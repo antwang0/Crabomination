@@ -10,6 +10,7 @@
 mod energy_sweep;
 mod among;
 mod may_cost;
+mod may_pick;
 mod sacrifice_record;
 mod with_targets;
 mod choose_one;
@@ -6482,7 +6483,10 @@ impl GameState {
                 let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
                 let revealed: Vec<crate::card::CardId> =
                     self.players[opp].library.iter().take(n).map(|c| c.id).collect();
-                let pick = self.players[opp]
+                // "You may put a nonland permanent card … from among them" —
+                // Lonis's controller picks; the highest mana value is the
+                // headless default.
+                let fits: Vec<(CardId, String, u32)> = self.players[opp]
                     .library
                     .iter()
                     .take(n)
@@ -6491,8 +6495,19 @@ impl GameState {
                             && !c.definition.is_land()
                             && c.definition.cost.cmc() <= cap
                     })
-                    .max_by_key(|c| c.definition.cost.cmc())
-                    .map(|c| c.id);
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+                    .collect();
+                let auto = fits.iter().max_by_key(|c| c.2).map(|c| c.0);
+                let Some(pick) = self.may_pick_one(
+                    ctx.controller,
+                    "You may put a nonland permanent card from among them onto the battlefield",
+                    ctx.source.unwrap_or(CardId(0)),
+                    fits.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                    auto,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
                 if let Some(pid) = pick
                     && let Some(card) = Self::take_card(&mut self.players[opp].library, pid)
                 {
@@ -28213,18 +28228,27 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let top: Vec<CardId> =
                     self.players[p].library.iter().take(n).map(|c| c.id).collect();
-                // Auto-pick the highest-power creature among the revealed cards.
-                let pick = top
+                // "You may put a creature card from among them onto the
+                // battlefield" — the player's pick; the highest power is the
+                // headless default.
+                let creatures: Vec<(CardId, String, i32)> = self.players[p]
+                    .library
                     .iter()
-                    .copied()
-                    .filter(|id| {
-                        self.players[p].library.iter().find(|c| c.id == *id)
-                            .map(|c| self.computed_is_creature(c)).unwrap_or(false)
-                    })
-                    .max_by_key(|id| {
-                        self.players[p].library.iter().find(|c| c.id == *id)
-                            .map(|c| c.definition.power).unwrap_or(0)
-                    });
+                    .take(n)
+                    .filter(|c| self.computed_is_creature(c))
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.power))
+                    .collect();
+                let auto = creatures.iter().max_by_key(|c| c.2).map(|c| c.0);
+                let Some(pick) = self.may_pick_one(
+                    p,
+                    "You may put a creature card from among them onto the battlefield",
+                    ctx.source.unwrap_or(CardId(0)),
+                    creatures.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                    auto,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
                 if let Some(pid) = pick {
                     self.move_card_to(
                         pid,
@@ -28705,17 +28729,26 @@ impl GameState {
                 if revealed.is_empty() {
                     return Ok(());
                 }
-                // Auto-pick the highest-power matching card among those revealed.
-                let pick = revealed
+                // "You may put one of them onto the battlefield" — the
+                // player's pick; the highest power is the headless default.
+                let matching: Vec<(CardId, String, i32)> = self.players[p]
+                    .library
                     .iter()
-                    .copied()
-                    .filter(|id| {
-                        self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source)
-                    })
-                    .max_by_key(|id| {
-                        self.players[p].library.iter().find(|c| c.id == *id)
-                            .map(|c| c.definition.power).unwrap_or(0)
-                    });
+                    .take(n)
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.power))
+                    .collect();
+                let auto = matching.iter().max_by_key(|c| c.2).map(|c| c.0);
+                let Some(pick) = self.may_pick_one(
+                    p,
+                    "You may put one of them onto the battlefield tapped and attacking",
+                    ctx.source.unwrap_or(CardId(0)),
+                    matching.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                    auto,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
                 if let Some(id) = pick {
                     // Attack the defender the triggering creature is attacking,
                     // else the controller's first opponent.

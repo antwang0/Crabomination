@@ -1777,6 +1777,31 @@ fn fertile_imagination_tokens_per_match() {
 
 /// Aethermage's Touch flashes a creature onto the battlefield; it returns to
 /// hand at the caster's end step.
+/// "You **may** put a creature card from among them onto the battlefield" —
+/// the caster's pick: it always took the highest power (the Drake); asked, it
+/// takes the Phantom Warrior.
+#[test]
+fn aethermages_touch_deploys_the_creature_its_caster_picks() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let warrior = g.add_card_to_library(0, catalog::phantom_warrior());
+    g.add_card_to_library(0, catalog::snapping_drake());
+    let spell = g.add_card_to_hand(0, catalog::aethermages_touch());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![warrior])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Aethermage's Touch");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(warrior).is_some(), "the picked creature");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Snapping Drake"));
+}
+
 #[test]
 fn aethermages_touch_deploys_then_bounces() {
     let mut g = two_player_game();

@@ -173,6 +173,32 @@ fn zabaz_modular_bonus() {
 }
 
 /// Lonis investigates on nontoken creatures and steals with sacrificed Clues.
+/// Lonis: "you **may** put a nonland permanent card … onto the battlefield"
+/// — declining leaves the revealed cards with their owner (the engine always
+/// took one).
+#[test]
+fn lonis_may_decline_the_revealed_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let lonis = g.add_card_to_battlefield(0, catalog::lonis_cryptozoologist());
+    g.clear_sickness(lonis);
+    for _ in 0..2 {
+        g.add_token_to_battlefield(0, &crabomination_base::tokens::clue_token());
+    }
+    let myr = g.add_card_to_library(1, catalog::parcel_myr());
+    g.add_card_to_library(1, catalog::island());
+    g.step = crabomination::game::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lonis, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: Some(2), mode: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(myr).is_none(), "declined");
+    assert!(g.players[1].library.iter().any(|c| c.id == myr), "it went to the bottom");
+}
+
 #[test]
 fn lonis_investigate_and_steal() {
     let mut g = two_player_game();
