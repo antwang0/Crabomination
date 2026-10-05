@@ -268,6 +268,20 @@ fn infinite_reflection_turns_the_team_into_copies() {
     assert_eq!(pt(&g, late), (4, 4));
 }
 
+/// Infinite Reflection on your own creature: "each OTHER nontoken creature
+/// you control" becomes a copy; the enchanted one isn't rewritten.
+#[test]
+fn infinite_reflection_skips_the_enchanted_creature() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let refl = g.add_card_to_hand(0, catalog::infinite_reflection());
+    cast(&mut g, refl, &[Target::Permanent(bear)]);
+    assert_eq!(g.battlefield_find(giant).unwrap().definition.name, "Grizzly Bears");
+    assert_eq!(pt(&g, giant), (2, 2));
+    assert_eq!(g.battlefield_find(bear).unwrap().definition.name, "Grizzly Bears");
+}
+
 /// Intellectual Offering at three seats: you and one opponent each draw
 /// three; the other opponent draws nothing (not targets — chosen).
 #[test]

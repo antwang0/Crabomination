@@ -232,7 +232,8 @@ pub fn infinite_reflection() -> CardDefinition {
     let yours = || R::Creature.and(R::ControlledByYou).and(R::Not(Box::new(R::IsToken)));
     CardDefinition {
         triggered_abilities: vec![etb(Effect::BecomeCopyOf {
-            what: Selector::EachPermanent(yours()),
+            // "Each OTHER nontoken creature": not the enchanted one itself.
+            what: Selector::EachPermanent(yours().and(R::Not(Box::new(R::IsHostOfSource)))),
             source: enchanted(),
             extra_creature_types: vec![],
             keep_own_triggered: false,
