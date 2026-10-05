@@ -468,8 +468,8 @@ pub fn the_beamtown_bullies() -> CardDefinition {
 
 /// Turf War — {4}{R} enchantment. Entering, a contested counter on a land
 /// each player controls; a creature dealing combat damage to a player takes
-/// one of their contested lands and untaps it. The entry targets one land
-/// per player (`ForEachPlayerTarget`, CR 601.2c).
+/// one of their contested lands (its controller's pick) and untaps it. The
+/// entry targets one land per player (`ForEachPlayerTarget`, CR 601.2c).
 pub fn turf_war() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![

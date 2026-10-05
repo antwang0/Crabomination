@@ -178,6 +178,28 @@ fn turf_war_takes_contested_land() {
     assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0));
 }
 
+/// "One of those lands of their choice": the attacking creature's controller
+/// picks the contested land — the Forest here, not the Command Tower the
+/// headless default (nonbasic first) would take.
+#[test]
+fn turf_war_attacker_picks_the_contested_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let tower = g.add_card_to_battlefield(1, catalog::command_tower());
+    g.add_card_to_battlefield(0, catalog::turf_war());
+    for id in [forest, tower] {
+        g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Contested, 1);
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    attack(&mut g, &[(bear, 1)]).expect("attack");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![forest])]));
+    finish_combat(&mut g);
+    assert_eq!(g.battlefield_find(forest).map(|c| c.controller), Some(0));
+    assert_eq!(g.battlefield_find(tower).map(|c| c.controller), Some(1));
+}
+
 /// Turf War's entry TARGETS one land per player (CR 601.2c): every seat gets
 /// one counter, and a shroud land can't be chosen (CR 702.18a), so its
 /// controller's other land takes the counter.
