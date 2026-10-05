@@ -122,6 +122,9 @@ pub enum Modification {
     SetCardTypes(Vec<CardType>),
     AddCreatureType(CreatureType),
     SetCreatureTypes(Vec<CreatureType>),
+    /// CR 205.3 — "is every creature type" (Omo). A type effect, so a layer-6
+    /// strip leaves it; the pass reports it as a computed changeling.
+    EveryCreatureType,
     AddLandType(LandType),
     SetLandTypes(Vec<LandType>),
     /// Vraska, Betrayal's Sting's −2 — "becomes a Treasure artifact".
@@ -247,6 +250,8 @@ pub fn modification_families(m: &Modification) -> u32 {
         // of a `Landwalk` payload (CR 612 / 702.15).
         M::ReplaceBasicLandType(..) => F::LAND_TYPE | F::KEYWORD_EDIT,
         M::AddCreatureType(_) | M::SetCreatureTypes(_) => F::CREATURE_TYPE,
+        // Read through the computed changeling, so the keyword gates see it.
+        M::EveryCreatureType => F::CREATURE_TYPE | F::KEYWORD,
         M::AddColor(_) | M::SetColors(_) | M::LoseAllColors => F::COLOR,
         M::AddKeyword(k) if crate::card::is_ability_lock_keyword(k) => F::KEYWORD | F::ABILITY_LOCK,
         M::AddKeyword(_) => F::KEYWORD,
@@ -1087,7 +1092,7 @@ impl SecondPass {
             match e.modification {
                 Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_) => g.type_changer = true,
                 // CR 702.73a — a granted changeling makes the bearer every type.
-                Modification::AddKeyword(Keyword::Changeling) => {
+                Modification::AddKeyword(Keyword::Changeling) | Modification::EveryCreatureType => {
                     g.type_changer = true;
                     g.keyword_changer = true;
                 }
@@ -1396,6 +1401,7 @@ fn compute_permanent_pass(
     let mut switched = false;
     let mut lost_all_abilities = false;
     let mut creature_types_set = false;
+    let mut every_creature_type = false;
     let mut cant_have_keywords: Vec<Keyword> = Vec::new();
 
     // Sort effects by layer, then sublayer, then timestamp — but only build
@@ -1497,6 +1503,11 @@ fn compute_permanent_pass(
             Modification::SetCreatureTypes(cts) => {
                 subtypes.creature_types = cts.clone();
                 creature_types_set = true;
+                every_creature_type = false;
+            }
+            Modification::EveryCreatureType => {
+                every_creature_type = true;
+                creature_types_set = false;
             }
             Modification::AddLandType(lt) => {
                 if !subtypes.land_types.contains(lt) {
@@ -1609,6 +1620,14 @@ fn compute_permanent_pass(
     // timestamp (Archetype of Courage vs. a later first-strike anthem).
     if !cant_have_keywords.is_empty() {
         keywords.retain(|k| !cant_have_keywords.contains(k));
+    }
+    // CR 613.1d / 613.3 — a layer-4 "every creature type", or a printed
+    // changeling's CDA (applied first in layer 4), survives a layer-6 strip;
+    // it reads as changeling to each type check.
+    let every_creature_type = every_creature_type
+        || (lost_all_abilities && !creature_types_set && def.keywords.contains(&Keyword::Changeling));
+    if every_creature_type && !keywords.contains(&Keyword::Changeling) {
+        keywords.push(Keyword::Changeling);
     }
 
     // Compute final P/T.

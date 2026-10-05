@@ -13259,6 +13259,7 @@ pub fn static_effect_changes_creature_types(effect: &StaticEffect) -> bool {
         | SE::MatchingAreChosenTypeToo { .. }
         | SE::MatchingLandsAreCreatures { .. }
         | SE::AddCreatureTypeToMatching { .. }
+        | SE::EveryCreatureType { .. }
         | SE::MatchingLoseAllCreatureTypes { .. }
         | SE::SelfIsCreatureIf { .. }
         // Off-battlefield grants: no layer effect, but the lane is what tells
@@ -13498,6 +13499,8 @@ pub fn static_effect_grants_keyword(
         | SE::SelfHasKeywordWhilePredicate { keyword, .. }
         | SE::SelfHasKeywordWhileCountersAtLeast { keyword, .. }
         | SE::SelfHasKeywordIf { keyword, .. } => pred(keyword),
+        // Layer 4, but it reads as a computed changeling (`layers.rs`).
+        SE::EveryCreatureType { .. } => pred(&Keyword::Changeling),
         // Unbounded — the granted keyword carries a payload the static does
         // not fix (an exiled card's keywords or card types, a draft note, an
         // ETB-chosen colour, a counter count), so the only sound answer while

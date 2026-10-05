@@ -526,6 +526,10 @@ pub enum StaticEffect {
         applies_to: Selector,
         creature_type: crate::card::CreatureType,
     },
+    /// CR 205.3 / 613.1d — "[matching creatures] are every creature type" as a
+    /// layer-4 type effect, not a changeling grant: losing all abilities
+    /// (layer 6) leaves it (Omo, Maskwood Nexus). Reads as changeling.
+    EveryCreatureType { applies_to: Selector },
     /// CR 205.3 / 613.1d — "[matching creatures] lose all creature types"
     /// (Curse of Conformity). Layer 4, resolved live so `applies_to` may be a
     /// `ControlledBy` seat.

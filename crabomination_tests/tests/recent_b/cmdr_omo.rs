@@ -92,6 +92,27 @@ fn omo_marks_everything() {
     assert!(g.computed_permanent(bear).is_some_and(|c| c.keywords().contains(&Keyword::Changeling)));
 }
 
+/// CR 205.3 / 613.1d — Omo's and Maskwood Nexus's "every creature type" is a
+/// layer-4 type effect, not a changeling grant: Dress Down's layer-6 "lose
+/// all abilities" leaves it.
+#[test]
+fn every_creature_type_survives_losing_all_abilities() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::omo_queen_of_vesuva());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::Everything, 1);
+    g.add_card_to_battlefield(1, catalog::maskwood_nexus());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::dress_down());
+    for id in [bear, theirs] {
+        assert!(g.computed_permanent(id).is_some_and(|c| c.keywords().contains(&Keyword::Changeling)), "{id:?}");
+    }
+    // CR 613.3 — so does a printed changeling: its CDA applied in layer 4
+    // (2021-02-05 ruling: "it will remain all creature types").
+    let mimic = g.add_card_to_battlefield(0, catalog::changeling_outcast());
+    assert!(g.computed_permanent(mimic).is_some_and(|c| c.keywords().contains(&Keyword::Changeling)));
+}
+
 /// CR 701.5 — Summary Dismissal exiles the other spell (to exile, not the
 /// graveyard) and counters an activated ability on the stack.
 #[test]

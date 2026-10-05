@@ -1243,7 +1243,7 @@ pub fn reshape_the_earth() -> CardDefinition {
 // ── Artifacts ────────────────────────────────────────────────────────────────
 
 /// Maskwood Nexus — {4} Artifact. Creatures you control are every creature
-/// type (a changeling grant); so are creature spells you control and creature
+/// type (layer 4, CR 205.3); so are creature spells you control and creature
 /// cards you own that aren't on the battlefield.
 /// {3}, {T}: create a 2/2 blue Shapeshifter token with changeling.
 pub fn maskwood_nexus() -> CardDefinition {
@@ -1251,9 +1251,8 @@ pub fn maskwood_nexus() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Creatures you control are every creature type.",
-                effect: StaticEffect::GrantKeyword {
+                effect: StaticEffect::EveryCreatureType {
                     applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                    keyword: Keyword::Changeling,
                 },
             },
             StaticAbility {

@@ -41,7 +41,7 @@ they call a deck 🟡, the table wins.
 | 75 | Hazel of the Rootbloom (BG) | 1: sword_of_the_squeak |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 122 | Omo, Queen of Vesuva (GU) | 3: desert_warfare, march_from_velis_vel, omo_queen_of_vesuva |
+| 122 | Omo, Queen of Vesuva (GU) | 2: desert_warfare, march_from_velis_vel |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 137 | Zimone, Infinite Analyst (GU) | 2: quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |

@@ -12441,6 +12441,7 @@ impl GameState {
             mod_families::KEYWORD | mod_families::KEYWORD_EDIT,
             |e| match &e.modification {
                 Modification::AddKeyword(k) => pred(k),
+                Modification::EveryCreatureType => pred(&Keyword::Changeling),
                 Modification::ReplaceColorWord(..) | Modification::ReplaceBasicLandType(..) => true,
                 _ => false,
             },
@@ -32210,6 +32211,19 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::AddCreatureType(*creature_type),
+                    });
+                }
+            }
+            StaticEffect::EveryCreatureType { applies_to } => {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::EveryCreatureType,
                     });
                 }
             }

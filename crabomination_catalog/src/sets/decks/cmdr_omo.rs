@@ -3,8 +3,6 @@
 //! `tests/recent_b/cmdr_omo.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Omo, Queen of Vesuva** — "every creature type" is a Changeling grant,
-//!   so a creature that loses all abilities stops being every type.
 //! - **Desert Warfare** — a Desert card reaches your graveyard "from your hand"
 //!   only by a discard here.
 //! - **March from Velis Vel** — the land type is chosen as a mode.
@@ -65,8 +63,8 @@ fn pump(what: Selector, n: Value) -> Effect {
 }
 
 /// Omo, Queen of Vesuva — an everything counter on up to one land and up to
-/// one creature as it enters or attacks. Residual: "every creature type" is
-/// a Changeling grant, lost with all abilities (a layer-4 type isn't).
+/// one creature as it enters or attacks; a marked creature is every creature
+/// type as a layer-4 effect (CR 205.3), so losing all abilities keeps it.
 pub fn omo_queen_of_vesuva() -> CardDefinition {
     let counter_on = |slot: u8, filter: R| Effect::AddCounter {
         what: Selector::TargetFiltered { slot, filter },
@@ -90,11 +88,10 @@ pub fn omo_queen_of_vesuva() -> CardDefinition {
     }));
     statics.push(static_ab(
         "Each nonland creature with an everything counter on it is every creature type.",
-        StaticEffect::GrantKeyword {
+        StaticEffect::EveryCreatureType {
             applies_to: Selector::EachPermanent(
                 R::Creature.and(R::Nonland).and(R::WithCounter(CounterType::Everything)),
             ),
-            keyword: Keyword::Changeling,
         },
     ));
     CardDefinition {

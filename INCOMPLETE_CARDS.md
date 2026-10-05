@@ -1932,7 +1932,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | Card | Deck | Gap |
 |---|---|---|
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
-| 🟡 Omo, Queen of Vesuva | Tricky Terrain (M3C) | "every creature type" is a Changeling grant, so a creature that loses all abilities stops being every type (a layer-4 type wouldn't). |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand is watched only as a discard (library routes — mill, surveil, reveal — are all seen). |
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Amoeboid Changeling | Everyone's Invited! (SLD) | "loses all creature types" empties the type line and strips Changeling until end of turn, and a later grant that turn doesn't restore it. |
