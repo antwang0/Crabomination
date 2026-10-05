@@ -3134,6 +3134,31 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-05 (Commander session `01S6ztPx`) — guardrail; layer-4 every-type, CR 608.2b card re-check
+
+Hot-path touches: the layer pass gains one `bool` and one branch taken only
+after a `RemoveAllAbilities` / layer-4 creature-type set (`EveryCreatureType`);
+`ApplyToTargets` re-checks only off-battlefield card targets under a
+zone-naming filter. Callgrind against the pre-session tip `6e49f7a86`
+(`release-fast`, `--games 6 --seed 1`, 4-core container); the candidate
+includes concurrent sessions' commits.
+
+```text
+callgrind Ir     fixed 169,838,222 -> 169,704,291 (-0.08 %)
+                 cube  307,383,658 -> 308,056,053 (+0.22 %)
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); peak_rss_mib 36.4
+wall (--bench)   10 alternating pairs, medians 221.8 k vs 221.7 k decisions/s
+                 (spread 195-274 k on this box: noise, not a reading)
+suite            24,162 / 0 / 5 (CRAB_ANSWER_LOG=strict)
+pods (release)   seed 206001 2/3/4/5/6/8 x 300; all-deck census 3/4/5/6 seats
+                 (205001, 210000/212000/213000+, 8,660); seed 209001 2..8 x
+                 1,000 = 7,000 (turns/game 19.31 / 32.19 / 45.59 / 57.91 /
+                 68.33 / 81.74 / 97.15 — the base binary reads 68.18 / 97.23 at
+                 6 / 8 seats on the same seed): all decided, zero panics
+strict debug     all 183 decks, 4 seats x 6 (208001+): 276 games, no finds
+```
+
 ### 2026-10-04 (Commander session `01MptjgzbuRdUyr1`) — guardrail; one gated SBA walk bit
 
 `StaticEffect::GrantStaticAbility` adds a sync pass to the SBA check, reached

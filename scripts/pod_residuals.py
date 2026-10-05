@@ -100,7 +100,7 @@ def main():
                 hit = MARKERS.search(docs[c])
                 lo = max(0, hit.start() - 60)
                 print(f"      {c}: …{docs[c][lo:hit.end() + 100]}…")
-    tail = f"{complete} / {len(decks)} pod decks carry no residual in their card docs"
+    tail = f"{complete} / {len(decks)} pod decks carry no residual in their card docs or INCOMPLETE_CARDS"
     print(f"\n{tail}; the rest are listed." if table else tail)
 
 
