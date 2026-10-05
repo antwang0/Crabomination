@@ -702,8 +702,14 @@ pub struct PlayerData {
     /// Wood-Kin). Cleared with `was_dealt_damage_this_turn` at turn start.
     #[serde(default)]
     pub damage_taken_this_turn: u32,
-    /// Damage each source has dealt this player this turn (Impact
-    /// Resonance's per-source, per-recipient total). Cleared at turn start.
+    /// The largest total one source dealt one object or player this turn,
+    /// as far as this seat's record goes (Impact Resonance): damage to this
+    /// player per source, and the tallies of permanents this player owned
+    /// that left the battlefield. Cleared at turn start.
+    #[serde(default)]
+    pub greatest_hit_this_turn: u32,
+    /// Damage each source has dealt this player this turn, feeding
+    /// `greatest_hit_this_turn`. Cleared at turn start.
     #[serde(default)]
     pub damage_by_source_this_turn: crate::copyvec::CopyVec<[(crate::card::CardId, u32); 2]>,
     /// The combat-damage-only slice of `damage_taken_this_turn` ("if a player
@@ -1647,6 +1653,7 @@ impl Player {
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,
+            greatest_hit_this_turn: 0,
             damage_by_source_this_turn: crate::copyvec::CopyVec::new(),
             combat_damage_taken_this_turn: 0,
             token_copy_replacement_used_this_turn: false,
@@ -1793,20 +1800,24 @@ impl Player {
 }
 
 impl PlayerData {
-    /// Fold `amount` damage from `src` into this turn's per-source tally;
-    /// returns the source's new total against this player.
-    pub fn record_damage_from(&mut self, src: Option<crate::card::CardId>, amount: u32) -> u32 {
-        let Some(src) = src else { return amount };
-        match self.damage_by_source_this_turn.iter_mut().find(|(s, _)| *s == src) {
-            Some((_, n)) => {
-                *n = n.saturating_add(amount);
-                *n
-            }
-            None => {
-                self.damage_by_source_this_turn.push((src, amount));
-                amount
-            }
-        }
+    /// Fold `amount` damage from `src` into this player's per-source tally
+    /// and `greatest_hit_this_turn` (2014-11-07 Impact Resonance ruling: one
+    /// source's total to one victim). A sourceless hit counts on its own.
+    pub fn record_damage_from(&mut self, src: Option<crate::card::CardId>, amount: u32) {
+        let total = match src {
+            None => amount,
+            Some(src) => match self.damage_by_source_this_turn.iter_mut().find(|(s, _)| *s == src) {
+                Some((_, n)) => {
+                    *n = n.saturating_add(amount);
+                    *n
+                }
+                None => {
+                    self.damage_by_source_this_turn.push((src, amount));
+                    amount
+                }
+            },
+        };
+        self.greatest_hit_this_turn = self.greatest_hit_this_turn.max(total);
     }
 
     pub fn is_alive(&self) -> bool {

@@ -1088,7 +1088,14 @@ impl GameState {
                     .find(|(s, _)| *s == src)
                     .map_or(0, |&(_, n)| n as i32)
             }
-            Value::GreatestDamageFromOneSourceThisTurn => self.turn.greatest_pair_damage_this_turn as i32,
+            // Players carry their own per-source totals and the tallies of
+            // permanents that left; the board carries the rest.
+            Value::GreatestDamageFromOneSourceThisTurn => {
+                let to_players = self.players.iter().map(|p| p.greatest_hit_this_turn).max().unwrap_or(0);
+                let to_permanents =
+                    self.battlefield.iter().map(|c| c.max_damage_from_single_source()).max().unwrap_or(0);
+                to_players.max(to_permanents) as i32
+            }
             Value::CreatureDeathsThisTurnMatching { filter } => self
                 .deaths
                 .creature_deaths_this_turn

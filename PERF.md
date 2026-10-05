@@ -3134,6 +3134,42 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved
+
+Hot-path touches: every damage event to a player folds into a per-player,
+per-source `CopyVec` (Impact Resonance's one-source-to-one-victim total), and
+a damaged permanent leaving the battlefield folds its tally into its owner's
+`PlayerData` (inside the `find_card_anywhere_mut` it already took).
+Callgrind `release-fast`-equivalent `profiling-fast --no-default-features`,
+`--a gang --b gang --games 6 --threads 1 --seed 1`, base `834319826` (the
+pre-session tip), candidate the session tip, which includes four concurrent
+engine commits (0729b3b2e..18ec4b013). 4-core container.
+
+```text
+first cut        a TurnRegistries scalar written on every damage event:
+                 fixed 867,525,401 -> 870,559,475 (+0.35 %), cube
+                 1,345,037,842 -> 1,348,172,303 (+0.23 %) — make_mut_slow
+                 40,964 -> 42,852 calls, the new ones under
+                 resolve_combat_into (+1,002) and
+                 deal_combat_damage_to_target (+1,304): CLAUDE.md's CoW rule,
+                 a group store in combat unshares it on every probe
+moved to Player  same unshare count as the base (59,878 make_mut_slow);
+                 fixed 868,951,308 (+0.16 %), cube 1,347,627,667 (+0.19 %);
+                 find_card_anywhere +1.0 M / +1.3 M from a second scan
+folded in        the leave-fold reads the card the existing &mut already
+                 found: fixed 867,920,328 (+0.046 %), cube 1,346,281,770
+                 (+0.092 %) — noise, concurrent commits included
+--bench          27.64 / 613.0 / 0 stalls — byte-identical; determinism ok
+pods (release)   all-deck census 4 seats x 100 (92000+), then 3/4/5/6/8 seats
+                 (93000+/94000+/95000+/96000+/98000+; 300/400/300/300/200
+                 per group): 66,300 games, 4 CR 104.4a all-lose draws, one
+                 real lock (Silent Arbiter + Propaganda vs 956 Insects),
+                 zero panics
+strict debug     4 seats (101000+, 46 x 20) + 6 seats (102000+, 31 x 12):
+                 1,292 games, one draw, zero panics
+suite            24,198 run, 2 failures of this session's (fixed, 462559c51)
+```
+
 ### 2026-10-05 (Commander session `01G3AuwS`) — guardrail; PumpPTByValue in the gather's phase two
 
 Hot-path touches: `StaticEffect::PumpPTByValue` moved into the gather's

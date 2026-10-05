@@ -1677,8 +1677,7 @@ impl GameState {
                 {
                     let pl = &mut *self.players[p];
                     pl.damage_taken_this_turn = pl.damage_taken_this_turn.saturating_add(amount);
-                    let total = pl.record_damage_from(source, amount);
-                    self.note_pair_damage(total);
+                    pl.record_damage_from(source, amount);
                 }
                 // Record the damaging creature so "destroy target creature
                 // that dealt damage to you this turn" (Spear of Heliod) can
@@ -1765,7 +1764,6 @@ impl GameState {
                     .battlefield_find(cid)
                     .map(|c| c.definition.is_battle())
                     .unwrap_or(false);
-                let mut pair_total = amount;
                 if is_pw {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         let current = c.counter_count(CounterType::Loyalty);
@@ -1779,7 +1777,7 @@ impl GameState {
                         c.damage_dealt_to_this_turn += amount;
                         if let Some(src) = source {
                             c.damaged_by_this_turn.push(src);
-                            pair_total = c.record_damage_from(src, amount);
+                            c.record_damage_from(src, amount);
                         }
                         events.push(GameEvent::DamageDealt {
                             amount,
@@ -1863,7 +1861,7 @@ impl GameState {
                         c.damage_dealt_to_this_turn += amount;
                         if let Some(src) = source {
                             c.damaged_by_this_turn.push(src);
-                            pair_total = c.record_damage_from(src, amount);
+                            c.record_damage_from(src, amount);
                         }
                         // Blazing Effigy is the only card that reads this
                         // tally, and its `Vec` was cloned on every `CardData`
@@ -1922,7 +1920,6 @@ impl GameState {
                         self.fire_spell_damage_listeners(src, crate::game::types::Target::Permanent(cid), amount);
                     }
                 }
-                self.note_pair_damage(pair_total);
             }
             EntityRef::Card(_) => {}
         }
@@ -3153,7 +3150,9 @@ impl GameState {
         // that granted abilities to the permanent don't follow it, and
         // per-object activation limits (CR 602.5f "only once each turn",
         // CR 702.177a exhaust's "activate only once") start over.
+        let mut fold = None;
         if let Some(c) = self.find_card_anywhere_mut(id) {
+            fold = Some((c.owner, c.max_damage_from_single_source()));
             // All four are `CardCold` fields; clearing unconditionally would
             // unshare the group for every permanent that leaves the
             // battlefield, and they are empty on nearly all of them.
@@ -3206,6 +3205,14 @@ impl GameState {
                 c.cast_via_madness = false;
                 c.put_onto_battlefield_by = None;
             }
+        }
+        // Impact Resonance — a damaged permanent's per-source tally outlives
+        // it on its owner's record (2014-11-07). Read first: only a leaver
+        // carrying a bigger tally writes.
+        if let Some((owner, hit)) = fold
+            && hit > self.players.get(owner).map_or(u32::MAX, |p| p.greatest_hit_this_turn)
+        {
+            self.players[owner].greatest_hit_this_turn = hit;
         }
         // CR 611.2c — continuous effects aimed at this specific permanent
         // end with it (don't re-attach if the same card re-enters).

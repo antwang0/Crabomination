@@ -4924,11 +4924,10 @@ impl GameState {
                         // (CR 702.2b) all see it.
                         if dealt > 0 {
                             if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
-                                let pair_total = blocker.record_damage_from(atk.id, dealt as u32);
+                                blocker.record_damage_from(atk.id, dealt as u32);
                                 if atk.has_deathtouch {
                                     blocker.dealt_deathtouch_damage = true;
                                 }
-                                self.note_pair_damage(pair_total);
                             }
                             events.push(GameEvent::DamageDealt {
                                 amount: dealt as u32,
@@ -4944,11 +4943,10 @@ impl GameState {
                         && let Some(blocker) = self.battlefield_find_mut(blocker_id)
                     {
                         blocker.damage += dealt as u32;
-                        let pair_total = blocker.record_damage_from(atk.id, dealt as u32);
+                        blocker.record_damage_from(atk.id, dealt as u32);
                         if atk.has_deathtouch {
                             blocker.dealt_deathtouch_damage = true;
                         }
-                        self.note_pair_damage(pair_total);
                         events.push(GameEvent::DamageDealt {
                             amount: dealt as u32,
                             to_player: None,
@@ -5145,11 +5143,10 @@ impl GameState {
                             // CR 120.3d — dealt either way (as counters or as
                             // marked damage): the record, deathtouch and the
                             // event follow the damage, not its form.
-                            let pair_total = attacker.record_damage_from(bid, dmg);
+                            attacker.record_damage_from(bid, dmg);
                             if bc.keywords().has_kw(&Keyword::Deathtouch) {
                                 attacker.dealt_deathtouch_damage = true;
                             }
-                            self.note_pair_damage(pair_total);
                             events.push(GameEvent::DamageDealt {
                                 amount: dmg,
                                 to_player: None,
@@ -5847,8 +5844,7 @@ impl GameState {
                         c.dealt_damage_this_turn = true;
                         c.damage_dealt_to_this_turn += amount;
                         c.damaged_by_this_turn.push(atk.id);
-                        let pair_total = c.record_damage_from(atk.id, amount);
-                        self.note_pair_damage(pair_total);
+                        c.record_damage_from(atk.id, amount);
                     }
                     events.push(GameEvent::DamageDealt {
                         amount,
@@ -5904,7 +5900,7 @@ impl GameState {
                     let pl = &mut *self.players[p];
                     pl.was_dealt_damage_this_turn = true;
                     pl.damage_taken_this_turn = pl.damage_taken_this_turn.saturating_add(amount);
-                    let pair_total = pl.record_damage_from(Some(atk_id), amount);
+                    pl.record_damage_from(Some(atk_id), amount);
                     pl.combat_damage_taken_this_turn =
                         pl.combat_damage_taken_this_turn.saturating_add(amount);
                     if !pl.creatures_that_damaged_me_this_turn.contains(&atk_id) {
@@ -5966,7 +5962,6 @@ impl GameState {
                     {
                         self.combat_victims_by_name.push((name, p));
                     }
-                    self.note_pair_damage(pair_total);
                 }
                 // CR 702.180c — Toxic N adds N poison on combat damage to a
                 // player, on top of any life loss (and stacks with Infect's
@@ -6030,8 +6025,7 @@ impl GameState {
                         pw.dealt_damage_this_turn = true;
                         pw.damage_dealt_to_this_turn += amount;
                         pw.damaged_by_this_turn.push(atk.id);
-                        let pair_total = pw.record_damage_from(atk.id, amount);
-                        self.note_pair_damage(pair_total);
+                        pw.record_damage_from(atk.id, amount);
                     }
                     events.push(GameEvent::DamageDealt {
                         amount,
