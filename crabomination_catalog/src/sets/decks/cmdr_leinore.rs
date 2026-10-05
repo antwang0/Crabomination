@@ -338,22 +338,22 @@ pub fn kyler_sigardian_emissary() -> CardDefinition {
 }
 
 /// Moorland Rescuer — dies: return any number of other creature cards with
-/// total power X or less from your graveyard (X its last-known power), then
-/// exile it.
+/// total power X or less from your graveyard (X its last-known power, the
+/// set the controller's pick, CR 608.2d), then exile it.
 pub fn moorland_rescuer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_dies(Effect::Seq(vec![
-            Effect::Move {
-                what: Selector::TakeWithSumCap {
-                    inner: Box::new(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: R::Creature.and(R::OtherThanSource),
-                    }),
-                    cap: Box::new(Value::PowerOf(Box::new(Selector::This))),
-                    value_of_each: Box::new(Value::PowerOf(Box::new(Selector::TriggerSource))),
+            Effect::MoveWithinTotalManaValue {
+                from: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: R::Creature.and(R::OtherThanSource),
                 },
+                filter: R::Creature,
+                cap: Value::PowerOf(Box::new(Selector::This)),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                max_count: None,
+                by_power: true,
             },
             Effect::Move {
                 what: Selector::MatchingAmong { inner: Box::new(Selector::This), filter: R::InGraveyard },

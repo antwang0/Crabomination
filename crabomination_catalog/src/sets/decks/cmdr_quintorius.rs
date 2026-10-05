@@ -258,6 +258,7 @@ pub fn ao_the_dawn_sky() -> CardDefinition {
                         cap: Value::Const(4),
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                         max_count: None,
+                        by_power: false,
                     },
                     // "Put the rest on the bottom of your library in a random order."
                     Effect::BottomInRandomOrder {

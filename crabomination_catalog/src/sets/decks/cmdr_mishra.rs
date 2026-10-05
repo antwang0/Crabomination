@@ -482,6 +482,7 @@ pub fn smelting_vat() -> CardDefinition {
                     cap: Value::SacrificedManaValue,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     max_count: Some(2),
+                    by_power: false,
                 },
                 Effect::BottomInRandomOrder {
                     what: Selector::TopOfLibrary {

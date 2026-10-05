@@ -752,6 +752,7 @@ pub fn technomancer() -> CardDefinition {
                 cap: Value::Const(6),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 max_count: None,
+                by_power: false,
             },
         ]))],
         ..artifact_creature(
@@ -790,6 +791,7 @@ pub fn the_war_in_heaven() -> CardDefinition {
                         cap: Value::Const(8),
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                         max_count: Some(3),
+                        by_power: false,
                     },
                     Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Necrodermis, amount: Value::ONE },
                     Effect::AddCardTypeIndefinitely { what: Selector::LastMoved, card_type: CardType::Artifact, until_eot: false },

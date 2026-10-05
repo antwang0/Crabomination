@@ -2554,7 +2554,6 @@ impl Effect {
                 | Selector::TakeGreatestManaValue { inner, .. } => {
                     sel_filter(inner)
                 }
-                Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
                 Selector::RadianceGroup { subject } => sel_filter(subject),
                 Selector::CreaturesInCombatWith(subject) => sel_filter(subject),
                 _ => None,
@@ -4718,7 +4717,6 @@ impl Effect {
                 Selector::PowerAbove { inner, than } => {
                     sel_find(inner, slot).or_else(|| val_find(than, slot))
                 }
-                Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
                 // A bare `PlayerRef::Target(n)` inside any player-reading
                 // selector declares slot `n` as a player target — Lord of the
                 // Void's `Player(Target(0))`, Mudhole's `CardsInZone { who:
@@ -6109,15 +6107,6 @@ fn sel_has_target(s: &Selector) -> bool {
         | Selector::TakeGreatestPower { inner, count }
         | Selector::TakeGreatestManaValue { inner, count } => {
             sel_has_target(inner) || value_has_target(count)
-        }
-        Selector::TakeWithSumCap {
-            inner,
-            cap,
-            value_of_each,
-        } => {
-            sel_has_target(inner)
-                || value_has_target(cap)
-                || value_has_target(value_of_each)
         }
         _ => selector_player_ref(s).is_some_and(player_has_target),
     }

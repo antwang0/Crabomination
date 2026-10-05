@@ -233,6 +233,24 @@ fn moorland_rescuer_returns_up_to_its_power() {
     assert!(g.exile.iter().any(|c| c.id == rescuer), "the Rescuer is exiled");
 }
 
+/// CR 608.2d — which cards come back is the controller's pick under the
+/// power budget: Bears and Elves (3) rather than the default Giant and Elves,
+/// and a pick past the budget keeps only what fits.
+#[test]
+fn moorland_rescuer_returns_the_cards_its_controller_picks() {
+    let mut g = main_phase(2);
+    let rescuer = g.add_card_to_battlefield(0, catalog::moorland_rescuer());
+    let ids: Vec<_> = [catalog::hill_giant(), catalog::grizzly_bears(), catalog::llanowar_elves()]
+        .into_iter()
+        .map(|def| g.add_card_to_graveyard(0, def))
+        .collect();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![ids[1], ids[2]])]));
+    kill(&mut g, rescuer);
+    let back: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0).map(|c| c.definition.name).collect();
+    assert_eq!(back.len(), 2, "{back:?}");
+    assert!(back.contains(&"Grizzly Bears") && back.contains(&"Llanowar Elves"));
+}
+
 /// Ruinous Intrusion reads the exiled permanent's mana value.
 #[test]
 fn ruinous_intrusion_counts_the_exiled_mana_value() {

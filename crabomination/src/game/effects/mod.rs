@@ -12258,7 +12258,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MoveWithinTotalManaValue { from, filter, cap, to, max_count } => {
+            Effect::MoveWithinTotalManaValue { from, filter, cap, to, max_count, by_power } => {
                 // Cheapest-first greedy fill of the mana-value budget, so the
                 // number of cards returned is maximized (March from the Tomb).
                 let budget = self.evaluate_value(cap, ctx).max(0) as u32;
@@ -12266,14 +12266,25 @@ impl GameState {
                     .resolve_selector(from, ctx)
                     .into_iter()
                     .filter_map(|e| e.as_card_id())
-                    .filter_map(|id| self.find_card_anywhere(id).map(|c| (id, c.definition.cost.cmc())))
+                    .filter_map(|id| {
+                        self.find_card_anywhere(id).map(|c| {
+                            let n = if *by_power { c.definition.power.max(0) as u32 } else { c.definition.cost.cmc() };
+                            (id, n)
+                        })
+                    })
                     .filter(|(id, _)| {
                         self.find_card_anywhere(*id).is_some_and(|c| {
                             self.evaluate_requirement_on_card(filter, c, ctx.controller)
                         })
                     })
                     .collect();
-                candidates.sort_by_key(|(_, mv)| *mv);
+                // A power budget fills biggest-first (the most power back); a
+                // mana-value one cheapest-first (the most cards).
+                if *by_power {
+                    candidates.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+                } else {
+                    candidates.sort_by_key(|(_, mv)| *mv);
+                }
                 let cap_n = max_count.map_or(usize::MAX, |n| n as usize);
                 // Fill `ids` in order while the budget and the count allow.
                 let fit = |ids: &mut dyn Iterator<Item = CardId>, mvs: &[(CardId, u32)]| -> Vec<CardId> {
@@ -12302,7 +12313,7 @@ impl GameState {
                     let Some(chosen) = self.ask_seat_cards_logged(
                         &mut cursor,
                         ctx.controller,
-                        format!("Choose cards with total mana value {budget} or less"),
+                        format!("Choose cards with total {} {budget} or less", if *by_power { "power" } else { "mana value" }),
                         ctx.source.unwrap_or(CardId(0)),
                         named,
                         0,
@@ -42952,38 +42963,6 @@ impl GameState {
                 });
                 all.truncate(n);
                 all
-            }
-
-            Selector::TakeWithSumCap { inner, cap, value_of_each } => {
-                let cap_n = self.evaluate_value(cap, ctx).max(0);
-                if cap_n == 0 {
-                    return vec![];
-                }
-                // Bind each candidate to `ctx.trigger_source` so that
-                // `value_of_each` can reference it via `Selector::TriggerSource`
-                // (mirrors `Effect::ForEach`'s binding convention).
-                let mut valued: Vec<(EntityRef, i32)> = self
-                    .resolve_selector(inner, ctx)
-                    .into_iter()
-                    .map(|ent| {
-                        let mut sub_ctx = ctx.clone();
-                        sub_ctx.trigger_source = Some(ent);
-                        (ent, self.evaluate_value(value_of_each, &sub_ctx).max(0))
-                    })
-                    .collect();
-                // Greedy, largest first (stable, so ties keep resolution
-                // order): the AutoDecider's deterministic pick, and it spends
-                // the cap on the biggest bodies (Moorland Rescuer).
-                valued.sort_by_key(|&(_, v)| std::cmp::Reverse(v));
-                let mut running_total: i32 = 0;
-                let mut kept: Vec<EntityRef> = Vec::new();
-                for (ent, v) in valued {
-                    if running_total + v <= cap_n {
-                        running_total += v;
-                        kept.push(ent);
-                    }
-                }
-                kept
             }
         }
     }

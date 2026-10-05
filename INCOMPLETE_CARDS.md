@@ -1928,7 +1928,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 City of Brass | Turtle Power! (TMC) | "whenever this becomes tapped" is folded into its mana ability: tapped any other way it deals no damage, and the damage is no trigger. |
 | 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | "whenever you copy a spell, up to one target opponent may also copy that spell" is not implemented: the trigger picker fills an optional player slot whenever one is legal, so a bot would hand the table copies (needs a decline-a-gift rule for optional trigger targets). |
 | 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the cost's exiled card is the least valuable one, not the player's pick (the X ability's card is a real target). |
-| 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with another printed alternative cost (evoke, dash, …) is offered that one, not Henzie's blitz (one alternative cost per cast action; none in this list — its blitz creatures take the cheaper blitz). |
 | 🟡 Turf War | Riveteers Rampage (NCC) | the stolen land ("one of those lands of their choice") is the engine's pick: nonbasic first, then the highest mana value. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |

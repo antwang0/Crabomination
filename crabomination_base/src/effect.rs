@@ -606,17 +606,6 @@ pub enum Selector {
     /// printed one: Highcliff Felidar, Stitcher Geralf's exiled cards.
     TakeGreatestPower { inner: Box<Selector>, count: Box<Value> },
 
-    /// Take entities of `inner` greedily, largest `value_of_each` first,
-    /// while the running sum stays ≤ `cap`; one that would overflow is
-    /// skipped so smaller ones can still fit. "Any number of creature cards
-    /// with total power X or less" (Moorland Rescuer). The greedy walk is the
-    /// AutoDecider's deterministic pick; a UI seat gets no per-card prompt.
-    TakeWithSumCap {
-        inner: Box<Selector>,
-        cap: Box<Value>,
-        value_of_each: Box<Value>,
-    },
-
     /// All battlefield permanents (including the anchor itself) whose
     /// printed name matches the entity resolved by `inner`. Powers the
     /// printed "and each other permanent with the same name" / "all
@@ -6792,6 +6781,10 @@ pub enum Effect {
         /// "Up to N" — at most this many cards (The War in Heaven's three).
         #[serde(default)]
         max_count: Option<u32>,
+        /// The budget is total **power**, not mana value (Moorland Rescuer's
+        /// "total power X or less").
+        #[serde(default)]
+        by_power: bool,
     },
     MoveChosen {
         from: Selector,
