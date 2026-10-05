@@ -97,7 +97,10 @@ def main():
         print(f"{i:3} {name}: {len(cards)} cards, {len(flagged)} with residuals")
         if show_cards:
             for c in flagged:
-                hit = MARKERS.search(docs[c])
+                hit = MARKERS.search(docs.get(c, ""))
+                if hit is None:
+                    print(f"      {c}: (open 🟡 row in INCOMPLETE_CARDS.md)")
+                    continue
                 lo = max(0, hit.start() - 60)
                 print(f"      {c}: …{docs[c][lo:hit.end() + 100]}…")
     tail = f"{complete} / {len(decks)} pod decks carry no residual in their card docs or INCOMPLETE_CARDS"

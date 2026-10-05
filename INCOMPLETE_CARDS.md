@@ -1907,7 +1907,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 
 | Card | Deck | Gap |
 |---|---|---|
-| 🟡 Angel of Destiny | Angels (SLD) | "each player this creature attacked this turn" is the last player it attacked. |
 | 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. A player's damage counts as their largest single hit, not one source's total (double strike undercounts). |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |

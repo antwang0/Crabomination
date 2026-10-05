@@ -2172,6 +2172,9 @@ impl GameState {
             card.attacked_this_turn = true;
             card.attacked_own_turn = true;
             card.times_attacked_this_turn = card.times_attacked_this_turn.saturating_add(1);
+            if let AttackTarget::Player(d) = atk.target {
+                card.attacked_players |= 1u16.checked_shl(d as u32).unwrap_or(0);
+            }
             // Territorial Hellkite's record of whom it attacked this combat.
             if let AttackTarget::Player(d) = atk.target
                 && card.cold_any(|k| k.combat_defenders.as_ref().is_some_and(|v| !v.contains(&d)))

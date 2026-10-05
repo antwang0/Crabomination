@@ -160,6 +160,23 @@ fn angel_of_destiny_ends_the_game_for_the_player_it_attacked() {
     assert!(g.players[1].is_alive(), "the other opponent doesn't");
 }
 
+/// "Each player this creature attacked this turn": a second combat at
+/// another player puts both on the hook, together (CR 104.3a); a seat it
+/// never attacked keeps playing.
+#[test]
+fn angel_of_destiny_ends_the_game_for_every_player_it_attacked() {
+    let mut g = main_phase(4);
+    let angel = g.add_card_to_battlefield(0, catalog::angel_of_destiny());
+    g.players[0].life = g.players[0].starting_life + 20;
+    attack_unblocked(&mut g, &[angel], 2);
+    g.battlefield_find_mut(angel).unwrap().tapped = false;
+    attack_unblocked(&mut g, &[angel], 3);
+    to_end_step(&mut g);
+    assert!(!g.players[2].is_alive() && !g.players[3].is_alive(), "both attacked players lose");
+    assert!(g.players[1].is_alive(), "the unattacked opponent doesn't");
+    assert!(g.players[0].is_alive());
+}
+
 #[test]
 fn arch_of_orazca_draws_with_the_citys_blessing() {
     let mut g = main_phase(2);

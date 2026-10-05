@@ -135,6 +135,10 @@ pub enum PlayerRef {
     /// by [`Effect::RememberPlayerOnSource`]) — "that player" on a later
     /// trigger. Soul Scourge, Laquatus's Champion.
     ChosenPlayerOfSource,
+    /// "Each player this creature attacked this turn" (Angel of Destiny) —
+    /// the source's `attacked_players`, alive seats in APNAP order; nobody
+    /// once the source has left the battlefield.
+    EachPlayerSourceAttackedThisTurn,
     /// "Choose an opponent **at random**" (Raving Dead) — a live opponent
     /// drawn from the game's RNG. A fresh draw each time it is resolved, so
     /// it belongs in a one-shot slot such as `Effect::RememberPlayerOnSource`.
@@ -189,6 +193,7 @@ impl PlayerRef {
                 | PlayerRef::EachPlayerWithoutMaxSpeed
                 | PlayerRef::EachTeammate
                 | PlayerRef::EachPlayerExceptControllerOf(_)
+                | PlayerRef::EachPlayerSourceAttackedThisTurn
         )
     }
 }

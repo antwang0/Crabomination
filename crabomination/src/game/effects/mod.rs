@@ -41493,10 +41493,16 @@ impl GameState {
                 // CR 104.3a — eliminate the named player; the SBA loop
                 // promotes the last player standing. CR 104.3d — a "you lose
                 // the game" effect does nothing to a player who can't lose.
-                if let Some(loser) = self.resolve_player(who, ctx)
-                    && !self.player_cant_lose_game(loser)
-                {
-                    self.players[loser].eliminated = true;
+                // "Each player … loses the game" (Angel of Destiny) eliminates
+                // them together, before the sweep reads who is left.
+                let mut lost = false;
+                for loser in self.resolve_players(who, ctx) {
+                    if !self.player_cant_lose_game(loser) {
+                        self.players[loser].eliminated = true;
+                        lost = true;
+                    }
+                }
+                if lost {
                     self.settle_then_sweep_mid_resolution(events);
                 }
                 Ok(())
@@ -43044,6 +43050,14 @@ impl GameState {
                     .filter(|i| self.players[*i].is_alive())
                     .collect(),
             ),
+            PlayerRef::EachPlayerSourceAttackedThisTurn => {
+                let mask = ctx.source.and_then(|s| self.battlefield_find(s)).map_or(0, |c| c.attacked_players);
+                self.apnap_sort(
+                    (0..self.players.len())
+                        .filter(|&i| i < 16 && mask & (1 << i) != 0 && self.players[i].is_alive())
+                        .collect(),
+                )
+            }
             PlayerRef::EachPlayerWithoutMaxSpeed => self.apnap_sort(
                 (0..self.players.len())
                     .filter(|i| self.players[*i].is_alive() && self.players[*i].speed < 4)
@@ -43333,7 +43347,7 @@ impl GameState {
             PlayerRef::EachTeammate => {
                 self.teammates(ctx.controller).into_iter().find(|i| self.players[*i].is_alive())
             }
-            PlayerRef::EachPlayerExceptControllerOf(_) => {
+            PlayerRef::EachPlayerExceptControllerOf(_) | PlayerRef::EachPlayerSourceAttackedThisTurn => {
                 self.resolve_players(pref, ctx).into_iter().next()
             }
             PlayerRef::EnchantedPlayer => ctx

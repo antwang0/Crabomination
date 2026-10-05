@@ -10294,6 +10294,11 @@ pub struct CardInstance {
     /// Moraug's "+1/+0 for each time it has attacked this turn"). Reset with
     /// `attacked_this_turn`.
     pub times_attacked_this_turn: u8,
+    /// The seats it attacked this turn, one bit a seat (CR 506.3c — a
+    /// planeswalker or battle attacked isn't its player). Angel of Destiny's
+    /// "each player this creature attacked this turn". Reset with
+    /// `attacked_this_turn`; rides the handle's padding.
+    pub attacked_players: u16,
     /// `attacked_own_turn` as of the previous turn (Kithkin Greatheart's
     /// "attacked during your last turn").
     pub attacked_last_turn: bool,
@@ -10343,6 +10348,7 @@ impl From<CardData> for CardInstance {
             attacked_this_turn: false,
             attacked_own_turn: false,
             times_attacked_this_turn: 0,
+            attacked_players: 0,
             attacked_last_turn: false,
             blocked_this_turn: false,
             tapped_this_turn: false,

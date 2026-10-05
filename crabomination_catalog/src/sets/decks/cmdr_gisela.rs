@@ -8,7 +8,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, SoulbondBonus, StaticAbility, StaticEffect, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, cost, generic, w};
@@ -135,14 +135,13 @@ pub fn angel_of_destiny() -> CardDefinition {
                     },
                 ]),
             },
-            on_attack(Effect::RememberPlayerOnSource { who: PlayerRef::DefendingPlayer }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
                     .with_filter(Predicate::All(vec![
                         fifteen_over_start(),
                         Predicate::EntityMatches { what: Selector::This, filter: R::AttackedThisTurn },
                     ])),
-                effect: Effect::LoseGame { who: PlayerRef::ChosenPlayerOfSource },
+                effect: Effect::LoseGame { who: PlayerRef::EachPlayerSourceAttackedThisTurn },
             },
         ],
         ..creature(

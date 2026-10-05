@@ -217,6 +217,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::MostCardsInHand
         | PlayerRef::MostCreatures
         | PlayerRef::ChosenPlayerOfSource
+        | PlayerRef::EachPlayerSourceAttackedThisTurn
         | PlayerRef::RandomOpponent
         | PlayerRef::RandomOtherOpponentThanEnchanted
         | PlayerRef::RandomPlayer
