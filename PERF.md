@@ -3134,6 +3134,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-05 (Commander session `01G3AuwS`) — guardrail; PumpPTByValue in the gather's phase two
+
+Hot-path touches: `StaticEffect::PumpPTByValue` moved into the gather's
+CR 613.8 phase two, so a gather with one on the board installs the
+`gather_partial` snapshot (one `Vec` copy of the effects built so far);
+`CardInstance` gains `attacked_players: u16` (rides the handle's padding).
+Base: `release` at `c10024736` (before the phase-two move); candidate
+`release` at `e031e6bd2`, which includes concurrent sessions' commits.
+
+```text
+--bench          decisions 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split)
+--bench --decks  cube 20.29 / 475.4, sos 19.68 / 487.3 — base and candidate
+                 identical in both
+wall (--bench)   bench_ab.py 16 pairs: paired B/A median -1.48 %, mean
+                 -1.25 %, sd 5.66 — noise
+suite            24,174 / 0 / 5 (CRAB_ANSWER_LOG=strict)
+pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
+                 6 seats (42000+, 31 x 150 = 4,650); strict debug census 4 seats
+                 (31000+, 46 x 2) and 6 seats (32000+, 31 x 3): all decided,
+                 zero panics
+```
+
 ### 2026-10-05 (Commander session `01S6ztPx`) — guardrail; layer-4 every-type, CR 608.2b card re-check
 
 Hot-path touches: the layer pass gains one `bool` and one branch taken only
