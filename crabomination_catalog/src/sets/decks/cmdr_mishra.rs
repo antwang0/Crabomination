@@ -114,7 +114,7 @@ pub fn ashnod_the_uncaring() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::AbilityActivatedWithSacrifice, EventScope::YourControl)
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Sacrifice), EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Artifact.or(R::Creature),

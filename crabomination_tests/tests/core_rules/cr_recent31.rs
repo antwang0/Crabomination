@@ -29,7 +29,7 @@ fn cr_702_108c_adapt_activation_triggers() {
     let mut g = two_player_game();
     let untapper = crabomination::card::CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::AdaptAbilityActivated, EventScope::YourControl),
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crabomination::effect::ActivationTrait::Adapt), EventScope::YourControl),
             effect: Effect::Untap { what: Selector::This, up_to: None },
         }],
         ..catalog::gyre_engineer()

@@ -196,7 +196,7 @@ pub fn rangers_refueler() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Crew(2)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::ExhaustAbilityActivated, EventScope::YourControl),
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Exhaust), EventScope::YourControl),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,

@@ -120,7 +120,7 @@ pub fn rangers_aetherhive() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Vigilance, Keyword::Crew(1)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::ExhaustAbilityActivated, EventScope::YourControl),
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Exhaust), EventScope::YourControl),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

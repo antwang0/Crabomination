@@ -1166,7 +1166,7 @@ fn cr_602_2_an_activation_knows_it_was_paid_by_sacrifice() {
         name: "Test Sacrifice Watcher",
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::AbilityActivatedWithSacrifice, EventScope::YourControl),
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crabomination::effect::ActivationTrait::Sacrifice), EventScope::YourControl),
             effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
         }],
         ..Default::default()
@@ -1358,7 +1358,7 @@ fn cr_602_2_an_activation_knows_the_life_paid_for_it() {
         name: "Test Life Watcher",
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::AbilityActivatedWithLifePaid, EventScope::YourControl),
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crabomination::effect::ActivationTrait::LifePaid), EventScope::YourControl),
             effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
         }],
         ..Default::default()

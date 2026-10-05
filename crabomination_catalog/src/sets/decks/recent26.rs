@@ -202,7 +202,7 @@ pub fn afterburner_expert() -> CardDefinition {
         // audit column, 2026-09-10); `FromYourGraveyard` is the
         // graveyard-resident trigger.
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::ExhaustAbilityActivated, EventScope::FromYourGraveyard),
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Exhaust), EventScope::FromYourGraveyard),
             effect: Effect::Move {
                 what: Selector::This,
                 to: crate::effect::ZoneDest::Battlefield {

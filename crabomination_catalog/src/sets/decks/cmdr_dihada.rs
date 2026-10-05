@@ -599,7 +599,7 @@ pub fn verrak_warped_sengir() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::AbilityActivatedWithLifePaid, EventScope::YourControl),
+            event: EventSpec::new(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::LifePaid), EventScope::YourControl),
             effect: Effect::MayPayLife {
                 description: "Pay that much life again to copy the ability?".into(),
                 amount: Value::TriggerEventAmount,

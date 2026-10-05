@@ -4396,7 +4396,7 @@ pub struct ActivatedAbility {
     pub exhaust: bool,
     /// "Activate only once." A plain once-per-game gate (Possessed Goat) that
     /// reuses `exhausted_abilities` bookkeeping like `exhaust` but is *not* the
-    /// Exhaust keyword — it fires no `ExhaustAbilityActivated` event. Defaults
+    /// Exhaust keyword — it fires no `AbilityActivatedWith(Exhaust)` event. Defaults
     /// to false.
     #[serde(default)]
     pub activate_once: bool,

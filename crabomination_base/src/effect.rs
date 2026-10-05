@@ -3520,19 +3520,10 @@ pub enum EventKind {
     AnyCounterAdded,
     /// An ability was activated.
     AbilityActivated,
-    /// An ability was activated and one or more permanents were sacrificed to
-    /// pay for it (Ashnod the Uncaring). Also an `AbilityActivated`.
-    AbilityActivatedWithSacrifice,
-    /// An ability was activated and life was paid to activate it (Verrak,
-    /// Warped Sengir); the event amount is the life paid.
-    AbilityActivatedWithLifePaid,
-    /// CR 702.177 — an exhaust ability was activated ("whenever you activate an
-    /// exhaust ability" — Adrenaline Jockey).
-    ExhaustAbilityActivated,
-    /// CR 702.108 — an adapt ability was activated ("whenever you activate an
-    /// adapt ability" — Gyre Engineer). Detected structurally from the
-    /// activated ability's counter-check effect shape (see `Effect::is_adapt`).
-    AdaptAbilityActivated,
+    /// An ability was activated, with the [`ActivationTrait`] named. Also an
+    /// `AbilityActivated`. One payload variant, so the four share a kind bit
+    /// (`EventKind` is at its 128-tag `u128` mask).
+    AbilityActivatedWith(ActivationTrait),
     /// One or more cards left a player's graveyard (returned to hand /
     /// battlefield, exiled from graveyard, etc.). Used by Strixhaven
     /// "cards leave your graveyard" payoffs (Garrison Excavator, Living
@@ -3876,6 +3867,23 @@ impl EventKind {
     pub const fn fold_bits(bits: u128) -> u64 {
         (bits as u64) | ((bits >> 64) as u64)
     }
+}
+
+/// What [`EventKind::AbilityActivatedWith`] asks of the activation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ActivationTrait {
+    /// One or more permanents were sacrificed to pay for it (Ashnod the
+    /// Uncaring).
+    Sacrifice,
+    /// Life was paid to activate it (Verrak, Warped Sengir); the event amount
+    /// is the life paid.
+    LifePaid,
+    /// CR 702.177 — an exhaust ability ("whenever you activate an exhaust
+    /// ability" — Adrenaline Jockey).
+    Exhaust,
+    /// CR 702.108 — an adapt ability (Gyre Engineer), detected structurally
+    /// from the activated ability's counter-check shape (`Effect::is_adapt`).
+    Adapt,
 }
 
 /// The zones [`EventKind::CardExiledFrom`] distinguishes (a bitmask).

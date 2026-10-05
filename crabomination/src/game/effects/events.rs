@@ -119,10 +119,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         }
         E::AbilityActivated { .. } => bits!(
             K::AbilityActivated,
-            K::AbilityActivatedWithSacrifice,
-            K::AbilityActivatedWithLifePaid,
-            K::ExhaustAbilityActivated,
-            K::AdaptAbilityActivated,
+            K::AbilityActivatedWith(crate::effect::ActivationTrait::Sacrifice),
         ),
         E::CardLeftGraveyard { .. } => bits!(K::CardLeftGraveyard),
         E::CardPutIntoGraveyard { .. } => bits!(K::LandPutIntoGraveyard, K::PutIntoGraveyard),
@@ -221,16 +218,18 @@ fn event_payload_matches(
         (EventKind::CounterRemoved(k), GameEvent::CounterRemoved { counter_type, .. }) => {
             counter_type == k
         }
-        (EventKind::ExhaustAbilityActivated, GameEvent::AbilityActivated { exhaust, .. }) => {
-            *exhaust
+        (
+            EventKind::AbilityActivatedWith(t),
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, .. },
+        ) => {
+            use crate::effect::ActivationTrait as T;
+            match t {
+                T::Sacrifice => *sacrificed,
+                T::LifePaid => *life_paid > 0,
+                T::Exhaust => *exhaust,
+                T::Adapt => *adapt,
+            }
         }
-        (EventKind::AbilityActivatedWithSacrifice, GameEvent::AbilityActivated { sacrificed, .. }) => {
-            *sacrificed
-        }
-        (EventKind::AbilityActivatedWithLifePaid, GameEvent::AbilityActivated { life_paid, .. }) => {
-            *life_paid > 0
-        }
-        (EventKind::AdaptAbilityActivated, GameEvent::AbilityActivated { adapt, .. }) => *adapt,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land, .. }) => {
             *is_land
         }
@@ -382,10 +381,18 @@ fn reference_event_kind_matches(
         (EventKind::CounterRemoved(k), GameEvent::CounterRemoved { counter_type, .. }) => counter_type == k,
         (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. } | GameEvent::KeywordCounterAdded { .. }) => true,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
-        (EventKind::AbilityActivatedWithSacrifice, GameEvent::AbilityActivated { sacrificed: true, .. }) => true,
-        (EventKind::AbilityActivatedWithLifePaid, GameEvent::AbilityActivated { life_paid, .. }) => *life_paid > 0,
-        (EventKind::ExhaustAbilityActivated, GameEvent::AbilityActivated { exhaust: true, .. }) => true,
-        (EventKind::AdaptAbilityActivated, GameEvent::AbilityActivated { adapt: true, .. }) => true,
+        (
+            EventKind::AbilityActivatedWith(t),
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, .. },
+        ) => {
+            use crate::effect::ActivationTrait as T;
+            match t {
+                T::Sacrifice => *sacrificed,
+                T::LifePaid => *life_paid > 0,
+                T::Exhaust => *exhaust,
+                T::Adapt => *adapt,
+            }
+        }
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,
         (EventKind::PutIntoGraveyard, GameEvent::CardPutIntoGraveyard { .. }) => true,
@@ -2089,8 +2096,8 @@ mod tests {
             K::CounterRemoved(CounterType::MinusOneMinusOne),
             K::AnyCounterAdded,
             K::AbilityActivated,
-            K::ExhaustAbilityActivated,
-            K::AdaptAbilityActivated,
+            K::AbilityActivatedWith(crate::effect::ActivationTrait::Exhaust),
+            K::AbilityActivatedWith(crate::effect::ActivationTrait::Adapt),
             K::CardLeftGraveyard,
             K::CardExiled,
             K::CardExiledFrom(crate::effect::exile_from::GRAVEYARD),

@@ -1,6 +1,6 @@
 //! Aetherdrift (DFT) Speed/Exhaust staples plus a few gap cards. Two new engine
 //! pieces exercised here: `Value::PlayerSpeed` (Momentum Breaker's "gain life
-//! equal to your speed") and the `EventKind::ExhaustAbilityActivated` trigger
+//! equal to your speed") and the `EventKind::AbilityActivatedWith(Exhaust)` trigger
 //! (Adrenaline Jockey). Tests in `crabomination/src/tests/recent167.rs`.
 
 use crate::card::{
@@ -296,7 +296,7 @@ pub fn adrenaline_jockey() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::ExhaustAbilityActivated, EventScope::YourControl),
+                event: EventSpec::new(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Exhaust), EventScope::YourControl),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
