@@ -1908,11 +1908,10 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | Card | Deck | Gap |
 |---|---|---|
 | 🟡 Angel of Destiny | Angels (SLD) | "each player this creature attacked this turn" is the last player it attacked. |
-| 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. |
-| 🟡 Volcanic Offering | Built From Scratch (C14) | the choosing opponent is the caster's most hostile one, for both halves. |
+| 🟡 Impact Resonance | Built From Scratch (C14) | X is read as the spell resolves, from per-source tallies and each player's largest single hit. A player's damage counts as their largest single hit, not one source's total (double strike undercounts). |
 | 🟡 Jinnie Fay, Jetmir's Second | Raining Cats and Dogs (SLD) | not optional: a creature token is replaced by the bigger Cat or Dog whenever one beats its printed body, and a noncreature token never is. |
 | 🟡 Sword of the Squeak | Squirreled Away (BLC) | "base power or toughness 1" reads printed power and toughness. |
-| 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | the granted offspring copy is Zinnia's own trigger (lost if Zinnia leaves first); a creature with its own kicker or offspring gets no second one. |
+| 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | a creature with its own kicker or offspring gets no second, granted offspring (one optional cost per cast action). |
 
 ### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
 
@@ -1930,11 +1929,12 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | the "reveal" is automatic whenever an Elemental card is in hand. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
-| 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | copying a spell doesn't offer an opponent a copy. |
-| 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the X ability's card is the engine's pick, not a target; the cost's exiled card is the least valuable one, not the player's pick. |
+| 🟡 City of Brass | Turtle Power! (TMC) | "whenever this becomes tapped" is folded into its mana ability: tapped any other way it deals no damage, and the damage is no trigger. |
+| 🟡 Parnesse, the Subtle Brush | Maestros Massacre (NCC) | "whenever you copy a spell, up to one target opponent may also copy that spell" is not implemented (only the targeted-counter half is). |
+| 🟡 Shelob, Dread Weaver | The Hosts of Mordor (LTC) | the cost's exiled card is the least valuable one, not the player's pick (the X ability's card is a real target). |
 | 🟡 Moorland Rescuer | Coven Counters (MIC) | the returned set is a greedy largest-power-first pick under the cap, not a prompt. |
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with another printed alternative cost (evoke, dash, …) is offered that one, not Henzie's blitz (one alternative cost per cast action; none in this list — its blitz creatures take the cheaper blitz). |
-| 🟡 Turf War | Riveteers Rampage (NCC) | the contested lands are chosen, not targeted; the stolen land is the engine's pick. |
+| 🟡 Turf War | Riveteers Rampage (NCC) | the stolen land ("one of those lands of their choice") is the engine's pick: nonbasic first, then the highest mana value. |
 | 🟡 Capricious Efreet | Power Hungry (C13) | the up-to-two opposing targets are the auto-picker's; no UI prompt for the optional slots. |
 | 🟡 Espers to Magicite | Revival Trance (FIC) | the card is chosen as it resolves, not targeted by a reflexive trigger; its artifact-only type is a layer-4 set, not a copiable value. |
 | 🟡 The Warring Triad | Revival Trance (FIC) | the mill is part of the effect, not a cost, and the mana always goes to you. |
@@ -1945,7 +1945,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
-| 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II's name "Fenric" is a copiable value, so a copy of Fenric is named Fenric too (CR 707.2); no non-copy name effect. |
 

@@ -144,7 +144,8 @@ pub fn impact_resonance() -> CardDefinition {
         effect: Effect::DealDamageDivided {
             total: Value::GreatestDamageFromOneSourceThisTurn,
             filter: R::Creature,
-            max_targets: 4,
+            // "Any number of target creatures" (one damage each at most X).
+            max_targets: 20,
             retaliate_to_source: false,
         },
         ..Default::default()

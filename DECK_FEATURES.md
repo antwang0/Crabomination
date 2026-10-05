@@ -31,13 +31,13 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-05 (`01S6ztPx`, 157/183 — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
+Snapshot 2026-10-05 (`01S6ztPx`, 158/183 — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 33 | Gisela, the Broken Blade (W) | 1: angel_of_destiny |
-| 34 | Daretti, Scrap Savant (R) | 2: impact_resonance, volcanic_offering |
+| 34 | Daretti, Scrap Savant (R) | 1: impact_resonance |
 | 41 | Neyali, Suns' Vanguard (RW) | 1: goldwardens_gambit |
 | 42 | Teferi, Temporal Archmage (U) | 1: shaper_parasite |
 | 55 | Zedruu the Greathearted (URW) | 1: ruhan_of_the_fomori |
@@ -58,12 +58,11 @@ they call a deck 🟡, the table wins.
 | 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
 | 154 | Sauron, Lord of the Rings (UBR) | 1: shelob_dread_weaver |
 | 160 | Terra, Herald of Hope (RWB) | 2: espers_to_magicite, the_warring_triad |
-| 169 | Dr. Madison Li (URW) | 1: expert_level_safe |
 | 175 | The Swarmlord (GUR) | 1: hierophant_bio_titan |
 | 180 | Heroes in a Half Shell (WUBRG) | 1: city_of_brass |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
 
-157 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+158 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
