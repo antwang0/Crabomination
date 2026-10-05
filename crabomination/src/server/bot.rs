@@ -3750,8 +3750,14 @@ fn decide_pending_policy_inner(
                     // out for an X the body may not even use (Tester of the
                     // Tangential moves at most the counters it has). Spend what
                     // floats; a sized answer is a strength round with a gate,
-                    // not a default.
-                    (*max).min(state.players[seat].mana_pool.total())
+                    // not a default. A Commander seat floats nothing, so that
+                    // left every "you may pay {X}" upside dead (Flameblast
+                    // Dragon, Decree of Justice): it pays what it can.
+                    if state.players[seat].commanders.is_empty() {
+                        (*max).min(state.players[seat].mana_pool.total())
+                    } else {
+                        *max
+                    }
                 }
                 // Devour and God-Eternal Bontu: `max` is every permanent we
                 // control and the payoff is linear in what we give up, so the
@@ -3853,6 +3859,10 @@ fn decide_pending_policy_inner(
             crate::decision::DecisionAnswer::DamageDivision(
                 mine.iter().map(|m| if *m { split.next().unwrap_or(0) } else { 0 }).collect(),
             )
+        }
+        crate::decision::Decision::DivideDamage { total, targets, noun, .. } if !noun.starts_with("+1/+1") => {
+            super::divide_damage::divide_damage(state, seat, w, *total, targets)
+                .unwrap_or_else(|| AutoDecider.decide(decision))
         }
         // CR 704.5j — keep the copy with the most board state, the same pick
         // the sweep makes for a headless seat (`legend_keep_default`).
@@ -6361,6 +6371,10 @@ fn decide_choose_cards(
         ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
         return fill_to_min(chosen);
+    }
+    // Exile / command-zone pick (Jeleva's free cast, Next of Kin): ours to gain.
+    if gain && let Some(answer) = super::zone_picks::pick_from_exile_or_command(state, candidates, max) {
+        return answer;
     }
     // Library-source pick ("you may put a creature card from among them onto
     // the battlefield" — Summoning Trap, Elvish Rejuvenator): a `Gain` pick
@@ -27166,6 +27180,11 @@ mod tests {
         assert_eq!(amount(ask(AmountKind::Life, 9)), 3, "life payments keep a buffer");
         // Empty pool, so a MayPayX spends nothing rather than tapping out.
         assert_eq!(amount(ask(AmountKind::Mana, 5)), 0, "MayPayX spends what floats");
+        // A Commander seat floats nothing, so it pays what its sources reach.
+        let mut pod = two_player_game();
+        pod.seat_commanders(0, vec![catalog::grizzly_bears()]);
+        let d = ask(AmountKind::Mana, 5);
+        assert_eq!(decide_pending_policy(&pod, 0, &w, &d, false), DecisionAnswer::Amount(5));
     }
 
     /// Territorial Aetherkite's "pay any amount of {E}: that much damage to

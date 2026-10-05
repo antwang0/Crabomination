@@ -133,6 +133,8 @@ mod put_from_hand;
 mod land_ramp;
 mod renewal_guard;
 mod copy_pick;
+mod zone_picks;
+mod divide_damage;
 pub mod encode;
 pub mod encode_table;
 pub mod card_tokens;
