@@ -7,6 +7,7 @@
 //! [`GameEvent`]s.
 
 // Values over a selector's cards (Occult Epiphany, Sudden Salvation).
+mod energy_sweep;
 mod among;
 mod may_cost;
 mod sacrifice_record;
@@ -9689,7 +9690,7 @@ impl GameState {
                             )));
                             return Ok(());
                         }
-                        None => avail,
+                        None => self.headless_energy_sweep(then, avail, ctx).unwrap_or(avail),
                     }
                 };
                 self.spend_energy(p, pay);

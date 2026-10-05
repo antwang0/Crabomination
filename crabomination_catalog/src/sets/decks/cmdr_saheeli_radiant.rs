@@ -557,7 +557,8 @@ pub fn stridehangar_automaton() -> CardDefinition {
 }
 
 /// Territorial Aetherkite — flying, haste; enters: {E}{E}, then pay any
-/// amount of {E} to deal that much damage to each other creature.
+/// amount of {E} to deal that much damage to each other creature (a prompting
+/// seat names it; a headless one pays what nets the most, `energy_sweep.rs`).
 pub fn territorial_aetherkite() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],

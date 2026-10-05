@@ -159,9 +159,25 @@ fn territorial_aetherkite_spends_energy_as_damage() {
     let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
     let kite = g.add_card_to_hand(0, catalog::territorial_aetherkite());
     cast_at(&mut g, kite, &[]).expect("cast");
-    assert!(g.battlefield_find(bear).is_none(), "three damage (1 + 2 energy)");
+    assert!(g.battlefield_find(bear).is_none(), "enough of the 1 + 2 energy for the Bears");
     assert!(g.battlefield_find(wurm).is_some());
     assert!(g.battlefield_find(kite).is_some(), "not itself");
+}
+
+/// "Pay one or more {E}" is an amount, not everything: a headless seat pays
+/// the 2 that kills both opposing Bears, not the 5 that would also kill its
+/// own Hill Giant, and keeps the rest of the energy.
+#[test]
+fn territorial_aetherkite_pays_only_what_the_sweep_needs() {
+    let mut g = main_phase(2);
+    g.players[0].energy = 3;
+    let bears = [g.add_card_to_battlefield(1, catalog::grizzly_bears()), g.add_card_to_battlefield(1, catalog::grizzly_bears())];
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let kite = g.add_card_to_hand(0, catalog::territorial_aetherkite());
+    cast_at(&mut g, kite, &[]).expect("cast");
+    assert!(bears.iter().all(|&b| g.battlefield_find(b).is_none()));
+    assert!(g.battlefield_find(giant).is_some(), "your own 3/3 survives");
+    assert_eq!(g.players[0].energy, 3, "paid 2 of 5");
 }
 
 /// Pia Nalaar: the end-step energy becomes an X/X flying Vehicle.
