@@ -22912,15 +22912,41 @@ impl GameState {
             Effect::Populate { who } => {
                 // CR 701.32 — copy one creature token the player controls.
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                // Pick the controller's highest-power creature token (AutoDecider
-                // heuristic; deterministic for tests).
-                let pick = self
+                // "Choose a creature token you control" — the populating
+                // player picks. The default, and a headless seat's pick, is
+                // the highest-power token. Interchangeable tokens (one name)
+                // ask nothing.
+                let tokens: Vec<(CardId, String, i32)> = self
                     .battlefield
                     .iter()
                     .filter(|c| c.is_token && c.controller == p && self.computed_is_creature(c))
-                    .max_by_key(|c| c.power())
-                    .map(|c| c.id);
-                let Some(src_id) = pick else { return Ok(()); };
+                    .map(|c| (c.id, c.definition.name.to_string(), c.power()))
+                    .collect();
+                let Some(best) = tokens.iter().max_by_key(|t| t.2).map(|t| t.0) else {
+                    self.clear_answer_log();
+                    return Ok(());
+                };
+                let src_id = if tokens.iter().all(|t| t.1 == tokens[0].1) {
+                    best
+                } else {
+                    let mut cursor = 0;
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Populate: choose a creature token to copy".into(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        tokens.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                        1,
+                        1,
+                        PickValue::Gain,
+                        effect,
+                        vec![best],
+                    ) else {
+                        return Ok(());
+                    };
+                    picked.first().copied().unwrap_or(best)
+                };
+                self.clear_answer_log();
                 let Some(def) = self
                     .battlefield
                     .find_by_id(src_id)

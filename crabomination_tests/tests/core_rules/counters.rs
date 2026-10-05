@@ -701,6 +701,44 @@ fn populate_copies_a_creature_token_you_control() {
     assert_eq!(beasts, 2, "populate minted a second copy of the Beast token");
 }
 
+/// CR 701.36a — "choose a creature token you control": the populating
+/// player picks. With a 3/3 Beast and a 1/1 Soldier the engine always copied
+/// the Beast; asked, the player can copy the Soldier.
+#[test]
+fn populate_copies_the_token_its_player_chooses() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    let token = |name: &'static str, pt: i32| CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        power: pt,
+        toughness: pt,
+        ..Default::default()
+    };
+    let beast = g.add_card_to_battlefield(0, token("Beast", 3));
+    let soldier = g.add_card_to_battlefield(0, token("Soldier", 1));
+    for t in [beast, soldier] {
+        g.battlefield_find_mut(t).unwrap().is_token = true;
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![soldier])]));
+    let spell = CardDefinition {
+        name: "Populator",
+        cost: crabomination::mana::cost(&[crabomination::mana::generic(1)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Populate { who: PlayerRef::You },
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, spell);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let count = |name: &str| g.battlefield.iter().filter(|c| c.definition.name == name).count();
+    assert_eq!((count("Soldier"), count("Beast")), (2, 1), "the chosen token was copied");
+}
+
 #[test]
 fn populate_is_noop_without_a_creature_token() {
     use crabomination::card::{CardDefinition, CardType};
