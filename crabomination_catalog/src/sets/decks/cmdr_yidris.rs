@@ -406,7 +406,7 @@ pub fn treacherous_terrain() -> CardDefinition {
 }
 
 /// Vial Smasher the Fierce — partner; your first spell each turn deals its
-/// mana value to a random opponent (never their planeswalker).
+/// mana value to a random opponent or a planeswalker they control (your pick).
 pub fn vial_smasher_the_fierce() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -414,9 +414,11 @@ pub fn vial_smasher_the_fierce() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::ONE }),
-            effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::RandomOpponent),
-                amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            effect: Effect::WithRandomOpponent {
+                body: Box::new(Effect::DealDamageToPlayerOrPlaneswalker {
+                    who: PlayerRef::ChosenPlayerOfSource,
+                    amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                }),
             },
         }],
         ..creature(

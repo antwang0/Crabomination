@@ -32673,6 +32673,10 @@ impl GameState {
                 self.choose_opponent_then(then, Some(lead), effect, ctx, events)
             }
 
+            Effect::DealDamageToPlayerOrPlaneswalker { who, amount } => {
+                self.deal_damage_to_player_or_planeswalker(who, amount, effect, ctx, events)
+            }
+
             Effect::WithRandomPlayer { body } => {
                 let Some(p) = self.resolve_player(&PlayerRef::RandomPlayer, ctx) else { return Ok(()) };
                 let bound = Effect::BindScratch {

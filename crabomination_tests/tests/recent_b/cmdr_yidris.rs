@@ -431,6 +431,25 @@ fn vial_smasher_throws_the_first_spell() {
     assert_eq!(g.players[1].life, life - 5, "the second spell doesn't");
 }
 
+/// "To that player or a planeswalker that player controls" is the
+/// controller's pick, not a target: a planeswalker the damage kills takes it
+/// (Serra Angel's 5 into Jace Beleren's 3 loyalty); one it can't kill
+/// (Grizzly Bears' 2) doesn't, and the player is hit instead.
+#[test]
+fn vial_smasher_may_hit_a_planeswalker() {
+    let run = |spell: fn() -> crabomination::card::CardDefinition| {
+        let mut g = pod(2);
+        g.add_card_to_battlefield(0, catalog::vial_smasher_the_fierce());
+        let pw = g.add_card_to_battlefield(1, catalog::jace_beleren());
+        let life = g.players[1].life;
+        let s = g.add_card_to_hand(0, spell());
+        cast(&mut g, 0, s, None).expect("cast");
+        (g.battlefield_find(pw).is_some(), life - g.players[1].life)
+    };
+    assert_eq!(run(catalog::serra_angel), (false, 0), "the walker it kills");
+    assert_eq!(run(catalog::grizzly_bears), (true, 2), "the player, past a walker it can't kill");
+}
+
 /// Returns an instant, burns opposing creatures for its mana value.
 #[test]
 fn volcanic_vision_returns_and_burns() {

@@ -185,6 +185,72 @@ impl GameState {
     }
 }
 
+impl GameState {
+    /// `Effect::DealDamageToPlayerOrPlaneswalker`: the controller's ballot of
+    /// that player and each planeswalker they control, headless answer first
+    /// (the highest-loyalty planeswalker the damage kills, else the player).
+    pub(super) fn deal_damage_to_player_or_planeswalker(
+        &mut self,
+        who: &crate::effect::PlayerRef,
+        amount: &crate::effect::Value,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use crate::card::{CardType, CounterType};
+        use crate::effect::{PlayerRef, Selector, Value};
+        let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+        let n = self.evaluate_value(amount, ctx).max(0);
+        let walkers: Vec<(CardId, u32, String)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && self.computed_has_card_type(c, CardType::Planeswalker))
+            .map(|c| (c.id, c.counter_count(CounterType::Loyalty), c.definition.name.to_string()))
+            .collect();
+        let mut options: Vec<Option<CardId>> = vec![None];
+        let mut labels = vec![format!("Player {}", p + 1)];
+        if let Some(kill) = walkers.iter().filter(|w| w.1 as i32 <= n).max_by_key(|w| w.1) {
+            options.insert(0, Some(kill.0));
+            labels.insert(0, kill.2.clone());
+        }
+        for (id, _, name) in &walkers {
+            if !options.contains(&Some(*id)) {
+                options.push(Some(*id));
+                labels.push(name.clone());
+            }
+        }
+        let i = match take_opt_scratch!(self.stashed_resolution_answer) {
+            Some(DecisionAnswer::Amount(k)) => k as usize,
+            _ if options.len() <= 1 => 0,
+            _ => {
+                let decision = Decision::ChooseOption {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Deal the damage to".to_string(),
+                    options: labels,
+                };
+                if self.seat_suspends(ctx.controller) {
+                    let max = options.len() as u32 - 1;
+                    self.suspend_signal =
+                        Some(Box::new((decision, PendingEffectState::AmountAnswerPending { max }, effect.clone())));
+                    return Ok(());
+                }
+                match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => 0,
+                    _ => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(k) => k as usize,
+                        _ => 0,
+                    },
+                }
+            }
+        };
+        let to = match options.get(i).copied().flatten() {
+            Some(w) => Selector::ExactObjects(vec![w]),
+            None => Selector::Player(PlayerRef::Seat(p)),
+        };
+        self.run_effect(&Effect::DealDamage { to, amount: Value::Const(n) }, ctx, events)
+    }
+}
+
 fn ballot_decision(source: CardId, seats: &[usize], prompt: &str) -> Decision {
     Decision::ChooseOption {
         source,

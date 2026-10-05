@@ -862,6 +862,7 @@ impl Effect {
             | Effect::ChooseOpponentThen { then }
             | Effect::ChooseOpponentLedBy { then, .. } => then.requires_target(),
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
+            Effect::DealDamageToPlayerOrPlaneswalker { who, .. } => player_has_target(who),
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::ClearLastMoved

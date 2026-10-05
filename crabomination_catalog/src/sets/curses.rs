@@ -83,16 +83,16 @@ pub fn psychic_possession() -> CardDefinition {
     def
 }
 
-/// Curse of the Pierced Heart — {R}. 1 damage to the enchanted player each of
-/// their upkeeps.
+/// Curse of the Pierced Heart — {1}{R}. Each of the enchanted player's
+/// upkeeps, 1 damage to them or a planeswalker they control (your pick).
 pub fn curse_of_the_pierced_heart() -> CardDefinition {
     player_aura(
         "Curse of the Pierced Heart",
         cost(&[generic(1), r()]),
         true,
         vec![],
-        vec![enchanted_player_upkeep(Effect::DealDamage {
-            to: Selector::Player(PlayerRef::EnchantedPlayer),
+        vec![enchanted_player_upkeep(Effect::DealDamageToPlayerOrPlaneswalker {
+            who: PlayerRef::EnchantedPlayer,
             amount: Value::ONE,
         })],
     )

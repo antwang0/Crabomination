@@ -10252,6 +10252,11 @@ pub enum Effect {
     /// body (Truth or Consequences: one opponent takes every consequences
     /// vote's damage), read back by `PlayerRef::ChosenPlayerOfSource`.
     WithRandomOpponent { body: Box<Effect> },
+    /// "Deals `amount` damage to [that player] or a planeswalker that player
+    /// controls" — not a target: the controller picks on resolution, from a
+    /// ballot whose headless answer is a planeswalker the damage would kill,
+    /// else the player (Vial Smasher, Curse of the Pierced Heart).
+    DealDamageToPlayerOrPlaneswalker { who: PlayerRef, amount: Value },
     /// [`Effect::WithRandomOpponent`] over every living player, you included
     /// ("choose a player at random" — Wildfire Devils).
     WithRandomPlayer { body: Box<Effect> },
