@@ -1862,6 +1862,7 @@ impl GameState {
                     }
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
                         .find_card_anywhere(cid)
+                        .or_else(|| self.scratch.sacrificed_token_lki.as_deref().filter(|c| c.id == cid))
                         .map(|c| c.definition.printed_colors().len() as i32),
                     EntityRef::Player(_) => None,
                 })
@@ -4855,7 +4856,12 @@ impl GameState {
         if let Some(c) = self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == cid)) {
             return Some(c);
         }
-        self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == cid))
+        if let Some(c) = self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == cid)) {
+            return Some(c);
+        }
+        // CR 608.2h — a token sacrificed as a cost has ceased to exist by the
+        // time the ability resolves (Falkenrath Aristocrat's "if it was a Human").
+        self.scratch.sacrificed_token_lki.as_deref().filter(|c| c.id == cid)
     }
 
     /// The controller the controller leaves (`ControlledByYou` / `…Opponent` /

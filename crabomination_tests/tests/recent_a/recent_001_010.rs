@@ -10458,6 +10458,47 @@ mod recent6 {
         );
     }
 
+    /// CR 608.2h — a TOKEN sacrificed as a cost has ceased to exist by the
+    /// time the ability resolves, so its last-known characteristics answer:
+    /// Falkenrath Aristocrat's "if it was a Human" and Lyzolda's "if it was
+    /// red" (a token's colour is its colour indicator, not a mana cost).
+    #[test]
+    fn a_sacrificed_token_answers_cost_riders_with_its_last_known_object() {
+        use crabomination::card::TokenDefinition;
+        let red_human = || TokenDefinition {
+            name: "Human Rogue".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![crabomination::card::CardType::Creature],
+            colors: vec![crabomination::mana::Color::Red],
+            subtypes: crabomination::card::Subtypes {
+                creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let activate = |g: &mut GameState, card_id, target| {
+            g.players[0].mana_pool.add_colorless(5);
+            g.perform_action(GameAction::ActivateAbility {
+                card_id, ability_index: 0, target, additional_targets: vec![], x_value: None, mode: None,
+            })
+            .expect("sacrifice the token");
+            drain_stack(g);
+        };
+        let mut g = two_player_game();
+        let aristocrat = g.add_card_to_battlefield(0, catalog::falkenrath_aristocrat());
+        g.add_token_to_battlefield(0, &red_human());
+        activate(&mut g, aristocrat, None);
+        assert_eq!(g.battlefield_find(aristocrat).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+        let mut g = two_player_game();
+        let lyzolda = g.add_card_to_battlefield(0, catalog::lyzolda_the_blood_witch());
+        g.add_token_to_battlefield(0, &red_human());
+        let life = g.players[1].life;
+        activate(&mut g, lyzolda, Some(crabomination::game::types::Target::Player(1)));
+        assert_eq!(g.players[1].life, life - 2, "the red token's sacrifice deals 2");
+    }
+
     /// Falkenrath Aristocrat grows only when the sacrifice was a Human.
     #[test]
     fn falkenrath_aristocrat_grows_off_a_human_sacrifice() {
