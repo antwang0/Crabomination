@@ -8271,3 +8271,46 @@ fn cr_608_2h_path_to_exile_on_a_stolen_creature_pays_its_controller() {
     assert_eq!((plains(1), plains(2)), (0, 1), "the thief, not the owner, fetched a basic (prompting {prompting})");
     }
 }
+
+/// CR 701.19 — one search is one "searched their library" event, even for a
+/// prompting seat whose pick suspends the resolution: the event was pushed
+/// before the ask, and the re-run pushed it again (River Song's Spoilers
+/// fired twice off The World Tree).
+#[test]
+fn cr_701_19_a_prompting_seats_search_any_number_is_one_search() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = multi_player_game(2);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].wants_ui = true;
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut def = catalog::lightning_bolt();
+    def.name = "Search Test";
+    def.cost = crabomination::mana::ManaCost::default();
+    def.effect = crabomination::effect::Effect::SearchAnyNumber {
+        who: crabomination::effect::PlayerRef::You,
+        filter: SelectionRequirement::Creature,
+        to: crabomination::effect::ZoneDest::Hand(crabomination::effect::PlayerRef::You),
+    };
+    let spell = g.add_card_to_hand(0, def);
+    let mut events = g
+        .perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    for _ in 0..20 {
+        if let Some(pd) = &g.pending_decision {
+            let answer = match &pd.decision {
+                Decision::ChooseCards { candidates, .. } => DecisionAnswer::Cards(candidates.iter().map(|c| c.0).collect()),
+                _ => DecisionAnswer::Bool(true),
+            };
+            events.extend(g.perform_action(GameAction::SubmitDecision(answer)).expect("answer"));
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            events.extend(g.perform_action(GameAction::PassPriority).expect("pass"));
+        }
+    }
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "found the Bears");
+    let searches = events.iter().filter(|e| matches!(e, crabomination::game::types::GameEvent::PlayerSearchedLibrary { .. })).count();
+    assert_eq!(searches, 1);
+}

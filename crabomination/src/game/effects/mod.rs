@@ -15251,13 +15251,12 @@ impl GameState {
                         };
                         votes[pick] += 1;
                         cast.push((seat, pick));
-                        events.push(GameEvent::Voted {
-                            player: seat,
-                            choice: ballot[pick].clone(),
-                        });
                     }
                 }
                 self.clear_answer_log();
+                // After every ask: a prompting voter's re-run would log the
+                // earlier ballots again.
+                events.extend(cast.iter().map(|&(seat, pick)| GameEvent::Voted { player: seat, choice: ballot[pick].clone() }));
                 self.last_vote = cast;
                 events.push(GameEvent::VotingFinished);
                 match tally {
@@ -25716,7 +25715,6 @@ impl GameState {
                     return Ok(());
                 }
                 self.players[p].searched_library_this_turn = true;
-                events.push(GameEvent::PlayerSearchedLibrary { player: p });
                 let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
                 let filter = filter.resolve_x(ctx.x_value);
                 let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
@@ -25743,6 +25741,9 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
+                // After the ask: a prompting seat's re-run would announce the
+                // search twice (River Song's Spoilers fired twice).
+                events.push(GameEvent::PlayerSearchedLibrary { player: p });
                 for id in picked {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         if let Some(h) = hijacked_by {
