@@ -67,7 +67,8 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CardDrawn { .. } => bits!(K::CardDrawn),
         E::FirstCardDrawnThisTurn { .. } => bits!(K::FirstCardDrawnThisTurn),
         E::NthCardDrawnThisTurn { .. } => bits!(K::NthCardDrawnThisTurn(2)),
-        E::CardDiscarded { .. } => bits!(K::CardDiscarded),
+        E::CardDiscarded { .. } => bits!(K::CardDiscarded, K::PutIntoGraveyardFromHand),
+        E::CardPutIntoGraveyardFromHand { .. } => bits!(K::PutIntoGraveyardFromHand),
         E::LandPlayed { .. } => bits!(K::LandPlayed),
         E::SpellCast { .. } => bits!(K::SpellCast),
         E::SpellsCopied { .. } => bits!(K::SpellCopied),
@@ -310,6 +311,8 @@ fn reference_event_kind_matches(
         (EventKind::FirstCardDrawnThisTurn, GameEvent::FirstCardDrawnThisTurn { .. }) => true,
         (EventKind::NthCardDrawnThisTurn(k), GameEvent::NthCardDrawnThisTurn { n, .. }) => u32::from(*k) == *n,
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
+        (EventKind::PutIntoGraveyardFromHand, GameEvent::CardDiscarded { .. })
+        | (EventKind::PutIntoGraveyardFromHand, GameEvent::CardPutIntoGraveyardFromHand { .. }) => true,
         (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
         (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
         (EventKind::SpellCopied, GameEvent::SpellsCopied { .. }) => true,
@@ -561,6 +564,7 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             | EventKind::Tapped
             | EventKind::CardDrawn
             | EventKind::CardDiscarded
+            | EventKind::PutIntoGraveyardFromHand
             // Its twin: Spiritual Focus pays per card an opponent's spell
             // takes, and Mind Rot takes two.
             | EventKind::OpponentCausedYouToDiscard
@@ -1384,6 +1388,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::FirstCardDrawnThisTurn { player, .. }
         | GameEvent::NthCardDrawnThisTurn { player, .. }
         | GameEvent::CardDiscarded { player, .. }
+        | GameEvent::CardPutIntoGraveyardFromHand { player, .. }
         | GameEvent::DiscardedBatch { player, .. }
         | GameEvent::LandPlayed { player, .. }
         | GameEvent::SpellCast { player, .. }
@@ -1565,7 +1570,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::CardDrawn { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::FirstCardDrawnThisTurn { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::NthCardDrawnThisTurn { card_id, .. } => Some(EntityRef::Card(*card_id)),
-        GameEvent::CardDiscarded { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CardDiscarded { card_id, .. } | GameEvent::CardPutIntoGraveyardFromHand { card_id, .. } => {
+            Some(EntityRef::Card(*card_id))
+        }
         // Bind TriggerSource to the milled card (now in a graveyard) so filter
         // predicates can introspect it ("a creature card put into a graveyard
         // from a library" — Dreadhound). SelfSource milled triggers match by
@@ -1840,6 +1847,7 @@ mod tests {
             E::NthCardDrawnThisTurn { player: 0, card_id: c, n: 2 },
             E::NthCardDrawnThisTurn { player: 0, card_id: c, n: 3 },
             E::CardDiscarded { player: 0, card_id: c },
+            E::CardPutIntoGraveyardFromHand { player: 0, card_id: c },
             E::OpponentCausedYouToDiscard { player: 0, card_id: c },
             E::DiscardedBatch { player: 0, count: 2 },
             E::LandPlayed { player: 0, card_id: c, played: true, from_hand: true },
@@ -2034,6 +2042,7 @@ mod tests {
             K::FirstCardDrawnThisTurn,
             K::NthCardDrawnThisTurn(2),
             K::CardDiscarded,
+            K::PutIntoGraveyardFromHand,
             K::OpponentCausedYouToDiscard,
             K::LandPlayed,
             K::SpellCast,

@@ -2485,6 +2485,13 @@ impl GameState {
                     self.entered_from_hand_this_turn.insert(cid);
                 }
                 self.place_card_in_dest(card, p, &resolved_dest, events);
+                // Moved, not discarded — the "from your hand" family still
+                // sees it if it landed (a CR 614.6 redirect means it didn't).
+                if matches!(resolved_dest, ZoneDest::Graveyard)
+                    && self.players[p].graveyard.iter().any(|c| c.id == cid)
+                {
+                    events.push(GameEvent::CardPutIntoGraveyardFromHand { player: p, card_id: cid });
+                }
                 return;
             }
         }

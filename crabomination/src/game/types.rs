@@ -2985,6 +2985,11 @@ pub enum GameEvent {
     /// what `EventScope::YourControl`/`OpponentControl` reads.
     SpellCountered { card_id: CardId, player: usize },
     CardMilled { player: usize, card_id: CardId },
+    /// A card went from `player`'s hand to their graveyard WITHOUT being
+    /// discarded (an effect moved it there). With `CardDiscarded`, the
+    /// "put into your graveyard from your hand" family
+    /// (`EventKind::PutIntoGraveyardFromHand`: Desert Warfare).
+    CardPutIntoGraveyardFromHand { player: usize, card_id: CardId },
     /// CR 701.42a — a surveiled card was put into `player`'s graveyard from
     /// their library. Not a mill (CR 701.13): it matches the "put into your
     /// graveyard from your library" family (`EventKind::CardMilled`) but not

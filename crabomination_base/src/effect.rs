@@ -3297,6 +3297,10 @@ pub enum EventKind {
     FirstCardDrawnThisTurn,
     /// A card was discarded.
     CardDiscarded,
+    /// A card was put into a graveyard from a hand — discarded, or moved
+    /// there by an effect (`GameEvent::CardPutIntoGraveyardFromHand`). Desert
+    /// Warfare's "a Desert card is put into your graveyard from your hand".
+    PutIntoGraveyardFromHand,
     /// A spell or ability an opponent controls caused a player to discard a
     /// card (CR 701.9 + `GameState.resolution_causer`). Keyed on the *discarding*
     /// player, so `EventScope::YourControl` reads "causes you to discard"
