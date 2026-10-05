@@ -13017,7 +13017,7 @@ impl GameState {
                 self.exile_type_spread_return_permanent(*min_types, ctx, events, effect)
             }
             Effect::ChooseGraveyardCreaturesEachMayReturn => {
-                self.choose_graveyard_creatures_each_may_return(ctx, events)
+                self.choose_graveyard_creatures_each_may_return(ctx, events, effect)
             }
 
             Effect::CreateTokenBlocking { definition, .. } => {

@@ -288,6 +288,28 @@ fn dawnbreak_reclaimer_swaps_graveyard_creatures() {
     assert!(g.battlefield_find(bigger).is_none());
 }
 
+/// "Choose a creature card in an opponent's graveyard, then **that player**
+/// chooses a creature card in your graveyard": both picks are asked. Seat 0
+/// names seat 1's Hill Giant (not the cheapest card), so seat 1 — not seat
+/// 2 — picks from seat 0's graveyard, and takes the Angel over the Bears.
+#[test]
+fn dawnbreak_reclaimer_each_side_picks() {
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::dawnbreak_reclaimer());
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let my_bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    let giant = g.add_card_to_graveyard(1, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![giant]),
+        DecisionAnswer::Cards(vec![angel]),
+    ]));
+    to_end_step(&mut g);
+    assert_eq!(g.battlefield_find(giant).map(|c| c.controller), Some(1), "the card seat 0 named");
+    assert_eq!(g.battlefield_find(angel).map(|c| c.controller), Some(0), "the card seat 1 named");
+    assert!(g.battlefield_find(theirs).is_none() && g.battlefield_find(my_bears).is_none());
+}
+
 #[test]
 fn keeper_of_the_accord_catches_up_on_an_opponents_end_step() {
     let mut g = main_phase(2);

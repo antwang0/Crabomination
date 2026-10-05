@@ -3,49 +3,106 @@
 
 use super::EffectContext;
 use crate::card::CardId;
+use crate::decision::PickValue;
 use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
 use crate::game::GameState;
 use crate::game::types::{GameError, GameEvent};
 
 impl GameState {
-    /// The cheapest creature card (by mana value, then id) in `seat`'s
-    /// graveyard — the least a picker hands the other side.
-    fn cheapest_graveyard_creature(&self, seat: usize) -> Option<(CardId, u32)> {
-        self.players[seat]
-            .graveyard
-            .iter()
-            .filter(|c| self.computed_is_creature(c))
-            .map(|c| (c.id, c.definition.cost.cmc()))
-            .min_by_key(|&(id, mv)| (mv, id.0))
-    }
-
-    /// The picks are the engine's: each side names the other's cheapest
-    /// creature card, and the opponent is the first in turn order holding
-    /// the cheapest one. The "may" is the controller's (`MayDo`); a bot seat
-    /// returns the pair only when it gets at least as much as it gives.
+    /// "Choose a creature card in an opponent's graveyard, then that player
+    /// chooses a creature card in your graveyard. You may return those cards"
+    /// — the controller picks first, then the owner of that pick picks from
+    /// the controller's graveyard (both asked; the cheapest card, and the
+    /// first opponent in turn order holding it, are the headless default),
+    /// then the controller's "may". A bot seat returns the pair only when it
+    /// gets at least as much as it gives.
     pub(super) fn choose_graveyard_creatures_each_may_return(
         &mut self,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
         let me = ctx.controller;
         let live = self.opponents_of(me);
         let opps: Vec<usize> =
             self.seats_in_turn_order_from(me).into_iter().filter(|q| live.contains(q)).collect();
-        let theirs = opps
-            .iter()
-            .filter_map(|&q| self.cheapest_graveyard_creature(q).map(|pick| (q, pick)))
-            .min_by_key(|&(_, (id, mv))| (mv, id.0));
         // With no opponent left there is no "that player" to pick from yours.
         if opps.is_empty() {
+            self.clear_answer_log();
             return Ok(());
         }
-        let mine = self.cheapest_graveyard_creature(me);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let creatures_of = |g: &Self, seat: usize| -> Vec<(CardId, u32, String)> {
+            let mut v: Vec<(CardId, u32, String)> = g.players[seat]
+                .graveyard
+                .iter()
+                .filter(|c| g.computed_is_creature(c))
+                .map(|c| (c.id, c.definition.cost.cmc(), c.definition.name.to_string()))
+                .collect();
+            v.sort_by_key(|c| (c.1, c.0.0));
+            v
+        };
+        let mut cursor = 0;
+        // Cheapest first: a stable sort keeps turn order among equals, so the
+        // head is the old pick.
+        let mut theirs_cands: Vec<(CardId, u32, String, usize)> = opps
+            .iter()
+            .flat_map(|&q| creatures_of(self, q).into_iter().map(move |(id, mv, n)| (id, mv, n, q)))
+            .collect();
+        theirs_cands.sort_by_key(|c| (c.1, c.0.0));
+        let theirs: Option<(CardId, u32, usize)> = match theirs_cands.len() {
+            0 => None,
+            1 => Some((theirs_cands[0].0, theirs_cands[0].1, theirs_cands[0].3)),
+            _ => {
+                let auto = theirs_cands[0].0;
+                let Some(picked) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    me,
+                    "Choose a creature card in an opponent's graveyard".into(),
+                    source,
+                    theirs_cands.iter().map(|c| (c.0, c.2.clone())).collect(),
+                    1,
+                    1,
+                    PickValue::Cost,
+                    effect,
+                    vec![auto],
+                ) else {
+                    return Ok(());
+                };
+                let id = picked.first().copied().unwrap_or(auto);
+                theirs_cands.iter().find(|c| c.0 == id).map(|c| (c.0, c.1, c.3))
+            }
+        };
+        let mine_cands = creatures_of(self, me);
+        let mine: Option<(CardId, u32)> = match (theirs, mine_cands.len()) {
+            (_, 0) => None,
+            (Some((_, _, q)), n) if n > 1 => {
+                let auto = mine_cands[0].0;
+                let Some(picked) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    q,
+                    "Choose a creature card in that player's graveyard".into(),
+                    source,
+                    mine_cands.iter().map(|c| (c.0, c.2.clone())).collect(),
+                    1,
+                    1,
+                    PickValue::Cost,
+                    effect,
+                    vec![auto],
+                ) else {
+                    return Ok(());
+                };
+                let id = picked.first().copied().unwrap_or(auto);
+                mine_cands.iter().find(|c| c.0 == id).map(|c| (c.0, c.1))
+            }
+            _ => Some((mine_cands[0].0, mine_cands[0].1)),
+        };
         if theirs.is_none() && mine.is_none() {
+            self.clear_answer_log();
             return Ok(());
         }
         let ids: Vec<(CardId, usize)> = theirs
-            .map(|(q, (id, _))| (id, q))
+            .map(|(id, _, q)| (id, q))
             .into_iter()
             .chain(mine.map(|(id, _)| (id, me)))
             .collect();
@@ -57,16 +114,25 @@ impl GameState {
                 })
                 .collect(),
         );
-        if self.seat_prompts(me) {
-            return self.run_effect(
-                &Effect::MayDo { description: "Return both creature cards to the battlefield?".into(), body: Box::new(back) },
-                ctx,
-                events,
-            );
-        }
-        let gain = mine.map_or(0, |(_, mv)| mv as i64 + 1);
-        let give = theirs.map_or(0, |(_, (_, mv))| mv as i64 + 1);
-        if gain > 0 && gain >= give {
+        let go = if self.seat_prompts(me) {
+            let Some(yes) = self.ask_seat_bool(
+                &mut cursor,
+                me,
+                "Return both creature cards to the battlefield?".into(),
+                source,
+                effect,
+                crate::decision::OptionalKind::MayBody,
+            ) else {
+                return Ok(());
+            };
+            yes
+        } else {
+            let gain = mine.map_or(0, |(_, mv)| mv as i64 + 1);
+            let give = theirs.map_or(0, |(_, mv, _)| mv as i64 + 1);
+            gain > 0 && gain >= give
+        };
+        self.clear_answer_log();
+        if go {
             self.run_effect(&back, ctx, events)?;
         }
         Ok(())

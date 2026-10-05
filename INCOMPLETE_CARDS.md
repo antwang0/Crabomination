@@ -412,10 +412,10 @@ headless seat keeps the weakest-first pick.
 
 Multi-card picks: `Effect::ChooseSomeAmong` (`shortcut::choose_some_then`,
 exactly N or up to N) — Haunting Voyage's "up to two", Insatiable
-Frugivore's three each loop. Left on the same scan: Dawnbreak Reclaimer's
-two choosers (both picks must stand at once), Foreboding
-Steamboat, Neyam Shai Murad's "that player chooses", `Effect::ExileFromGraveyard`
-(8 cards, cheapest-first).
+Frugivore's three each loop. Left on the same scan: Foreboding
+Steamboat, Neyam Shai Murad's "that player chooses". (Dawnbreak Reclaimer's
+two choosers and `Effect::ExileFromGraveyard`'s per-player pick are asked
+since `01VKHeZo`.)
 
 ## Oracle-vs-definition scans (2026-09-28, session `01WRiz7c`) — what the fixes left
 
