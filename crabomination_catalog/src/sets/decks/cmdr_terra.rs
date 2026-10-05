@@ -384,6 +384,7 @@ pub fn gogo_mysterious_mime() -> CardDefinition {
         add_creature_types: vec![],
         legendary: false,
         add_colors: vec![],
+        set_card_types: None,
     });
     body.extend(both(|s| Effect::PumpPT {
         what: s,

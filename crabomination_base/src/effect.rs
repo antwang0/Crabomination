@@ -9275,6 +9275,11 @@ pub enum Effect {
         /// "… blue and black … in addition to its other colors" (Olag).
         #[serde(default)]
         add_colors: Vec<crate::mana::Color>,
+        /// "… it's an artifact and it loses all other card types" (Espers to
+        /// Magicite): the card types become exactly these; a creature type
+        /// line goes with the Creature type (CR 205.3d).
+        #[serde(default)]
+        set_card_types: Option<Vec<crate::card::CardType>>,
     },
     /// Create `count` token copies of the permanent resolved by `source`
     /// (controlled by `who`), each gaining haste until end of turn and

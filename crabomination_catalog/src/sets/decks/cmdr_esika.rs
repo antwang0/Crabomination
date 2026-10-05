@@ -1007,6 +1007,7 @@ pub fn ludevic_necrogenius() -> CardDefinition {
                 add_creature_types: vec![CreatureType::Zombie],
                 legendary: true,
                 add_colors: vec![Color::Blue, Color::Black],
+                set_card_types: None,
             },
             Effect::AddCounter {
                 what: Selector::This,

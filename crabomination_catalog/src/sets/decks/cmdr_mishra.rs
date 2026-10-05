@@ -86,6 +86,7 @@ pub fn mishra_eminent_one() -> CardDefinition {
                     add_creature_types: vec![],
                     legendary: false,
                     add_colors: vec![],
+                    set_card_types: None,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,

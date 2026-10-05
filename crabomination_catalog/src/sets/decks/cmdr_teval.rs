@@ -539,6 +539,7 @@ pub fn the_scarab_god() -> CardDefinition {
                     add_creature_types: vec![],
                     legendary: false,
                     add_colors: vec![],
+                    set_card_types: None,
                 },
             ]),
             ..Default::default()
