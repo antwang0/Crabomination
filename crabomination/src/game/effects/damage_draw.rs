@@ -7,6 +7,14 @@ use crate::game::GameState;
 use crate::game::types::{GameError, GameEvent};
 
 impl GameState {
+    /// Raise the turn's greatest one-source-to-one-recipient total (Impact
+    /// Resonance) to `total`. Reads first: a lower total writes nothing.
+    pub(crate) fn note_pair_damage(&mut self, total: u32) {
+        if total > self.turn.greatest_pair_damage_this_turn {
+            self.turn.greatest_pair_damage_this_turn = total;
+        }
+    }
+
     /// Reads the source's per-source damage tally
     /// (`CardData::damage_by_source_this_turn`, cleared only at end of turn,
     /// so it survives the zone change that fired the trigger). A damaging

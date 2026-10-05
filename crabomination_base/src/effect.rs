@@ -1643,8 +1643,8 @@ pub enum Value {
     /// Standard Bearer.
     ControllerCreaturesDiedThisTurn,
     /// "The greatest amount of damage dealt by a source to a permanent or
-    /// player this turn" (Impact Resonance): the largest per-source tally on a
-    /// battlefield permanent, or the largest single hit a player took.
+    /// player this turn" (Impact Resonance): the largest total one source
+    /// dealt one permanent or player, the victim gone or not (2014-11-07).
     GreatestDamageFromOneSourceThisTurn,
     /// Damage the resolving source has dealt this turn (Chandra, Fire of
     /// Kaladesh's "if Chandra has dealt 3 or more damage this turn").

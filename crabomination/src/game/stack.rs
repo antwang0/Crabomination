@@ -4818,7 +4818,9 @@ impl GameState {
             let pl = &mut **pl;
             pl.was_dealt_damage_this_turn = false;
             pl.damage_taken_this_turn = 0;
-            pl.greatest_hit_this_turn = 0;
+            if !pl.damage_by_source_this_turn.is_empty() {
+                pl.damage_by_source_this_turn.clear();
+            }
             pl.combat_damage_taken_this_turn = 0;
             pl.token_copy_replacement_used_this_turn = false;
             pl.tokens_created_this_turn = 0;
@@ -5431,6 +5433,9 @@ impl GameState {
         self.creature_combat_damage_doublers = 0;
         clear_turn!(self.damage_sources_this_turn);
         clear_turn!(self.damage_by_source_this_turn);
+        if self.turn.greatest_pair_damage_this_turn != 0 {
+            self.turn.greatest_pair_damage_this_turn = 0;
+        }
         clear_turn!(self.noncombat_damage_bonus_this_turn);
         // Desperate Gambit's unspent doubler expires with the turn.
         clear_turn!(self.double_next_damage_from);

@@ -1677,7 +1677,8 @@ impl GameState {
                 {
                     let pl = &mut *self.players[p];
                     pl.damage_taken_this_turn = pl.damage_taken_this_turn.saturating_add(amount);
-                    pl.greatest_hit_this_turn = pl.greatest_hit_this_turn.max(amount);
+                    let total = pl.record_damage_from(source, amount);
+                    self.note_pair_damage(total);
                 }
                 // Record the damaging creature so "destroy target creature
                 // that dealt damage to you this turn" (Spear of Heliod) can
@@ -1764,6 +1765,7 @@ impl GameState {
                     .battlefield_find(cid)
                     .map(|c| c.definition.is_battle())
                     .unwrap_or(false);
+                let mut pair_total = amount;
                 if is_pw {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         let current = c.counter_count(CounterType::Loyalty);
@@ -1777,7 +1779,7 @@ impl GameState {
                         c.damage_dealt_to_this_turn += amount;
                         if let Some(src) = source {
                             c.damaged_by_this_turn.push(src);
-                            c.record_damage_from(src, amount);
+                            pair_total = c.record_damage_from(src, amount);
                         }
                         events.push(GameEvent::DamageDealt {
                             amount,
@@ -1861,7 +1863,7 @@ impl GameState {
                         c.damage_dealt_to_this_turn += amount;
                         if let Some(src) = source {
                             c.damaged_by_this_turn.push(src);
-                            c.record_damage_from(src, amount);
+                            pair_total = c.record_damage_from(src, amount);
                         }
                         // Blazing Effigy is the only card that reads this
                         // tally, and its `Vec` was cloned on every `CardData`
@@ -1920,6 +1922,7 @@ impl GameState {
                         self.fire_spell_damage_listeners(src, crate::game::types::Target::Permanent(cid), amount);
                     }
                 }
+                self.note_pair_damage(pair_total);
             }
             EntityRef::Card(_) => {}
         }

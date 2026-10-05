@@ -1449,6 +1449,11 @@ pub struct TurnRegistries {
     /// turn"). Cleared at the turn boundary.
     #[serde(default)]
     pub(crate) damage_by_source_this_turn: Vec<(CardId, u32)>,
+    /// The largest total any one source has dealt any one permanent or
+    /// player this turn (Impact Resonance). Kept as damage lands, so a
+    /// victim that has since left still counts.
+    #[serde(default)]
+    pub(crate) greatest_pair_damage_this_turn: u32,
     /// `(seat, damage)` dealt to each player by artifact sources this turn
     /// (Reverse Polarity). Cleared at cleanup.
     #[serde(default)]

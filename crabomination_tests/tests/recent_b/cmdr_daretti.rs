@@ -191,6 +191,33 @@ fn impact_resonance_echoes_the_turns_biggest_hit() {
     assert!(g.battlefield_find(giant).is_none() && g.battlefield_find(bear).is_none(), "5 split 3/2 kills both");
 }
 
+/// 2014-11-07 ruling — X totals one source's damage to one permanent or
+/// player over the turn (two 2s from one source to a player is 4), and a
+/// victim that has since died still counts (Flame Slash's 4 to a Bear).
+#[test]
+fn impact_resonance_totals_one_source_per_victim_over_the_turn() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = main_phase(2);
+    let pinger = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(1), 2, Some(pinger), &mut ev);
+    g.deal_damage_to_from(EntityRef::Player(1), 2, Some(pinger), &mut ev);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ir = g.add_card_to_hand(0, catalog::impact_resonance());
+    cast(&mut g, ir, &[Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).is_none(), "X = 4 kills the 3/3");
+
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let slash = g.add_card_to_hand(0, catalog::flame_slash());
+    cast(&mut g, slash, &[Target::Permanent(bear)]);
+    assert!(g.battlefield_find(bear).is_none());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let ir = g.add_card_to_hand(0, catalog::impact_resonance());
+    cast(&mut g, ir, &[Target::Permanent(giant)]);
+    assert!(g.battlefield_find(giant).is_none(), "the dead Bear's 4 still counts");
+}
+
 #[test]
 fn incite_rebellion_charges_each_player_for_their_own_army() {
     let mut g = main_phase(2);

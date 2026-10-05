@@ -11429,11 +11429,17 @@ impl CardInstance {
     }
 
     /// Fold `amount` damage from source instance `src` into this turn's
-    /// per-source tally (Ogre Enforcer).
-    pub fn record_damage_from(&mut self, src: CardId, amount: u32) {
+    /// per-source tally (Ogre Enforcer); returns the source's new total.
+    pub fn record_damage_from(&mut self, src: CardId, amount: u32) -> u32 {
         match self.damage_by_source_this_turn.iter_mut().find(|(s, _)| *s == src) {
-            Some((_, n)) => *n += amount,
-            None => self.damage_by_source_this_turn.push((src, amount)),
+            Some((_, n)) => {
+                *n += amount;
+                *n
+            }
+            None => {
+                self.damage_by_source_this_turn.push((src, amount));
+                amount
+            }
         }
     }
 
