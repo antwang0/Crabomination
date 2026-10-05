@@ -25452,7 +25452,7 @@ impl GameState {
         if candidates.is_empty() {
             self.flip_pending_life_gain_flags();
             self.keep_trigger_batch_lki();
-            self.died_card_snapshots.clear();
+            self.clear_died_snapshots_unless_suspended();
             return;
         }
         let Some(ordered) = self.continue_trigger_ordering(Vec::new(), candidates) else {
@@ -25823,7 +25823,18 @@ impl GameState {
         // that cycle's die-time, so stale entries from prior batches
         // can't leak into later trigger resolution.
         self.keep_trigger_batch_lki();
-        self.died_card_snapshots.clear();
+        self.clear_died_snapshots_unless_suspended();
+    }
+
+    /// The per-batch snapshot clear, deferred while a resolution is running
+    /// (an exile mid-resolution dispatches its own batch) or suspended on a
+    /// pending decision (its re-run reads the same objects): CR 608.2h — "its
+    /// controller" of a stolen creature Path to Exile exiled is the thief, not
+    /// the owner. The next dispatch outside a resolution clears them.
+    fn clear_died_snapshots_unless_suspended(&mut self) {
+        if self.pending_decision.is_none() && self.resolution_depth == 0 && !self.died_card_snapshots.is_empty() {
+            self.died_card_snapshots.clear();
+        }
     }
 
     /// CR 603.3b — reorder each contiguous run of same-controller triggers

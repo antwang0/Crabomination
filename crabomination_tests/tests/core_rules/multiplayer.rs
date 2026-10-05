@@ -8230,3 +8230,44 @@ fn cr_611_2b_control_until_your_next_turn_lasts_past_this_cleanup() {
     pass_until(&mut g, 0);
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "back as the taker's next turn began");
 }
+
+/// CR 608.2h — Path to Exile on a STOLEN creature: "its controller" searches
+/// (the thief). The exile's own mid-resolution trigger dispatch cleared the
+/// leaver's snapshot, so "its controller" fell back to the OWNER — and the
+/// dispatch between a prompting seat's suspend and resume did the same.
+#[test]
+fn cr_608_2h_path_to_exile_on_a_stolen_creature_pays_its_controller() {
+    use crabomination::decision::{AutoDecider, Decider, Decision, DecisionAnswer};
+    for prompting in [false, true] {
+    let mut g = multi_player_game(3);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().controller = 2;
+    for seat in 0..3 {
+        g.add_card_to_library(seat, catalog::plains());
+        g.players[seat].wants_ui = prompting;
+    }
+    let path = g.add_card_to_hand(0, catalog::path_to_exile());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell { card_id: path, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Path");
+    for _ in 0..60 {
+        if let Some(pd) = &g.pending_decision {
+            let answer = match &pd.decision {
+                Decision::SearchLibrary { candidates, .. } => DecisionAnswer::Search(candidates.first().map(|c| c.0)),
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                d => AutoDecider.decide(d),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    let plains = |seat| g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == "Plains").count();
+    assert_eq!((plains(1), plains(2)), (0, 1), "the thief, not the owner, fetched a basic (prompting {prompting})");
+    }
+}
