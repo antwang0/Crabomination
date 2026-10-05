@@ -309,6 +309,8 @@ fn copy_land_copies_a_land() {
 }
 
 /// March from Velis Vel: your Deserts become hasty copies of your creature.
+/// CR 608.2d — the land type is chosen as the spell resolves, not as a mode:
+/// the answer given then (Desert, the first type) is the one used.
 #[test]
 fn march_from_velis_vel_marches_the_deserts() {
     let mut g = main_phase(2);
@@ -316,17 +318,41 @@ fn march_from_velis_vel_marches_the_deserts() {
     let d1 = g.add_card_to_battlefield(0, catalog::desert_of_the_indomitable());
     let plains = g.add_card_to_battlefield(0, catalog::plains());
     let m = g.add_card_to_hand(0, catalog::march_from_velis_vel());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Amount(0),
+    ]));
     act_as(&mut g, 0, GameAction::CastSpell {
         card_id: m,
         target: Some(Target::Permanent(giant)),
         additional_targets: vec![],
-        mode: Some(0),
+        mode: None,
         x_value: None,
     })
-    .expect("Desert mode");
+    .expect("cast");
     assert_eq!(pt(&g, d1), (3, 3));
     assert!(g.computed_permanent(d1).is_some_and(|c| c.keywords().contains(&Keyword::Haste)));
     assert!(g.computed_permanent(plains).is_some_and(|c| c.power == 0));
+}
+
+/// The type named on resolution is the one marched: Gate leaves the Desert a land.
+#[test]
+fn march_from_velis_vel_names_its_type_on_resolution() {
+    let mut g = main_phase(2);
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let d1 = g.add_card_to_battlefield(0, catalog::desert_of_the_indomitable());
+    let m = g.add_card_to_hand(0, catalog::march_from_velis_vel());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Amount(1),
+    ]));
+    act_as(&mut g, 0, GameAction::CastSpell {
+        card_id: m,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    assert!(g.computed_permanent(d1).is_some_and(|c| c.power == 0), "Gate, not Desert");
 }
 
 /// Rampant Frogantua gets +10/+10 per player who has lost.

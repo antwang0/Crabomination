@@ -1923,7 +1923,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Victory Chimes | Silverquill Statement (C21) | the mana always goes to you, not a player of your choice. |
 | 🟡 Desert Warfare | Tricky Terrain (M3C) | a Desert card reaching your graveyard from hand is watched only as a discard (library routes — mill, surveil, reveal — are all seen). |
-| 🟡 March from Velis Vel | Tricky Terrain (M3C) | the nonbasic land type is chosen as a mode. |
 | 🟡 Primal Beyond | Dance of the Elements (ECC) | the "reveal" is automatic whenever an Elemental card is in hand. |
 | 🟡 Unbound Flourishing | Quandrix Unlimited (SOC) | an {X} activated ability countered before the copy trigger resolves isn't copied (the 2019-06-14 ruling still copies it). |
 | 🟡 City of Brass | Turtle Power! (TMC) | "whenever this becomes tapped" is folded into its mana ability: tapped any other way it deals no damage, and the damage is no trigger. |

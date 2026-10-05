@@ -5072,7 +5072,7 @@ impl Effect {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::TapOrUntap { what } => sel_find(what, slot),
-                Effect::Vote { options, .. } => {
+                Effect::Vote { options, .. } | Effect::PlayerChoosesOne { options, .. } => {
                     options.iter().find_map(|o| eff_find(&o.effect, slot, mode, kicked))
                 }
                 Effect::AtEndOfCombat { body } | Effect::AtNextTurnsUpkeep { body } => {

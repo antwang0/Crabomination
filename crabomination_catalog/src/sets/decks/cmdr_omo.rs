@@ -14,7 +14,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate, ZoneDest,
+    DelayedTriggerKind, Duration, Effect, LookPick, ManaPayload, PlayerRef, Predicate, VoteOption, ZoneDest,
 };
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, SpendRestriction, cost, g, generic, hybrid, u, x};
@@ -360,15 +360,15 @@ pub fn magus_of_the_candelabra() -> CardDefinition {
 }
 
 /// March from Velis Vel — your lands of a chosen nonbasic type become copies
-/// of your creature with haste until end of turn; flashback {4}{U}.
-/// Residual: the type is chosen as a mode.
+/// of your creature with haste until end of turn; flashback {4}{U}. The type
+/// is chosen as the spell resolves (CR 608.2d), the creature as it is cast.
 pub fn march_from_velis_vel() -> CardDefinition {
-    let modes = LandType::NONBASIC
+    let options = LandType::NONBASIC
         .iter()
         .map(|&lt| {
             let lands = || yours(R::Land.and(R::HasLandType(lt)));
             // Haste first: once copied the lands no longer have the type.
-            Effect::Seq(vec![
+            let body = Effect::Seq(vec![
                 Effect::GrantKeyword { what: lands(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
                 Effect::BecomeCopyOfFor {
                     what: lands(),
@@ -376,12 +376,18 @@ pub fn march_from_velis_vel() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                     non_legendary: false,
                 },
-            ])
+            ]);
+            VoteOption::new(&format!("{lt:?}"), body)
         })
         .collect();
     CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(4), u()]))],
-        ..spell("March from Velis Vel", cost(&[generic(2), u()]), CardType::Sorcery, Effect::ChooseMode(modes))
+        ..spell(
+            "March from Velis Vel",
+            cost(&[generic(2), u()]),
+            CardType::Sorcery,
+            Effect::PlayerChoosesOne { who: PlayerRef::You, options },
+        )
     }
 }
 
