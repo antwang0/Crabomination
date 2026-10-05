@@ -626,6 +626,29 @@ fn bane_of_bala_ged_attack_exiles_two_permanents() {
     assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
 }
 
+/// "Defending player exiles two permanents **they control**" — the defender
+/// picks (CR 701.16-style choice by the affected player). The engine always
+/// took the weakest two for them; asked, they keep both Bears and give up
+/// the Hill Giant and one Bear.
+#[test]
+fn bane_of_bala_ged_defender_picks_what_to_exile() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::bane_of_bala_ged());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![giant, other])]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the Bear the defender kept");
+    assert!(g.battlefield_find(giant).is_none() && g.battlefield_find(other).is_none());
+}
+
 /// Birthing Hulk mints two Eldrazi Scions on ETB.
 #[test]
 fn birthing_hulk_makes_two_scions() {

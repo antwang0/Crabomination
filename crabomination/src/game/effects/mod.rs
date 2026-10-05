@@ -24081,20 +24081,43 @@ impl GameState {
             }
 
             Effect::PlayerExilesPermanents { who, count, filter } => {
-                // Exile analogue of Annihilator (Bane of Bala Ged). The
-                // affected player auto-picks the weakest N matching permanents;
-                // a human-defender chooser is a follow-up (tracked in TODO.md).
+                // Exile analogue of Annihilator (Bane of Bala Ged): each
+                // affected player picks their own N in APNAP order (CR 101.4),
+                // the weakest being the headless default; then they all go
+                // at once.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
                     return Ok(());
                 }
-                let players: Vec<usize> = self.resolve_players(who, ctx);
+                let players: Vec<usize> = self.apnap_sort(self.resolve_players(who, ctx));
+                let mut cursor = 0;
+                let mut exiled: Vec<CardId> = Vec::new();
                 for p in players {
                     let candidates = self.sacrifice_candidates(p, filter, ctx.source);
-                    let ids = self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false);
-                    for id in ids {
-                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    let auto = self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false);
+                    if candidates.len() <= n {
+                        exiled.extend(auto);
+                        continue;
                     }
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        format!("Exile {n} permanent(s) you control"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        self.card_id_names(&candidates),
+                        n as u32,
+                        n as u32,
+                        PickValue::Cost,
+                        effect,
+                        auto.clone(),
+                    ) else {
+                        return Ok(());
+                    };
+                    exiled.extend(if picked.len() == n { picked } else { auto });
+                }
+                self.clear_answer_log();
+                for id in exiled {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
                 }
                 Ok(())
             }
