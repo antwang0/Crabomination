@@ -430,3 +430,22 @@ fn vault_112_chapter_three_plays_a_land() {
     assert_eq!(run(0), (true, 1), "played as the land drop");
     assert_eq!(run(1), (false, 1), "no land play left: it stays exiled");
 }
+
+/// C.A.M.P. — the Junk token comes only when the target creature shares a
+/// color with the mana the fortified land produced (CR 106.8; the
+/// 2024-03-08 ruling): a red creature off a Mountain, not a green one.
+#[test]
+fn camp_junk_needs_a_color_shared_with_the_lands_mana() {
+    let run = |creature: fn() -> crabomination::card::CardDefinition| {
+        let mut g = pod(2);
+        let land = g.add_card_to_battlefield(0, catalog::mountain());
+        let camp = g.add_card_to_battlefield(0, catalog::c_a_m_p());
+        g.battlefield_find_mut(camp).unwrap().attached_to = Some(land);
+        let c = g.add_card_to_battlefield(0, creature());
+        activate_x(&mut g, 0, land, 0, None, None).expect("tap for mana");
+        let junk = g.battlefield.iter().filter(|p| p.definition.name == "Junk").count();
+        (g.battlefield_find(c).unwrap().counter_count(CounterType::PlusOnePlusOne), junk)
+    };
+    assert_eq!(run(catalog::raging_goblin), (1, 1), "red mana, red creature");
+    assert_eq!(run(catalog::llanowar_elves), (1, 0), "red mana, green creature");
+}

@@ -1956,7 +1956,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Depthshaker Titan | Counter Intelligence (EOC) | "any number of target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Katsumasa, the Animator | Buckle Up (NEC) | "each of up to three target" noncreature artifacts takes the targeter's pick. |
 | 🟡 Dance of the Manse | Buckle Up (NEC) | "up to X target" cards take the targeter's pick (capped at X). |
-| 🟡 C.A.M.P. | Science! (PIP) | the Junk token comes whenever the creature is colored, not only when it shares a color with the land's mana. |
 | 🟡 Expert-Level Safe | Science! (PIP) | both numbers are drawn uniformly at random (the equilibrium strategy); no player is asked. |
 | 🟡 Hierophant Bio-Titan | Tyranid Swarm (40K) | the counters that buy the most discount (up to five) are always removed, from the creatures carrying the most; the caster doesn't choose. |
 | 🟡 The Curse of Fenric | Blast from the Past (WHO) | II's name "Fenric" is a copiable value, so a copy of Fenric is named Fenric too (CR 707.2); no non-copy name effect. |

@@ -1797,6 +1797,10 @@ pub enum Predicate {
     /// color with a creature you control"). Reads the target wherever it is —
     /// stack spell or permanent.
     TargetSharesColorWithControlled { slot: u8, filter: crate::card::SelectionRequirement },
+    /// The permanent in target `slot` shares a colour with the mana the
+    /// trigger's tap produced (a `TappedForMana` trigger's event amount is
+    /// that `ColorSet`): C.A.M.P.
+    TargetSharesColorWithTappedMana { slot: u8 },
     /// True if `who` sacrificed at least one permanent during the current
     /// resolution. Backed by `GameState::players_sacrificed_this_resolution`.
     /// Gates "if you sacrificed a permanent this way, …" (Deadly Brew).

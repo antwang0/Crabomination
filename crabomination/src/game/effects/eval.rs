@@ -2453,6 +2453,15 @@ impl GameState {
                             }
                     })
             }
+            Predicate::TargetSharesColorWithTappedMana { slot } => {
+                let mana = crate::mana::ColorSet(ctx.event_amount as u8);
+                match ctx.targets.get(*slot as usize) {
+                    Some(crate::game::types::Target::Permanent(cid)) => {
+                        self.card_colors_anywhere(*cid).iter().any(|c| mana.contains(c))
+                    }
+                    _ => false,
+                }
+            }
             Predicate::PlayerSacrificedThisResolution(pref) => self
                 .resolve_player(pref, ctx)
                 .is_some_and(|p| self.scratch.players_sacrificed_this_resolution.contains(&p)),

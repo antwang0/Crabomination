@@ -24466,7 +24466,7 @@ impl GameState {
                             card.controller,
                             trig_source,
                             subject,
-                            self.event_amount_for(ev),
+                            self.event_amount_in(ev, events),
                         )
                         .with_event_player(subject, crate::game::effects::events::event_actor(self, ev));
                         // "One or more …" asks whether ANY event of the batch
@@ -24520,7 +24520,7 @@ impl GameState {
                     } else if ta.event.batch_counts_subjects {
                         self.batch_subject_count(events, &ta.event, card)
                     } else {
-                        self.event_amount_for(ev)
+                        self.event_amount_in(ev, events)
                     };
                     // CR 603.2 / 603.3d — an event that fails a "once each
                     // turn" trigger's condition didn't trigger it, so it
@@ -24722,7 +24722,7 @@ impl GameState {
                             controller: snap.controller,
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                            event_amount: self.event_amount_for(ev),
+                            event_amount: self.event_amount_in(ev, events),
                             triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
@@ -24758,7 +24758,7 @@ impl GameState {
                                 controller: snap.controller,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                                event_amount: self.event_amount_for(ev),
+                                event_amount: self.event_amount_in(ev, events),
                                 triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
@@ -24806,7 +24806,7 @@ impl GameState {
                                 controller: card.controller,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                                event_amount: self.event_amount_for(ev),
+                                event_amount: self.event_amount_in(ev, events),
                                 triggered_by_etb: false,
                                 triggered_by_death: false,
                                 triggered_by_attack: false,
@@ -24912,7 +24912,7 @@ impl GameState {
                                 card.owner,
                                 card.id,
                                 subject,
-                                self.event_amount_for(ev),
+                                self.event_amount_in(ev, events),
                             );
                             // Keep scanning the batch on a miss, as above.
                             if !self.evaluate_predicate(filter, &ctx) {
@@ -24926,7 +24926,7 @@ impl GameState {
                             controller: card.owner,
                             filter: ta.event.filter.clone(),
                             subject,
-                            event_amount: self.event_amount_for(ev),
+                            event_amount: self.event_amount_in(ev, events),
                             triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                             triggered_by_death: matches!(
                                 ev,
@@ -24995,7 +24995,7 @@ impl GameState {
                                 controller,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                                event_amount: self.event_amount_for(ev),
+                                event_amount: self.event_amount_in(ev, events),
                                 triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                                 triggered_by_death: matches!(
                                     ev,
@@ -25073,7 +25073,7 @@ impl GameState {
                             controller: card.owner,
                             filter: ta.event.filter.clone(),
                             subject,
-                            event_amount: self.event_amount_for(ev),
+                            event_amount: self.event_amount_in(ev, events),
                             triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
@@ -25126,7 +25126,7 @@ impl GameState {
                                         ev,
                                         &ta.event.kind,
                                     ),
-                                    event_amount: self.event_amount_for(ev),
+                                    event_amount: self.event_amount_in(ev, events),
                                     triggered_by_etb: false,
                                     triggered_by_death: false,
                                     triggered_by_attack: false,
@@ -25170,7 +25170,7 @@ impl GameState {
                                 controller: seat_idx,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                                event_amount: self.event_amount_for(ev),
+                                event_amount: self.event_amount_in(ev, events),
                                 triggered_by_etb: false,
                             triggered_by_death: false,
                             triggered_by_attack: false,
@@ -30298,6 +30298,22 @@ impl GameState {
             Some((_, n)) => *n += 1,
             None => tally.push((seat, 1)),
         }
+    }
+
+    /// [`Self::event_amount_for`] for a trigger dispatched from `events`: a
+    /// `TappedForMana` event carries the colors that permanent's tap produced
+    /// in this batch, as a `ColorSet` mask (C.A.M.P., CR 106.8).
+    pub(crate) fn event_amount_in(&self, ev: &GameEvent, events: &[GameEvent]) -> u32 {
+        let GameEvent::TappedForMana { card_id, .. } = ev else { return self.event_amount_for(ev) };
+        let mut set = crate::mana::ColorSet::empty();
+        for e in events {
+            if let GameEvent::ManaAdded { color, source: Some(s), .. } = e
+                && s == card_id
+            {
+                set.insert(*color);
+            }
+        }
+        u32::from(set.0)
     }
 
     pub(crate) fn event_amount_for(&self, ev: &GameEvent) -> u32 {

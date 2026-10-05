@@ -2,8 +2,6 @@
 //! beyond what the catalog had. Tests in `tests/recent_b/cmdr_madison.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **C.A.M.P.** — the Junk token comes whenever the creature is colored,
-//!   not only when it shares a color with the land's mana.
 //! - **Expert-Level Safe** — both numbers are drawn at random (the
 //!   equilibrium strategy); no player is asked.
 
@@ -826,8 +824,6 @@ pub fn brotherhood_vertibird() -> CardDefinition {
 /// C.A.M.P. — {3} Artifact — Fortification. Whenever fortified land is tapped
 /// for mana, put a +1/+1 counter on target creature you control; if it shares
 /// a color with the mana, create a Junk token. Fortify {3}.
-///
-/// ⚠ Residual: the Junk token comes whenever the creature is colored.
 pub fn c_a_m_p() -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Fortification], ..Default::default() },
@@ -842,10 +838,7 @@ pub fn c_a_m_p() -> CardDefinition {
                         amount: Value::ONE,
                     },
                     Effect::If {
-                        cond: Predicate::EntityMatches {
-                            what: Selector::Target(0),
-                            filter: R::Not(Box::new(R::Colorless)),
-                        },
+                        cond: Predicate::TargetSharesColorWithTappedMana { slot: 0 },
                         then: Box::new(make(crabomination_base::tokens::junk_token(), Value::ONE)),
                         else_: Box::new(Effect::Noop),
                     },
