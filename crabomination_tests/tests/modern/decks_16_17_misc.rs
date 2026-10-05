@@ -2582,6 +2582,27 @@ fn relic_of_progenitus_exiles_opponent_graveyard() {
     assert_eq!(g.players[1].graveyard.len(), 1, "exactly one card left the graveyard");
 }
 
+/// "Target player exiles a card from their graveyard" — that player picks
+/// which. The engine always took the cheapest (the Bolt); the victim may keep
+/// it and exile the Bears instead.
+#[test]
+fn relic_of_progenitus_victim_picks_the_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bears = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let relic = g.add_card_to_battlefield(0, catalog::relic_of_progenitus());
+    g.clear_sickness(relic);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bears])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "the victim kept the Bolt");
+    assert!(g.exile.iter().any(|c| c.id == bears));
+}
+
 /// Relic of Progenitus's second ability exiles ALL graveyards, the caster's
 /// too, and draws — it shipped as one target player's shuffle-back.
 #[test]

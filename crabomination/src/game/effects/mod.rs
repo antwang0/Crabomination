@@ -10210,17 +10210,44 @@ impl GameState {
 
             Effect::ExileFromGraveyard { who, count, filter } => {
                 // Mandatory "exile N cards from your graveyard" (Decaying
-                // Soil). Auto-picks the cheapest matches.
+                // Soil, Relic of Progenitus's "target player exiles a card"):
+                // each player picks their own, in APNAP order (CR 101.4); the
+                // cheapest matches are the headless default.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                for p in self.resolve_players(who, ctx) {
-                    let mut hits: Vec<(CardId, u32)> = self.players[p]
+                let mut cursor = 0;
+                let mut picks: Vec<(usize, Vec<CardId>)> = Vec::new();
+                for p in self.apnap_sort(self.resolve_players(who, ctx)) {
+                    let mut hits: Vec<(CardId, u32, String)> = self.players[p]
                         .graveyard
                         .iter()
                         .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                        .map(|c| (c.id, c.definition.cost.cmc()))
+                        .map(|c| (c.id, c.definition.cost.cmc(), c.definition.name.to_string()))
                         .collect();
-                    hits.sort_by_key(|&(_, mv)| mv);
-                    for (id, _) in hits.into_iter().take(n) {
+                    hits.sort_by_key(|h| h.1);
+                    let auto: Vec<CardId> = hits.iter().take(n).map(|h| h.0).collect();
+                    if hits.len() <= n || n == 0 {
+                        picks.push((p, auto));
+                        continue;
+                    }
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        format!("Exile {n} card(s) from your graveyard"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        hits.into_iter().map(|(id, _, name)| (id, name)).collect(),
+                        n as u32,
+                        n as u32,
+                        PickValue::Cost,
+                        effect,
+                        auto.clone(),
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push((p, if picked.len() == n { picked } else { auto }));
+                }
+                self.clear_answer_log();
+                for (p, ids) in picks {
+                    for id in ids {
                         if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
                             self.exile.push(card);
                             // "Exiled this way" (Augusta, Order Returned).
