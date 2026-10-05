@@ -9661,6 +9661,10 @@ pub enum Effect {
     /// Reverberate / Fork / Twincast. AutoDecider keeps the original
     /// target (first legal); a scripted/UI decider can repoint it.
     CopySpellMayChooseTargets { what: Selector, count: Value },
+    /// Copy the spell `what` names under `who`'s control; they may choose new
+    /// targets (CR 707.10c, 115.7). "Target opponent may also copy that
+    /// spell" (Parnesse, the Subtle Brush) under a `PlayersMayAccept`.
+    CopySpellForPlayer { what: Selector, who: PlayerRef },
     /// CR 706 — the Onslaught Chain cycle's rider: "Then `who` may copy this
     /// spell and may choose a new target for that copy." The copy is controlled
     /// by `who`, who retargets it, so a chain can bounce around the table.

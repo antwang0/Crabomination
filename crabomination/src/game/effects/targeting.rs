@@ -1020,6 +1020,10 @@ impl GameState {
                 let mut found: Option<Target> = None;
                 let hostile = self.players[controller].hostile_player_targets
                     && eff.player_slot_is_hostile(slot, mode);
+                // An optional gift slot (Parnesse's opponent copy) is never
+                // filled with an opponent by the auto-picker; asked lazily,
+                // only on the opponent fallback.
+                let gift = || eff.player_slot_is_gift(slot) && eff.target_slot_optional(slot, mode);
                 let (first, second) = if hostile { (opp, controller) } else { (controller, opp) };
                 let player_first = Target::Player(first);
                 let player_second = Target::Player(second);
@@ -1041,6 +1045,7 @@ impl GameState {
                     found = Some(player_first);
                 } else if is_legal(&player_second)
                     && !taken(&player_second)
+                    && !(second != controller && gift())
                     // A hostile slot never falls back onto the caster's own
                     // face: the battlefield walk below ranks the other side
                     // first, and an optional slot may stay empty.

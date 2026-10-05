@@ -31009,6 +31009,7 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopySpellForPlayer { what, who } => self.copy_spell_for_player(what, who, ctx, events),
             Effect::CopySpellForEachOtherTarget { what } => {
                 // Radiate — the chosen spell targets exactly one object; copy
                 // it once per other object it could legally target.

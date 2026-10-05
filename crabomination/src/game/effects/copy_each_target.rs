@@ -1,6 +1,6 @@
 //! Radiant Performer — "copy that spell or ability for each other permanent
 //! or player the spell or ability could target. Each copy targets a different
-//! one of those."
+//! one of those." And a copy handed to another player (Parnesse).
 
 use super::EffectContext;
 use crate::card::CardId;
@@ -100,5 +100,25 @@ impl GameState {
             }
             self.push_stack(copy);
         }
+    }
+
+    /// `Effect::CopySpellForPlayer` — one copy of each spell `what` names,
+    /// controlled by `who`, who may choose new targets (CR 707.10c, 115.7).
+    pub(super) fn copy_spell_for_player(
+        &mut self,
+        what: &Selector,
+        who: &crate::effect::PlayerRef,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+        let ids: Vec<CardId> = match what {
+            Selector::TriggerSource => ctx.trigger_source.and_then(|e| e.as_card_id()).into_iter().collect(),
+            _ => self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).collect(),
+        };
+        for cid in ids {
+            self.copy_stack_spell_controlled(cid, 1, true, Some(seat), None, events);
+        }
+        Ok(())
     }
 }

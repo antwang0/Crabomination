@@ -2118,6 +2118,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(count)
             }
             Effect::CopySpellAsOneOneSpirit { what } => sel_has_target(what),
+            Effect::CopySpellForPlayer { what, who } => sel_has_target(what) || player_has_target(who),
             Effect::Connive { what, amount } => sel_has_target(what) || value_has_target(amount),
             Effect::ChooseNewTargetsForSpell { what } | Effect::GainControlOfSpell { what } => {
                 sel_has_target(what)
@@ -3347,6 +3348,23 @@ impl Effect {
     /// loot ("target player discards any number, then draws that many") or
     /// a gift stays caster-first, so the answer is "hostile", not "friendly
     /// or not".
+    /// Is player slot `slot` a GIFT — the named player may take a free copy
+    /// of a spell (Parnesse)? An optional gift slot is one the auto-picker
+    /// leaves empty rather than hand an opponent the upside.
+    pub fn player_slot_is_gift(&self, slot: u8) -> bool {
+        fn walk(e: &Effect, slot: u8, found: &mut bool) {
+            if let Effect::CopySpellForPlayer { who: PlayerRef::Target(n), .. } = e
+                && *n == slot
+            {
+                *found = true;
+            }
+            e.for_each_inner(&mut |i| walk(i, slot, found));
+        }
+        let mut found = false;
+        walk(self, slot, &mut found);
+        found
+    }
+
     pub fn player_slot_is_hostile(&self, slot: u8, mode: Option<usize>) -> bool {
         fn hostile(e: &Effect) -> bool {
             match e {
