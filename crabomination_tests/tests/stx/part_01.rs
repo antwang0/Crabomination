@@ -252,7 +252,7 @@ fn quandrix_command_shuffle_mode_recycles_three_graveyard_cards() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
-    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::island()); }
+    let islands: Vec<_> = (0..4).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
     let id = g.add_card_to_hand(0, catalog::quandrix_command());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -261,9 +261,15 @@ fn quandrix_command_shuffle_mode_recycles_three_graveyard_cards() {
     g.perform_action(GameAction::CastSpellSpree {
         card_id: id,
         spree_modes: vec![2, 3],
-        // Slot 0: mode 2's creature; slot 1: mode 3's TARGET PLAYER.
+        // Slot 0: mode 2's creature; slot 1: mode 3's TARGET PLAYER; slots
+        // 2..4: the three target cards in that player's graveyard.
         target: Some(Target::Permanent(bear)),
-        additional_targets: vec![Target::Player(0)],
+        additional_targets: vec![
+            Target::Player(0),
+            Target::Permanent(islands[0]),
+            Target::Permanent(islands[1]),
+            Target::Permanent(islands[2]),
+        ],
         x_value: None,
     })
     .expect("Quandrix Command counters+shuffle castable");
@@ -278,24 +284,75 @@ fn quandrix_command_shuffle_mode_recycles_three_graveyard_cards() {
         "one island + the spent Command remain in the graveyard");
 }
 
+/// CR 608.2b — mode 3's cards are targets: one that left the graveyard
+/// before resolution stays where it went; the other targets still go back.
+#[test]
+fn quandrix_command_shuffle_mode_skips_a_target_that_left() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let islands: Vec<_> = (0..3).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::quandrix_command());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id,
+        spree_modes: vec![2, 3],
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![
+            Target::Player(0),
+            Target::Permanent(islands[0]),
+            Target::Permanent(islands[1]),
+            Target::Permanent(islands[2]),
+        ],
+        x_value: None,
+    })
+    .expect("castable");
+    let gone = g.players[0].graveyard.iter().position(|c| c.id == islands[0]).unwrap();
+    let card = g.players[0].graveyard.remove(gone);
+    g.exile.push(card);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before + 2);
+    assert!(g.exile.iter().any(|c| c.id == islands[0]));
+}
+
 /// Quandrix Command's mode 3 is "*target player* shuffles …": aimed at the
 /// opponent, it's their graveyard that goes back (graveyard hate), not yours.
 #[test]
 fn quandrix_command_shuffle_mode_targets_a_player() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    for _ in 0..4 { g.add_card_to_graveyard(1, catalog::island()); }
-    g.add_card_to_graveyard(0, catalog::island());
+    let theirs: Vec<_> = (0..4).map(|_| g.add_card_to_graveyard(1, catalog::island())).collect();
+    let mine = g.add_card_to_graveyard(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::quandrix_command());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
+    // CR 115.1 / 601.2c — the cards must be in the target player's graveyard.
+    let mut bad = g.clone();
+    assert!(
+        bad.perform_action(GameAction::CastSpellSpree {
+            card_id: id,
+            spree_modes: vec![2, 3],
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![Target::Player(1), Target::Permanent(mine)],
+            x_value: None,
+        })
+        .is_err(),
+        "a card in another player's graveyard is no legal target"
+    );
     let lib_before = g.players[1].library.len();
     g.perform_action(GameAction::CastSpellSpree {
         card_id: id,
         spree_modes: vec![2, 3],
         target: Some(Target::Permanent(bear)),
-        additional_targets: vec![Target::Player(1)],
+        additional_targets: vec![
+            Target::Player(1),
+            Target::Permanent(theirs[0]),
+            Target::Permanent(theirs[1]),
+            Target::Permanent(theirs[2]),
+        ],
         x_value: None,
     })
     .expect("castable");
