@@ -991,3 +991,41 @@ fn cr_608_2h_shadowgrange_reads_the_sacrifice_after_a_parked_pick() {
     assert!(g.battlefield_find(a).is_none(), "the token Giant went");
     assert_eq!(g.players[0].life, life + 3, "gained the sacrificed Giant's power");
 }
+
+/// CR 614.10 — "Skipping a step … the turn-based actions of that step don't
+/// happen", but the turn still begins. Under Stasis nothing untaps, yet the
+/// land drop resets (CR 305.2), summoning sickness lifts (CR 302.6 — it is
+/// about control since the turn began), and "until your next turn" effects
+/// end (CR 611.2b; Teferi's Protection's life lock). All of that lived inside
+/// the untapping, so a skipped untap step left the player unable to play a
+/// land or attack, and their life locked, for the rest of the game.
+#[test]
+fn cr_614_10_a_skipped_untap_step_still_begins_the_turn() {
+    let mut g = two_player_game();
+    for seat in 0..2 {
+        for _ in 0..10 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.add_card_to_battlefield(1, catalog::stasis());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = true;
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.players[0].lands_played_this_turn = 1;
+    g.players[0].life_locked_until_next_turn = true;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::End;
+    for _ in 0..20 {
+        if g.active_player_idx == 0 && g.step != TurnStep::Untap {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.active_player_idx, 0, "seat 0's turn began");
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped, "Stasis: nothing untaps");
+    assert!(!b.summoning_sick, "but control since the turn began is control since the turn began");
+    assert_eq!(g.players[0].lands_played_this_turn, 0, "a fresh land drop");
+    assert!(!g.players[0].life_locked_until_next_turn, "and 'until your next turn' is over");
+}

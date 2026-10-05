@@ -721,6 +721,16 @@ impl GameState {
                         events.append(&mut dn_evs);
                     }
                     self.do_untap();
+                } else {
+                    // The turn still begins (CR 614.10's skipped step skips
+                    // the untapping, not the turn's start). CR 302.6 —
+                    // summoning sickness is about control since the turn
+                    // began, so it lifts without an untap too.
+                    let ap = self.active_player_idx;
+                    for c in self.battlefield.iter_mut().filter(|c| c.controller == ap) {
+                        c.clear_summoning_sickness();
+                    }
+                    self.begin_turn_resets();
                 }
                 // CR 611.2b — "until the next turn" / "until your next turn"
                 // continuous effects end as the relevant turn begins.
@@ -3957,7 +3967,28 @@ impl GameState {
         })
     }
 
+    /// CR 502 — the untap step's turn-based actions, then the bookkeeping
+    /// every turn begins with. The two halves are separate because a skipped
+    /// untap step (CR 614.10: Stasis, The Eon Fog) or one where nothing
+    /// untaps (Mist of Stagnation) still begins a turn: "until your next
+    /// turn" effects end, the land drop resets, goad lifts.
     pub fn do_untap(&mut self) {
+        let untapped_now = self.untap_permanents();
+        self.begin_turn_resets();
+        // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
+        // permanent that flipped tapped→untapped this step.
+        if !untapped_now.is_empty() {
+            let events: Vec<GameEvent> = untapped_now
+                .into_iter()
+                .map(|card_id| GameEvent::PermanentUntapped { card_id })
+                .collect();
+            self.dispatch_triggers_for_events(&events);
+        }
+    }
+
+    /// CR 502.2-502.4 — phasing and untapping. Returns the permanents that
+    /// flipped tapped→untapped, for CR 702.108 Inspired.
+    fn untap_permanents(&mut self) -> Vec<crate::card::CardId> {
         // CR 502.1 — phasing happens first, as a turn-based action.
         self.do_phasing();
         let p = self.active_player_idx;
@@ -4080,7 +4111,7 @@ impl GameState {
             for c in self.battlefield.iter_mut().filter(|c| c.controller == p) {
                 c.clear_summoning_sickness();
             }
-            return;
+            return Vec::new();
         }
         // Inline: seats, and the list dies with the untap step. PERF `(-366)`.
         let untappers: SmallVec<[usize; 4]> = {
@@ -4647,6 +4678,13 @@ impl GameState {
                 }
             }
         }
+        untapped_now
+    }
+
+    /// Turn-start bookkeeping that belongs to the turn beginning, not to
+    /// untapping — run even when the untap step is skipped (see `do_untap`).
+    pub(crate) fn begin_turn_resets(&mut self) {
+        let p = self.active_player_idx;
         // CR 701.38 — goad lasts "until your next turn." When the goader's
         // (= active player p's) turn begins, drop their goad on every
         // creature so the must-attack requirement lifts. CR 800.4m — a
@@ -5075,15 +5113,6 @@ impl GameState {
             pl.half_damage_shields = 0;
             pl.damage_mirrors = 0;
             pl.creature_damage_to_you_this_turn = false;
-        }
-        // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
-        // permanent that flipped tapped→untapped this step.
-        if !untapped_now.is_empty() {
-            let events: Vec<GameEvent> = untapped_now
-                .into_iter()
-                .map(|card_id| GameEvent::PermanentUntapped { card_id })
-                .collect();
-            self.dispatch_triggers_for_events(&events);
         }
     }
 
