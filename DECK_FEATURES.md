@@ -45,7 +45,7 @@ they call a deck 🟡, the table wins.
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
 | 137 | Zimone, Infinite Analyst (GU) | 2: quandrix_command, unbound_flourishing |
 | 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |
-| 141 | Prosper, Tome-Bound (BR) | 2: hellish_rebuke, share_the_spoils |
+| 141 | Prosper, Tome-Bound (BR) | 1: share_the_spoils |
 | 145 | Hakbal of the Surging Soul (GU) | 1: quandrix_command |
 | 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
 | 153 | Sevinne, the Chronoclasm (URW) | 3: elsha_of_the_infinite, mandate_of_peace, wall_of_stolen_identity |

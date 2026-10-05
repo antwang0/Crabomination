@@ -23090,13 +23090,13 @@ impl GameState {
     /// [`event_kind_bits`]: crate::game::effects::events::event_kind_bits
     /// `DelayedKind::OpponentPermanentDamagesYouThisTurn` (Hellish Rebuke):
     /// one trigger per damage event a permanent of the watcher's opponent
-    /// dealt the watcher, with that permanent as the trigger source.
+    /// dealt the watcher, that permanent's own (source and controller).
     fn fire_opponent_permanent_damage_watchers(&mut self, events: &[GameEvent]) {
         use crate::game::types::DelayedKind;
         if !self.delayed_triggers.iter().any(|dt| dt.kind == DelayedKind::OpponentPermanentDamagesYouThisTurn) {
             return;
         }
-        let hits: Vec<(usize, CardId)> = events
+        let hits: Vec<(usize, CardId, usize)> = events
             .iter()
             .filter_map(|e| match e {
                 GameEvent::DamageDealt {
@@ -23106,21 +23106,24 @@ impl GameState {
                     from_controller: Some(c),
                     ..
                 } if self.battlefield_find(*src).is_some() && self.opponents_of(*p).contains(c) => {
-                    Some((*p, *src))
+                    Some((*p, *src, *c))
                 }
                 _ => None,
             })
             .collect();
-        for (p, src) in hits {
+        for (p, src, c) in hits {
             let watchers: Vec<crate::game::types::DelayedTrigger> = self
                 .delayed_triggers
                 .iter()
                 .filter(|dt| dt.kind == DelayedKind::OpponentPermanentDamagesYouThisTurn && dt.controller == p)
                 .cloned()
                 .collect();
+            // The ability is granted to the permanent, so it is that
+            // permanent's trigger, controlled by its controller (CR 113.6,
+            // 603.3a), not the watcher's.
             for dt in watchers {
                 self.push_stack(
-                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    TriggerPush::new(src, c, dt.effect.clone())
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(src)))
                         .build(),
                 );

@@ -515,3 +515,38 @@ fn hellish_rebuke_punishes_a_pinger() {
     .expect("ping");
     assert!(g.battlefield_find(pyro).is_none(), "sacrificed");
 }
+
+/// CR 113.6 / 603.3a — Hellish Rebuke grants the ability to the opponent's
+/// permanent, so its trigger is that permanent's, controlled by its
+/// controller (who then loses the 2 life), not the Rebuke's caster's.
+#[test]
+fn hellish_rebuke_trigger_belongs_to_the_damaging_permanent() {
+    use crabomination::game::types::StackItem;
+    let mut g = main_phase(3);
+    let pyro = g.add_card_to_battlefield(2, catalog::prodigal_pyromancer());
+    g.clear_sickness(pyro);
+    let hr = g.add_card_to_hand(0, catalog::hellish_rebuke());
+    cast_at(&mut g, hr, &[]).expect("cast");
+    flood(&mut g, 2);
+    g.priority.player_with_priority = 2;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pyro,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    let events = g.resolve_top_of_stack().expect("the ping");
+    g.dispatch_triggers_for_events(&events);
+    let trig = g.stack.iter().find_map(|si| match si {
+        StackItem::Trigger { source, controller, .. } if *source == pyro => Some(*controller),
+        _ => None,
+    });
+    assert_eq!(trig, Some(2), "the Pyromancer's own trigger");
+    let life = g.players[2].life;
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pyro).is_none(), "sacrificed");
+    assert_eq!(g.players[2].life, life - 2);
+}

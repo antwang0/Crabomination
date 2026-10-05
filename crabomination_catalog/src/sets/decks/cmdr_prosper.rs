@@ -3,9 +3,6 @@
 //! `tests/recent_b/cmdr_prosper.rs`.
 //!
 //! Residuals (each also on its card):
-//! - **Hellish Rebuke** — modelled as your watcher for the turn, so the
-//!   sacrifice-and-lose-life trigger is yours rather than the permanent
-//!   controller's (same outcome).
 //! - **Share the Spoils** — each player's pile of linked cards becomes
 //!   playable at their upkeep; a land played from it doesn't refill it.
 //! - **Danse Macabre** — your sacrifice is made after the others'.
@@ -378,8 +375,8 @@ pub fn fiendlash() -> CardDefinition {
 }
 
 /// Hellish Rebuke — this turn, an opponent's permanent that damages you is
-/// sacrificed and its controller loses 2 life. Residual: the trigger is
-/// yours, not the permanent controller's.
+/// sacrificed and its controller loses 2 life; the trigger is the permanent's
+/// own (`fire_opponent_permanent_damage_watchers`).
 pub fn hellish_rebuke() -> CardDefinition {
     let it = || Selector::TriggerSource;
     spell(
