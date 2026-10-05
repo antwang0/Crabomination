@@ -920,11 +920,9 @@ pub fn the_caves_of_androzani() -> CardDefinition {
 
 /// The Curse of Fenric — kills up to one creature per player for a
 /// deathtouch Mutant; II makes a creature a 6/6 legendary Horror named Fenric
-/// with no abilities; III, a Mutant fights another creature named Fenric.
-///
-/// ⚠ Residual: the name is written into the copiable values
-/// (`AmendCopiableValues` — the engine has no non-copy name effect), so a
-/// copy of Fenric is named Fenric too (CR 707.2).
+/// with no abilities (a non-copy name, `BecomeNamed`: a copy of Fenric keeps
+/// its printed name, CR 707.2); III, a Mutant fights another creature named
+/// Fenric.
 pub fn the_curse_of_fenric() -> CardDefinition {
     let mutant = token("Mutant", vec![Color::Green], vec![CreatureType::Mutant], 3, 3, vec![Keyword::Deathtouch]);
     saga("The Curse of Fenric", cost(&[generic(2), g(), w()]), vec![
@@ -962,15 +960,7 @@ pub fn the_curse_of_fenric() -> CardDefinition {
                 duration: Duration::Permanent,
             },
             Effect::BecomeLegendary { what: Selector::Target(0), duration: Duration::Permanent },
-            Effect::AmendCopiableValues {
-                what: Selector::Target(0),
-                name: Some("Fenric"),
-                set_creature_types: None,
-                add_creature_types: vec![],
-                legendary: false,
-                add_colors: vec![],
-                set_card_types: None,
-            },
+            Effect::BecomeNamed { what: Selector::Target(0), name: "Fenric" },
         ])),
         (3, Effect::Fight {
             attacker: target_filtered(R::HasCreatureType(CreatureType::Mutant)),

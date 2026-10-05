@@ -467,6 +467,44 @@ fn curse_of_fenric_ii_makes_a_legendary_horror() {
     assert!(!cp.keywords().contains(&Keyword::Flying));
 }
 
+/// CR 707.2 — "becomes … named Fenric" is no copy effect, so the name isn't
+/// a copiable value: the creature is named Fenric (III's "named Fenric"
+/// sees it), a token copy of it is a Grizzly Bears, and the name ends when
+/// it leaves the battlefield (CR 400.7).
+#[test]
+fn curse_of_fenric_ii_name_is_not_copiable() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let saga = catalog::the_curse_of_fenric();
+    let chapter = saga.saga_chapters[1].1.clone();
+    let src = g.add_card_to_battlefield(0, saga);
+    let ctx = EffectContext::for_ability(src, 0, Some(crabomination::game::types::Target::Permanent(bear)));
+    g.resolve_effect(&chapter, &ctx).expect("resolves");
+    assert_eq!(g.battlefield_find(bear).unwrap().definition.name, "Fenric");
+    let copy = Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        source: Selector::ExactObjects(vec![bear]),
+        extra_creature_types: vec![],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: false,
+        legendary: false,
+        extra_keywords: vec![],
+        no_mana_cost: false,
+        enters_with_counters: None,
+    };
+    g.resolve_effect(&copy, &EffectContext::for_ability(src, 0, None)).expect("copy");
+    let tok = g.battlefield.iter().find(|c| c.is_token && c.controller == 0).expect("the copy");
+    assert_eq!(tok.definition.name, "Grizzly Bears", "a copy takes the printed name");
+    let ev = g.resolve_effect(&Effect::Move { what: Selector::ExactObjects(vec![bear]), to: crabomination::effect::ZoneDest::Graveyard }, &ctx).expect("dies");
+    g.dispatch_triggers_for_events(&ev);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear && c.definition.name == "Grizzly Bears"));
+}
+
 /// The Fourth Doctor — "once each turn, you may play a historic land or cast
 /// a historic spell from the top of your library. When you do, create a
 /// Food": a land played that way makes one too, the grant is spent, and a

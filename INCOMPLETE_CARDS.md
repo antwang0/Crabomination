@@ -1927,7 +1927,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers every cost you pay yourself; a mana ability the auto-tapper fires on its own pays its {B} with mana. |
 
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |
-| 🟡 The Curse of Fenric | Blast from the Past (WHO) | II's name "Fenric" is a copiable value, so a copy of Fenric is named Fenric too (CR 707.2); no non-copy name effect. |
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)
 
