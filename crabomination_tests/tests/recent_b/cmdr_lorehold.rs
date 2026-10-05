@@ -444,3 +444,45 @@ fn wake_the_past_returns_artifacts_with_haste() {
     assert!(named(&g, 0, "Grizzly Bears").is_empty());
     assert!(g.computed_permanent(t[0]).unwrap().keywords().contains(&Keyword::Haste));
 }
+
+/// Ruin Grinder with PROMPTING seats (every pod seat): each accepter's discard
+/// suspends, and the rest of that accepter's wheel — and the other accepters'
+/// — must still run, bound to the right player. The draw used to go to no one
+/// (the resumed context has no slot 0) and a second accepter was never asked
+/// to discard.
+#[test]
+fn ruin_grinder_wheels_every_prompting_accepter() {
+    use crabomination::decision::{AutoDecider, Decider, Decision};
+    let mut g = pod(2);
+    let grinder = g.add_card_to_battlefield(0, catalog::ruin_grinder());
+    for seat in 0..2 {
+        library(&mut g, seat, 10);
+        g.add_card_to_hand(seat, catalog::plains());
+        g.add_card_to_hand(seat, catalog::lightning_bolt());
+        g.players[seat].wants_ui = true;
+    }
+    let old: Vec<Vec<CardId>> = (0..2).map(|s| g.players[s].hand.iter().map(|c| c.id).collect()).collect();
+    g.battlefield_find_mut(grinder).unwrap().damage = 4;
+    g.check_state_based_actions();
+    for _ in 0..80 {
+        if let Some(pd) = &g.pending_decision {
+            let answer = match &pd.decision {
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                Decision::Discard { hand, count, .. } => {
+                    DecisionAnswer::Discard(hand.iter().take(*count as usize).map(|c| c.0).collect())
+                }
+                d => AutoDecider.decide(d),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(g.battlefield_find(grinder).is_none());
+    for (seat, hand) in old.iter().enumerate() {
+        assert_eq!(g.players[seat].hand.len(), 7, "seat {seat} drew seven");
+        assert!(hand.iter().all(|id| g.players[seat].graveyard.iter().any(|c| c.id == *id)), "seat {seat} discarded its hand");
+    }
+}

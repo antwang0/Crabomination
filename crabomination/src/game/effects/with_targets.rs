@@ -28,17 +28,20 @@ impl GameState {
         self.run_effect(body, &sub, events)?;
         // A parked continuation resumes under the stack item's context: keep
         // the binding by naming the same objects again.
-        let ids: Vec<crate::card::CardId> = targets
-            .iter()
-            .filter_map(|t| match t {
-                Target::Permanent(id) => Some(*id),
-                Target::Player(_) => None,
-            })
-            .collect();
-        rewrap_parked(&mut self.suspend_signal, |carried| Effect::WithTargets {
-            what: Selector::ExactObjects(ids),
-            body: Box::new(carried),
-        });
+        // One player target (`PlayersMayAccept`'s accepter) is named as that seat.
+        let what = match targets.as_slice() {
+            [Target::Player(p)] => Selector::Player(crate::effect::PlayerRef::Seat(*p)),
+            _ => Selector::ExactObjects(
+                targets
+                    .iter()
+                    .filter_map(|t| match t {
+                        Target::Permanent(id) => Some(*id),
+                        Target::Player(_) => None,
+                    })
+                    .collect(),
+            ),
+        };
+        rewrap_parked(&mut self.suspend_signal, |carried| Effect::WithTargets { what, body: Box::new(carried) });
         Ok(())
     }
 }

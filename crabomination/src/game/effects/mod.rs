@@ -26859,7 +26859,7 @@ impl GameState {
                 }
                 // Each accepter pays with themselves in slot 0; the shared
                 // consequence then runs once, however many accepted.
-                for p in accepted {
+                for (i, &p) in accepted.iter().enumerate() {
                     let mut acc_ctx = ctx.clone();
                     if acc_ctx.targets.is_empty() {
                         acc_ctx.targets.push(Target::Player(p));
@@ -26867,6 +26867,23 @@ impl GameState {
                         acc_ctx.targets[0] = Target::Player(p);
                     }
                     self.run_effect(on_accept, &acc_ctx, events)?;
+                    // A prompting accepter's ask (Ruin Grinder's discard)
+                    // parks the rest of their payment, which resumes under
+                    // the stack item's context: keep them bound, and queue
+                    // the other accepters and the shared consequence behind.
+                    let accepter = |q: usize, body: Effect| Effect::WithTargets {
+                        what: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                        body: Box::new(body),
+                    };
+                    if rewrap_parked(&mut self.suspend_signal, |carried| accepter(p, carried)) {
+                        splice_after_suspend(&mut self.suspend_signal, || {
+                            let mut rest: Vec<Effect> =
+                                accepted[i + 1..].iter().map(|&q| accepter(q, (**on_accept).clone())).collect();
+                            rest.push((**if_any).clone());
+                            Effect::seq(rest)
+                        });
+                        return Ok(());
+                    }
                 }
                 self.run_effect(if_any, ctx, events)
             }
