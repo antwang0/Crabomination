@@ -3160,6 +3160,28 @@ census (tip)     every deck, 4/6/8 seats x 60 (seeds 135001+/136001+/137001+):
 pod table        re-blessed once (hideaway plays a hidden land; bisected)
 ```
 
+### 2026-10-05 (Commander session `01VKHeZo`) — guardrail, no perf work
+
+Engine edits on paths every pool reaches: one `quiet_events` emptiness read
+after `perform_action`'s dispatch; `UntilNextTurn` control reverted in
+`do_untap` instead of cleanup; the first sacrifice's card types stamped in
+`ResolutionScratch` (written only on a resolution's first sacrifice).
+4-core container, `release`, session-start binary (`e2f85d199` + this
+session's first six commits) vs the tip, `--bench` alternated.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split)
+wall (release)   base 312/286/307/278/284 vs tip 298/284/278/289/292/301
+                 games/s: 293.4 vs 290.3 (-1.0 %, ranges overlap)
+suite            24,139 / 0 / 5; clippy 0
+pods (release)   2..8 seats x 1,000 x seeds 141002-143008 = 21,000 decided;
+                 all 183 decks in 77 groups (4 seats x 150, 6 seats x 150,
+                 seeds 132000+/133000+) = 11,550, one CR 104.4a draw
+strict debug     CRAB_ANSWER_LOG=strict, all 183 decks, 1,230 games: one find
+                 (Braids' deny ask across a suspend), fixed and re-run clean
+```
+
 ### 2026-10-04 (Commander session `01JMRKMd`) — guardrail, no perf work
 
 Per-bucket artifact provenance on `ManaPool` (`[u32; 6]`, skipped on the wire
