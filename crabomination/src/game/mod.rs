@@ -20617,6 +20617,7 @@ impl GameState {
             .contains(&crate::card::CardType::Creature);
         let was_nonland = !card.definition.card_types.contains(&crate::card::CardType::Land);
         let madness = card.definition.madness_cost().cloned().or_else(|| self.granted_madness(p, &card));
+        let madness_life = if card.definition.madness_cost().is_some() { card.definition.madness_life_cost } else { 0 };
 
         // The discard happens regardless of the destination zone (CR
         // 701.8b), so emit the event + bump the discard-matters counters
@@ -20697,7 +20698,7 @@ impl GameState {
                 // CR 702.35a — exile instead of graveyard, then offer the
                 // cast for the madness cost.
                 self.exile.push(card);
-                if !self.offer_madness_cast(p, card_id, &cost, events) {
+                if !self.offer_madness_cast(p, card_id, &cost, madness_life, events) {
                     // CR 702.35b — declined / unaffordable: the card goes
                     // from exile to its owner's graveyard.
                     if let Some(c) = Self::take_card(&mut self.exile, card_id) {
@@ -20773,8 +20774,14 @@ impl GameState {
         p: usize,
         card_id: crate::card::CardId,
         cost: &crate::mana::ManaCost,
+        life: u32,
         events: &mut Vec<GameEvent>,
     ) -> bool {
+        // CR 119.4 — a life payment needs that much life; a headless seat
+        // also keeps some above it.
+        if life > 0 && self.players[p].life < life as i32 {
+            return false;
+        }
         // AutoDecider's blanket "no" made Madness a dead keyword for every
         // server-hosted seat (this ask never suspends — it sits inside the
         // synchronous discard path). Auto seats now use a policy: cast
@@ -20792,7 +20799,7 @@ impl GameState {
         let take = match self.decider.kind() {
             crate::decision::DeciderKind::Auto => {
                 let mut probe = self.players[p].mana_pool.clone();
-                probe.pay(cost).is_ok() && x_value != Some(0)
+                probe.pay(cost).is_ok() && x_value != Some(0) && (life == 0 || self.players[p].life > 2 * life as i32)
             }
             _ => matches!(
                 self.decider.decide(&Decision::OptionalTrigger {
@@ -20812,6 +20819,12 @@ impl GameState {
         let pool_before = self.players[p].mana_pool.clone();
         if self.players[p].mana_pool.pay(cost).is_err() {
             return false;
+        }
+        if life > 0 && !self.replace_life_payment(p, life, events) {
+            let applied = self.adjust_life_applied(p, -(life as i32));
+            if applied < 0 {
+                events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+            }
         }
         // A targeted madness spell (Dark Withering) takes the auto-picker's
         // target, as the other effect-driven casts do; with `None` its cast

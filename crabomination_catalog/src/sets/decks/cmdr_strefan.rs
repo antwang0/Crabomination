@@ -340,9 +340,12 @@ pub fn scion_of_opulence() -> CardDefinition {
 }
 
 /// Shadowgrange Archfiend — each opponent sacrifices their greatest-power
-/// creature; you gain the greatest power sacrificed.
+/// creature; you gain the greatest power sacrificed. Madness—{2}{B}, Pay 8
+/// life.
 pub fn shadowgrange_archfiend() -> CardDefinition {
     CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[generic(2), b()]))],
+        madness_life_cost: 8,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),

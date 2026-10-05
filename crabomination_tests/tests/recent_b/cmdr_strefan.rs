@@ -102,6 +102,25 @@ fn arterial_alchemy_turns_blood_into_equipment() {
     assert_eq!(pt(&g, bear), (4, 2));
 }
 
+/// CR 702.35 / 119.4 — Shadowgrange Archfiend's madness cost is {2}{B} and 8
+/// life: discarded with the mana up it is cast from exile and the life is
+/// paid; below 8 life it can't be, and goes to the graveyard (CR 702.35b).
+#[test]
+fn shadowgrange_archfiend_madness_pays_eight_life() {
+    let run = |life: i32| {
+        let mut g = main_phase(2);
+        g.players[0].life = life;
+        let sa = g.add_card_to_hand(0, catalog::shadowgrange_archfiend());
+        flood(&mut g, 0);
+        let mut events = Vec::new();
+        assert!(g.discard_card(0, sa, &mut events));
+        drain_stack(&mut g);
+        (g.battlefield_find(sa).is_some(), g.players[0].life)
+    };
+    assert_eq!(run(30), (true, 22), "cast for madness, 8 life paid");
+    assert_eq!(run(7), (false, 7), "can't pay 8 life");
+}
+
 /// CR 702.35 — a Vampire card discarded with Falkenrath Gorger out is cast
 /// for its madness cost (its own mana cost) when the pool can pay.
 #[test]

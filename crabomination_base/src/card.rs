@@ -5256,6 +5256,10 @@ pub struct CardDefinition {
     /// A discard-destination replacement, applied in `discard_card`.
     #[serde(default)]
     pub opponent_discard_deploys: Option<(CounterType, u32)>,
+    /// CR 702.35 / 119.4 — the "Pay N life" half of a madness cost
+    /// (Shadowgrange Archfiend's "Madness—{2}{B}, Pay 8 life").
+    #[serde(default)]
+    pub madness_life_cost: u32,
     /// CR 702.103 — Bestow alternative cost. When `Some(cost)`, the card may
     /// be cast as an Aura spell targeting a creature for this cost (via
     /// `GameAction::CastBestow`); it enters attached, grants its
