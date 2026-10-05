@@ -319,13 +319,35 @@ pub fn make_an_example() -> CardDefinition {
 }
 
 /// Parnesse, the Subtle Brush — you and your permanents tax an opponent's
-/// targeting 4 life (ward-shaped, CR 702.21a: `ControllerHasWard` for you).
-///
-/// Residual: copying a spell doesn't offer an opponent a copy (an "up to
-/// one target opponent" the trigger picker would always fill, so a bot would
-/// hand the table copies — priced and left).
+/// targeting 4 life (ward-shaped, CR 702.21a: `ControllerHasWard` for you);
+/// whenever you copy a spell, up to one target opponent may also copy it
+/// (a gift slot: the auto-picker leaves it empty, a prompting seat may name
+/// one).
 pub fn parnesse_the_subtle_brush() -> CardDefinition {
     CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCopied, EventScope::YourControl),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    // Declares slot 0 as "target opponent" (Gonti's device).
+                    Effect::Draw {
+                        who: Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer },
+                        amount: Value::Const(0),
+                    },
+                    Effect::PlayersMayAccept {
+                        who: PlayerRef::Target(0),
+                        description: "Copy that spell?".into(),
+                        on_accept: Box::new(Effect::CopySpellForPlayer {
+                            what: Selector::TriggerSource,
+                            who: PlayerRef::Target(0),
+                        }),
+                        if_any: Box::new(Effect::Noop),
+                        otherwise: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
+        }],
         static_abilities: vec![
             StaticAbility {
                 description: "Whenever a permanent you control becomes the target of a spell or ability an \

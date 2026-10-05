@@ -315,6 +315,66 @@ fn parnesse_taxes_targeting() {
     assert_eq!(g.players[0].life, life, "countered");
 }
 
+/// Parnesse — "whenever you copy a spell, up to one target opponent may also
+/// copy that spell": the slot is a gift, so a headless controller leaves it
+/// empty (only the two Bolts it controls hit); a prompting controller names
+/// seat 1, who takes the copy and aims it at seat 0 (CR 707.10c, 115.7).
+#[test]
+fn parnesse_offers_an_opponent_a_copy_only_when_named() {
+    let bolt_then_copy = |g: &mut GameState| {
+        g.players[1].life = 20;
+        g.players[0].life = 20;
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        let rev = g.add_card_to_hand(0, catalog::reverberate());
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("bolt");
+        g.perform_action(GameAction::CastSpell {
+            card_id: rev, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("reverberate");
+    };
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::parnesse_the_subtle_brush());
+    bolt_then_copy(&mut g);
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (20, 14), "no gift: two Bolts at seat 1");
+
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::parnesse_the_subtle_brush());
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    bolt_then_copy(&mut g);
+    for _ in 0..16 {
+        if let Some(pd) = g.pending_decision.as_ref() {
+            let answer = match &pd.decision {
+                crabomination::decision::Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Player(1)) => {
+                    DecisionAnswer::Target(Target::Player(1))
+                }
+                crabomination::decision::Decision::ChooseTarget { legal, .. } => DecisionAnswer::Target(legal[0].clone()),
+                // Seat 1 takes the copy.
+                crabomination::decision::Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                other => panic!("unexpected {other:?}"),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        } else if !g.stack.is_empty() {
+            for _ in 0..2 {
+                if g.pending_decision.is_none() {
+                    g.perform_action(GameAction::PassPriority).expect("pass");
+                }
+            }
+        } else {
+            break;
+        }
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "seat 0's Bolt and its copy");
+    assert_eq!(g.players[0].life, 17, "seat 1 copied the Bolt and aimed it at seat 0");
+}
+
 /// Rekindling Phoenix — dies into an Elemental that brings it back.
 #[test]
 fn rekindling_phoenix_rises() {
