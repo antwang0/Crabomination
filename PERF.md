@@ -3180,6 +3180,9 @@ pods (release)   2..8 seats x 1,000 x seeds 141002-143008 = 21,000 decided;
                  seeds 132000+/133000+) = 11,550, one CR 104.4a draw
 strict debug     CRAB_ANSWER_LOG=strict, all 183 decks, 1,230 games: one find
                  (Braids' deny ask across a suspend), fixed and re-run clean
+later            every sacrifice clones an LKI into ResolutionScratch
+                 (`sacrificed_lki_this_resolution`): --bench byte-identical,
+                 base 291/289/307 vs tip 277/298/295 games/s (-2.0 %, noise)
 ```
 
 ### 2026-10-04 (Commander session `01JMRKMd`) — guardrail, no perf work
