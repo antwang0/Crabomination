@@ -3145,15 +3145,9 @@ impl GameState {
         // `revert_temporary_control` already carries, narrowed to the source
         // this call is about. Reads are free (`Deref`).
         if self.temporary_control.iter().any(|tc| tc.source == Some(id)) {
-            let mut kept = Vec::new();
-            for tc in std::mem::take(&mut self.temporary_control) {
-                if tc.source == Some(id) {
-                    self.change_control(tc.card, tc.original_controller);
-                } else {
-                    kept.push(tc);
-                }
-            }
-            self.temporary_control = kept;
+            let all = std::mem::take(&mut self.temporary_control);
+            let ended: Vec<bool> = all.iter().map(|tc| tc.source == Some(id)).collect();
+            self.temporary_control = self.settle_temporary_control(all, &ended);
         }
         // CR 400.7 — the card is a new object in its next zone: effects
         // that granted abilities to the permanent don't follow it, and

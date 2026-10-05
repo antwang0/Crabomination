@@ -18479,53 +18479,109 @@ impl GameState {
         // end of your next turn", this is that player's turn after the one it
         // began on.
         let (active, turn) = (self.active_player_idx, self.turn_number);
-        let due = |tc: &TempControl| {
-            which.contains(&tc.duration)
-                && tc.installed.is_none_or(|(p, t)| p == active && turn > t)
-        };
-        // CR 800.4c's "there is no other effect giving control of that object
-        // to another player in the game" — asked of the *whole* list rather
-        // than of the entries already processed, so it does not depend on the
-        // order control effects were registered in.
-        let survives_elsewhere = |card: CardId, idx: usize| {
-            all.iter().enumerate().any(|(j, o)| j != idx && o.card == card && !due(o))
-        };
-        let mut kept: Vec<TempControl> = Vec::new();
-        for (idx, tc) in all.iter().cloned().enumerate() {
-            let on_battlefield = self.battlefield.find_by_id(tc.card).is_some();
-            if !on_battlefield {
-                continue; // card left play — nothing to revert
+        let ended: Vec<bool> = all
+            .iter()
+            .map(|tc| which.contains(&tc.duration) && tc.installed.is_none_or(|(p, t)| p == active && turn > t))
+            .collect();
+        self.temporary_control = self.settle_temporary_control(all, &ended);
+    }
+
+    /// End the `temporary_control` entries `ended` marks and return the rest.
+    ///
+    /// CR 613.7 / 611.2b — a permanent stolen twice is under a *stack* of
+    /// control effects in timestamp order, which is the order entries sit in
+    /// the list; each entry's `original_controller` is the controller the
+    /// effects below it gave. An effect ending in the middle of the stack
+    /// changes nothing on the board — the entry above inherits its
+    /// `original_controller`, so the stack still unwinds to the right seat
+    /// (two pod Treasure Nabbers on one permanent: the second steal ends on
+    /// its own schedule and control falls back to the first stealer while
+    /// that one still holds). Only when the top of a card's stack ends does
+    /// control move, to the controller the highest surviving effect gives.
+    /// Entries whose card has left the battlefield are dropped without effect
+    /// (CR 800.4 — the control-changing effect simply ends).
+    pub(crate) fn settle_temporary_control(&mut self, all: Vec<TempControl>, ended: &[bool]) -> Vec<TempControl> {
+        let mut kept: Vec<Option<TempControl>> = vec![None; all.len()];
+        let mut done: Vec<bool> = vec![false; all.len()];
+        for start in 0..all.len() {
+            if done[start] {
+                continue;
             }
-            if due(&tc) {
-                // CR 800.4c — "If an effect that gives a player still in the
-                // game control of an object ends, there is no other effect
-                // giving control of that object to another player in the
-                // game, and the player who controlled that object by default
-                // has left the game, the object is exiled."
-                //
-                // Without this the object simply stays where it is:
-                // `change_control` refuses the move under CR 800.4b and
-                // returns `None`, so the borrower keeps a permanent for the
-                // rest of the game that the rules say should be gone. The
-                // reachable shape is three-deep — A owns it, B takes it
-                // permanently, C takes it until end of turn, B leaves — which
-                // is why 800.4a's own revert (it only touches permanents the
-                // departing seat controls *right now*) does not cover it.
-                //
-                let default_gone = !self
-                    .players
-                    .get(tc.original_controller)
-                    .is_some_and(|p| p.is_alive());
-                if default_gone && !survives_elsewhere(tc.card, idx) {
-                    self.remove_from_battlefield_to_exile(tc.card);
-                } else {
-                    self.change_control(tc.card, tc.original_controller);
+            let card = all[start].card;
+            let on_battlefield = self.battlefield.find_by_id(card).is_some();
+            // The controller under the run of ended entries being walked.
+            let mut below: Option<usize> = None;
+            for i in start..all.len() {
+                if all[i].card != card {
+                    continue;
                 }
+                done[i] = true;
+                if !on_battlefield {
+                    continue; // card left play — nothing to revert
+                }
+                if ended[i] {
+                    below.get_or_insert(all[i].original_controller);
+                } else {
+                    let mut tc = all[i].clone();
+                    if let Some(p) = below.take() {
+                        tc.original_controller = p;
+                    }
+                    kept[i] = Some(tc);
+                }
+            }
+            let Some(back_to) = below else { continue };
+            // CR 800.4c — "If an effect that gives a player still in the
+            // game control of an object ends, there is no other effect
+            // giving control of that object to another player in the game,
+            // and the player who controlled that object by default has left
+            // the game, the object is exiled." `back_to` is what every
+            // surviving effect below gives, so a departed `back_to` means no
+            // live player is left to hand it to.
+            //
+            // Without this the object simply stays where it is:
+            // `change_control` refuses the move under CR 800.4b and returns
+            // `None`, so the borrower keeps a permanent for the rest of the
+            // game that the rules say should be gone. The reachable shape is
+            // three-deep — A owns it, B takes it permanently, C takes it until
+            // end of turn, B leaves — which is why 800.4a's own revert (it
+            // only touches permanents the departing seat controls *right
+            // now*) does not cover it.
+            if self.players.get(back_to).is_some_and(|p| p.is_alive()) {
+                self.change_control(card, back_to);
             } else {
-                kept.push(tc);
+                self.remove_from_battlefield_to_exile(card);
             }
         }
-        self.temporary_control = kept;
+        kept.into_iter().flatten().collect()
+    }
+
+    /// Pending temporary-control entries, for tests.
+    #[doc(hidden)]
+    pub fn temporary_control_len(&self) -> usize {
+        self.temporary_control.len()
+    }
+
+    /// CR 800.4a — "any effects which give that player control of any
+    /// objects … end": every `temporary_control` entry granting departed
+    /// seat `p` control ends, through the same stack walk as a duration
+    /// ending. An entry's grantee is the next entry's `original_controller`
+    /// for the same card, or the card's current controller for the top one.
+    pub(crate) fn end_temporary_control_granted_to(&mut self, p: usize) {
+        if self.temporary_control.is_empty() {
+            return;
+        }
+        let all = std::mem::take(&mut self.temporary_control);
+        let ended: Vec<bool> = (0..all.len())
+            .map(|i| {
+                let grantee = all[i + 1..]
+                    .iter()
+                    .find(|o| o.card == all[i].card)
+                    .map(|o| o.original_controller)
+                    .or_else(|| self.battlefield_find(all[i].card).map(|c| c.controller));
+                grantee == Some(p)
+            })
+            .collect();
+        self.temporary_control = self.settle_temporary_control(all, &ended);
     }
 
     /// CR 707 / 611.2c — a "becomes a copy" effect ends when the object

@@ -5877,6 +5877,11 @@ impl GameState {
             self.note_left_without_dying(c, events);
         }
         self.battlefield.retain(|c| c.owner != p);
+        // A recorded steal hands the permanent to whoever the effect under it
+        // gives (another stealer whose effect still holds), not straight to
+        // the owner; this also drops the departed seat's entries so a later
+        // steal of the same permanent still ends.
+        self.end_temporary_control_granted_to(p);
         let reverts: Vec<(CardId, usize)> = self
             .battlefield
             .iter()
@@ -6789,8 +6794,9 @@ impl GameState {
                     || tc.while_matches.is_some()
             })
         {
-            let mut kept = Vec::new();
-            for tc in std::mem::take(&mut self.temporary_control) {
+            let all = std::mem::take(&mut self.temporary_control);
+            let mut ended = Vec::with_capacity(all.len());
+            for tc in &all {
                 let holds = (!tc.while_source_tapped
                     || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| c.tapped))
                     && (!tc.while_source_attached
@@ -6814,13 +6820,9 @@ impl GameState {
                             )
                         })
                     });
-                if holds {
-                    kept.push(tc);
-                } else {
-                    self.change_control(tc.card, tc.original_controller);
-                }
+                ended.push(!holds);
             }
-            self.temporary_control = kept;
+            self.temporary_control = self.settle_temporary_control(all, &ended);
         }
 
         // Same clause on the continuous-effect side (Hisoka's Guard's shroud

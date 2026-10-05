@@ -4756,6 +4756,71 @@ fn cr_800_4c_an_ordinary_reversion_is_untouched() {
     );
 }
 
+/// Seat `by` steals `card` for `duration` (Treasure Nabber's "until the end
+/// of your next turn", Act of Treason's "until end of turn").
+fn steal_for(g: &mut GameState, by: usize, card: crabomination::card::CardId, duration: crabomination::effect::Duration) {
+    use crabomination::effect::{Effect, Selector};
+    let ctx = EffectContext { targets: vec![crabomination::game::types::Target::Permanent(card)], ..EffectContext::for_spell(by, None, 0, 0) };
+    g.resolve_effect(&Effect::GainControl { what: Selector::Target(0), to: None, duration }, &ctx)
+        .expect("steal");
+}
+
+/// CR 613.7 / 611.2b — two steals of one permanent are two control effects
+/// in timestamp order, and each ends on its own schedule. Seat 1 Nabbers
+/// seat 0's Bears until the end of seat 1's next turn; seat 2 then takes them
+/// until end of turn. At this turn's cleanup only seat 2's effect ends, so
+/// control falls back to seat 1, whose effect still holds; it goes home to
+/// seat 0 at the end of seat 1's next turn. (Two pod decks run Treasure
+/// Nabber.) The engine kept one entry per card, so the second steal recorded
+/// nothing: seat 2 kept the Bears until seat 1's turn ended, then they went
+/// straight home.
+#[test]
+fn cr_613_7_a_second_steal_ends_on_its_own_and_falls_back_to_the_first() {
+    use crabomination::effect::Duration;
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    steal_for(&mut g, 1, bears, Duration::UntilEndOfYourNextTurn);
+    steal_for(&mut g, 2, bears, Duration::EndOfTurn);
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 2);
+
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(
+        g.battlefield_find(bears).unwrap().controller,
+        1,
+        "seat 2's effect ended; seat 1's, the next one down, still holds",
+    );
+
+    g.turn_number += 1;
+    g.active_player_idx = 1;
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 0, "seat 1's next turn ended: home");
+    assert_eq!(g.temporary_control_len(), 0, "and nothing is left pending");
+}
+
+/// CR 800.4a — "any effects which give that player control of any objects
+/// … end". Seat 1 Nabbers the Bears, seat 2 takes them
+/// until the end of seat 2's next turn, and seat 2 leaves: control goes to
+/// seat 1, whose effect still holds, not to the owner. The departed seat's
+/// entry goes with it — a stale one would keep naming seat 2 forever.
+#[test]
+fn cr_800_4a_a_departed_stealer_hands_back_to_the_steal_below() {
+    use crabomination::effect::Duration;
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    steal_for(&mut g, 1, bears, Duration::UntilEndOfYourNextTurn);
+    steal_for(&mut g, 2, bears, Duration::UntilEndOfYourNextTurn);
+    g.concede(2);
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 1, "seat 1's steal still holds");
+    assert_eq!(g.temporary_control_len(), 1, "seat 2's entry ended with it");
+
+    g.turn_number += 1;
+    g.active_player_idx = 1;
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 0, "then home at its own end");
+}
+
 // ── CR 101.4 — a per-player loop whose body suspends ───────────────────────
 //
 // "If multiple players would make choices … at the same time, the active

@@ -20029,11 +20029,10 @@ impl GameState {
                     let Some(prev) = self.change_control(cid, new_ctrl) else { continue };
                     // For non-permanent steals, remember the pre-steal
                     // controller so control reverts when the duration ends
-                    // (CR 800.4). Keep the earliest entry if the permanent is
-                    // re-stolen so it unwinds all the way back.
-                    if !matches!(duration, Duration::Permanent)
-                        && !self.temporary_control.iter().any(|t| t.card == cid)
-                    {
+                    // (CR 800.4). A re-steal stacks a second entry on the
+                    // first in timestamp order (CR 613.7), so each ends on its
+                    // own schedule — see `settle_temporary_control`.
+                    if !matches!(duration, Duration::Permanent) {
                         let installed = matches!(duration, Duration::UntilEndOfYourNextTurn | Duration::UntilNextTurn)
                             .then_some((ctx.controller, self.turn_number));
                         self.temporary_control.push(crate::game::TempControl {
