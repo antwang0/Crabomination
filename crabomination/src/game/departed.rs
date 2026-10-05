@@ -209,9 +209,15 @@ mod tests {
         g.check_state_based_actions();
         assert!(g.suspend_signal.is_some(), "another seat's ask stays");
         g.suspend_signal = ask(2);
+        // An earlier seat's answer in the same resolution's replay log.
+        g.log_answer(crate::decision::DecisionAnswer::Bool(true), Some(3));
         g.players[2].life = 0;
         g.check_state_based_actions();
         assert!(g.suspend_signal.is_none(), "the departed seat's ask is gone");
+        // ...and its continuation's replay log with it: the next resolution's
+        // first ask would replay that answer as its own (a strict concession
+        // pod, seats 79/64/128 seed 160002).
+        assert!(g.scratch.resolution_answer_log.is_empty(), "no answer outlives the dropped continuation");
     }
 
     /// CR 800.4 generally: no modal the engine poses may name a seat that has
