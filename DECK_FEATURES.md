@@ -31,7 +31,7 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-05 (`01S6ztPx`, 160/183 — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
+Snapshot 2026-10-05 (`01G3AuwS`, 162/183 — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
@@ -41,11 +41,9 @@ they call a deck 🟡, the table wins.
 | 55 | Zedruu the Greathearted (URW) | 1: ruhan_of_the_fomori |
 | 63 | Rin and Seri, Inseparable (RGW) | 1: jinnie_fay_jetmirs_second |
 | 66 | Inalla, Archmage Ritualist (UBR) | 1: vindictive_lich |
-| 75 | Hazel of the Rootbloom (BG) | 1: sword_of_the_squeak |
 | 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 120 | Leinore, Autumn Sovereign (GW) | 1: moorland_rescuer |
-| 122 | Omo, Queen of Vesuva (GU) | 2: desert_warfare, march_from_velis_vel |
+| 122 | Omo, Queen of Vesuva (GU) | 1: desert_warfare |
 | 125 | Henzie "Toolbox" Torre (BRG) | 2: henzie_toolbox_torre, turf_war |
 | 130 | Prossh, Skyraider of Kher (BRG) | 1: capricious_efreet |
 | 137 | Zimone, Infinite Analyst (GU) | 1: unbound_flourishing |
@@ -60,7 +58,7 @@ they call a deck 🟡, the table wins.
 | 180 | Heroes in a Half Shell (WUBRG) | 1: city_of_brass |
 | 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
 
-160 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+162 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
