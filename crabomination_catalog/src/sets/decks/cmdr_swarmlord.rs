@@ -468,18 +468,18 @@ pub fn haruspex() -> CardDefinition {
 
 /// Hierophant Bio-Titan — removing +1/+1 counters from your creatures makes
 /// it {2} cheaper each; reach, vigilance, ward {2}; power 2 or less can't
-/// block it.
-/// Residual: the counters that buy the most discount (up to five) are always
-/// removed, from the creatures carrying the most.
+/// block it. A manual-mana caster names the count and each counter's
+/// creature; headless, the most discount (up to five) from the creatures
+/// carrying the most.
 pub fn hierophant_bio_titan() -> CardDefinition {
     let removable = || {
-        Value::Min(
+        Value::CastCounterRemovalOr(Box::new(Value::Min(
             Box::new(Value::CountersOn {
                 what: Box::new(Selector::EachPermanent(yours(R::Creature))),
                 kind: CounterType::PlusOnePlusOne,
             }),
             Box::new(Value::Const(5)),
-        )
+        )))
     };
     CardDefinition {
         keywords: vec![

@@ -122,6 +122,36 @@ fn cr_601_2f_hierophant_removes_counters_for_a_discount() {
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
+/// CR 601.2b / 601.2f — "remove any number of counters" is the caster's
+/// choice: a manual-mana caster removes two (not the three the headless pick
+/// takes), names the Elf's lone counter first, and the second comes off the
+/// Bear (the only holder left); the spell costs {4} less.
+#[test]
+fn cr_601_2b_hierophant_caster_chooses_the_counters() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.battlefield_find_mut(elf).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.players[0].manual_mana = true;
+    let hbt = g.add_card_to_hand(0, catalog::hierophant_bio_titan());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: hbt, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("asks how many");
+    assert!(g.pending_decision.is_some(), "how many counters");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(2))).expect("two");
+    assert!(g.pending_decision.is_some(), "which creature first");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![elf]))).expect("the elf");
+    assert!(g.pending_decision.is_none(), "the bear is the only holder left");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hbt).is_some());
+    assert_eq!((counters(&g, bear), counters(&g, elf)), (1, 0));
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{10}}{{G}}{{G}} - 4");
+}
+
 /// CR 702.156 — Ravenous: X = 5 enters with five counters and draws.
 #[test]
 fn cr_702_156_ravenous_draws_at_five() {
