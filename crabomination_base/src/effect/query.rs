@@ -734,7 +734,8 @@ impl Effect {
     /// validation.
     pub fn requires_target(&self) -> bool {
         match self {
-            Effect::Voyage { .. }
+            Effect::ConniveFinish { .. }
+            | Effect::Voyage { .. }
             | Effect::ShuffleIntoTopPile { .. }
             | Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
             | Effect::SecretCouncilPlayerVote { .. }

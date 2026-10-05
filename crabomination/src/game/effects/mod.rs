@@ -35117,6 +35117,9 @@ impl GameState {
             }
 
             Effect::Connive { what, amount } => self.connive(what, amount, ctx, events),
+            Effect::ConniveFinish { conniver, controller, since } => {
+                self.connive_finish(*conniver, *controller, *since, ctx, events)
+            }
             Effect::SecretCouncilPlayerVote { per_vote, unvoted } => {
                 self.secret_council_player_vote(per_vote, unvoted, effect, ctx, events)
             }

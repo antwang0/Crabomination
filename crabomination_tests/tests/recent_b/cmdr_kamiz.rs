@@ -428,3 +428,38 @@ fn skyway_robber_escapes() {
     assert!(g.battlefield_find(s).is_some());
     assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(s)).count(), 5);
 }
+
+/// CR 701.50a — a conniving creature whose controller PROMPTS (every pod seat)
+/// still gets its counter: the discard suspends for the pick, and the counter
+/// step used to be lost with the continuation (it was neither parked nor
+/// re-run).
+#[test]
+fn cr_701_50a_a_prompting_seat_connives_for_its_counter() {
+    use crabomination::decision::Decision;
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = true;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let plans = g.add_card_to_hand(0, catalog::change_of_plans());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: plans, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: Some(1),
+    })
+    .expect("cast");
+    for _ in 0..40 {
+        if let Some(pd) = &g.pending_decision {
+            let answer = match &pd.decision {
+                Decision::Discard { .. } => DecisionAnswer::Discard(vec![bolt]),
+                _ => DecisionAnswer::Bool(false),
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "discarded the Bolt");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "a nonland discard: one counter");
+}

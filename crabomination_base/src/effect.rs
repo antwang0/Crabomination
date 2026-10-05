@@ -10975,6 +10975,12 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// Internal plumbing (CR 701.50a): the last step of one creature's connive —
+    /// a +1/+1 counter on `conniver` per nonland card discarded since entry
+    /// `since` of the resolution's discard list, then the `Connived` event.
+    /// Its own node so a suspended discard parks it behind itself.
+    ConniveFinish { conniver: crate::card::CardId, controller: usize, since: u32 },
+
     /// Internal plumbing: re-stamp the power of the creature tapped to pay a
     /// Station ability's cost (CR 702.184a) before running `body`, so
     /// `Value::TappedForCostPower` reads it at resolution. Wrapped around the
