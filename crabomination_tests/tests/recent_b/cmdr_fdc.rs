@@ -7014,3 +7014,36 @@ fn druid_of_purification_choices_may_be_declined() {
     assert!(g.battlefield_find(picked).is_none());
     assert!(g.battlefield_find(spared).is_some(), "both other seats declined");
 }
+
+/// CR 702.16j — Cliffside Rescuer's "protection from each of your opponents"
+/// is protection from those players, locked as it resolves: at three seats
+/// neither of two opponents can target the creature; your own spell can.
+#[test]
+fn cliffside_rescuer_protects_from_each_opponent() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let r = g.add_card_to_battlefield(0, catalog::cliffside_rescuer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(r);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: r,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice for protection");
+    drain_stack(&mut g);
+    for seat in [1, 2] {
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        g.priority.player_with_priority = seat;
+        assert!(try_cast(&mut g, seat, bolt, &[Target::Permanent(bear)]).is_err(), "seat {seat}");
+    }
+    let mine = g.add_card_to_hand(0, catalog::giant_growth());
+    g.priority.player_with_priority = 0;
+    assert!(try_cast(&mut g, 0, mine, &[Target::Permanent(bear)]).is_ok(), "not from you");
+}

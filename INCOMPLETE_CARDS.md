@@ -1947,7 +1947,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | 🟡 Territorial Aetherkite | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Rampaging Aetherhood | Living Energy (DRC) | "pay one or more {E}" pays all of it; no prompt for a smaller amount. |
 | 🟡 Goldwardens' Gambit | Rebellion Rising (ONC) | each token takes your highest-mana-value unattached Equipment; no pick, and an attached one is never moved. |
-| 🟡 Cliffside Rescuer | Primal Genesis (C19) | protection from each opponent is protection from what opponents control (`ProtectionFromMatching(ControlledByOpponent)`). |
 | 🟡 Vial Smasher the Fierce | Entropic Uprising (C16) | the random opponent is always dealt the damage, never one of their planeswalkers. |
 
 | 🟡 Vindictive Lich | Arcane Wizardry (C17) | always all three modes, in a fixed order (lose five, discard two, sacrifice); a mode with no fresh opponent does nothing. |

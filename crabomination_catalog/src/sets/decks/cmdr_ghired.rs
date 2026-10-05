@@ -153,9 +153,9 @@ pub fn cliffside_rescuer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::GrantKeyword {
+            effect: Effect::GainProtectionFromPlayer {
                 what: target_filtered(R::Permanent.and(R::ControlledByYou)),
-                keyword: Keyword::ProtectionFromMatching(Box::new(R::ControlledByOpponent)),
+                from: PlayerRef::EachOpponent,
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()

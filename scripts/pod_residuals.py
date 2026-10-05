@@ -9,7 +9,8 @@ engine's pick", a "may" that "collapses" / is "always taken", a target
 "picked at resolution rather than targeted" — counts against its deck; a bare "⚠" marks history, not a
 gap. The doc is the source the trackers summarise, so this keeps
 DECK_FEATURES' deck table honest; read the flagged doc before believing it
-(`audit_incomplete` found docs ~30% stale).
+(`audit_incomplete` found docs ~30% stale). A card with an open 🟡 row in
+INCOMPLETE_CARDS.md counts too, whatever its doc says (the two drift apart).
 
   scripts/pod_residuals.py             # per-deck counts, complete decks too
   scripts/pod_residuals.py --cards     # every flagged card with its doc line
@@ -46,6 +47,17 @@ def factory_docs():
     return docs
 
 
+def incomplete_factories():
+    """Factory names of the cards INCOMPLETE_CARDS.md lists as open (🟡)."""
+    out = set()
+    for line in (ROOT / "INCOMPLETE_CARDS.md").read_text(encoding="utf-8").splitlines():
+        m = re.match(r"\|\s*🟡\s*([^|]+?)\s*\|", line)
+        if m:
+            name = re.sub(r"[’'\"]", "", m.group(1).split(" // ")[0]).lower()
+            out.add(re.sub(r"[^a-z0-9]+", "_", name).strip("_"))
+    return out
+
+
 def deck_lists():
     src = (ROOT / "crabomination" / "src" / "pod" / "decks.rs").read_text(encoding="utf-8")
     consts = {}
@@ -65,6 +77,7 @@ def deck_lists():
 
 def main():
     docs = factory_docs()
+    open_rows = incomplete_factories()
     decks = deck_lists()
     show_cards = "--cards" in sys.argv
     table = "--table" in sys.argv
@@ -73,7 +86,7 @@ def main():
         print("|---|---|---|")
     complete = 0
     for i, (name, cards) in enumerate(decks, 1):
-        flagged = sorted({c for c in cards if MARKERS.search(docs.get(c, ""))})
+        flagged = sorted({c for c in cards if MARKERS.search(docs.get(c, "")) or c in open_rows})
         complete += not flagged
         if table:
             if flagged:

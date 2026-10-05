@@ -196,12 +196,18 @@ impl GameState {
         duration: crate::effect::Duration,
         ctx: &EffectContext,
     ) {
+        use crate::card::SelectionRequirement as R;
         use crate::game::effects::EntityRef;
-        let Some(q) = self.resolve_player(from, ctx) else { return };
-        let bit = 1u64.checked_shl(q as u32).unwrap_or(0);
-        let kw = crate::card::Keyword::ProtectionFromMatching(Box::new(
-            crate::card::SelectionRequirement::ControlledBySeat(q as u8),
-        ));
+        // One seat, or a set locked as it resolves ("protection from each of
+        // your opponents" — Cliffside Rescuer, CR 702.16j).
+        let seats = self.resolve_players(from, ctx);
+        let bit = seats.iter().fold(0u64, |b, &q| b | 1u64.checked_shl(q as u32).unwrap_or(0));
+        let Some(filter) =
+            seats.iter().map(|&q| R::ControlledBySeat(q as u8)).reduce(|a, b| R::Or(Box::new(a), Box::new(b)))
+        else {
+            return;
+        };
+        let kw = crate::card::Keyword::ProtectionFromMatching(Box::new(filter));
         for ent in self.resolve_selector(what, ctx) {
             match ent {
                 EntityRef::Player(p) if duration == crate::effect::Duration::UntilNextTurn => {
