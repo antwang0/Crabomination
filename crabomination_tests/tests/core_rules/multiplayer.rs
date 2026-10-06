@@ -1157,6 +1157,41 @@ fn cr_800_4a_departed_players_command_zone_leaves_too() {
     assert!(g.find_card_anywhere(cmd).is_none(), "the commander is nowhere");
 }
 
+/// CR 800.4a — "all objects owned by that player leave the game", wherever
+/// they are: a card of theirs in another seat's hand, library or graveyard
+/// (a pod cast a departed seat's stolen Ruinous Ultimatum from hand), and a
+/// phased-out permanent, which sits off the battlefield list (a departed
+/// seat's Benthic Biomancer phased back in). One they controlled but don't
+/// own reverts to its owner.
+#[test]
+fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
+    let mut g = multi_player_game(3);
+    let stolen = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let tucked = g.add_card_to_library(1, catalog::grizzly_bears());
+    let buried = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for id in [stolen, tucked, buried] {
+        g.find_card_anywhere_mut(id).unwrap().owner = 2;
+    }
+    let mine = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let borrowed = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(borrowed).unwrap().controller = 2;
+    for id in [mine, borrowed] {
+        let card = g.battlefield.iter().find(|c| c.id == id).unwrap().clone();
+        g.battlefield.retain(|c| c.id != id);
+        g.phased_out.push(card);
+    }
+
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+
+    for id in [stolen, tucked, buried, mine] {
+        assert!(g.find_card_anywhere(id).is_none(), "{id:?} left with its owner");
+    }
+    assert!(g.phased_out.iter().all(|c| c.id != mine));
+    let back = g.phased_out.iter().find(|c| c.id == borrowed).expect("its owner's card stays phased out");
+    assert_eq!(back.controller, 0, "control reverts to the owner");
+}
+
 /// CR 800.4 — a decision the departed player was being asked to make is
 /// dropped. A pending decision suppresses every *other* seat's actions until
 /// it is answered, so leaving one addressed to a player who is no longer in

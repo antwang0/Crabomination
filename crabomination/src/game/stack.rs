@@ -5992,6 +5992,37 @@ impl GameState {
         self.players[p].hand.clear();
         self.players[p].library.clear();
         self.players[p].graveyard.clear();
+        // CR 800.4a — "all objects OWNED by that player leave": also their
+        // cards in another seat's hand, library or graveyard (a stolen card
+        // taken into hand was cast after its owner left — Ruinous Ultimatum),
+        // and their phased-out permanents, which live off the battlefield
+        // list and phased back in later (Benthic Biomancer). A phased-out
+        // permanent they controlled reverts to its owner.
+        for q in 0..self.players.len() {
+            if q == p {
+                continue;
+            }
+            let theirs = |c: &crate::card::CardInstance| c.owner == p;
+            let pl = &self.players[q];
+            let (h, l, g) = (pl.hand.iter().any(theirs), pl.library.iter().any(theirs), pl.graveyard.iter().any(theirs));
+            if h {
+                self.players[q].hand.retain(|c| c.owner != p);
+            }
+            if l {
+                self.players[q].library.retain(|c| c.owner != p);
+            }
+            if g {
+                self.players[q].graveyard.retain(|c| c.owner != p);
+            }
+        }
+        if self.phased_out.iter().any(|c| c.owner == p || c.controller == p) {
+            self.phased_out.retain(|c| c.owner != p);
+            for c in self.phased_out.iter_mut() {
+                if c.controller == p {
+                    c.controller = c.owner;
+                }
+            }
+        }
         // CR 800.4a — *every* zone, which includes the command zone (a
         // departed Commander player's commander does not sit there for the
         // rest of the game) and the outside-the-game sideboard.
