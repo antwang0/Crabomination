@@ -18078,10 +18078,20 @@ impl GameState {
         // A source whose own life cost or damage would take the payer's last
         // life is never auto-tapped: a pod seat at 1 life paid a ward with
         // City of Brass and left the game (CR 104.3a / 800.4a). Only read at
-        // a low life total, so an ordinary payment never walks it.
+        // a low life total, so an ordinary payment never walks it. The harm
+        // is SUMMED over the sources kept: two Talismans at 2 life each
+        // passed alone and together paid the seat to 0 mid-cast.
         let life = self.effective_life(player);
         if (1..=LETHAL_TAP_WINDOW).contains(&life) {
-            sources.0.retain(|s| self.mana_source_self_harm(s) < life);
+            let mut harm = 0;
+            sources.0.retain(|s| {
+                let h = self.mana_source_self_harm(s);
+                let keep = h <= 0 || harm + h < life;
+                if keep {
+                    harm += h.max(0);
+                }
+                keep
+            });
         }
 
         // Converge (`diverse`): colors already certain to be spent — the

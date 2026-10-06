@@ -1193,7 +1193,7 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
 }
 
 /// CR 704.3 / 117.5 — state-based actions wait until a player would receive
-/// priority. A seat at 2 life that pays a cast with two Talismans is at 0 while
+/// priority. A seat at 4 life that pays a cast with four Talismans is at 0 while
 /// casting, not out: the spell reaches the stack, and only the sweep after the
 /// cast takes the seat — and the spell with it (CR 800.4a). The auto-tapper's
 /// mana ability used to run the loss check mid-cast, so the seat left first
@@ -1201,23 +1201,62 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
 /// Ultimatum resolved for a departed seat).
 #[test]
 fn cr_704_3_a_seat_paying_itself_to_zero_mid_cast_loses_after_the_cast() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::mana::{b, cost, r};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Above auto-tap's low-life guard, so four Talismans pay 4 to a seat at 4.
+    g.players[0].life = 4;
+    let pay: Vec<_> = (0..4).map(|_| g.add_card_to_battlefield(0, catalog::talisman_of_indulgence())).collect();
+    let spell = CardDefinition {
+        name: "Test Rite",
+        cost: cost(&[b(), b(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: crabomination::effect::Effect::GainLife {
+            who: crabomination::effect::Selector::You,
+            amount: crabomination::effect::Value::Const(5),
+        },
+        ..Default::default()
+    };
+    let rite = g.add_card_to_hand(0, spell);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: rite, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_ok(), "{r:?}");
+    assert!(pay.iter().all(|&t| g.battlefield_find(t).is_none_or(|c| c.tapped)), "all four Talismans paid");
+    assert!(!g.players[0].is_alive(), "0 life loses at the sweep after the cast");
+    assert!(g.stack.is_empty(), "and the spell ceased to exist with its caster");
+}
+
+/// Auto-tap's low-life guard sums the harm of the sources it keeps: two
+/// Talismans at 2 life each passed the per-source test and together paid a
+/// pod seat to 0 mid-cast. One may still be tapped; the cast that needs both
+/// is refused rather than paid to death.
+#[test]
+fn auto_tap_does_not_sum_two_painful_sources_to_lethal() {
     let mut g = multi_player_game(3);
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.players[0].life = 2;
-    let pay = [g.add_card_to_battlefield(0, catalog::talisman_of_indulgence()),
-        g.add_card_to_battlefield(0, catalog::talisman_of_indulgence())];
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::talisman_of_indulgence());
+    }
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let kill = g.add_card_to_hand(0, catalog::terminate());
     let r = g.perform_action(GameAction::CastSpell {
         card_id: kill, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     });
-    assert!(r.is_ok(), "{r:?}");
-    assert!(pay.iter().all(|&t| g.battlefield_find(t).is_none_or(|c| c.tapped)), "both Talismans paid");
-    assert!(!g.players[0].is_alive(), "0 life loses at the sweep after the cast");
-    assert!(g.stack.is_empty(), "and the spell ceased to exist with its caster");
-    assert!(g.battlefield_find(bear).is_some(), "nothing resolved for the departed seat");
+    assert!(r.is_err(), "{r:?}");
+    assert_eq!(g.players[0].life, 2);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("one Talisman is still fine");
+    assert_eq!(g.players[0].life, 1);
 }
 
 /// CR 800.4 — a decision the departed player was being asked to make is
