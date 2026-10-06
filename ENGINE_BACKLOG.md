@@ -143,7 +143,13 @@ the handoff.
   gains 5 (`cr_603_2_a_listener_the_resolution_removes_saw_the_entries_before`).
   Marauding Blight-Priest sees a gain made before the sweep
   (`cr_603_2_a_departed_life_gain_listener_saw_the_gain`).
-  ⏳ Still open: other event kinds (counters, casts, draws) and
+  ✅ *(2026-10-06, fourth Commander run)* **life lost, draws, discards and
+  counters** too, and a noncreature listener destroyed (its only in-order
+  event is `CardPutIntoGraveyard`, a departure when it has a death snapshot
+  this dispatch) — `core_rules::cr_recent113`. The payoff goes through
+  `trigger_effect_for` like the walk's.
+  ⏳ Still open: casts (a cast mid-resolution), deaths of *other* creatures
+  seen by a listener that dies later in the same resolution, and
   once-per-turn/batch listeners, which this pass skips.
 
 ## FIXED/OPEN 2026-10-03 (Commander routine, `01QFHGia`) — per-recipient combat triggers, countered flashback, a reanimated token

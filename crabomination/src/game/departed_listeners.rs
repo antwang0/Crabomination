@@ -7,7 +7,7 @@
 //! snapshot, for the entries the batch records between its own entry (if
 //! any) and its departure.
 //!
-//! Scope: the kinds in [`LOOKS_BACK`] — ones that only the dispatch walk
+//! Scope: the kinds [`looks_back`] names — ones that only the dispatch walk
 //! fires, so a departed listener can't also have fired from a direct hook —
 //! and only departures with an in-order event — the synthesized
 //! `PermanentDied` is appended after the batch, so it can't date a departure.
@@ -20,23 +20,51 @@ use crate::card::CardId;
 use crate::effect::{EventKind, EventScope};
 use crate::game::effects::{EffectContext, events};
 
-/// The listener kinds this pass serves: "whenever [a permanent] enters" and
-/// "whenever you gain life" (printed `LifeGained` listeners fire only from
-/// the walk; `fire_life_gained_watchers` serves delayed ones).
-const LOOKS_BACK: [EventKind; 2] = [EventKind::EntersBattlefield, EventKind::LifeGained];
-
-/// Whether `ev` is an event a [`LOOKS_BACK`] listener can see.
-fn looked_back_on(ev: &GameEvent) -> bool {
-    matches!(ev, GameEvent::PermanentEntered { .. } | GameEvent::LifeGained { .. })
+/// The listener kinds this pass serves: "whenever [a permanent] enters",
+/// "whenever you gain / an opponent loses life", "whenever a player draws /
+/// discards a card" and "whenever a counter is put on". Printed listeners of
+/// each fire only from the walk (`fire_life_gained_watchers` serves delayed
+/// ones).
+fn looks_back(kind: &EventKind) -> bool {
+    matches!(
+        kind,
+        EventKind::EntersBattlefield
+            | EventKind::LifeGained
+            | EventKind::LifeLost
+            | EventKind::CardDrawn
+            | EventKind::CardDiscarded
+            | EventKind::CounterAdded(_)
+            | EventKind::AnyCounterAdded
+    )
 }
 
-/// The card an in-order departure event moves off the battlefield.
-fn departure_of(ev: &GameEvent) -> Option<CardId> {
+/// Whether `ev` is an event a [`looks_back`] listener can see.
+fn looked_back_on(ev: &GameEvent) -> bool {
+    matches!(
+        ev,
+        GameEvent::PermanentEntered { .. }
+            | GameEvent::LifeGained { .. }
+            | GameEvent::LifeLost { .. }
+            | GameEvent::CardDrawn { .. }
+            | GameEvent::CardDiscarded { .. }
+            | GameEvent::CounterAdded { .. }
+            | GameEvent::KeywordCounterAdded { .. }
+    )
+}
+
+/// The card an in-order departure event moves off the battlefield. A
+/// noncreature put into a graveyard reports only `CardPutIntoGraveyard`,
+/// which a discard or a resolving spell reports too: it is a departure only
+/// for a card with a death snapshot this dispatch.
+fn departure_of(g: &GameState, ev: &GameEvent) -> Option<CardId> {
     match *ev {
         GameEvent::CreatureDied { card_id }
         | GameEvent::PermanentLeftBattlefield { card_id, .. }
         | GameEvent::PermanentExiled { card_id }
         | GameEvent::PermanentReturnedToHand { card_id, .. } => Some(card_id),
+        GameEvent::CardPutIntoGraveyard { card_id, .. } if g.died_card_snapshots.get(&card_id).is_some() => {
+            Some(card_id)
+        }
         _ => None,
     }
 }
@@ -47,13 +75,13 @@ impl GameState {
     pub(crate) fn departed_listener_candidates(&self, events: &[GameEvent]) -> Vec<TriggerCandidate> {
         let mut out: Vec<TriggerCandidate> = Vec::new();
         if !events.iter().any(looked_back_on)
-            || !events.iter().any(|e| departure_of(e).is_some())
+            || !events.iter().any(|e| departure_of(self, e).is_some())
         {
             return out;
         }
         let mut seen: Vec<CardId> = Vec::new();
         for (dep, ev) in events.iter().enumerate() {
-            let Some(listener) = departure_of(ev) else { continue };
+            let Some(listener) = departure_of(self, ev) else { continue };
             // First departure only; one still (or back) on the battlefield is
             // the walk's.
             if seen.contains(&listener) || self.battlefield_find(listener).is_some() {
@@ -65,7 +93,7 @@ impl GameState {
                 continue;
             };
             let listens = |ta: &&crate::card::TriggeredAbility| {
-                LOOKS_BACK.contains(&ta.event.kind)
+                looks_back(&ta.event.kind)
                     && !ta.event.zone.command_zone_only()
                     && !ta.event.once_per_turn
                     && !ta.event.once_per_batch
@@ -101,7 +129,7 @@ impl GameState {
                     }
                     out.push(TriggerCandidate {
                         source: listener,
-                        effect: ta.effect.clone(),
+                        effect: self.trigger_effect_for(&ta.effect, &ta.event, snap, ev, events),
                         controller: snap.controller,
                         filter: ta.event.filter.clone(),
                         subject,
@@ -111,7 +139,7 @@ impl GameState {
                         triggered_by_attack: false,
                         triggered_by_land_entry: false,
                         triggered_by_face_up: false,
-                        triggered_by_draw: false,
+                        triggered_by_draw: matches!(ev, GameEvent::CardDrawn { .. }),
                         damaged_creature_controller: None,
                         from_mana_ability: false,
                         actor: events::event_actor(self, ev),
