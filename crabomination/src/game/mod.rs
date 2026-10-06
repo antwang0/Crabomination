@@ -22701,10 +22701,16 @@ impl GameState {
             let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
             self.note_unattached(equipment, &def, ctrl, host);
         }
-        Ok(vec![GameEvent::AttachmentMoved {
+        let mut events = vec![GameEvent::AttachmentMoved {
             attachment: equipment,
             attached_to: Some(target),
-        }])
+        }];
+        // CR 117.5 — the attach resolves inline, and the player who did it
+        // receives priority next: state-based actions first. A Skullclamp
+        // made a 1/1 a 2/0 that stayed on the battlefield while its
+        // controller kept acting.
+        self.check_state_based_actions_into(&mut events);
+        Ok(events)
     }
 
     /// CR 702.151 — Reconfigure. Pay the reconfigure cost to attach the
@@ -22754,6 +22760,8 @@ impl GameState {
                 let pos = self.battlefield.iter().position(|c| c.id == equipment).ok_or(GameError::InvalidTarget)?;
                 self.battlefield[pos].attached_to = Some(t);
                 events.push(GameEvent::AttachmentMoved { attachment: equipment, attached_to: Some(t) });
+                // CR 117.5 — as for equip.
+                self.check_state_based_actions_into(&mut events);
                 Ok(events)
             }
             None => {
@@ -22765,6 +22773,7 @@ impl GameState {
                 let pos = self.battlefield.iter().position(|c| c.id == equipment).ok_or(GameError::InvalidTarget)?;
                 self.battlefield[pos].attached_to = None;
                 events.push(GameEvent::AttachmentMoved { attachment: equipment, attached_to: None });
+                self.check_state_based_actions_into(&mut events);
                 Ok(events)
             }
         }

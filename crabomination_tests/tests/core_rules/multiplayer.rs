@@ -8695,3 +8695,21 @@ fn cr_701_19_a_prompting_seats_search_any_number_is_one_search() {
     let searches = events.iter().filter(|e| matches!(e, crabomination::game::types::GameEvent::PlayerSearchedLibrary { .. })).count();
     assert_eq!(searches, 1);
 }
+
+/// CR 117.5 / 704.5f — equip attaches inline here, and the player who did it
+/// receives priority next, so the sweep runs first: Skullclamp on a 1/1 makes
+/// it a 2/0 that dies at once (its controller drew two in a pod while the
+/// 2/0 stayed on the battlefield until the next priority pass).
+#[test]
+fn cr_117_5_an_equip_that_kills_its_creature_is_swept_at_once() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let clamp = g.add_card_to_battlefield(0, catalog::skullclamp());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: clamp, target: elf }).expect("equip");
+    assert!(g.battlefield_find(elf).is_none(), "the 2/0 died to the sweep");
+    assert!(g.battlefield_find(clamp).is_some_and(|c| c.attached_to.is_none()));
+}
