@@ -285,3 +285,37 @@ fn cr_603_7_a_reflexive_payoff_asks_for_its_target() {
     assert!(g.players[2].life < l2, "the chosen opponent takes the damage");
     assert_eq!(g.players[1].life, l1);
 }
+
+/// CR 702.85a / 601.2c — a cascaded spell's target is its caster's to name: a
+/// prompting seat's Bloodbraid Elf cascades into Lightning Bolt and aims it.
+#[test]
+fn cr_702_85a_a_cascaded_spell_asks_for_its_target() {
+    let mut g = main_phase(3);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let elf = g.add_card_to_hand(0, catalog::bloodbraid_elf());
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    cast(&mut g, elf, None);
+    let mut asked = 0;
+    for _ in 0..40 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let answer = match &p.decision {
+                Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Player(2)) => {
+                    asked += 1;
+                    DecisionAnswer::Target(Target::Player(2))
+                }
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                d => crabomination::decision::AutoDecider.decide(d),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(asked, 1);
+    assert_eq!(g.players[2].life, l2 - 3, "the chosen opponent takes the Bolt");
+    assert_eq!(g.players[1].life, l1);
+}

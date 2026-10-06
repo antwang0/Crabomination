@@ -10300,6 +10300,11 @@ pub enum Effect {
     /// [`Effect::WithRandomOpponent`] over every living player, you included
     /// ("choose a player at random" — Wildfire Devils).
     WithRandomPlayer { body: Box<Effect> },
+    /// The continuation of a suspended "cast the exiled card without paying
+    /// its mana cost?" offer (Cascade, Discover, Possibility Storm) for a
+    /// prompting seat: on the logged yes, `player` casts `card` from exile,
+    /// naming the spell's target first (CR 601.2c). Engine-built, never on a card.
+    CastExiledFreeAsking { card: crate::card::CardId, player: usize },
     /// "You may cast it from your graveyard as an Adventure until the end of
     /// your next turn" — the source card, now in its owner's graveyard, on a
     /// dies trigger (Hildibrand Manderville). Only the owner's own graveyard

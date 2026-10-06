@@ -29321,10 +29321,19 @@ impl GameState {
                 self.log_answer(DecisionAnswer::Cards(ids.clone()), Some(player));
                 Ok(Vec::new())
             }
-            PendingEffectState::MayCastExiledPending { player, card, decline } => {
+            PendingEffectState::MayCastExiledPending { player, card, decline, then_cast } => {
                 let DecisionAnswer::Bool(yes) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
+                // The continuation casts (and asks the spell's target): log
+                // the answer for it, and only run the decline here.
+                if then_cast {
+                    self.log_answer(DecisionAnswer::Bool(*yes), Some(player));
+                    if !*yes {
+                        self.decline_exiled_cast(card, decline);
+                    }
+                    return Ok(Vec::new());
+                }
                 let mut events = Vec::new();
                 let auto_target = self
                     .find_card_anywhere(card)
@@ -29350,26 +29359,30 @@ impl GameState {
                         })
                         .unwrap_or(false);
                 if !cast {
-                    // Zone moves mirror each keyword's printed decline path.
-                    // (No per-move event today — matches the pre-suspension
-                    // behavior of these arms' decline branches.)
-                    match decline {
-                        crate::game::types::MayCastDecline::LeaveInExile => {}
-                        crate::game::types::MayCastDecline::ToHand => {
-                            if let Some(c) = Self::take_card(&mut self.exile, card) {
-                                let owner = c.owner;
-                                self.players[owner].hand.push(c);
-                            }
-                        }
-                        crate::game::types::MayCastDecline::ToBottom => {
-                            if let Some(c) = Self::take_card(&mut self.exile, card) {
-                                let owner = c.owner;
-                                self.players[owner].library.push(c);
-                            }
-                        }
-                    }
+                    self.decline_exiled_cast(card, decline);
                 }
                 Ok(events)
+            }
+        }
+    }
+
+    /// A declined exiled free cast: the card goes where its keyword's
+    /// printed decline path says. (No per-move event today — matches the
+    /// pre-suspension behavior of these arms' decline branches.)
+    fn decline_exiled_cast(&mut self, card: CardId, decline: crate::game::types::MayCastDecline) {
+        match decline {
+            crate::game::types::MayCastDecline::LeaveInExile => {}
+            crate::game::types::MayCastDecline::ToHand => {
+                if let Some(c) = Self::take_card(&mut self.exile, card) {
+                    let owner = c.owner;
+                    self.players[owner].hand.push(c);
+                }
+            }
+            crate::game::types::MayCastDecline::ToBottom => {
+                if let Some(c) = Self::take_card(&mut self.exile, card) {
+                    let owner = c.owner;
+                    self.players[owner].library.push(c);
+                }
             }
         }
     }

@@ -2444,7 +2444,15 @@ pub enum PendingEffectState {
     /// dig already mutated state (Cascade, Discover, Possibility Storm,
     /// Ripple, Amped Raptor). Completion-style — no re-run: the answer
     /// handler casts `card` from exile on yes, or applies `decline` on no.
-    MayCastExiledPending { player: usize, card: crate::card::CardId, decline: MayCastDecline },
+    MayCastExiledPending {
+        player: usize,
+        card: crate::card::CardId,
+        decline: MayCastDecline,
+        /// The cast is the continuation's (`Effect::CastExiledFreeAsking`),
+        /// which asks the spell's target; the answer is only logged here.
+        #[serde(default)]
+        then_cast: bool,
+    },
 }
 
 /// Where a declined [`PendingEffectState::MayCastExiledPending`] card goes.

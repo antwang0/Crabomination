@@ -32994,6 +32994,8 @@ impl GameState {
                 self.deal_damage_to_player_or_planeswalker(who, amount, effect, ctx, events)
             }
 
+            Effect::CastExiledFreeAsking { card, player } => self.cast_exiled_free_asking(*card, *player, effect, events),
+
             Effect::WithRandomPlayer { body } => {
                 let Some(p) = self.resolve_player(&PlayerRef::RandomPlayer, ctx) else { return Ok(()) };
                 let bound = Effect::BindScratch {
@@ -34494,8 +34496,9 @@ impl GameState {
                                     player: caster,
                                     card: cid,
                                     decline: crate::game::types::MayCastDecline::ToBottom,
+                                    then_cast: true,
                                 },
-                                Effect::Noop,
+                                Effect::CastExiledFreeAsking { card: cid, player: caster },
                             )));
                             return Ok(());
                         }
@@ -40520,8 +40523,9 @@ impl GameState {
                                     player: p,
                                     card: cid,
                                     decline: crate::game::types::MayCastDecline::ToBottom,
+                                    then_cast: true,
                                 },
-                                Effect::Noop,
+                                Effect::CastExiledFreeAsking { card: cid, player: p },
                             )));
                             return Ok(());
                         }
@@ -40735,8 +40739,9 @@ impl GameState {
                                     player: p,
                                     card: cid,
                                     decline: crate::game::types::MayCastDecline::ToHand,
+                                    then_cast: true,
                                 },
-                                Effect::Noop,
+                                Effect::CastExiledFreeAsking { card: cid, player: p },
                             )));
                             return Ok(());
                         }

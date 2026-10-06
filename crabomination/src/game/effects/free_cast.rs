@@ -126,3 +126,66 @@ impl GameState {
         Ok(())
     }
 }
+
+impl GameState {
+    /// `Effect::CastExiledFreeAsking` — the logged yes of a suspended exiled
+    /// free-cast offer, then the cast with slot 0's target named by `player`
+    /// (CR 601.2c), the engine's pick leading the ballot. A logged no (the
+    /// decline already ran) or a card no longer in exile does nothing.
+    pub(super) fn cast_exiled_free_asking(
+        &mut self,
+        card: CardId,
+        player: usize,
+        effect: &Effect,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use crate::decision::DecisionAnswer;
+        let yes = matches!(self.scratch.resolution_answer_log.first(), Some(DecisionAnswer::Bool(true)));
+        if !yes || !self.exile.iter().any(|c| c.id == card) {
+            self.clear_answer_log();
+            return Ok(());
+        }
+        let Some(def) = self.find_card_anywhere(card).map(|c| c.definition.arc()) else {
+            self.clear_answer_log();
+            return Ok(());
+        };
+        let auto = self.auto_target_for_effect_avoiding(&def.effect, player, Some(card));
+        let target = if def.effect.requires_target() {
+            let filter = def.effect.target_filter_for_slot_in_mode(0, None).cloned();
+            let mut legal: Vec<Target> = match &filter {
+                Some(f) => self.with_frozen_layers(|s| {
+                    s.battlefield
+                        .iter()
+                        .map(|c| Target::Permanent(c.id))
+                        .chain((0..s.players.len()).map(Target::Player))
+                        .filter(|t| {
+                            s.evaluate_requirement_static(f, t, player, Some(card))
+                                && s.check_target_legality(t, player).is_ok()
+                        })
+                        .collect()
+                }),
+                None => Vec::new(),
+            };
+            if let Some(a) = auto.clone() {
+                legal.retain(|t| *t != a);
+                legal.insert(0, a);
+            }
+            if legal.is_empty() {
+                auto
+            } else {
+                let mut cursor = 1;
+                let name = def.name.to_string();
+                match self.ask_seat_target_logged(&mut cursor, player, format!("Choose a target for {name}"), card, legal, effect) {
+                    Some(t) => Some(t),
+                    None => return Ok(()),
+                }
+            }
+        } else {
+            None
+        };
+        self.clear_answer_log();
+        let cast = self.cast_card_for_free(player, card, crate::card::Zone::Exile, target, vec![], None, None, false)?;
+        events.extend(cast);
+        Ok(())
+    }
+}
