@@ -1783,8 +1783,9 @@ fn play_pod_game(
             g.pending_decision.as_ref().map(|pd| &pd.decision),
         );
         // CR 903.9b — every pod seat answers the library redirect "yes", so a
-        // commander in a library reached it past `resolve_zone_change` (an
-        // inline push the replacement never saw). Debug-only.
+        // commander in a library and not waiting on its offer reached it past
+        // `resolve_zone_change` (an inline push the replacement never saw).
+        // Debug-only.
         // CR 400.1 — one object, one zone: the golden traces check this in
         // duels only, and a pod reaches far more cards. Debug-only.
         #[cfg(debug_assertions)]
@@ -1802,11 +1803,17 @@ fn play_pod_game(
                     c.definition.name, c.owner, c.controller, g.turn_number,
                 );
             }
-            if let Some(c) = g.stack.iter().find_map(|si| match si {
-                crate::game::types::StackItem::Spell { card, caster, .. } if gone(*caster) || gone(card.owner) => Some(card),
+            if let Some((c, caster)) = g.stack.iter().find_map(|si| match si {
+                crate::game::types::StackItem::Spell { card, caster, .. } if gone(*caster) || gone(card.owner) => {
+                    Some((card, *caster))
+                }
                 _ => None,
             }) {
-                panic!("seed {seed}: spell {} outlived a departed seat (turn {})", c.definition.name, g.turn_number);
+                eprintln!("DBG life {} cause {:?} left {} pending {:?} step {:?}", g.players[caster].life, g.players[caster].loss_cause, g.players[caster].left_game, g.pending_decision.as_ref().map(|p| &p.decision), g.step);
+                panic!(
+                    "seed {seed}: spell {} (owner p{}, caster p{caster}) outlived a departed seat (turn {})",
+                    c.definition.name, c.owner, g.turn_number,
+                );
             }
         }
         #[cfg(debug_assertions)]
@@ -1814,7 +1821,9 @@ fn play_pod_game(
             .players
             .iter()
             .flat_map(|p| p.library.iter())
-            .find(|c| g.players.iter().any(|q| q.commanders.contains(&c.id)))
+            .find(|c| {
+                g.players.iter().any(|q| q.commanders.contains(&c.id)) && !g.commander_redirect_offers.contains(&c.id)
+            })
         {
             panic!(
                 "seed {seed}: commander {} reached a library past the CR 903.9b replacement (turn {}, after {actions} actions)",
@@ -2905,8 +2914,13 @@ mod tests {
         // a hidden LAND too, where it was cast-only and stranded the land in
         // exile — bisected to that commit alone): 0xC0FFEE 2492→2482
         // actions, same winner; 43 unchanged; 4242 82→89 turns, same winner.
+        // Re-blessed 2026-10-06 (CR 903.9b: a pod seat prompts, so a commander
+        // bounced to hand or tucked is OFFERED the command zone once the
+        // action settles — `commander_redirect_offers` — and the answer is
+        // an action; bisected to that commit alone): 0xC0FFEE 2486→2490
+        // actions, same winner and turns; 43 and 4242 unmoved.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(2), 54, 2486),
+            (0xC0FFEE, Some(2), 54, 2490),
             (43, Some(0), 74, 3800),
             (4242, Some(3), 70, 3143),
         ];
