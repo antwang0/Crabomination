@@ -2526,6 +2526,24 @@ impl GameState {
                             })
                             .unwrap_or_default();
                         for effect in mutate_effects {
+                            // CR 603.3d — a prompting caster names the targets.
+                            if self.trigger_asks_targets(caster, &effect) {
+                                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                                source: host_id,
+                                controller: caster,
+                                effect: effect,
+                                subject: Some(crate::game::effects::EntityRef::Permanent(host_id)),
+                                event_amount: 0,
+                                mode: None,
+                                intervening_if: None,
+                                actor: None,
+                                from_mana_ability: false,
+                                x_value: 0,
+                                converged_value: 0,
+                                mana_spent: 0,
+                            });
+                                continue;
+                            }
                             let auto_target = self.auto_target_for_effect(&effect, caster);
                             self.push_stack(
                                 TriggerPush::new(host_id, caster, effect)
@@ -6760,6 +6778,24 @@ impl GameState {
                 continue;
             }
             if self.state_trigger_armed.insert(id) {
+                // CR 603.3d — a prompting controller names the targets.
+                if self.trigger_asks_targets(ctrl, &st.effect) {
+                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                                source: id,
+                                controller: ctrl,
+                                effect: st.effect,
+                                subject: None,
+                                event_amount: 0,
+                                mode: None,
+                                intervening_if: None,
+                                actor: None,
+                                from_mana_ability: false,
+                                x_value: 0,
+                                converged_value: 0,
+                                mana_spent: 0,
+                            });
+                    continue;
+                }
                 let target = self.auto_target_for_effect(&st.effect, ctrl);
                 self.push_stack(
                     crate::game::types::TriggerPush::new(id, ctrl, st.effect)

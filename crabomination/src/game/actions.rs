@@ -8075,6 +8075,25 @@ impl GameState {
             })
             .unwrap_or_default();
         for effect in unlock_triggers {
+            // CR 603.3d — a prompting controller names the targets.
+            if self.trigger_asks_targets(controller, &effect) {
+                let mode = self.pick_trigger_mode(&effect, card_id, controller);
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    source: card_id,
+                    controller,
+                    effect,
+                    subject: None,
+                    event_amount: 0,
+                    mode,
+                    intervening_if: None,
+                    actor: None,
+                    from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                });
+                continue;
+            }
             let (mode, auto_target) = self.trigger_mode_and_target(&effect, controller, None);
             self.push_stack(
                 TriggerPush::new(card_id, controller, effect)
@@ -9134,6 +9153,24 @@ impl GameState {
         effects: Vec<crate::effect::Effect>,
     ) {
         for effect in effects {
+            if self.trigger_asks_targets(controller, &effect) {
+                let mode = self.pick_trigger_mode(&effect, card_id, controller);
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                    actor: None,
+                    source: card_id,
+                    controller,
+                    effect,
+                    subject: Some(crate::game::effects::EntityRef::Card(card_id)),
+                    event_amount: 0,
+                    mode,
+                    intervening_if: None,
+                });
+                continue;
+            }
             let (mode, auto_target) =
                 self.trigger_mode_and_target(&effect, controller, Some(card_id));
             self.push_pending_trigger(
@@ -15979,6 +16016,28 @@ impl GameState {
                     .map(|c| c.definition.cost.cmc())
                     .unwrap_or(0);
                 for dt in next_cast {
+                    // CR 603.3d — a prompting controller names the targets.
+                    if self.trigger_asks_targets(dt.controller, &dt.effect) {
+                        let mode = self.pick_trigger_mode(&dt.effect, dt.source, dt.controller);
+                        self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                            source: dt.source,
+                            controller: dt.controller,
+                            effect: dt.effect.clone(),
+                            subject: Some(crate::game::effects::EntityRef::Card(cast_card)),
+                            event_amount: cast_mv,
+                            mode,
+                            intervening_if: None,
+                            actor: None,
+                            from_mana_ability: false,
+                            x_value: self.spells_cast_this_turn.saturating_sub(1),
+                            converged_value: 0,
+                            mana_spent: 0,
+                        });
+                        if !dt.fires_once {
+                            self.delayed_triggers.push(dt);
+                        }
+                        continue;
+                    }
                     // A body with a target slot (Ride the Avalanche's "up to
                     // one target creature") picks it now, reading the cast
                     // spell's mana value as its filters would.

@@ -194,12 +194,9 @@ run against a prompting seat):
   except a batched / merged / Felix-doubled fire. Still open: slot 0 *bound*
   to the damaged player is right for "that player" and wrong for "any
   target" / "target player" wordings.
-- Delayed `WhenCardDies` / `WhenTokenDies` / haunt (`mod.rs` ~23352), delayed
-  "next spell you cast" (`actions.rs` ~15943).
-- Room unlock (`actions.rs` `set_room_door_unlocked`), mutate (`stack.rs`
-  ~2529), state triggers (`stack.rs` ~6763), plot (`push_plot_triggers`),
-  and four one-card sites (`stack.rs` ~8572, `movement.rs` ~923 / ~2061,
-  `token_triggers.rs` ~31).
+- Four one-card sites (`stack.rs` ~8572 Valentin, `movement.rs` ~923 / ~2061,
+  `token_triggers.rs` ~31). (Delayed dies / haunt, delayed "next spell", Room
+  unlocks, mutate, state triggers and plot: fixed 2026-10-06.)
 - `Effect::Reflexive` (effects/mod.rs ~8083, ~42 cards) resolves its "when you
   do" payoff inline with an engine pick instead of as a CR 603.7 trigger
   (`ReflexiveTrigger` asks, and waits in the backlog while another decision

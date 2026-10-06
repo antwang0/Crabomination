@@ -23349,6 +23349,24 @@ impl GameState {
                 // time), so a targeting body had no slot bound and resolved
                 // against an empty list — Absolver Thrull's and Orzhov
                 // Euthanist's haunt bodies ("destroy target enchantment").
+                // CR 603.3d — a prompting controller names them.
+                if dt.target.is_none() && self.trigger_asks_targets(dt.controller, &dt.effect) {
+                    self.queue_trigger_asking(PendingTriggerPush {
+                        source: dt.source,
+                        controller: dt.controller,
+                        effect: dt.effect,
+                        subject: Some(crate::game::effects::EntityRef::Card(cid)),
+                        event_amount: mv,
+                        mode: None,
+                        intervening_if: None,
+                        actor: None,
+                        from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
+                    });
+                    continue;
+                }
                 let (mut target, mut additional) = (dt.target, Vec::new());
                 if target.is_none() && dt.effect.requires_target() {
                     let (slot0, rest) = self.auto_targets_for_effect_all_slots_sourced(

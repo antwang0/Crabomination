@@ -230,3 +230,20 @@ fn cr_603_3d_a_damaged_players_trigger_asks_for_its_target() {
     assert_eq!(asked, 1);
     assert!(g.battlefield_find(other).unwrap().tapped);
 }
+
+/// Ride the Avalanche's delayed "when you next cast a spell this turn" names
+/// its "up to one target creature" through the prompting seat.
+#[test]
+fn cr_603_3d_a_delayed_cast_trigger_asks_for_its_target() {
+    let mut g = main_phase(2);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let ride = g.add_card_to_hand(0, catalog::ride_the_avalanche());
+    cast(&mut g, ride, None);
+    settle(&mut g, Target::Player(1));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(settle(&mut g, Target::Permanent(a)), 1);
+    let plus = |id| g.battlefield_find(id).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne);
+    assert_eq!((plus(a), plus(b)), (1, 0), "Bolt's mana value onto the chosen creature");
+}
