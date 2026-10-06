@@ -494,7 +494,14 @@ impl GameState {
     /// triggers of what it returns.
     fn sweep_after_step_advance(&mut self, r: &mut Result<Vec<GameEvent>, GameError>) {
         let Ok(events) = r.as_mut() else { return };
-        if self.pending_decision.is_some() || self.suspend_signal.is_some() || self.is_game_over() {
+        // Combat damage sweeps inside its own resolution (`resolve_combat_into`)
+        // and is nearly every advance whose events would open the gate: a
+        // second sweep there cost ~4 % wall on `--bench`.
+        if self.pending_decision.is_some()
+            || self.suspend_signal.is_some()
+            || self.is_game_over()
+            || matches!(self.step, TurnStep::FirstStrikeDamage | TurnStep::CombatDamage)
+        {
             return;
         }
         if !events.iter().all(GameEvent::inert_for_state_based_actions)

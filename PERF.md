@@ -3216,6 +3216,12 @@ wall (--bench)   the UNGATED post-action sweep: bench_ab.py 16 pairs, paired
                  SBA_OTHER_ATTACHED walk bit): 32 pairs median +1.43 %,
                  mean +0.81 %, sd 9.24 — noise; thread determinism ok;
                  peak_rss_mib 28.8
+                 the step-advance sweep (CR 704.3): gated as the post-action
+                 one, 48 pairs median -5.75 %, mean -3.66 % — it re-swept
+                 every combat-damage advance, which `resolve_combat_into`
+                 sweeps itself; skipping those steps: 48 pairs median
+                 -2.26 %, mean -0.97 %, sd 12.23 — noise; counters
+                 byte-identical
 pods (release)   seed 9123 2..8 x 1,000 = 7,000 (turns/game 19.22 / 32.54 /
                  46.28 / 58.31 / 69.07 / 83.19 / 96.35), all decided, zero
                  panics; all-deck 6 seats (33000+, 31 x 200) + 4 seats
