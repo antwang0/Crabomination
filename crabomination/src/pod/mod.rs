@@ -2025,6 +2025,19 @@ mod tests {
     /// the stack overflowed: this exact game, casting Breya. (A replay: once
     /// the bot or these decks change, the game stops reaching that board and
     /// this only proves the game still finishes.)
+    /// CR 704.5j — two Vensers, Fervent Forger at one table: each seat's
+    /// token-copy ETB took the other's Venser, whose tokens' ETBs copied it
+    /// again, 1,538 triggers to the action cap. The copy now takes a
+    /// nonlegendary permanent (a replay: it proves the game decides).
+    #[test]
+    fn two_vensers_do_not_copy_each_other_to_the_action_cap() {
+        let d = target_decks();
+        let field = [d[160], d[161], d[162], d[163]];
+        let pilot = Pilot::Scored(crate::server::bot::EvalWeights::baseline());
+        let t = run_pod_games(&field, 11, 1, 34040, 4_000, pilot);
+        assert_eq!((t.games, t.undecided()), (1, 0));
+    }
+
     #[test]
     fn a_mana_source_paying_for_itself_does_not_overflow() {
         let d = target_decks();

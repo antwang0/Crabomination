@@ -3605,6 +3605,21 @@ fn decide_pending_policy_inner(
     decision: &crate::decision::Decision,
     eval_modes: bool,
 ) -> crate::decision::DecisionAnswer {
+    // CR 704.5j — a trigger's token copy of a legend dies to the legend rule
+    // and nets its ETB at most, so the pick is among the nonlegendary
+    // permanents when there are any. Two Vensers, Fervent Forger at a pod
+    // table each copied the other's Venser, whose tokens' ETBs copied it
+    // again: 1,538 triggers to the action cap (seed 34040). The auto-target
+    // walk ranks the same way (`targeting.rs`'s `legend_copy`).
+    if let crate::decision::Decision::ChooseTarget { legal, .. } = decision
+        && let Some(nonlegend) = token_copy_nonlegend_targets(state, legal)
+    {
+        let mut d = decision.clone();
+        if let crate::decision::Decision::ChooseTarget { legal, .. } = &mut d {
+            *legal = nonlegend;
+        }
+        return decide_pending_policy_inner(state, seat, w, &d, eval_modes);
+    }
     match decision {
         // Smarter mulligan than AutoDecider's blanket Keep:
         // ship hands that are flooded or screwed on lands.
@@ -32039,4 +32054,29 @@ mod sweeper_shield_tests {
             "{action:?}"
         );
     }
+}
+
+/// The nonlegendary half of a pending trigger target pick whose effect makes
+/// token copies, when it is a proper, nonempty subset of `legal`.
+fn token_copy_nonlegend_targets(
+    state: &GameState,
+    legal: &[crate::game::types::Target],
+) -> Option<Vec<crate::game::types::Target>> {
+    use crate::effect::Effect;
+    let pd = state.pending_decision.as_ref()?;
+    let crate::game::types::ResumeContext::TriggerTargetPick { pending, .. } = &pd.resume else { return None };
+    if !pending
+        .effect
+        .any_nested(&|e| matches!(e, Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. }))
+    {
+        return None;
+    }
+    let legend = |t: &crate::game::types::Target| match t {
+        crate::game::types::Target::Permanent(id) => state
+            .battlefield_find(*id)
+            .is_some_and(|c| c.definition.supertypes.contains(&crate::card::Supertype::Legendary)),
+        _ => false,
+    };
+    let keep: Vec<_> = legal.iter().filter(|t| !legend(t)).cloned().collect();
+    (!keep.is_empty() && keep.len() < legal.len()).then_some(keep)
 }

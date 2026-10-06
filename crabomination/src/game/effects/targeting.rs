@@ -397,6 +397,25 @@ impl GameState {
                 })
                 .collect()
         };
+        // A token copy of a legend you control dies to the legend rule
+        // (CR 704.5j) and nets its ETB at most, so a token-copy effect
+        // takes a nonlegendary permanent first. Aimed at a Venser,
+        // Fervent Forger, a demonstrated Replication Technique looped:
+        // each Venser token's ETB copied the Technique again (seed
+        // 1054026, a stack of 512). Every walk below ranks it so: a copy of
+        // "target permanent an opponent controls" took the other seat's
+        // Venser, and two Vensers at a table copied each other to the action
+        // cap (seed 34040, 1,538 triggers on the stack).
+        let copies_to_token = eff.any_nested(&|e| {
+            matches!(e, Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. })
+        });
+        let legend_copy = |cid: CardId| {
+            copies_to_token
+                && self
+                    .battlefield
+                    .find_by_id(cid)
+                    .is_some_and(|c| c.definition.supertypes.contains(&crate::card::Supertype::Legendary))
+        };
         let mut primary_candidates = collect_legal_on_player(primary_player);
         if prefer_friendly && !primary_candidates.is_empty() {
             // Sort by descending power so the strongest creature wins — except
@@ -412,22 +431,6 @@ impl GameState {
                     return 0;
                 }
                 self.battlefield.find_by_id(cid).map_or(0, |c| c.counters.values().sum())
-            };
-            // A token copy of a legend you control dies to the legend rule
-            // (CR 704.5j) and nets its ETB at most, so a token-copy effect
-            // takes a nonlegendary permanent first. Aimed at a Venser,
-            // Fervent Forger, a demonstrated Replication Technique looped:
-            // each Venser token's ETB copied the Technique again (seed
-            // 1054026, a stack of 512).
-            let copies_to_token = eff.any_nested(&|e| {
-                matches!(e, Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. })
-            });
-            let legend_copy = |cid: CardId| {
-                copies_to_token
-                    && self
-                        .battlefield
-                        .find_by_id(cid)
-                        .is_some_and(|c| c.definition.supertypes.contains(&crate::card::Supertype::Legendary))
             };
             // An untap wants something tapped (Garruk Wildspeaker's lands).
             let untaps = eff.any_nested(&|e| matches!(e, Effect::Untap { .. }));
@@ -451,7 +454,7 @@ impl GameState {
             // friendly branch above has always picked its best target;
             // only the hostile side was arbitrary.
             primary_candidates
-                .sort_by_cached_key(|c| (hostile_ward(c.0), std::cmp::Reverse(c.1)));
+                .sort_by_cached_key(|c| (legend_copy(c.0), hostile_ward(c.0), std::cmp::Reverse(c.1)));
         }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
@@ -466,21 +469,23 @@ impl GameState {
                 .filter(|&p| p != primary_player && p != controller && !self.same_team(p, controller))
                 .flat_map(collect_legal_on_player)
                 .collect();
-            others.sort_by_cached_key(|c| (hostile_ward(c.0), std::cmp::Reverse(c.1)));
+            others.sort_by_cached_key(|c| (legend_copy(c.0), hostile_ward(c.0), std::cmp::Reverse(c.1)));
             if let Some(&(cid, _)) = others.first() {
                 return Some(Target::Permanent(cid));
             }
         }
         for pass_warded in [false, true] {
-            if let Some(t) = self
+            let mut legal = self
                 .battlefield
                 .iter()
                 .filter(|c| !is_avoided(c.id))
                 .filter(|c| pass_warded || !hostile_ward(c.id))
-                .find(|c| is_legal_bf(c))
-                .map(|c| Target::Permanent(c.id))
-            {
-                return Some(t);
+                .filter(|c| is_legal_bf(c));
+            // A friendly copy whose own side had nothing (Venser's "an
+            // opponent controls") still takes a nonlegend first.
+            let pick = if copies_to_token { legal.min_by_key(|c| legend_copy(c.id)) } else { legal.next() };
+            if let Some(c) = pick {
+                return Some(Target::Permanent(c.id));
             }
         }
         // Source-fallback: only the avoided source is a legal candidate.

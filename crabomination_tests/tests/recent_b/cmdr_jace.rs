@@ -203,3 +203,22 @@ fn cr_704_5j_token_copy_targeting_skips_your_legend() {
     let t = g.auto_target_for_effect(&technique.effect, 0);
     assert_eq!(t, Some(Target::Permanent(bears)), "not {venser:?}");
 }
+
+/// The same rule on an OPPONENT's board: Venser's own "copies of target
+/// permanent an opponent controls" took the opponent's Venser, and each token
+/// Venser's ETB copied it again — two Vensers at a table looped to the pod's
+/// action cap (seed 34040, 1,538 triggers on the stack). Copy the
+/// nonlegendary permanent instead.
+#[test]
+fn cr_704_5j_venser_copies_an_opponents_nonlegend_not_their_venser() {
+    let mut g = main_phase(3);
+    let theirs = g.add_card_to_battlefield(1, catalog::venser_fervent_forger());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ours = catalog::venser_fervent_forger();
+    let copy_mode = match &ours.triggered_abilities[0].effect {
+        crabomination::effect::Effect::ChooseMode(modes) => modes[1].clone(),
+        e => panic!("{e:?}"),
+    };
+    let t = g.auto_target_for_effect(&copy_mode, 0);
+    assert_eq!(t, Some(Target::Permanent(bears)), "not {theirs:?}");
+}
