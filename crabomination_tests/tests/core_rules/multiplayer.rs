@@ -1316,6 +1316,30 @@ fn cr_704_3_an_aura_on_a_departed_seats_creature_goes_in_the_same_check() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == aura));
 }
 
+/// CR 702.26g — a permanent phased out *indirectly* (an Aura on a phasing
+/// host) phases in with its host, not on its own controller's untap: another
+/// seat's Aura came back alone and sat attached to a host still phased out
+/// (Fool's Demise, a four-seat pod).
+#[test]
+fn cr_702_26g_an_indirectly_phased_out_aura_returns_with_its_host() {
+    let mut g = multi_player_game(3);
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(host);
+    for id in [host, aura] {
+        let c = g.battlefield.iter().find(|c| c.id == id).unwrap().clone();
+        g.battlefield.retain(|c| c.id != id);
+        g.phased_out.push(c);
+    }
+    g.active_player_idx = 1;
+    g.do_phasing();
+    assert!(g.battlefield_find(aura).is_none(), "not on the Aura controller's untap");
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(host).is_some());
+    assert_eq!(g.battlefield_find(aura).and_then(|c| c.attached_to), Some(host), "back with its host");
+}
+
 /// CR 800.4 — a decision the departed player was being asked to make is
 /// dropped. A pending decision suppresses every *other* seat's actions until
 /// it is answered, so leaving one addressed to a player who is no longer in

@@ -1818,8 +1818,11 @@ fn play_pod_game(
                     && g.battlefield_find(h).is_none()
                 {
                     panic!(
-                        "seed {seed}: {} is attached to {h:?}, which is not on the battlefield (turn {}, {:?}, after {actions} actions)",
-                        c.definition.name, g.turn_number, g.step,
+                        "seed {seed}: {} is attached to {h:?}, which is not on the battlefield (turn {}, {:?}, after {actions} actions; host phased out: {})",
+                        c.definition.name,
+                        g.turn_number,
+                        g.step,
+                        g.phased_out.iter().any(|p| p.id == h),
                     );
                 }
             }

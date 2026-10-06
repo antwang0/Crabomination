@@ -3790,10 +3790,22 @@ impl GameState {
         // Phase IN: every phased-out permanent this player controls returns —
         // except "until [source] leaves" phase-outs (CR 702.26 — Out of
         // Time), which `on_left_battlefield` returns instead.
+        // CR 702.26g — a permanent that phased out *indirectly* (attached to
+        // one that phased out) phases in with its host, whoever controls it:
+        // another seat's Aura came back on its own controller's untap and sat
+        // attached to a host still phased out (Fool's Demise, a pod).
         let mut phased_in: Vec<crate::card::CardId> = Vec::new();
+        let returns_directly = |g: &Self, c: &crate::card::CardInstance| {
+            c.controller == p
+                && c.phased_out_by.is_none()
+                && !c.attached_to.is_some_and(|h| g.phased_out.iter().any(|o| o.id == h))
+        };
+        let hosts: Vec<crate::card::CardId> =
+            self.phased_out.iter().filter(|c| returns_directly(self, c)).map(|c| c.id).collect();
         let mut i = 0;
         while i < self.phased_out.len() {
-            if self.phased_out[i].controller == p && self.phased_out[i].phased_out_by.is_none() {
+            let c = &self.phased_out[i];
+            if hosts.contains(&c.id) || c.attached_to.is_some_and(|h| hosts.contains(&h)) {
                 let c = self.phased_out.remove(i);
                 phased_in.push(c.id);
                 self.phase_in_card(c);
