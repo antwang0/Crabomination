@@ -3211,7 +3211,11 @@ the sweep changes); same box, same profile.
                  determinism ok (3 vs 1)
 wall (--bench)   the UNGATED post-action sweep: bench_ab.py 16 pairs, paired
                  B/A median -7.79 %, mean -6.52 %, sd 9.52 — rejected;
-                 gated: median +0.10 %, mean -0.38 %, sd 7.33 — noise
+                 gated: median +0.10 %, mean -0.38 %, sd 7.33 — noise;
+                 at the session tip (answers sweep ungated, the
+                 SBA_OTHER_ATTACHED walk bit): 32 pairs median +1.43 %,
+                 mean +0.81 %, sd 9.24 — noise; thread determinism ok;
+                 peak_rss_mib 28.8
 pods (release)   seed 9123 2..8 x 1,000 = 7,000 (turns/game 19.22 / 32.54 /
                  46.28 / 58.31 / 69.07 / 83.19 / 96.35), all decided, zero
                  panics; all-deck 6 seats (33000+, 31 x 200) + 4 seats
@@ -3221,6 +3225,7 @@ strict debug     6 seats (32100+, 31 x 60), 4 seats (35000+/36000+, 46 x
                  40 twice), 6 seats (37000+, 31 x 30), 4/6/3 seats (39000+/
                  40000+/41000+) with the settled-board invariants: every
                  failure filed and fixed in this session's commits
+suite            24,250 / 0 / 5 (CRAB_ANSWER_LOG=strict); clippy 0
 ```
 
 ### 2026-10-06 (Commander routine) — guardrail; CR 603.3d trigger-target asks, Jinnie Fay, reveal lands

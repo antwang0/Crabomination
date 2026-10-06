@@ -263,6 +263,12 @@ reducer in scope or an armed draw loss — ungated it cost -7.8 % wall
 (PERF "2026-10-06 (Commander session, second)"). ✅ **CR 702.26g** — an
 Aura phased out with its host phased back in on its own controller's untap
 while the host stayed out (Fool's Demise); it now returns with the host.
+✅ **CR 704.5n/q** — only printed Equipment unattached from a vanished host;
+a Treasure a static had made an Equipment stayed attached (new scan bit
+`SBA_OTHER_ATTACHED`). ✅ **CR 704.5m** — Necromancy never became the Aura
+its Oracle says it becomes, so it outlived its creature; the self-`Attach`
+bakes the subtype onto the battlefield object. ✅ An answered decision sweeps
+ungated (its resolution's events are not in the action's return).
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled
 
