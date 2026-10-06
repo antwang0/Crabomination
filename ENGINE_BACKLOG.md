@@ -113,6 +113,32 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-10-06 (fourth Commander routine) — combat removal, defender scoring, owner zones
+
+Debug-pod invariants (`pod/mod.rs`: CR 506.4 combatants, CR 509.1a blockers,
+CR 400.3 owner zones, CR 903.8 tax / 903.10a commander damage per action,
+`CRAB_POD_SWEEP_PROBE=1`) found every item here but the 508.1d deadlock.
+
+- ✅ **CR 506.4** — a combatant that stops being a creature leaves combat (an
+  attacking Mogis below devotion; Satya's token copy of a crewed Vehicle
+  entering "attacking"): `stack.rs::remove_noncreature_combatants` in the
+  sweep. ⏳ A planeswalker / battle that stops being one while attacked is
+  not removed (unreachable in the pods).
+- ✅ **CR 508.1d** — a goad, "attacks that player" and a lure each rejected
+  every other defender, so a goaded Raving Dead bound to its goader had NO
+  legal attack. `game/attack_requirements.rs` scores them together (engine
+  and bot). ⏳ Creature-level requirements vs restrictions are still checked
+  one at a time, not maximized.
+- ✅ **CR 400.3** — `place_card_in_dest` put a card into the effect
+  controller's hand / library ("your library" on a stolen Sensei's Divining
+  Top). Other direct `hand.push` / `library.insert` sites are not audited;
+  the owner invariant names any a pod reaches.
+- ✅ **"Target … card from your graveyard" reached any graveyard** — ten
+  cards (Mystic Sanctuary, Scrap Trawler, Torrential Gearhulk, …);
+  `scripts/audit_your_graveyard_target.py --gate` at 0. Devious Cover-Up
+  carried an invented oracle and is rewritten.
+- ✅ **CR 603.2** departed listeners: draws, discards, life loss, counters.
+
 ## FIXED/OPEN 2026-10-04 (Commander routine, `01WwQaPJ`) — paid costs read back at resolution, and a listener that leaves in the same resolution
 
 - ✅ **CR 602.2b** — what an activation's costs did lived in `GameState`
