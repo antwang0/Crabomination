@@ -2007,6 +2007,31 @@ fn play_pod_game(
                 }
             }
         }
+        // CR 610.3 — a card exiled "until [source] leaves the battlefield"
+        // returns once the source has left (a phased-out source hasn't). A
+        // printed leave TRIGGER returns it as it resolves, so only with the
+        // stack empty. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() && g.stack.is_empty() && g.pending_decision.is_none() && g.suspend_signal.is_none() {
+            if let Some((c, link)) = g.exile.iter().find_map(|c| {
+                c.exiled_by
+                    .filter(|l| {
+                        l.monarch_guard.is_none()
+                            && g.battlefield_find(l.source).is_none()
+                            && !g.phased_out.iter().any(|p| p.id == l.source)
+                    })
+                    .map(|l| (c, l))
+            }) {
+                panic!(
+                    "seed {seed}: {} is still exiled until {:?} leaves, which is in {} (turn {}, {:?}, after {actions} actions)",
+                    c.definition.name,
+                    link.source,
+                    zone_label(&g, link.source),
+                    g.turn_number,
+                    g.step,
+                );
+            }
+        }
         // CR 800.4a — priority passes on from a player who left. Debug-only.
         #[cfg(debug_assertions)]
         if !g.is_game_over() {
