@@ -1674,6 +1674,7 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
 /// `CRAB_POD_SWEEP_PROBE=1` (debug builds): after every settled action, a
 /// clone's fresh CR 704.3 sweep must do nothing — the strict form of the
 /// per-rule invariants below, one clone an action, so opt-in.
+#[cfg(debug_assertions)]
 fn pod_sweep_probe() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| std::env::var_os("CRAB_POD_SWEEP_PROBE").is_some())
