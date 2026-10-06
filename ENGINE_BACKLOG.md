@@ -212,6 +212,21 @@ run against a prompting seat):
   This supersedes the same day's "closed with a reason" (the stack form
   dropped the outer context — it now carries it).
 
+**Third 2026-10-06 run (Commander routine).** A strict debug pod (seed 18901,
+decks 31/91/112/157, game 18) tripped the orphaned-attachment invariant:
+Clever Concealment phased out Lightning Greaves, Yuffie died meanwhile, and
+Greaves phased back in attached to the graveyard card. ✅ **CR 702.26i** —
+`phase_in_card` drops an attachment whose host left the battlefield. ✅ **CR
+704.3** — no sweep ran between the untap step and upkeep priority (a legend
+phasing in beside its namesake survived; an "until end of combat" pump's
+expiry left a lethally damaged creature into main two); `advance_step` sweeps
+entering Upkeep / Draw and leaving EndCombat (`cr_recent98::cr_704_3_*`).
+⚠ **OPEN (test robustness):** `server::tests::reconnect_within_grace_keeps_match_alive`
+failed once under full-suite load on a 4-core box (its 400 ms wall-clock grace
+elapsed before the second reattach; `mod.rs:2910`), and passes alone. A
+wall-clock grace in a unit test is load-sensitive; give it a generous grace
+or a fake clock.
+
 **Second 2026-10-06 session — CR 903.9b direct pushes.** A debug pod
 invariant (a commander in a library is a bypass, since every pod seat says
 yes) found Spell Crumple bottoming a countered Sigarda in its first run.

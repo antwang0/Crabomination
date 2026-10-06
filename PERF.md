@@ -3193,6 +3193,30 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
+### 2026-10-06 (Commander routine, third) — guardrail; CR 603.7 reflexive payoffs on the stack, CR 704.3 step-start sweep
+
+Hot-path touches: `advance_step` runs one state-based sweep entering Upkeep /
+Draw and leaving EndCombat (~3 a turn; every step read the same within noise
+and was narrowed anyway); a reflexive payoff is a stack push (no `--bench`
+card has one). Release `--bench`, 4-core Xeon @ 2.80 GHz, ABAB, wall clock not
+comparable to other boxes.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 at every build; determinism ok (all pairs split)
+wall (--bench)   session start 120.4 / 135.6 k decisions/s; every-step sweep
+                 127.3 / 129.6 / 133.9 k; narrowed 127.9 / 128.4 / 132.7 k (noise)
+suite            24,259 / 0 / 5 (one load-timing server test failed once, passes
+                 alone — ENGINE_BACKLOG)
+pods (release)   seed 9121 2..8 x 500, 9131 2..8 x 600, 9141 3/4/6/8 x 500 =
+                 9,700 games, all decided, zero panics; turns/game at 9131:
+                 19.08 / 32.70 / 46.20 / 57.49 / 67.88 / 83.24 / 97.94
+2-player pools   cube / sos / sealed seed 9132 x 600 a deck = 15,000 games,
+                 0 undecided
+strict debug     seeds 18901-18903 (one find: CR 702.26i, fixed) and
+                 19001-19010, 10 groups x 24 four-seat games over 40 decks, clean
+```
+
 ### 2026-10-06 (Commander session, second) — guardrail; the state-based check after every action, and its gate
 
 Hot-path touches: `perform_action_inner` sweeps after every non-pass action
