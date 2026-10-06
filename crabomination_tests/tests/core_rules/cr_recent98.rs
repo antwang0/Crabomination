@@ -333,3 +333,29 @@ fn cr_704_3_an_until_your_next_turn_expiry_is_swept_before_upkeep_priority() {
     assert_eq!((g.active_player_idx, g.step), (0, crabomination::TurnStep::Upkeep));
     assert!(g.battlefield_find(germ).is_none(), "0/0 once its controller's turn began");
 }
+
+/// CR 400.3 — a card bound for a library goes to its owner's, whatever the
+/// effect names: a stolen Sensei's Divining Top's "put it on top of its
+/// owner's library" (written "your library") lands on its owner's.
+#[test]
+fn cr_400_3_a_stolen_top_goes_onto_its_owners_library() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let top = g.add_card_to_battlefield(1, catalog::senseis_divining_top());
+    g.battlefield_find_mut(top).unwrap().controller = 0;
+    g.active_player_idx = 0;
+    g.step = crabomination::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: top,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(top), "on top of its owner's library");
+    assert!(!g.players[0].library.iter().any(|c| c.id == top));
+}
