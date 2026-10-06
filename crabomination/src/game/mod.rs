@@ -31655,6 +31655,17 @@ fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool
         {
             true
         }
+        // CR 613.4c — a toughness bonus behind its own condition is lost
+        // when the condition lapses, which can happen with no event at all
+        // (a turn change, a hand-size count).
+        SE::PumpTeamIf { toughness, .. }
+        | SE::PumpSelfIf { toughness, .. }
+        | SE::GrantPumpSelfIf { toughness, .. }
+        | SE::AnthemForFilterIf { toughness, .. }
+            if *toughness > 0 =>
+        {
+            true
+        }
         // Layer-7c, literal toughness.
         SE::PumpPT { toughness, .. }
         | SE::PumpTeamIf { toughness, .. }
@@ -31675,11 +31686,44 @@ fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool
         | SE::PumpTeamByControlledPermanents { per_toughness, .. }
         | SE::PumpPTPerOwnCreatureType { per_toughness, .. }
         | SE::PumpPTPerCounterOnSource { per_toughness, .. } => *per_toughness < 0,
-        SE::WhileClassLevelAtLeast { inner, .. }
-        | SE::WhileYourTurn { inner }
-        | SE::WhileNotYourTurn { inner }
-        | SE::WhileCountersAtLeast { inner, .. }
-        | SE::WhileCondition { inner, .. } => static_effect_reduces_toughness(inner),
+        // A turn or a condition gating a toughness bonus ends it with no event
+        // (Sentinel Sarah Lyons' "while an artifact entered under your control
+        // this turn, creatures you control get +2/+2" kept a 0/0 alive into
+        // the next turn's upkeep in a pod). A class level only rises, and a
+        // counter comes off with an event.
+        SE::WhileYourTurn { inner } | SE::WhileNotYourTurn { inner } | SE::WhileCondition { inner, .. } => {
+            static_effect_reduces_toughness(inner) || static_effect_adds_toughness(inner)
+        }
+        SE::WhileClassLevelAtLeast { inner, .. } | SE::WhileCountersAtLeast { inner, .. } => {
+            static_effect_reduces_toughness(inner)
+        }
+        _ => false,
+    }
+}
+
+/// A layer-7c toughness bonus (literal or count-scaled) — the half a lapsing
+/// condition takes away.
+fn static_effect_adds_toughness(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        SE::PumpPT { toughness, .. }
+        | SE::PumpTeamIf { toughness, .. }
+        | SE::PumpSelfIf { toughness, .. }
+        | SE::GrantPumpSelfIf { toughness, .. }
+        | SE::PumpPTPerOtherOfType { toughness, .. }
+        | SE::PumpPerSharedType { toughness, .. }
+        | SE::PumpPerSameNameCreatureYouControl { toughness, .. }
+        | SE::AnthemForChosenType { toughness, .. }
+        | SE::AnthemForChosenColor { toughness, .. }
+        | SE::AnthemForFilter { toughness, .. }
+        | SE::AnthemForFilterIf { toughness, .. }
+        | SE::AnthemForColorSharedWithLibraryTop { toughness, .. } => *toughness > 0,
+        SE::PumpSelfByControlledPermanents { per_toughness, .. }
+        | SE::PumpSelfByValue { per_toughness, .. }
+        | SE::PumpTeamPerAttachmentOnSource { per_toughness, .. }
+        | SE::PumpTeamByControlledPermanents { per_toughness, .. }
+        | SE::PumpPTPerOwnCreatureType { per_toughness, .. }
+        | SE::PumpPTPerCounterOnSource { per_toughness, .. } => *per_toughness > 0,
         _ => false,
     }
 }

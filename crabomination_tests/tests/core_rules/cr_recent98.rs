@@ -359,3 +359,40 @@ fn cr_400_3_a_stolen_top_goes_onto_its_owners_library() {
     assert_eq!(g.players[1].library.first().map(|c| c.id), Some(top), "on top of its owner's library");
     assert!(!g.players[0].library.iter().any(|c| c.id == top));
 }
+
+/// CR 704.3 / 613.4c — a toughness bonus behind a condition ends with no
+/// event when the condition lapses: a 0/0 a "during your turn, creatures you
+/// control get +2/+2" lord kept alive dies before the next turn's upkeep
+/// priority (a pod's Synth Infiltrator outlived Sentinel Sarah Lyons'
+/// "while an artifact entered this turn" +2/+2).
+#[test]
+fn cr_704_3_a_lapsed_conditional_anthem_is_swept_at_the_turn_change() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, creatures you control get +2/+2.",
+            effect: StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: 2,
+                    toughness: 2,
+                }),
+            },
+        }],
+        ..bear("Turn Lord")
+    });
+    let germ = g.add_card_to_battlefield(0, CardDefinition { power: 0, toughness: 0, ..bear("Germ") });
+    g.active_player_idx = 0;
+    g.step = crabomination::TurnStep::End;
+    g.priority.player_with_priority = 0;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(germ).is_some(), "2/2 during its controller's turn");
+    for _ in 0..8 {
+        if g.active_player_idx == 1 && g.step == crabomination::TurnStep::Upkeep {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!((g.active_player_idx, g.step), (1, crabomination::TurnStep::Upkeep));
+    assert!(g.battlefield_find(germ).is_none(), "0/0 once the turn passed");
+}
