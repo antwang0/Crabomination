@@ -4115,6 +4115,19 @@ impl SelectionRequirement {
         }
     }
 
+    /// True when the filter reads a permanent's tap state anywhere in its
+    /// tree (Augusta, Dean of Order's "other untapped creatures"): a tap or
+    /// an untap alone can move a permanent in or out of it. Recurses through
+    /// And/Or/Not.
+    pub fn mentions_tap_state(&self) -> bool {
+        match self {
+            Self::Tapped | Self::Untapped => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_tap_state() || b.mentions_tap_state(),
+            Self::Not(inner) => inner.mentions_tap_state(),
+            _ => false,
+        }
+    }
+
     /// True when no match can be controlled by the evaluating player — an
     /// `And` holding `ControlledByOpponent` or `Not(ControlledByYou)` ("target
     /// creature you don't control"). An `Or` qualifies only if both arms do.

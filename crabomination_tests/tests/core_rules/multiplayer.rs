@@ -8804,6 +8804,30 @@ fn cr_704_5a_paying_your_last_life_for_a_spell_loses_before_you_act_again() {
     assert!(g.stack.is_empty(), "and the spell left with its caster");
 }
 
+/// CR 704.5f / 613.4c / 117.5 — a creature kept alive only by a tap-state
+/// anthem (Augusta, Dean of Order's "other untapped creatures you control get
+/// +0/+1") dies the moment its own tap cost turns the bonus off, before its
+/// controller acts again: the tap was inert to the post-action gate, so a pod's
+/// Bloodline Keeper sat at 0 toughness after activating.
+#[test]
+fn cr_704_5f_tapping_out_of_an_untapped_anthem_is_swept_before_acting_again() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, *catalog::plargg_dean_of_chaos().back_face.expect("Augusta"));
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    g.battlefield_find_mut(pinger).unwrap().counters.add(crabomination::card::CounterType::MinusOneMinusOne, 1);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(pinger).is_some(), "a 0/1 while untapped");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pinger, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("ping");
+    assert!(g.battlefield_find(pinger).is_none(), "tapped, it is a 0/0 and dies before p0 acts again");
+}
+
 /// CR 605.3a / 700.4 — a mana source sacrificed while an alternative cast
 /// is paid (a flashback here) leaves the battlefield with its events: the
 /// flashback path dropped the auto-tapper's, so the sacrifice fired no

@@ -31641,6 +31641,14 @@ fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool
         | SE::MatchingLandsAreCreatures { .. }
         | SE::PumpPTByValue { .. }
         | SE::PumpSelfByExiledWithStats => true,
+        // CR 613.4c — a toughness bonus whose filter reads tap state is lost
+        // by a tap alone (Augusta's "other untapped creatures you control get
+        // +0/+1"), an inert event to the post-action gate.
+        SE::AnthemForFilter { filter, toughness, .. } | SE::AnthemForFilterIf { filter, toughness, .. }
+            if *toughness > 0 && filter.mentions_tap_state() =>
+        {
+            true
+        }
         // Layer-7c, literal toughness.
         SE::PumpPT { toughness, .. }
         | SE::PumpTeamIf { toughness, .. }
