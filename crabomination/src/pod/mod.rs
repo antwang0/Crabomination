@@ -2552,6 +2552,13 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-10-06 (CR 603.3d, a prompting seat's targeted
+        // self-death trigger goes through the asking queue, so a pod bot
+        // picks its targets by policy like every other trigger — bisected by
+        // disabling that routing alone): seed 43 77→74 turns, 4242 97→67,
+        // same winners; 0xC0FFEE unmoved. `bot_ladder --commander --a dflt`,
+        // 2,000 games at seed 9991, before/after: 40.45/40.85, 62.51/62.81,
+        // 82.27/82.69 turns at 3/4/6 seats, every block 2,000/2,000 decided.
         // Re-blessed 2026-10-05 (`01VKHeZo`, Hideaway asks its player which
         // looked-at card to hide; bisected: its parent passes and every later
         // commit to the tip reads the same rows). A pod bot ranks a library
@@ -2855,8 +2862,8 @@ mod tests {
         // actions, same winner; 43 unchanged; 4242 82→89 turns, same winner.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2486),
-            (43, Some(0), 77, 3649),
-            (4242, Some(3), 97, 4745),
+            (43, Some(0), 74, 3800),
+            (4242, Some(3), 67, 3092),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
