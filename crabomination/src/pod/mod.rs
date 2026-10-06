@@ -1646,6 +1646,47 @@ fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
 /// seeded stream, so an unset run is the run it always was.
 /// Which zone `id` is in, for an invariant's message. Debug-only.
 #[cfg(debug_assertions)]
+/// The nontoken cards each seat owns, across every zone a card can be in (a
+/// melded or merged permanent counts its component cards). A spell copy is a
+/// token here (CR 707.10a). For the debug conservation invariant.
+#[cfg(debug_assertions)]
+fn owned_card_counts(g: &GameState) -> Vec<Vec<crate::card::CardId>> {
+    let mut n = vec![Vec::new(); g.players.len()];
+    let mut add = |c: &crate::card::CardInstance| {
+        let parts: Vec<&crate::card::CardInstance> = if !c.meld_parts.is_empty() {
+            c.meld_parts.iter().collect()
+        } else if !c.mutate_stack.is_empty() {
+            c.mutate_stack.iter().collect()
+        } else {
+            vec![c]
+        };
+        for part in parts {
+            if !part.is_token
+                && let Some(slot) = n.get_mut(part.owner)
+            {
+                slot.push(part.id);
+            }
+        }
+    };
+    g.battlefield.iter().for_each(&mut add);
+    g.phased_out.iter().for_each(&mut add);
+    g.exile.iter().for_each(&mut add);
+    for si in g.stack.iter() {
+        if let crate::game::types::StackItem::Spell { card, .. } = si {
+            add(card);
+        }
+    }
+    for p in g.players.iter() {
+        for z in [&*p.graveyard, &*p.hand, &*p.library, &*p.command, &*p.ante, &*p.sideboard] {
+            z.iter().for_each(&mut add);
+        }
+    }
+    for ids in &mut n {
+        ids.sort_unstable();
+    }
+    n
+}
+
 fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
     let has = |z: &[crate::card::CardInstance]| z.iter().any(|c| c.id == id);
     if g.battlefield_find(id).is_some() {
@@ -1788,6 +1829,10 @@ fn play_pod_game(
     let mut concede = concede_rate.map(|n| (n, StdRng::seed_from_u64(seed ^ 0xC0DE_C0DE)));
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
+    // CR 400.1 — a card is always somewhere: each seat's nontoken card
+    // count holds while it is in the game (debug; checked on settled boards).
+    #[cfg(debug_assertions)]
+    let owned_at_start = owned_card_counts(&g);
     let mut census =
         if into.is_some() { ActionCensus::forced() } else { ActionCensus::armed() };
     // The budget counts plays, not priority passes (`PodOutcome::plays`), with
@@ -2066,6 +2111,32 @@ fn play_pod_game(
                 g.turn_number,
                 g.step,
             );
+        }
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() && g.pending_decision.is_none() && g.suspend_signal.is_none() {
+            // CR 400.3 — a hand, library or graveyard holds only its own
+            // seat's cards.
+            for (seat, pl) in g.players.iter().enumerate() {
+                if let Some(c) = pl.hand.iter().chain(pl.library.iter()).chain(pl.graveyard.iter()).find(|c| c.owner != seat) {
+                    panic!(
+                        "seed {seed}: {} (owner p{}) is in p{seat}'s {} (turn {}, {:?}, after {actions} actions)",
+                        c.definition.name, c.owner, zone_label(&g, c.id), g.turn_number, g.step,
+                    );
+                }
+            }
+            let now = owned_card_counts(&g);
+            if let Some(p) = (0..g.players.len()).find(|&p| g.players[p].is_alive() && now[p] != owned_at_start[p]) {
+                let gone: Vec<String> = owned_at_start[p]
+                    .iter()
+                    .filter(|id| now[p].binary_search(id).is_err())
+                    .map(|id| format!("{id:?} {:?}", g.find_card_anywhere(*id).map(|c| (c.definition.name, c.owner))))
+                    .collect();
+                let new: Vec<_> = now[p].iter().filter(|id| owned_at_start[p].binary_search(id).is_err()).collect();
+                panic!(
+                    "seed {seed}: p{p} owns {} nontoken cards, {} at the start (turn {}, {:?}, after {actions} actions): gone {gone:?}, new {new:?}",
+                    now[p].len(), owned_at_start[p].len(), g.turn_number, g.step,
+                );
+            }
         }
         // CR 704.3 — the sweep repeats until a pass does nothing, so a second
         // sweep over a settled state finds nothing either. Debug-only, opt-in.
