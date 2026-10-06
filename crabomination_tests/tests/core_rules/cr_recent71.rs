@@ -37,7 +37,7 @@ fn cr_702_22d_bands_with_other_needs_no_plain_banding() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::adventurers_guildhouse());
     let a = g.add_card_to_battlefield(0, catalog::kamahl_fist_of_krosa());
-    let b = g.add_card_to_battlefield(0, catalog::kamahl_fist_of_krosa());
+    let b = g.add_card_to_battlefield(0, catalog::seton_krosan_protector());
     for id in [a, b] {
         g.clear_sickness(id);
     }

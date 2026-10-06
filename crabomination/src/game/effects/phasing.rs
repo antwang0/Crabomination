@@ -10,8 +10,17 @@ impl GameState {
     /// CR 702.26 — a phased-out permanent returns to the battlefield with its
     /// counters, so a keyword counter re-arms the instance-keyword gate. The
     /// one way back for every phase-in path.
-    pub(crate) fn phase_in_card(&mut self, c: crate::card::CardInstance) {
+    pub(crate) fn phase_in_card(&mut self, mut c: crate::card::CardInstance) {
         self.board_instance_keywords |= !c.keyword_counters.is_empty();
+        // CR 702.26i — an Aura / Equipment that phased out directly phases in
+        // unattached once its host has left the battlefield (no unattach
+        // trigger, 702.26j). A host still phased out is still there.
+        if let Some(h) = c.attached_to
+            && self.battlefield.find_by_id(h).is_none()
+            && !self.phased_out.iter().any(|p| p.id == h)
+        {
+            c.attached_to = None;
+        }
         self.battlefield.push(c);
     }
 

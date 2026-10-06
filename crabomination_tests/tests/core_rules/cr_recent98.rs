@@ -143,6 +143,27 @@ fn cr_702_26_cant_phase_out_pins_the_permanent() {
     assert!(g.phased_out.is_empty());
 }
 
+/// CR 702.26i — an Equipment that phased out directly phases back in
+/// unattached when the creature it was on died meanwhile (a pod's Clever
+/// Concealment left Lightning Greaves pointing at a dead Yuffie).
+#[test]
+fn cr_702_26i_equipment_phases_in_unattached_from_a_departed_host() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, bear("Host"));
+    let greaves = g.add_card_to_battlefield(0, catalog::lightning_greaves());
+    g.battlefield_find_mut(greaves).unwrap().attached_to = Some(host);
+    let i = g.battlefield.iter().position(|c| c.id == greaves).unwrap();
+    let c = g.battlefield.remove(i);
+    g.phased_out.push(c);
+    let j = g.battlefield.iter().position(|c| c.id == host).unwrap();
+    let dead = g.battlefield.remove(j);
+    g.players[0].graveyard.push(dead);
+    g.active_player_idx = 0;
+    g.do_phasing();
+    let back = g.battlefield_find(greaves).expect("phased in");
+    assert_eq!(back.attached_to, None, "its host is in the graveyard");
+}
+
 /// CR 615.7 / 614.9 — Reflect Damage's floating shield soaks the chosen
 /// source's next damage event anywhere and deals it to that source's
 /// controller instead.
@@ -173,4 +194,50 @@ fn cr_615_7_anywhere_shield_reflects_to_the_sources_controller() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(victim).map(|c| c.damage), Some(0), "prevented");
     assert_eq!(g.players[1].life, 19, "dealt to the source's controller instead");
+}
+
+/// CR 704.5n — an Equipment whose host is gone (here: in a graveyard) is
+/// unattached by the state-based sweep, the net under CR 702.26i.
+#[test]
+fn cr_704_5n_equipment_on_a_departed_host_is_unattached() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, bear("Host"));
+    let greaves = g.add_card_to_battlefield(0, catalog::lightning_greaves());
+    g.battlefield_find_mut(greaves).unwrap().attached_to = Some(host);
+    let j = g.battlefield.iter().position(|c| c.id == host).unwrap();
+    let dead = g.battlefield.remove(j);
+    g.players[0].graveyard.push(dead);
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(greaves).unwrap().attached_to, None);
+}
+
+/// CR 704.3 / 502.1 — the untap step's phasing has no priority, but the
+/// upkeep does: a legend that phases in beside its namesake meets the legend
+/// rule before the active player can act.
+#[test]
+fn cr_704_3_a_phased_in_legend_meets_the_legend_rule_before_upkeep_priority() {
+    let mut g = two_player_game();
+    let legend = || CardDefinition { supertypes: vec![crabomination::card::Supertype::Legendary], ..bear("Twin Legend") };
+    let a = g.add_card_to_battlefield(0, legend());
+    g.add_card_to_battlefield(0, legend());
+    let i = g.battlefield.iter().position(|c| c.id == a).unwrap();
+    let c = g.battlefield.remove(i);
+    g.phased_out.push(c);
+    g.active_player_idx = 1;
+    g.step = crabomination::TurnStep::End;
+    g.priority.player_with_priority = 1;
+    for _ in 0..8 {
+        if g.active_player_idx == 0 && g.step == crabomination::TurnStep::Upkeep {
+            break;
+        }
+        if g.pending_decision.is_some() {
+            let d = g.pending_decision.as_ref().unwrap().decision.clone();
+            g.submit_decision(crabomination::decision::Decider::decide(&mut crabomination::decision::AutoDecider, &d)).unwrap();
+            continue;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!((g.active_player_idx, g.step), (0, crabomination::TurnStep::Upkeep));
+    let n = g.battlefield.iter().filter(|c| c.definition.name == "Twin Legend").count();
+    assert_eq!(n, 1, "the legend rule ran before upkeep priority");
 }

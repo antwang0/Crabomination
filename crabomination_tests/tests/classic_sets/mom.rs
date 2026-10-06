@@ -103,7 +103,9 @@ fn defeated_siege_transforms_to_back() {
 #[test]
 fn cannot_attack_battle_you_protect() {
     let mut g = two_player_game();
-    let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    // The opponent's Siege, protected by the active player (a Siege's
+    // protector is an opponent of its controller, CR 310.11a).
+    let battle = g.add_card_to_battlefield(1, catalog::invasion_of_zendikar());
     {
         let b = g.battlefield_find_mut(battle).unwrap();
         b.counters.insert(CounterType::Defense, 3);

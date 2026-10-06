@@ -1104,6 +1104,13 @@ impl GameState {
             }
         }
 
+        // CR 704.3 — the state-based actions are checked whenever a player
+        // would receive priority, a step's beginning included: the untap
+        // step's phasing can put a legend beside its namesake, and no action
+        // of anyone's has run the sweep since.
+        if self.pending_decision.is_none() && !self.is_game_over() {
+            self.check_state_based_actions_into(&mut events);
+        }
         Ok(events)
     }
 
