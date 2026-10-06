@@ -445,3 +445,43 @@ fn cr_903_9b_a_countered_commander_spell_goes_home() {
         assert!(g.players[0].library.iter().chain(&g.players[0].hand).all(|c| c.id != cmd), "{name}");
     }
 }
+
+/// CR 903.9b — Glimpse of Tomorrow shuffles every permanent its caster owns
+/// into their library, and an owned commander among them may go home instead.
+#[test]
+fn cr_903_9b_glimpse_of_tomorrow_sends_a_commander_home() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(cmd, 0, None);
+    let eff = catalog::glimpse_of_tomorrow().effect;
+    g.resolve_effect(&eff, &ctx).expect("Glimpse");
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd), "home");
+    assert!(g.players[0].library.iter().all(|c| c.id != cmd));
+}
+
+/// CR 903.9b — "from anywhere": a commander in its owner's hand (Command
+/// Beacon) or graveyard (a declined 903.9a return) that a mass shuffle puts
+/// into the library may go home instead.
+#[test]
+fn cr_903_9b_a_shuffled_hand_or_graveyard_commander_goes_home() {
+    use crabomination::effect::{Effect, PlayerRef};
+    let shuffles = [
+        Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+        Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+    ];
+    for (i, eff) in shuffles.iter().enumerate() {
+        let mut g = main_phase();
+        let cmd = g.seat_commanders(1, vec![catalog::grizzly_bears()])[0];
+        let pos = g.players[1].command.iter().position(|c| c.id == cmd).unwrap();
+        let card = g.players[1].command.remove(pos);
+        if i == 0 { g.players[1].hand.push(card) } else { g.players[1].graveyard.push(card) }
+        let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+        g.resolve_effect(eff, &ctx).expect("shuffle");
+        assert!(g.players[1].command.iter().any(|c| c.id == cmd), "{eff:?}: home");
+        assert!(g.players[1].library.iter().all(|c| c.id != cmd), "{eff:?}");
+    }
+}

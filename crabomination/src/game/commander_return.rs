@@ -129,20 +129,22 @@ impl GameState {
 }
 
 impl GameState {
-    /// CR 903.9b — a commander leaving the STACK for its owner's hand or
-    /// library (a countered spell's "instead" zone: Spell Crumple, Memory
-    /// Lapse, Remand) may go to the command zone. `Some(card)` back when it
-    /// does not, for the caller to place as it would have.
-    pub(crate) fn commander_off_stack_redirect(
+    /// CR 903.9b — a commander a direct push would put into its owner's hand
+    /// or library (a countered spell's "instead" zone: Spell Crumple, Memory
+    /// Lapse, Remand; Glimpse of Tomorrow's shuffle) may go to the command
+    /// zone. `Some(card)` back when it does not, for the caller to place as
+    /// it would have.
+    pub(crate) fn commander_zone_redirect(
         &mut self,
         card: crate::card::CardInstance,
+        from: Zone,
         to: Zone,
     ) -> Option<crate::card::CardInstance> {
         let owner = card.owner;
         if card.is_token || !self.players.get(owner).is_some_and(|p| p.commanders.contains(&card.id)) {
             return Some(card);
         }
-        if self.resolve_zone_change(card.id, Zone::Stack, to) != Zone::Command {
+        if self.resolve_zone_change(card.id, from, to) != Zone::Command {
             return Some(card);
         }
         let mut card = card;
@@ -154,5 +156,26 @@ impl GameState {
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);
         None
+    }
+
+    /// [`commander_zone_redirect`](Self::commander_zone_redirect) over a batch
+    /// a mass move lifted (a hand or graveyard shuffled into a library): the
+    /// commanders that go home leave `cards`.
+    pub(crate) fn commander_zone_redirect_all(
+        &mut self,
+        cards: &mut Vec<crate::card::CardInstance>,
+        from: Zone,
+        to: Zone,
+    ) {
+        let is_commander =
+            |g: &Self, c: &crate::card::CardInstance| g.players.get(c.owner).is_some_and(|p| p.commanders.contains(&c.id));
+        if !cards.iter().any(|c| is_commander(self, c)) {
+            return;
+        }
+        for c in std::mem::take(cards) {
+            if let Some(c) = self.commander_zone_redirect(c, from, to) {
+                cards.push(c);
+            }
+        }
     }
 }

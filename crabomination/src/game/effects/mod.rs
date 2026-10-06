@@ -5997,7 +5997,11 @@ impl GameState {
                         }
                         card.counters.clear();
                         card.attached_to = None;
-                        self.players[p].library.push(card);
+                        // CR 903.9b — a commander may go home instead.
+                        let lib = crate::card::Zone::Library;
+                        if let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Battlefield, lib) {
+                            self.players[p].library.push(card);
+                        }
                     }
                 }
                 self.shuffle_library(p, events);
@@ -11786,7 +11790,8 @@ impl GameState {
                     if n == 0 {
                         continue;
                     }
-                    let hand: Vec<_> = self.players[p].hand.drain(..).collect();
+                    let mut hand: Vec<_> = self.players[p].hand.drain(..).collect();
+                    self.commander_zone_redirect_all(&mut hand, crate::card::Zone::Hand, crate::card::Zone::Library);
                     self.players[p].library.extend(hand);
                     self.run_effect(
                         &Effect::Draw {
@@ -23298,7 +23303,7 @@ impl GameState {
                             _ => None,
                         };
                         let card = match would_be {
-                            Some(to) => match self.commander_off_stack_redirect(*card, to) {
+                            Some(to) => match self.commander_zone_redirect(*card, crate::card::Zone::Stack, to) {
                                 Some(c) => Box::new(c),
                                 None => continue,
                             },
@@ -29512,8 +29517,9 @@ impl GameState {
             // recycled, the rest left where they were.
             Effect::ShuffleGraveyardIntoLibrary { who } => {
                 for p in self.resolve_players(who, ctx) {
-                    let cards = std::mem::take(&mut *self.players[p].graveyard);
+                    let mut cards = std::mem::take(&mut *self.players[p].graveyard);
                     let ids: Vec<CardId> = cards.iter().map(|c| c.id).collect();
+                    self.commander_zone_redirect_all(&mut cards, crate::card::Zone::Graveyard, crate::card::Zone::Library);
                     self.players[p].library.extend(cards);
                     for id in ids {
                         self.note_left_graveyard(p, id, events);
@@ -29530,7 +29536,9 @@ impl GameState {
                         .into_iter()
                         .partition(|c| self.evaluate_requirement_on_card(filter, c, p));
                     self.players[p].graveyard = kept.into();
+                    let mut matched = matched;
                     let ids: Vec<CardId> = matched.iter().map(|c| c.id).collect();
+                    self.commander_zone_redirect_all(&mut matched, crate::card::Zone::Graveyard, crate::card::Zone::Library);
                     self.players[p].library.extend(matched);
                     for id in ids {
                         self.note_left_graveyard(p, id, events);
@@ -29548,7 +29556,9 @@ impl GameState {
                         .partition(|c| self.evaluate_requirement_on_card(filter, c, p));
                     let moved = matched.len() as i32;
                     self.players[p].graveyard = kept.into();
+                    let mut matched = matched;
                     let ids: Vec<CardId> = matched.iter().map(|c| c.id).collect();
+                    self.commander_zone_redirect_all(&mut matched, crate::card::Zone::Graveyard, crate::card::Zone::Library);
                     self.players[p].library.extend(matched);
                     for id in ids {
                         self.note_left_graveyard(p, id, events);
@@ -29564,9 +29574,12 @@ impl GameState {
             Effect::ShuffleHandAndGraveyardIntoLibrary { who } => {
                 
                 for p in self.resolve_players(who, ctx) {
-                    let hand = std::mem::take(&mut *self.players[p].hand);
-                    let gy = std::mem::take(&mut *self.players[p].graveyard);
+                    let mut hand = std::mem::take(&mut *self.players[p].hand);
+                    let mut gy = std::mem::take(&mut *self.players[p].graveyard);
                     let ids: Vec<CardId> = gy.iter().map(|c| c.id).collect();
+                    // CR 903.9b — a commander among them may go home instead.
+                    self.commander_zone_redirect_all(&mut hand, crate::card::Zone::Hand, crate::card::Zone::Library);
+                    self.commander_zone_redirect_all(&mut gy, crate::card::Zone::Graveyard, crate::card::Zone::Library);
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
                     for id in ids {
@@ -29595,9 +29608,12 @@ impl GameState {
                     for cid in owned {
                         self.move_card_to(cid, &dest, ctx, events);
                     }
-                    let hand = std::mem::take(&mut *self.players[p].hand);
-                    let gy = std::mem::take(&mut *self.players[p].graveyard);
+                    let mut hand = std::mem::take(&mut *self.players[p].hand);
+                    let mut gy = std::mem::take(&mut *self.players[p].graveyard);
                     let ids: Vec<CardId> = gy.iter().map(|c| c.id).collect();
+                    // CR 903.9b — a commander among them may go home instead.
+                    self.commander_zone_redirect_all(&mut hand, crate::card::Zone::Hand, crate::card::Zone::Library);
+                    self.commander_zone_redirect_all(&mut gy, crate::card::Zone::Graveyard, crate::card::Zone::Library);
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
                     for id in ids {
@@ -32682,7 +32698,8 @@ impl GameState {
                 if n == 0 {
                     return Ok(());
                 }
-                let hand: Vec<CardInstance> = self.players[v].hand.drain(..).collect();
+                let mut hand: Vec<CardInstance> = self.players[v].hand.drain(..).collect();
+                self.commander_zone_redirect_all(&mut hand, crate::card::Zone::Hand, crate::card::Zone::Library);
                 for c in hand.into_iter().rev() {
                     self.players[v].library.insert(0, c);
                 }
