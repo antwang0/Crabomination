@@ -4971,6 +4971,13 @@ impl GameState {
         if card.carries_old_object_state() {
             card.enter_as_new_object();
         }
+        // CR 305.1 / 110.2 — the player who plays a land controls it, from
+        // every zone. A card keeps the `controller` it last had on the
+        // battlefield, so an owner replaying a land an opponent had stolen
+        // put it under that opponent (and under a departed one, CR 800.4a).
+        if card.controller != p {
+            card.controller = p;
+        }
         self.battlefield.push(card);
         // CR 707.2 — "enter as a copy of any land" (Vesuva) is chosen as it
         // enters, before the as-enters replacements below, which then read

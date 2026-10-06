@@ -1267,6 +1267,23 @@ fn auto_tap_does_not_sum_two_painful_sources_to_lethal() {
     assert_eq!(g.players[0].life, 1);
 }
 
+/// CR 305.1 / 110.2 — the player who plays a land controls it. A card keeps
+/// the `controller` it last had on the battlefield, so an owner replaying a
+/// land an opponent had stolen put it under that opponent — and, once that
+/// opponent had left the game, under a departed seat (two pod finds:
+/// Terramorphic Expanse, Thriving Heath).
+#[test]
+fn cr_305_1_a_played_land_enters_under_the_player_who_played_it() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.find_card_anywhere_mut(land).unwrap().controller = 2;
+    g.perform_action(GameAction::PlayLand(land)).expect("play");
+    assert_eq!(g.battlefield_find(land).map(|c| c.controller), Some(0));
+}
+
 /// CR 800.4 — a decision the departed player was being asked to make is
 /// dropped. A pending decision suppresses every *other* seat's actions until
 /// it is answered, so leaving one addressed to a player who is no longer in
