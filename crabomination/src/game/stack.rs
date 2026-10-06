@@ -6000,18 +6000,23 @@ impl GameState {
         // is leaving (Cast Out's ruling). Read before the sources go; the
         // returns run once the departed seat's own cards are gone, so only
         // other players' cards come back.
-        let durations: Vec<CardId> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.owner == p)
-            .filter(|c| {
-                !c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ExileReturnIsLeaveTrigger))
-            })
-            .map(|c| c.id)
-            .collect();
+        // A return that is a leave TRIGGER (Leonin Relic-Warder's printed
+        // two-trigger text) is the departed seat's and never goes on the
+        // stack (CR 800.4d): its card stays exiled, the link spent.
+        let mut durations: Vec<CardId> = Vec::new();
+        let mut leave_triggers: Vec<CardId> = Vec::new();
+        for c in self.battlefield.iter().filter(|c| c.owner == p) {
+            let trigger = c
+                .definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ExileReturnIsLeaveTrigger));
+            if trigger {
+                leave_triggers.push(c.id);
+            } else {
+                durations.push(c.id);
+            }
+        }
         // CR 800.4a — leaving the game is leaving the battlefield: every
         // other player's "whenever a … leaves the battlefield" sees each one
         // (Twilight Drover's ruling: once per creature token). The departed
@@ -6090,6 +6095,13 @@ impl GameState {
             for c in self.phased_out.iter_mut() {
                 if c.controller == p {
                     c.controller = c.owner;
+                }
+            }
+        }
+        if !leave_triggers.is_empty() {
+            for c in self.exile.iter_mut() {
+                if c.exiled_by.is_some_and(|l| leave_triggers.contains(&l.source)) {
+                    c.exiled_by = None;
                 }
             }
         }

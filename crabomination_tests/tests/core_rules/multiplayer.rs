@@ -7285,7 +7285,8 @@ fn cr_800_4a_a_departed_players_until_exile_ends_but_a_leave_trigger_does_not_fi
     assert!(g.battlefield_find(light).is_none() && g.battlefield_find(ring).is_none(), "seat 1's permanents left");
     let back = g.battlefield_find(held).expect("the Banishing Light's card returned");
     assert_eq!(back.controller, 2, "under its owner's control");
-    assert!(g.exile.iter().any(|c| c.id == ringed), "the Oblivion Ring's card stays exiled");
+    let ringed = g.exile.iter().find(|c| c.id == ringed).expect("the Oblivion Ring's card stays exiled");
+    assert!(ringed.exiled_by.is_none(), "and its link is spent: no source is left to return it");
 }
 
 /// CR 800.4m — "until that player's next turn" lasts until that turn *would
