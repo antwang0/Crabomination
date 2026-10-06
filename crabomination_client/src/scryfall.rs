@@ -32,6 +32,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::fmt::Write;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 use std::path::Path;
 #[cfg(not(target_arch = "wasm32"))]
@@ -490,7 +491,16 @@ const PLACEHOLDER_H: u32 = crate::card::proxy::PROXY_H;
 /// card. Public so the asset-source registration in `main` can load it
 /// once and share it with [`CardPlaceholderReader`].
 pub fn load_placeholder_font(assets_dir: &Path) -> Option<FontVec> {
+    #[cfg(not(target_arch = "wasm32"))]
     let bytes = fs::read(assets_dir.join(crate::theme::FONT_PATH)).ok()?;
+    // The browser has no filesystem to read it from (the `fs::read` failed
+    // and every placeholder was a blank frame), and the asset server's copy
+    // is fetched asynchronously, after the reader is built. 65 KB embedded.
+    #[cfg(target_arch = "wasm32")]
+    let bytes = {
+        let _ = assets_dir;
+        include_bytes!("../assets/fonts/MiranoExtendedFreebie-Light.ttf").to_vec()
+    };
     FontVec::try_from_vec(bytes).ok()
 }
 

@@ -487,6 +487,9 @@ pub type AffectedIds = crate::copyvec::CopyVec<[CardId; 4]>;
 
 /// `AffectedIds` must not be wider than the `Vec` it replaced — the whole
 /// case for the inline slot is that it is free in a struct this hot to clone.
+/// 64-bit only: on wasm32 a `Vec` is 12 bytes, and the browser client is not
+/// what the clone budget is measured on.
+#[cfg(target_pointer_width = "64")]
 const _: () = assert!(
     std::mem::size_of::<AffectedIds>() <= std::mem::size_of::<Vec<CardId>>(),
 );

@@ -3,7 +3,7 @@
 #
 # Usage:
 #   web/build.sh            # wasm-release profile (small + optimized)
-#   web/build.sh --debug    # dev profile (fast rebuilds, huge wasm)
+#   web/build.sh --debug    # wasm-dev profile (fast rebuilds, huge wasm)
 #
 # Output layout (web/dist/):
 #   index.html
@@ -19,11 +19,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PROFILE=wasm-release
-TARGET_DIR=wasm-release
 if [[ "${1:-}" == "--debug" ]]; then
-    PROFILE=dev
-    TARGET_DIR=debug
+    # Not plain `dev`: see `[profile.wasm-dev]` in the workspace Cargo.toml.
+    PROFILE=wasm-dev
 fi
+TARGET_DIR=$PROFILE
 
 echo "==> cargo build (--profile $PROFILE)"
 cargo build --target wasm32-unknown-unknown --profile "$PROFILE" -p crabomination_client

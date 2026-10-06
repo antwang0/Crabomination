@@ -346,11 +346,22 @@ fn main() {
                         position: bevy::window::WindowPosition::Centered(
                             bevy::window::MonitorSelection::Primary,
                         ),
-                        resize_constraints: bevy::window::WindowResizeConstraints {
-                            min_width: 1024.0,
-                            min_height: 768.0,
-                            ..default()
+                        // Not in the browser: winit applies the minimum as the
+                        // canvas's CSS `min-width`/`min-height`, which beats
+                        // the page's 100vh — a viewport under 768 px clipped
+                        // the bottom of the table and shifted every click.
+                        resize_constraints: if cfg!(target_arch = "wasm32") {
+                            default()
+                        } else {
+                            bevy::window::WindowResizeConstraints {
+                                min_width: 1024.0,
+                                min_height: 768.0,
+                                ..default()
+                            }
                         },
+                        // Browser: the canvas follows the page (and the
+                        // window's resizes) instead of the configured size.
+                        fit_canvas_to_parent: true,
                         ..default()
                     }),
                     ..default()

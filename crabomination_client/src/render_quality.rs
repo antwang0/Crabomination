@@ -106,8 +106,14 @@ impl RenderQuality {
     /// rendered 3-D output and visibly tightens card text. Gated off on Low
     /// because that tier has no MSAA/SMAA — sharpening aliased edges there
     /// would amplify shimmer rather than help.
+    ///
+    /// Always `None` in the browser: Bevy 0.19's CAS shader binds a 4-byte
+    /// uniform, WebGL2 lacks `BUFFER_BINDINGS_NOT_16_BYTE_ALIGNED`, and the
+    /// invalid pipeline is a render validation error that quits the app on
+    /// its first frame.
     pub fn sharpening(self) -> Option<ContrastAdaptiveSharpening> {
         match self {
+            _ if cfg!(target_arch = "wasm32") => None,
             Self::Low => None,
             _ => Some(ContrastAdaptiveSharpening {
                 enabled: true,

@@ -904,11 +904,11 @@ because the shape recurs.
   one that wouldn't start. Now falls back to defaults and **leaves the
   broken file on disk** so the edit is recoverable; the wasm loader
   already did this and now shares `parse_or_default` with it.
-  - ⚠ The wasm branch of `config.rs` **cannot be compile-checked here**:
-    `cargo check --target wasm32-unknown-unknown` fails in the engine at
-    `game/layers.rs:352` (`size_of::<AffectedIds>() <=
-    size_of::<Vec<CardId>>()` is false on a 32-bit pointer). Pre-existing
-    — verified identical on a clean tree.
+  - ✅ The wasm branch of `config.rs` could not be compile-checked: the
+    engine's `size_of::<AffectedIds>() <= size_of::<Vec<CardId>>()` layout
+    guard is false on a 32-bit pointer. It is now 64-bit only, and
+    `cargo check --target wasm32-unknown-unknown -p crabomination_client`
+    is clean (see `web/README.md`).
 
 Not fixed, and worth their own pass — each is systemic rather than a paper
 cut, and the first two would make the third and fourth reviewable:
@@ -927,7 +927,7 @@ cut, and the first two would make the third and fourth reviewable:
   later".
   - ⚠ The order is enforced by **eleven `const _: () = assert!(…)` in the
     `layer` module**, not by a test — a reorder fails the *build*, the
-    same idiom `crabomination/src/game/layers.rs:352` uses for its struct
+    same idiom `crabomination/src/game/layers.rs` uses for its struct
     sizes. Verified: pushing `MODAL` above `CARD_PEEK` fails with
     `error[E0080] … assertion failed: MODAL < CARD_PEEK`.
 - ✅ **No modal focus arbiter** — shipped as `systems::esc`. Twelve

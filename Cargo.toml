@@ -239,3 +239,15 @@ inherits = "release"
 opt-level = "s"
 # Strip all debugging information from the binary to slightly reduce file size.
 strip = "debuginfo"
+
+# `web/build.sh --debug`: `dev` at opt-level 1. At opt-level 0 the wasm
+# backend gives every virtual register its own local, and serde's derived
+# field visitor for `Effect` comes out at 51,356 of them — over the
+# 50,000-local limit that wasm-bindgen's parser and every browser enforce, so a
+# plain `dev` bundle does not load at all. Any optimization turns on register
+# coloring. It has to be the whole profile, not `crabomination_base` alone:
+# the visitor is generic over the deserializer's error type, so it is
+# instantiated (and compiled at the opt-level of) whichever crate deserializes.
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1

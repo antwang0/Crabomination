@@ -739,7 +739,7 @@ impl Default for MenuFields {
             saved.player_name.chars().take(MAX_PLAYER_NAME_LEN).collect()
         };
         let join_addr = if saved.join_addr.trim().is_empty() {
-            std::env::var("CRAB_SERVER").unwrap_or_else(|_| "127.0.0.1:7777".to_string())
+            default_join_addr()
         } else {
             saved.join_addr
         };
@@ -779,6 +779,26 @@ fn default_player_name() -> String {
     } else {
         trimmed.chars().take(MAX_PLAYER_NAME_LEN).collect()
     }
+}
+
+/// The server address a fresh install offers to join: `CRAB_SERVER`, else
+/// the standalone server's TCP port on this machine.
+#[cfg(not(target_arch = "wasm32"))]
+fn default_join_addr() -> String {
+    std::env::var("CRAB_SERVER").unwrap_or_else(|_| "127.0.0.1:7777".to_string())
+}
+
+/// The browser can only open a WebSocket, so it offers the server's WS port
+/// (`CRAB_WS_BIND`'s default, 7778) on the host that served the page — the
+/// usual deployment puts the bundle and the server on one machine. The TCP
+/// port the native default names can never connect from here.
+#[cfg(target_arch = "wasm32")]
+fn default_join_addr() -> String {
+    let host = web_sys::window()
+        .and_then(|w| w.location().hostname().ok())
+        .filter(|h| !h.is_empty())
+        .unwrap_or_else(|| "127.0.0.1".to_string());
+    format!("{host}:7778")
 }
 
 // ── Marker components ────────────────────────────────────────────────────────
@@ -2152,6 +2172,7 @@ fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
 /// match actor wants one occupant a seat (it asserted, and the host thread
 /// died as the joiner connected). Direct mode has no lobby handshake to
 /// learn the joiner's name, so seat 1 is "Opponent".
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn host_lan_seats(
     state: &mut GameState,
     host_name: &str,
