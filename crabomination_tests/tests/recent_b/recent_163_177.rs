@@ -1221,6 +1221,7 @@ mod recent167 {
         let mut g = two_player_game();
         let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let card = g.add_card_to_hand(0, catalog::howlers_heavy());
+        g.add_card_to_library(0, catalog::island());
         g.players[0].mana_pool.add(Color::Blue, 1);
         g.players[0].mana_pool.add_colorless(1);
         g.priority.player_with_priority = 0;

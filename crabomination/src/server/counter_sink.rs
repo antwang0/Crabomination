@@ -474,6 +474,8 @@ mod tests {
         let mut g = crate::game::multi_player_game(3);
         g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
         let walker = g.add_card_to_battlefield(0, crate::catalog::hangarback_walker());
+        // A 0/0 with no counter dies to the sweep after any action.
+        g.battlefield_find_mut(walker).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
         g.clear_sickness(walker);
         g.players[0].mana_pool.add_colorless(1);
         g.step = TurnStep::End;
@@ -485,7 +487,7 @@ mod tests {
         assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == walker));
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
-        assert_eq!(g.battlefield_find(walker).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+        assert_eq!(g.battlefield_find(walker).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     }
 
     /// Oblivion Stone marks its controller's best nonland permanent (never

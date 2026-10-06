@@ -20049,7 +20049,37 @@ impl GameState {
         &mut self,
         action: GameAction,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let result = self.perform_action_dispatch(action);
+        let passes = matches!(action, GameAction::PassPriority);
+        let mut result = self.perform_action_dispatch(action);
+        // CR 117.3c / 117.5 — after a cast, an activation, a land drop or a
+        // special action the same player receives priority, and state-based
+        // actions are checked first. Only a priority pass (and a cost that
+        // moved something) swept: a Skullclamped 1/1, a Psychosis Crawler
+        // whose controller cast their last card, stayed on the battlefield at
+        // 0 toughness while that player kept acting. A pass sweeps on its own.
+        // Gated, because the sweep is ~4.2 k Ir and most actions leave only
+        // mana, tapping and hand traffic behind: on a non-inert event, a
+        // toughness reducer in scope (a hand-size P/T counts) or an armed
+        // empty-library loss (+1.7 % on `fixed` for the cost-only form
+        // ungated; this one ungated read -7 % wall on `--bench`).
+        if !passes
+            && let Ok(events) = result.as_mut()
+            && self.pending_decision.is_none()
+            && self.suspend_signal.is_none()
+            && !self.is_game_over()
+            && (!events.iter().all(GameEvent::inert_for_state_based_actions)
+                || self.pt_reduction_in_scope()
+                || self.players.iter().any(|p| p.pending_deck_loss))
+        {
+            let mut swept = Vec::new();
+            self.check_state_based_actions_into(&mut swept);
+            if !swept.is_empty() {
+                if self.pending_decision.is_none() {
+                    self.dispatch_triggers_for_events(&swept);
+                }
+                events.extend(swept);
+            }
+        }
         if result.is_ok() && self.players.iter().any(|p| !p.commanders.is_empty()) {
             self.pose_commander_return();
         }
@@ -20069,7 +20099,6 @@ impl GameState {
         if let GameAction::SubmitDecision(answer) = action {
             return self.submit_decision(answer);
         }
-        let pays_a_cost = action.pays_a_cost();
         if self.pending_decision.is_some() {
             return Err(GameError::DecisionPending);
         }
@@ -20576,19 +20605,8 @@ impl GameState {
         // resolves. After this action's own dispatch, never before it: the
         // sweep's death batch would otherwise consume the LKI a sacrifice
         // cost's death triggers still need (Pest Brewmaster's "another Pest").
-        // Gated on the payment having moved something a sweep reads — a
-        // permanent, a counter, a life total — because the sweep is ~4.2 k Ir
-        // and most announcements leave only mana and tapping behind
-        // (+1.7 % on `fixed` ungated; the cost paths emit `CounterRemoved`
-        // for exactly this reason).
-        if pays_a_cost && !events.iter().all(GameEvent::inert_for_state_based_actions) {
-            let mut swept = Vec::new();
-            self.check_state_based_actions_into(&mut swept);
-            if !swept.is_empty() {
-                self.dispatch_triggers_for_events(&swept);
-                events.extend(swept);
-            }
-        }
+        // The sweep itself is `perform_action_inner`'s, for every action the
+        // actor keeps priority after.
         Ok(events)
     }
 
@@ -22701,15 +22719,12 @@ impl GameState {
             let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
             self.note_unattached(equipment, &def, ctrl, host);
         }
-        let mut events = vec![GameEvent::AttachmentMoved {
+        let events = vec![GameEvent::AttachmentMoved {
             attachment: equipment,
             attached_to: Some(target),
         }];
-        // CR 117.5 — the attach resolves inline, and the player who did it
-        // receives priority next: state-based actions first. A Skullclamp
-        // made a 1/1 a 2/0 that stayed on the battlefield while its
-        // controller kept acting.
-        self.check_state_based_actions_into(&mut events);
+        // CR 117.5 — the attach resolves inline; `perform_action_inner`
+        // sweeps before the player acts again (a Skullclamped 1/1 dies).
         Ok(events)
     }
 
@@ -22760,8 +22775,6 @@ impl GameState {
                 let pos = self.battlefield.iter().position(|c| c.id == equipment).ok_or(GameError::InvalidTarget)?;
                 self.battlefield[pos].attached_to = Some(t);
                 events.push(GameEvent::AttachmentMoved { attachment: equipment, attached_to: Some(t) });
-                // CR 117.5 — as for equip.
-                self.check_state_based_actions_into(&mut events);
                 Ok(events)
             }
             None => {
@@ -22773,7 +22786,6 @@ impl GameState {
                 let pos = self.battlefield.iter().position(|c| c.id == equipment).ok_or(GameError::InvalidTarget)?;
                 self.battlefield[pos].attached_to = None;
                 events.push(GameEvent::AttachmentMoved { attachment: equipment, attached_to: None });
-                self.check_state_based_actions_into(&mut events);
                 Ok(events)
             }
         }

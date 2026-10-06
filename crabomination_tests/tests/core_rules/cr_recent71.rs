@@ -87,7 +87,8 @@ fn cr_702_22j_defender_divides_damage_against_a_quality_band() {
     g.add_card_to_battlefield(1, catalog::adventurers_guildhouse());
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let x = g.add_card_to_battlefield(1, catalog::kamahl_fist_of_krosa());
-    let y = g.add_card_to_battlefield(1, catalog::kamahl_fist_of_krosa());
+    // A second legend by another name: two Kamahls are a CR 704.5j choice.
+    let y = g.add_card_to_battlefield(1, catalog::isamaru_hound_of_konda());
     g.clear_sickness(attacker);
     to_declare_attackers(&mut g);
     g.perform_action(GameAction::DeclareAttackers(vec![at(attacker, AttackTarget::Player(1))]))

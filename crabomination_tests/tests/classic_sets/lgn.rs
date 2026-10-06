@@ -55,6 +55,8 @@ fn activate(g: &mut GameState, seat: usize, card_id: CardId, index: usize, targe
 
 fn cycle(g: &mut GameState, seat: usize, id: CardId) {
     mana(g, seat);
+    // Cycling draws: an empty library is a CR 704.5b loss at the next check.
+    g.add_card_to_library(seat, catalog::swamp());
     g.priority.player_with_priority = seat;
     g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle");
     drain_stack(g);

@@ -166,7 +166,9 @@ fn march_of_progress_copies_artifact_creatures() {
 fn one_with_the_machine_draws_by_mana_value() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::sol_ring());
-    g.add_card_to_battlefield(0, catalog::hexavus());
+    let hex = g.add_card_to_battlefield(0, catalog::hexavus());
+    // Hexavus enters with six +1/+1 counters; a bare 0/0 dies to the sweep.
+    g.battlefield_find_mut(hex).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 6);
     for _ in 0..8 {
         g.add_card_to_library(0, catalog::island());
     }

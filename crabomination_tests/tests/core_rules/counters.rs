@@ -1002,6 +1002,8 @@ fn a_token_created_with_counters_has_them_before_it_enters() {
 fn cytoplast_root_kin_pulls_a_counter_off_a_creature_you_control() {
     let mut g = two_player_game();
     let kin = g.add_card_to_battlefield(0, catalog::cytoplast_root_kin());
+    // Graft 4: it enters with its counters (a bare 0/0 dies to the sweep).
+    g.battlefield_find_mut(kin).unwrap().add_counters(CounterType::PlusOnePlusOne, 4);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
     let before = g.battlefield_find(kin).unwrap().counter_count(CounterType::PlusOnePlusOne);
