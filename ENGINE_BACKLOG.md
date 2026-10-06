@@ -215,10 +215,12 @@ invariant (a commander in a library is a bypass, since every pod seat says
 yes) found Spell Crumple bottoming a countered Sigarda in its first run.
 Fixed: `CounterSpellToZone` / `MoveSpellToZone`'s hand and library arms,
 Glimpse of Tomorrow, the hand / graveyard shuffles and Head Games
-(`commander_return.rs::commander_zone_redirect{,_all}`). **Open:** the
-bespoke single-card hand→library arms (a Brainstorm put-back, "put a card
-from your hand on top") with a commander in hand — Command Beacon or a
-declined redirect only; 86 `library.push/insert` sites, most library→library.
+(`commander_return.rs::commander_zone_redirect{,_all}`), and the hand
+put-backs (`PutCardFromHandOnTopOfLibrary`, `PutCardsFromHandOnBottom`,
+`ChooseFromHandToTopOfLibrary`, `PayLifeOrPutBackDrawnThisTurn`,
+`execute_put_on_library`). The other `library.push/insert` sites are
+library→library moves or cast rollbacks; the debug pod invariant names any
+new bypass.
 The pod loop also asserts `duplicate_zone_id` and CR 800.4a (no permanent or
 spell outlives its departed owner/controller) in debug builds now, and the
 800.4a check found two more in its first 1,860-game sweep (6 seats, every

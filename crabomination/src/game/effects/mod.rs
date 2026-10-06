@@ -11161,7 +11161,10 @@ impl GameState {
                 self.clear_answer_log();
                 // Put back in reverse so the first chosen ends up on top.
                 for (cid, pay) in chosen.iter().zip(&pays).rev() {
-                    if !*pay && let Some(card) = Self::take_card(&mut self.players[p].hand, *cid) {
+                    if !*pay
+                        && let Some(card) = Self::take_card(&mut self.players[p].hand, *cid)
+                        && let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library)
+                    {
                         self.players[p].library.insert(0, card);
                     }
                 }
@@ -11724,7 +11727,10 @@ impl GameState {
                 }
                 self.clear_answer_log();
                 for (p, cid) in picks {
-                    if let Some(card) = Self::take_card(&mut self.players[p].hand, cid) {
+                    // CR 903.9b — a commander put back may go home instead.
+                    if let Some(card) = Self::take_card(&mut self.players[p].hand, cid)
+                        && let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library)
+                    {
                         self.players[p].library.insert(0, card);
                     }
                 }
@@ -11776,7 +11782,10 @@ impl GameState {
                 self.clear_answer_log();
                 for (p, ids) in picks {
                     for cid in ids {
-                        if let Some(card) = Self::take_card(&mut self.players[p].hand, cid) {
+                        if let Some(card) = Self::take_card(&mut self.players[p].hand, cid)
+                            && let Some(card) =
+                                self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library)
+                        {
                             self.players[p].library.push(card);
                         }
                     }
@@ -37596,7 +37605,9 @@ impl GameState {
                 };
                 // Last pushed ends up on top, so place in reverse pick order.
                 for id in picked.into_iter().rev() {
-                    if let Some(card) = Self::take_card(&mut self.players[victim].hand, id) {
+                    if let Some(card) = Self::take_card(&mut self.players[victim].hand, id)
+                        && let Some(card) = self.commander_zone_redirect(card, crate::card::Zone::Hand, crate::card::Zone::Library)
+                    {
                         self.players[victim].library.insert(0, card);
                     }
                 }
@@ -41857,6 +41868,8 @@ impl GameState {
                 cards_to_insert.push(card);
             }
         }
+        // CR 903.9b — a commander among them may go home instead.
+        self.commander_zone_redirect_all(&mut cards_to_insert, crate::card::Zone::Hand, crate::card::Zone::Library);
         // Insert in reverse so that chosen[0] ends up on top.
         for card in cards_to_insert.into_iter().rev() {
             self.players[player].library.insert(0, card);

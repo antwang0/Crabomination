@@ -485,3 +485,28 @@ fn cr_903_9b_a_shuffled_hand_or_graveyard_commander_goes_home() {
         assert!(g.players[1].library.iter().all(|c| c.id != cmd), "{eff:?}");
     }
 }
+
+/// CR 903.9b — a commander in hand that a put-back effect puts into its
+/// owner's library (top: "put a card from your hand on top"; bottom: Sawtooth
+/// Loon's "two cards from your hand on the bottom") may go home instead.
+#[test]
+fn cr_903_9b_a_commander_put_back_from_hand_goes_home() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let put_backs = [
+        Effect::PutCardFromHandOnTopOfLibrary { who: Selector::You },
+        Effect::PutCardsFromHandOnBottom { who: Selector::You, count: Value::Const(1) },
+    ];
+    for eff in &put_backs {
+        let mut g = main_phase();
+        let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+        let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+        let card = g.players[0].command.remove(pos);
+        g.players[0].hand.clear();
+        g.players[0].hand.push(card);
+        let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+        g.resolve_effect(eff, &ctx).expect("put back");
+        assert!(g.players[0].command.iter().any(|c| c.id == cmd), "{eff:?}: home");
+        assert!(g.players[0].library.iter().all(|c| c.id != cmd), "{eff:?}");
+    }
+}
