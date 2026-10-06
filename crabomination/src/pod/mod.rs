@@ -1671,6 +1671,54 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
     }
 }
 
+/// The per-action commander invariants (debug pods): CR 903.3 a living
+/// seat's commander is a card still in the game (a melded or merged one is in
+/// its permanent); CR 903.8 the tax count never falls, and rises when a
+/// commander goes from the command zone to the stack; CR 903.10a only a
+/// commander deals commander damage. `seen` is each commander's zone and
+/// count after the previous action.
+#[cfg(debug_assertions)]
+fn check_commanders(
+    g: &GameState,
+    seed: u64,
+    actions: usize,
+    seen: &mut Vec<(crate::card::CardId, &'static str, u32)>,
+) {
+    if g.is_game_over() {
+        return;
+    }
+    for (i, p) in g.players.iter().enumerate().filter(|(_, p)| p.is_alive()) {
+        for &cmd in &p.commanders {
+            let zone = zone_label(g, cmd);
+            let now = g.commander_cast_count.get(&cmd).copied().unwrap_or(0);
+            let (was, before) = seen.iter().find(|s| s.0 == cmd).map_or(("unknown", 0), |s| (s.1, s.2));
+            assert!(
+                zone != "nowhere",
+                "seed {seed}: p{i}'s commander {cmd:?} left {was} for no zone (turn {}, {:?}, after {actions} actions; pending {:?})",
+                g.turn_number,
+                g.step,
+                g.pending_decision.as_ref().map(|p| &p.decision),
+            );
+            assert!(
+                now >= before && (was != "a command zone" || zone != "the stack" || now > before),
+                "seed {seed}: commander {cmd:?}'s cast count went {before} -> {now} moving from {was} to {zone} (turn {}, after {actions} actions)",
+                g.turn_number,
+            );
+        }
+    }
+    if let Some(&(victim, id)) =
+        g.commander_damage.keys().find(|(_, id)| !g.players.iter().any(|p| p.commanders.contains(id)))
+    {
+        panic!("seed {seed}: p{victim} took commander damage from {id:?}, which is no commander (turn {})", g.turn_number);
+    }
+    seen.clear();
+    for p in g.players.iter() {
+        seen.extend(
+            p.commanders.iter().map(|&c| (c, zone_label(g, c), g.commander_cast_count.get(&c).copied().unwrap_or(0))),
+        );
+    }
+}
+
 /// `CRAB_POD_SWEEP_PROBE=1` (debug builds): after every settled action, a
 /// clone's fresh CR 704.3 sweep must do nothing — the strict form of the
 /// per-rule invariants below, one clone an action, so opt-in.
@@ -1734,7 +1782,7 @@ fn play_pod_game(
     let trace_from = pod_trace_from();
     let mut repeats = RepeatGuard::default();
     #[cfg(debug_assertions)]
-    let mut commander_zones: Vec<(crate::card::CardId, &'static str)> = Vec::new();
+    let mut commanders_seen: Vec<(crate::card::CardId, &'static str, u32)> = Vec::new();
     let mut concede = concede_rate.map(|n| (n, StdRng::seed_from_u64(seed ^ 0xC0DE_C0DE)));
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
@@ -1788,6 +1836,8 @@ fn play_pod_game(
                 }
                 census.bump(key);
                 census.note_triggers(&g);
+                #[cfg(debug_assertions)]
+                check_commanders(&g, seed, actions, &mut commanders_seen);
                 any = true;
                 actions += 1;
                 plays += usize::from(!is_pass);
@@ -1915,8 +1965,49 @@ fn play_pod_game(
                 );
             }
         }
-        // CR 800.4a — priority passes on from a player who left; CR 903.3 — a
-        // living seat's commander is a card still in the game. Debug-only.
+        // CR 509.1a — a blocker is controlled by the defending player of each
+        // attacker it blocks (control changes remove it, CR 506.4); CR 400.3 —
+        // a card in a hand, library, graveyard or command zone is in its
+        // owner's. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            for (&b, atks) in g.block_map.iter() {
+                let Some(bc) = g.battlefield_find(b).map(|c| c.controller) else { continue };
+                for a in atks.iter().filter_map(|&a| g.attack_for(a)) {
+                    let defender = match a.target {
+                        crate::game::types::AttackTarget::Player(q) => Some(q),
+                        crate::game::types::AttackTarget::Planeswalker(id)
+                        | crate::game::types::AttackTarget::Battle(id) => g
+                            .attacked_permanent_defenders
+                            .iter()
+                            .find(|(c, _)| *c == id)
+                            .map(|&(_, d)| d)
+                            .or_else(|| g.defender_for(a.target)),
+                    };
+                    assert!(
+                        defender.is_none_or(|d| d == bc),
+                        "seed {seed}: p{bc}'s {} blocks {:?}, which attacks p{defender:?} (turn {}, {:?}, after {actions} actions)",
+                        g.battlefield_find(b).map_or("?", |c| c.definition.name),
+                        a.attacker,
+                        g.turn_number,
+                        g.step,
+                    );
+                }
+            }
+            for (i, p) in g.players.iter().enumerate() {
+                for (zone, cards) in
+                    [("hand", &p.hand[..]), ("library", &p.library[..]), ("graveyard", &p.graveyard[..]), ("command zone", &p.command[..])]
+                {
+                    if let Some(c) = cards.iter().find(|c| c.owner != i) {
+                        panic!(
+                            "seed {seed}: p{}'s {} is in p{i}'s {zone} (turn {}, {:?}, after {actions} actions)",
+                            c.owner, c.definition.name, g.turn_number, g.step,
+                        );
+                    }
+                }
+            }
+        }
+        // CR 800.4a — priority passes on from a player who left. Debug-only.
         #[cfg(debug_assertions)]
         if !g.is_game_over() {
             let holder = g.priority.player_with_priority;
@@ -1926,23 +2017,6 @@ fn play_pod_game(
                 g.turn_number,
                 g.step,
             );
-            for (i, p) in g.players.iter().enumerate().filter(|(_, p)| p.is_alive()) {
-                for &cmd in &p.commanders {
-                    let zone = zone_label(&g, cmd);
-                    let was = commander_zones.iter().find(|(c, _)| *c == cmd).map_or("unknown", |&(_, z)| z);
-                    assert!(
-                        zone != "nowhere",
-                        "seed {seed}: p{i}'s commander {cmd:?} left {was} for no zone (turn {}, {:?}, after {actions} actions; pending {:?})",
-                        g.turn_number,
-                        g.step,
-                        g.pending_decision.as_ref().map(|p| &p.decision),
-                    );
-                }
-            }
-            commander_zones.clear();
-            for p in g.players.iter() {
-                commander_zones.extend(p.commanders.iter().map(|&c| (c, zone_label(&g, c))));
-            }
         }
         // CR 704.3 — the sweep repeats until a pass does nothing, so a second
         // sweep over a settled state finds nothing either. Debug-only, opt-in.
