@@ -1958,7 +1958,9 @@ impl GameEvent {
     /// state-based action apply: the announcement itself, mana, tapping,
     /// targeting, hand and library traffic. Anything that moves a permanent,
     /// a counter or a life total is *not* here, and an unknown kind is not
-    /// either — the gate this feeds sweeps on doubt.
+    /// either — the gate this feeds sweeps on doubt. Nor is a card leaving a
+    /// graveyard: a graveyard count is a P/T term (Bonehoard, Lhurgoyf), and
+    /// casting a creature out of one left a 0/0 Germ alive.
     pub(crate) fn inert_for_state_based_actions(&self) -> bool {
         use GameEvent as E;
         matches!(
@@ -1979,7 +1981,6 @@ impl GameEvent {
                 | E::CardDiscarded { .. }
                 | E::DiscardedBatch { .. }
                 | E::OpponentCausedYouToDiscard { .. }
-                | E::CardLeftGraveyard { .. }
                 | E::LibraryShuffled { .. }
                 | E::PlayerSearchedLibrary { .. }
                 | E::TopCardRevealed { .. }

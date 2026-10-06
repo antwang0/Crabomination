@@ -269,3 +269,33 @@ fn cr_704_3_an_end_of_combat_expiry_is_swept_before_main_two() {
     assert_eq!(g.step, crabomination::TurnStep::PostCombatMain);
     assert!(g.battlefield_find(pumped).is_none(), "3 damage on a 2/2 once the pump is gone");
 }
+
+/// CR 704.3 / 117.5 — casting a creature out of a graveyard is swept before
+/// its caster acts again: Gravecrawler was the only creature card in any
+/// graveyard, so Bonehoard's "+X/+X, X = creature cards in all graveyards"
+/// falls to +0/+0 and the 0/0 it equips dies (a pod found a Phyrexian Germ
+/// alive at 0/0 after a Vengeful Dead was cast from a graveyard).
+#[test]
+fn cr_704_3_a_card_leaving_a_graveyard_is_swept_after_the_action() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = crabomination::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let germ = g.add_card_to_battlefield(0, CardDefinition { power: 0, toughness: 0, ..bear("Germ") });
+    let hoard = g.add_card_to_battlefield(0, catalog::bonehoard());
+    g.battlefield_find_mut(hoard).unwrap().attached_to = Some(germ);
+    g.add_card_to_battlefield(0, catalog::gravecrawler()); // the Zombie it needs
+    let crawler = g.add_card_to_graveyard(0, catalog::gravecrawler());
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(germ).is_some(), "1/1 while Gravecrawler is in the graveyard");
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: crawler,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("cast from the graveyard");
+    assert!(g.battlefield_find(germ).is_none(), "0/0 once the graveyard is empty, before anyone acts");
+}
