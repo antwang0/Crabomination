@@ -12791,37 +12791,18 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
     // Remaining attackers go at the player — at a table, the surplus past a
     // kill spills to the next opponent.
     super::pod_attack::spread_face_attacks(state, seat, target_player, attackers, &mut attacks);
-    // CR 701.15b — then a goaded attacker aimed at its goader goes at another
-    // opponent when one exists.
+    // CR 508.1d — an attacker with a defender-naming requirement (a goad, a
+    // chosen player, a lure) keeps its aim if that obeys the most of them,
+    // else takes the first defender in turn order that does; any other aim
+    // makes the engine reject the whole declaration.
     for a in attacks.iter_mut() {
-        match a.target {
-            AttackTarget::Player(p) => {
-                a.target = AttackTarget::Player(goad_legal_target(state, seat, a.attacker, p));
-            }
-            // "Attacks a PLAYER other than the goader": a goaded creature aimed
-            // at a planeswalker or battle goes at a player instead.
-            AttackTarget::Planeswalker(t) | AttackTarget::Battle(t)
-                if state.battlefield_find(a.attacker).is_some_and(|c| !state.goaders(c).is_empty()) =>
-            {
-                let owner = state.battlefield_find(t).map_or(seat, |c| c.controller);
-                let q = goad_legal_target(state, seat, a.attacker, owner);
-                if q != seat && !state.goaders(state.battlefield_find(a.attacker).unwrap()).contains(&q) {
-                    a.target = AttackTarget::Player(q);
-                }
-            }
-            _ => {}
-        }
-        // CR 508.1d — Raving Dead attacks its chosen opponent if able; any
-        // other aim makes the engine reject the whole declaration.
-        if let Some(q) = chosen_attack_target(state, seat, a.attacker) {
-            a.target = AttackTarget::Player(q);
-        }
-        // CR 508.1d — and a lured seat attacks the lure (Gideon Jura).
-        if let Some(pw) = state.attack_lure_of(seat) {
-            a.target = AttackTarget::Planeswalker(pw);
-        }
-        if let Some(pw) = state.creature_lure_of(seat, a.attacker) {
-            a.target = AttackTarget::Planeswalker(pw);
+        let options = state.attack_target_options(seat, a.attacker);
+        let Some(best) = options.iter().map(|&(_, s)| s).max() else { continue };
+        if best > 0
+            && !options.iter().any(|&(t, s)| t == a.target && s == best)
+            && let Some(&(t, _)) = options.iter().find(|&&(_, s)| s == best)
+        {
+            a.target = t;
         }
     }
     // CR 508.1a — Weathered Sentinels attacks only a player who attacked
@@ -12853,48 +12834,6 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
     attacks
 }
 
-/// CR 701.15b — a goaded creature "attacks a player other than the goading
-/// player if able". The picker aims the whole declaration at one player; a
-/// goaded attacker aimed at its goader while another opponent could be
-/// attacked makes the engine reject the **whole** batch, so each such
-/// attacker is sent at the next live, non-goading opponent instead (15
-/// rejected declarations in 40 eighteen-seat pod games, each a lost combat).
-fn goad_legal_target(state: &GameState, seat: usize, id: CardId, preferred: usize) -> usize {
-    let Some(c) = state.battlefield_find(id) else { return preferred };
-    let goaders = state.goaders(c);
-    if !goaders.contains(&preferred) {
-        return preferred;
-    }
-    // Only a non-goader this creature may actually attack counts (CR
-    // 508.1c, the engine's own test): otherwise the goader stays legal.
-    let kws: Vec<crate::card::Keyword> =
-        state.computed_permanent(id).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
-    let n = state.players.len();
-    (1..n)
-        .map(|i| (seat + i) % n)
-        .find(|&q| {
-            !state.same_team(seat, q)
-                && state.players[q].is_alive()
-                && !goaders.contains(&q)
-                && state.attacker_target_block(seat, id, &kws, Some(q)).is_none()
-        })
-        .unwrap_or(preferred)
-}
-
-/// The live opponent a `MustAttackChosenPlayer` creature (Raving Dead) is
-/// bound to attack, stamped in its `chosen_player`. Read off the computed
-/// keywords, as `must_attack` and the engine do: a granted one (encore, the
-/// Fantastic Four) binds too.
-fn chosen_attack_target(state: &GameState, seat: usize, id: CardId) -> Option<usize> {
-    let c = state.battlefield_find(id)?;
-    c.chosen_player?;
-    if !state.computed_permanent(id).is_some_and(|cp| cp.keywords().has_kw(&crate::card::Keyword::MustAttackChosenPlayer)) {
-        return None;
-    }
-    c.chosen_player
-        .filter(|&q| state.players.get(q).is_some_and(|pl| pl.is_alive()) && !state.same_team(seat, q))
-}
-
 /// CR 508.1d — a creature the rules oblige to attack, read off the
 /// **computed** keyword set because that is where the engine reads it.
 ///
@@ -12913,6 +12852,7 @@ fn must_attack(
         || (kws.has_kw(&Keyword::MustAttackIfAnotherAttacks) && others_attacking)
         || (kws.has_kw(&Keyword::MustAttackChosenPlayer) && c.chosen_player.is_some())
         || state.is_goaded(c)
+        || state.must_attack_a_player_this_combat(c.controller, c.id)
 }
 
 /// CR 508.1d — re-add every creature the rules oblige to attack that the
@@ -12955,6 +12895,7 @@ fn restore_forced_attackers(
 fn attack_requirement_present(state: &GameState) -> bool {
     use crate::card::Keyword;
     state.any_goad_present()
+        || !state.attack_player_requirements.is_empty()
         || state.board_keyword_in_scope(&[
             Keyword::MustAttack,
             Keyword::MustAttackOrBlock,

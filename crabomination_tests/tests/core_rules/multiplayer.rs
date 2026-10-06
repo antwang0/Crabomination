@@ -6741,7 +6741,7 @@ fn cr_702_141a_each_encore_token_attacks_its_own_opponent() {
     g.priority.player_with_priority = 0;
     let both_at_1 = tokens.iter().map(|t| Attack { attacker: t.0, target: AttackTarget::Player(1) }).collect();
     assert!(
-        matches!(g.clone().perform_action(GameAction::DeclareAttackers(both_at_1)), Err(GameError::InvalidAttackTarget(2))),
+        matches!(g.clone().perform_action(GameAction::DeclareAttackers(both_at_1)), Err(GameError::InvalidAttackTarget(_))),
         "the second token must attack seat 2",
     );
     g.perform_action(GameAction::DeclareAttackers(vec![

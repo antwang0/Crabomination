@@ -127,6 +127,8 @@ mod etb_keyword_counters;
 pub mod combat;
 // CR 508.1d — "attack [this] if able" during a player's next turn.
 mod attack_lure;
+// CR 508.1d — the defender-naming requirements, scored together.
+mod attack_requirements;
 
 mod adventure_grant;
 mod goad;
@@ -1559,6 +1561,10 @@ pub struct ColdState {
     /// planeswalker or battle attack writes it.
     #[serde(default)]
     pub(crate) attacked_permanent_defenders: Vec<(CardId, usize)>,
+    /// CR 508.1d — "attacks that player this combat if able" (Ruhan of the
+    /// Fomori), as (creature, player). Cleared with `attacking`.
+    #[serde(default)]
+    pub(crate) attack_player_requirements: Vec<(CardId, usize)>,
     /// Activated abilities countered this turn, as they last existed on the
     /// stack: a "copy that ability" trigger still copies one countered
     /// before it resolved (Unbound Flourishing's 2019-06-14 ruling). Cold:

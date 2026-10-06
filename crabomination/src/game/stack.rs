@@ -3610,6 +3610,9 @@ impl GameState {
         if !self.attacked_permanent_defenders.is_empty() {
             self.attacked_permanent_defenders.clear();
         }
+        if !self.attack_player_requirements.is_empty() {
+            self.attack_player_requirements.clear();
+        }
         // Dropped, not cleared — see `resolve_combat`.
         self.block_map = Default::default();
         self.blocked_attackers.clear();

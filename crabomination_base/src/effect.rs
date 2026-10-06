@@ -12696,6 +12696,11 @@ pub enum Effect {
     /// twin of [`Effect::RememberPermanentOnSource`]. Backs the Torment
     /// Nightmare Horrors' "that player gains N life" leave trigger.
     RememberPlayerOnSource { who: PlayerRef },
+    /// CR 508.1d — "[this] attacks that player this combat if able" (Ruhan of
+    /// the Fomori): a requirement on the source bound to `who` for the
+    /// current combat, kept apart from `chosen_player` so another effect
+    /// naming a player on it can't overwrite it.
+    MustAttackPlayerThisCombat { who: PlayerRef },
     /// CR 614.12 — "as this enters, choose a player" (`opponent`: "choose an
     /// opponent"): the controller's pick, stamped on the source's
     /// `chosen_player`. Offered as a seat ballot led by the most hostile

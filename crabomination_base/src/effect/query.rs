@@ -1000,7 +1000,9 @@ impl Effect {
             | Effect::CopyEachCreatureToken => false,
             // Turn-scoped registrations whose "target" is a player slot or
             // nothing at all.
-            Effect::RememberPlayerOnSource { who } | Effect::RedirectDrawsThisTurn { from: who } => {
+            Effect::RememberPlayerOnSource { who }
+            | Effect::MustAttackPlayerThisCombat { who }
+            | Effect::RedirectDrawsThisTurn { from: who } => {
                 matches!(who, PlayerRef::Target(_))
             }
             Effect::AnyPlayerMayExileFromGraveyard { then, .. } => then.requires_target(),

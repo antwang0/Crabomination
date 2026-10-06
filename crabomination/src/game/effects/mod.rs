@@ -30639,6 +30639,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MustAttackPlayerThisCombat { who } => {
+                if let Some(src) = ctx.source.filter(|&s| self.battlefield_find(s).is_some())
+                    && let Some(q) = self.resolve_player(who, ctx)
+                {
+                    self.attack_player_requirements.push((src, q));
+                }
+                Ok(())
+            }
+
             Effect::AnyPlayerMayExileFromGraveyard { count, then } => {
                 // Carrion Rats — walk the seats in turn order from the
                 // source's controller and take the first willing payer.

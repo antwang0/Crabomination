@@ -1315,6 +1315,7 @@ impl GameState {
                     || g.attack_lure_of(p).is_some()
                     || g.side_attacks_if_able(p)
                     || g.any_creature_lure(p)
+                    || !g.attack_player_requirements.is_empty()
                     || statics & attack_static::MUST_ATTACK_WITH_ONE != 0
                     || g.board_keyword_in_scope(&[
                         Keyword::MustAttack,
@@ -1430,49 +1431,19 @@ impl GameState {
             }
         }
 
-        // CR 701.15b — a goaded creature "attacks a PLAYER other than the
-        // controller of the [goad source] if able": attacking a goader, or a
-        // planeswalker or battle (not a player, CR 506.4c), is illegal while
-        // an alive non-goader opponent it could instead attack exists.
+        // CR 508.1d / 701.15b — the requirements naming a defender (a goad's
+        // "a player other than the goader", "attacks that player", a lure's
+        // planeswalker) are scored together: each attack obeys as many as any
+        // defender it could attack without a restriction or a cost would.
         for atk in &attacks {
-            let target_player = match atk.target {
-                AttackTarget::Player(q) => q,
-                AttackTarget::Planeswalker(cid) | AttackTarget::Battle(cid) => {
-                    self.battlefield_find(cid).map_or(usize::MAX, |c| c.controller)
-                }
-            };
-            let at_player = matches!(atk.target, AttackTarget::Player(_));
-            if let Some(c) = self.battlefield_find(atk.attacker)
-                && let goaders = self.goaders(c)
-                && !goaders.is_empty()
-                && (!at_player || goaders.contains(&target_player))
-            {
-                // CR 508.1c/d — a requirement counts only where it can be met
-                // without breaking a restriction, and no one must pay a cost
-                // to meet one: a non-goader this creature can't attack (Crown-
-                // Hunter Hireling's own restriction) or can attack only for a
-                // tax (Ghostly Prison) is no option.
-                let p = self.active_player_idx;
-                let kws: Vec<Keyword> =
-                    self.computed_permanent(atk.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
-                let statics = attack_static_scan(self);
-                let taxed = self.attack_tax_possible(statics);
-                let has_nongoader_option = (0..self.players.len()).any(|q| {
-                    q != p
-                        && !self.same_team(p, q)
-                        && self.players[q].is_alive()
-                        && !goaders.contains(&q)
-                        && self.attacker_target_block(p, atk.attacker, &kws, Some(q)).is_none()
-                        && (!taxed || {
-                            let a = Attack { attacker: atk.attacker, target: AttackTarget::Player(q) };
-                            self.attack_tax_for(std::slice::from_ref(&a), statics, |_| {
-                                self.attack_block_keyword_tax(atk.attacker, &kws, true)
-                            }) == 0
-                        })
-                });
-                if has_nongoader_option {
-                    return Err(GameError::InvalidAttackTarget(target_player));
-                }
+            if !self.attack_target_obeys_most(p, atk.attacker, atk.target) {
+                let defender = match atk.target {
+                    AttackTarget::Player(q) => q,
+                    AttackTarget::Planeswalker(cid) | AttackTarget::Battle(cid) => {
+                        self.battlefield_find(cid).map_or(usize::MAX, |c| c.controller)
+                    }
+                };
+                return Err(attack_reject(line!(), GameError::InvalidAttackTarget(defender)));
             }
         }
 
@@ -1592,11 +1563,8 @@ impl GameState {
         // CR 508.1d — a lure (Gideon Jura's +2): every creature able to attack
         // must, and at the lure. Can't be satisfied → no requirement, so this
         // runs only while the lured permanent is still an attackable walker.
-        if let Some(pw) = self.attack_lure_of(p) {
+        if self.attack_lure_of(p).is_some() {
             had_to.extend(attacks.iter().map(|a| a.attacker));
-            if let Some(bad) = attacks.iter().find(|a| a.target != AttackTarget::Planeswalker(pw)) {
-                return Err(attack_reject(line!(), GameError::CannotAttack(bad.attacker)));
-            }
             for c in &self.battlefield {
                 if c.controller == p
                     && self.computed_is_creature(c)
@@ -1630,16 +1598,12 @@ impl GameState {
                 if c.controller != p {
                     continue;
                 }
-                let Some(pw) = self.creature_lure_of(p, c.id) else { continue };
+                if self.creature_lure_of(p, c.id).is_none() {
+                    continue;
+                }
                 had_to.push(c.id);
-                match attacks.iter().find(|a| a.attacker == c.id) {
-                    Some(a) if a.target != AttackTarget::Planeswalker(pw) => {
-                        return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
-                    }
-                    None if able_to_attack(c) => {
-                        return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
-                    }
-                    _ => {}
+                if able_to_attack(c) && !attacks.iter().any(|a| a.attacker == c.id) {
+                    return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
         }
@@ -1668,23 +1632,15 @@ impl GameState {
                         // CR 508.1d — Ekundu Cyclops only has to join an
                         // attack someone else already started.
                         Keyword::MustAttackIfAnotherAttacks => must_if_another = true,
-                        // CR 508.1d — Raving Dead: attack the chosen
-                        // opponent if able, so that attack is the only legal
-                        // one for it while that seat is a live opponent.
+                        // CR 508.1d — Raving Dead attacks the chosen
+                        // opponent if able; which defender is scored with the
+                        // other defender-naming requirements above.
                         Keyword::MustAttackChosenPlayer => {
                             if let Some(q) = c.chosen_player
                                 && self.players.get(q).is_some_and(|pl| pl.is_alive())
                                 && !self.same_team(p, q)
                             {
                                 must_attack = true;
-                                if let Some(atk) = attacks.iter().find(|a| a.attacker == c.id)
-                                    && atk.target != AttackTarget::Player(q)
-                                {
-                                    return Err(attack_reject(
-                                        line!(),
-                                        GameError::InvalidAttackTarget(q),
-                                    ));
-                                }
                             }
                         }
                         _ => {}
@@ -1693,7 +1649,8 @@ impl GameState {
                 let must = must_attack
                     || must_either
                     || (must_if_another && attacks.iter().any(|a| a.attacker != c.id))
-                    || self.is_goaded(c);
+                    || self.is_goaded(c)
+                    || self.must_attack_a_player_this_combat(p, c.id);
                 if !must {
                     continue;
                 }
@@ -3785,6 +3742,9 @@ impl GameState {
     /// and planeswalkers are removed from combat." Also CR 724.1b's
     /// end-the-turn teardown.
     pub(crate) fn remove_all_from_combat(&mut self) {
+        if !self.attack_player_requirements.is_empty() {
+            self.attack_player_requirements.clear();
+        }
         if !self.attacking.is_empty() {
             self.attacking.clear();
             if !self.attacked_permanent_defenders.is_empty() {
