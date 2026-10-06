@@ -5456,6 +5456,31 @@ impl GameState {
             // the targets, which are the chosen mode's (CR 700.2a).
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             let view = effect.targeting_view(mode);
+            // CR 603.3d — a prompting controller names the targets (a
+            // reanimated or blinked creature's ETB, a land drop's). Probing
+            // Telepathy copiers keep the direct push, which they ride on.
+            if multiplier > 0
+                && self.trigger_asks_targets(controller, view)
+                && entering_trigger_copiers(self, controller, card_id).is_empty()
+            {
+                for _ in 0..multiplier {
+                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                        source: card_id,
+                        controller,
+                        effect: effect.clone(),
+                        subject: None,
+                        event_amount: 0,
+                        mode,
+                        intervening_if: None,
+                        actor: None,
+                        from_mana_ability: false,
+                        x_value: cast_x,
+                        converged_value: 0,
+                        mana_spent: 0,
+                    });
+                }
+                continue;
+            }
             // A picked mode with no target takes none — the picker's bare-`Any`
             // fallback would hand it a player the resolution then rejects.
             let untargeted_mode = !std::ptr::eq(view, &effect) && !view.requires_target();
@@ -12747,6 +12772,25 @@ impl GameState {
                     continue;
                 }
             }
+            // CR 603.3d — a prompting caster names the targets.
+            if self.trigger_asks_targets(controller, &effect) {
+                let mode = self.pick_trigger_mode(&effect, source, controller);
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    source,
+                    controller,
+                    effect,
+                    subject: Some(crate::game::effects::EntityRef::Card(source)),
+                    event_amount: 0,
+                    mode,
+                    intervening_if: None,
+                    actor: None,
+                    from_mana_ability: false,
+                    x_value: cast_x,
+                    converged_value: 0,
+                    mana_spent: 0,
+                });
+                continue;
+            }
             let (mode, auto_target) =
                 self.trigger_mode_and_target(&effect, controller, Some(source));
             // CR 115.1c — maximize an "up to N target" self-cast trigger
@@ -16342,6 +16386,26 @@ impl GameState {
                     _ => None,
                 })
                 .unwrap_or(0);
+            // CR 603.3d — a prompting listener names the targets.
+            if self.trigger_asks_targets(listener_controller, view) {
+                for _ in 0..fires {
+                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                        source,
+                        controller: listener_controller,
+                        effect: effect.clone(),
+                        subject: Some(crate::game::effects::EntityRef::Card(cast_card)),
+                        event_amount: spell_mv,
+                        mode,
+                        intervening_if: None,
+                        actor: Some(controller),
+                        from_mana_ability: false,
+                        x_value: spell_x,
+                        converged_value,
+                        mana_spent,
+                    });
+                }
+                continue;
+            }
             // `repeat_n` yields the original last, so the ordinary board — no
             // doubler, `fires == 1` — pays no clone at all (PERF `(-361)`).
             for (effect, auto_target) in std::iter::repeat_n((effect, auto_target), fires) {

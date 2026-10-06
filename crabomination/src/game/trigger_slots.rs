@@ -172,3 +172,24 @@ impl GameState {
         })
     }
 }
+
+impl GameState {
+    /// CR 603.3d — does a trigger pushed straight to the stack have to go
+    /// through the asking queue instead? Only a prompting controller's
+    /// targeted trigger: every other seat keeps the engine's fill.
+    pub(crate) fn trigger_asks_targets(&self, controller: usize, effect: &Effect) -> bool {
+        self.seat_prompts(controller) && effect.requires_target()
+    }
+
+    /// Hand `push` to the asking queue, or — mid-resolution, or while another
+    /// decision is open — hold it until the resolution ends
+    /// (`prompt_trigger_backlog`, drained by `resolve_top_of_stack` and the
+    /// next state-based sweep outside one).
+    pub(crate) fn queue_trigger_asking(&mut self, push: PendingTriggerPush) {
+        if self.resolution_depth > 0 || self.pending_decision.is_some() {
+            self.scratch.prompt_trigger_backlog.push(push);
+        } else {
+            self.drain_trigger_queue(vec![push]);
+        }
+    }
+}

@@ -2552,6 +2552,12 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-10-06 (CR 603.3d, the asking queue also takes a
+        // prompting seat's non-cast ETB, attack, "whenever you attack",
+        // spell-cast and self-cast triggers): seed 4242 67→70 turns, same
+        // winner; the other two unmoved. 2,000 games at seed 9991,
+        // before/after: 40.85/40.86, 62.81/62.67, 82.69/82.99 turns at 3/4/6
+        // seats, every block decided.
         // Re-blessed 2026-10-06 (CR 603.3d, a prompting seat's targeted
         // self-death trigger goes through the asking queue, so a pod bot
         // picks its targets by policy like every other trigger — bisected by
@@ -2863,7 +2869,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2486),
             (43, Some(0), 74, 3800),
-            (4242, Some(3), 67, 3092),
+            (4242, Some(3), 70, 3143),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

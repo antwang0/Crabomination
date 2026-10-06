@@ -7687,8 +7687,8 @@ impl GameState {
                 // CR 603.3d — a prompting seat names its own targets: outside
                 // a resolution the trigger goes through the queue that asks
                 // (Vindictive Lich's per-mode opponents after lethal damage).
-                if self.seat_prompts(controller) && effect.requires_target() {
-                    let push = crate::game::types::PendingTriggerPush {
+                if self.trigger_asks_targets(controller, &effect) {
+                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
                         source,
                         controller,
                         effect,
@@ -7701,12 +7701,7 @@ impl GameState {
                         x_value: 0,
                         converged_value: 0,
                         mana_spent: 0,
-                    };
-                    if mid_resolution || self.pending_decision.is_some() {
-                        self.scratch.prompt_trigger_backlog.push(push);
-                    } else {
-                        self.drain_trigger_queue(vec![push]);
-                    }
+                    });
                     continue;
                 }
                 let (mode, auto_target) =
@@ -9116,8 +9111,8 @@ impl GameState {
             for effect in std::iter::repeat_n(effect, fires) {
                 // CR 603.3d — a prompting seat names its own targets, as in
                 // the state-based funnel above.
-                if self.seat_prompts(controller) && effect.requires_target() {
-                    let push = crate::game::types::PendingTriggerPush {
+                if self.trigger_asks_targets(controller, &effect) {
+                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
                         source,
                         controller,
                         effect,
@@ -9130,12 +9125,7 @@ impl GameState {
                         x_value: 0,
                         converged_value: 0,
                         mana_spent: 0,
-                    };
-                    if self.resolution_depth > 0 || self.pending_decision.is_some() {
-                        self.scratch.prompt_trigger_backlog.push(push);
-                    } else {
-                        self.drain_trigger_queue(vec![push]);
-                    }
+                    });
                     continue;
                 }
                 let (mode, auto_target) =

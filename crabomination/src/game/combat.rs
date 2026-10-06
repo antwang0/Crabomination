@@ -2660,6 +2660,33 @@ impl GameState {
                     continue;
                 }
             }
+            // Isshin / Windcrag Siege (Mardu): a self-source attack trigger of a
+            // permanent you control fires an additional time per doubler.
+            let fires = 1
+                + self.attack_trigger_extra_fires(controller)
+                + crate::game::actions::ally_trigger_extra_fires(self, controller, source);
+            // CR 603.3d — a prompting attacker names the targets, each fire
+            // on its own.
+            if self.trigger_asks_targets(controller, &effect) {
+                let mode = self.pick_trigger_mode(&effect, source, controller);
+                for _ in 0..fires {
+                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                        source,
+                        controller,
+                        effect: effect.clone(),
+                        subject: None,
+                        event_amount: 0,
+                        mode,
+                        intervening_if: None,
+                        actor: None,
+                        from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
+                    });
+                }
+                continue;
+            }
             let (mode, auto_target) =
                 self.trigger_mode_and_target(&effect, controller, Some(source));
             // CR 115.1c — fill any additional "up to N target" slots (Lagorin's
@@ -2671,11 +2698,6 @@ impl GameState {
                 controller,
                 auto_target.clone(),
             );
-            // Isshin / Windcrag Siege (Mardu): a self-source attack trigger of a
-            // permanent you control fires an additional time per doubler.
-            let fires = 1
-                + self.attack_trigger_extra_fires(controller)
-                + crate::game::actions::ally_trigger_extra_fires(self, controller, source);
             // `repeat_n` clones `fires - 1` times and yields the original
             // last, so the ordinary board — no doubler, `fires == 1` — pays
             // no clone at all (PERF `(-361)`).
@@ -2778,12 +2800,33 @@ impl GameState {
                         continue;
                     }
                 }
-                let (mode, auto_target) = self.trigger_mode_and_target(&effect, ctrl, Some(src));
                 // Isshin / Fractured Realm: an attack-caused trigger of a
                 // permanent you control fires an additional time per doubler.
                 let fires = 1
                     + self.attack_trigger_extra_fires(ctrl)
                     + crate::game::actions::ally_trigger_extra_fires(self, ctrl, src);
+                // CR 603.3d — a prompting controller names the targets.
+                if self.trigger_asks_targets(ctrl, &effect) {
+                    let mode = self.pick_trigger_mode(&effect, src, ctrl);
+                    for _ in 0..fires {
+                        self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                            source: src,
+                            controller: ctrl,
+                            effect: effect.clone(),
+                            subject: None,
+                            event_amount: 0,
+                            mode,
+                            intervening_if: None,
+                            actor: None,
+                            from_mana_ability: false,
+                            x_value: 0,
+                            converged_value: 0,
+                            mana_spent: 0,
+                        });
+                    }
+                    continue;
+                }
+                let (mode, auto_target) = self.trigger_mode_and_target(&effect, ctrl, Some(src));
                 for (effect, auto_target) in
                     std::iter::repeat_n((effect, auto_target), fires)
                 {
