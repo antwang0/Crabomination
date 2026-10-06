@@ -219,8 +219,9 @@ Greaves phased back in attached to the graveyard card. ✅ **CR 702.26i** —
 `phase_in_card` drops an attachment whose host left the battlefield. ✅ **CR
 704.3** — no sweep ran between the untap step and upkeep priority (a legend
 phasing in beside its namesake survived; an "until end of combat" pump's
-expiry left a lethally damaged creature into main two); `advance_step` sweeps
-entering Upkeep / Draw and leaving EndCombat (`cr_recent98::cr_704_3_*`).
+expiry left a lethally damaged creature into main two); `advance_step`'s gated
+sweep (merged with the concurrent session's) also opens leaving EndCombat
+(`cr_recent98::cr_704_3_*`).
 ⚠ **OPEN (test robustness):** `server::tests::reconnect_within_grace_keeps_match_alive`
 failed once under full-suite load on a 4-core box (its 400 ms wall-clock grace
 elapsed before the second reattach; `mod.rs:2910`), and passes alone. A
