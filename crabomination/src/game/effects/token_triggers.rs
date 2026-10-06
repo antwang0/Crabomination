@@ -32,7 +32,7 @@ impl GameState {
             if self.trigger_asks_targets(controller, body) {
                 self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
                     source: id,
-                    controller: controller,
+                    controller,
                     effect: body.clone(),
                     subject: Some(EntityRef::Permanent(id)),
                     event_amount: 0,

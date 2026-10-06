@@ -924,7 +924,7 @@ impl GameState {
             if self.trigger_asks_targets(controller, &redirect) {
                 self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
                 source: cid,
-                controller: controller,
+                controller,
                 effect: redirect,
                 subject: None,
                 event_amount: 0,
@@ -2080,8 +2080,8 @@ impl GameState {
             if self.trigger_asks_targets(controller, &effect) {
                 self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
                     source: listener,
-                    controller: controller,
-                    effect: effect,
+                    controller,
+                    effect,
                     subject: None,
                     event_amount: amount,
                     mode: None,
