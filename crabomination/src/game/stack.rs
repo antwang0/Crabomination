@@ -770,9 +770,17 @@ impl GameState {
                     } => departed & (1u64 << (player & 63)) != 0 && turn > installed_turn,
                     _ => false,
                 };
+                let (effects, copies) = (self.continuous_effects.len(), self.temporary_copies.len());
                 self.continuous_effects.retain(|e| !ends_now(&e.duration));
                 self.expire_granted_triggers(|g| ends_now(&g.expiry));
                 self.revert_next_turn_copies(self.active_player_idx, turn, false, departed);
+                // CR 704.3 — an ended pump or a copy reverting to a 0/0 emits
+                // nothing; the step-advance sweep's gate reads this flag.
+                if (self.continuous_effects.len(), self.temporary_copies.len()) != (effects, copies)
+                    && !self.scratch.phased_since_sweep
+                {
+                    self.scratch.phased_since_sweep = true;
+                }
                 // CR 801.2c — ranges of influence are determined as each turn
                 // begins, so a player leaving only shifts them now.
                 self.refresh_range_matrix();
@@ -866,8 +874,12 @@ impl GameState {
                     } => player == active && turn > installed_turn,
                     _ => false,
                 };
+                let effects = self.continuous_effects.len();
                 self.continuous_effects.retain(|e| !ends_now(&e.duration));
                 self.expire_granted_triggers(|g| ends_now(&g.expiry));
+                if self.continuous_effects.len() != effects && !self.scratch.phased_since_sweep {
+                    self.scratch.phased_since_sweep = true;
+                }
                 // CR 702.32 / 702.63 — Fading / Vanishing tick down as a
                 // turn-based action at upkeep, before step triggers.
                 let mut fv = self.process_fading_vanishing();
@@ -1113,9 +1125,11 @@ impl GameState {
         // untapping are inert), and not after combat damage, which sweeps in
         // its own resolution: ungated this re-ran after every combat-damage
         // advance, -5.75 % median wall on `--bench` (PERF). Leaving the end
-        // of combat and entering an upkeep open it too: an "until end of
-        // combat" boost's expiry and the untap step's "until your next turn"
-        // ends (a pump, a copy reverting to a 0/0) emit nothing.
+        // of combat opens it too, and the flag below is also set by the untap
+        // / upkeep expiries: an "until end of combat" boost ending and an
+        // "until your next turn" pump or copy ending (a copy reverting to a
+        // 0/0) emit nothing. An unconditional upkeep sweep cost +0.91 % Ir
+        // on `fixed`.
         if self.pending_decision.is_none()
             && self.suspend_signal.is_none()
             && !self.is_game_over()
@@ -1125,7 +1139,6 @@ impl GameState {
                 self.scratch.phased_since_sweep = false;
                 true
             }) || left_combat
-                || next == TurnStep::Upkeep
                 || !events.iter().all(GameEvent::inert_for_state_based_actions)
                 || self.pt_reduction_in_scope()
                 || (0..self.players.len()).any(|i| {

@@ -2527,10 +2527,10 @@ pub struct ResolutionScratch {
     /// hold no event list of their own.
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
-    /// Something phased in or out since the last step-advance sweep: the
-    /// untap step's phasing dispatches its own events, so the CR 704.3 gate
-    /// at the end of `advance_step` reads this instead. Written only when a
-    /// permanent phases.
+    /// Something phased in or out, or an untap / upkeep expiry ended an
+    /// effect or a copy, since the last step-advance sweep: neither leaves an
+    /// event, so the CR 704.3 gate at the end of `advance_step` reads this
+    /// instead. Written only when one of those happens.
     pub(crate) phased_since_sweep: bool,
     /// CR 724.1a / 724.2a — the events an "end the turn / combat phase"
     /// resolution produced before the process began: kept for the log, but
