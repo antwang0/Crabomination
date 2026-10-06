@@ -920,6 +920,24 @@ impl GameState {
                 to: crate::effect::shortcut::target_any(),
                 amount: crate::effect::Value::Const(amount as i32),
             };
+            // CR 603.3d — a prompting controller names "any other target".
+            if self.trigger_asks_targets(controller, &redirect) {
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                source: cid,
+                controller: controller,
+                effect: redirect,
+                subject: None,
+                event_amount: 0,
+                mode: None,
+                intervening_if: None,
+                actor: None,
+                from_mana_ability: false,
+                x_value: 0,
+                converged_value: 0,
+                mana_spent: 0,
+            });
+                return 0;
+            }
             let target = self.auto_target_for_effect_avoiding(&redirect, controller, Some(cid));
             self.push_stack(
                 crate::game::types::TriggerPush::new(cid, controller, redirect)
@@ -2058,6 +2076,24 @@ impl GameState {
         }
         self.spell_damage_trigger_fired = true;
         for (listener, effect, controller) in listeners {
+            // CR 603.3d — a prompting controller names the targets.
+            if self.trigger_asks_targets(controller, &effect) {
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    source: listener,
+                    controller: controller,
+                    effect: effect,
+                    subject: None,
+                    event_amount: amount,
+                    mode: None,
+                    intervening_if: None,
+                    actor: None,
+                    from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                });
+                continue;
+            }
             let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
             self.push_stack(
                 TriggerPush::new(listener, controller, effect)

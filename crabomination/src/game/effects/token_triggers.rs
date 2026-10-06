@@ -28,6 +28,24 @@ impl GameState {
             .collect();
         for id in ids {
             let Some(controller) = self.battlefield_find(id).map(|c| c.controller) else { continue };
+            // CR 603.3d — a prompting controller names the targets.
+            if self.trigger_asks_targets(controller, body) {
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    source: id,
+                    controller: controller,
+                    effect: body.clone(),
+                    subject: Some(EntityRef::Permanent(id)),
+                    event_amount: 0,
+                    mode: None,
+                    intervening_if: None,
+                    actor: None,
+                    from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                });
+                continue;
+            }
             let (slot0, additional) = self.auto_targets_for_effect_all_slots(body, controller, None);
             self.push_stack(
                 crate::game::TriggerPush::new(id, controller, body.clone())

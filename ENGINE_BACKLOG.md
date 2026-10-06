@@ -194,9 +194,10 @@ run against a prompting seat):
   except a batched / merged / Felix-doubled fire. Still open: slot 0 *bound*
   to the damaged player is right for "that player" and wrong for "any
   target" / "target player" wordings.
-- Four one-card sites (`stack.rs` ~8572 Valentin, `movement.rs` ~923 / ~2061,
-  `token_triggers.rs` ~31). (Delayed dies / haunt, delayed "next spell", Room
-  unlocks, mutate, state triggers and plot: fixed 2026-10-06.)
+- (Fixed 2026-10-06, no card-specific test — the shared helper is tested
+  per family: Valentin's reflexive, `PreventDamageToThisRedirect`,
+  `YourInstantOrSorceryDealtDamage`, `EachPushesTrigger`; delayed dies /
+  haunt, delayed "next spell", Room unlocks, mutate, state triggers, plot.)
 - `Effect::Reflexive` (~42 cards) still resolves inline for a bot seat (CR 603.7
   says the stack); a prompting seat's payoff now goes on the stack as a
   `ReflexiveTrigger` and is asked (2026-10-06), unless it is bound to a

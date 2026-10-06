@@ -8600,6 +8600,25 @@ impl GameState {
             // Fire Valentin's reflexive "when you do, …" for the static's
             // controller (CR 603.x reflexive trigger off the replacement).
             if let Some((_src, controller, Some(effect))) = valentin_redirect {
+                // CR 603.3d — a prompting controller names the targets.
+                if self.trigger_asks_targets(controller, &effect) {
+                    let mode = self.pick_trigger_mode(&effect, id, controller);
+                    self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                        source: id,
+                        controller,
+                        effect,
+                        subject: None,
+                        event_amount: 0,
+                        mode,
+                        intervening_if: None,
+                        actor: None,
+                        from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
+                    });
+                    return;
+                }
                 let (mode, auto_target) = self.trigger_mode_and_target(&effect, controller, None);
                 self.push_stack(
                     TriggerPush::new(id, controller, effect)

@@ -3214,7 +3214,10 @@ suite            24,227 / 0 / 5 (CRAB_ANSWER_LOG=strict)
 pods (release)   seed 9991 x 2,000 at 3/4/6 seats, A/B per re-bless (all
                  decided); seed 9110 2..8 x 1,000 = 7,000, all decided, zero
                  panics (turns/game 22.14 / 39.99 / 63.20 / 80.94 / 82.03 /
-                 101.42 / 120.15, `--a dflt`)
+                 101.42 / 120.15, `--a dflt`); all-deck census, 31 six-seat
+                 groups x 100 (seeds 9201+), 3,100 games, all decided; strict
+                 debug pods (seeds 18601/18602 x 30, decks 63/66/90/148 and
+                 152/156/170/55), all decided
 ```
 
 ### 2026-10-05 (Commander session `01S6ztPx`) — guardrail; layer-4 every-type, CR 608.2b card re-check
