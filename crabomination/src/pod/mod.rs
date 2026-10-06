@@ -1644,6 +1644,41 @@ fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
 /// at arbitrary points (mid-combat, mid-payment, under a pending ask), where a
 /// pod's own losses only ever reach it from a state-based check. Its own
 /// seeded stream, so an unset run is the run it always was.
+/// Which zone `id` is in, for an invariant's message. Debug-only.
+#[cfg(debug_assertions)]
+fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
+    let has = |z: &[crate::card::CardInstance]| z.iter().any(|c| c.id == id);
+    if g.battlefield_find(id).is_some() {
+        "the battlefield"
+    } else if g.battlefield.iter().any(|c| c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|p| p.id == id)) {
+        "a melded or merged permanent"
+    } else if has(&g.phased_out) {
+        "phased out"
+    } else if has(&g.exile) {
+        "exile"
+    } else if g.stack.iter().any(|si| matches!(si, crate::game::types::StackItem::Spell { card, .. } if card.id == id)) {
+        "the stack"
+    } else if g.players.iter().any(|p| has(&p.graveyard)) {
+        "a graveyard"
+    } else if g.players.iter().any(|p| has(&p.hand)) {
+        "a hand"
+    } else if g.players.iter().any(|p| has(&p.library)) {
+        "a library"
+    } else if g.players.iter().any(|p| has(&p.command)) {
+        "a command zone"
+    } else {
+        "nowhere"
+    }
+}
+
+/// `CRAB_POD_SWEEP_PROBE=1` (debug builds): after every settled action, a
+/// clone's fresh CR 704.3 sweep must do nothing — the strict form of the
+/// per-rule invariants below, one clone an action, so opt-in.
+fn pod_sweep_probe() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_POD_SWEEP_PROBE").is_some())
+}
+
 fn pod_concede_rate() -> Option<u32> {
     static RATE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
     *RATE.get_or_init(|| std::env::var("CRAB_POD_CONCEDE").ok().and_then(|s| s.parse().ok()))
@@ -1697,6 +1732,8 @@ fn play_pod_game(
     let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
     let trace_from = pod_trace_from();
     let mut repeats = RepeatGuard::default();
+    #[cfg(debug_assertions)]
+    let mut commander_zones: Vec<(crate::card::CardId, &'static str)> = Vec::new();
     let mut concede = concede_rate.map(|n| (n, StdRng::seed_from_u64(seed ^ 0xC0DE_C0DE)));
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
     // field test and the `Debug` format below never runs.
@@ -1732,7 +1769,7 @@ fn play_pod_game(
             } else {
                 match g.perform_action(action) {
                     Ok(events) => {
-                        g.recycle_events(events);
+                                                g.recycle_events(events);
                         true
                     }
                     Err(e) => {
@@ -1839,26 +1876,91 @@ fn play_pod_game(
                 if let Some(h) = c.attached_to
                     && g.battlefield_find(h).is_none()
                 {
-                    let zone = if g.phased_out.iter().any(|p| p.id == h) {
-                        "phased out"
-                    } else if g.exile.iter().any(|p| p.id == h) {
-                        "exile"
-                    } else if g.players.iter().any(|p| p.graveyard.iter().any(|x| x.id == h)) {
-                        "a graveyard"
-                    } else if g.players.iter().any(|p| p.hand.iter().any(|x| x.id == h)) {
-                        "a hand"
-                    } else if g.players.iter().any(|p| p.library.iter().any(|x| x.id == h)) {
-                        "a library"
-                    } else if g.players.iter().any(|p| p.command.iter().any(|x| x.id == h)) {
-                        "a command zone"
-                    } else {
-                        "nowhere"
-                    };
+                    let zone = zone_label(&g, h);
                     panic!(
                         "seed {seed}: {} is attached to {h:?}, which is in {zone} (turn {}, {:?}, after {actions} actions)",
                         c.definition.name, g.turn_number, g.step,
                     );
                 }
+            }
+        }
+        // CR 506.4 — an attacker or blocker that left the battlefield, phased
+        // out, changed controller or stopped being a creature is removed from
+        // combat. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            let name = |id: crate::card::CardId| g.battlefield_find(id).map_or_else(|| "<gone>".to_string(), |c| c.definition.name.to_string());
+            let in_combat = |id: crate::card::CardId, want: Option<usize>| {
+                g.battlefield_find(id).is_some_and(|c| want.is_none_or(|p| c.controller == p))
+                    && g.computed_permanent(id)
+                        .is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
+            };
+            let active = g.active_player_idx;
+            if let Some(a) = g.attacking.iter().find(|a| !in_combat(a.attacker, Some(active))) {
+                panic!(
+                    "seed {seed}: {:?} ({}) is still attacking after leaving combat (turn {}, {:?}, after {actions} actions)",
+                    a.attacker,
+                    name(a.attacker),
+                    g.turn_number,
+                    g.step,
+                );
+            }
+            if let Some(&b) = g.block_map.keys().find(|&&b| !in_combat(b, None)) {
+                panic!(
+                    "seed {seed}: {b:?} ({}) is still blocking after leaving combat (turn {}, {:?}, after {actions} actions)",
+                    name(b),
+                    g.turn_number,
+                    g.step,
+                );
+            }
+        }
+        // CR 800.4a — priority passes on from a player who left; CR 903.3 — a
+        // living seat's commander is a card still in the game. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            let holder = g.priority.player_with_priority;
+            assert!(
+                g.players.get(holder).is_some_and(|p| p.is_alive()),
+                "seed {seed}: departed p{holder} holds priority (turn {}, {:?}, after {actions} actions)",
+                g.turn_number,
+                g.step,
+            );
+            for (i, p) in g.players.iter().enumerate().filter(|(_, p)| p.is_alive()) {
+                for &cmd in &p.commanders {
+                    let zone = zone_label(&g, cmd);
+                    let was = commander_zones.iter().find(|(c, _)| *c == cmd).map_or("unknown", |&(_, z)| z);
+                    assert!(
+                        zone != "nowhere",
+                        "seed {seed}: p{i}'s commander {cmd:?} left {was} for no zone (turn {}, {:?}, after {actions} actions; pending {:?})",
+                        g.turn_number,
+                        g.step,
+                        g.pending_decision.as_ref().map(|p| &p.decision),
+                    );
+                }
+            }
+            commander_zones.clear();
+            for p in g.players.iter() {
+                commander_zones.extend(p.commanders.iter().map(|&c| (c, zone_label(&g, c))));
+            }
+        }
+        // CR 704.3 — the sweep repeats until a pass does nothing, so a second
+        // sweep over a settled state finds nothing either. Debug-only, opt-in.
+        #[cfg(debug_assertions)]
+        if pod_sweep_probe()
+            && !g.is_game_over()
+            && g.pending_decision.is_none()
+            && g.suspend_signal.is_none()
+        {
+            let mut probe = g.clone();
+            let events = probe.check_state_based_actions();
+            if !events.is_empty() || probe.pending_decision.is_some() {
+                panic!(
+                    "seed {seed}: a fresh sweep still acts after {actions} actions (turn {}, {:?}, stack {}): {events:?}; asks {:?}",
+                    g.turn_number,
+                    g.step,
+                    g.stack.len(),
+                    probe.pending_decision.as_ref().map(|p| &p.decision),
+                );
             }
         }
         // CR 800.4a — a player who left took every object they owned, and
