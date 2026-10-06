@@ -336,3 +336,16 @@ fn jegantha_is_auto_tapped_for_a_colored_pip() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bears).is_some());
 }
+
+/// CR 614.12 — Primal Beyond's reveal is a "may": with an Elemental in hand a
+/// player who declines to reveal gets the land tapped.
+#[test]
+fn primal_beyond_reveal_is_the_players_choice() {
+    let mut g = main_phase(2);
+    g.add_card_to_hand(0, catalog::smokebraider());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let land = g.add_card_to_hand(0, catalog::primal_beyond());
+    g.perform_action(GameAction::PlayLand(land)).expect("play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "no reveal, so tapped");
+}

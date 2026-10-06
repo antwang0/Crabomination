@@ -5105,6 +5105,10 @@ impl GameState {
         // source/controller.
         let self_seat = self.battlefield[idx].controller;
         let self_id = self.battlefield[idx].id;
+        // "You may reveal a [card] from your hand" (the reveal lands, Primal
+        // Beyond): untapped only if a reveal is the arm that held and the
+        // controller chose to reveal.
+        let mut reveal_ask = false;
         for sa in &self.battlefield[idx].definition.static_abilities {
             match &sa.effect {
                 StaticEffect::EntersTapped { applies_to: crate::effect::Selector::This } => {
@@ -5127,9 +5131,20 @@ impl GameState {
                         should_tap = true;
                         break;
                     }
+                    let arms: &[crate::card::Predicate] = match condition {
+                        crate::card::Predicate::Any(arms) => arms,
+                        one => std::slice::from_ref(one),
+                    };
+                    let (reveals, others): (Vec<_>, Vec<_>) = arms.iter().partition(|p| is_hand_reveal(p));
+                    if !reveals.is_empty() && !others.iter().any(|p| self.evaluate_predicate(p, &ctx)) {
+                        reveal_ask = true;
+                    }
                 }
                 _ => {}
             }
+        }
+        if reveal_ask && !should_tap && !self.reveals_from_hand(self_seat, self_id) {
+            should_tap = true;
         }
         // Both cross-permanent walks below match statics the lane's
         // predicate covers (PERF `(-234)`); an empty slice skips them on a
@@ -5198,6 +5213,21 @@ impl GameState {
         if should_tap {
             self.battlefield[idx].tapped = true;
         }
+    }
+
+    /// "As this land enters, you may reveal a … card from your hand": the
+    /// controller's yes/no (the headless answer is yes — nothing in the engine
+    /// reads what was revealed, so an untapped land is free).
+    fn reveals_from_hand(&mut self, seat: usize, land: CardId) -> bool {
+        if !self.seat_prompts(seat) && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            return true;
+        }
+        let decision = crate::decision::Decision::OptionalTrigger {
+            source: land,
+            description: "Reveal a card from your hand so this land enters untapped?".into(),
+            kind: crate::decision::OptionalKind::FreeUpside,
+        };
+        !matches!(self.ask_entering(seat, &decision), crate::decision::DecisionAnswer::Bool(false))
     }
 
     /// CR 614 — true when `seat` controls an "enters untapped" replacement
@@ -23963,4 +23993,17 @@ fn clamp_activated_mode(effect: &crate::effect::Effect, chosen: usize) -> usize 
 /// types, or changeling (CR 702.73a).
 fn def_is_creature_type(def: &crate::card::CardDefinition, t: crate::card::CreatureType) -> bool {
     def.subtypes.creature_types.contains(&t) || def.keywords.contains(&crate::card::Keyword::Changeling)
+}
+
+/// A "you may reveal a [filter] card from your hand" arm of an
+/// `EntersTappedUnless` condition: a hand is hidden, so checking it is a reveal.
+fn is_hand_reveal(p: &crate::card::Predicate) -> bool {
+    matches!(
+        p,
+        crate::card::Predicate::SelectorExists(crate::effect::Selector::CardsInZone {
+            who: crate::effect::PlayerRef::You,
+            zone: crate::card::Zone::Hand,
+            ..
+        })
+    )
 }

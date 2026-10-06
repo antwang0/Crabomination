@@ -467,8 +467,8 @@ pub fn mass_of_mysteries() -> CardDefinition {
 }
 
 /// Primal Beyond — enters tapped unless you reveal an Elemental card from
-/// your hand; {T}: {C}; {T}: one mana of any color for Elemental spells and
-/// abilities.
+/// your hand (asked: `reveals_from_hand`); {T}: {C}; {T}: one mana of any
+/// color for Elemental spells and abilities.
 pub fn primal_beyond() -> CardDefinition {
     CardDefinition {
         name: "Primal Beyond",
