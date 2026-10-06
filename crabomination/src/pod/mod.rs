@@ -1793,10 +1793,23 @@ fn play_pod_game(
             panic!("seed {seed}: card {dup:?} is in two zones (turn {}, after {actions} actions)", g.turn_number);
         }
         // CR 704.3 — once an action has settled the state-based actions have
-        // run: no creature at 0 toughness (704.5f) and no permanent attached
-        // to a host that is gone (704.5m/n). Debug-only.
+        // run: no living player at 0 life (704.5a), no creature at 0
+        // toughness (704.5f), no 0-loyalty planeswalker (704.5i) and no
+        // permanent attached to a host that is gone (704.5m/n). Debug-only.
         #[cfg(debug_assertions)]
         if !g.is_game_over() && g.pending_decision.is_none() && g.suspend_signal.is_none() {
+            // CR 704.5a — a living player at 0 or less life who can lose has lost.
+            if let Some(i) = (0..g.players.len()).find(|&i| {
+                g.players[i].is_alive()
+                    && g.effective_life(i) <= 0
+                    && !g.player_cant_lose_game(i)
+                    && !g.player_unlife_active(i)
+            }) {
+                panic!(
+                    "seed {seed}: p{i} is alive at {} life after the sweep (turn {}, {:?}, after {actions} actions)",
+                    g.effective_life(i), g.turn_number, g.step,
+                );
+            }
             for c in g.battlefield.iter() {
                 if let Some(cp) = g.computed_permanent(c.id)
                     && cp.card_types().contains(&crate::card::CardType::Creature)
@@ -1812,6 +1825,15 @@ fn play_pod_game(
                         g.step,
                         c.counters,
                         probe.battlefield_find(c.id).is_none(),
+                    );
+                }
+                if c.definition.is_planeswalker()
+                    && c.counter_count(crate::card::CounterType::Loyalty) == 0
+                    && g.computed_permanent(c.id).is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Planeswalker))
+                {
+                    panic!(
+                        "seed {seed}: {} is a 0-loyalty planeswalker after the sweep (turn {}, {:?}, after {actions} actions)",
+                        c.definition.name, g.turn_number, g.step,
                     );
                 }
                 if let Some(h) = c.attached_to
