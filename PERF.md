@@ -3193,6 +3193,25 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
+### 2026-10-06 (Commander session, second, close) — guardrail; CR 605.3a payment events, CR 704.5f tap-state anthems
+
+Hot-path touches: alternative-cast / effect payments queue their auto-tap
+events (empty on a cast that sacrifices nothing); a dispatch that drains
+`pending_cost_events` re-queues them as quiet events; `static_effect_reduces_toughness`
+reads a tap-state filter (Augusta only). Release, 4-core Xeon @ 2.80 GHz,
+base `bf4740be5` vs `cef728f88`, both rebuilt after the rebase.
+
+```text
+--bench          decisions 196,176 / 27.64 on both sides — byte-identical
+wall (--bench)   bench_ab.py 32 pairs: +2.23 % median / +1.13 % mean (sd 10.0)
+                 — noise, no regression
+suite            24,591 / 0 / 5 before the rebase; core_rules + engine
+                 3,537 / 0 / 5 after it; golden traces unchanged
+pods (release)   seed 46000 x 400 default pool, all decided, zero panics,
+                 stall rate 0 %
+clippy           workspace 0
+```
+
 ### 2026-10-06 (Commander routine, third) — guardrail; CR 603.7 reflexive payoffs on the stack, CR 704.3 step-start sweep
 
 Hot-path touches: the gated step-advance sweep (merged with the concurrent
