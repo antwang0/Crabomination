@@ -8173,6 +8173,15 @@ impl GameState {
                 }
                 continue;
             }
+            // CR 704.3 — the loss CONDITIONS below are state-based actions,
+            // checked only when a player would receive priority. Part-way
+            // through a resolution (a "then" sweep, or a pain land's damage
+            // as the auto-tapper pays a cast) a seat at 0 life may still gain
+            // life, and leaving there dropped a spell its own cast then
+            // pushed. An effect's "loses the game" (above) leaves at once.
+            if mid_resolution {
+                continue;
+            }
             // Phase M: 21-commander-damage SBA (CR 704.6c). Any
             // single (this-player, commander) entry of ≥ 21 in
             // `commander_damage` loses the game for this player. We

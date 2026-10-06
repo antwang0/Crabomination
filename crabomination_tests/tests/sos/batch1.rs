@@ -2488,6 +2488,10 @@ fn an_opponents_edict_takes_the_viewers_pick_while_off_priority() {
 /// (recorded replay, 2026-08-27). The suspend is now dropped when the game
 /// is already over: the spell's draws still happen, the discard never asks,
 /// and the game is simply won.
+///
+/// CR 704.3 (2026-10-06) — the opponent at 0 life loses at the sweep after
+/// the resolution, not inside it, so the spell's own discard is asked first
+/// and is answerable; the game is won once it is answered.
 #[test]
 fn a_lethal_traumatic_critique_does_not_pose_an_unanswerable_discard() {
     let mut g = two_player_game();
@@ -2509,6 +2513,11 @@ fn a_lethal_traumatic_critique_does_not_pose_an_unanswerable_discard() {
     })
     .expect("Traumatic Critique castable at X=3");
     drain_stack(&mut g);
+    if let Some(pd) = g.pending_decision.as_ref() {
+        assert!(g.game_over.is_none(), "an ask is only posed into a live game");
+        let a = crabomination::decision::AutoDecider.decide(&pd.decision);
+        g.perform_action(GameAction::SubmitDecision(a)).expect("the discard is answerable");
+    }
 
     assert_eq!(g.game_over, Some(Some(0)), "the damage half ends the game");
     assert!(

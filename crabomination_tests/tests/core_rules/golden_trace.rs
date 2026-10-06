@@ -372,7 +372,13 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // Same winner, same turn count; seeds 1, 2, 3 and 5 are untouched,
     // which is what a targeting fix rather than a rules change looks like.
     (4, Some(1), 18, 462, 0x0650_2a57_9f97_ec5c),
-    (5, Some(0), 9, 235, 0x4231_212b_3b36_c9a5),
+    // Re-blessed 2026-10-06 (CR 704.3 — the loss SBAs no longer run inside a
+    // mid-resolution sweep): seed 5's lethal spell finishes resolving and
+    // reaches its owner's graveyard before the real sweep ends the game,
+    // where the game used to end inside its resolution with the card on
+    // nowhere. Same winner, turns and actions; the final line's graveyard
+    // count is the only change. Seeds 1-4 untouched.
+    (5, Some(0), 9, 235, 0x185c_50ad_d0e8_fa9a),
 ];
 
 #[test]
@@ -544,3 +550,4 @@ fn the_sick_wall_of_roots_pair_passes_the_gate_audit() {
     let t = trace_game(&deck, &deck, 8_709_371_159_938_462_617, 6_000);
     assert!(t.winner.is_some(), "not decided after {} lines, turn {}", t.lines.len(), t.turns);
 }
+

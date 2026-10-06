@@ -1192,6 +1192,34 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
     assert_eq!(back.controller, 0, "control reverts to the owner");
 }
 
+/// CR 704.3 / 117.5 — state-based actions wait until a player would receive
+/// priority. A seat at 2 life that pays a cast with two Talismans is at 0 while
+/// casting, not out: the spell reaches the stack, and only the sweep after the
+/// cast takes the seat — and the spell with it (CR 800.4a). The auto-tapper's
+/// mana ability used to run the loss check mid-cast, so the seat left first
+/// and the cast then pushed a spell nobody controlled (a pod's Ruinous
+/// Ultimatum resolved for a departed seat).
+#[test]
+fn cr_704_3_a_seat_paying_itself_to_zero_mid_cast_loses_after_the_cast() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].life = 2;
+    let pay = [g.add_card_to_battlefield(0, catalog::talisman_of_indulgence()),
+        g.add_card_to_battlefield(0, catalog::talisman_of_indulgence())];
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let kill = g.add_card_to_hand(0, catalog::terminate());
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: kill, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_ok(), "{r:?}");
+    assert!(pay.iter().all(|&t| g.battlefield_find(t).is_none_or(|c| c.tapped)), "both Talismans paid");
+    assert!(!g.players[0].is_alive(), "0 life loses at the sweep after the cast");
+    assert!(g.stack.is_empty(), "and the spell ceased to exist with its caster");
+    assert!(g.battlefield_find(bear).is_some(), "nothing resolved for the departed seat");
+}
+
 /// CR 800.4 — a decision the departed player was being asked to make is
 /// dropped. A pending decision suppresses every *other* seat's actions until
 /// it is answered, so leaving one addressed to a player who is no longer in
