@@ -5977,6 +5977,9 @@ pub enum Effect {
     /// attacker — Flash Foliage). No-op if the target isn't attacking; the
     /// token joins the block map and marks the attacker blocked.
     CreateTokenBlocking { definition: std::sync::Arc<crate::card::TokenDefinition>, filter: SelectionRequirement },
+    /// CR 509.4 — "create … that's blocking that creature" (Brimaz): the
+    /// attacker the source blocks, not a target.
+    CreateTokenBlockingThat { definition: std::sync::Arc<crate::card::TokenDefinition> },
     /// "For each creature attacking you or a planeswalker you control, create
     /// a token that's a copy of that creature and that's blocking that
     /// creature. Exile those tokens at end of combat." (Mirror Match, CR

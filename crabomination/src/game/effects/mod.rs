@@ -13181,11 +13181,12 @@ impl GameState {
                 self.choose_graveyard_creatures_each_may_return(ctx, events, effect)
             }
 
-            Effect::CreateTokenBlocking { definition, .. } => {
+            Effect::CreateTokenBlocking { definition, .. } | Effect::CreateTokenBlockingThat { definition } => {
                 // A spell names the attacker as its target; a "whenever this
                 // creature blocks" trigger (Brimaz) carries none, and the
                 // attacker is the one the source blocks.
-                let attacker = match ctx.targets.first().cloned() {
+                let targeted = matches!(effect, Effect::CreateTokenBlocking { .. });
+                let attacker = match ctx.targets.first().cloned().filter(|_| targeted) {
                     Some(Target::Permanent(a)) => a,
                     _ => match self
                         .resolve_selector(&crate::effect::Selector::BlockedAttacker, ctx)

@@ -7971,10 +7971,9 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
             }),
             // "Whenever Brimaz blocks a creature, create a 1/1 white Cat
             // Soldier creature token with vigilance that's blocking that
-            // creature" — shipped missing (the `cnt` audit column,
-            // 2026-09-10). The token blocks an attacking creature; with one
-            // attacker blocked that is the one Brimaz blocks.
-            crate::effect::shortcut::blocks(Effect::CreateTokenBlocking {
+            // creature" — the creature Brimaz blocks, not a target (a pod
+            // seat aimed it at an attacker another player was defending).
+            crate::effect::shortcut::blocks(Effect::CreateTokenBlockingThat {
                 definition: std::sync::Arc::new(white_token(
                     "Cat Soldier",
                     1,
@@ -7982,7 +7981,6 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
                     vec![CreatureType::Cat, CreatureType::Soldier],
                     vec![Keyword::Vigilance],
                 )),
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
             }),
         ],
         ..Default::default()

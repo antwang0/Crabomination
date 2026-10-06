@@ -2390,3 +2390,32 @@ fn brimaz_makes_a_blocking_cat_token() {
     let cat = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Cat Soldier").map(|c| c.id).expect("cat token");
     assert!(g.block_map.get(&cat).is_some_and(|a| a.contains(&giant)), "the token blocks the Giant");
 }
+
+/// CR 509.4 — "blocking **that** creature" is the one Brimaz blocks, not a
+/// target: with another creature attacking another player, the token still
+/// blocks Brimaz's attacker (a pod seat aimed it at the other one, which its
+/// controller wasn't defending — CR 509.1a).
+#[test]
+fn brimaz_token_blocks_the_creature_brimaz_blocks() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = multi_player_game(3);
+    let brimaz = g.add_card_to_battlefield(1, catalog::brimaz_king_of_oreskos());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [giant, other] {
+        g.clear_sickness(id);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: other, target: AttackTarget::Player(2) },
+        Attack { attacker: giant, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(brimaz, giant)])).expect("block");
+    drain_stack(&mut g);
+    let cat = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Cat Soldier").map(|c| c.id).expect("cat token");
+    assert_eq!(g.block_map.get(&cat).map(|a| a.to_vec()), Some(vec![giant]), "the token blocks the Giant only");
+}

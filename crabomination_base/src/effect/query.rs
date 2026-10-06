@@ -1633,6 +1633,7 @@ impl Effect {
             Effect::DealDamageDivided { .. } | Effect::PreventNextDamageDivided { .. } => true,
             Effect::DealDamageDividedEvenly { .. } => true,
             Effect::CreateTokenBlocking { .. } => true,
+            Effect::CreateTokenBlockingThat { .. } => false,
             Effect::SupportCounters { .. } => true,
             Effect::DistributeCounters { .. } => true,
             Effect::ApplyToTargets { .. } => true,
