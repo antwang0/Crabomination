@@ -299,3 +299,37 @@ fn cr_704_3_a_card_leaving_a_graveyard_is_swept_after_the_action() {
     .expect("cast from the graveyard");
     assert!(g.battlefield_find(germ).is_none(), "0/0 once the graveyard is empty, before anyone acts");
 }
+
+/// CR 704.3 / 502.1 — an "until your next turn" effect ends as that turn
+/// begins, in a step with no priority, and the sweep before the upkeep's
+/// priority sees the result: a 0/0 a "+1/+1 until your next turn" kept alive
+/// dies (a pod's Synth Infiltrator outlived its "until your next turn" copy).
+#[test]
+fn cr_704_3_an_until_your_next_turn_expiry_is_swept_before_upkeep_priority() {
+    use crabomination::effect::{Duration, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let germ = g.add_card_to_battlefield(0, CardDefinition { power: 0, toughness: 0, ..bear("Germ") });
+    let src = g.add_card_to_battlefield(0, bear("Source"));
+    let pump = Effect::PumpPT {
+        what: Selector::Target(0),
+        power: Value::Const(1),
+        toughness: Value::Const(1),
+        duration: Duration::UntilNextTurn,
+    };
+    let ctx = EffectContext::for_trigger(src, 0, Some(Target::Permanent(germ)), 0);
+    g.resolve_effect(&pump, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(germ).is_some(), "1/1 under the pump");
+    g.active_player_idx = 1;
+    g.step = crabomination::TurnStep::End;
+    g.priority.player_with_priority = 1;
+    for _ in 0..8 {
+        if g.active_player_idx == 0 && g.step == crabomination::TurnStep::Upkeep {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!((g.active_player_idx, g.step), (0, crabomination::TurnStep::Upkeep));
+    assert!(g.battlefield_find(germ).is_none(), "0/0 once its controller's turn began");
+}

@@ -1113,8 +1113,9 @@ impl GameState {
         // untapping are inert), and not after combat damage, which sweeps in
         // its own resolution: ungated this re-ran after every combat-damage
         // advance, -5.75 % median wall on `--bench` (PERF). Leaving the end
-        // of combat opens it too: an "until end of combat" boost's expiry
-        // emits nothing, and can leave a damaged creature lethal.
+        // of combat and entering an upkeep open it too: an "until end of
+        // combat" boost's expiry and the untap step's "until your next turn"
+        // ends (a pump, a copy reverting to a 0/0) emit nothing.
         if self.pending_decision.is_none()
             && self.suspend_signal.is_none()
             && !self.is_game_over()
@@ -1124,6 +1125,7 @@ impl GameState {
                 self.scratch.phased_since_sweep = false;
                 true
             }) || left_combat
+                || next == TurnStep::Upkeep
                 || !events.iter().all(GameEvent::inert_for_state_based_actions)
                 || self.pt_reduction_in_scope()
                 || (0..self.players.len()).any(|i| {
