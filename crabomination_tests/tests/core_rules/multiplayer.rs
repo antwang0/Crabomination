@@ -1340,6 +1340,22 @@ fn cr_702_26g_an_indirectly_phased_out_aura_returns_with_its_host() {
     assert_eq!(g.battlefield_find(aura).and_then(|c| c.attached_to), Some(host), "back with its host");
 }
 
+/// CR 704.5n / 704.5q — an attached permanent that is not an Aura becomes
+/// unattached once its host is gone, printed Equipment or not: a Treasure a
+/// static had made an Equipment stayed attached to the creature Price of Fame
+/// destroyed (a three-seat debug pod).
+#[test]
+fn cr_704_5q_a_non_aura_attachment_unattaches_when_its_host_leaves() {
+    let mut g = multi_player_game(3);
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gear = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.battlefield_find_mut(gear).unwrap().attached_to = Some(host);
+    let mut events = Vec::new();
+    g.destroy_permanent(host, false, &mut events);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(gear).is_some_and(|c| c.attached_to.is_none()), "unattached, still on the battlefield");
+}
+
 /// CR 800.4 — a decision the departed player was being asked to make is
 /// dropped. A pending decision suppresses every *other* seat's actions until
 /// it is answered, so leaving one addressed to a player who is no longer in

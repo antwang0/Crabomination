@@ -144,6 +144,7 @@ struct SbaBoardScan {
     role: bool,
     start_engines: bool,
     equipment_attached: bool,
+    other_attached: bool,
     soulbond: bool,
     shapeshifter: bool,
     sculptor: bool,
@@ -156,6 +157,9 @@ struct SbaBoardScan {
 /// Bit 30 is free in the low word (`sba_bits` stop at 29) and is not a memo
 /// bit: a `GrantStaticAbility` source, read off the statics in the walk.
 const SBA_STATIC_GRANT: u32 = 30;
+/// A permanent that is neither a printed Aura nor a printed Equipment is
+/// attached to something (an artifact a static made an Equipment).
+const SBA_OTHER_ATTACHED: u32 = 31;
 const SBA_BESTOWED: u32 = 32;
 const SBA_SOULBOND: u32 = 33;
 const SBA_SECTOR_SET: u32 = 34;
@@ -6375,6 +6379,9 @@ impl GameState {
             }
             if c.attached_to.is_some() {
                 m |= d & b::EQUIPMENT;
+                if d & b::EQUIPMENT == 0 && !c.definition.is_aura() {
+                    flags |= 1 << SBA_OTHER_ATTACHED;
+                }
             }
             flags |= (c.bestowed as u64) << SBA_BESTOWED;
             flags |= (c.soulbond_partner.is_some() as u64) << SBA_SOULBOND;
@@ -6458,6 +6465,7 @@ impl GameState {
         s.legend_rule_off = m & b::LEGEND_RULE_OFF != 0;
         s.lethal_by_power = m & b::LETHAL_BY_POWER != 0;
         s.static_grant = packed & (1 << SBA_STATIC_GRANT) != 0;
+        s.other_attached = packed & (1 << SBA_OTHER_ATTACHED) != 0;
         // CR 704.5j — the Ring's emblem grants the supertype without a
         // battlefield source.
         s.supertype_grant |= self.players.iter().any(|p| p.ring_temptations >= 1);
@@ -8104,14 +8112,20 @@ impl GameState {
         // anymore (e.g. equipped creature died) OR the target permanent
         // is no longer a legal target (no creature subtype for Equipment).
         // The Equipment itself stays in play — only the link is cleared.
-        let stale_equipment_links: Vec<CardId> = if !scan.equipment_attached {
+        // CR 704.5n/q — so does anything else attached that is not an Aura
+        // once its host is gone: a Treasure some static made an Equipment
+        // stayed attached to the creature Price of Fame destroyed (a pod).
+        let stale_equipment_links: Vec<CardId> = if !scan.equipment_attached && !scan.other_attached {
             Vec::new()
         } else {
             self.battlefield
             .iter()
-            .filter(|c| c.definition.is_equipment())
+            .filter(|c| !c.definition.is_aura())
             .filter_map(|c| {
                 let attached = c.attached_to?;
+                if !c.definition.is_equipment() {
+                    return self.battlefield.find_by_id(attached).is_none().then_some(c.id);
+                }
                 // Layer-aware: an animated land (Quirion Druid) is a legal
                 // host, and a creature that lost the type stops being one.
                 let is_still_legal = self.permanent_is_creature(attached)
