@@ -3193,6 +3193,30 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
+### 2026-10-06 (Commander routine) — guardrail; CR 603.3d trigger-target asks, Jinnie Fay, reveal lands
+
+Hot-path touches: `check_state_based_actions_into` reads one `Vec::is_empty`
+(the prompting-seat trigger backlog); the token mint scans the controller's
+statics for `TokensMayBecome` on noncreature tokens too (Jinnie Fay may
+replace a Treasure); every other change is behind `seat_prompts`, which no
+bench seat sets. Callgrind against the session-start tip `1bb73918a`
+(`profiling-fast`, `--games 6 --seed 1`, 4-core container); the candidate
+includes a concurrent client/wasm commit.
+
+```text
+callgrind Ir     fixed 866,925,415 -> 866,898,166 (-0.003 %)
+                 cube  1,344,335,014 -> 1,347,061,140 (+0.20 %)
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); peak_rss_mib 29.3
+wall (--bench)   244.1 k decisions/s, one run (Xeon @ 2.10 GHz; not comparable
+                 to the 221.8 k above, another box)
+suite            24,227 / 0 / 5 (CRAB_ANSWER_LOG=strict)
+pods (release)   seed 9991 x 2,000 at 3/4/6 seats, A/B per re-bless (all
+                 decided); seed 9110 2..8 x 1,000 = 7,000, all decided, zero
+                 panics (turns/game 22.14 / 39.99 / 63.20 / 80.94 / 82.03 /
+                 101.42 / 120.15, `--a dflt`)
+```
+
 ### 2026-10-05 (Commander session `01S6ztPx`) — guardrail; layer-4 every-type, CR 608.2b card re-check
 
 Hot-path touches: the layer pass gains one `bool` and one branch taken only

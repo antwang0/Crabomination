@@ -31,25 +31,17 @@ lists were picked.
 Per-deck completion is generated, not hand-kept: `scripts/pod_residuals.py --table`
 (re-run it after a card fix and paste) lists each deck whose cards' docs still
 name a gap, with the cards; a deck absent from the table carries none.
-Snapshot 2026-10-05 (`01CyDrsA`, 169/183; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
+Snapshot 2026-10-06 (Commander routine, 179/183; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 55 | Zedruu the Greathearted (URW) | 1: ruhan_of_the_fomori |
-| 63 | Rin and Seri, Inseparable (RGW) | 1: jinnie_fay_jetmirs_second |
-| 66 | Inalla, Archmage Ritualist (UBR) | 1: vindictive_lich |
-| 90 | Breena, the Demagogue (WB) | 1: victory_chimes |
 | 94 | Zinnia, Valley's Voice (URW) | 1: zinnia_valleys_voice |
-| 122 | Omo, Queen of Vesuva (GU) | 1: desert_warfare |
 | 125 | Henzie "Toolbox" Torre (BRG) | 1: henzie_toolbox_torre |
-| 137 | Zimone, Infinite Analyst (GU) | 1: unbound_flourishing |
-| 140 | Anhelo, the Painter (UBR) | 1: parnesse_the_subtle_brush |
-| 148 | Ashling, the Limitless (WUBRG) | 1: primal_beyond |
 | 152 | Anje Falkenrath (BR) | 1: krrik_son_of_yawgmoth |
-| 175 | The Swarmlord (GUR) | 1: hierophant_bio_titan |
-| 180 | Heroes in a Half Shell (WUBRG) | 1: city_of_brass |
-| 182 | The Fourth Doctor + Sarah Jane Smith (GWU) | 1: the_curse_of_fenric |
+
+179 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 169 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
