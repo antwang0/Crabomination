@@ -1834,6 +1834,17 @@ fn play_pod_game(
                     g.pending_decision.as_ref().map(|p| &p.decision),
                 );
             }
+            if let Some((src, controller)) = g.stack.iter().find_map(|si| match si {
+                crate::game::types::StackItem::Trigger { source, controller, .. } if gone(*controller) => {
+                    Some((*source, *controller))
+                }
+                _ => None,
+            }) {
+                panic!(
+                    "seed {seed}: a trigger of {src:?} controlled by departed p{controller} is on the stack (turn {})",
+                    g.turn_number,
+                );
+            }
             if let Some((c, caster)) = g.stack.iter().find_map(|si| match si {
                 crate::game::types::StackItem::Spell { card, caster, .. } if gone(*caster) || gone(card.owner) => {
                     Some((card, *caster))
