@@ -20050,6 +20050,10 @@ impl GameState {
         action: GameAction,
     ) -> Result<Vec<GameEvent>, GameError> {
         let passes = matches!(action, GameAction::PassPriority);
+        // An answer can finish a resolution whose events it does not return,
+        // so it sweeps ungated; a duel's bot seats never answer, so this
+        // costs `--bench` nothing.
+        let answers = matches!(action, GameAction::SubmitDecision(_));
         let mut result = self.perform_action_dispatch(action);
         // CR 117.3c / 117.5 — after a cast, an activation, a land drop or a
         // special action the same player receives priority, and state-based
@@ -20067,7 +20071,8 @@ impl GameState {
             && self.pending_decision.is_none()
             && self.suspend_signal.is_none()
             && !self.is_game_over()
-            && (!events.iter().all(GameEvent::inert_for_state_based_actions)
+            && (answers
+                || !events.iter().all(GameEvent::inert_for_state_based_actions)
                 || self.pt_reduction_in_scope()
                 || self.players.iter().any(|p| p.pending_deck_loss))
         {
