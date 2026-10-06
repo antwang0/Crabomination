@@ -186,6 +186,38 @@ impl GameState {
 }
 
 impl GameState {
+    /// `AddMana { who: PlayerOfYourChoice }` (Victory Chimes): a ballot of the
+    /// living seats led by the controller, the headless pick. A mana ability
+    /// suspends like any other resolution; the resume re-runs `effect`.
+    pub(super) fn choose_mana_recipient(&mut self, effect: &Effect, ctx: &EffectContext) -> Option<usize> {
+        let me = ctx.controller;
+        let mut seats = vec![me];
+        seats.extend(
+            self.seats_in_turn_order_from(me).into_iter().filter(|&q| q != me && self.players[q].is_alive()),
+        );
+        let i = match take_opt_scratch!(self.stashed_resolution_answer) {
+            Some(DecisionAnswer::Amount(n)) => n as usize,
+            _ if seats.len() <= 1 => 0,
+            _ => {
+                let decision = ballot_decision(ctx.source.unwrap_or(CardId(0)), &seats, "Choose who adds the mana");
+                if self.seat_suspends(me) {
+                    let max = seats.len() as u32 - 1;
+                    self.suspend_signal =
+                        Some(Box::new((decision, PendingEffectState::AmountAnswerPending { max }, effect.clone())));
+                    return None;
+                }
+                match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => 0,
+                    _ => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(n) => n as usize,
+                        _ => 0,
+                    },
+                }
+            }
+        };
+        seats.get(i).or(seats.first()).copied()
+    }
+
     /// `Effect::DealDamageToPlayerOrPlaneswalker`: the controller's ballot of
     /// that player and each planeswalker they control, headless answer first
     /// (the highest-loyalty planeswalker the damage kills, else the player).

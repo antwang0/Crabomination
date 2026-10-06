@@ -13560,7 +13560,15 @@ impl GameState {
             }
 
             Effect::AddMana { who, pool } => {
-                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let p = if matches!(who, PlayerRef::PlayerOfYourChoice) {
+                    match self.choose_mana_recipient(effect, ctx) {
+                        Some(p) => p,
+                        None => return Ok(()),
+                    }
+                } else {
+                    let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                    p
+                };
                 // Unwrap a spend-restriction wrapper. The inner payload
                 // resolves exactly as normal; each colored pip it produces
                 // is tagged with `restriction` so `pay_for_spell` can gate
@@ -43384,6 +43392,8 @@ impl GameState {
             // the bot's attack target and the auto-filled "target opponent",
             // so a fixed seed reproduces the run; the lone opponent in a duel.
             PlayerRef::HostileOpponent => self.default_hostile_opponent(ctx.controller),
+            // Headless reading; `AddMana` asks the real choice.
+            PlayerRef::PlayerOfYourChoice => Some(ctx.controller),
             PlayerRef::CurrentVoter => Some(self.current_voter.unwrap_or(ctx.controller)),
             PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),

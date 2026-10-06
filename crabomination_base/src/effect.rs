@@ -169,6 +169,10 @@ pub enum PlayerRef {
     /// fewest untapped blockers, ties by seat index), and it is the only
     /// opponent in a duel. The Rack, Cursed Rack, Pallimud, Booby Trap.
     HostileOpponent,
+    /// "A player of your choice" — not a target (CR 115.10), so a mana
+    /// ability naming it stays one (CR 605.1a). `Effect::AddMana` asks it as a
+    /// seat ballot led by you; any other reader takes you (Victory Chimes).
+    PlayerOfYourChoice,
 }
 
 impl PlayerRef {

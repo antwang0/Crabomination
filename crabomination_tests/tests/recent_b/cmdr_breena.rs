@@ -566,3 +566,37 @@ fn cr_702_16_protection_from_a_player_sheds_their_curse() {
     assert!(g.battlefield_find(curse).is_none(), "seat 1's Curse falls off");
     assert!(g.battlefield_find(other).is_some(), "seat 2's stays");
 }
+
+/// Victory Chimes: "a player of your choice adds {C}" names no target, so it
+/// stays a mana ability (CR 605.1a) and the mana goes to the chosen seat; a
+/// headless seat keeps it.
+#[test]
+fn victory_chimes_gives_the_mana_to_the_chosen_player() {
+    let mut g = pod(3);
+    let chimes = g.add_card_to_battlefield(0, catalog::victory_chimes());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: chimes,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    assert!(g.stack.is_empty(), "a mana ability does not use the stack");
+    assert_eq!(g.players[2].mana_pool.colorless_amount(), 1, "the ballot is you, then turn order");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 0);
+    let mut h = pod(3);
+    let chimes = h.add_card_to_battlefield(0, catalog::victory_chimes());
+    h.perform_action(GameAction::ActivateAbility {
+        card_id: chimes,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    assert_eq!(h.players[0].mana_pool.colorless_amount(), 1);
+}

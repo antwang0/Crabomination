@@ -223,6 +223,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::RandomPlayer
         | PlayerRef::PlayerToYourRight
         | PlayerRef::HostileOpponent
+        | PlayerRef::PlayerOfYourChoice
         | PlayerRef::OpponentsWhoVotedDifferently
         | PlayerRef::OpponentsWhoVotedTheSame => None,
     }

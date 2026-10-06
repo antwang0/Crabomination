@@ -533,7 +533,7 @@ pub fn tragic_arrogance() -> CardDefinition {
 }
 
 /// Victory Chimes — untaps during each other player's untap step; {T}: a player
-/// of your choice adds {C}. Residual: you always add it.
+/// of your choice adds {C} (a seat ballot, you first; still a mana ability).
 pub fn victory_chimes() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -542,7 +542,7 @@ pub fn victory_chimes() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+            effect: Effect::AddMana { who: PlayerRef::PlayerOfYourChoice, pool: ManaPayload::Colorless(Value::ONE) },
             ..Default::default()
         }],
         ..artifact("Victory Chimes", cost(&[generic(3)]))
