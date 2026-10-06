@@ -473,45 +473,11 @@ impl GameState {
             // finish the turn.
             return match self.do_cleanup(&mut events) {
                 CleanupOutcome::Suspended | CleanupOutcome::PriorityGranted => Ok(events),
-                CleanupOutcome::TurnOver => {
-                    let mut r = self.advance_step(events);
-                    self.sweep_after_step_advance(&mut r);
-                    r
-                }
+                CleanupOutcome::TurnOver => self.advance_step(events),
             };
         }
 
-        let mut r = self.advance_step(events);
-        self.sweep_after_step_advance(&mut r);
-        r
-    }
-
-    /// CR 704.3 — a step advance hands a player priority, so state-based
-    /// actions are checked first. The advance itself never swept: a commander
-    /// that went home across End → Upkeep left its Aura attached to nothing
-    /// while the next turn's players acted. Gated as the post-action sweep is
-    /// (a step change and untapping are inert); the caller dispatches the
-    /// triggers of what it returns.
-    fn sweep_after_step_advance(&mut self, r: &mut Result<Vec<GameEvent>, GameError>) {
-        let Ok(events) = r.as_mut() else { return };
-        // Combat damage sweeps inside its own resolution (`resolve_combat_into`)
-        // and is nearly every advance whose events would open the gate: a
-        // second sweep there cost ~4 % wall on `--bench`.
-        if self.pending_decision.is_some()
-            || self.suspend_signal.is_some()
-            || self.is_game_over()
-            || matches!(self.step, TurnStep::FirstStrikeDamage | TurnStep::CombatDamage)
-        {
-            return;
-        }
-        if !events.iter().all(GameEvent::inert_for_state_based_actions)
-            || self.pt_reduction_in_scope()
-            || (0..self.players.len()).any(|i| {
-                self.players[i].pending_deck_loss || (self.players[i].is_alive() && self.effective_life(i) <= 0)
-            })
-        {
-            self.check_state_based_actions_into(events);
-        }
+        self.advance_step(events)
     }
 
     /// CR 614 — Fasting: "if you would begin your draw step, you may skip
@@ -1140,9 +1106,27 @@ impl GameState {
 
         // CR 704.3 — the state-based actions are checked whenever a player
         // would receive priority, a step's beginning included: the untap
-        // step's phasing can put a legend beside its namesake, and no action
-        // of anyone's has run the sweep since.
-        if self.pending_decision.is_none() && !self.is_game_over() {
+        // step's phasing can put a legend beside its namesake, and a commander
+        // that went home across End -> Upkeep left its Aura attached to
+        // nothing. Gated as the post-action sweep is (a step change and
+        // untapping are inert), and not after combat damage, which sweeps in
+        // its own resolution: ungated this re-ran after every combat-damage
+        // advance, -5.75 % median wall on `--bench` (PERF).
+        if self.pending_decision.is_none()
+            && self.suspend_signal.is_none()
+            && !self.is_game_over()
+            && !matches!(self.step, TurnStep::FirstStrikeDamage | TurnStep::CombatDamage)
+            // Read before the clear: `scratch` is a CoW group (CLAUDE.md).
+            && ((self.scratch.phased_since_sweep && {
+                self.scratch.phased_since_sweep = false;
+                true
+            }) || !events.iter().all(GameEvent::inert_for_state_based_actions)
+                || self.pt_reduction_in_scope()
+                || (0..self.players.len()).any(|i| {
+                    self.players[i].pending_deck_loss
+                        || (self.players[i].is_alive() && self.effective_life(i) <= 0)
+                }))
+        {
             self.check_state_based_actions_into(&mut events);
         }
         Ok(events)
@@ -3881,6 +3865,10 @@ impl GameState {
         }
         // CR 702.26 — "when this phases in" triggers. Phasing in isn't an ETB,
         // so we dispatch a dedicated `PermanentPhasedIn` event for each.
+        if !phased_in.is_empty() || !to_phase_out.is_empty() {
+            // CR 704.3 — the step's sweep gate (`advance_step`) reads this.
+            self.scratch.phased_since_sweep = true;
+        }
         if !phased_in.is_empty() {
             let evs: Vec<GameEvent> = phased_in
                 .into_iter()
