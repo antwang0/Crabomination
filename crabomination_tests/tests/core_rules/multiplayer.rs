@@ -1175,8 +1175,15 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
     let mine = g.add_card_to_battlefield(2, catalog::grizzly_bears());
     let borrowed = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(borrowed).unwrap().controller = 2;
-    for id in [mine, borrowed] {
-        let card = g.battlefield.iter().find(|c| c.id == id).unwrap().clone();
+    // Held by their own source: its "until this leaves" return ran inside
+    // the leave pass and phased the card back in (a departed commander).
+    let holder = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let held = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    for id in [mine, borrowed, held] {
+        let mut card = g.battlefield.iter().find(|c| c.id == id).unwrap().clone();
+        if id == held {
+            card.phased_out_by = Some(holder);
+        }
         g.battlefield.retain(|c| c.id != id);
         g.phased_out.push(card);
     }
@@ -1184,8 +1191,9 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
     g.players[2].life = 0;
     g.check_state_based_actions();
 
-    for id in [stolen, tucked, buried, mine] {
+    for id in [stolen, tucked, buried, mine, held] {
         assert!(g.find_card_anywhere(id).is_none(), "{id:?} left with its owner");
+        assert!(g.battlefield_find(id).is_none());
     }
     assert!(g.phased_out.iter().all(|c| c.id != mine));
     let back = g.phased_out.iter().find(|c| c.id == borrowed).expect("its owner's card stays phased out");

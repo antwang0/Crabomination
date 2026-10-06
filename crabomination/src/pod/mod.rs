@@ -1799,8 +1799,14 @@ fn play_pod_game(
             let gone = |p: usize| g.players.get(p).is_none_or(|pl| !pl.is_alive());
             if let Some(c) = g.battlefield.iter().find(|c| gone(c.owner) || gone(c.controller)) {
                 panic!(
-                    "seed {seed}: {} (owner p{}, controller p{}) outlived a departed seat (turn {}, after {actions} actions)",
-                    c.definition.name, c.owner, c.controller, g.turn_number,
+                    "seed {seed}: {} (owner p{}, controller p{}) outlived a departed seat (turn {}, {:?}, after {actions} actions; left {:?}; pending {:?})",
+                    c.definition.name,
+                    c.owner,
+                    c.controller,
+                    g.turn_number,
+                    g.step,
+                    g.players.iter().map(|p| (p.eliminated, p.left_game)).collect::<Vec<_>>(),
+                    g.pending_decision.as_ref().map(|p| &p.decision),
                 );
             }
             if let Some((c, caster)) = g.stack.iter().find_map(|si| match si {

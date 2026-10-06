@@ -5972,32 +5972,14 @@ impl GameState {
         // left with them).
         retain_cold!(self.hands_revealed_to, |(a, b)| *a != p && *b != p);
         self.exile.retain(|c| c.owner != p);
-        for id in durations {
-            // A token in the card's place (Skyclave Apparition, Severance
-            // Priest) is a leave TRIGGER's doing — CR 800.4a drops it.
-            for c in self.exile.iter_mut() {
-                if c.exiled_by.is_some_and(|l| {
-                    l.source == id
-                        && matches!(
-                            l.return_to,
-                            crate::card::ExileReturnZone::IllusionToken | crate::card::ExileReturnZone::SpiritToken
-                        )
-                }) {
-                    c.exiled_by = None;
-                }
-            }
-            self.return_linked_exiles(id, events);
-            self.phase_in_held_by(id, events);
-        }
-        self.players[p].hand.clear();
-        self.players[p].library.clear();
-        self.players[p].graveyard.clear();
         // CR 800.4a — "all objects OWNED by that player leave": also their
         // cards in another seat's hand, library or graveyard (a stolen card
         // taken into hand was cast after its owner left — Ruinous Ultimatum),
         // and their phased-out permanents, which live off the battlefield
-        // list and phased back in later (Benthic Biomancer). A phased-out
-        // permanent they controlled reverts to its owner.
+        // list and phased back in later (Benthic Biomancer) — before the
+        // "until this leaves" returns below, which phased a departed seat's
+        // own commander back in. A phased-out permanent they controlled
+        // reverts to its owner.
         for q in 0..self.players.len() {
             if q == p {
                 continue;
@@ -6023,6 +6005,26 @@ impl GameState {
                 }
             }
         }
+        for id in durations {
+            // A token in the card's place (Skyclave Apparition, Severance
+            // Priest) is a leave TRIGGER's doing — CR 800.4a drops it.
+            for c in self.exile.iter_mut() {
+                if c.exiled_by.is_some_and(|l| {
+                    l.source == id
+                        && matches!(
+                            l.return_to,
+                            crate::card::ExileReturnZone::IllusionToken | crate::card::ExileReturnZone::SpiritToken
+                        )
+                }) {
+                    c.exiled_by = None;
+                }
+            }
+            self.return_linked_exiles(id, events);
+            self.phase_in_held_by(id, events);
+        }
+        self.players[p].hand.clear();
+        self.players[p].library.clear();
+        self.players[p].graveyard.clear();
         // CR 800.4a — *every* zone, which includes the command zone (a
         // departed Commander player's commander does not sit there for the
         // rest of the game) and the outside-the-game sideboard.
