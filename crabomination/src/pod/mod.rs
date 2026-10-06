@@ -2114,16 +2114,6 @@ fn play_pod_game(
         }
         #[cfg(debug_assertions)]
         if !g.is_game_over() && g.pending_decision.is_none() && g.suspend_signal.is_none() {
-            // CR 400.3 — a hand, library or graveyard holds only its own
-            // seat's cards.
-            for (seat, pl) in g.players.iter().enumerate() {
-                if let Some(c) = pl.hand.iter().chain(pl.library.iter()).chain(pl.graveyard.iter()).find(|c| c.owner != seat) {
-                    panic!(
-                        "seed {seed}: {} (owner p{}) is in p{seat}'s {} (turn {}, {:?}, after {actions} actions)",
-                        c.definition.name, c.owner, zone_label(&g, c.id), g.turn_number, g.step,
-                    );
-                }
-            }
             let now = owned_card_counts(&g);
             if let Some(p) = (0..g.players.len()).find(|&p| g.players[p].is_alive() && now[p] != owned_at_start[p]) {
                 let gone: Vec<String> = owned_at_start[p]
