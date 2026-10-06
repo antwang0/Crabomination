@@ -1802,9 +1802,16 @@ fn play_pod_game(
                     && cp.card_types().contains(&crate::card::CardType::Creature)
                     && cp.toughness <= 0
                 {
+                    let mut probe = g.clone();
+                    probe.check_state_based_actions();
                     panic!(
-                        "seed {seed}: {} is a {}-toughness creature after the sweep (turn {}, {:?}, after {actions} actions)",
-                        c.definition.name, cp.toughness, g.turn_number, g.step,
+                        "seed {seed}: {} is a {}-toughness creature after the sweep (turn {}, {:?}, after {actions} actions; counters {:?}; a fresh sweep removes it: {})",
+                        c.definition.name,
+                        cp.toughness,
+                        g.turn_number,
+                        g.step,
+                        c.counters,
+                        probe.battlefield_find(c.id).is_none(),
                     );
                 }
                 if let Some(h) = c.attached_to
