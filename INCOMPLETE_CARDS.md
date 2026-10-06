@@ -1914,7 +1914,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 | Card | Deck | Gap |
 |---|---|---|
 | 🟡 Henzie "Toolbox" Torre | Riveteers Rampage (NCC) | a creature spell with another printed alternative cost (evoke, dash, …) is offered that one, not Henzie's blitz (one alternative cost per cast action; none in this list — its blitz creatures take the cheaper blitz). |
-| 🟡 K'rrik, Son of Yawgmoth | Merciless Rage (C19) | life for {B} covers every cost you pay yourself; a mana ability the auto-tapper fires on its own pays its {B} with mana. |
 
 
 ## Search filters (2026-09-28, `scripts/audit_search_filters.py --gate`, 0)
@@ -1954,7 +1953,6 @@ library-exile event.
 | Weftwalking | "the first spell each player casts during each of their turns may be cast without paying its mana cost" is absent | no once-per-turn-per-player free-cast static |
 | Coveted Jewel, Flame Sweep, The One Ring, Amped Raptor, Chandra ToD, Ragavan, Robber of the Rich, Gonti, Reckoner Bankbuster | a bare "attack you" fires on planeswalker attacks; "except creatures you control with flying" spares every flyer; the protection rider ignores "if you cast it"; the Raptor's exile ignores "if you cast it from your hand", takes the top card only and costs a flat {E}×4; the impulse "you may cast" of Chandra / Ragavan / Robber / Gonti lets an exiled land be played; Bankbuster's Pilot lacks the +2 crew bonus | cube pool — frozen |
 | Choreographed Sparks, Render Speechless, Cost of Brilliance, Homesickness, Vibrant Outburst, Burrog Barrage, Chelonian Tackle, Dissection Practice, Impractical Joke | copy any-controller spell / "up to" slots still mandatory | SOS pool — frozen; this also blocks the CR 601.2c later-slot gate (TODO) |
-| Chainer, Nightmare Adept | a creature card put into the graveyard after the activation isn't covered | the permission is a one-cast group over the creature cards there as it resolves |
 | Rhuk, Hexgold Nabber | only the attack half: an equipped creature of yours DYING doesn't move its Equipment to Rhuk | the Equipment falls off before the trigger resolves; `AttachedToMe` of the dead creature needs last-known attachments |
 | Imprison | neither the {T}-ability tax nor the attacks-or-blocks tax is implemented | two pay-or-destroy triggers on the enchanted creature's actions |
 | Jace, Vryn's Prodigy | the −9 emblem mills EACH opponent five, not one target opponent | an emblem trigger with a player target is untested ground; the ultimate is rarely reached |

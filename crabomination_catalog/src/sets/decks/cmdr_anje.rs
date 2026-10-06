@@ -1,14 +1,6 @@
 //! Commander: the cards the **Merciless Rage** precon (C19, Anje
 //! Falkenrath) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_anje.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Chainer, Nightmare Adept** — the permission names one creature card
-//!   (the first in your graveyard) as it resolves.
-//! - **Hedonist's Trove** — the exiled cards stay playable after the Trove
-//!   leaves, and the one-spell-a-turn cap isn't enforced.
-//! - **K'rrik, Son of Yawgmoth** — life for {B} covers spells only, not
-//!   activation costs.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
@@ -511,9 +503,10 @@ pub fn hedonists_trove() -> CardDefinition {
 /// K'rrik, Son of Yawgmoth — lifelink; {B} in your spells' costs may be paid
 /// with 2 life; each black spell you cast grows it. Spells, activations,
 /// turning face up, cycling and the other action costs, and "unless [you]
-/// pay" costs (ward, taxes) take the life (`phyrexianize_for_payer`).
-/// Residual: a mana ability the auto-tapper activates on its own pays its {B}
-/// with mana (one you activate yourself takes the life).
+/// pay" costs (ward, taxes) take the life (`phyrexianize_for_payer`). The
+/// life is optional, so the auto-tapper's own mana-ability activations paying
+/// their {B} with mana is a legal payment; one you activate yourself may take
+/// the life.
 pub fn krrik_son_of_yawgmoth() -> CardDefinition {
     let pb = phyrexian(Color::Black);
     CardDefinition {

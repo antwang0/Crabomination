@@ -1520,9 +1520,11 @@ auto-picker's target. The strict pods caught Boneyard Parley's splitter as a
 singular `EachOpponent`. Pods (seed 152, 1,000 each): 4 seats 1,000 decided,
 Anje 19.5 %; 6 seats against the Leinore / Sidar / Oloro / Prossh / Nalia
 precons 1,000 decided, 1.2 %; 8 seats (seats 4-10) 1,000 decided, 5.7 %.
-Residuals: Archfiend of Spite's damager always sacrifices when able;
-Boneyard Parley's five are an untargeted pick; Chainer's permission names one
-card as it resolves; K'rrik's life-for-{B} covers spells only. Census:
+Residuals at landing (all since closed — Chainer's permission reads the
+graveyard as the spell is cast, K'rrik's life covers every cost you pay, its
+auto-tapped mana abilities paying mana being a legal choice): Archfiend of
+Spite's damager always sacrificed when able; Boneyard Parley's five were an
+untargeted pick. Census:
 no card of the list unplayed. Debug strict pods (400 games): clean. `--bench`
 byte-identical.
 
