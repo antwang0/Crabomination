@@ -201,14 +201,16 @@ run against a prompting seat):
   per family: Valentin's reflexive, `PreventDamageToThisRedirect`,
   `YourInstantOrSorceryDealtDamage`, `EachPushesTrigger`; delayed dies /
   haunt, delayed "next spell", Room unlocks, mutate, state triggers, plot.)
-- `Effect::Reflexive` (~42 cards) still resolves inline for a bot seat (CR 603.7
-  says the stack); a prompting seat's payoff now goes on the stack as a
-  `ReflexiveTrigger` and is asked (2026-10-06), unless it is bound to a
-  loop's player (Nihiloor). **CLOSED WITH A REASON (2026-10-06):** none of
-  the 42 orders an effect after its payoff inside the same resolution, so
-  inline-vs-stack differs only by a response window bots rarely use, and the
-  stack form drops the outer context (`event_amount`, `trigger_source`,
-  scratch bindings) that the inline form keeps. Not worth the trace churn.
+- ✅ `Effect::Reflexive` with a targeted body goes on the stack for every seat
+  (2026-10-06, second run: `push_reflexive_trigger`). The stacked payoff used
+  to lose the gating event's scratch — a prompting seat's Ziatora dealt 0, and
+  Argentum Masticore's target fizzled once any spell resolved in between —
+  now carried by `ScratchBinding::Resolution` (CR 603.7c). Untargeted and
+  "that player"-bound payoffs (Nihiloor, Dokuchi Silencer) go on the stack
+  too; only a sourceless effect (a test's bare `resolve_effect`) runs one
+  inline.
+  This supersedes the same day's "closed with a reason" (the stack form
+  dropped the outer context — it now carries it).
 
 **Second 2026-10-06 session — CR 903.9b direct pushes.** A debug pod
 invariant (a commander in a library is a bypass, since every pod seat says

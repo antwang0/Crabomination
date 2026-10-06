@@ -1835,6 +1835,13 @@ impl GameState {
         event_amount: u32,
     ) {
         let Some(src) = ctx.source else { return };
+        // A player subject is the seat "that player" names: the
+        // `ControlledByTriggerPlayer` target filter reads it now and again at
+        // resolution (`trigger_player`).
+        let seat = match subject {
+            EntityRef::Player(p) => Some(p),
+            _ => None,
+        };
         // CR 603.7 — the "when you do" payoff goes on the stack as
         // its own trigger; targets are picked now (603.7d).
         // A prompting seat names the targets through the trigger
@@ -1850,7 +1857,7 @@ impl GameState {
                 event_amount,
                 mode: None,
                 intervening_if: None,
-                actor: None,
+                actor: seat,
                 from_mana_ability: false,
                 x_value: ctx.x_value,
                 converged_value: ctx.converged_value,
@@ -1867,8 +1874,13 @@ impl GameState {
         // Auron's" — `PowerLessThanSource`). An X carried in ("up to
         // that many" — Loamcrafter Faun's discard count) caps the slots.
         let x = (ctx.x_value > 0).then_some(ctx.x_value);
+        let saved_seat = self.trigger_event_player_scratch;
+        if seat.is_some() {
+            self.trigger_event_player_scratch = seat;
+        }
         let (mut slot0, mut additional) =
             self.auto_targets_for_effect_all_slots_x(body, ctx.controller, None, false, Some(src), x);
+        self.trigger_event_player_scratch = saved_seat;
         if body.slot_past_x_cap(0, ctx.x_value) {
             slot0 = None;
             additional.clear();
@@ -1883,6 +1895,7 @@ impl GameState {
                 .x_value(ctx.x_value)
                 .converged_value(ctx.converged_value)
                 .trigger_source(Some(subject))
+                .trigger_player(seat)
                 .event_amount(event_amount)
                 .build(),
         );
@@ -8211,47 +8224,28 @@ impl GameState {
             }
 
             Effect::Reflexive { body } => {
-                // CR 603.7 / 603.3d — a targeted payoff goes on the stack as
-                // the trigger it is (a prompting seat names its targets), its
-                // "it" / "that much" the enclosing event's. A payoff bound to
-                // a loop's player ("that player" — Nihiloor) stays inline; so
-                // does an untargeted one, which skips only the response window.
-                if let Some(src) = ctx.source
-                    && !matches!(ctx.trigger_source, Some(EntityRef::Player(_)))
-                    && body.requires_target()
-                {
+                // CR 603.7 / 603.3d — a "when you do" payoff is a trigger: it
+                // goes on the stack (a prompting seat names its targets), its
+                // "it" / "that much" / "that player" the enclosing event's or
+                // loop's (Nihiloor's "creature that player controls").
+                if let Some(src) = ctx.source {
                     let subject = ctx.trigger_source.unwrap_or(EntityRef::Permanent(src));
                     self.push_reflexive_trigger(body, ctx, subject, ctx.event_amount);
                     return Ok(());
                 }
-                // CR 603.7 — a "when you do" reflexive payoff. Its targets are
-                // chosen now (after the gating cost was paid), not at the outer
-                // trigger. Auto-target the body fresh and thread the picks
-                // through a derived context, mirroring the descend/forage path.
-                // A payoff behind "pay {X}" reads that X in its target filter
-                // (Halo Forager's "mana value X").
-                // A player the enclosing loop bound ("for each opponent, …
-                // that player" — Nihiloor) is the `ControlledByTriggerPlayer`
-                // seat, as it is for a trigger whose subject is a player.
-                let saved_seat = self.trigger_event_player_scratch;
-                if let Some(EntityRef::Player(p)) = ctx.trigger_source {
-                    self.trigger_event_player_scratch = Some(p);
-                }
+                // No source to put a trigger under (a bare effect resolved
+                // directly): pick its targets and run it in place.
                 let (slot0, additional) = self.auto_targets_for_effect_all_slots_x(
                     body,
                     ctx.controller,
                     None,
                     false,
-                    ctx.source,
+                    None,
                     (ctx.x_value > 0).then_some(ctx.x_value),
                 );
                 let mut body_ctx = ctx.clone();
                 body_ctx.targets = slot0.into_iter().chain(additional).collect();
-                let ran = self.run_effect(body, &body_ctx, events);
-                self.trigger_event_player_scratch = saved_seat;
-                ran?;
-                // A parked payoff resumes under the stack item's targets, not
-                // the ones picked here (Numa's distribution found no Elves).
+                self.run_effect(body, &body_ctx, events)?;
                 self.pin_parked_targets(&body_ctx.targets);
                 Ok(())
             }

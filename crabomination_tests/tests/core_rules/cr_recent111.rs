@@ -495,3 +495,41 @@ fn cr_603_7_a_bot_seats_reflexive_payoff_uses_the_stack() {
     settle(&mut g, Target::Player(1));
     assert_eq!(g.players[1].life, 17);
 }
+
+/// CR 603.7 + 603.7c — a payoff bound to "that player" goes on the stack too
+/// and keeps its player: Dokuchi Silencer hits seat 1, and the reflexive
+/// "destroy target creature that player controls" takes seat 1's creature,
+/// never seat 2's bigger one.
+#[test]
+fn cr_603_7_a_that_player_payoff_keeps_its_player_on_the_stack() {
+    let mut g = main_phase(3);
+    g.players[0].wants_ui = false;
+    let ninja = g.add_card_to_battlefield(0, catalog::dokuchi_silencer());
+    g.clear_sickness(ninja);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    let other = g.add_card_to_battlefield(2, catalog::serra_angel());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ninja, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    let mut saw_payoff = false;
+    for _ in 0..60 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let d = p.decision.clone();
+            g.submit_decision(crabomination::decision::AutoDecider.decide(&d)).expect("answer");
+            continue;
+        }
+        saw_payoff |= g.stack.iter().any(|si| {
+            matches!(si, crabomination::game::types::StackItem::Trigger { trigger_player: Some(1), target: Some(Target::Permanent(_)), .. })
+        });
+        if matches!(g.step, TurnStep::EndCombat | TurnStep::PostCombatMain) && g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(saw_payoff, "the payoff waited on the stack, bound to seat 1");
+    assert!(g.battlefield_find(mine).is_none(), "that player's creature is destroyed");
+    assert!(g.battlefield_find(other).is_some());
+}
