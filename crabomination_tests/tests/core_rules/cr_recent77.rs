@@ -4,7 +4,7 @@
 use crabomination::card::CounterType;
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{Attack, AttackTarget, GameAction};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -415,4 +415,33 @@ fn undercity_branches_are_offered_at_secret_entrance() {
     g.take_initiative(0, &mut events);
     drain_stack(&mut g);
     assert_eq!(g.players[0].dungeon.as_ref().map(|(_, r)| *r), Some(1), "Forge");
+}
+
+/// CR 903.9b — a commander SPELL countered into its owner's library (Spell
+/// Crumple, Memory Lapse) or hand (Remand) may go to the command zone
+/// instead. The counter arms pushed it straight into the zone, and a pod's
+/// Sigarda sat on the bottom of a library for the rest of the game.
+#[test]
+fn cr_903_9b_a_countered_commander_spell_goes_home() {
+    for counter in [catalog::spell_crumple as fn() -> _, catalog::memory_lapse, catalog::remand] {
+        let mut g = main_phase();
+        let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+        mana(&mut g, 0);
+        g.perform_action(GameAction::CastFromCommandZone {
+            card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None,
+            alternative: false, pitch_card: None,
+        })
+        .expect("cast the commander");
+        let id = g.add_card_to_hand(1, counter());
+        mana(&mut g, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(cmd)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("counter it");
+        drain_stack(&mut g);
+        let name = counter().name;
+        assert!(g.players[0].command.iter().any(|c| c.id == cmd), "{name}: home");
+        assert!(g.players[0].library.iter().chain(&g.players[0].hand).all(|c| c.id != cmd), "{name}");
+    }
 }

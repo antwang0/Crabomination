@@ -23287,6 +23287,23 @@ impl GameState {
                             self.exile.push(*card);
                             continue;
                         }
+                        // CR 903.9b — a commander bound for its owner's hand
+                        // or library may go to the command zone instead.
+                        let would_be = match zone {
+                            CounteredSpellZone::OwnerHand => Some(crate::card::Zone::Hand),
+                            CounteredSpellZone::OwnerLibraryTop
+                            | CounteredSpellZone::OwnerLibraryBottom
+                            | CounteredSpellZone::OwnerLibraryTopOrBottom
+                            | CounteredSpellZone::OwnerLibrarySecondFromTop => Some(crate::card::Zone::Library),
+                            _ => None,
+                        };
+                        let card = match would_be {
+                            Some(to) => match self.commander_off_stack_redirect(*card, to) {
+                                Some(c) => Box::new(c),
+                                None => continue,
+                            },
+                            None => card,
+                        };
                         match zone {
                             // Index 0 is the top (draw = `library.remove(0)`).
                             CounteredSpellZone::OwnerLibraryTop => {

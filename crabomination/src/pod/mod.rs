@@ -1782,6 +1782,21 @@ fn play_pod_game(
             g.pending_decision.as_ref().map(|pd| pd.acting_player()).unwrap_or(usize::MAX),
             g.pending_decision.as_ref().map(|pd| &pd.decision),
         );
+        // CR 903.9b — every pod seat answers the library redirect "yes", so a
+        // commander in a library reached it past `resolve_zone_change` (an
+        // inline push the replacement never saw). Debug-only.
+        #[cfg(debug_assertions)]
+        if let Some(c) = g
+            .players
+            .iter()
+            .flat_map(|p| p.library.iter())
+            .find(|c| g.players.iter().any(|q| q.commanders.contains(&c.id)))
+        {
+            panic!(
+                "seed {seed}: commander {} reached a library past the CR 903.9b replacement (turn {}, after {actions} actions)",
+                c.definition.name, g.turn_number,
+            );
+        }
         if any { stale = 0 } else { stale += 1 }
         // `CRAB_CAP_DIAG=<n>` names a *slow* game's board too, once, as it
         // passes `n` actions — a decided game never reaches the line below.

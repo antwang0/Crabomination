@@ -127,3 +127,32 @@ impl GameState {
         self.note_commander_to_command_zone(id, owner);
     }
 }
+
+impl GameState {
+    /// CR 903.9b — a commander leaving the STACK for its owner's hand or
+    /// library (a countered spell's "instead" zone: Spell Crumple, Memory
+    /// Lapse, Remand) may go to the command zone. `Some(card)` back when it
+    /// does not, for the caller to place as it would have.
+    pub(crate) fn commander_off_stack_redirect(
+        &mut self,
+        card: crate::card::CardInstance,
+        to: Zone,
+    ) -> Option<crate::card::CardInstance> {
+        let owner = card.owner;
+        if card.is_token || !self.players.get(owner).is_some_and(|p| p.commanders.contains(&card.id)) {
+            return Some(card);
+        }
+        if self.resolve_zone_change(card.id, Zone::Stack, to) != Zone::Command {
+            return Some(card);
+        }
+        let mut card = card;
+        let id = card.id;
+        card.drop_counters_for_zone_change(Zone::Command);
+        card.exiled_with = None;
+        card.controller = owner;
+        self.players[owner].command.push(card);
+        self.offboard_keyword_grants = true;
+        self.note_commander_to_command_zone(id, owner);
+        None
+    }
+}
