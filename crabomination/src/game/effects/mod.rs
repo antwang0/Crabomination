@@ -136,7 +136,7 @@ pub(crate) enum ScratchSave {
     LastDieRoll(u8),
     ChosenOpponent(Option<usize>),
     Causer(Option<usize>),
-    Resolution(Box<(crate::effect::ResolutionCarry, Vec<CardId>)>),
+    Resolution(Box<(crate::effect::ResolutionCarry, Vec<CardId>, Vec<CardId>)>),
     /// A context pin (`Controller`, `EventAmount`): nothing on `GameState`.
     Nothing,
 }
@@ -1791,7 +1791,12 @@ impl GameState {
                     Some(id) => std::mem::replace(&mut self.scratch.exiled_card_ids_this_resolution, vec![id]),
                     None => Vec::new(),
                 };
-                ScratchSave::Resolution(Box::new((prev, exiled)))
+                let moved = if carry.last_moved.is_empty() {
+                    Vec::new()
+                } else {
+                    std::mem::replace(&mut self.scratch.last_moved_cards, carry.last_moved.clone())
+                };
+                ScratchSave::Resolution(Box::new((prev, exiled, moved)))
             }
             ScratchBinding::Controller(_) | ScratchBinding::EventAmount(_) => ScratchSave::Nothing,
         }
@@ -1805,14 +1810,82 @@ impl GameState {
             ScratchSave::ChosenOpponent(prev) => self.scratch.chosen_opponent_scratch = prev,
             ScratchSave::Causer(prev) => self.resolution_causer = prev,
             ScratchSave::Resolution(prev) => {
-                let (carry, exiled) = *prev;
+                let (carry, exiled, moved) = *prev;
                 if carry.last_exiled.is_some() || !exiled.is_empty() {
                     self.scratch.exiled_card_ids_this_resolution = exiled;
+                }
+                if !carry.last_moved.is_empty() || !moved.is_empty() {
+                    self.scratch.last_moved_cards = moved;
                 }
                 self.set_resolution_carry(&carry);
             }
             ScratchSave::Nothing => {}
         }
+    }
+
+    /// CR 603.7 — put a "when you do" payoff on the stack as its own trigger:
+    /// targets are picked now (603.7d), the gating event's scratch carried
+    /// (603.7c). `subject` / `event_amount` are what the payoff's "it" and
+    /// "that much" read.
+    pub(crate) fn push_reflexive_trigger(
+        &mut self,
+        body: &Effect,
+        ctx: &EffectContext,
+        subject: EntityRef,
+        event_amount: u32,
+    ) {
+        let Some(src) = ctx.source else { return };
+        // CR 603.7 — the "when you do" payoff goes on the stack as
+        // its own trigger; targets are picked now (603.7d).
+        // A prompting seat names the targets through the trigger
+        // queue's own picker (off-board cards in a card modal).
+        // With another decision open it waits in the backlog rather
+        // than taking the engine's pick.
+        if self.trigger_asks_targets(ctx.controller, body) {
+            let push = crate::game::types::PendingTriggerPush {
+                source: src,
+                controller: ctx.controller,
+                effect: self.carry_into_reflexive(body.clone()),
+                subject: Some(subject),
+                event_amount,
+                mode: None,
+                intervening_if: None,
+                actor: None,
+                from_mana_ability: false,
+                x_value: ctx.x_value,
+                converged_value: ctx.converged_value,
+                mana_spent: 0,
+            };
+            if self.pending_decision.is_some() {
+                self.scratch.prompt_trigger_backlog.push(push);
+            } else {
+                self.drain_trigger_queue(vec![push]);
+            }
+            return;
+        }
+        // Sourced: a slot filter can read the source ("power less than
+        // Auron's" — `PowerLessThanSource`). An X carried in ("up to
+        // that many" — Loamcrafter Faun's discard count) caps the slots.
+        let x = (ctx.x_value > 0).then_some(ctx.x_value);
+        let (mut slot0, mut additional) =
+            self.auto_targets_for_effect_all_slots_x(body, ctx.controller, None, false, Some(src), x);
+        if body.slot_past_x_cap(0, ctx.x_value) {
+            slot0 = None;
+            additional.clear();
+        } else if let Some(cap) = (1..=additional.len()).find(|&s| body.slot_past_x_cap(s as u8, ctx.x_value)) {
+            additional.truncate(cap - 1);
+        }
+        let carried = self.carry_into_reflexive(body.clone());
+        self.push_stack(
+            crate::game::TriggerPush::new(src, ctx.controller, carried)
+                .target(slot0)
+                .additional_targets(additional)
+                .x_value(ctx.x_value)
+                .converged_value(ctx.converged_value)
+                .trigger_source(Some(subject))
+                .event_amount(event_amount)
+                .build(),
+        );
     }
 
     /// CR 603.7c — the scratch a reflexive trigger's body may read, as this
@@ -1827,6 +1900,7 @@ impl GameState {
             last_discarded_mana_value: self.last_discarded_mana_value,
             greatest_discarded_mv: self.greatest_discarded_mv_this_resolution,
             last_exiled: self.scratch.exiled_card_ids_this_resolution.last().copied(),
+            last_moved: self.scratch.last_moved_cards.clone(),
         }
     }
 
@@ -8137,15 +8211,18 @@ impl GameState {
             }
 
             Effect::Reflexive { body } => {
-                // CR 603.7 / 603.3d — a prompting seat's payoff goes on the
-                // stack as the trigger it is, its targets that player's to
-                // name; a bot seat keeps the inline fill below. A payoff bound
-                // to a loop's player ("that player" — Nihiloor) stays inline.
-                if ctx.source.is_some()
+                // CR 603.7 / 603.3d — a targeted payoff goes on the stack as
+                // the trigger it is (a prompting seat names its targets), its
+                // "it" / "that much" the enclosing event's. A payoff bound to
+                // a loop's player ("that player" — Nihiloor) stays inline; so
+                // does an untargeted one, which skips only the response window.
+                if let Some(src) = ctx.source
                     && !matches!(ctx.trigger_source, Some(EntityRef::Player(_)))
-                    && self.trigger_asks_targets(ctx.controller, body)
+                    && body.requires_target()
                 {
-                    return self.run_effect(&Effect::ReflexiveTrigger { body: body.clone() }, ctx, events);
+                    let subject = ctx.trigger_source.unwrap_or(EntityRef::Permanent(src));
+                    self.push_reflexive_trigger(body, ctx, subject, ctx.event_amount);
+                    return Ok(());
                 }
                 // CR 603.7 — a "when you do" reflexive payoff. Its targets are
                 // chosen now (after the gating cost was paid), not at the outer
@@ -20005,57 +20082,8 @@ impl GameState {
             }
 
             Effect::ReflexiveTrigger { body } => {
-                // CR 603.7 — the "when you do" payoff goes on the stack as
-                // its own trigger; targets are picked now (603.7d).
                 let Some(src) = ctx.source else { return Ok(()) };
-                // A prompting seat names the targets through the trigger
-                // queue's own picker (off-board cards in a card modal).
-                // With another decision open it waits in the backlog rather
-                // than taking the engine's pick.
-                if self.trigger_asks_targets(ctx.controller, body) {
-                    let push = crate::game::types::PendingTriggerPush {
-                        source: src,
-                        controller: ctx.controller,
-                        effect: self.carry_into_reflexive((**body).clone()),
-                        subject: Some(EntityRef::Permanent(src)),
-                        event_amount: 0,
-                        mode: None,
-                        intervening_if: None,
-                        actor: None,
-                        from_mana_ability: false,
-                        x_value: ctx.x_value,
-                        converged_value: ctx.converged_value,
-                        mana_spent: 0,
-                    };
-                    if self.pending_decision.is_some() {
-                        self.scratch.prompt_trigger_backlog.push(push);
-                    } else {
-                        self.drain_trigger_queue(vec![push]);
-                    }
-                    return Ok(());
-                }
-                // Sourced: a slot filter can read the source ("power less than
-                // Auron's" — `PowerLessThanSource`). An X carried in ("up to
-                // that many" — Loamcrafter Faun's discard count) caps the slots.
-                let x = (ctx.x_value > 0).then_some(ctx.x_value);
-                let (mut slot0, mut additional) =
-                    self.auto_targets_for_effect_all_slots_x(body, ctx.controller, None, false, Some(src), x);
-                if body.slot_past_x_cap(0, ctx.x_value) {
-                    slot0 = None;
-                    additional.clear();
-                } else if let Some(cap) = (1..=additional.len()).find(|&s| body.slot_past_x_cap(s as u8, ctx.x_value)) {
-                    additional.truncate(cap - 1);
-                }
-                let carried = self.carry_into_reflexive((**body).clone());
-                self.push_stack(
-                    crate::game::TriggerPush::new(src, ctx.controller, carried)
-                        .target(slot0)
-                        .additional_targets(additional)
-                        .x_value(ctx.x_value)
-                        .converged_value(ctx.converged_value)
-                        .trigger_source(Some(EntityRef::Permanent(src)))
-                        .build(),
-                );
+                self.push_reflexive_trigger(body, ctx, EntityRef::Permanent(src), 0);
                 Ok(())
             }
 

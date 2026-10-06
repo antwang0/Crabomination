@@ -13105,6 +13105,8 @@ pub struct ResolutionCarry {
     pub last_discarded_mana_value: Option<u32>,
     pub greatest_discarded_mv: u32,
     pub last_exiled: Option<crate::card::CardId>,
+    /// `Selector::LastMoved` — the card a reveal-until-find took (Yuna's Whistle).
+    pub last_moved: Vec<crate::card::CardId>,
 }
 
 impl Default for Effect {

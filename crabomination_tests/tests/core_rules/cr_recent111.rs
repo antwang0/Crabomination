@@ -474,3 +474,24 @@ fn cr_603_7c_a_stacked_reflexive_targets_filter_reads_the_discard() {
     settle_yes(&mut g, Target::Permanent(ring));
     assert!(g.battlefield_find(ring).is_none(), "MV 1 <= the discarded MV 5");
 }
+
+/// CR 603.7 — a bot seat's "when you do" payoff is a trigger on the stack too
+/// (it was resolved inline): Ziatora's damage waits there, a window to
+/// respond, and still deals the sacrificed creature's power.
+#[test]
+fn cr_603_7_a_bot_seats_reflexive_payoff_uses_the_stack() {
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = false;
+    g.players[0].hostile_player_targets = true;
+    g.add_card_to_battlefield(0, catalog::ziatora_the_incinerator());
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    assert_eq!(g.players[1].life, 20, "the payoff has not resolved yet");
+    assert_eq!(g.stack.len(), 1, "the reflexive trigger is on the stack");
+    settle(&mut g, Target::Player(1));
+    assert_eq!(g.players[1].life, 17);
+}

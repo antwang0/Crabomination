@@ -924,7 +924,7 @@ pub fn yunas_whistle() -> CardDefinition {
                 miss_dest: RevealMissDest::BottomRandom,
             },
             // CR 603.7 — "when you reveal a creature card this way": the
-            // reflexive half runs inline so it can still read the find.
+            // reflexive trigger carries the find (CR 603.7c).
             Effect::If {
                 cond: Predicate::SelectorExists(Selector::LastMoved),
                 then: Box::new(Effect::Reflexive {
