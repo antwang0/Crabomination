@@ -30384,6 +30384,14 @@ impl GameState {
             self.drop_resume_channels_on_fizzle(resuming);
             return Ok(());
         }
+        // CR 603.7c — a reflexive trigger's carried scratch is what its target
+        // filter reads too ("mana value less than or equal to the discarded
+        // card's" — Argentum Masticore). The resolution resets and re-binds it.
+        if !resuming
+            && let crate::effect::Effect::BindScratch { scratch: s @ crate::effect::ScratchBinding::Resolution(_), .. } = &effect
+        {
+            let _ = self.bind_scratch(s);
+        }
         let resolved_target = match target.as_ref() {
             // An unfilled optional slot 0 holds its place; it has no object
             // to be illegal (`target_hole`).

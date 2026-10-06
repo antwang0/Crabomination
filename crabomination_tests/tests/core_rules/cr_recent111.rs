@@ -398,3 +398,79 @@ fn cr_115_1c_a_combat_damage_triggers_second_slot_is_filled() {
     assert_eq!(g.players[0].life, life + 1, "the trigger resolved (one pair → X = 1)");
     assert_eq!(g.players[0].hand.len() + g.players[1].hand.len(), hands + 1, "and someone drew X");
 }
+
+/// Answer every pending decision with "yes" / `pick` for a target / the
+/// headless answer otherwise, passing priority until the stack is empty.
+fn settle_yes(g: &mut GameState, pick: Target) -> usize {
+    let mut asked = 0;
+    for _ in 0..60 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let answer = match &p.decision {
+                Decision::ChooseTarget { legal, .. } if legal.contains(&pick) => {
+                    asked += 1;
+                    DecisionAnswer::Target(pick.clone())
+                }
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                d => crabomination::decision::AutoDecider.decide(d),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    asked
+}
+
+/// CR 603.7c — a reflexive trigger that resolves later still reads the event
+/// that made it: Ziatora's "damage equal to that creature's power", asked of a
+/// prompting seat (so on the stack), is the sacrificed Hill Giant's 3.
+#[test]
+fn cr_603_7c_a_stacked_reflexive_trigger_reads_the_sacrificed_power() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::ziatora_the_incinerator());
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    assert_eq!(settle_yes(&mut g, Target::Player(1)), 1);
+    assert_eq!(g.players[1].life, 17, "three damage, the sacrificed creature's power");
+}
+
+/// CR 603.7c + 608.2b — the stacked payoff's target filter reads the carried
+/// discard too: Argentum Masticore's "mana value ≤ the discarded card's" keeps
+/// a Sol Ring legal after a Serra Angel discard, even with a Bolt resolving
+/// in between, so it is destroyed.
+#[test]
+fn cr_603_7c_a_stacked_reflexive_targets_filter_reads_the_discard() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::argentum_masticore());
+    g.add_card_to_hand(0, catalog::serra_angel());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    // Resolve the upkeep trigger, stopping once its payoff is on the stack.
+    for _ in 0..20 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let answer = match &p.decision {
+                Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Permanent(ring)) => {
+                    DecisionAnswer::Target(Target::Permanent(ring))
+                }
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                d => crabomination::decision::AutoDecider.decide(d),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if g.players[0].graveyard.iter().any(|c| c.definition.name == "Serra Angel") {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.stack.len(), 1, "the reflexive payoff waits on the stack");
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    settle_yes(&mut g, Target::Permanent(ring));
+    assert!(g.battlefield_find(ring).is_none(), "MV 1 <= the discarded MV 5");
+}

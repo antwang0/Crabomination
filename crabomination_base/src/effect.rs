@@ -13087,6 +13087,24 @@ pub enum ScratchBinding {
     /// placer for "THEY put the same counters on this" — Bold Plagiarist),
     /// read back as each `CounterAdded`'s `placer`.
     Causer(usize),
+    /// CR 603.7c — what the gating event left in the resolver's scratch (the
+    /// sacrificed creature's power, the discarded card's mana value), carried
+    /// onto the stack with a reflexive trigger that resolves later.
+    Resolution(Box<ResolutionCarry>),
+}
+
+/// The resolution scratch a reflexive trigger's body may read, as the
+/// enclosing effect left it ([`ScratchBinding::Resolution`]).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResolutionCarry {
+    pub sacrificed_power: Option<i32>,
+    pub sacrificed_toughness: Option<i32>,
+    pub sacrificed_mana_value: Option<u32>,
+    pub sacrificed_total_power: i32,
+    pub sacrificed_count: u32,
+    pub last_discarded_mana_value: Option<u32>,
+    pub greatest_discarded_mv: u32,
+    pub last_exiled: Option<crate::card::CardId>,
 }
 
 impl Default for Effect {

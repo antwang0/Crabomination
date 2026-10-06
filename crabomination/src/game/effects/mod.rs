@@ -131,11 +131,12 @@ use crate::mana::Color;
 /// What `bind_scratch` displaced, for `restore_scratch` to put back. Not a
 /// `ScratchBinding`: `current_voter` is an `Option` outside a ballot, which the
 /// binding has no way to say.
-enum ScratchSave {
+pub(crate) enum ScratchSave {
     CurrentVoter(Option<usize>),
     LastDieRoll(u8),
     ChosenOpponent(Option<usize>),
     Causer(Option<usize>),
+    Resolution(Box<(crate::effect::ResolutionCarry, Vec<CardId>)>),
     /// A context pin (`Controller`, `EventAmount`): nothing on `GameState`.
     Nothing,
 }
@@ -1771,7 +1772,7 @@ impl GameState {
 
     /// Pin one piece of resolver scratch for an `Effect::BindScratch` body,
     /// handing back what was there for `restore_scratch`.
-    fn bind_scratch(&mut self, scratch: &ScratchBinding) -> ScratchSave {
+    pub(crate) fn bind_scratch(&mut self, scratch: &ScratchBinding) -> ScratchSave {
         match scratch {
             ScratchBinding::CurrentVoter(seat) => {
                 ScratchSave::CurrentVoter(self.current_voter.replace(*seat))
@@ -1783,6 +1784,15 @@ impl GameState {
                 ScratchSave::ChosenOpponent(self.scratch.chosen_opponent_scratch.replace(*seat))
             }
             ScratchBinding::Causer(seat) => ScratchSave::Causer(self.resolution_causer.replace(*seat)),
+            ScratchBinding::Resolution(carry) => {
+                let prev = self.resolution_carry();
+                self.set_resolution_carry(carry);
+                let exiled = match carry.last_exiled {
+                    Some(id) => std::mem::replace(&mut self.scratch.exiled_card_ids_this_resolution, vec![id]),
+                    None => Vec::new(),
+                };
+                ScratchSave::Resolution(Box::new((prev, exiled)))
+            }
             ScratchBinding::Controller(_) | ScratchBinding::EventAmount(_) => ScratchSave::Nothing,
         }
     }
@@ -1794,8 +1804,50 @@ impl GameState {
             ScratchSave::LastDieRoll(prev) => self.last_die_roll = prev,
             ScratchSave::ChosenOpponent(prev) => self.scratch.chosen_opponent_scratch = prev,
             ScratchSave::Causer(prev) => self.resolution_causer = prev,
+            ScratchSave::Resolution(prev) => {
+                let (carry, exiled) = *prev;
+                if carry.last_exiled.is_some() || !exiled.is_empty() {
+                    self.scratch.exiled_card_ids_this_resolution = exiled;
+                }
+                self.set_resolution_carry(&carry);
+            }
             ScratchSave::Nothing => {}
         }
+    }
+
+    /// CR 603.7c — the scratch a reflexive trigger's body may read, as this
+    /// resolution has it now.
+    pub(crate) fn resolution_carry(&self) -> crate::effect::ResolutionCarry {
+        crate::effect::ResolutionCarry {
+            sacrificed_power: self.sacrificed_power,
+            sacrificed_toughness: self.sacrificed_toughness,
+            sacrificed_mana_value: self.sacrificed_mana_value,
+            sacrificed_total_power: self.sacrificed_total_power,
+            sacrificed_count: self.sacrificed_count,
+            last_discarded_mana_value: self.last_discarded_mana_value,
+            greatest_discarded_mv: self.greatest_discarded_mv_this_resolution,
+            last_exiled: self.scratch.exiled_card_ids_this_resolution.last().copied(),
+        }
+    }
+
+    fn set_resolution_carry(&mut self, c: &crate::effect::ResolutionCarry) {
+        self.sacrificed_power = c.sacrificed_power;
+        self.sacrificed_toughness = c.sacrificed_toughness;
+        self.sacrificed_mana_value = c.sacrificed_mana_value;
+        self.sacrificed_total_power = c.sacrificed_total_power;
+        self.sacrificed_count = c.sacrificed_count;
+        self.last_discarded_mana_value = c.last_discarded_mana_value;
+        self.greatest_discarded_mv_this_resolution = c.greatest_discarded_mv;
+    }
+
+    /// CR 603.7c — a reflexive body bound to the scratch it was created
+    /// under; bare when the resolution left nothing to carry.
+    pub(crate) fn carry_into_reflexive(&self, body: Effect) -> Effect {
+        let carry = self.resolution_carry();
+        if carry == crate::effect::ResolutionCarry::default() {
+            return body;
+        }
+        Effect::BindScratch { scratch: ScratchBinding::Resolution(Box::new(carry)), body: Box::new(body) }
     }
 
     /// Drop the multi-question replay log — call when a log-using effect
@@ -19964,7 +20016,7 @@ impl GameState {
                     let push = crate::game::types::PendingTriggerPush {
                         source: src,
                         controller: ctx.controller,
-                        effect: (**body).clone(),
+                        effect: self.carry_into_reflexive((**body).clone()),
                         subject: Some(EntityRef::Permanent(src)),
                         event_amount: 0,
                         mode: None,
@@ -19994,8 +20046,9 @@ impl GameState {
                 } else if let Some(cap) = (1..=additional.len()).find(|&s| body.slot_past_x_cap(s as u8, ctx.x_value)) {
                     additional.truncate(cap - 1);
                 }
+                let carried = self.carry_into_reflexive((**body).clone());
                 self.push_stack(
-                    crate::game::TriggerPush::new(src, ctx.controller, (**body).clone())
+                    crate::game::TriggerPush::new(src, ctx.controller, carried)
                         .target(slot0)
                         .additional_targets(additional)
                         .x_value(ctx.x_value)
