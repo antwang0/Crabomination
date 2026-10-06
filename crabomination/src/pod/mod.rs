@@ -1619,6 +1619,14 @@ impl RepeatGuard {
 /// game on stderr — turn, step, stack depth, seat, action — and every
 /// rejected one as a `REJECT` line with the engine's error. Names a capped
 /// game's loop without a rebuild (`--first I --games 1` replays it).
+/// `CRAB_POD_SBA_PROBE=1` (debug builds): after every settled action, a fresh
+/// state-based sweep on a clone must find nothing to do.
+#[cfg(debug_assertions)]
+fn sba_probe() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_POD_SBA_PROBE").is_some())
+}
+
 fn pod_trace_from() -> Option<usize> {
     static FROM: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
     *FROM.get_or_init(|| std::env::var("CRAB_POD_TRACE").ok().and_then(|s| s.parse().ok()))
@@ -1847,6 +1855,28 @@ fn play_pod_game(
                     "seed {seed}: p{i} is alive at {} life after the sweep (turn {}, {:?}, after {actions} actions)",
                     g.effective_life(i), g.turn_number, g.step,
                 );
+            }
+            // CR 704.3 — the general form of the checks below: a fresh sweep
+            // over a settled board does nothing. Clones the game every action,
+            // so opt-in (`CRAB_POD_SBA_PROBE=1`).
+            if sba_probe() {
+                let mut probe = g.clone();
+                let evs = probe.check_state_based_actions();
+                if !evs.is_empty() {
+                    let named: Vec<String> = evs
+                        .iter()
+                        .filter_map(|e| match e {
+                            crate::game::GameEvent::CreatureDied { card_id } => g
+                                .battlefield_find(*card_id)
+                                .map(|c| format!("{} {:?} attached: {:?}", c.definition.name, g.computed_permanent(c.id).map(|cp| (cp.power, cp.toughness, c.damage)), g.battlefield.iter().filter(|a| a.attached_to == Some(c.id)).map(|a| (a.definition.name, a.controller)).collect::<Vec<_>>())),
+                            _ => None,
+                        })
+                        .collect();
+                    panic!(
+                        "seed {seed}: a fresh state-based sweep still acts after the action settled (turn {}, {:?}, after {actions} actions): {:?} {named:?}",
+                        g.turn_number, g.step, evs,
+                    );
+                }
             }
             for c in g.battlefield.iter() {
                 if let Some(cp) = g.computed_permanent(c.id)
