@@ -3193,6 +3193,36 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
+### 2026-10-06 (Commander session, second) — guardrail; the state-based check after every action, and its gate
+
+Hot-path touches: `perform_action_inner` sweeps after every non-pass action
+(CR 117.5) — **gated** on a non-inert event, a toughness reducer in scope or
+an armed empty-library loss, which replaces the old cost-only gate
+(`pays_a_cost`, deleted); the sweep repeats while a pass emitted events
+(CR 704.3, one pass on a quiet board); the mid-resolution sweep skips the
+player-loss conditions; combat-damage pushes call `auto_extra_targets_for`;
+everything else is departures, Commander-only, or debug-only (the pod
+invariants). Base `bl_cand` = release at `0b61929ce` (this session, before
+the sweep changes); same box, same profile.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 at every build this session; determinism ok, thread
+                 determinism ok (3 vs 1)
+wall (--bench)   the UNGATED post-action sweep: bench_ab.py 16 pairs, paired
+                 B/A median -7.79 %, mean -6.52 %, sd 9.52 — rejected;
+                 gated: median +0.10 %, mean -0.38 %, sd 7.33 — noise
+pods (release)   seed 9123 2..8 x 1,000 = 7,000 (turns/game 19.22 / 32.54 /
+                 46.28 / 58.31 / 69.07 / 83.19 / 96.35), all decided, zero
+                 panics; all-deck 6 seats (33000+, 31 x 200) + 4 seats
+                 (34000+, 46 x 200) = 15,400: two CR 104.4a draws, one
+                 action cap (two Vensers, fixed)
+strict debug     6 seats (32100+, 31 x 60), 4 seats (35000+/36000+, 46 x
+                 40 twice), 6 seats (37000+, 31 x 30), 4/6/3 seats (39000+/
+                 40000+/41000+) with the settled-board invariants: every
+                 failure filed and fixed in this session's commits
+```
+
 ### 2026-10-06 (Commander routine) — guardrail; CR 603.3d trigger-target asks, Jinnie Fay, reveal lands
 
 Hot-path touches: `check_state_based_actions_into` reads one `Vec::is_empty`

@@ -191,9 +191,12 @@ triggers and "whenever you attack" (`combat.rs`), spell-cast listeners and
 run against a prompting seat):
 - `combat.rs` `fire_combat_damage_triggers`: a slot the engine *picks* is now
   asked (Throat Slitter, `cr_603_3d_a_combat_damage_trigger_asks_for_its_target`),
-  except a batched / merged / Felix-doubled fire. Still open: slot 0 *bound*
-  to the damaged player is right for "that player" and wrong for "any
-  target" / "target player" wordings.
+  except a batched / merged / Felix-doubled fire. ✅ *(2026-10-06, second
+  session)* a mixed player-or-permanent slot 0 ("any target" — Sword of Fire
+  and Ice, Niv-Mizzet, Guildpact) is picked, not bound to the damaged player,
+  and slots past the first are filled (Niv's "target player draws X" drew
+  nothing). An oracle census found no other shipped combat-damage trigger
+  printing "any target" / "target player" after its condition.
 - (Fixed 2026-10-06, no card-specific test — the shared helper is tested
   per family: Valentin's reflexive, `PreventDamageToThisRedirect`,
   `YourInstantOrSorceryDealtDamage`, `EachPushesTrigger`; delayed dies /
@@ -201,7 +204,63 @@ run against a prompting seat):
 - `Effect::Reflexive` (~42 cards) still resolves inline for a bot seat (CR 603.7
   says the stack); a prompting seat's payoff now goes on the stack as a
   `ReflexiveTrigger` and is asked (2026-10-06), unless it is bound to a
-  loop's player (Nihiloor).
+  loop's player (Nihiloor). **CLOSED WITH A REASON (2026-10-06):** none of
+  the 42 orders an effect after its payoff inside the same resolution, so
+  inline-vs-stack differs only by a response window bots rarely use, and the
+  stack form drops the outer context (`event_amount`, `trigger_source`,
+  scratch bindings) that the inline form keeps. Not worth the trace churn.
+
+**Second 2026-10-06 session — CR 903.9b direct pushes.** A debug pod
+invariant (a commander in a library is a bypass, since every pod seat says
+yes) found Spell Crumple bottoming a countered Sigarda in its first run.
+Fixed: `CounterSpellToZone` / `MoveSpellToZone`'s hand and library arms,
+Glimpse of Tomorrow, the hand / graveyard shuffles and Head Games
+(`commander_return.rs::commander_zone_redirect{,_all}`). **Open:** the
+bespoke single-card hand→library arms (a Brainstorm put-back, "put a card
+from your hand on top") with a commander in hand — Command Beacon or a
+declined redirect only; 86 `library.push/insert` sites, most library→library.
+The pod loop also asserts `duplicate_zone_id` and CR 800.4a (no permanent or
+spell outlives its departed owner/controller) in debug builds now, and the
+800.4a check found two more in its first 1,860-game sweep (6 seats, every
+deck): ✅ **CR 800.4a** — the leave pass cleared only the departed seat's OWN
+hand/library/graveyard and the battlefield list, so a card they owned in
+another seat's hand was cast later (Ruinous Ultimatum) and their phased-out
+permanents (`GameState::phased_out`) phased back in (Benthic Biomancer under
+Farewell). ✅ **CR 704.3** — the mid-resolution sweep ran the player-loss
+SBAs, so a seat that paid itself to 0 with two Talismans left the game
+mid-cast and the cast then pushed a spell no one controlled; the loss
+conditions now wait for the real sweep (an effect's "loses the game" still
+leaves at once). Golden seed 5 re-blessed: its lethal spell now reaches the
+graveyard before the game ends. Both in `multiplayer::cr_800_4a_*` /
+`cr_704_3_*`. A second sweep (4 seats, 35000+) found three more:
+✅ the leave pass's own "until this leaves" returns (`phase_in_held_by`) ran
+before the phased-out cleanup, so a departed seat's commanders phased back in
+(The Tenth Doctor and Rose Tyler mid-combat); ✅ **CR 305.1** — a played land
+entered under the `controller` it last had on the battlefield (only the
+from-exile path reset it): an owner replaying a land an opponent had stolen
+put it under that opponent (Terramorphic Expanse, Thriving Heath). Also:
+✅ auto-tap's low-life guard sums the kept sources' harm (two Talismans at 2
+life); ✅ CR 704.5j — a trigger's token copy takes a nonlegend on either side
+(two Vensers copied each other to the action cap; the bot's posed
+`ChooseTarget` filters too); ✅ persist / undying return under the OWNER (the
+same stale-`controller` class; every other battlefield entry sets it).
+Two more invariants once an action has settled (no creature at ≤ 0
+toughness, no attachment to a host that is gone) found two more at once:
+✅ **CR 704.3** — the sweep was single-pass: a departure is its last step
+(another seat's Aura on a creature that left with its owner), and a death can
+cause a death (Biomass Mutation at X = 0 killed two lords; the creature they
+pumped was 0/0 only afterwards). The sweep now repeats while a pass emitted
+events (bounded at 16, one pass on a quiet board). ✅ **CR 117.5** — only a
+priority pass (and a cost that moved something) swept, so after a cast, an
+activation, a land drop or a special action the actor kept acting over a
+board an SBA should have changed (a Skullclamped 1/1 at 2/0 — equip attaches
+inline, a standing simplification; a Psychosis Crawler after its controller
+cast their last card; a Fertilid's last counter). `perform_action_inner`
+sweeps after every non-pass action, gated on a non-inert event, a toughness
+reducer in scope or an armed draw loss — ungated it cost -7.8 % wall
+(PERF "2026-10-06 (Commander session, second)"). ✅ **CR 702.26g** — an
+Aura phased out with its host phased back in on its own controller's untap
+while the host stayed out (Fool's Demise); it now returns with the host.
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled
 
@@ -212,10 +271,10 @@ run against a prompting seat):
   `perform_action_inner` so bot dry runs see it). ⚠ Hooking `perform_action`
   instead missed the bots' `dry_run`s: a settled state handed back to the pod
   loop carried an unposed commander, which then sat in the graveyard.
-- **OPEN (human seats only):** CR 903.9b's hand/library replacement
-  (`resolve_zone_change`) and the legend rule (`ChooseLegendToKeep`) still
-  answer through the decider — both happen mid-event, where a pose-at-settle
-  would reorder triggers; they need the SBA sweep itself to suspend.
+- ✅ **(human seats):** the legend rule poses `ChooseLegendToKeep` at settle
+  (`legend_rule.rs`), and *(2026-10-06, second session)* CR 903.9b's hand /
+  library replacement is offered at settle too (`commander_redirect_offers`):
+  the card lands first, so the rest of that resolution sees it there.
 - **FIXED:** `apply_draw_dig` asked each optional draw replacement through the
   decider with no stack item to park on, so Auto's blanket "no" made Abundance
   (four target decks), Archmage Ascension, Parallel Thoughts and Pursuit of
