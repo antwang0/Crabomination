@@ -1792,6 +1792,31 @@ fn play_pod_game(
         if let Some(dup) = g.duplicate_zone_id() {
             panic!("seed {seed}: card {dup:?} is in two zones (turn {}, after {actions} actions)", g.turn_number);
         }
+        // CR 704.3 — once an action has settled the state-based actions have
+        // run: no creature at 0 toughness (704.5f) and no permanent attached
+        // to a host that is gone (704.5m/n). Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() && g.pending_decision.is_none() && g.suspend_signal.is_none() {
+            for c in g.battlefield.iter() {
+                if let Some(cp) = g.computed_permanent(c.id)
+                    && cp.card_types().contains(&crate::card::CardType::Creature)
+                    && cp.toughness <= 0
+                {
+                    panic!(
+                        "seed {seed}: {} is a {}-toughness creature after the sweep (turn {}, {:?}, after {actions} actions)",
+                        c.definition.name, cp.toughness, g.turn_number, g.step,
+                    );
+                }
+                if let Some(h) = c.attached_to
+                    && g.battlefield_find(h).is_none()
+                {
+                    panic!(
+                        "seed {seed}: {} is attached to {h:?}, which is not on the battlefield (turn {}, {:?}, after {actions} actions)",
+                        c.definition.name, g.turn_number, g.step,
+                    );
+                }
+            }
+        }
         // CR 800.4a — a player who left took every object they owned, and
         // control they held over another player's object ended. Debug-only.
         #[cfg(debug_assertions)]
