@@ -1785,6 +1785,12 @@ fn play_pod_game(
         // CR 903.9b — every pod seat answers the library redirect "yes", so a
         // commander in a library reached it past `resolve_zone_change` (an
         // inline push the replacement never saw). Debug-only.
+        // CR 400.1 — one object, one zone: the golden traces check this in
+        // duels only, and a pod reaches far more cards. Debug-only.
+        #[cfg(debug_assertions)]
+        if let Some(dup) = g.duplicate_zone_id() {
+            panic!("seed {seed}: card {dup:?} is in two zones (turn {}, after {actions} actions)", g.turn_number);
+        }
         #[cfg(debug_assertions)]
         if let Some(c) = g
             .players
