@@ -9287,6 +9287,9 @@ impl GameState {
                 self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
             returned.damage = 0;
             returned.summoning_sick = true;
+            // CR 702.79a / 702.93a — "under its owner's control": a stolen
+            // creature kept its thief as `controller` into the graveyard.
+            returned.controller = owner;
             let rid = returned.id;
             events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
             self.battlefield.push(returned);

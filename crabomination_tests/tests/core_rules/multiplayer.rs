@@ -1284,6 +1284,21 @@ fn cr_305_1_a_played_land_enters_under_the_player_who_played_it() {
     assert_eq!(g.battlefield_find(land).map(|c| c.controller), Some(0));
 }
 
+/// CR 702.79a — persist returns the creature "under its OWNER's control".
+/// A stolen Kitchen Finks kept its thief as `controller` into the graveyard
+/// and came back to the thief (the stale-controller class behind CR 305.1's
+/// land drop).
+#[test]
+fn cr_702_79a_a_stolen_persist_creature_returns_to_its_owner() {
+    let mut g = multi_player_game(3);
+    let finks = g.add_card_to_battlefield(0, catalog::kitchen_finks());
+    g.battlefield_find_mut(finks).unwrap().controller = 1;
+    let mut events = Vec::new();
+    g.destroy_permanent(finks, false, &mut events);
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(finks).map(|c| c.controller), Some(0), "back under its owner");
+}
+
 /// CR 800.4 — a decision the departed player was being asked to make is
 /// dropped. A pending decision suppresses every *other* seat's actions until
 /// it is answered, so leaving one addressed to a player who is no longer in
