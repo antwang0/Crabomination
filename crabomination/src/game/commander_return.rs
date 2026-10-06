@@ -8,6 +8,11 @@
 //! seat is answered by the decider inside the sweep, as before. A declined
 //! commander is remembered in `commander_return_declined` until it turns up in
 //! some other zone.
+//!
+//! CR 903.9b's hand / library replacement is posed the same way to a
+//! prompting owner: the event can't suspend, so the card lands and the offer
+//! (`commander_redirect_offers`) is asked once the action settles. The rest
+//! of that resolution sees it in the hand or library (Chaos Warp's reveal).
 
 use super::GameState;
 use super::types::{GameError, GameEvent, PendingDecision, ResumeContext};
@@ -52,12 +57,40 @@ impl GameState {
         }
     }
 
+    /// [`commander_return_zone`](Self::commander_return_zone), or the hand or
+    /// library a CR 903.9b offer left the commander in (still there).
+    fn pending_return_zone(&self, owner: usize, id: CardId) -> Option<Zone> {
+        self.commander_return_zone(owner, id).or_else(|| {
+            if !self.commander_redirect_offers.contains(&id) {
+                None
+            } else if self.players[owner].hand.iter().any(|c| c.id == id) {
+                Some(Zone::Hand)
+            } else if self.players[owner].library.iter().any(|c| c.id == id) {
+                Some(Zone::Library)
+            } else {
+                None
+            }
+        })
+    }
+
     /// Pose a prompting owner's CR 903.9a choice once an action has settled —
     /// before anyone acts again, since every action is refused while it is
     /// pending. One commander at a time; the answer's action poses the next.
     pub(crate) fn pose_commander_return(&mut self) {
         if self.pending_decision.is_some() || self.suspend_signal.is_some() || self.is_game_over() {
             return;
+        }
+        // A 903.9b offer whose card has moved on since lapses.
+        if !self.commander_redirect_offers.is_empty() {
+            let offers = std::mem::take(&mut self.commander_redirect_offers);
+            self.commander_redirect_offers = offers
+                .into_iter()
+                .filter(|&id| {
+                    self.players.iter().position(|p| p.commanders.contains(&id)).is_some_and(|o| {
+                        self.players[o].hand.iter().chain(self.players[o].library.iter()).any(|c| c.id == id)
+                    })
+                })
+                .collect();
         }
         for owner in 0..self.players.len() {
             if self.players[owner].commanders.is_empty() || !self.seat_suspends(owner) {
@@ -68,7 +101,7 @@ impl GameState {
                 if self.commander_return_declined.contains(&commander) {
                     continue;
                 }
-                if let Some(would_be) = self.commander_return_zone(owner, commander) {
+                if let Some(would_be) = self.pending_return_zone(owner, commander) {
                     self.pending_decision = Some(Box::new(PendingDecision {
                         decision: Decision::CommanderRedirect { commander, would_be },
                         resume: ResumeContext::CommanderReturn { owner, commander },
@@ -91,8 +124,14 @@ impl GameState {
             return Err(GameError::DecisionAnswerMismatch);
         };
         let mut evs = Vec::new();
-        if let Some(zone) = self.commander_return_zone(owner, commander) {
-            if yes {
+        if let Some(zone) = self.pending_return_zone(owner, commander) {
+            if matches!(zone, Zone::Hand | Zone::Library) {
+                // CR 903.9b — a one-time offer, answered either way.
+                self.commander_redirect_offers.retain(|d| *d != commander);
+                if yes {
+                    self.return_commander(owner, commander, zone);
+                }
+            } else if yes {
                 self.return_commander(owner, commander, zone);
             } else if !self.commander_return_declined.contains(&commander) {
                 self.commander_return_declined.push(commander);
@@ -107,10 +146,11 @@ impl GameState {
 
     /// Move commander `id` from `zone` to its owner's command zone.
     fn return_commander(&mut self, owner: usize, id: CardId, zone: Zone) {
-        let card = if zone == Zone::Graveyard {
-            Self::take_card(&mut self.players[owner].graveyard, id)
-        } else {
-            Self::take_card(&mut self.exile, id)
+        let card = match zone {
+            Zone::Graveyard => Self::take_card(&mut self.players[owner].graveyard, id),
+            Zone::Hand => Self::take_card(&mut self.players[owner].hand, id),
+            Zone::Library => Self::take_card(&mut self.players[owner].library, id),
+            _ => Self::take_card(&mut self.exile, id),
         };
         let Some(mut card) = card else { return };
         if zone == Zone::Graveyard {

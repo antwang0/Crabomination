@@ -2022,6 +2022,11 @@ pub struct ColdState {
     /// game with a commander in one of those zones.
     #[serde(default)]
     pub commander_return_declined: Vec<CardId>,
+    /// CR 903.9b — commanders a prompting owner's hand or library took with
+    /// the redirect still open: the event can't suspend, so the card lands
+    /// and [`Self::pose_commander_return`] asks once the action settles.
+    #[serde(default)]
+    pub commander_redirect_offers: Vec<CardId>,
     /// Auras that lost their host this turn, keyed by the (now-gone) host's
     /// CardId → list of `(aura id, aura controller)`. Populated in the
     /// orphan-Aura SBA sweep before the Aura is sent to the graveyard, so
@@ -7403,6 +7408,18 @@ impl GameState {
                 // redirect later, this branch would need a generic
                 // `OptionalReplacement` decision instead.
                 if optional {
+                    // A prompting owner is asked once the action settles
+                    // (`commander_return.rs`); the card goes where it was going.
+                    if matches!(to, crate::card::Zone::Hand | crate::card::Zone::Library)
+                        && let Some(owner) = self.players.iter().position(|p| p.commanders.contains(&card_id))
+                        && self.seat_suspends(owner)
+                    {
+                        applied.push(rid);
+                        if !self.commander_redirect_offers.contains(&card_id) {
+                            self.commander_redirect_offers.push(card_id);
+                        }
+                        continue;
+                    }
                     let answer = self.decider.decide(&crate::decision::Decision::CommanderRedirect {
                         commander: card_id,
                         would_be: to,

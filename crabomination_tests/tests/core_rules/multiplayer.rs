@@ -3509,6 +3509,87 @@ fn cr_903_9a_prompting_owner_may_decline_once() {
     assert!(g.players[0].command.iter().all(|c| c.id != cmd));
 }
 
+/// CR 903.9b — the hand / library redirect is the OWNER's "may" too: a
+/// prompting owner's bounced commander lands in hand and is offered the
+/// command zone once the action settles; "no" keeps it in hand (no tax on a
+/// cast from there), "yes" sends it home. Both answers are final.
+#[test]
+fn cr_903_9b_prompting_owner_is_offered_the_redirect_from_hand() {
+    for yes in [false, true] {
+        let mut g = two_player_game();
+        let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+        g.players[0].wants_ui = true;
+        let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+        let card = g.players[0].command.remove(pos);
+        g.battlefield.push(card);
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let bounce = g.add_card_to_hand(0, catalog::unsummon());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bounce, target: Some(Target::Permanent(cmd)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .unwrap();
+        drain_stack(&mut g);
+        let pd = g.pending_decision.as_ref().expect("the owner is offered the command zone");
+        assert!(matches!(
+            pd.decision,
+            crabomination::decision::Decision::CommanderRedirect { commander, would_be: crabomination::card::Zone::Hand }
+                if commander == cmd
+        ));
+        g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(yes))).unwrap();
+        assert!(g.pending_decision.is_none(), "asked once");
+        assert_eq!(g.players[0].command.iter().any(|c| c.id == cmd), yes);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == cmd), !yes);
+        g.perform_action(GameAction::PassPriority).unwrap();
+        assert!(g.pending_decision.is_none(), "not re-posed");
+    }
+}
+
+/// CR 903.9b — the library half, from the stack: a prompting owner's
+/// commander spell countered by Spell Crumple is offered the command zone.
+#[test]
+fn cr_903_9b_prompting_owner_is_offered_the_redirect_from_the_library() {
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.players[0].wants_ui = true;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    for c in [crabomination::mana::Color::White, crabomination::mana::Color::Blue, crabomination::mana::Color::Green] {
+        g.players[0].mana_pool.add(c, 10);
+        g.players[1].mana_pool.add(c, 10);
+    }
+    g.players[0].mana_pool.add_colorless(10);
+    g.players[1].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None,
+        alternative: false, pitch_card: None,
+    })
+    .unwrap();
+    let crumple = g.add_card_to_hand(1, catalog::spell_crumple());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: crumple, target: Some(Target::Permanent(cmd)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    for _ in 0..8 {
+        if g.pending_decision.is_some() || g.stack.is_empty() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    let pd = g.pending_decision.as_ref().expect("the owner is offered the command zone");
+    assert!(matches!(
+        pd.decision,
+        crabomination::decision::Decision::CommanderRedirect { would_be: crabomination::card::Zone::Library, .. }
+    ));
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true))).unwrap();
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd));
+    assert!(g.players[0].library.iter().all(|c| c.id != cmd));
+}
+
 /// CR 903.9a — a seat that doesn't prompt is answered inside the sweep, as
 /// before: nothing is posed and the commander is already home.
 #[test]
