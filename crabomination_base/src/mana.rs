@@ -472,6 +472,19 @@ impl ManaCost {
         }
     }
 
+    /// Every `{color}` pip as `{color/P}`, and every hybrid pip one of whose
+    /// halves is `color` as `{A/B/P}` — K'rrik's "for each {B} in a cost"
+    /// (2019-08-23 ruling: a {B/R} paid as {B} may be paid with life).
+    pub fn phyrexianize_all(&mut self, color: Color) {
+        for s in &mut self.symbols {
+            match *s {
+                ManaSymbol::Colored(c) if c == color => *s = ManaSymbol::Phyrexian(c),
+                ManaSymbol::Hybrid(a, b) if a == color || b == color => *s = ManaSymbol::PhyrexianHybrid(a, b),
+                _ => {}
+            }
+        }
+    }
+
     /// The first `{color}` pip as `{color/P}`; false when there is none.
     pub fn phyrexianize_one(&mut self, color: Color) -> bool {
         match self.symbols.iter_mut().find(|s| **s == ManaSymbol::Colored(color)) {

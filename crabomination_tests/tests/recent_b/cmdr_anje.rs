@@ -177,6 +177,19 @@ fn krrik_pays_black_with_life() {
     assert_eq!(g.computed_permanent(shade).unwrap().power, 3);
 }
 
+/// K'rrik: a hybrid {B/R} paid as {B} may be paid with 2 life (2019-08-23
+/// ruling) — Rakdos Cackler ({B/R}) for 2 life, no mana.
+#[test]
+fn krrik_pays_a_hybrid_black_pip_with_life() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::krrik_son_of_yawgmoth());
+    let cackler = g.add_card_to_hand(0, catalog::rakdos_cackler());
+    let life = g.players[0].life;
+    cast(&mut g, cackler, &[]).expect("cast with life");
+    assert!(g.battlefield_find(cackler).is_some());
+    assert_eq!(g.players[0].life, life - 2);
+}
+
 /// K'rrik's "for each {B} in a cost" reaches cycling (2024-06-07 ruling):
 /// Decree of Pain cycles for {3} and 4 life.
 #[test]

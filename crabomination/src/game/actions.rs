@@ -1923,7 +1923,7 @@ pub(crate) fn apply_colored_cost_statics(
                 cost.phyrexianize_one(*color);
             }
             if let StaticEffect::PhyrexianPipsForAllSpells { color } = &sa.effect {
-                while cost.phyrexianize_one(*color) {}
+                cost.phyrexianize_all(*color);
             }
         }
     }
@@ -8436,13 +8436,13 @@ impl GameState {
     /// and special-action costs too (2024-06-07 ruling); spells take it in
     /// `apply_colored_cost_statics`. Walks only for a cost with a coloured pip.
     pub(crate) fn phyrexianize_for_payer(&self, seat: usize, cost: &mut crate::mana::ManaCost) {
-        if !cost.symbols.iter().any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))) {
+        if !cost.symbols.iter().any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_) | crate::mana::ManaSymbol::Hybrid(..))) {
             return;
         }
         for src in self.battlefield.iter().filter(|c| c.controller == seat) {
             for sa in &src.definition.static_abilities {
                 if let crate::effect::StaticEffect::PhyrexianPipsForAllSpells { color } = sa.effect {
-                    while cost.phyrexianize_one(color) {}
+                    cost.phyrexianize_all(color);
                 }
             }
         }
