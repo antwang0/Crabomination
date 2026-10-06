@@ -2190,6 +2190,11 @@ pub struct ResolutionScratch {
     /// the targets (`resolve_top_of_stack` drains it). Empty in bot play.
     #[serde(default)]
     pub(crate) prompt_trigger_backlog: Vec<crate::game::types::PendingTriggerPush>,
+    /// Jinnie Fay's answer for the creation event in progress: (the token
+    /// definition's address, its controller, the ballot index). Cleared at
+    /// each resolution's start (CR 614.1a, "that many" share one choice).
+    #[serde(skip)]
+    pub(crate) token_replacement_pick: Option<(usize, usize, u8)>,
     /// The object the trigger being targeted or resolved fired on, read by
     /// `SelectionRequirement::OtherThanTriggerSubject`. Stamped only for a
     /// trigger whose filter names it (`stamp_trigger_subject`), so the group

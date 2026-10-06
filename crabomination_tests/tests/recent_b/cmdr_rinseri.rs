@@ -530,3 +530,44 @@ fn excess_counts_creatures_that_connected_even_if_gone() {
     g.resolve_effect(&excess, &ctx).unwrap();
     assert_eq!(named(&g, 0, "Treasure").len(), 2);
 }
+
+/// CR 614.1a — Jinnie Fay's replacement is the controller's choice, made once
+/// for the whole event: two Soldiers become two Dogs on one answer.
+#[test]
+fn cr_614_1a_jinnie_fay_one_choice_covers_that_many() {
+    use crabomination::decision::Decision;
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::jinnie_fay_jetmirs_second());
+    // The ballot leads with the headless pick (the Cat), then Keep, then Dog.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, alarm);
+    let dogs = named(&g, 0, "Dog");
+    assert_eq!(dogs.len(), 2, "that many Dogs");
+    assert_eq!(pt(&g, dogs[0]), (3, 1));
+    assert!(named(&g, 0, "Soldier").is_empty());
+    let asked = match g.decider.kind() {
+        crabomination::decision::DeciderKind::Scripted { asked, .. } => asked,
+        _ => unreachable!(),
+    };
+    assert_eq!(asked.iter().filter(|d| matches!(d, Decision::ChooseOption { .. })).count(), 1);
+}
+
+/// CR 614.1a — "one or more tokens" covers a Treasure too; it is kept unless
+/// the controller takes a creature instead.
+#[test]
+fn cr_614_1a_jinnie_fay_may_replace_a_treasure() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::jinnie_fay_jetmirs_second());
+    let rich = g.add_card_to_hand(0, catalog::strike_it_rich());
+    cast(&mut g, rich);
+    assert_eq!(named(&g, 0, "Treasure").len(), 1, "headless keeps the Treasure");
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(0, catalog::jinnie_fay_jetmirs_second());
+    // Keep, Cat, Dog.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let rich = g.add_card_to_hand(0, catalog::strike_it_rich());
+    cast(&mut g, rich);
+    assert!(named(&g, 0, "Treasure").is_empty());
+    assert_eq!(named(&g, 0, "Cat").len(), 1);
+}

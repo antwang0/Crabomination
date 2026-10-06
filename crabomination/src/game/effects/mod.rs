@@ -3157,6 +3157,7 @@ impl GameState {
             clear_scratch!(self.first_sacrificed_types);
             clear_scratch!(self.sacrificed_lki_this_resolution);
             clear_opt_scratch!(self.named_card_this_resolution);
+            clear_opt_scratch!(self.token_replacement_pick);
             clear_scratch!(self.names_this_resolution);
         }
         // Stamps rather than resets, so they run on a continuation too:

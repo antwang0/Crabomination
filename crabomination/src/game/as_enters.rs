@@ -97,7 +97,7 @@ impl GameState {
 
     /// Ask `decision` of `seat` off the stack, as `drive_suspensions` does:
     /// a prompting seat has nowhere to park it, so its policy answers.
-    fn ask_entering(&mut self, seat: usize, decision: &crate::decision::Decision) -> crate::decision::DecisionAnswer {
+    pub(crate) fn ask_entering(&mut self, seat: usize, decision: &crate::decision::Decision) -> crate::decision::DecisionAnswer {
         if self.seat_prompts(seat) {
             crate::server::bot::decide_pending_policy(
                 self,

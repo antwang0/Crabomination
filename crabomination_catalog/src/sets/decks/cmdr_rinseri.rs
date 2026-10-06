@@ -6,9 +6,6 @@
 //! - **Highcliff Felidar** — the per-opponent destructions happen one
 //!   opponent at a time, not simultaneously; the pick among tied creatures is
 //!   the engine's, not the controller's.
-//! - **Jinnie Fay** — the replacement is not optional: a creature token whose
-//!   printed body is smaller than a Cat's or Dog's always becomes the bigger
-//!   one, and a noncreature token (Treasure, Clue) is never replaced.
 //! - **Pack Leader** — the shield covers the Dogs you control as the trigger
 //!   resolves, not a Dog that arrives later in the turn.
 //! - **Showdown of the Skalds** — chapters II and III choose the counter's
@@ -160,10 +157,8 @@ pub fn jetmir_nexus_of_revels() -> CardDefinition {
 }
 
 /// Jinnie Fay, Jetmir's Second — your tokens may instead be 2/2 green Cats
-/// with haste or 3/1 green Dogs with vigilance (CR 614.1a).
-///
-/// ⚠ Residual: only creature tokens are replaced, and only by a bigger body
-/// (see `GameState::token_replacement_for`).
+/// with haste or 3/1 green Dogs with vigilance (CR 614.1a): one ballot per
+/// creation event, any token kind (`GameState::token_replacement_for`).
 pub fn jinnie_fay_jetmirs_second() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
