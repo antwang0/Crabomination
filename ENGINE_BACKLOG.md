@@ -201,9 +201,9 @@ run against a prompting seat):
   and four one-card sites (`stack.rs` ~8572, `movement.rs` ~923 / ~2061,
   `token_triggers.rs` ~31).
 - `Effect::Reflexive` (effects/mod.rs ~8083, ~42 cards) resolves its "when you
-  do" payoff inline with an engine pick instead of as a CR 603.7 trigger;
-  `ReflexiveTrigger` asks, but falls back to the engine pick while another
-  decision is open (could use the backlog).
+  do" payoff inline with an engine pick instead of as a CR 603.7 trigger
+  (`ReflexiveTrigger` asks, and waits in the backlog while another decision
+  is open).
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled
 

@@ -19934,8 +19934,10 @@ impl GameState {
                 let Some(src) = ctx.source else { return Ok(()) };
                 // A prompting seat names the targets through the trigger
                 // queue's own picker (off-board cards in a card modal).
-                if self.seat_prompts(ctx.controller) && self.pending_decision.is_none() && body.requires_target() {
-                    self.drain_trigger_queue(vec![crate::game::types::PendingTriggerPush {
+                // With another decision open it waits in the backlog rather
+                // than taking the engine's pick.
+                if self.trigger_asks_targets(ctx.controller, body) {
+                    let push = crate::game::types::PendingTriggerPush {
                         source: src,
                         controller: ctx.controller,
                         effect: (**body).clone(),
@@ -19948,7 +19950,12 @@ impl GameState {
                         x_value: ctx.x_value,
                         converged_value: ctx.converged_value,
                         mana_spent: 0,
-                    }]);
+                    };
+                    if self.pending_decision.is_some() {
+                        self.scratch.prompt_trigger_backlog.push(push);
+                    } else {
+                        self.drain_trigger_queue(vec![push]);
+                    }
                     return Ok(());
                 }
                 // Sourced: a slot filter can read the source ("power less than
