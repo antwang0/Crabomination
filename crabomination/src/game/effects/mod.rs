@@ -31367,6 +31367,20 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid) {
                             c.attached_to = anchor;
                             c.attached_to_player = anchor_seat;
+                            // Necromancy — "it becomes an Aura" as it attaches
+                            // itself: an enchantment that is no Aura by its
+                            // printing is one on the battlefield, so CR 704.5m
+                            // takes it once its creature is gone. Baked, so it
+                            // ends with the object (CR 400.7).
+                            if matches!(what, Selector::This)
+                                && c.definition.card_types.contains(&crate::card::CardType::Enchantment)
+                                && !c.definition.is_aura()
+                            {
+                                c.bake_grant()
+                                    .subtypes
+                                    .enchantment_subtypes
+                                    .push(crate::card::EnchantmentSubtype::Aura);
+                            }
                             events.push(GameEvent::AttachmentMoved { attachment: cid, attached_to: anchor });
                         }
                 }

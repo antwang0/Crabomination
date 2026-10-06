@@ -1622,6 +1622,29 @@ fn necromancy_takes_its_creature_with_it() {
     assert!(g.battlefield_find(dead).is_none(), "the creature goes with it");
 }
 
+/// CR 704.5m — Necromancy "becomes an Aura" as it enters (as it attaches
+/// itself), so once the creature it brought back leaves, it is an Aura
+/// attached to nothing and goes to the graveyard (it stayed on the battlefield
+/// attached to a card that was gone — a three-seat debug pod). The card in the
+/// graveyard is the printed, non-Aura enchantment again (CR 400.7).
+#[test]
+fn cr_704_5m_necromancy_follows_its_creature_out() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::necromancy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, aura, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).and_then(|c| c.attached_to), Some(dead));
+    let mut events = Vec::new();
+    g.destroy_permanent(dead, false, &mut events);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(aura).is_none(), "the orphaned Aura went to the graveyard");
+    let card = g.players[0].graveyard.iter().find(|c| c.id == aura).expect("in the graveyard");
+    assert!(!card.definition.is_aura(), "an Aura only while on the battlefield");
+}
+
 /// Animate Dead attaches to what it reanimates, shrinks it, and takes it back.
 #[test]
 fn animate_dead_attaches_and_reclaims() {
