@@ -138,6 +138,9 @@ CR 400.3 owner zones, CR 903.8 tax / 903.10a commander damage per action,
   `scripts/audit_your_graveyard_target.py --gate` at 0. Devious Cover-Up
   carried an invented oracle and is rewritten.
 - ✅ **CR 603.2** departed listeners: draws, discards, life loss, counters.
+- ✅ **CR 509.4 / 509.1a** — Brimaz's "token blocking that creature" asked
+  for a target, so a seat aimed it at an attacker another player was
+  defending; `Effect::CreateTokenBlockingThat` is untargeted.
 
 ## FIXED/OPEN 2026-10-04 (Commander routine, `01WwQaPJ`) — paid costs read back at resolution, and a listener that leaves in the same resolution
 
