@@ -2418,6 +2418,24 @@ impl GameState {
             }
         }
         for (src, defender, effect, id) in own_target_fires {
+            // CR 603.3d — a prompting defender names the target.
+            if self.trigger_asks_targets(defender, &effect) {
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    source: src,
+                    controller: defender,
+                    effect,
+                    subject: Some(crate::game::effects::EntityRef::Permanent(id)),
+                    event_amount: 0,
+                    mode: None,
+                    intervening_if: None,
+                    actor: None,
+                    from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                });
+                continue;
+            }
             let target = self.auto_target_for_effect_avoiding(&effect, defender, Some(src));
             self.push_stack(
                 TriggerPush::new(src, defender, effect)
@@ -6871,6 +6889,25 @@ impl GameState {
                     continue;
                 }
                 self.combat_trigger_fired_this_step.push(key);
+            }
+            // CR 603.3d — a prompting damaged player names the target.
+            if self.trigger_asks_targets(controller, &effect) {
+                let mode = self.pick_trigger_mode(&effect, listener, controller);
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    source: listener,
+                    controller,
+                    effect,
+                    subject: dealer,
+                    event_amount: damage_amount,
+                    mode,
+                    intervening_if: None,
+                    actor: None,
+                    from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
+                });
+                continue;
             }
             let (mode, auto_target) =
                 self.trigger_mode_and_target(&effect, controller, Some(listener));

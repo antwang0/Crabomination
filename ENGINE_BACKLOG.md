@@ -180,7 +180,8 @@ the handoff.
 CR 603.3d. Only `drain_trigger_queue` asks a prompting (`wants_ui`) seat for a
 trigger's targets; the funnels that `push_stack` a trigger with
 `auto_target_for_effect*` gave a human seat the engine's pick. **Fixed**
-(`trigger_slots.rs`: `trigger_asks_targets` / `queue_trigger_asking`, held in
+(defender-side attack and combat-damage triggers too, 2026-10-06;
+`trigger_slots.rs`: `trigger_asks_targets` / `queue_trigger_asking`, held in
 `ResolutionScratch::prompt_trigger_backlog` mid-resolution): the two self-dies
 funnels (`stack.rs`), a non-cast ETB (`fire_self_etb_triggers`), self attack
 triggers and "whenever you attack" (`combat.rs`), spell-cast listeners and
@@ -193,8 +194,6 @@ run against a prompting seat):
   except a batched / merged / Felix-doubled fire. Still open: slot 0 *bound*
   to the damaged player is right for "that player" and wrong for "any
   target" / "target player" wordings.
-- Defender-side triggers: `combat.rs` ~2421 ("whenever a creature attacks
-  you") and ~6833 (`ControllerDealtCombatDamage`).
 - Delayed `WhenCardDies` / `WhenTokenDies` / haunt (`mod.rs` ~23352), delayed
   "next spell you cast" (`actions.rs` ~15943).
 - Room unlock (`actions.rs` `set_room_door_unlocked`), mutate (`stack.rs`

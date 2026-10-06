@@ -153,3 +153,80 @@ fn cr_603_3d_a_combat_damage_trigger_asks_for_its_target() {
     assert!(g.battlefield_find(small).is_none(), "the chosen creature is destroyed");
     assert!(g.battlefield_find(big).is_some());
 }
+
+/// A defender's "whenever a creature attacks you, tap target creature" (a
+/// slot that can't be a player, so not bound to the attacker's controller):
+/// the prompting defender picks.
+#[test]
+fn cr_603_3d_a_defenders_attack_trigger_asks_for_its_target() {
+    use crabomination::card::{CardDefinition, CardType, EventKind, EventScope, EventSpec, SelectionRequirement as R, TriggeredAbility};
+    use crabomination::effect::{Effect, Selector};
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = false;
+    g.players[1].wants_ui = true;
+    let watch = CardDefinition {
+        name: "Test Sentry",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+            effect: Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+        }],
+        ..Default::default()
+    };
+    g.add_card_to_battlefield(1, watch);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let other = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    assert_eq!(settle(&mut g, Target::Permanent(other)), 1);
+    assert!(g.battlefield_find(other).unwrap().tapped);
+}
+
+/// "Whenever a creature deals combat damage to you, tap target creature": the
+/// prompting damaged player picks.
+#[test]
+fn cr_603_3d_a_damaged_players_trigger_asks_for_its_target() {
+    use crabomination::card::{CardDefinition, CardType, EventKind, EventScope, EventSpec, SelectionRequirement as R, TriggeredAbility};
+    use crabomination::effect::{Effect, Selector};
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = false;
+    g.players[1].wants_ui = true;
+    let watch = CardDefinition {
+        name: "Test Grudge",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ControllerDealtCombatDamage, EventScope::SelfSource),
+            effect: Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+        }],
+        ..Default::default()
+    };
+    g.add_card_to_battlefield(1, watch);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let other = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    let mut asked = 0;
+    for _ in 0..60 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let answer = match &p.decision {
+                Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Permanent(other)) => {
+                    asked += 1;
+                    DecisionAnswer::Target(Target::Permanent(other))
+                }
+                d => crabomination::decision::AutoDecider.decide(d),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if matches!(g.step, TurnStep::EndCombat | TurnStep::PostCombatMain) && g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(asked, 1);
+    assert!(g.battlefield_find(other).unwrap().tapped);
+}
