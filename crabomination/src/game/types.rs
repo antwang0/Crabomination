@@ -1987,6 +1987,8 @@ impl GameEvent {
                 | E::ScryPerformed { .. }
                 | E::SurveilPerformed { .. }
                 | E::CardCycled { .. }
+                | E::StepChanged(_)
+                | E::TurnStarted { .. }
         )
     }
 }

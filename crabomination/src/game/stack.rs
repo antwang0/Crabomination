@@ -473,11 +473,38 @@ impl GameState {
             // finish the turn.
             return match self.do_cleanup(&mut events) {
                 CleanupOutcome::Suspended | CleanupOutcome::PriorityGranted => Ok(events),
-                CleanupOutcome::TurnOver => self.advance_step(events),
+                CleanupOutcome::TurnOver => {
+                    let mut r = self.advance_step(events);
+                    self.sweep_after_step_advance(&mut r);
+                    r
+                }
             };
         }
 
-        self.advance_step(events)
+        let mut r = self.advance_step(events);
+        self.sweep_after_step_advance(&mut r);
+        r
+    }
+
+    /// CR 704.3 — a step advance hands a player priority, so state-based
+    /// actions are checked first. The advance itself never swept: a commander
+    /// that went home across End → Upkeep left its Aura attached to nothing
+    /// while the next turn's players acted. Gated as the post-action sweep is
+    /// (a step change and untapping are inert); the caller dispatches the
+    /// triggers of what it returns.
+    fn sweep_after_step_advance(&mut self, r: &mut Result<Vec<GameEvent>, GameError>) {
+        let Ok(events) = r.as_mut() else { return };
+        if self.pending_decision.is_some() || self.suspend_signal.is_some() || self.is_game_over() {
+            return;
+        }
+        if !events.iter().all(GameEvent::inert_for_state_based_actions)
+            || self.pt_reduction_in_scope()
+            || (0..self.players.len()).any(|i| {
+                self.players[i].pending_deck_loss || (self.players[i].is_alive() && self.effective_life(i) <= 0)
+            })
+        {
+            self.check_state_based_actions_into(events);
+        }
     }
 
     /// CR 614 — Fasting: "if you would begin your draw step, you may skip

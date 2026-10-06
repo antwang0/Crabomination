@@ -1839,12 +1839,24 @@ fn play_pod_game(
                 if let Some(h) = c.attached_to
                     && g.battlefield_find(h).is_none()
                 {
+                    let zone = if g.phased_out.iter().any(|p| p.id == h) {
+                        "phased out"
+                    } else if g.exile.iter().any(|p| p.id == h) {
+                        "exile"
+                    } else if g.players.iter().any(|p| p.graveyard.iter().any(|x| x.id == h)) {
+                        "a graveyard"
+                    } else if g.players.iter().any(|p| p.hand.iter().any(|x| x.id == h)) {
+                        "a hand"
+                    } else if g.players.iter().any(|p| p.library.iter().any(|x| x.id == h)) {
+                        "a library"
+                    } else if g.players.iter().any(|p| p.command.iter().any(|x| x.id == h)) {
+                        "a command zone"
+                    } else {
+                        "nowhere"
+                    };
                     panic!(
-                        "seed {seed}: {} is attached to {h:?}, which is not on the battlefield (turn {}, {:?}, after {actions} actions; host phased out: {})",
-                        c.definition.name,
-                        g.turn_number,
-                        g.step,
-                        g.phased_out.iter().any(|p| p.id == h),
+                        "seed {seed}: {} is attached to {h:?}, which is in {zone} (turn {}, {:?}, after {actions} actions)",
+                        c.definition.name, g.turn_number, g.step,
                     );
                 }
             }
@@ -2098,6 +2110,19 @@ mod tests {
     /// the stack overflowed: this exact game, casting Breya. (A replay: once
     /// the bot or these decks change, the game stops reaching that board and
     /// this only proves the game still finishes.)
+    /// CR 704.3 — the step advance into the next turn's upkeep sweeps before
+    /// anyone has priority: a commander that went home across End → Upkeep
+    /// left its Darksteel Mutation attached to nothing (a replay: debug
+    /// builds assert the settled-board invariants after every action).
+    #[test]
+    fn a_step_advance_sweeps_before_upkeep_priority() {
+        let d = target_decks();
+        let field = [d[88], d[89], d[90], d[91]];
+        let pilot = Pilot::Scored(crate::server::bot::EvalWeights::baseline());
+        let t = run_pod_games(&field, 17, 1, 43022, 4_000, pilot);
+        assert_eq!(t.games, 1);
+    }
+
     /// CR 704.5j — two Vensers, Fervent Forger at one table: each seat's
     /// token-copy ETB took the other's Venser, whose tokens' ETBs copied it
     /// again, 1,538 triggers to the action cap. The copy now takes a
