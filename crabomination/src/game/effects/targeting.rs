@@ -1045,11 +1045,11 @@ impl GameState {
                     found = Some(player_first);
                 } else if is_legal(&player_second)
                     && !taken(&player_second)
-                    && !(second != controller && gift())
+                    && (second == controller || !gift())
                     // A hostile slot never falls back onto the caster's own
                     // face: the battlefield walk below ranks the other side
                     // first, and an optional slot may stay empty.
-                    && !(hostile && second == controller)
+                    && (!hostile || second != controller)
                 {
                     found = Some(player_second);
                 }

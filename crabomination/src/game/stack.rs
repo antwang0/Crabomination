@@ -2531,7 +2531,7 @@ impl GameState {
                                 self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
                                 source: host_id,
                                 controller: caster,
-                                effect: effect,
+                                effect,
                                 subject: Some(crate::game::effects::EntityRef::Permanent(host_id)),
                                 event_amount: 0,
                                 mode: None,
