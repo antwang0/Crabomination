@@ -222,7 +222,7 @@ phasing in beside its namesake survived; an "until end of combat" pump's
 expiry left a lethally damaged creature into main two); `advance_step`'s gated
 sweep (merged with the concurrent session's) also opens leaving EndCombat
 (`cr_recent98::cr_704_3_*`).
-⚠ **OPEN (test robustness):** `server::tests::reconnect_within_grace_keeps_match_alive`
+✅ *(fixed: 1.5 s grace)* **(test robustness):** `server::tests::reconnect_within_grace_keeps_match_alive`
 failed once under full-suite load on a 4-core box (its 400 ms wall-clock grace
 elapsed before the second reattach; `mod.rs:2910`), and passes alone. A
 wall-clock grace in a unit test is load-sensitive; give it a generous grace

@@ -2884,7 +2884,7 @@ mod tests {
                 None,
                 Some(reattach_rx),
                 None,
-                Duration::from_millis(400),
+                Duration::from_millis(1500),
                 None,
                 None,
             );
@@ -2895,7 +2895,8 @@ mod tests {
         drain_initial(&c0);
         drain_initial(&c1);
 
-        // Both drop, then seat 0 reconnects well within the 400ms grace.
+        // Both drop, then seat 0 reconnects well within the grace (1.5 s: a 400 ms one
+        // elapsed under full-suite load on a 4-core box).
         drop(c0);
         drop(c1);
         thread::sleep(Duration::from_millis(50));
@@ -2912,7 +2913,7 @@ mod tests {
         // With seat 0 reconnected the deadline is cleared, so the match must
         // NOT end even after the original grace would have elapsed.
         assert!(
-            done_rx.recv_timeout(Duration::from_millis(600)).is_err(),
+            done_rx.recv_timeout(Duration::from_millis(1800)).is_err(),
             "a within-grace reattach must keep the match running",
         );
 
@@ -2922,7 +2923,7 @@ mod tests {
         drop(c1b);
         drop(reattach_tx);
         done_rx
-            .recv_timeout(Duration::from_secs(2))
+            .recv_timeout(Duration::from_secs(5))
             .expect("match ends after the final grace window");
         let outcome = handle.join().unwrap();
         assert_eq!(outcome.winner, None, "an emptied table has no winner");
