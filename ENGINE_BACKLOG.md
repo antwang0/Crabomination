@@ -228,6 +228,14 @@ phasing in beside its namesake survived; an "until end of combat" pump's
 expiry left a lethally damaged creature into main two); `advance_step`'s gated
 sweep (merged with the concurrent session's) also opens leaving EndCombat
 (`cr_recent98::cr_704_3_*`).
+The sweep probe (`CRAB_POD_SWEEP_PROBE=1`: a clone's fresh sweep must do
+nothing after a settled action) found two more gate holes in ~1,000 probe
+games: ✅ casting a creature out of a graveyard (`CardLeftGraveyard` +
+`SpellCast`, both "inert") left Bonehoard's 0/0 Germ alive — a graveyard count
+is a P/T term, so `CardLeftGraveyard` is no longer inert; ✅ the untap step's
+"until your next turn" ends (a Synth Infiltrator's copy reverting to 0/0)
+emit nothing — those expiries set the step-advance gate's flag when they
+remove something (an unconditional upkeep sweep cost +0.91 % Ir, PERF). Both in `cr_recent98::cr_704_3_*`.
 ✅ *(fixed: 1.5 s grace)* **(test robustness):** `server::tests::reconnect_within_grace_keeps_match_alive`
 failed once under full-suite load on a 4-core box (its 400 ms wall-clock grace
 elapsed before the second reattach; `mod.rs:2910`), and passes alone. A

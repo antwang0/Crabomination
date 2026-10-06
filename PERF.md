@@ -3259,6 +3259,16 @@ pods (release)   seed 9121 2..8 x 500, 9131 2..8 x 600, 9141 3/4/6/8 x 500 =
                  0 undecided
 strict debug     seeds 18901-18903 (one find: CR 702.26i, fixed) and
                  19001-19010, 10 groups x 24 four-seat games over 40 decks, clean
+sweep probe      4 seats 19200-19245 (46 x 12), 6 seats 19300-19329 (30 x 8),
+                 5 seats 19400-19429 (30 x 8): two finds (graveyard cast,
+                 untap-step expiry), fixed; clean after
+callgrind Ir     `profiling-fast`, `--games 6 --seed 1`, the two gate widenings
+                 (CardLeftGraveyard not inert; untap/upkeep expiries flag the
+                 step sweep) vs the tip without them:
+                 unconditional upkeep sweep  fixed 188,131,655 -> 189,846,282
+                 (+0.91 %)  cube 344,072,555 -> 345,888,223 (+0.53 %) — rejected;
+                 flagged on an actual expiry  fixed -> 188,159,360 (+0.015 %)
+                 cube -> 344,018,621 (-0.016 %)
 ```
 
 ### 2026-10-06 (Commander session, second) — guardrail; the state-based check after every action, and its gate
