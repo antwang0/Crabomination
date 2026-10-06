@@ -434,3 +434,53 @@ fn vindictive_lich_splits_its_modes_across_opponents() {
     assert_eq!(named(&g, 1, "Grizzly Bears").len(), 1);
 }
 
+
+/// Vindictive Lich on a prompting seat: each mode's opponent is the
+/// controller's to name as the trigger goes on the stack (CR 700.2b/700.2c),
+/// and a declined slot leaves that mode unchosen.
+#[test]
+fn vindictive_lich_prompting_seat_names_each_modes_opponent() {
+    use crabomination::decision::Decision;
+    let mut g = pod(4);
+    for s in 1..4 {
+        g.add_card_to_battlefield(s, catalog::grizzly_bears());
+        g.add_card_to_hand(s, catalog::island());
+        g.add_card_to_hand(s, catalog::island());
+    }
+    let lich = g.add_card_to_battlefield(0, catalog::vindictive_lich());
+    g.players[0].wants_ui = true;
+    let before: Vec<(i32, usize, usize)> = (0..4)
+        .map(|s| (g.players[s].life, g.players[s].hand.len(), named(&g, s, "Grizzly Bears").len()))
+        .collect();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, bolt, Some(Target::Permanent(lich))).expect("kill it");
+    // Slot order is the card's: lose five, discard two, sacrifice.
+    let mut slots = vec![
+        DecisionAnswer::Target(Target::Player(3)),
+        DecisionAnswer::DeclineTarget,
+        DecisionAnswer::Target(Target::Player(1)),
+    ]
+    .into_iter();
+    let mut asked = 0;
+    for _ in 0..10 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseTarget { .. } => {
+                asked += 1;
+                slots.next().expect("three slots")
+            }
+            Decision::ChooseModes { default, .. } => DecisionAnswer::Modes(default.clone()),
+            d => panic!("unexpected {d:?}"),
+        };
+        g.submit_decision(answer).expect("answer");
+        drain_stack(&mut g);
+    }
+    assert_eq!(asked, 3);
+    let after: Vec<(i32, usize, usize)> = (0..4)
+        .map(|s| (g.players[s].life, g.players[s].hand.len(), named(&g, s, "Grizzly Bears").len()))
+        .collect();
+    assert_eq!(after[3].0, before[3].0 - 5, "seat 3 loses the five");
+    assert_eq!(after[1].2, before[1].2 - 1, "seat 1 sacrifices");
+    assert_eq!(after[2], before[2], "the declined discard reaches nobody");
+    assert_eq!(after[3].1, before[3].1);
+}

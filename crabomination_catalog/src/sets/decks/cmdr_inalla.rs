@@ -508,8 +508,8 @@ pub fn taigam_sidisis_hand() -> CardDefinition {
 /// Vindictive Lich — when it dies, choose one or more, each aimed at a
 /// different opponent: sacrifice a creature, discard two, lose five. One mode
 /// per opponent — a mode left without a fresh opponent does nothing, so a
-/// duel's one opponent takes only the five. Residual: which opponent gets
-/// which mode is the engine's pick (the most hostile loses the five).
+/// duel's one opponent takes only the five. A prompting seat names each
+/// mode's opponent (or none); the headless fill gives the most hostile the five.
 pub fn vindictive_lich() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_dies(Effect::ChooseN {

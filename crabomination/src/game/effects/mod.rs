@@ -7160,6 +7160,11 @@ impl GameState {
                     }
                     _ => in_range(picks),
                 };
+                // CR 608.2c — the chosen modes run in the order written, not
+                // the order they were picked (Vindictive Lich's default lists
+                // them last-first). A repeated mode stays in sequence (700.2d).
+                let mut run = run;
+                run.sort_unstable();
                 // Each target-bearing mode owns one cast-time target slot,
                 // assigned by its position among the target-bearing modes in
                 // the card's *default* `picks` (not the run order). Keying off

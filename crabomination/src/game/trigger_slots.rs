@@ -56,6 +56,9 @@ impl GameState {
         picked: &[Target],
         seat: usize,
     ) -> Option<Decision> {
+        if matches!(pending.effect, Effect::ChooseN { .. }) {
+            return self.next_modal_slot(pending, picked, seat);
+        }
         let first = picked.first()?;
         if !self.seat_prompts(seat) || !matches!(first, Target::Permanent(_)) {
             return None;
@@ -109,6 +112,61 @@ impl GameState {
             legal,
             source_name,
             description: format!("Choose another target ({} chosen)", picked.len()),
+            optional: true,
+            extra_cast_slot: false,
+        })
+    }
+}
+
+impl GameState {
+    /// CR 700.2c / 603.3c — a modal trigger's per-mode slots ("each mode must
+    /// target a different player": Vindictive Lich), asked positionally after
+    /// slot 0, the engine's fill leading. A decline leaves that mode's slot a
+    /// hole (`target_hole.rs`), so the mode does nothing; no slot reuses a
+    /// target an earlier one named, as the fill never does for `ChooseN`.
+    fn next_modal_slot(&self, pending: &PendingTriggerPush, picked: &[Target], seat: usize) -> Option<Decision> {
+        if !self.seat_prompts(seat) || picked.is_empty() {
+            return None;
+        }
+        // One slot per target-bearing mode, as the `ChooseN` arm binds them.
+        let Effect::ChooseN { picks, modes } = &pending.effect else { return None };
+        let mut owners: Vec<u8> = picks
+            .iter()
+            .copied()
+            .filter(|&i| modes.get(i as usize).is_some_and(|m| m.requires_target()))
+            .collect();
+        owners.dedup();
+        let slot = picked.len();
+        if slot >= owners.len() {
+            return None;
+        }
+        let filter = pending.effect.target_filter_for_slot_in_mode(u8::try_from(slot).ok()?, pending.mode)?.clone();
+        let fill = self.auto_extra_targets_for(&pending.effect, pending.source, pending.controller, picked.first().cloned());
+        let mut legal: Vec<Target> = self.with_frozen_layers(|s| {
+            s.battlefield
+                .iter()
+                .map(|c| Target::Permanent(c.id))
+                .chain((0..s.players.len()).map(Target::Player))
+                .filter(|t| {
+                    !picked.contains(t)
+                        && s.evaluate_requirement_static(&filter, t, pending.controller, Some(pending.source))
+                        && s.check_target_legality(t, pending.controller).is_ok()
+                })
+                .collect()
+        });
+        if legal.is_empty() {
+            return None;
+        }
+        if let Some(lead) = fill.get(slot - 1).filter(|t| legal.contains(t)).cloned() {
+            legal.retain(|t| *t != lead);
+            legal.insert(0, lead);
+        }
+        let source_name = self.find_card_anywhere(pending.source).map(|c| c.definition.name.to_string()).unwrap_or_default();
+        Some(Decision::ChooseTarget {
+            source: pending.source,
+            legal,
+            source_name,
+            description: format!("Choose the target for mode slot {}", slot + 1),
             optional: true,
             extra_cast_slot: false,
         })

@@ -2220,6 +2220,10 @@ impl GameState {
             _ => false,
         };
         let mut events = self.resolve_top_of_stack_inner()?;
+        if !self.scratch.prompt_trigger_backlog.is_empty() && self.pending_decision.is_none() {
+            let queue = std::mem::take(&mut self.scratch.prompt_trigger_backlog);
+            self.drain_trigger_queue(queue);
+        }
         if was_trigger && self.game_over.is_none() {
             // The watch holds an *anchor* fingerprint and counts the trigger
             // resolutions that return the game to it. Comparing each
@@ -6579,6 +6583,16 @@ impl GameState {
     /// pass a buffer that already holds this action's earlier events.
     pub fn check_state_based_actions_into(&mut self, events: &mut Vec<GameEvent>) {
         self.check_state_based_actions_inner(events, false);
+        // A prompting seat's held death trigger from a resolution that did
+        // not end in `resolve_top_of_stack` (a mana ability, a cost) is asked
+        // before anyone gets priority (CR 117.5).
+        if !self.scratch.prompt_trigger_backlog.is_empty()
+            && self.pending_decision.is_none()
+            && self.resolution_depth == 0
+        {
+            let queue = std::mem::take(&mut self.scratch.prompt_trigger_backlog);
+            self.drain_trigger_queue(queue);
+        }
     }
 
     /// The sweep an effect runs part-way through its own resolution so a later
@@ -7669,6 +7683,31 @@ impl GameState {
                     if !self.evaluate_predicate(pred, &ctx) {
                         continue;
                     }
+                }
+                // CR 603.3d — a prompting seat names its own targets: outside
+                // a resolution the trigger goes through the queue that asks
+                // (Vindictive Lich's per-mode opponents after lethal damage).
+                if self.seat_prompts(controller) && effect.requires_target() {
+                    let push = crate::game::types::PendingTriggerPush {
+                        source,
+                        controller,
+                        effect,
+                        subject: Some(crate::game::effects::EntityRef::Permanent(id)),
+                        event_amount: died_ev_amount,
+                        mode: None,
+                        intervening_if: None,
+                        actor: None,
+                        from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
+                    };
+                    if mid_resolution || self.pending_decision.is_some() {
+                        self.scratch.prompt_trigger_backlog.push(push);
+                    } else {
+                        self.drain_trigger_queue(vec![push]);
+                    }
+                    continue;
                 }
                 let (mode, auto_target) =
                     self.trigger_mode_and_target(&effect, controller, Some(source));
@@ -9075,6 +9114,30 @@ impl GameState {
             // The target is still picked per fire: the stack grows between
             // them, so the two pushes need not agree.
             for effect in std::iter::repeat_n(effect, fires) {
+                // CR 603.3d — a prompting seat names its own targets, as in
+                // the state-based funnel above.
+                if self.seat_prompts(controller) && effect.requires_target() {
+                    let push = crate::game::types::PendingTriggerPush {
+                        source,
+                        controller,
+                        effect,
+                        subject: Some(crate::game::effects::EntityRef::Permanent(id)),
+                        event_amount: self.event_amount_for(&GameEvent::CreatureDied { card_id: id }),
+                        mode: None,
+                        intervening_if: None,
+                        actor: None,
+                        from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
+                    };
+                    if self.resolution_depth > 0 || self.pending_decision.is_some() {
+                        self.scratch.prompt_trigger_backlog.push(push);
+                    } else {
+                        self.drain_trigger_queue(vec![push]);
+                    }
+                    continue;
+                }
                 let (mode, auto_target) =
                     self.trigger_mode_and_target(&effect, controller, Some(source));
                 // CR 115.1c — slots past the first, as `push_pending_trigger`

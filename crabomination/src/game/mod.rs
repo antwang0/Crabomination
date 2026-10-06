@@ -2185,6 +2185,11 @@ fn serde_true() -> bool {
 /// `(-143)` measured what happens when you do not: +2.15 % on `fixed`.
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ResolutionScratch {
+    /// CR 603.3d — a prompting seat's targeted self-death trigger that fired
+    /// mid-resolution, held until the resolution ends so its controller names
+    /// the targets (`resolve_top_of_stack` drains it). Empty in bot play.
+    #[serde(default)]
+    pub(crate) prompt_trigger_backlog: Vec<crate::game::types::PendingTriggerPush>,
     /// The object the trigger being targeted or resolved fired on, read by
     /// `SelectionRequirement::OtherThanTriggerSubject`. Stamped only for a
     /// trigger whose filter names it (`stamp_trigger_subject`), so the group
@@ -26180,7 +26185,10 @@ impl GameState {
                         // "Up to one target …" triggers (Ennis, Debate
                         // Moderator's ETB) may be declined — the trigger
                         // then resolves targetless as a no-op.
-                        optional: pending.effect.targeting_view(pending.mode).target_slot_optional(0, None),
+                        // A modal trigger's slot may go empty too: that
+                        // mode is then not chosen (CR 700.2c).
+                        optional: pending.effect.targeting_view(pending.mode).target_slot_optional(0, None)
+                            || matches!(pending.effect, Effect::ChooseN { .. }),
                         extra_cast_slot: false,
                         source: pending.source,
                         legal: clickable,
@@ -27646,8 +27654,12 @@ impl GameState {
                 // CR 601.2c — an "up to N target" fan-out asks for each
                 // further slot in turn (`trigger_slots.rs`); a decline ends
                 // the picking with what is named.
+                // A modal trigger's declined slot is a hole: that mode goes
+                // untargeted and the later modes are still asked.
+                let modal = matches!(pending.effect, Effect::ChooseN { .. });
                 match target {
                     Some(t) => picked.push(t),
+                    None if modal => picked.push(crate::game::target_hole::TARGET_HOLE),
                     None if picked.is_empty() => {
                         self.push_pending_trigger(pending, None);
                         self.drain_trigger_queue(remaining);
@@ -27656,7 +27668,7 @@ impl GameState {
                     None => {}
                 }
                 let seat = chooser.unwrap_or(pending.controller);
-                if !answer_was_decline
+                if (!answer_was_decline || modal)
                     && let Some(decision) = self.next_trigger_extra_slot(&pending, &picked, seat)
                 {
                     self.pending_decision = Some(Box::new(PendingDecision {
