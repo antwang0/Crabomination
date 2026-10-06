@@ -39093,15 +39093,14 @@ pub fn wirewood_herald() -> CardDefinition {
 //  protection-from-two-colors shell with a `DealsCombatDamageToPlayer` rider.)
 
 /// Sword of Fire and Ice — protection from red and from blue. On combat damage
-/// to a player: deal 2 damage + draw a card. (The "any target" of the 2 damage
-/// is bound to the damaged player — the trigger's Target(0).)
+/// to a player: 2 damage to any target + draw a card.
 pub fn sword_of_fire_and_ice() -> CardDefinition {
     sword(
         "Sword of Fire and Ice",
         [Color::Red, Color::Blue],
         Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::Player(PlayerRef::Target(0)),
+                to: crate::effect::shortcut::target_any(),
                 amount: Value::Const(2),
             },
             Effect::Draw {

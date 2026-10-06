@@ -319,3 +319,82 @@ fn cr_702_85a_a_cascaded_spell_asks_for_its_target() {
     assert_eq!(g.players[2].life, l2 - 3, "the chosen opponent takes the Bolt");
     assert_eq!(g.players[1].life, l1);
 }
+
+/// Equip `sword` to a fresh attacker for seat 0 and swing at seat 1.
+fn swing_with_sword(g: &mut GameState, sword: crabomination::card::CardDefinition) -> CardId {
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let s = g.add_card_to_battlefield(0, sword);
+    g.battlefield_find_mut(s).unwrap().attached_to = Some(bear);
+    g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    bear
+}
+
+/// CR 115.4 / 603.3d — Sword of Fire and Ice's "2 damage to any target" is
+/// the controller's pick, not bound to the damaged player.
+#[test]
+fn cr_603_3d_a_combat_damage_any_target_is_not_bound_to_that_player() {
+    let mut g = main_phase(2);
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    g.battlefield_find_mut(elf).unwrap().tapped = true;
+    swing_with_sword(&mut g, catalog::sword_of_fire_and_ice());
+    let life = g.players[1].life;
+    let mut asked = 0;
+    for _ in 0..60 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let answer = match &p.decision {
+                Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Permanent(elf)) => {
+                    assert!(legal.contains(&Target::Player(1)), "a player is still legal");
+                    asked += 1;
+                    DecisionAnswer::Target(Target::Permanent(elf))
+                }
+                d => crabomination::decision::AutoDecider.decide(d),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if matches!(g.step, TurnStep::EndCombat | TurnStep::PostCombatMain) && g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(asked, 1);
+    assert!(g.battlefield_find(elf).is_none(), "the chosen creature took the 2");
+    assert_eq!(g.players[1].life, life - 4, "only the bear's combat damage (2 + the Sword's +2)");
+}
+
+/// CR 115.1c — Niv-Mizzet, Guildpact's combat-damage trigger fills its second
+/// slot ("target player draws X cards"): a bot seat's draw is not lost.
+#[test]
+fn cr_115_1c_a_combat_damage_triggers_second_slot_is_filled() {
+    let mut g = main_phase(2);
+    g.players[0].wants_ui = false;
+    let niv = g.add_card_to_battlefield(0, catalog::niv_mizzet_guildpact());
+    g.clear_sickness(niv);
+    g.add_card_to_battlefield(0, catalog::judith_carnage_connoisseur());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let hands = g.players[0].hand.len() + g.players[1].hand.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: niv, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    let life = g.players[0].life;
+    for _ in 0..60 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let a = crabomination::decision::AutoDecider.decide(&p.decision);
+            g.submit_decision(a).expect("answer");
+            continue;
+        }
+        if matches!(g.step, TurnStep::EndCombat | TurnStep::PostCombatMain) && g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[0].life, life + 1, "the trigger resolved (one pair → X = 1)");
+    assert_eq!(g.players[0].hand.len() + g.players[1].hand.len(), hands + 1, "and someone drew X");
+}

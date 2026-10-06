@@ -7754,8 +7754,17 @@ impl GameState {
             let default_misfits = slot0_filter.is_some_and(|f| {
                 !self.evaluate_requirement_static(f, &default_target, controller, Some(trig_source))
             });
-            let picked =
-                default_misfits || (!slot0_accepts_player && (view.prefers_graveyard_target() || slot0_rejects_player));
+            // CR 115.4 / 603.3d — a printed "any target" (a player *or* a
+            // permanent: Sword of Fire and Ice) is the controller's choice,
+            // not "that player"; only a bare or player-only slot is bound.
+            let slot0_is_choice = slot0_filter.is_some_and(|f| {
+                f.can_match_player()
+                    && !f.is_player_only()
+                    && !matches!(f, crate::card::SelectionRequirement::Any | crate::card::SelectionRequirement::Not(_))
+            });
+            let picked = default_misfits
+                || slot0_is_choice
+                || (!slot0_accepts_player && (view.prefers_graveyard_target() || slot0_rejects_player));
             let target = if picked {
                 // Concretize any X-from-cost gate against the damage dealt
                 // (Venerable Warsinger's "mana value X or less, where X is
@@ -7838,10 +7847,14 @@ impl GameState {
                 });
                 continue;
             }
+            // CR 115.1c — slots past the first ("… and target player draws X
+            // cards", Niv-Mizzet, Guildpact), as the death funnels fill them.
+            let additional = self.auto_extra_targets_for(&effect, trig_source, controller, target.clone());
             for _ in 0..extra {
                 self.push_stack(
                     TriggerPush::new(trig_source, controller, effect.clone())
                         .target(target.clone())
+                        .additional_targets(additional.clone())
                         .mode(mode)
                         .trigger_source(dealer)
                         .trigger_player(match default_target {
@@ -7856,6 +7869,7 @@ impl GameState {
             self.push_stack(
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)
+                    .additional_targets(additional)
                     .mode(mode)
                     .trigger_source(dealer)
                     .trigger_player(match default_target {
