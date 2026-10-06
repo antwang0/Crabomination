@@ -20063,8 +20063,9 @@ impl GameState {
         // 0 toughness while that player kept acting. A pass sweeps on its own.
         // Gated, because the sweep is ~4.2 k Ir and most actions leave only
         // mana, tapping and hand traffic behind: on a non-inert event, a
-        // toughness reducer in scope (a hand-size P/T counts) or an armed
-        // empty-library loss (+1.7 % on `fixed` for the cost-only form
+        // toughness reducer in scope (a hand-size P/T counts), a living
+        // player at 0 life or an armed empty-library loss (+1.7 % on `fixed`
+        // for the cost-only form
         // ungated; this one ungated read -7 % wall on `--bench`).
         if !passes
             && let Ok(events) = result.as_mut()
@@ -20074,7 +20075,11 @@ impl GameState {
             && (answers
                 || !events.iter().all(GameEvent::inert_for_state_based_actions)
                 || self.pt_reduction_in_scope()
-                || self.players.iter().any(|p| p.pending_deck_loss))
+                // Life paid as a cost (Phyrexian pips) is queued and drained
+                // by a dispatch inside the cast, so it is not in `events`.
+                || (0..self.players.len()).any(|i| {
+                    self.players[i].pending_deck_loss || (self.players[i].is_alive() && self.effective_life(i) <= 0)
+                }))
         {
             let mut swept = Vec::new();
             self.check_state_based_actions_into(&mut swept);

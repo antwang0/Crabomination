@@ -8780,3 +8780,26 @@ fn cr_704_3_a_death_caused_by_a_death_happens_in_the_same_check() {
     assert!(g.battlefield_find(lord).is_none(), "the 0/0 lord died");
     assert!(g.battlefield_find(elf).is_none(), "and the Elf it kept at 1/1 died in the same check");
 }
+
+/// CR 704.5a / 117.5 — a player who pays their last life as a cost (Phyrexian
+/// mana) has lost before they would act again: the post-action sweep's gate
+/// read the action's events, and the paid life is queued and drained by a
+/// dispatch inside the cast, so a pod seat stayed in the game at 0 life (Act
+/// of Aggression).
+#[test]
+fn cr_704_5a_paying_your_last_life_for_a_spell_loses_before_you_act_again() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].life = 4;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::act_of_aggression());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast for life");
+    assert!(!g.players[0].is_alive(), "0 life after the cast");
+    assert!(g.stack.is_empty(), "and the spell left with its caster");
+}
