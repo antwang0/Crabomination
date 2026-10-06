@@ -8713,3 +8713,30 @@ fn cr_117_5_an_equip_that_kills_its_creature_is_swept_at_once() {
     assert!(g.battlefield_find(elf).is_none(), "the 2/0 died to the sweep");
     assert!(g.battlefield_find(clamp).is_some_and(|c| c.attached_to.is_none()));
 }
+
+/// CR 704.3 — the state-based check repeats until none applies. Biomass
+/// Mutation at X = 0 makes every creature its caster controls 0/0; a lord
+/// dies to that, and the creature it was pumping is 0/0 only once the lord is
+/// gone. The sweep was one pass, so that second death waited for the next
+/// priority pass while players kept acting (Adrix and Nev, a four-seat pod).
+#[test]
+fn cr_704_3_a_death_caused_by_a_death_happens_in_the_same_check() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let lord = g.add_card_to_battlefield(0, catalog::elvish_archdruid());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let spell = g.add_card_to_hand(0, catalog::biomass_mutation());
+    for c in [crabomination::mana::Color::Green, crabomination::mana::Color::Blue] {
+        g.players[0].mana_pool.add(c, 5);
+    }
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(0) })
+        .expect("cast");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    assert!(g.stack.is_empty(), "Biomass Mutation resolved");
+    assert!(g.battlefield_find(lord).is_none(), "the 0/0 lord died");
+    assert!(g.battlefield_find(elf).is_none(), "and the Elf it kept at 1/1 died in the same check");
+}

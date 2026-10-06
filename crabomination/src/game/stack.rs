@@ -6656,7 +6656,25 @@ impl GameState {
         self.check_state_based_actions_inner(events, true);
     }
 
+    /// CR 704.3 — "whenever a player would receive priority, the game checks
+    /// for any of the listed conditions … then the check is repeated". The
+    /// pass below is one check; it repeats while a pass did anything (an
+    /// event), so a death that a death caused — a creature left 0/0 when the
+    /// lords pumping it died to the same Biomass Mutation — happens before
+    /// anyone acts, not at the next priority pass. Bounded; one pass where
+    /// nothing happens, which is every pass on a quiet board.
     fn check_state_based_actions_inner(&mut self, events: &mut Vec<GameEvent>, mid_resolution: bool) {
+        const REPEAT_CAP: usize = 16;
+        for _ in 0..REPEAT_CAP {
+            let before = events.len();
+            self.check_state_based_actions_pass(events, mid_resolution);
+            if mid_resolution || events.len() == before || self.game_over.is_some() {
+                break;
+            }
+        }
+    }
+
+    fn check_state_based_actions_pass(&mut self, events: &mut Vec<GameEvent>, mid_resolution: bool) {
         if sba_census::on() {
             self.sba_census_tick();
         }
@@ -8277,12 +8295,11 @@ impl GameState {
         // would have ended the match as soon as one of the four
         // players died even though their teammate was still in.
         self.settle_game_over_if_decided(events);
-        // CR 704.3 — the check repeats until none applies. A departure is the
-        // sweep's last step, and what it leaves (another seat's Aura on a
-        // creature that left with its owner) waited for some later pass while
-        // the next player already had priority. Bounded by the seat count.
-        if !newly_eliminated.is_empty() && self.game_over.is_none() {
-            self.check_state_based_actions_inner(events, mid_resolution);
+        // CR 704.3 — a departure is the pass's last step, and what it leaves
+        // (another seat's Aura on a creature that left with its owner) is the
+        // next pass's to sweep, mid-resolution included.
+        if mid_resolution && !newly_eliminated.is_empty() && self.game_over.is_none() {
+            self.check_state_based_actions_pass(events, mid_resolution);
         }
     }
 
