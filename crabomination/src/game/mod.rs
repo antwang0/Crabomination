@@ -23822,6 +23822,10 @@ impl GameState {
         if !self.scratch.pending_cost_events.is_empty() {
             let pending = std::mem::take(&mut self.scratch.pending_cost_events);
             self.dispatch_triggers_for_events(&pending);
+            // Dispatched here, so they ride back undispatched: the action's
+            // event list (and the post-action sweep's gate) still sees a
+            // mana source sacrificed or life paid as a cost.
+            self.scratch.quiet_events.extend(pending);
         }
         // CR 603.3 — a cost-paid permanent's own death triggers go on the
         // stack now, above the spell or ability they paid for and below this
@@ -27151,7 +27155,7 @@ impl GameState {
             })
             .sum();
         if loyalty_tax > 0 {
-            self.try_pay_with_auto_tap(p, &crate::mana::cost(&[crate::mana::generic(loyalty_tax)]))?;
+            self.try_pay_with_auto_tap_queued(p, &crate::mana::cost(&[crate::mana::generic(loyalty_tax)]))?;
         }
 
         // Apply loyalty cost. CR 606.5: a `-X` ability lets the player pick X

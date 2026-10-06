@@ -7293,7 +7293,7 @@ impl GameState {
                 combined.symbols.extend(squad.symbols.iter().cloned());
             }
             if !combined.symbols.is_empty() {
-                self.try_pay_with_auto_tap(p, &combined)?;
+                self.try_pay_with_auto_tap_queued(p, &combined)?;
             }
             // The non-mana half, `times` times (CR 601.2h): checked whole
             // first, so an unaffordable count fails the cast (it runs inside
@@ -7385,7 +7385,7 @@ impl GameState {
             for _ in 0..times {
                 combined.symbols.extend(kick.symbols.iter().cloned());
             }
-            self.try_pay_with_auto_tap(p, &combined)?;
+            self.try_pay_with_auto_tap_queued(p, &combined)?;
         }
         self.cast_kick_count = times;
         let events = self.cast_spell(card_id, target, additional_targets, mode, x_value);
@@ -7486,7 +7486,7 @@ impl GameState {
                 for _ in 0..times {
                     combined.symbols.extend(replicate.symbols.iter().cloned());
                 }
-                self.try_pay_with_auto_tap(p, &combined)?;
+                self.try_pay_with_auto_tap_queued(p, &combined)?;
             }
             // CR 702.107a — copy the spell once per replicate payment; copies
             // may choose new targets.
@@ -7732,11 +7732,11 @@ impl GameState {
                 if !self.additional_costs_payable(p, &costs) {
                     return Err(GameError::InvalidTarget);
                 }
-                self.try_pay_with_auto_tap(p, &cost)?;
+                self.try_pay_with_auto_tap_queued(p, &cost)?;
                 let (mut ev, _) = self.pay_additional_costs(p, &costs, None, None);
                 cost_events.append(&mut ev);
             } else {
-                self.try_pay_with_auto_tap(p, &cost)?;
+                self.try_pay_with_auto_tap_queued(p, &cost)?;
             }
         }
         // CR 702.47b — spliced effect `i` reads its target from
@@ -12911,9 +12911,10 @@ impl GameState {
         // opponent's (Shaman's Trance).
         let mut spell_kind = card.definition.spell_kind();
         spell_kind.from_graveyard = card.owner == p;
-        let receipt = self.try_pay_after_snapshot_mode(
+        let mut receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &spell_kind, None,
         )?;
+        self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         let mana_spent = receipt
@@ -13169,9 +13170,10 @@ impl GameState {
         }
         let forced_only = self.players[p].manual_mana;
         let snapshot = self.snapshot_payment_state(p);
-        let receipt = self.try_pay_after_snapshot_mode(
+        let mut receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &spell_kind, spend_float,
         )?;
+        self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         let mana_spent = receipt
@@ -13288,9 +13290,10 @@ impl GameState {
         // opponent's (Shaman's Trance).
         let mut spell_kind = card.definition.spell_kind();
         spell_kind.from_graveyard = card.owner == p;
-        let receipt = self.try_pay_after_snapshot_mode(
+        let mut receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &spell_kind, None,
         )?;
+        self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt, &spell_kind);
 
@@ -13417,7 +13420,8 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let mut kind = card.definition.spell_kind();
         kind.from_graveyard = true;
-        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, false, &kind)?;
+        let mut receipt = self.try_pay_with_auto_tap_kind(p, &cost, false, &kind)?;
+        self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
@@ -13528,7 +13532,8 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         let mut kind = card.definition.spell_kind();
         kind.from_graveyard = true;
-        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
+        let mut receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
+        self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
@@ -14069,7 +14074,8 @@ impl GameState {
             self.players[p].free_exile_cast_used_this_turn = true;
         } else if let Some(cost) = alt_cast_cost {
             let forced_only = self.players[p].manual_mana;
-            let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+            let mut receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+            self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
             mana_spent = receipt
                 .pool_before
                 .total()
@@ -16701,6 +16707,28 @@ impl GameState {
         cost: &crate::mana::ManaCost,
     ) -> Result<PaymentReceipt, GameError> {
         self.try_pay_with_auto_tap_mode(payer, cost, false)
+    }
+
+    /// `try_pay_with_auto_tap` for a caller with no event list of its own:
+    /// the auto-tap's events — a mana source sacrificed or tapped as it paid
+    /// (CR 605.3a, 700.4) — queue for the next dispatch instead of being
+    /// dropped, so its "dies" triggers fire and the post-action sweep sees it.
+    pub(crate) fn try_pay_with_auto_tap_queued(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+    ) -> Result<(), GameError> {
+        let receipt = self.try_pay_with_auto_tap(payer, cost)?;
+        self.queue_payment_events(receipt.auto_events);
+        Ok(())
+    }
+
+    /// Queue a payment's auto-tap events in `pending_cost_events`, drained
+    /// after the action (or by the next dispatch).
+    pub(crate) fn queue_payment_events(&mut self, events: Vec<GameEvent>) {
+        if !events.is_empty() {
+            self.scratch.pending_cost_events.extend(events);
+        }
     }
 
     /// `try_pay_with_auto_tap`, but `forced_only` gates manual tapping.

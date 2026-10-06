@@ -8803,3 +8803,32 @@ fn cr_704_5a_paying_your_last_life_for_a_spell_loses_before_you_act_again() {
     assert!(!g.players[0].is_alive(), "0 life after the cast");
     assert!(g.stack.is_empty(), "and the spell left with its caster");
 }
+
+/// CR 605.3a / 700.4 — a mana source sacrificed while an alternative cast
+/// is paid (a flashback here) leaves the battlefield with its events: the
+/// flashback path dropped the auto-tapper's, so the sacrifice fired no
+/// triggers and the post-action sweep missed an Aura left on the departed
+/// host (pod seed 44000).
+#[test]
+fn cr_605_3a_a_mana_source_sacrificed_paying_flashback_reports_its_sacrifice() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let petal = g.add_card_to_battlefield(0, catalog::lotus_petal());
+    let looting = g.add_card_to_graveyard(0, catalog::faithless_looting());
+    g.players[0].mana_pool.add_colorless(2);
+    let events = g
+        .perform_action(GameAction::CastFlashback {
+            card_id: looting, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("flashback");
+    assert!(g.battlefield_find(petal).is_none(), "the Petal paid the {{R}}");
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::PermanentSacrificed { card_id, .. } if *card_id == petal)),
+        "and its sacrifice is reported: {events:?}"
+    );
+}

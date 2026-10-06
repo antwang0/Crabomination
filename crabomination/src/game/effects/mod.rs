@@ -12275,7 +12275,7 @@ impl GameState {
                         // ends the loop, so a spent one is always a yes.
                         continue;
                     }
-                    if again && self.try_pay_with_auto_tap(ctx.controller, repeat_cost).is_ok() {
+                    if again && self.try_pay_with_auto_tap_queued(ctx.controller, repeat_cost).is_ok() {
                         continue;
                     }
                     if let Some(cid) = mine {
@@ -26174,7 +26174,7 @@ impl GameState {
                     }
                     let saved = self.priority.player_with_priority;
                     self.priority.player_with_priority = payer;
-                    let paid = self.try_pay_with_auto_tap(payer, &cost).is_ok();
+                    let paid = self.try_pay_with_auto_tap_queued(payer, &cost).is_ok();
                     self.priority.player_with_priority = saved;
                     if paid {
                         self.clear_answer_log();
@@ -35739,7 +35739,7 @@ impl GameState {
                         random: false,
                     }),
                     ChainCopyCost::Mana(c) => {
-                        if self.try_pay_with_auto_tap(seat, c).is_err() {
+                        if self.try_pay_with_auto_tap_queued(seat, c).is_err() {
                             return Ok(());
                         }
                         None
@@ -44992,7 +44992,7 @@ impl GameState {
                         } else {
                             let saved_priority = self.priority.player_with_priority;
                             self.priority.player_with_priority = payer;
-                            let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
+                            let ok = self.try_pay_with_auto_tap_queued(payer, mc).is_ok();
                             self.priority.player_with_priority = saved_priority;
                             if ok {
                                 self.pay_life_cost(payer, life as u32);
@@ -45422,7 +45422,7 @@ impl GameState {
     fn pay_mana_as(&mut self, payer: usize, mc: &crate::mana::ManaCost) -> bool {
         let saved = self.priority.player_with_priority;
         self.priority.player_with_priority = payer;
-        let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
+        let ok = self.try_pay_with_auto_tap_queued(payer, mc).is_ok();
         self.priority.player_with_priority = saved;
         ok
     }

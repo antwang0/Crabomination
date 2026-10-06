@@ -1879,7 +1879,7 @@ impl GameState {
             // Pay from the floating pool, auto-tapping mana sources for any
             // shortfall (rolled back atomically if unpayable).
             let tax_cost = crate::mana::cost(&[crate::mana::generic(total_tax)]);
-            if self.try_pay_with_auto_tap(p, &tax_cost).is_err() {
+            if self.try_pay_with_auto_tap_queued(p, &tax_cost).is_err() {
                 return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
             }
         }
@@ -3154,7 +3154,7 @@ impl GameState {
                     continue;
                 }
                 let tax = crate::mana::cost(&[crate::mana::generic(amount)]);
-                if self.try_pay_with_auto_tap(seat, &tax).is_err() {
+                if self.try_pay_with_auto_tap_queued(seat, &tax).is_err() {
                     return Err(block_reject(line!(), GameError::CannotBlock(assignments[0].0)));
                 }
             }
@@ -3405,7 +3405,7 @@ impl GameState {
                 let ok = self.players[player].life >= life as i32
                     && (mana == 0 || {
                         let cost = crate::mana::cost(&[crate::mana::generic(mana)]);
-                        self.try_pay_with_auto_tap(player, &cost).is_ok()
+                        self.try_pay_with_auto_tap_queued(player, &cost).is_ok()
                     });
                 if !ok {
                     for (p, s) in snapshots {

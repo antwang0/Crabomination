@@ -1774,7 +1774,7 @@ impl GameState {
             return Err(GameError::WrongStep { actual: self.step });
         }
         let surcharge = self.players[seat].planar_die_rolls_this_turn;
-        self.try_pay_with_auto_tap(seat, &crate::mana::cost(&[crate::mana::generic(surcharge)]))?;
+        self.try_pay_with_auto_tap_queued(seat, &crate::mana::cost(&[crate::mana::generic(surcharge)]))?;
         self.players[seat].planar_die_rolls_this_turn = surcharge.saturating_add(1);
         // CR 901.9d — the planar die fires "whenever you roll dice" triggers
         // but has no numeric result, so `last_die_roll` is left alone.
