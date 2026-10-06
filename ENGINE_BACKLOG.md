@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets](#fixedopen-2026-10-06-commander-routine--a-prompting-seat-never-named-a-directly-pushed-triggers-targets) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine) — face-down exile, and the implicit "target opponent"](#fixedopen-2026-10-02-commander-routine-claudemodern_decks--face-down-exile-and-the-implicit-target-opponent) | 16 |
 | Bugs & robustness | [FIXED 2026-09-29 (session `012RbSk7`) — protection was a cast-time rule: nothing re-checked it at resolution, and a resolving spell had no colour](#fixed-2026-09-29-session-012rbsk7--protection-was-a-cast-time-rule-nothing-re-checked-it-at-resolution-and-a-resolving-spell-had-no-colour) | 35 |
@@ -173,6 +174,36 @@ the handoff.
   selections (`CardsInZone` already skips tokens).
 - ✅ `keyword_is_friendly` read MustBlock as a buff — a lure's headless
   target was the caster's own creature.
+
+## FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets
+
+CR 603.3d. Only `drain_trigger_queue` asks a prompting (`wants_ui`) seat for a
+trigger's targets; the funnels that `push_stack` a trigger with
+`auto_target_for_effect*` gave a human seat the engine's pick. **Fixed**
+(`trigger_slots.rs`: `trigger_asks_targets` / `queue_trigger_asking`, held in
+`ResolutionScratch::prompt_trigger_backlog` mid-resolution): the two self-dies
+funnels (`stack.rs`), a non-cast ETB (`fire_self_etb_triggers`), self attack
+triggers and "whenever you attack" (`combat.rs`), spell-cast listeners and
+"when you cast this spell" (`actions.rs`). Bot seats keep the engine fill.
+
+**Open, ranked by how often a pod reaches them** (a read-only audit, not yet
+run against a prompting seat):
+- `combat.rs` `fire_combat_damage_triggers` (~7683/7739/7753): slot 0 is bound
+  to the damaged player, which is right for "that player" and wrong for "any
+  target" / "target player" wordings; a chosen slot has to be told apart from
+  a bound one before it can be asked.
+- Defender-side triggers: `combat.rs` ~2421 ("whenever a creature attacks
+  you") and ~6833 (`ControllerDealtCombatDamage`).
+- Delayed `WhenCardDies` / `WhenTokenDies` / haunt (`mod.rs` ~23352), delayed
+  "next spell you cast" (`actions.rs` ~15943).
+- Room unlock (`actions.rs` `set_room_door_unlocked`), mutate (`stack.rs`
+  ~2529), state triggers (`stack.rs` ~6763), plot (`push_plot_triggers`),
+  and four one-card sites (`stack.rs` ~8572, `movement.rs` ~923 / ~2061,
+  `token_triggers.rs` ~31).
+- `Effect::Reflexive` (effects/mod.rs ~8083, ~42 cards) resolves its "when you
+  do" payoff inline with an engine pick instead of as a CR 603.7 trigger;
+  `ReflexiveTrigger` asks, but falls back to the engine pick while another
+  decision is open (could use the backlog).
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled
 
