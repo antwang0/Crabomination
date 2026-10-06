@@ -73,6 +73,26 @@ fn cr_506_4b_tapping_a_declared_attacker_keeps_it_in_combat() {
     assert_eq!(g.players[1].life, 18, "a tapped attacker still connects");
 }
 
+/// 506.4 — an attacking God that falls below its devotion stops being a
+/// creature and is removed from combat (found by a strict debug pod: Mogis
+/// stayed attacking into the combat damage step).
+#[test]
+fn cr_506_4_an_attacker_that_stops_being_a_creature_leaves_combat() {
+    let mut g = main_phase();
+    let erebos = g.add_card_to_battlefield(0, catalog::erebos_god_of_the_dead());
+    let obliterator = g.add_card_to_battlefield(0, catalog::phyrexian_obliterator());
+    g.clear_sickness(erebos);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: erebos, target: AttackTarget::Player(1) }])
+        .expect("devotion 5: Erebos is a creature and attacks");
+    g.remove_from_battlefield_to_graveyard_raw(obliterator);
+    g.check_state_based_actions();
+    assert!(g.attacking.iter().all(|a| a.attacker != erebos), "no longer a creature, so out of combat");
+    g.step = TurnStep::DeclareBlockers;
+    let _ = g.resolve_combat();
+    assert_eq!(g.players[1].life, 20, "a removed attacker deals no combat damage");
+}
+
 /// 506.4 — an attacker whose controller changes mid-combat is removed from
 /// combat and deals no damage.
 #[test]

@@ -5845,6 +5845,27 @@ impl GameState {
         });
     }
 
+    /// CR 506.4 — an attacker or blocker that stopped being a creature (a God
+    /// below its devotion, an animation that ended) is removed from combat.
+    fn remove_noncreature_combatants(&mut self) {
+        let gone: SmallVec<[CardId; 4]> = self
+            .attacking
+            .iter()
+            .map(|a| a.attacker)
+            .chain(self.block_map.keys().copied())
+            .filter(|&id| self.battlefield_find(id).is_some_and(|c| !self.computed_is_creature(c)))
+            .collect();
+        for id in gone {
+            self.remove_permanent_from_combat(id);
+            if !self.attack_bands.is_empty() {
+                for band in self.attack_bands.iter_mut() {
+                    band.retain(|m| *m != id);
+                }
+                self.attack_bands.retain(|b| b.len() > 1);
+            }
+        }
+    }
+
     /// "When enchanted player loses the game" (Curse of Vengeance): each
     /// Aura on `p` that another player owns triggers now, while it is still
     /// attached, with its counter total as the event amount; and "whenever a
@@ -6750,6 +6771,9 @@ impl GameState {
             && self.players.iter().any(|p| !p.commanders.is_empty())
         {
             self.commander_zone_return_sba();
+        }
+        if !self.attacking.is_empty() || !self.block_map.is_empty() {
+            self.remove_noncreature_combatants();
         }
 
         // One pass answering "which of the rare SBAs can fire on this board".
