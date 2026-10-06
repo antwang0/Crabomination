@@ -3193,6 +3193,30 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
+### 2026-10-06 (Commander routine, fourth) — guardrail; CR 506.4 noncreature combatants, CR 508.1d defender scoring, CR 603.2 departed listeners
+
+Hot-path touches: the sweep removes noncreature combatants (gated on a
+non-empty combat; `computed_is_creature`'s printed fast path); the attack
+declaration scores defender-naming requirements per attacker (one `goaders`
+walk an attack, as the goad block it replaces did); the departed-listener
+pass looks back for draws / discards / life loss / counters (still gated on
+the batch holding a departure). Release, 4-core box, no base binary built —
+the wall clock is a single-box reading, not an A/B.
+
+```text
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); 159.9-166.6 k decisions/s
+suite            24,273 / 0 / 5 (strict answer log); clippy workspace 0
+pods (release)   seed 49100 2..8 x 400 = 2,800, all decided; seeds 49200-49259
+                 random 4/5/6-seat pods over all 183 decks x 100 = 6,000, two
+                 CR 104.4a draws, zero panics, stall rate 0 %
+2-player pools   seed 49300 cube / sos / sealed x 300 a deck: 6 cube draws,
+                 0 otherwise; seed 9132 cube x 600: 0 undecided (as recorded)
+strict debug     seeds 19600-19611, 19700-19707, 19800-19811, 19900-19907,
+                 20000-20039, 20100-20129, 20200-20229 (CRAB_POD_SWEEP_PROBE,
+                 random 3/4/6-seat pods): two finds (CR 506.4, fixed), clean after
+```
+
 ### 2026-10-06 (Commander session, second, close) — guardrail; CR 605.3a payment events, CR 704.5f tap-state anthems
 
 Hot-path touches: alternative-cast / effect payments queue their auto-tap
