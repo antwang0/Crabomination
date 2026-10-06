@@ -1883,7 +1883,6 @@ fn play_pod_game(
                 }
                 _ => None,
             }) {
-                eprintln!("DBG life {} cause {:?} left {} pending {:?} step {:?}", g.players[caster].life, g.players[caster].loss_cause, g.players[caster].left_game, g.pending_decision.as_ref().map(|p| &p.decision), g.step);
                 panic!(
                     "seed {seed}: spell {} (owner p{}, caster p{caster}) outlived a departed seat (turn {})",
                     c.definition.name, c.owner, g.turn_number,
