@@ -1791,6 +1791,24 @@ fn play_pod_game(
         if let Some(dup) = g.duplicate_zone_id() {
             panic!("seed {seed}: card {dup:?} is in two zones (turn {}, after {actions} actions)", g.turn_number);
         }
+        // CR 800.4a — a player who left took every object they owned, and
+        // control they held over another player's object ended. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            let gone = |p: usize| g.players.get(p).is_none_or(|pl| !pl.is_alive());
+            if let Some(c) = g.battlefield.iter().find(|c| gone(c.owner) || gone(c.controller)) {
+                panic!(
+                    "seed {seed}: {} (owner p{}, controller p{}) outlived a departed seat (turn {}, after {actions} actions)",
+                    c.definition.name, c.owner, c.controller, g.turn_number,
+                );
+            }
+            if let Some(c) = g.stack.iter().find_map(|si| match si {
+                crate::game::types::StackItem::Spell { card, caster, .. } if gone(*caster) || gone(card.owner) => Some(card),
+                _ => None,
+            }) {
+                panic!("seed {seed}: spell {} outlived a departed seat (turn {})", c.definition.name, g.turn_number);
+            }
+        }
         #[cfg(debug_assertions)]
         if let Some(c) = g
             .players
