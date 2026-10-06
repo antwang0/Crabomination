@@ -444,7 +444,7 @@ pub fn young_necromancer() -> CardDefinition {
                 },
                 Effect::Reflexive {
                     body: Box::new(Effect::Move {
-                        what: target_filtered(R::Creature),
+                        what: target_filtered(R::Creature.from_your_graveyard()),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,
                             tapped: false,

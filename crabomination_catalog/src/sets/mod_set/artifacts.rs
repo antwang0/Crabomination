@@ -1763,7 +1763,7 @@ pub fn scrap_trawler() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::And(
                     Box::new(SelectionRequirement::Artifact),
                     Box::new(SelectionRequirement::And(
-                        Box::new(SelectionRequirement::InGraveyard),
+                        Box::new(SelectionRequirement::InYourGraveyard),
                         Box::new(SelectionRequirement::ManaValueLessThanEventAmount),
                     )),
                 )),

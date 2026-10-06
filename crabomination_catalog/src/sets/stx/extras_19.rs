@@ -586,7 +586,7 @@ fn lukka_wayward_bonder() -> CardDefinition {
                 loyalty_cost: -2,
                 effect: Effect::Seq(vec![
                     Effect::Move {
-                        what: target_filtered(SelectionRequirement::Creature),
+                        what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,
                             tapped: false,

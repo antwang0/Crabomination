@@ -48117,7 +48117,7 @@ pub fn titania_protector_of_argoth() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Land.and(SelectionRequirement::InGraveyard),
+                    SelectionRequirement::Land.from_your_graveyard(),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

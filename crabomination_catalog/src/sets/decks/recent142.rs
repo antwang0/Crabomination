@@ -149,7 +149,7 @@ pub fn neva_stalked_by_nightmares() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![
             etb(Effect::Move {
-                what: target_filtered(R::Creature.or(R::Enchantment).and(R::InGraveyard)),
+                what: target_filtered(R::Creature.or(R::Enchantment).from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
             TriggeredAbility {

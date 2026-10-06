@@ -338,7 +338,8 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 pub fn mavinda_students_advocate() -> CardDefinition {
     let target_is_in_your_gy = crate::effect::shortcut::target_filtered(
         SelectionRequirement::HasCardType(CardType::Instant)
-            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+            .from_your_graveyard(),
     );
     CardDefinition {
         name: "Mavinda, Students' Advocate",

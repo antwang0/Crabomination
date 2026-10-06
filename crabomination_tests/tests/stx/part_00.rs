@@ -3271,13 +3271,14 @@ fn charge_through_grants_trample_and_cantrips() {
     assert_eq!(g.players[0].hand.len(), hand_before, "cantrip replaces itself");
 }
 
+/// Devious Cover-Up exiles the spell it counters, and its controller may
+/// shuffle cards from their own graveyard into their library.
 #[test]
-fn devious_cover_up_counters_a_spell_and_exiles_chosen_gy_cards() {
+fn devious_cover_up_exiles_the_countered_spell_and_shuffles_your_graveyard() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // P1 casts Bolt; P0 counters with Devious Cover-Up. Also seed two gy cards.
-    let extra0 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    let extra1 = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let mine = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let theirs = g.add_card_to_graveyard(1, catalog::lightning_bolt());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
     g.active_player_idx = 1;
@@ -3285,10 +3286,8 @@ fn devious_cover_up_counters_a_spell_and_exiles_chosen_gy_cards() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bolt castable");
-
     g.priority.player_with_priority = 0;
-    // "Exile any number" — choose both seeded gy cards (across both players).
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![extra0, extra1])]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![mine])]));
     let cover = g.add_card_to_hand(0, catalog::devious_cover_up());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(2);
@@ -3296,42 +3295,10 @@ fn devious_cover_up_counters_a_spell_and_exiles_chosen_gy_cards() {
         card_id: cover, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cover-Up castable for {2}{U}{U}");
     drain_stack(&mut g);
-
     assert_eq!(g.players[0].life, 20, "Bolt countered");
-    // Both chosen graveyard cards are now in exile; the countered Bolt
-    // (not chosen) remains in P1's graveyard.
-    assert!(g.exile.iter().any(|c| c.id == extra0), "P0 gy card exiled");
-    assert!(g.exile.iter().any(|c| c.id == extra1), "P1 gy card exiled");
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "countered Bolt stays");
-}
-
-#[test]
-fn devious_cover_up_auto_decider_exiles_nothing() {
-    // AutoDecider answers ChooseCards with the empty set ("up to" default).
-    let mut g = two_player_game();
-    let gy = g.add_card_to_graveyard(1, catalog::lightning_bolt());
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    g.priority.player_with_priority = 0;
-    let cover = g.add_card_to_hand(0, catalog::devious_cover_up());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: cover, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Cover-Up castable");
-    drain_stack(&mut g);
-    // AutoDecider now exiles OPPONENT graveyard cards (free hate — the
-    // old empty default forfeited the rider every time). The seed card
-    // is exiled; the countered Bolt hit the graveyard after the pick.
-    assert!(g.exile.iter().any(|c| c.id == gy), "opponent's graveyard card exiled");
-    // The countered Bolt reaches the graveyard before the pick, so the
-    // hate default sweeps it into exile as well.
-    assert!(g.exile.iter().any(|c| c.id == bolt), "countered spell exiled too");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the countered spell is exiled");
+    assert!(g.players[0].library.iter().any(|c| c.id == mine), "your card shuffled into your library");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == theirs), "theirs untouched");
 }
 
 #[test]

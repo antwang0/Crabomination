@@ -1219,21 +1219,24 @@ pub fn charge_through() -> CardDefinition {
     }
 }
 
-/// Devious Cover-Up — {2}{U}{U} Instant (Mono-U STX).
-/// "Counter target spell. Then exile any number of target cards from
-/// graveyards." The graveyard-strip rider ships via
-/// `Effect::ExileAnyNumberFromGraveyards` (`Decision::ChooseCards`).
+/// Devious Cover-Up — {2}{U}{U} Instant. Counter target spell, exiling it;
+/// shuffle up to four cards from your graveyard into your library. Residual:
+/// the four are chosen as it resolves, not targeted.
 pub fn devious_cover_up() -> CardDefinition {
     CardDefinition {
         name: "Devious Cover-Up",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CounterSpell {
+            Effect::CounterSpellToZone {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                zone: crate::effect::CounteredSpellZone::Exile,
             },
-            Effect::ExileAnyNumberFromGraveyards {
+            Effect::ShuffleGraveyardCardsIntoLibrary {
+                who: PlayerRef::You,
                 filter: SelectionRequirement::Any,
+                max: Value::Const(4),
+                to_top: false,
             },
         ]),
         ..Default::default()

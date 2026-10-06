@@ -4232,7 +4232,7 @@ pub fn torrential_gearhulk() -> CardDefinition {
             effect: Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
                                 pay_own_cost: false,
-                what: target_filtered(SelectionRequirement::HasCardType(CardType::Instant)),
+                what: target_filtered(SelectionRequirement::HasCardType(CardType::Instant).from_your_graveyard()),
                 source_zone: Zone::Graveyard,
                 exile_after: true,
                 copy: false,

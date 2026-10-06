@@ -320,7 +320,7 @@ pub fn defiled_crypt_cadaver_lab() -> CardDefinition {
                 triggered_abilities: vec![TriggeredAbility {
                     event: EventSpec::new(EventKind::DoorUnlocked, EventScope::SelfSource),
                     effect: Effect::Move {
-                        what: target_filtered(R::Creature),
+                        what: target_filtered(R::Creature.from_your_graveyard()),
                         to: ZoneDest::Hand(PlayerRef::You),
                     },
                 }],
