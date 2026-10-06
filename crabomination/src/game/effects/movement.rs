@@ -2736,23 +2736,17 @@ impl GameState {
             card.strip_name_stickers();
         }
         match dest {
-            ZoneDest::Hand(who) => {
-                let ctx = EffectContext::for_spell(default_player, None, 0, 0);
-                // `OwnerOfMoved` routes the card to *its own* owner (per-card
-                // board-bounce — Aetherize / Evacuation).
-                let p = match who {
-                    PlayerRef::OwnerOfMoved => card.owner,
-                    _ => self.resolve_player(who, &ctx).unwrap_or(default_player),
-                };
+            // CR 400.3 — a card bound for a hand or library other than its
+            // owner's goes to its owner's: "return it to your hand" on a
+            // stolen permanent, "put it on top of your library" on another
+            // player's card (a stolen Sensei's Divining Top).
+            ZoneDest::Hand(_) => {
+                let p = card.owner;
                 card.controller = p;
                 self.players[p].hand.push(card);
             }
-            ZoneDest::Library { who, pos } => {
-                let ctx = EffectContext::for_spell(default_player, None, 0, 0);
-                let p = match who {
-                    PlayerRef::OwnerOfMoved => card.owner,
-                    _ => self.resolve_player(who, &ctx).unwrap_or(default_player),
-                };
+            ZoneDest::Library { pos, .. } => {
+                let p = card.owner;
                 // A one-shot top reveal (Aven Windreader) only covers the card
                 // that was on top; any insertion can displace it.
                 retain_cold!(self.library_tops_revealed, |s| *s != p);
