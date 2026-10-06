@@ -241,3 +241,31 @@ fn cr_704_3_a_phased_in_legend_meets_the_legend_rule_before_upkeep_priority() {
     let n = g.battlefield.iter().filter(|c| c.definition.name == "Twin Legend").count();
     assert_eq!(n, 1, "the legend rule ran before upkeep priority");
 }
+
+/// CR 704.3 / 511.2 — an "until end of combat" boost expires as the combat
+/// phase ends; a creature it was keeping alive dies before the postcombat
+/// main phase's priority.
+#[test]
+fn cr_704_3_an_end_of_combat_expiry_is_swept_before_main_two() {
+    use crabomination::effect::{Duration, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let pumped = g.add_card_to_battlefield(0, bear("Pumped"));
+    let src = g.add_card_to_battlefield(0, bear("Source"));
+    let pump = Effect::PumpPT {
+        what: Selector::Target(0),
+        power: Value::Const(2),
+        toughness: Value::Const(2),
+        duration: Duration::EndOfCombat,
+    };
+    let ctx = EffectContext::for_trigger(src, 0, Some(Target::Permanent(pumped)), 0);
+    g.resolve_effect(&pump, &ctx).unwrap();
+    g.battlefield_find_mut(pumped).unwrap().damage = 3;
+    g.active_player_idx = 0;
+    g.step = crabomination::TurnStep::EndCombat;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    assert_eq!(g.step, crabomination::TurnStep::PostCombatMain);
+    assert!(g.battlefield_find(pumped).is_none(), "3 damage on a 2/2 once the pump is gone");
+}

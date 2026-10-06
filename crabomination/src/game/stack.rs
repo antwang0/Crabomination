@@ -624,7 +624,8 @@ impl GameState {
         // end of the combat phase." Sweep `UntilEndOfCombat` continuous
         // effects whenever we leave EndCombat — including into an additional
         // combat phase, since each combat phase has its own end.
-        if self.step == TurnStep::EndCombat {
+        let left_combat = self.step == TurnStep::EndCombat;
+        if left_combat {
             self.remove_all_from_combat();
             self.expire_end_of_combat_effects();
             self.revert_temporary_control(&[crate::effect::Duration::EndOfCombat]);
@@ -1111,7 +1112,9 @@ impl GameState {
         // nothing. Gated as the post-action sweep is (a step change and
         // untapping are inert), and not after combat damage, which sweeps in
         // its own resolution: ungated this re-ran after every combat-damage
-        // advance, -5.75 % median wall on `--bench` (PERF).
+        // advance, -5.75 % median wall on `--bench` (PERF). Leaving the end
+        // of combat opens it too: an "until end of combat" boost's expiry
+        // emits nothing, and can leave a damaged creature lethal.
         if self.pending_decision.is_none()
             && self.suspend_signal.is_none()
             && !self.is_game_over()
@@ -1120,7 +1123,8 @@ impl GameState {
             && ((self.scratch.phased_since_sweep && {
                 self.scratch.phased_since_sweep = false;
                 true
-            }) || !events.iter().all(GameEvent::inert_for_state_based_actions)
+            }) || left_combat
+                || !events.iter().all(GameEvent::inert_for_state_based_actions)
                 || self.pt_reduction_in_scope()
                 || (0..self.players.len()).any(|i| {
                     self.players[i].pending_deck_loss
