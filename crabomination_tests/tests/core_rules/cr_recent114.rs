@@ -35,7 +35,8 @@ fn cr_115_1_a_your_graveyard_target_never_reaches_an_opponents_graveyard() {
             g.add_card_to_graveyard(0, catalog::forest());
         }
     };
-    let cases: [(&str, fn() -> CardDefinition, fn() -> CardDefinition, Setup); 5] = [
+    type Case = (&'static str, fn() -> CardDefinition, fn() -> CardDefinition, Setup);
+    let cases: [Case; 5] = [
         ("Mystic Sanctuary", catalog::mystic_sanctuary, catalog::lightning_bolt, islands),
         ("Torrential Gearhulk", catalog::torrential_gearhulk, catalog::lightning_bolt, none),
         ("Neva", catalog::neva_stalked_by_nightmares, catalog::grizzly_bears, none),
