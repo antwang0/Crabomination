@@ -180,6 +180,8 @@ fn collect_evidence_ui_picker_honors_chosen_cards() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: id, target: AttackTarget::Player(1),
     }])).expect("attack");
+    // CR 603.3d — the prompting seat names the attack trigger's target.
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(id))).expect("target");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt left in graveyard");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_a || c.id == bear_b),
