@@ -768,9 +768,10 @@ picks the most hostile opponent and binds them as "that player" (Pollen
 Lullaby). ⚠ **Crescendo of War found a layer gap**: a
 `PumpPTPerCounterOnSource` over a live filter (attacking, blocking) was dropped
 whole — only `PumpPT`/`GrantKeyword` rode the gather's live pass; it now shares
-it, and the dropped-static ratchet covers it. Residual: **Ruhan**'s random
-opponent is stored on Ruhan. (Jötun Grunt's graveyard and card picks became
-the seat's choice in `01QFHGia`.)
+it, and the dropped-static ratchet covers it. No residual: Jötun Grunt's
+graveyard and card picks became the seat's choice in `01QFHGia`, and Ruhan's
+random opponent is its own combat-scoped CR 508.1d requirement since
+2026-10-06 (`attack_requirements.rs`).
 
 The **fifty-seventh** is Commander 2016's **Stalwart Unity**
 (`StalwartUnity_C16`) — four-colour group hug under Kynaios and Tiro of Meletis,

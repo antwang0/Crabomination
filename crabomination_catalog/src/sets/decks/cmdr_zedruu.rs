@@ -1,11 +1,6 @@
 //! Commander: the cards the **Political Puppets** precon (CMD, Zedruu the
 //! Greathearted) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_zedruu.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Jötun Grunt** — the graveyard and the two cards for each installment
-//!   are the engine's pick (an opponent's fullest graveyard, its highest mana
-//!   values).
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
@@ -305,13 +300,12 @@ pub fn rapacious_one() -> CardDefinition {
 }
 
 /// Ruhan of the Fomori — at the beginning of combat on your turn, an opponent
-/// chosen at random is the one Ruhan attacks if able.
+/// chosen at random is the one Ruhan attacks this combat if able.
 pub fn ruhan_of_the_fomori() -> CardDefinition {
     legendary(CardDefinition {
-        keywords: vec![Keyword::MustAttackChosenPlayer],
         triggered_abilities: vec![TriggeredAbility {
             event: step(TurnStep::BeginCombat, EventScope::YourControl),
-            effect: Effect::RememberPlayerOnSource { who: PlayerRef::RandomOpponent },
+            effect: Effect::MustAttackPlayerThisCombat { who: PlayerRef::RandomOpponent },
         }],
         ..creature(
             "Ruhan of the Fomori",

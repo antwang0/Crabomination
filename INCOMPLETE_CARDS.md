@@ -1909,12 +1909,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 |---|---|---|
 | 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | a creature with its own kicker or offspring gets no second, granted offspring (one optional cost per cast action). |
 
-### Seats 42, 46, 49, 53 and 55 (Peer Through Time C14, Wade into Battle C15, Chaos Incarnate SCD, Heavenly Inferno and Political Puppets CMD) — open residuals, 2026-09-24
-
-| Card | Deck | Gap |
-|---|---|---|
-| 🟡 Ruhan of the Fomori | Political Puppets (CMD) | the random opponent is stored on Ruhan, so another effect storing a player on it overwrites the pick. |
-
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 
 | Card | Deck | Gap |

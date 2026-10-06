@@ -280,21 +280,52 @@ fn prison_term_jumps_to_the_newcomer() {
 }
 
 /// CR 508.1d — Ruhan must attack the opponent it picked at random this
-/// combat.
+/// combat, and only this combat.
 #[test]
 fn ruhan_attacks_its_random_opponent() {
     let mut g = pod(3);
     let ruhan = g.add_card_to_battlefield(0, catalog::ruhan_of_the_fomori());
     g.clear_sickness(ruhan);
     step_into(&mut g, 0, TurnStep::PreCombatMain, TurnStep::BeginCombat);
-    let pick = g.battlefield_find(ruhan).unwrap().chosen_player.expect("an opponent was picked");
-    assert_ne!(pick, 0);
-    let other = if pick == 1 { 2 } else { 1 };
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     let at = |p| GameAction::DeclareAttackers(vec![Attack { attacker: ruhan, target: AttackTarget::Player(p) }]);
-    assert!(g.perform_action(at(other)).is_err());
-    g.perform_action(at(pick)).expect("the picked opponent");
+    let legal: Vec<usize> = [1, 2].into_iter().filter(|&q| g.clone().perform_action(at(q)).is_ok()).collect();
+    assert_eq!(legal.len(), 1, "only the picked opponent: {legal:?}");
+    assert!(g.clone().perform_action(GameAction::DeclareAttackers(vec![])).is_err(), "it must attack");
+    step_into(&mut g, 0, TurnStep::EndCombat, TurnStep::PostCombatMain);
+    g.step = TurnStep::DeclareAttackers;
+    let free = [1, 2].into_iter().filter(|&q| g.clone().perform_action(at(q)).is_ok()).count();
+    assert_eq!(free, 2, "the requirement ends with the combat");
+}
+
+/// CR 508.1d — Ruhan's pick is its own requirement: a second one naming the
+/// other opponent (the Fantastic Four's forced attack) leaves a tie, so the
+/// controller picks either, where the later stamp used to overwrite Ruhan's.
+#[test]
+fn ruhan_and_a_second_forced_attack_tie() {
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+    let mut g = pod(3);
+    let ruhan = g.add_card_to_battlefield(0, catalog::ruhan_of_the_fomori());
+    g.clear_sickness(ruhan);
+    step_into(&mut g, 0, TurnStep::PreCombatMain, TurnStep::BeginCombat);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let at = |p| GameAction::DeclareAttackers(vec![Attack { attacker: ruhan, target: AttackTarget::Player(p) }]);
+    let pick = [1, 2].into_iter().find(|&q| g.clone().perform_action(at(q)).is_ok()).expect("a pick");
+    let other = 3 - pick;
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::MustAttackPlayerThisTurn {
+            attacker: Selector::ExactObjects(vec![ruhan]),
+            defender: Selector::Player(PlayerRef::Seat(other)),
+        },
+        &ctx,
+    )
+    .expect("forced attack");
+    for q in [pick, other] {
+        g.clone().perform_action(at(q)).unwrap_or_else(|e| panic!("seat {q} obeys one of the two: {e:?}"));
+    }
 }
 
 /// Rapacious One: combat damage to a player makes that many Eldrazi Spawn.
