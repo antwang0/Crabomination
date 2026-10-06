@@ -116,3 +116,40 @@ fn cr_603_3d_a_self_cast_trigger_asks_for_its_targets() {
     assert_eq!(settle(&mut g, Target::Permanent(gone)), 1);
     assert!(g.battlefield_find(gone).is_none());
 }
+
+/// Throat Slitter's combat-damage trigger: "target nonblack creature that
+/// player controls" is the prompting attacker's pick, not the engine's.
+#[test]
+fn cr_603_3d_a_combat_damage_trigger_asks_for_its_target() {
+    let mut g = main_phase(2);
+    let slitter = g.add_card_to_battlefield(0, catalog::throat_slitter());
+    g.clear_sickness(slitter);
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(big).unwrap().tapped = true;
+    g.battlefield_find_mut(small).unwrap().tapped = true;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: slitter, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    let mut asked = 0;
+    for _ in 0..60 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let answer = match &p.decision {
+                Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Permanent(small)) => {
+                    asked += 1;
+                    DecisionAnswer::Target(Target::Permanent(small))
+                }
+                d => crabomination::decision::AutoDecider.decide(d),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if matches!(g.step, TurnStep::EndCombat | TurnStep::PostCombatMain) && g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(asked, 1);
+    assert!(g.battlefield_find(small).is_none(), "the chosen creature is destroyed");
+    assert!(g.battlefield_find(big).is_some());
+}

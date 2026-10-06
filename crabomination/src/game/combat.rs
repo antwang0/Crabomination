@@ -7717,9 +7717,9 @@ impl GameState {
             let default_misfits = slot0_filter.is_some_and(|f| {
                 !self.evaluate_requirement_static(f, &default_target, controller, Some(trig_source))
             });
-            let target = if default_misfits
-                || (!slot0_accepts_player && (view.prefers_graveyard_target() || slot0_rejects_player))
-            {
+            let picked =
+                default_misfits || (!slot0_accepts_player && (view.prefers_graveyard_target() || slot0_rejects_player));
+            let target = if picked {
                 // Concretize any X-from-cost gate against the damage dealt
                 // (Venerable Warsinger's "mana value X or less, where X is
                 // the damage this creature dealt to that player").
@@ -7777,6 +7777,30 @@ impl GameState {
             } else {
                 0
             };
+            // CR 603.3d — a slot the engine picks (not the bound damaged
+            // player) is a prompting controller's to name: Sword of Sinew and
+            // Steel, Efreet Flamepainter. A batched or merged fire stays
+            // direct, since later dealers find it on the stack.
+            if picked && !agnostic && once.is_none() && extra == 0 && self.trigger_asks_targets(controller, view) {
+                self.queue_trigger_asking(crate::game::types::PendingTriggerPush {
+                    source: trig_source,
+                    controller,
+                    effect,
+                    subject: dealer,
+                    event_amount: if counts_players { 1 } else { damage_amount },
+                    mode,
+                    intervening_if: None,
+                    actor: match default_target {
+                        Target::Player(p) => Some(p),
+                        _ => None,
+                    },
+                    from_mana_ability: false,
+                    x_value: damage_amount,
+                    converged_value: 0,
+                    mana_spent: 0,
+                });
+                continue;
+            }
             for _ in 0..extra {
                 self.push_stack(
                     TriggerPush::new(trig_source, controller, effect.clone())

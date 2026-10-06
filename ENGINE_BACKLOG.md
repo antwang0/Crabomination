@@ -188,10 +188,11 @@ triggers and "whenever you attack" (`combat.rs`), spell-cast listeners and
 
 **Open, ranked by how often a pod reaches them** (a read-only audit, not yet
 run against a prompting seat):
-- `combat.rs` `fire_combat_damage_triggers` (~7683/7739/7753): slot 0 is bound
-  to the damaged player, which is right for "that player" and wrong for "any
-  target" / "target player" wordings; a chosen slot has to be told apart from
-  a bound one before it can be asked.
+- `combat.rs` `fire_combat_damage_triggers`: a slot the engine *picks* is now
+  asked (Throat Slitter, `cr_603_3d_a_combat_damage_trigger_asks_for_its_target`),
+  except a batched / merged / Felix-doubled fire. Still open: slot 0 *bound*
+  to the damaged player is right for "that player" and wrong for "any
+  target" / "target player" wordings.
 - Defender-side triggers: `combat.rs` ~2421 ("whenever a creature attacks
   you") and ~6833 (`ControllerDealtCombatDamage`).
 - Delayed `WhenCardDies` / `WhenTokenDies` / haunt (`mod.rs` ~23352), delayed
