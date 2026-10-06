@@ -197,10 +197,10 @@ run against a prompting seat):
 - Four one-card sites (`stack.rs` ~8572 Valentin, `movement.rs` ~923 / ~2061,
   `token_triggers.rs` ~31). (Delayed dies / haunt, delayed "next spell", Room
   unlocks, mutate, state triggers and plot: fixed 2026-10-06.)
-- `Effect::Reflexive` (effects/mod.rs ~8083, ~42 cards) resolves its "when you
-  do" payoff inline with an engine pick instead of as a CR 603.7 trigger
-  (`ReflexiveTrigger` asks, and waits in the backlog while another decision
-  is open).
+- `Effect::Reflexive` (~42 cards) still resolves inline for a bot seat (CR 603.7
+  says the stack); a prompting seat's payoff now goes on the stack as a
+  `ReflexiveTrigger` and is asked (2026-10-06), unless it is bound to a
+  loop's player (Nihiloor).
 
 ## FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled
 

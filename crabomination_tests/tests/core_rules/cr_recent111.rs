@@ -247,3 +247,41 @@ fn cr_603_3d_a_delayed_cast_trigger_asks_for_its_target() {
     let plus = |id| g.battlefield_find(id).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne);
     assert_eq!((plus(a), plus(b)), (1, 0), "Bolt's mana value onto the chosen creature");
 }
+
+/// CR 603.7 — a "when you do" payoff is a reflexive trigger: Caesar's
+/// "damage … to target opponent" goes on the stack for a prompting seat, and
+/// that seat names the opponent.
+#[test]
+fn cr_603_7_a_reflexive_payoff_asks_for_its_target() {
+    let mut g = main_phase(3);
+    let caesar = g.add_card_to_battlefield(0, catalog::caesar_legions_emperor());
+    g.clear_sickness(caesar);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: caesar, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    let mut asked = 0;
+    for _ in 0..40 {
+        if let Some(p) = g.pending_decision.as_ref() {
+            let answer = match &p.decision {
+                Decision::ChooseModes { .. } => DecisionAnswer::Modes(vec![0, 2]),
+                Decision::ChooseTarget { legal, .. } if legal.contains(&Target::Player(2)) => {
+                    asked += 1;
+                    DecisionAnswer::Target(Target::Player(2))
+                }
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                d => crabomination::decision::AutoDecider.decide(d),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(asked, 1);
+    assert!(g.players[2].life < l2, "the chosen opponent takes the damage");
+    assert_eq!(g.players[1].life, l1);
+}

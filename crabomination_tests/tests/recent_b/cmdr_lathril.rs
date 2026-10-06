@@ -310,6 +310,8 @@ fn numa_distributes_at_a_prompting_seat() {
                     v[0] = *total;
                     DecisionAnswer::DamageDivision(v)
                 }
+                // CR 603.3d — the reflexive payoff's targets are the seat's.
+                crabomination::decision::Decision::ChooseTarget { legal, .. } => DecisionAnswer::Target(legal[0].clone()),
                 _ => DecisionAnswer::Amount(2),
             };
             g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");

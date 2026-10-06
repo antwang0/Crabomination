@@ -271,6 +271,8 @@ fn caesar_prompting_seat_answers_cleanly() {
         let Some(pending) = g.pending_decision.as_ref() else { break };
         let answer = match &pending.decision {
             Decision::ChooseModes { .. } => DecisionAnswer::Modes(vec![0, 2]),
+            // CR 603.3d — the reflexive payoff's target opponent.
+            Decision::ChooseTarget { legal, .. } => DecisionAnswer::Target(legal[0].clone()),
             _ => DecisionAnswer::Bool(true),
         };
         g.submit_decision(answer).expect("answer");

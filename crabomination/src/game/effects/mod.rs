@@ -8081,6 +8081,16 @@ impl GameState {
             }
 
             Effect::Reflexive { body } => {
+                // CR 603.7 / 603.3d — a prompting seat's payoff goes on the
+                // stack as the trigger it is, its targets that player's to
+                // name; a bot seat keeps the inline fill below. A payoff bound
+                // to a loop's player ("that player" — Nihiloor) stays inline.
+                if ctx.source.is_some()
+                    && !matches!(ctx.trigger_source, Some(EntityRef::Player(_)))
+                    && self.trigger_asks_targets(ctx.controller, body)
+                {
+                    return self.run_effect(&Effect::ReflexiveTrigger { body: body.clone() }, ctx, events);
+                }
                 // CR 603.7 — a "when you do" reflexive payoff. Its targets are
                 // chosen now (after the gating cost was paid), not at the outer
                 // trigger. Auto-target the body fresh and thread the picks
