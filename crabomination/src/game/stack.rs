@@ -8277,6 +8277,13 @@ impl GameState {
         // would have ended the match as soon as one of the four
         // players died even though their teammate was still in.
         self.settle_game_over_if_decided(events);
+        // CR 704.3 — the check repeats until none applies. A departure is the
+        // sweep's last step, and what it leaves (another seat's Aura on a
+        // creature that left with its owner) waited for some later pass while
+        // the next player already had priority. Bounded by the seat count.
+        if !newly_eliminated.is_empty() && self.game_over.is_none() {
+            self.check_state_based_actions_inner(events, mid_resolution);
+        }
     }
 
     /// An effect that makes a player lose or win (CR 104.3a / 104.2a) settles

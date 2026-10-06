@@ -1299,6 +1299,23 @@ fn cr_702_79a_a_stolen_persist_creature_returns_to_its_owner() {
     assert_eq!(g.battlefield_find(finks).map(|c| c.controller), Some(0), "back under its owner");
 }
 
+/// CR 704.3 — the state-based check repeats until none applies. A departure
+/// is the sweep's last step, so another seat's Aura on a creature that left
+/// with its owner stayed attached to nothing until some later pass, while the
+/// next player already had priority (Curiosity, a four-seat pod).
+#[test]
+fn cr_704_3_an_aura_on_a_departed_seats_creature_goes_in_the_same_check() {
+    let mut g = multi_player_game(3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::pacifism());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive());
+    assert!(g.battlefield_find(aura).is_none(), "the orphaned Aura went in the same check");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == aura));
+}
+
 /// CR 800.4 — a decision the departed player was being asked to make is
 /// dropped. A pending decision suppresses every *other* seat's actions until
 /// it is answered, so leaving one addressed to a player who is no longer in
