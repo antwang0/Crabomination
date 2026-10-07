@@ -3157,7 +3157,20 @@ strict debug     sweep.sh groups 410000-425000 3/4/5/6 seats (~1,900; the
                  stash claim never fired as `unclaimed stash`), 431000-434000
                  4/6/7/8 seats, concessions (~900): found the Akroan Horse
                  copy attacking (431005, CR 506.3b); --a dflt 441000-445000
-                 (~700) clean
+                 (~700) clean; 451000-459000 2..8 seats (~3,900) clean
+fuzzed debug     CRAB_POD_FUZZ 1,000-9,000 at 481000-496000 / 470500-477500
+                 (~6,000): found the wrong-shape answer deleting a paused
+                 spell (487016, five groups, one cause); then clean
+closing tip      771f573d8 + the once-each-turn look-back (one empty `Vec`,
+                 never allocated off a look-back fire): --bench 196,176 /
+                 27.64 / 613.0 byte-identical, determinism and
+                 thread_determinism ok, 172,925 decisions/s, peak_rss 29.7
+                 MiB; --seats 2..8 x 1,000 (7,000, 0 undecided; turns/game
+                 19.50 / 32.45 / 45.85 / 57.71 / 69.11 / 82.06 / 97.08);
+                 census 478000/479000 every deck 4/6 seats (10,000, 1 draw);
+                 fuzzed release 497000-499700 (15,700; 6 draws, 1 board
+                 cap); cube / sos / sealed --seed 9302 x 300 (7,500, 0
+                 undecided) — zero panics, zero stalls
 ```
 
 ### 2026-10-07 (Commander routine, sixth — session `011LGd2W`) — guardrail; CR 800.4a holds, departed askers, sweep finds

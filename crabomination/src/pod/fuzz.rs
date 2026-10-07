@@ -2,11 +2,12 @@
 //! its steps are swapped for a random alternative — another of its own cast /
 //! activation candidates at whatever priority window it holds, the other
 //! answer to a yes/no ask, a random answer to an ask that lists its options
-//! (targets, modes, cards, trigger order), a random subset of its attack or
-//! block declaration. A sweep tool: the tuned bots build the same boards over
-//! and over, and a panic or invariant that only an odd line of play reaches
-//! is still a panic self-play can hit. Seeded per game, so a fuzzed game
-//! replays. A swap the engine rejects is simply not taken.
+//! (targets, modes, cards, scry piles, divisions, trigger order, mulligans),
+//! a random subset of its attack or block declaration. A sweep tool: the
+//! tuned bots build the same boards over and over, and a panic or invariant
+//! that only an odd line of play reaches is still a panic self-play can hit.
+//! Seeded per game, so a fuzzed game replays. A swap the engine rejects is
+//! simply not taken.
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
@@ -84,6 +85,39 @@ impl FuzzBot {
                 let mut ids: Vec<_> = blockers.iter().map(|(id, _)| *id).collect();
                 ids.shuffle(&mut self.rng);
                 DecisionAnswer::DamageOrder(ids)
+            }
+            Decision::Scry { cards, .. } => {
+                let mut ids: Vec<_> = cards.iter().map(|(id, _)| *id).collect();
+                ids.shuffle(&mut self.rng);
+                let cut = self.rng.random_range(0..=ids.len());
+                let bottom = ids.split_off(cut);
+                DecisionAnswer::ScryOrder { kept_top: ids, bottom }
+            }
+            Decision::PutOnLibrary { count, hand, .. } => {
+                let mut ids: Vec<_> = hand.iter().map(|(id, _)| *id).collect();
+                ids.shuffle(&mut self.rng);
+                ids.truncate(*count);
+                DecisionAnswer::PutOnLibrary(ids)
+            }
+            Decision::Mulligan { .. } => {
+                if self.rng.random_range(0..2u8) == 0 { DecisionAnswer::Keep } else { DecisionAnswer::TakeMulligan }
+            }
+            // At least one to each target (CR 601.2d), the rest at random.
+            Decision::DivideDamage { total, targets, .. } if *total as usize >= targets.len() && !targets.is_empty() => {
+                let mut split = vec![1u32; targets.len()];
+                for _ in 0..(*total as usize - targets.len()) {
+                    let i = self.rng.random_range(0..split.len());
+                    split[i] += 1;
+                }
+                DecisionAnswer::DamageDivision(split)
+            }
+            Decision::AssignCombatDamage { attacker_power, blockers, .. } if !blockers.is_empty() => {
+                let mut split: Vec<(crate::card::CardId, u32)> = blockers.iter().map(|(id, _, _)| (*id, 0)).collect();
+                for _ in 0..*attacker_power {
+                    let i = self.rng.random_range(0..split.len());
+                    split[i].1 += 1;
+                }
+                DecisionAnswer::CombatDamageAssignment(split)
             }
             Decision::ChooseLegendToKeep { duplicates, .. } => {
                 DecisionAnswer::KeptLegend(duplicates[pick(&mut self.rng, duplicates.len())?].0)
