@@ -3134,6 +3134,34 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-07 (Commander routine, sixth — session `011LGd2W`) — guardrail; CR 800.4a holds, departed askers, sweep finds
+
+Hot-path touches: `change_control` writes `CardData::pre_effect_controller`
+(the card it already unshared); the entry stamp clears it behind an
+`is_some` read; a spell's resolution and `route_to_graveyard` clear
+`exiled_with` behind a read; the SBA tail reads `pending_decision.is_some()`;
+plural `PlayerRef::Seat` resolution reads `is_alive`. `release` at
+`2d49a1897`, 4-core Xeon @ 2.10 GHz, a debug sweep running beside it.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); 116,072 decisions/s, peak_rss 29.9 MiB
+2-player pools   --a dflt --b dflt --seed 260001 x 2,400: cube 19,200 (4
+                 CR 104.4a draws, no cap / board / stuck), sos 12,000 and
+                 sealed 28,800 all decided — 60,000 games, zero panics
+suite            24,310 / 0 / 5 (CRAB_ANSWER_LOG=strict) at aff1b464e
+strict debug     sweep.py groups (every deck, shuffled per seed):
+                 200000+ 4 x 30 concede, 201000+ 6 x 30, 202000+ 3 x 30
+                 concede, 203000+ 5 x 30 concede, 204000+ 8 x 20 concede
+                 (5,646): found Yuffie's stashed pick (201019), Florian's
+                 logged pick (203023), the phased-out holder (203033);
+                 220000+ 4 x 30, 221000+ 6 x 30 concede, 222000+ 7 x 24
+                 concede, 223000+ 3 x 30 concede (4,748): found Braids'
+                 departed turn (221000) and the phased-out merged commander
+                 (detector, 221030); all fixed and re-run clean
+```
+
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved
 
 Hot-path touches: every damage event to a player folds into a per-player,
