@@ -3233,6 +3233,10 @@ wall (--bench)   bench_ab.py 16 pairs, release 4519a0c02 (the run's base) vs
                  568f9a5e9, separate target dir: games/s medians 308.99 /
                  315.29, paired B/A median +0.70 %, mean +0.44 %, sd 5.78 —
                  flat
+strict debug     after the close: --a dflt 290000-295999 6/8/7/4/5/6 seats
+                 (773, clean); CRAB_POD_FUZZ=500-1500 296000-299999 4/6/3/5/8
+                 seats (5,020: one CR 104.4a Earthquake draw, clean). Suite at
+                 27f166a0d: 24,332 / 0 / 5; clippy 0
 ```
 
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved
