@@ -1827,7 +1827,7 @@ fn play_pod_game(
     let trace_from = pod_trace_from();
     let mut repeats = RepeatGuard::default();
     #[cfg(debug_assertions)]
-    let mut last_turn: Option<(u32, usize)> = None;
+    let mut last_turn: Option<(u32, usize, Option<usize>)> = None;
     #[cfg(debug_assertions)]
     let mut commanders_seen: Vec<(crate::card::CardId, &'static str, u32)> = Vec::new();
     let mut concede = concede_rate.map(|n| (n, StdRng::seed_from_u64(seed ^ 0xC0DE_C0DE)));
@@ -1893,11 +1893,14 @@ fn play_pod_game(
                 // or under their maximum hand size. Debug-only.
                 #[cfg(debug_assertions)]
                 {
-                    if let Some((turn, prev)) = last_turn
+                    // The maximum as the turn's last action left it: CR 514.1
+                    // discards before 514.2 ends "until end of turn" effects,
+                    // so a borrowed Body of Knowledge ("no maximum hand size")
+                    // covers the discard and is gone by the next turn.
+                    if let Some((turn, prev, Some(max))) = last_turn
                         && turn != g.turn_number
                         && !g.is_game_over()
                         && g.players.get(prev).is_some_and(|p| p.is_alive())
-                        && let Some(max) = g.effective_max_hand_size(prev)
                     {
                         assert!(
                             g.players[prev].hand.len() <= max + g.players[prev].cards_drawn_this_turn as usize,
@@ -1906,7 +1909,8 @@ fn play_pod_game(
                             g.step,
                         );
                     }
-                    last_turn = Some((g.turn_number, g.active_player_idx));
+                    last_turn =
+                        Some((g.turn_number, g.active_player_idx, g.effective_max_hand_size(g.active_player_idx)));
                 }
                 any = true;
                 actions += 1;
