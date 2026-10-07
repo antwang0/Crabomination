@@ -1,12 +1,6 @@
 //! Commander: the cards the **Riveteers Rampage** precon (NCC, Henzie
 //! "Toolbox" Torre) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_henzie.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Henzie** — a spell with its own blitz uses its printed blitz cost, not
-//!   a choice between that and Henzie's.
-//! - **Turf War** — the contested lands are chosen, not targeted; the
-//!   stolen land is the engine's pick.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -50,8 +44,8 @@ fn treasure() -> Arc<TokenDefinition> {
 /// Henzie "Toolbox" Torre — {B}{R}{G} 3/3 Devil Rogue. Creature spells with
 /// mana value 4 or greater have blitz at their mana cost (CR 702.152); blitz
 /// costs {1} less per commander cast from the command zone. A spell with its
-/// own blitz takes the cheaper of the two. Residual: a spell with another
-/// printed alternative cost (evoke, dash, …) is offered that one only.
+/// own blitz takes the cheaper of the two; one with another printed
+/// alternative cost (dash, evoke) takes either (`CastSpellGrantedAlternative`).
 pub fn henzie_toolbox_torre() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

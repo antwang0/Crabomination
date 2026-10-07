@@ -119,6 +119,59 @@ fn henzie_blitz_beats_a_dearer_printed_blitz() {
     assert!(g.battlefield_find(rhino).is_some_and(|c| c.blitzed));
 }
 
+/// CR 118.9a — only one alternative cost applies, and the caster picks it:
+/// Goblin Heelcutter's printed dash, or the blitz Henzie grants it.
+#[test]
+fn henzie_blitz_or_a_printed_dash() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::henzie_toolbox_torre());
+    let dash = g.add_card_to_hand(0, catalog::goblin_heelcutter());
+    let blitz = g.add_card_to_hand(0, catalog::goblin_heelcutter());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: dash,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("dash for {2}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dash).is_some_and(|c| c.dashed && !c.blitzed));
+    // Blitz at its mana cost, {3}{R}.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellGrantedAlternative {
+        card_id: blitz,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("blitz for {3}{R}");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blitz).is_some_and(|c| c.blitzed && !c.dashed));
+}
+
+/// Without a grant there is no granted alternative cost to take.
+#[test]
+fn a_printed_dash_alone_has_no_granted_alternative() {
+    let mut g = pod(2);
+    let id = g.add_card_to_hand(0, catalog::goblin_heelcutter());
+    flood(&mut g, 0);
+    let r = g.perform_action(GameAction::CastSpellGrantedAlternative {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err(), "{r:?}");
+}
+
 /// Jolene: an attack on your opponent makes the attacker a Treasure, and your
 /// own Treasure creations make one more.
 #[test]

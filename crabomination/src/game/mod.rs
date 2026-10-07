@@ -1729,6 +1729,11 @@ pub struct ColdState {
     /// CR 702.33b — the `kicker_options` indices the in-flight cast is paying
     /// for, consumed by the cast pipeline (`GameAction::CastSpellKickers`).
     pub(crate) cast_kicker_options: Vec<u8>,
+    /// CR 118.9a — the in-flight alternative-cost cast takes the granted
+    /// alternative cost over the card's printed one
+    /// (`GameAction::CastSpellGrantedAlternative`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) cast_granted_alt: bool,
     /// Turn-scoped `(land type, extra color)` mana grants from
     /// `Effect::ExtraManaOnLandTapThisTurn` (Bubbling Muck). Cleared at cleanup.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -20393,6 +20398,14 @@ impl GameState {
                 x_value,
                 delve_cards,
             } => self.cast_spell_with_delve(card_id, target, additional_targets, mode, x_value, &delve_cards),
+            GameAction::CastSpellGrantedAlternative { card_id, target, additional_targets, mode, x_value } => {
+                self.cast_granted_alt = true;
+                let out = self.cast_spell_alternative_from(
+                    crate::game::actions::AltCastZone::Hand, card_id, None, target, additional_targets, mode, x_value,
+                );
+                self.cast_granted_alt = false;
+                out
+            }
             GameAction::CastSpellAlternative {
                 card_id,
                 pitch_card,

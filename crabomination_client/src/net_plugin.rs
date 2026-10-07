@@ -1410,6 +1410,7 @@ pub fn cast_action_card_id(action: &GameAction) -> crabomination::card::CardId {
         | GameAction::CastSpellBack { card_id, .. }
         | GameAction::CastSpellDelve { card_id, .. }
         | GameAction::CastSpellAlternative { card_id, .. }
+        | GameAction::CastSpellGrantedAlternative { card_id, .. }
         | GameAction::CastFromCommandZone { card_id, .. }
         | GameAction::CastFlashback { card_id, .. }
         | GameAction::CastMayhem { card_id, .. }

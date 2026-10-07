@@ -561,6 +561,9 @@ impl GameState {
             .definition
             .alternative_cost
             .clone();
+        if self.cast_granted_alt {
+            return self.granted_alternative_cost_in(p, zone, card_id);
+        }
         // Scourge of Nel Toth — a graveyard-only alternative cost is offered
         // only on the graveyard hop (`cast_alternative_from_graveyard`).
         if let Some(alt) = &printed
@@ -582,6 +585,18 @@ impl GameState {
             }
             return Some(alt);
         }
+        self.granted_alternative_cost_in(p, zone, card_id)
+    }
+
+    /// The alternative cost a permanent `p` controls grants the spell
+    /// `card_id`, the card's printed one aside (CR 118.9a: a caster with
+    /// both picks one — `GameAction::CastSpellGrantedAlternative`).
+    pub(crate) fn granted_alternative_cost_in(
+        &self,
+        p: usize,
+        zone: AltCastZone,
+        card_id: CardId,
+    ) -> Option<crate::card::AlternativeCost> {
         // CR 702.152 — Henzie: "[filter] spells you cast have blitz", the
         // blitz cost being the spell's own mana cost.
         if let Some(granted) = self.granted_blitz(p, zone, card_id) {

@@ -9416,6 +9416,46 @@ pub(super) fn cast_candidates<'a>(
         };
         castable.push((action, false));
     }
+    // CR 118.9a — a card with a printed alternative cost may take a granted
+    // one instead (a dash creature under Henzie's blitz): offered beside it.
+    if facts.grants_alt_cost {
+        for c in state.players[seat].hand.iter().filter(|c| {
+            c.definition.alternative_cost.as_ref().is_some_and(|a| !a.from_graveyard)
+        }) {
+            let Some(a) = state.granted_alternative_cost_in(seat, crate::game::actions::AltCastZone::Hand, c.id)
+            else {
+                continue;
+            };
+            // Two blitzes are already the cheaper one (`effective_alternative_cost_in`).
+            let printed_blitz = c.definition.alternative_cost.as_ref().is_some_and(|p| p.blitz);
+            if (printed_blitz && a.blitz)
+                || !(mana_only_alt_cost(&a) || a.life_cost * 3 <= life)
+                || !a.discard_filters.is_empty()
+            {
+                continue;
+            }
+            let effect = &c.definition.effect;
+            let (target, additional_targets) = if effect.requires_target() {
+                let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            castable.push((
+                GameAction::CastSpellGrantedAlternative {
+                    card_id: c.id,
+                    target,
+                    additional_targets,
+                    mode: None,
+                    x_value: None,
+                },
+                false,
+            ));
+        }
+    }
     });
 
     // Non-mana activated abilities as candidates (flag): without this,
@@ -13855,6 +13895,7 @@ pub mod menu_census {
                         | GameAction::CastSpellKicked { .. }
                         | GameAction::CastSpellConvoke { .. }
                         | GameAction::CastSpellAlternative { .. }
+                        | GameAction::CastSpellGrantedAlternative { .. }
                 );
             }
         }
@@ -13932,6 +13973,7 @@ pub mod menu_census {
             | GameAction::CastPrepareSpell { x_value, .. }
             | GameAction::CastSpellConvoke { x_value, .. }
             | GameAction::CastSpellAlternative { x_value, .. }
+            | GameAction::CastSpellGrantedAlternative { x_value, .. }
             | GameAction::ActivateAbility { x_value, .. } => *x_value,
             _ => None,
         }
@@ -13947,6 +13989,7 @@ pub mod menu_census {
             | GameAction::CastPrepareSpell { x_value, .. }
             | GameAction::CastSpellConvoke { x_value, .. }
             | GameAction::CastSpellAlternative { x_value, .. }
+            | GameAction::CastSpellGrantedAlternative { x_value, .. }
             | GameAction::ActivateAbility { x_value, .. } => *x_value = Some(x),
             _ => return None,
         }
@@ -17988,6 +18031,7 @@ pub(super) fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) 
         | GameAction::CastMayhem { card_id, target, additional_targets, .. }
         | GameAction::CastHarmonize { card_id, target, additional_targets, .. }
         | GameAction::CastSpellAlternative { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellGrantedAlternative { card_id, target, additional_targets, .. }
         | GameAction::CastAdventureCreature { card_id, target, additional_targets, .. }
         | GameAction::CastPlotted { card_id, target, additional_targets, .. }
         | GameAction::CastForetold { card_id, target, additional_targets, .. }
@@ -20736,7 +20780,8 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         // graveyard or in exile, and unreachable any other way) but leaving
         // it there, so there is no variant premium to price.
         | GameAction::CastFromZoneWithoutPaying { card_id, target, .. }
-        | GameAction::CastSpellAlternative { card_id, target, .. } => {
+        | GameAction::CastSpellAlternative { card_id, target, .. }
+        | GameAction::CastSpellGrantedAlternative { card_id, target, .. } => {
             (*card_id, target.clone(), 0, 0)
         }
         // CR 903.8 — the commander is scored as the creature it is; the tax

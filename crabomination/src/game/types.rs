@@ -979,6 +979,17 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 118.9a — cast a spell from hand for the alternative cost a
+    /// permanent grants it (Henzie's blitz, Kentaro's {X}) rather than its own
+    /// printed one (evoke, dash): only one alternative cost applies.
+    CastSpellGrantedAlternative {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     ActivateAbility {
         card_id: CardId,
         ability_index: usize,
@@ -2051,6 +2062,7 @@ impl GameAction {
                 | A::CastSpellWaterbend { .. }
                 | A::CastSpellDelve { .. }
                 | A::CastSpellAlternative { .. }
+                | A::CastSpellGrantedAlternative { .. }
                 | A::CastFlashback { .. }
                 | A::CastMayhem { .. }
                 | A::CastHarmonize { .. }
@@ -2102,6 +2114,7 @@ impl GameAction {
             | A::CastSpellWaterbend { card_id, .. }
             | A::CastSpellDelve { card_id, .. }
             | A::CastSpellAlternative { card_id, .. }
+            | A::CastSpellGrantedAlternative { card_id, .. }
             | A::CastFlashback { card_id, .. }
             | A::CastMayhem { card_id, .. }
             | A::CastHarmonize { card_id, .. }
