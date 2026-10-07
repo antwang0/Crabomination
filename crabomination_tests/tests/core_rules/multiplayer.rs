@@ -9236,3 +9236,29 @@ fn cr_800_4a_a_departed_casters_spell_waiting_on_another_seat_ceases_to_exist() 
         "the Bears was never countered",
     );
 }
+
+/// CR 506.3b — a creature put onto the battlefield attacking under the control
+/// of a player who isn't attacking enters, but is never an attacking creature.
+/// Satya copied Akroan Horse "tapped and attacking"; the copy entered under an
+/// opponent's control and stayed in the attack (a strict 7-seat debug pod,
+/// seed 431005 game 2, tripped the CR 506.4 invariant).
+#[test]
+fn cr_506_3b_a_copy_entering_under_an_opponent_is_never_attacking() {
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    let satya = g.add_card_to_battlefield(0, catalog::satya_aetherflux_genius());
+    let horse = g.add_card_to_battlefield(0, catalog::akroan_horse());
+    g.set_attacking(vec![Attack { attacker: satya, target: AttackTarget::Player(1) }]);
+    let ctx = EffectContext::for_ability(satya, 0, Some(Target::Permanent(horse)));
+    g.resolve_effect(&Effect::TokenCopyTappedAttacking { source: Selector::Target(0) }, &ctx).expect("resolves");
+    let copy = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Akroan Horse")
+        .expect("the copy entered");
+    assert_ne!(copy.controller, 0, "under an opponent's control");
+    assert_eq!(g.attacking_ids(), vec![satya], "the copy never attacks");
+}

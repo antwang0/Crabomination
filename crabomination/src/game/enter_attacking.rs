@@ -11,7 +11,7 @@
 use super::GameState;
 use super::effects::EffectContext;
 use super::types::{Attack, AttackTarget, GameError, Target};
-use crate::card::CardId;
+use crate::card::{CardId, CardType};
 use crate::effect::{Effect, Selector};
 
 impl GameState {
@@ -112,8 +112,21 @@ impl GameState {
     }
 
     /// Mark `id` (already on the battlefield) as attacking `target`, without
-    /// declaring it (CR 508.4). Returns false if it isn't on the battlefield.
+    /// declaring it (CR 508.4). Returns false if it isn't on the battlefield,
+    /// or it entered but is never an attacking creature (CR 506.3a-c): it isn't
+    /// a creature, an attacking player doesn't control it (an Akroan Horse
+    /// copy entering under an opponent's control), or its defender left.
     pub(crate) fn put_into_combat_attacking(&mut self, id: CardId, target: AttackTarget) -> bool {
+        let Some(ctrl) = self.battlefield.find_by_id(id).map(|c| c.controller) else { return false };
+        if !self.same_team(ctrl, self.active_player_idx)
+            || !self.computed_permanent(id).is_some_and(|cp| cp.card_types().contains(&CardType::Creature))
+            || match target {
+                AttackTarget::Player(p) => !self.players.get(p).is_some_and(|pl| pl.is_alive()),
+                AttackTarget::Planeswalker(pw) | AttackTarget::Battle(pw) => self.battlefield.find_by_id(pw).is_none(),
+            }
+        {
+            return false;
+        }
         let Some(c) = self.battlefield.find_by_id_mut(id) else { return false };
         c.attacked_this_turn = true;
         self.note_attack_defender(target);
