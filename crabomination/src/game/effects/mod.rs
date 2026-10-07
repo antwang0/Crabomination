@@ -27353,10 +27353,16 @@ impl GameState {
                 let opp = self.resolve_player(who, ctx).or_else(|| {
                     self.default_hostile_opponent(ctx.controller)
                 });
-                let Some(opp) = opp else { return Ok(()) };
+                // A re-run that finds nothing left to look at (the seat whose
+                // life loss set the count has left) spends the logged pick.
+                let Some(opp) = opp else {
+                    self.clear_answer_log();
+                    return Ok(());
+                };
                 let top: Vec<crate::card::CardId> =
                     self.players[opp].library.iter().take(n).map(|c| c.id).collect();
                 if top.is_empty() {
+                    self.clear_answer_log();
                     return Ok(());
                 }
                 // "Exile one of them" is the controller's pick (the auto default:

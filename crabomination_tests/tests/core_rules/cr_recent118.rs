@@ -148,3 +148,44 @@ fn cr_608_2_a_pick_whose_candidates_left_spends_its_answer() {
     assert!(g.pending_decision.is_none());
     assert_eq!(g.battlefield_find(greaves).and_then(|c| c.attached_to), None, "nothing to attach");
 }
+
+/// CR 608.2 / 800.4a — Florian's look counts the life the caster's opponents
+/// lost; a seat that leaves while the pick waits takes its loss out of the
+/// count, the re-run looks at nothing, and the logged pick is spent rather
+/// than leaked (a strict 5-seat debug pod with concessions, seed 203023
+/// game 5).
+#[test]
+fn cr_608_2_a_look_that_shrinks_to_nothing_spends_its_pick() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::effect::{LookExileGrant, Value};
+    use crabomination::game::types::GameAction;
+    // SAFETY: set before any thread reads the environment.
+    unsafe { std::env::set_var("CRAB_ANSWER_LOG", "strict") };
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].wants_ui = true;
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.players[1].life_lost_this_turn = 2;
+    let look = g.add_card_to_hand(0, CardDefinition {
+        name: "Florian's Look",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookTopExileOneMayPlay {
+            count: Value::TotalLifeLostThisTurn(PlayerRef::EachOpponent),
+            who: PlayerRef::You,
+            grant: LookExileGrant::PlayThisTurn,
+        },
+        ..Default::default()
+    });
+    g.perform_action(GameAction::CastSpell { card_id: look, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(matches!(g.pending_decision.as_ref().map(|d| &d.decision), Some(Decision::ChooseCards { .. })));
+    g.concede(1);
+    g.submit_decision(DecisionAnswer::Cards(vec![top])).expect("answer");
+    assert!(g.pending_decision.is_none());
+    assert!(g.exile.iter().all(|c| c.id != top), "nothing was looked at, so nothing is exiled");
+}
