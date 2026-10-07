@@ -435,3 +435,34 @@ fn cr_603_2_a_cast_listener_destroyed_later_in_the_resolution_saw_the_cast() {
     assert!(g.battlefield_find(watcher).is_none(), "destroyed");
     assert_eq!(g.players[0].life, life + 2, "the cast was seen before the sweep");
 }
+
+/// CR 122.2 — Me, the Immortal keeps its counters outside a hand or library,
+/// so cast from the graveyard it enters already carrying a keyword counter,
+/// and the whole-board keyword gate must see it (its debug audit fired in a
+/// bot's look-ahead in a fuzzed 5-seat pod, seed 469022: a vigilance counter
+/// on Me after a cleanup had cleared the gate).
+#[test]
+fn cr_122_2_a_card_entering_with_its_keyword_counters_arms_the_board_gate() {
+    use crabomination::card::Keyword;
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let mut g = main_phase();
+    let me = g.add_card_to_graveyard(0, catalog::me_the_immortal());
+    g.players[0].graveyard.iter_mut().find(|c| c.id == me).unwrap().keyword_counters.add(Keyword::Vigilance, 1);
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    let _ = g.do_cleanup(&mut Vec::new());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for c in [Color::Green, Color::Blue, Color::Red] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastFlashback { card_id: me, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Me from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(me).is_some_and(|c| !c.keyword_counters.is_empty()), "entered with its counter");
+    // A whole-board keyword ask (the cumulative-upkeep gate).
+    let _ = g.process_cumulative_upkeep();
+}

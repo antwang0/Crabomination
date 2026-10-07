@@ -3421,8 +3421,9 @@ pub struct GameState {
     /// deserialize, recomputed **exactly** at cleanup (the eot grants have
     /// just been cleared; the counters are counted), and set by every engine
     /// path that adds one in between — [`grant_keyword_eot`], the three
-    /// `keyword_counters.add` sites, and a permanent phasing back in with its
-    /// counters. A test that writes the fields directly is fine until a
+    /// `keyword_counters.add` sites, a permanent phasing back in with its
+    /// counters, and one entering with counters it kept off the battlefield
+    /// (`apply_etb_keyword_counters`). A test that writes the fields directly is fine until a
     /// cleanup has run; the gate's `debug_assert!` audits the rest.
     ///
     /// [`grant_keyword_eot`]: Self::grant_keyword_eot

@@ -12,6 +12,14 @@ impl GameState {
     /// Called beside `apply_etb_type_riders` at the spell-resolve, move and
     /// token-mint entry sites, before the entry's triggers are gathered.
     pub(crate) fn apply_etb_keyword_counters(&mut self, entering: CardId, controller: usize, events: &mut Vec<GameEvent>) {
+        // CR 122.2 — a card that keeps its counters off the battlefield (Me,
+        // the Immortal, Skullbriar) can enter already carrying a keyword
+        // counter; the whole-board keyword gate must hear of it.
+        if !self.board_instance_keywords
+            && self.battlefield.find_by_id(entering).is_some_and(|c| c.cold_any(|k| !k.keyword_counters.is_empty()))
+        {
+            self.board_instance_keywords = true;
+        }
         if !self.battlefield.has_etb_counter_static() || self.counters_locked() {
             return;
         }
