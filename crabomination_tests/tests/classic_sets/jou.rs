@@ -279,7 +279,7 @@ fn cast_multi(
     r.map(|_| ())
 }
 
-/// CR 702.122 Strive — each extra target charges the full colored rider, and
+/// CR 601.2f strive — each extra target charges the full colored rider, and
 /// the spell pumps every target it paid for.
 #[test]
 fn strive_charges_a_colored_rider_per_extra_target() {

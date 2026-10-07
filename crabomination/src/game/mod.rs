@@ -167,6 +167,7 @@ mod vanishing;
 mod commander_return;
 mod legend_rule;
 mod simultaneous_deaths;
+mod strive_slots;
 mod departed_listeners;
 mod attack_apnap;
 mod trigger_batch;

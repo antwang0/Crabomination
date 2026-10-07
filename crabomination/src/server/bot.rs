@@ -7814,7 +7814,7 @@ pub(super) fn cast_candidates<'a>(
                     None => continue,
                 }
             } else if mode_effect.requires_target() && c.definition.cost_per_extra_target.is_some() {
-                // CR 702.122 / Fireball — each target beyond the first costs
+                // CR 601.2f strive / Fireball — each target beyond the first costs
                 // more, and X already spent the whole pool: the slot walker's
                 // full fan-out (Fireball's ten slots, the first of them its
                 // own caster) could never be paid, so the card was never

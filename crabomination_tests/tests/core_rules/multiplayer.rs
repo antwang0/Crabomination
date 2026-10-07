@@ -9262,3 +9262,37 @@ fn cr_506_3b_a_copy_entering_under_an_opponent_is_never_attacking() {
     assert_ne!(copy.controller, 0, "under an opponent's control");
     assert_eq!(g.attacking_ids(), vec![satya], "the copy never attacks");
 }
+
+/// CR 601.2f / 733.1 — a prompting seat casting a strive spell is offered
+/// the next target only when the surcharge for it can be paid. With exactly
+/// Call the Coppercoats' {2}{W} in pool the extra-opponent slot used to be
+/// offered, and taking it made the cast illegal and rewound it (a uniform-
+/// pilot pod re-cast it 3,823 times, seed 540010 game 8).
+#[test]
+fn cr_601_2f_an_unpayable_strive_slot_is_not_offered() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    use crabomination::mana::Color;
+    for (extra_white, offered) in [(0, false), (2, true)] {
+        let mut g = multi_player_game(3);
+        g.step = TurnStep::PreCombatMain;
+        g.players[0].wants_ui = true;
+        g.players[0].mana_pool.add(Color::White, 1 + extra_white);
+        g.players[0].mana_pool.add_colorless(2);
+        let c = g.add_card_to_hand(0, catalog::call_the_coppercoats());
+        g.perform_action(GameAction::CastSpell {
+            card_id: c,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        let asked = g.pending_decision.as_ref().is_some_and(|pd| {
+            matches!(pd.decision, crabomination::decision::Decision::ChooseTarget { .. })
+        });
+        assert_eq!(asked, offered, "extra white {extra_white}");
+        if !offered {
+            assert_eq!(g.stack.len(), 1, "the one-target cast went through");
+        }
+    }
+}

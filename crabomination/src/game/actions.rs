@@ -1556,7 +1556,7 @@ pub(crate) fn flashback_additional_costs(
         .collect()
 }
 
-/// CR 702.122 Strive (and Fireball's generic sibling): "this spell costs
+/// CR 601.2f — strive (an ability word, CR 207.2c) and Fireball: "this spell costs
 /// [cost] more to cast for each target beyond the first". Returns the total
 /// surcharge for `extra_targets` filled additional slots.
 pub fn strive_cost_for_spell(
@@ -6209,7 +6209,20 @@ impl GameState {
                         })
                         .collect()
                 });
-                if !candidates.is_empty() {
+                // CR 601.2f — a slot whose surcharge can't be paid isn't offered.
+                let surcharged = optional
+                    && self.find_card_anywhere(card_id).is_some_and(|c| c.definition.cost_per_extra_target.is_some());
+                if !candidates.is_empty()
+                    && (!surcharged
+                        || self.surcharged_slot_affordable(
+                            card_id,
+                            &target,
+                            &additional_targets,
+                            candidates[0].clone(),
+                            mode,
+                            x_value,
+                        ))
+                {
                     self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                         decision: crate::decision::Decision::ChooseTarget {
                             optional,
