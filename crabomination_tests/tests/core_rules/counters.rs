@@ -1051,3 +1051,19 @@ fn you_put_counters_keys_on_the_placer() {
     put_plus_as(&mut g, 0, theirs, 2);
     assert_eq!(g.players[0].life, 22, "my counters on their creature");
 }
+
+/// CR 122.6 / 702.79a — a persist creature returns "with a -1/-1 counter on
+/// it", which is a counter put on it: Flourishing Defenses (its ruling names
+/// persist) makes one Elf Warrior for the returned Kitchen Finks.
+#[test]
+fn cr_122_6_a_persist_return_is_a_counter_put_on_the_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::flourishing_defenses());
+    let finks = g.add_card_to_battlefield(0, catalog::kitchen_finks());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    bolt(&mut g, 0, finks);
+    let finks_back = g.battlefield.iter().find(|c| c.definition.name == "Kitchen Finks").expect("persisted");
+    assert_eq!(finks_back.counter_count(CounterType::MinusOneMinusOne), 1);
+    let elves = g.battlefield.iter().filter(|c| c.definition.name == "Elf Warrior").count();
+    assert_eq!(elves, 1);
+}

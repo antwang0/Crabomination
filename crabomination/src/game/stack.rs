@@ -9527,9 +9527,14 @@ impl GameState {
             // CR 702.79a / 702.93a — it returns "with" the counter: an
             // enters-with placement, so the CR 614.16 chain (Hardened Scales
             // makes undying's two) and the CR 122.1 lock apply.
-            self.place_counters(rid, kind, 1);
+            let n = self.place_counters(rid, kind, 1);
             self.tally_permanent_entry(rid);
             events.push(GameEvent::PermanentEntered { card_id: rid });
+            // CR 122.6 / 122.6a — a counter it enters with is a counter put on
+            // it, by its controller (Flourishing Defenses sees a persist return).
+            if n > 0 {
+                events.push(GameEvent::CounterAdded { card_id: rid, counter_type: kind, count: n, placer: None });
+            }
         }
     }
 }
