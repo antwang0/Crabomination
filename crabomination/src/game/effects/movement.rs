@@ -2390,6 +2390,13 @@ impl GameState {
             // (it is LKI for the death triggers); guarded, so a clean card
             // pays no CoW unshare.
             card.clear_effects_on_zone_change();
+            // CR 400.7 / 607 — a permanent cast out of an exile pile carried
+            // its links in (Share the Spoils' "play cards exiled with it"
+            // reads them as it lands); leaving, it sheds them.
+            if card.exiled_with.is_some() || card.exiled_by.is_some() {
+                card.exiled_with = None;
+                card.exiled_by = None;
+            }
             // CR 716.2 — a Class's level is battlefield-only.
             card.reset_class_level();
             // CR 707 — a temporary copy reverts as it leaves.

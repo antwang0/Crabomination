@@ -3207,7 +3207,7 @@ site goes through one helper. release-fast, 4-core Xeon @ 2.80 GHz.
                  (the run's base), 5 pairs, decisions/s base / cand:
                  116.9/114.6, 103.2/103.3, 101.3/95.0, 103.4/115.3,
                  112.3/115.5 k — means 107.4 / 108.7 k, flat
-suite            24,303 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
+suite            24,305 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
 pods (release)   seeds 150002-150008, 2..8 seats x 400 = 2,800; every deck
                  in 6-seat groups x 200 (160000+) = 6,200 and 4-seat
                  groups x 200 with CRAB_POD_CONCEDE=20 (161000+) = 9,200:
@@ -3236,7 +3236,9 @@ closing tip      6e1c85c2: --bench 196,176 / 613.0 byte-identical,
                  determinism ok; every deck in 6-seat groups x 150 with
                  CRAB_POD_CONCEDE=20 (230000+) = 4,650: zero panics, zero
                  stalls, 2 draws; cube / sos / sealed x 300 (231000) =
-                 7,500, 0 undecided
+                 7,500, 0 undecided; scripts/pod_census.sh strict debug,
+                 4 seats x 24 with CRAB_POD_CONCEDE=15 (240000+, 1,104) and
+                 6 seats x 24 probe only (250000+, 744): clean
 ```
 
 ### 2026-10-07 (Commander routine) — guardrail; CR 702.175 / 118.9a cast options, CR 508.1d / 509.1c cap deadlocks

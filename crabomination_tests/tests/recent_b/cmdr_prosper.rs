@@ -300,6 +300,40 @@ fn share_the_spoils_shares() {
     assert!(g.exile.iter().any(|c| c.id == next), "refilled from your library");
 }
 
+/// CR 400.7 / 607 — the Bears cast out of Share the Spoils' pile are a new
+/// object: exiled again by something else, they are not "exiled with" Share
+/// the Spoils any more (a stale link left them in its pile for ever).
+#[test]
+fn cr_400_7_a_card_cast_from_the_pile_leaves_it_for_good() {
+    use crabomination::effect::{Effect, Selector, ZoneDest};
+    use crabomination::game::effects::EffectContext;
+    let mut g = main_phase(2);
+    let theirs = g.add_card_to_library(1, catalog::grizzly_bears());
+    let sts = g.add_card_to_hand(0, catalog::share_the_spoils());
+    cast_at(&mut g, sts, &[]).expect("cast");
+    g.step = TurnStep::Untap;
+    to_step(&mut g, TurnStep::Upkeep);
+    to_step(&mut g, TurnStep::PreCombatMain);
+    act_as(&mut g, 0, GameAction::CastSpell { card_id: theirs, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .or_else(|_| {
+            act_as(&mut g, 0, GameAction::CastFromZoneWithoutPaying {
+                card_id: theirs,
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            })
+        })
+        .expect("cast the opponent's exiled Bears");
+    assert!(g.battlefield_find(theirs).is_some());
+    let ctx = EffectContext::for_ability(sts, 0, None);
+    let evs = g.resolve_effect(&Effect::Move { what: Selector::ExactObjects(vec![theirs]), to: ZoneDest::Exile }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    let sweep = Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Graveyard };
+    g.resolve_effect(&sweep, &ctx).unwrap();
+    assert!(g.exile.iter().any(|c| c.id == theirs), "not one of Share the Spoils' cards any more");
+}
+
 /// Share the Spoils, per its oracle and the 2021-07-23 rulings: entering
 /// mid-turn opens the pile to the active player at once ("during each
 /// player's turn"), a land played from it is that turn's one card and

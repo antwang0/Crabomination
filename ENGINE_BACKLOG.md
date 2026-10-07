@@ -142,7 +142,12 @@ Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
   `move_card_to` drops `exiled_with` too. ✅ *(sixth run)* the cast-from-
   exile paths keep `exiled_with` for the cast's own reads (Aminatou's Augury,
   Share the Spoils, Abaddon) and drop it as the spell resolves or reaches a
-  graveyard (`route_to_graveyard`).
+  graveyard (`route_to_graveyard`). ✅ *(fifth run, same day)* a land played
+  out of a pile keeps it as it lands (Share the Spoils' land-play refill
+  reads it) and a permanent sheds both links as it leaves the battlefield
+  (`move_card_to`, `remove_from_battlefield_to_exile`), a card as it reaches
+  a graveyard (`Player::send_to_graveyard`)
+  (`cmdr_prosper::cr_400_7_a_card_cast_from_the_pile_*`).
   `core_rules::cr_recent118`.
 - ✅ **CR 800.4a** — a card spell the departed seat was casting but did not
   own (Villainous Wealth's free casts of an opponent's library, then a

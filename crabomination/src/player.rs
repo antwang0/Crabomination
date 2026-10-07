@@ -1868,6 +1868,13 @@ impl PlayerData {
         // `Arc::make_mut` — so clearing an already-empty map deep-copies a
         // shared card, and most permanents die with no counters at all.
         card.drop_counters_for_zone_change(crate::card::Zone::Graveyard);
+        // CR 400.7 / 607 — a link to the exile it once left is not this
+        // object's (a card cast from exile kept it). Read first: the write
+        // is a `make_mut`.
+        if card.exiled_with.is_some() || card.exiled_by.is_some() {
+            card.exiled_with = None;
+            card.exiled_by = None;
+        }
         // CR 111.8 — a token that dies is no card: it feeds none of the
         // "cards put into your graveyard" tallies, and doesn't descend
         // (CR 700.11 "a permanent card"). It sits here until 704.5d.

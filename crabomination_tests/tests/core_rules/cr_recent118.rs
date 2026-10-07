@@ -189,3 +189,32 @@ fn cr_608_2_a_look_that_shrinks_to_nothing_spends_its_pick() {
     assert!(g.pending_decision.is_none());
     assert!(g.exile.iter().all(|c| c.id != top), "nothing was looked at, so nothing is exiled");
 }
+
+/// The cast route: Hostage Taker exiles a Bear and its controller casts it.
+/// The permanent it becomes carries no exile link, so exiled again later and
+/// the Taker gone, it stays exiled.
+#[test]
+fn cr_400_7_a_card_cast_out_of_exile_sheds_its_exile_links() {
+    use crabomination::game::types::GameAction;
+    use crabomination::mana::Color;
+    let mut g = main_phase();
+    let taker = g.add_card_to_battlefield(0, catalog::hostage_taker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let etb = catalog::hostage_taker().triggered_abilities[0].effect.clone();
+    resolve(&mut g, taker, Some(Target::Permanent(bear)), &etb);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the hostage");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("on the battlefield");
+    assert!(c.exiled_by.is_none() && c.exiled_with.is_none(), "{:?} / {:?}", c.exiled_by, c.exiled_with);
+    resolve(&mut g, taker, None, &Effect::Move { what: Selector::ExactObjects(vec![bear]), to: ZoneDest::Exile });
+    resolve(&mut g, taker, None, &Effect::Destroy { what: Selector::ExactObjects(vec![taker]) });
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}

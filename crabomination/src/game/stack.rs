@@ -8946,7 +8946,13 @@ impl GameState {
     }
 
     pub fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
-        if let Some(card) = self.battlefield.take_by_id(id) {
+        if let Some(mut card) = self.battlefield.take_by_id(id) {
+            // CR 400.7 / 607 — the permanent's old exile links (a card cast
+            // out of an exile pile) are not the new exile's.
+            if card.exiled_with.is_some() || card.exiled_by.is_some() {
+                card.exiled_with = None;
+                card.exiled_by = None;
+            }
             if let Some(seat) = self.resolution_causer {
                 self.note_exiled_from_hand_or_by(seat);
             }
