@@ -1639,13 +1639,6 @@ fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
     if names.is_empty() { dbg } else { format!("{dbg} [{}]", names.join(", ")) }
 }
 
-/// `CRAB_POD_CONCEDE=<n>`: after each accepted action, a living seat concedes
-/// with probability `n / 10_000` (CR 104.3a) — CR 800.4a's leave path driven
-/// at arbitrary points (mid-combat, mid-payment, under a pending ask), where a
-/// pod's own losses only ever reach it from a state-based check. Its own
-/// seeded stream, so an unset run is the run it always was.
-/// Which zone `id` is in, for an invariant's message. Debug-only.
-#[cfg(debug_assertions)]
 /// The nontoken cards each seat owns, across every zone a card can be in (a
 /// melded or merged permanent counts its component cards). A spell copy is a
 /// token here (CR 707.10a). For the debug conservation invariant.
@@ -1687,6 +1680,7 @@ fn owned_card_counts(g: &GameState) -> Vec<Vec<crate::card::CardId>> {
     n
 }
 
+/// Which zone `id` is in, for an invariant's message. Debug-only.
 #[cfg(debug_assertions)]
 fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
     let has = |z: &[crate::card::CardInstance]| z.iter().any(|c| c.id == id);
@@ -1770,6 +1764,11 @@ fn pod_sweep_probe() -> bool {
     *ON.get_or_init(|| std::env::var_os("CRAB_POD_SWEEP_PROBE").is_some())
 }
 
+/// `CRAB_POD_CONCEDE=<n>`: after each accepted action, a living seat concedes
+/// with probability `n / 10_000` (CR 104.3a) — CR 800.4a's leave path driven
+/// at arbitrary points (mid-combat, mid-payment, under a pending ask), where a
+/// pod's own losses only ever reach it from a state-based check. Its own
+/// seeded stream, so an unset run is the run it always was.
 fn pod_concede_rate() -> Option<u32> {
     static RATE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
     *RATE.get_or_init(|| std::env::var("CRAB_POD_CONCEDE").ok().and_then(|s| s.parse().ok()))
