@@ -28202,7 +28202,14 @@ impl GameState {
         r
     }
 
-    fn advance_mulligan(&mut self, next_player: Option<usize>) {
+    pub(crate) fn advance_mulligan(&mut self, mut next_player: Option<usize>) {
+        // CR 800.4a — a seat that left during the mulligans takes no turn at
+        // them (a 4-seat fuzzed pod handed a departed seat its mulligan).
+        while let Some(p) = next_player
+            && !self.players.get(p).is_some_and(|q| q.is_alive())
+        {
+            next_player = (p + 1 < self.players.len()).then_some(p + 1);
+        }
         match next_player {
             Some(p) => {
                 let after = (p + 1 < self.players.len()).then_some(p + 1);

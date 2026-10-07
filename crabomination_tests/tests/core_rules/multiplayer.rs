@@ -151,6 +151,35 @@ fn mulligan_chain_visits_every_seat_in_a_four_player_game() {
     );
 }
 
+/// CR 800.4a / 103.5 — a seat that leaves during the mulligans takes no turn
+/// at them, and if it leaves while deciding, the chain goes on to the next
+/// seat still in the game. A fuzzed 4-seat strict pod (seed 360013 game 19)
+/// handed a departed seat its mulligan, and a departure mid-decision dropped
+/// the chain.
+#[test]
+fn cr_800_4a_the_mulligans_skip_a_seat_that_left() {
+    use crabomination::decision::Decision;
+    let mut g = multi_player_game(4);
+    for seat in 0..4 {
+        for _ in 0..10 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    g.start_mulligan_phase();
+    let deciding = |g: &GameState| match g.pending_decision.as_ref().map(|d| &d.decision) {
+        Some(Decision::Mulligan { player, .. }) => Some(*player),
+        _ => None,
+    };
+    assert_eq!(deciding(&g), Some(0));
+    g.concede(2); // a later seat leaves
+    g.submit_decision(DecisionAnswer::Keep).expect("seat 0 keeps");
+    assert_eq!(deciding(&g), Some(1));
+    g.concede(1); // the deciding seat leaves
+    assert_eq!(deciding(&g), Some(3), "seat 2 is skipped; seat 3 decides");
+    g.submit_decision(DecisionAnswer::Keep).expect("seat 3 keeps");
+    assert!(g.pending_decision.is_none(), "the mulligans are over");
+}
+
 /// CR 103.5c — in a multiplayer game the first mulligan doesn't count toward
 /// the cards bottomed: one mulligan keeps seven, two bottom one. (CR 103.5a's
 /// two-player count is `london_mulligan_repose_on_short_bottoming_answer`.)

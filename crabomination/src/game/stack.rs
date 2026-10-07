@@ -6226,6 +6226,13 @@ impl GameState {
         if !resumes && self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p || d.resolves_for(p)) {
             let dropped = self.pending_decision.take();
             self.clear_answer_log();
+            // The mulligans go on to the next seat still in the game.
+            if let Some(crate::game::types::ResumeContext::Mulligan { player, next_player, .. }) =
+                dropped.as_ref().map(|d| &d.resume)
+                && *player == p
+            {
+                self.advance_mulligan(*next_player);
+            }
             // The paused spell's card is off the stack, in the resume: it
             // must land somewhere (a 5-seat pod: a seat conceded owing its
             // Mob Verdict vote, and the card left the game). Cast by the
