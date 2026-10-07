@@ -25,6 +25,15 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Open: a granted alternative cost beside a printed one (2026-10-07)
+
+`GameAction::CastSpellGrantedAlternative` (CR 118.9a — Henzie's blitz on a
+dash / evoke creature, Kentaro's {X} on an evoke card) has no client entry:
+the right-click `AltCost` path submits `CastSpellAlternative`, which takes the
+printed one. Needs an affordance list of hand cards whose
+`granted_alternative_cost_in` differs from the printed alt, and a two-entry
+menu. Engine and bot take both today.
+
 ## Take-backs against bots (2026-10-01) — shipped
 
 TODO "Engine — Rollback / Undo system", step 1. Read off layout-harness
