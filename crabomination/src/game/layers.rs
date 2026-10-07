@@ -1802,7 +1802,7 @@ fn affected_includes_gated(
         keywords: gate_keywords,
     } = *gates;
     let computed_types = gate_card_types.unwrap_or(&card.definition.card_types);
-    let colors = || gate_colors.unwrap_or_else(|| card.definition.printed_color_set());
+    let colors = || gate_colors.unwrap_or_else(|| colors_from_card(card));
     match affected {
         AffectedPermanents::Source => source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
@@ -2074,7 +2074,7 @@ pub(crate) fn requirement_matches_card_typed(
 ) -> bool {
     use SelectionRequirement as R;
     let def = &card.definition;
-    let color_set = || colors.unwrap_or_else(|| def.printed_color_set());
+    let color_set = || colors.unwrap_or_else(|| colors_from_card(card));
     let has_ctype = |ct: &CreatureType| match ctypes {
         Some((t, changeling)) => t.contains(ct) || changeling.every_type(card),
         None => def.subtypes.creature_types.contains(ct) || card.has_keyword(&Keyword::Changeling),
