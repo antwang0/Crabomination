@@ -2058,7 +2058,7 @@ impl GameState {
             }
         }
 
-        // CR 508.1g / 506.4 — a creature the attack costs removed (Blood Pet
+        // CR 508.1h-j / 506.4 — a creature the attack costs removed (Blood Pet
         // sacrificed for Ghostly Prison's tax) was declared but is not in
         // combat; the rest attack.
         let mut attacks = attacks;

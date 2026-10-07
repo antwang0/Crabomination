@@ -113,17 +113,18 @@ the handoff.
 
 # Bugs & robustness
 
-## FIXED 2026-10-07 (fifth Commander routine) — a combatant its own declaration cost removed, and an exile link that outlived the exile
+## FIXED 2026-10-07 (fifth Commander routine) — a combatant its own declaration cost removed, an exile link that outlived the exile, a departed caster's stolen spell
 
 Strict debug pods at fresh seeds (121000 4-seat; 130000+ every deck in
-6-seat groups × 30 with `CRAB_POD_SWEEP_PROBE`) found both. Seed 121000
+6-seat groups × 30 with `CRAB_POD_SWEEP_PROBE`; 140000+ every deck in 4-seat
+groups × 24 with `CRAB_POD_CONCEDE=20`) found all three. Seed 121000
 game 15 tripped the CR 506.4 invariant: Wall of Roots at 0/1 blocked beside a
 Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
 "-0/-1 counter: add {G}", and the dead Wall stayed in `block_map`.
 - ✅ **CR 509.1d / 506.4** — `declare_blockers` removes a blocker that left
   during the payment after recording the block; its attacker stays blocked
   (CR 509.1h).
-- ✅ **CR 508.1g / 506.4** — the attacking side was worse: Blood Pet
+- ✅ **CR 508.1h-j / 506.4** — the attacking side was worse: Blood Pet
   sacrificed to Ghostly Prison's tax made the whole declaration fail with
   `CardNotOnBattlefield` *after* paying (the action checkpoint rolled it
   back, so a bot lost the attack). The declaration drops attackers the costs
@@ -142,6 +143,14 @@ Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
   the card as it is cast — so a card cast from exile, and exiled again by a
   path that doesn't restamp, still counts as "exiled with" its first exiler.
   `core_rules::cr_recent118`.
+- ✅ **CR 800.4a** — a card spell the departed seat was casting but did not
+  own (Villainous Wealth's free casts of an opponent's library, then a
+  concession: seed 140029 game 13, 4 seats, `CRAB_POD_CONCEDE=20`) vanished
+  from the game; "objects still controlled by that player are exiled", and
+  only copies cease to exist. `multiplayer::cr_800_4a_a_spell_the_departed_*`.
+  ⏳ The battlefield half still hands such a permanent back to its owner
+  (`change_control`) rather than exiling it: telling a control EFFECT that
+  ends from control by casting needs the control source recorded.
 - ✅ CR 603.10a / 603.2 death listeners (see the 2026-10-04 section).
 
 ## FIXED 2026-10-06 (fourth Commander routine) — combat removal, defender scoring, owner zones

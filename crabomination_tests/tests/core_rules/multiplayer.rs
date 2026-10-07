@@ -1116,6 +1116,41 @@ fn cr_800_4a_departed_players_stack_items_cease_to_exist() {
     assert_eq!(g.players[1].life, 20, "the bolt never resolved");
 }
 
+/// CR 800.4a — "if there are any objects still controlled by that player,
+/// those objects are exiled": seat 0 is casting seat 1's Lightning Bolt (a
+/// Villainous Wealth free cast) when seat 0 leaves. The card goes to exile,
+/// unresolved; a copy of it would cease to exist. (A 4-seat strict pod with
+/// concessions, seed 140029 game 13, lost five such cards entirely.)
+#[test]
+fn cr_800_4a_a_spell_the_departed_player_cast_but_doesnt_own_is_exiled() {
+    use crabomination::game::types::StackItem;
+    let mut g = multi_player_game(3);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let pos = g.players[1].hand.iter().position(|c| c.id == bolt).unwrap();
+    let mut card = g.players[1].hand.remove(pos);
+    card.controller = 0;
+    let mut copy = card.clone();
+    copy.is_token = true;
+    for card in [card, copy] {
+        g.stack.push(StackItem::Spell {
+            card: Box::new(card),
+            caster: 0,
+            target: Some(crabomination::game::types::Target::Player(2)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+            mana_spent: 0,
+            uncounterable: false,
+        });
+    }
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    assert!(g.stack.is_empty());
+    assert_eq!(g.exile.iter().filter(|c| c.id == bolt).count(), 1, "the card is exiled, the copy is gone");
+    assert_eq!(g.players[2].life, 20, "nothing resolved");
+}
+
 /// CR 800.4a, the ability half: a triggered ability the departed player
 /// controls ceases to exist along with their spells. Kokusho's death trigger
 /// is on the stack when its controller leaves, so nobody loses 5 life.

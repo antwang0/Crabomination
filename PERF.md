@@ -3193,6 +3193,39 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
+### 2026-10-07 (Commander routine, fifth) — guardrail; CR 603.10a death listeners, CR 506.4 cost-killed combatants, CR 400.7 exile links, CR 800.4a stolen spells
+
+Hot-path touches: the dispatch's departed-listener gate now opens on every
+batch with a creature death (`CreatureDied` is a looked-back event and a
+departure); the simultaneous-death pass also reads `PermanentDied`; each
+declaration scans `block_map` / retains `attacks` once; every exile-leaving
+site goes through one helper. release-fast, 4-core Xeon @ 2.80 GHz.
+
+```text
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); same-box ABAB vs 44786d46
+                 (the run's base), 5 pairs, decisions/s base / cand:
+                 116.9/114.6, 103.2/103.3, 101.3/95.0, 103.4/115.3,
+                 112.3/115.5 k — means 107.4 / 108.7 k, flat
+suite            24,300 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
+pods (release)   seeds 150002-150008, 2..8 seats x 400 = 2,800; every deck
+                 in 6-seat groups x 200 (160000+) = 6,200 and 4-seat
+                 groups x 200 with CRAB_POD_CONCEDE=20 (161000+) = 9,200:
+                 18,200 games, zero panics, zero stalls, 4 CR 104.4a draws
+                 (all concession groups). turns/game 19.27 / 32.16 / 45.88 /
+                 57.94 / 68.37 / 82.39 / 98.29 — base_bl on the same seeds
+                 68.28 / 82.39 / 98.19 at 6/7/8: the curve above NEXT's older
+                 64/78/93 predates this run
+2-player pools   seeds 151000, 151002: cube / sos / sealed x 300 a deck =
+                 15,000 games, 0 undecided
+strict debug     121000 (4 seats, 60): found CR 506.4 (Wall of Roots);
+                 130000+ every deck in 6-seat groups x 30 with
+                 CRAB_POD_SWEEP_PROBE (930): found CR 400.7 (Steamboat, 2);
+                 140000+ every deck in 4-seat groups x 24 with
+                 CRAB_POD_CONCEDE=20 + probe (1,104): found CR 800.4a
+                 (Villainous Wealth); all fixed, group 140029 re-run clean
+```
+
 ### 2026-10-07 (Commander routine) — guardrail; CR 702.175 / 118.9a cast options, CR 508.1d / 509.1c cap deadlocks
 
 Hot-path touches: the cast pipeline reads `kicked_options` for a sentinel (an

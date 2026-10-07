@@ -43,7 +43,7 @@ fn cr_506_4_a_blocker_its_block_tax_killed_leaves_combat() {
     assert!(g.blocked_attackers().contains(&raider), "the attacker stays blocked");
 }
 
-/// CR 508.1g / 506.4 — the attacking side: Blood Pet attacks into Ghostly
+/// CR 508.1h-j / 506.4 — the attacking side: Blood Pet attacks into Ghostly
 /// Prison and the {2} tax takes a floating {C} and Blood Pet's own "sacrifice
 /// this: add {B}" — it never makes it into combat.
 #[test]

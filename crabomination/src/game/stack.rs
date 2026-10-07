@@ -6134,16 +6134,27 @@ impl GameState {
         if !self.players[p].emblems.is_empty() {
             self.players[p].emblems.clear();
         }
-        // CR 800.4a — "all spells and abilities on the stack controlled by
-        // that player cease to exist", and so does a spell they own that
-        // someone else is casting. Nothing resolves them, so nothing runs:
-        // the items are dropped, not countered.
+        // CR 800.4a — a spell they own leaves with them, and their abilities
+        // and spell copies on the stack ("objects not represented by cards")
+        // cease to exist. A card spell they were casting that another player
+        // owns is "still controlled by that player" and is exiled (Villainous
+        // Wealth's free casts of an opponent's cards, then a concession).
+        // Nothing resolves them, so nothing runs: none is countered.
+        let mut orphaned: Vec<crate::card::CardInstance> = Vec::new();
         self.stack.retain(|item| match item {
             crate::game::types::StackItem::Spell { card, caster, .. } => {
+                if *caster == p && card.owner != p && !card.is_token {
+                    orphaned.push((**card).clone());
+                }
                 *caster != p && card.owner != p
             }
             crate::game::types::StackItem::Trigger { controller, .. } => *controller != p,
         });
+        for mut card in orphaned {
+            card.controller = card.owner;
+            events.push(GameEvent::PermanentExiled { card_id: card.id });
+            self.exile.push(card);
+        }
         // CR 800.4d — a delayed triggered ability the departed player controls
         // can never be put onto the stack (`push_pending_trigger` refuses it),
         // so it is dropped rather than left as a watcher that matches for ever.
