@@ -517,3 +517,21 @@ fn zinnia_offspring_survives_zinnia_leaving() {
     drain_stack(&mut g);
     assert_eq!(named(&g, 0, "Grizzly Bears").len(), 2);
 }
+
+/// A human seat is offered the both-paid Agate Instigator cast too: the
+/// client pays the largest affordable `kicker_option_sets` entry.
+#[test]
+fn hand_affordances_offer_both_offspring_costs() {
+    use crabomination::card::GRANTED_OFFSPRING_OPTION;
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::zinnia_valleys_voice());
+    let agate = g.add_card_to_hand(0, catalog::agate_instigator());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let aff = g.compute_hand_affordances(0);
+    assert!(
+        aff.kicker_option_sets.iter().any(|(id, sets)| *id == agate && sets.contains(&vec![GRANTED_OFFSPRING_OPTION])),
+        "{:?}",
+        aff.kicker_option_sets
+    );
+}

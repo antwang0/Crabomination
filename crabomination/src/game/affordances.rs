@@ -905,29 +905,33 @@ impl GameState {
         template: &GameState,
         caster: usize,
     ) -> Vec<(CardId, Vec<Vec<u8>>)> {
-        let hand: Vec<(CardId, usize, bool, crate::effect::Effect)> = self.players[caster]
+        // CR 702.175 — a granted offspring paid beside the card's own kicker
+        // or offspring rides the same action as one more option.
+        let hand: Vec<(CardId, Vec<u8>, bool, crate::effect::Effect)> = self.players[caster]
             .hand
             .iter()
-            .filter(|c| !c.definition.kicker_options.is_empty())
-            .map(|c| {
-                (
-                    c.id,
-                    c.definition.kicker_options.len(),
-                    c.definition.effect.requires_target(),
-                    c.definition.effect.clone(),
-                )
+            .filter_map(|c| {
+                let mut opts: Vec<u8> = (0..c.definition.kicker_options.len() as u8).collect();
+                if self.granted_offspring_beside_own(caster, &c.definition).is_some() {
+                    opts.push(crate::card::GRANTED_OFFSPRING_OPTION);
+                }
+                (!opts.is_empty()).then(|| {
+                    (c.id, opts, c.definition.effect.requires_target(), c.definition.effect.clone())
+                })
             })
             .collect();
         let mut out = Vec::new();
-        for (id, n, needs_target, effect) in &hand {
+        for (id, opts, needs_target, effect) in &hand {
             let (target, additional_targets) = if *needs_target {
                 self.auto_targets_for_effect_all_slots_kicked(effect, caster, None, true, None)
             } else {
                 (None, Vec::new())
             };
-            // Non-empty subsets of `0..n`, in mask order.
-            let sets: Vec<Vec<u8>> = (1u32..(1 << *n))
-                .map(|mask| (0..*n as u8).filter(|i| mask & (1 << i) != 0).collect())
+            // Non-empty subsets of `opts`, in mask order.
+            let sets: Vec<Vec<u8>> = (1u32..(1 << opts.len()))
+                .map(|mask| {
+                    opts.iter().enumerate().filter(|(i, _)| mask & (1 << i) != 0).map(|(_, &o)| o).collect()
+                })
                 .filter(|kickers: &Vec<u8>| {
                     Self::would_accept_on(template, GameAction::CastSpellKickers {
                         card_id: *id,
