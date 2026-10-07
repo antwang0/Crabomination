@@ -73,6 +73,11 @@ FANOUT = re.compile(
     # *count*, a fan-out that names everyone but one seat, the opponents-only
     # flag on a mass effect, and the multi-seat ask arms.
     r'|OpponentsWhoLostLifeThisTurn|EachPlayerExceptControllerOf|opponents_only'
+    # Read and verified 2026-10-07: one target per graveyard (Geth's Summons),
+    # the voters who agreed (Model of Unity), each player's spare (Fortunate
+    # Few), and the one attacking player a FFA combat has (Curse of Verbosity).
+    r'|ForEachPlayerTarget|OpponentsWhoVotedTheSame|EachPlayerSparesOneTheyDontControl'
+    r'|PlayerIsOpponent \{ who: PlayerRef::ActivePlayer'
     r'|TemptingOffer|OpponentPlayer|OpponentsSorceryTimingOnly|PlayersMayAccept'
     r'|JoinForces|VoteTally|Monarch|Goad')
 rows = []
