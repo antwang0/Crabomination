@@ -115,3 +115,29 @@ fn cr_508_1d_a_goaded_okk() {
     assert!(declare(&mut g, &[], 2).is_err(), "the Wurm lets it attack");
     declare(&mut g, &[okk, wurm], 2).expect("both");
 }
+
+/// CR 509.1c — the blocking side: under Silent Arbiter ("no more than one
+/// creature can block"), a Lure attacker gets one of the two able blockers;
+/// both would break the cap and neither leaves a requirement unobeyed that
+/// one could meet.
+#[test]
+fn cr_509_1c_lure_requirements_are_maximized_under_a_blocker_cap() {
+    let mut g = two_player_game();
+    ready(&mut g, 0, catalog::silent_arbiter());
+    let lured = ready(&mut g, 0, catalog::grizzly_bears());
+    let lure = g.add_card_to_battlefield(0, catalog::lure());
+    g.battlefield_find_mut(lure).unwrap().attached_to = Some(lured);
+    let b1 = ready(&mut g, 1, catalog::grizzly_bears());
+    let b2 = ready(&mut g, 1, catalog::grizzly_bears());
+    to_attacks(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: lured, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    let blocks = |g: &GameState, b: Vec<(CardId, CardId)>| g.clone().perform_action(GameAction::DeclareBlockers(b));
+    blocks(&g, vec![(b1, lured)]).expect("one blocker fills the cap");
+    assert!(blocks(&g, vec![]).is_err(), "one could block");
+    assert!(blocks(&g, vec![(b1, lured), (b2, lured)]).is_err(), "the cap holds");
+    let picked = crabomination::server::bot::pick_blocks_for_test(&g, 1);
+    blocks(&g, picked).expect("the bot's blocks are legal");
+}

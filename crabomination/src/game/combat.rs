@@ -3274,7 +3274,7 @@ impl GameState {
                     && self.block_requirement_able(b, atk.attacker)
                     && !self.block_spoken_for_elsewhere(b, atk.attacker, &assignments)
             });
-            if idle_able_blocker {
+            if idle_able_blocker && !self.block_cap_shuts_out(&assignments) {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
             }
         }
@@ -3304,7 +3304,7 @@ impl GameState {
                     && self.block_requirement_able(b, atk.attacker)
                     && !self.block_spoken_for_elsewhere(b, atk.attacker, &assignments)
             });
-            if idle_able {
+            if idle_able && !self.block_cap_shuts_out(&assignments) {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
             }
         }
@@ -3328,7 +3328,7 @@ impl GameState {
                     && !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
                     && !self.block_spoken_for_elsewhere(b, atk.attacker, &assignments)
             });
-            if unmet {
+            if unmet && !self.block_cap_shuts_out(&assignments) {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
             }
         }
@@ -3351,7 +3351,7 @@ impl GameState {
             }
             let assigned = self.blocks(b.id, required)
                 || assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required);
-            if !assigned && !self.block_spoken_for_elsewhere(b, required, &assignments) {
+            if !assigned && !self.block_spoken_for_elsewhere(b, required, &assignments) && !self.block_cap_shuts_out(&assignments) {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(required)));
             }
         }
@@ -3409,7 +3409,7 @@ impl GameState {
                     && self.block_requirement_able(b, atk.attacker)
                     && self.block_requirement_binds(atk.attacker)
             });
-            if could_block {
+            if could_block && !self.block_cap_shuts_out(&assignments) {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(b.id)));
             }
         }
@@ -6505,6 +6505,23 @@ impl GameState {
                     b.controller,
                 )
                 .is_none()
+    }
+
+    /// CR 509.1c — a full blocker cap (Silent Arbiter) whose every blocker a
+    /// requirement binds: no declaration obeys more, so an unmet requirement
+    /// is excused (a Lure attacker and two able blockers under a cap of one).
+    pub(crate) fn block_cap_shuts_out(&self, assignments: &[(CardId, CardId)]) -> bool {
+        let Some(cap) = self.combat_participation_cap(true) else { return false };
+        let mut distinct: crate::game::types::SmallIdSet<CardId> = self.block_map.keys().copied().collect();
+        distinct.extend(assignments.iter().map(|(b, _)| *b));
+        distinct.len() >= cap as usize
+            && distinct.iter().all(|&bid| {
+                self.battlefield_find(bid).is_none_or(|b| {
+                    self.computed_permanent(bid).is_some_and(|cp| {
+                        cp.keywords().has_kw(&Keyword::MustBlock) || cp.keywords().has_kw(&Keyword::MustAttackOrBlock)
+                    }) || self.block_spoken_for_elsewhere(b, CardId(u32::MAX), assignments)
+                })
+            })
     }
 
     /// CR 509.1c — is `b` already **spoken for** by a different block
