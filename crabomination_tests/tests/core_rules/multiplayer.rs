@@ -1533,6 +1533,35 @@ fn cr_704_3_a_loss_the_golden_throne_leaves_comes_back_in_the_same_sweep() {
     assert!(!g.players[0].is_alive());
 }
 
+/// CR 704.3 / 704.5c / 704.5u — the gated sweeps look for every loss a seat
+/// can stand on, not only life and a deck-out: 21 commander damage or ten
+/// poison left standing with no event of its own (a replacement that resets
+/// neither, a "can't lose" that ended quietly) is swept on the next action,
+/// however inert. Here the state is planted and the action is a mana tap.
+#[test]
+fn cr_704_3_an_inert_action_sweeps_a_standing_commander_damage_or_poison_loss() {
+    for poison in [false, true] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let forest = g.add_card_to_battlefield(0, catalog::forest());
+        if poison {
+            g.players[2].poison_counters = 10;
+        } else {
+            let cmdr = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            g.players[1].commanders = vec![cmdr];
+            g.record_commander_damage(2, cmdr, 21);
+        }
+        assert!(g.players[2].is_alive(), "nothing has checked yet");
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: forest, ability_index: 0, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("tap for mana");
+        assert!(!g.players[2].is_alive(), "swept before seat 0 acts again (poison: {poison})");
+    }
+}
+
 /// CR 704.3 / 117.5 — state-based actions wait until a player would receive
 /// priority. A seat at 4 life that pays a cast with four Talismans is at 0 while
 /// casting, not out: the spell reaches the stack, and only the sweep after the

@@ -1141,10 +1141,7 @@ impl GameState {
             }) || left_combat
                 || !events.iter().all(GameEvent::inert_for_state_based_actions)
                 || self.pt_reduction_in_scope()
-                || (0..self.players.len()).any(|i| {
-                    self.players[i].pending_deck_loss
-                        || (self.players[i].is_alive() && self.effective_life(i) <= 0)
-                }))
+                || self.a_seat_stands_on_a_loss())
         {
             self.check_state_based_actions_into(&mut events);
         }

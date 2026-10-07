@@ -6513,6 +6513,25 @@ impl GameState {
         }
     }
 
+    /// CR 704.5a/b/c/u — does a seat stand on a loss the next sweep would act
+    /// on (life, an armed deck-out, poison, 21 commander damage)? The
+    /// post-action and step-advance sweep gates ask it: a loss that a
+    /// replacement or an expired "can't lose" left standing comes with no
+    /// event of its own. Prefiltered so a duel pays two field reads a seat.
+    pub(crate) fn a_seat_stands_on_a_loss(&self) -> bool {
+        (0..self.players.len()).any(|i| {
+            let p = &self.players[i];
+            p.pending_deck_loss
+                || (p.is_alive()
+                    && (self.effective_life(i) <= 0
+                        || (p.poison_counters > 0 && self.effective_poison(i) >= self.poison_loss_threshold(i))))
+        }) || (!self.commander_damage.is_empty()
+            && self
+                .commander_damage
+                .iter()
+                .any(|((victim, _), &d)| d >= 21 && self.players.get(*victim).is_some_and(|p| p.is_alive())))
+    }
+
     /// CR 704.5c / 810.8d — the poison total that loses the game: ten for a
     /// solo player, fifteen for a shared-pool (2HG) team.
     #[inline]
@@ -20112,9 +20131,7 @@ impl GameState {
                 || self.pt_reduction_in_scope()
                 // Life paid as a cost (Phyrexian pips) is queued and drained
                 // by a dispatch inside the cast, so it is not in `events`.
-                || (0..self.players.len()).any(|i| {
-                    self.players[i].pending_deck_loss || (self.players[i].is_alive() && self.effective_life(i) <= 0)
-                }))
+                || self.a_seat_stands_on_a_loss())
         {
             let mut swept = Vec::new();
             self.check_state_based_actions_into(&mut swept);
