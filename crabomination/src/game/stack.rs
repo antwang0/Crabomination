@@ -6216,7 +6216,14 @@ impl GameState {
         // Likewise an ask another seat owes while the departed player's own
         // spell or ability resolves (CR 800.4a — it ceases to exist with its
         // controller): a fan-out paused on the next opponent's answer.
-        if self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p || d.resolves_for(p)) {
+        // Another seat's resolution paused on the departed seat's per-seat
+        // answer (its Mob Verdict vote) is not theirs to take with them: it
+        // stays, and `resume_past_departed_asker` runs it on past the seat.
+        let resumes = self
+            .pending_decision
+            .as_ref()
+            .is_some_and(|d| d.acting_player() == p && !d.resolves_for(p) && d.departed_filler().is_some());
+        if !resumes && self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p || d.resolves_for(p)) {
             let dropped = self.pending_decision.take();
             self.clear_answer_log();
             // The paused spell's card is off the stack, in the resume: it
@@ -6816,6 +6823,9 @@ impl GameState {
     /// pass a buffer that already holds this action's earlier events.
     pub fn check_state_based_actions_into(&mut self, events: &mut Vec<GameEvent>) {
         self.check_state_based_actions_inner(events, false);
+        if self.pending_decision.is_some() {
+            self.resume_past_departed_asker(events);
+        }
         // A prompting seat's held death trigger from a resolution that did
         // not end in `resolve_top_of_stack` (a mana ability, a cost) is asked
         // before anyone gets priority (CR 117.5).

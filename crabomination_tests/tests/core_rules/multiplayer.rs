@@ -1181,9 +1181,11 @@ fn cr_800_4a_a_spell_the_departed_player_cast_but_doesnt_own_is_exiled() {
 }
 
 /// CR 800.4a — a seat that leaves owing a vote on another seat's Mob Verdict
-/// takes the ask with it, but not the card: the paused spell leaves the stack
-/// into its owner's graveyard. (A 5-seat strict pod with concessions, seed
-/// 170018 game 9, lost the card from the game.)
+/// takes neither the ask's spell nor its card with it: the vote goes on
+/// without the departed seat (its earlier ballot replays against the live
+/// seats), the spell resolves, and the card reaches its owner's graveyard. (A
+/// 5-seat strict pod with concessions, seed 170018 game 9, lost the card
+/// from the game; until 2026-10-07's sixth run the spell then fizzled.)
 #[test]
 fn cr_800_4a_a_departed_voters_ask_does_not_take_the_paused_spell_with_it() {
     use crabomination::game::types::{GameAction, TurnStep};
@@ -1195,6 +1197,7 @@ fn cr_800_4a_a_departed_voters_ask_does_not_take_the_paused_spell_with_it() {
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
+    g.add_card_to_library(0, catalog::island());
     let verdict = g.add_card_to_hand(0, catalog::mob_verdict());
     g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
     g.players[0].mana_pool.add_colorless(2);
@@ -1209,9 +1212,16 @@ fn cr_800_4a_a_departed_voters_ask_does_not_take_the_paused_spell_with_it() {
         g.perform_action(action).expect("accepted");
     }
     assert!(g.pending_decision.as_ref().is_some_and(|d| d.acting_player() == 1), "seat 1 owes a vote");
+    let hand = g.players[0].hand.len();
     g.concede(1);
+    assert!(g.pending_decision.as_ref().is_some_and(|d| d.acting_player() == 2), "the vote moves on to seat 2");
+    let action = HeuristicBot::new().next_action(&g, 2).expect("seat 2 votes");
+    g.perform_action(action).expect("accepted");
     assert!(g.pending_decision.is_none());
     assert!(g.players[0].graveyard.iter().any(|c| c.id == verdict), "the card reached its owner's graveyard");
+    // Seat 0's ballot holds only seat 2 now, and seat 2's only seat 0.
+    assert_eq!(g.players[2].life, 18, "seat 0's vote: 2 damage to seat 2");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "seat 2's vote: seat 0 draws");
 }
 
 /// CR 800.4a, the ability half: a triggered ability the departed player

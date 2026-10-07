@@ -160,9 +160,13 @@ Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
 - ✅ **CR 800.4a** — a seat that left owing an ask on ANOTHER seat's paused
   spell (its Mob Verdict vote; 5 seats, seed 170018 game 9) dropped the
   pending decision and the card inside its resume with it. The card now
-  leaves the stack as a fizzle does (exiled if the departed seat cast it);
-  the rest of that spell's resolution is still not run (⏳ resuming it with
-  the departed seat skipped is the full fix).
+  leaves the stack as a fizzle does (exiled if the departed seat cast it).
+  ✅ *(sixth run)* the full fix: a per-seat ask (`Seat{Bool,Amount,Cards,
+  Target}AnswerPending`) on another seat's resolution is kept, and
+  `departed.rs::resume_past_departed_asker` (the SBA tail) answers it with a
+  placeholder logged under the departed seat, which the re-run skips — the
+  vote goes on, a choice moves to another player (CR 800.4g). Other shapes
+  (a stash-only ask) still drop as before.
   `multiplayer::cr_800_4a_a_departed_voters_ask_*`.
 - ✅ **CR 104.3d / 704.3** — 21 commander damage taken under "players can't
   lose the game this turn" (Everybody Lives!) was not swept when the turn

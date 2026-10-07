@@ -1475,6 +1475,17 @@ impl PendingDecision {
     /// CR 800.4a — whether the spell or ability this decision is resolving
     /// belongs to seat `p` (cast by it, owned by it, or controlled by it):
     /// when `p` leaves the game, that object ceases to exist mid-resolution.
+    /// [`PendingEffectState::departed_filler`] for an effect resolution
+    /// paused on a per-seat ask.
+    pub(crate) fn departed_filler(&self) -> Option<crate::decision::DecisionAnswer> {
+        match &self.resume {
+            ResumeContext::Spell { in_progress, .. }
+            | ResumeContext::Trigger { in_progress, .. }
+            | ResumeContext::Ability { in_progress, .. } => in_progress.departed_filler(),
+            _ => None,
+        }
+    }
+
     pub fn resolves_for(&self, p: usize) -> bool {
         match &self.resume {
             ResumeContext::Spell { card, caster, .. } => *caster == p || card.owner == p,
@@ -1552,6 +1563,20 @@ impl PendingEffectState {
             PendingEffectState::SeatTargetAnswerPending { player } => Some(*player),
             PendingEffectState::MayCastExiledPending { player, .. } => Some(*player),
             PendingEffectState::StashNamePending { player } => Some(*player),
+            _ => None,
+        }
+    }
+
+    /// CR 800.4a — the placeholder a per-seat ask takes when its seat left
+    /// while it waited: logged under that seat, which the re-run's
+    /// `skip_departed_answers` passes over. `None` for every other shape.
+    pub(crate) fn departed_filler(&self) -> Option<crate::decision::DecisionAnswer> {
+        use crate::decision::DecisionAnswer as A;
+        match self {
+            PendingEffectState::SeatBoolAnswerPending { .. } => Some(A::Bool(false)),
+            PendingEffectState::SeatAmountAnswerPending { .. } => Some(A::Amount(0)),
+            PendingEffectState::SeatCardsAnswerPending { .. } => Some(A::Cards(Vec::new())),
+            PendingEffectState::SeatTargetAnswerPending { .. } => Some(A::DeclineTarget),
             _ => None,
         }
     }

@@ -127,6 +127,35 @@ impl GameState {
     /// `route_ask`'s answer: `audit_panics` counts an `unreachable!` as a bare
     /// panic reachable from self-play, and "the other variant cannot happen
     /// here" is a claim a total function does not have to make.
+    /// CR 800.4a / 800.4g — a resolution paused on a per-seat ask whose seat
+    /// has since left goes on without it: the ask takes a placeholder logged
+    /// under the departed seat, and the re-run skips it — a vote is not cast,
+    /// a choice moves to another player. Bounded by the seat count; a failed
+    /// resume drops the decision as the leave pass would have.
+    pub(crate) fn resume_past_departed_asker(&mut self, events: &mut Vec<crate::game::GameEvent>) {
+        for _ in 0..self.players.len() {
+            if self.game_over.is_some() || self.resolution_depth != 0 || self.suspend_signal.is_some() {
+                return;
+            }
+            let Some(filler) = self
+                .pending_decision
+                .as_ref()
+                .filter(|d| !self.players.get(d.acting_player()).is_some_and(|q| q.is_alive()))
+                .and_then(|d| d.departed_filler())
+            else {
+                return;
+            };
+            match self.submit_decision(filler) {
+                Ok(mut evs) => events.append(&mut evs),
+                Err(_) => {
+                    self.pending_decision = None;
+                    self.clear_answer_log();
+                    return;
+                }
+            }
+        }
+    }
+
     pub(crate) fn route_ask_choice(&self, seat: usize, source: crate::card::CardId) -> usize {
         if self.players.get(seat).is_none_or(|p| p.is_alive()) {
             return seat;
