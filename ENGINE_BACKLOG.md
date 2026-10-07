@@ -113,6 +113,23 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-10-07 (seventh Commander routine, `01W3Tmnx`) — the stash class, and a creature entering attacking under a non-attacker
+
+Strict debug sweeps at 410000-445000 (every deck in shuffled groups, 3..8
+seats, `baseline` and `--a dflt`, with and without concessions) and release
+censuses at 500000-550000 / 460000+ (`--a dflt`). Fixed, each with a
+CR-citing test:
+- ✅ **CR 608.2** — the stash class below (`run_effect` claim).
+- ✅ **CR 506.3a-c** — `put_into_combat_attacking` (every "enters attacking"
+  route) refuses a noncreature, a permanent no attacking player controls,
+  and a defender that left. Satya's tapped-and-attacking copy of Akroan Horse
+  entered under an opponent and stayed in the attack (7-seat seed 431005
+  game 2, the CR 506.4 invariant;
+  `multiplayer::cr_506_3b_a_copy_entering_under_an_opponent_is_never_attacking`).
+- Not taken: sequential deaths read as simultaneous. A `Seq` step is not a
+  sentence boundary (many one-sentence cards are spelled as a `Seq`), so no
+  boundary exists to split on; needs a per-sentence marker first.
+
 ## FIXED/OPEN 2026-10-07 (sixth Commander routine) — strict sweeps at 200000-224000
 
 Strict debug pods (`CRAB_ANSWER_LOG=strict CRAB_POD_SWEEP_PROBE=1`, every

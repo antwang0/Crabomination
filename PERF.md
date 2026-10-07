@@ -3134,6 +3134,32 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-07 (Commander routine, seventh — session `01W3Tmnx`) — guardrail; the stash claim, CR 506.3b
+
+Hot-path touches: `run_effect` reads `stashed_resolution_answer.is_some()`
+on every call (the claim runs only behind it); `put_into_combat_attacking`
+(cold) reads controller, computed types and the defender. `release` at
+`dc0202011`, 4-core Xeon @ 2.80 GHz, a debug sweep running beside it.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (before and after each fix); determinism ok (all pairs
+                 split); thread_determinism ok (3 vs 1); peak_rss 27.0 MiB
+2-player pools   --a dflt --b dflt --seed 9301 x 300: cube 2,400 (2 CR
+                 104.4a draws), sos 1,500 and sealed 3,600 all decided
+suite            24,318 / 0 / 5 (CRAB_ANSWER_LOG=strict) at dc0202011
+release pods     --seats 2..8 x 400 at 500000 (2,800; 1 draw); census
+                 groups 510000-550000 (18,880; 10 draws, all CR 104.4a);
+                 470000-474000 2/4/6/7/8 seats, concessions (49,000; 4
+                 draws); --a dflt 460000-462000 (3,880) — zero panics,
+                 zero stalls
+strict debug     sweep.sh groups 410000-425000 3/4/5/6 seats (~1,900; the
+                 stash claim never fired as `unclaimed stash`), 431000-434000
+                 4/6/7/8 seats, concessions (~900): found the Akroan Horse
+                 copy attacking (431005, CR 506.3b); --a dflt 441000-445000
+                 (~700) clean
+```
+
 ### 2026-10-07 (Commander routine, sixth — session `011LGd2W`) — guardrail; CR 800.4a holds, departed askers, sweep finds
 
 Hot-path touches: `change_control` writes `CardData::pre_effect_controller`
