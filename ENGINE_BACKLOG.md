@@ -149,9 +149,13 @@ Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
   concession: seed 140029 game 13, 4 seats, `CRAB_POD_CONCEDE=20`) vanished
   from the game; "objects still controlled by that player are exiled", and
   only copies cease to exist. `multiplayer::cr_800_4a_a_spell_the_departed_*`.
-  ⏳ The battlefield half still hands such a permanent back to its owner
-  (`change_control`) rather than exiling it: telling a control EFFECT that
-  ends from control by casting needs the control source recorded.
+  ✅ The battlefield half too: a permanent that ENTERED under the departed
+  seat (Reanimate on an opponent's card, a theft-cast) and hasn't changed
+  control since is exiled; one a control effect gave them still reverts.
+  `ColdState::entered_under_nonowner`, stamped at the entry funnel, cleared
+  by `change_control`. ⏳ the few direct `controller =` writes that bypass
+  `change_control` (an Aura's control move, `actions.rs` donate) don't clear
+  it. `multiplayer::cr_800_4a_a_permanent_that_entered_*`.
 - ✅ **CR 800.4a** — a seat that left owing an ask on ANOTHER seat's paused
   spell (its Mob Verdict vote; 5 seats, seed 170018 game 9) dropped the
   pending decision and the card inside its resume with it. The card now

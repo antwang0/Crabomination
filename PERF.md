@@ -3207,7 +3207,7 @@ site goes through one helper. release-fast, 4-core Xeon @ 2.80 GHz.
                  (the run's base), 5 pairs, decisions/s base / cand:
                  116.9/114.6, 103.2/103.3, 101.3/95.0, 103.4/115.3,
                  112.3/115.5 k — means 107.4 / 108.7 k, flat
-suite            24,302 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
+suite            24,303 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
 pods (release)   seeds 150002-150008, 2..8 seats x 400 = 2,800; every deck
                  in 6-seat groups x 200 (160000+) = 6,200 and 4-seat
                  groups x 200 with CRAB_POD_CONCEDE=20 (161000+) = 9,200:
@@ -3228,7 +3228,9 @@ strict debug     121000 (4 seats, 60): found CR 506.4 (Wall of Roots);
                  (a dropped vote ask took Mob Verdict's card) and CR 704.3
                  (Everybody Lives! expiry); all fixed, groups re-run clean;
                  then 180000+ 3-seat x 24 (1,464) and 190000+ 8-seat x 16
-                 (368), probe + concessions: clean
+                 (368), probe + concessions: clean; 200000+ 6-seat x 30
+                 with concessions (930) and 210000+ 4-seat x 30 probe only
+                 (1,380): clean
 ```
 
 ### 2026-10-07 (Commander routine) — guardrail; CR 702.175 / 118.9a cast options, CR 508.1d / 509.1c cap deadlocks

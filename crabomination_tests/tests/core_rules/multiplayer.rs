@@ -1090,6 +1090,37 @@ fn cr_800_4a_departed_players_objects_leave_and_control_reverts() {
     assert!(g.players[0].hand.is_empty(), "the departed player's hand leaves");
 }
 
+/// CR 800.4a — "any effects which give that player control of any objects
+/// end … Then, if there are any objects still controlled by that player,
+/// those objects are exiled": seat 0 reanimated seat 1's Bear (it entered
+/// under seat 0, no control effect) and stole seat 2's Bear with a control
+/// effect. When seat 0 leaves, the reanimated one is exiled and the stolen
+/// one goes back to seat 2.
+#[test]
+fn cr_800_4a_a_permanent_that_entered_under_the_departed_player_is_exiled() {
+    use crabomination::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
+    let mut g = multi_player_game(3);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let reanimated = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let stolen = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(src, 0, None);
+    let seq = Effect::Seq(vec![
+        Effect::Move {
+            what: Selector::ExactObjects(vec![reanimated]),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        Effect::GainControl { what: Selector::ExactObjects(vec![stolen]), to: None, duration: Duration::Permanent },
+    ]);
+    let events = g.resolve_effect(&seq, &ctx).expect("resolves");
+    g.dispatch_triggers_for_events(&events);
+    assert_eq!(g.battlefield_find(reanimated).map(|c| c.controller), Some(0));
+    assert_eq!(g.battlefield_find(stolen).map(|c| c.controller), Some(0));
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    assert!(g.exile.iter().any(|c| c.id == reanimated), "still controlled by seat 0: exiled");
+    assert_eq!(g.battlefield_find(stolen).map(|c| c.controller), Some(2), "the control effect ended");
+}
+
 /// CR 800.4a — "all spells and abilities on the stack controlled by that
 /// player cease to exist". They are dropped, not countered: nothing resolves
 /// and no "whenever a spell is countered" trigger fires.

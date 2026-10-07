@@ -1677,6 +1677,12 @@ pub struct ColdState {
     /// `left_while_attacking`.
     #[serde(default)]
     pub(crate) had_to_attack: Vec<CardId>,
+    /// CR 800.4a — permanents that entered under a player other than their
+    /// owner (Reanimate on an opponent's card, a theft-cast) and haven't
+    /// changed control since: no control EFFECT gives them to that player, so
+    /// they are exiled, not handed back, when that player leaves.
+    #[serde(default)]
+    pub(crate) entered_under_nonowner: Vec<CardId>,
     /// CR 603.10 — the blocking twin: blockers that left the battlefield
     /// during this combat (Death Tyrant). Cleared with `left_while_attacking`.
     #[serde(default)]
@@ -24039,7 +24045,9 @@ impl GameState {
                     let mut acted = None;
                     let mut land_ctrl = None;
                     let mut creature_ctrl = None;
+                    let mut nonowner = false;
                     if let Some(c) = self.battlefield_find_mut(*card_id) {
+                        nonowner = c.controller != c.owner;
                         c.entered_turn = Some(turn);
                         if c.definition.is_creature() {
                             creature_ctrl = Some(c.controller);
@@ -24056,6 +24064,15 @@ impl GameState {
                         }
                         if c.definition.is_land() {
                             land_ctrl = Some(c.controller);
+                        }
+                    }
+                    // CR 800.4a — entered under a non-owner with no control
+                    // effect behind it. Guarded reads: a cold field.
+                    if nonowner != self.entered_under_nonowner.contains(card_id) {
+                        if nonowner {
+                            self.entered_under_nonowner.push(*card_id);
+                        } else {
+                            self.entered_under_nonowner.retain(|c| c != card_id);
                         }
                     }
                     // CR 400.7 — a delayed "return it" scheduled as this
@@ -30719,6 +30736,11 @@ impl GameState {
         c.summoning_sick = true;
         c.echo_paid = false;
         self.scratch.pending_control_changes.push((id, prev, new_ctrl));
+        // A control effect now holds it (CR 800.4a's "effects which give
+        // that player control"). Read first: the list is a cold field.
+        if self.entered_under_nonowner.contains(&id) {
+            self.entered_under_nonowner.retain(|c| *c != id);
+        }
         // CR 506.4 — a permanent is removed from combat when its controller
         // changes, so a mid-combat steal stops it attacking or blocking.
         self.remove_from_combat(id);

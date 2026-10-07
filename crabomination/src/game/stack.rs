@@ -6045,7 +6045,15 @@ impl GameState {
             .map(|c| (c.id, c.owner))
             .collect();
         for (id, owner) in reverts {
-            self.change_control(id, owner); // control-changing effects end
+            // CR 800.4a — control effects end; what is "still controlled by
+            // that player" (it entered under them: a reanimated or
+            // theft-cast card) is exiled.
+            if self.entered_under_nonowner.contains(&id) {
+                self.remove_from_battlefield_to_exile(id);
+                events.push(GameEvent::PermanentExiled { card_id: id });
+            } else {
+                self.change_control(id, owner);
+            }
         }
         // CR 800.4a — "any effects which give that player control of any
         // objects **or players** end"; the reverts above are the object half,
