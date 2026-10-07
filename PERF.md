@@ -3216,6 +3216,10 @@ closing tip      568f9a5e9: suite 24,323 / 0 / 5 (strict); clippy 0;
                  70.09 / 82.66 / 97.42; every deck 4 x 200 concede (350000+)
                  and --a dflt 5 x 40 concede (351000+) = 10,689, all decided,
                  zero panics
+wall (--bench)   bench_ab.py 16 pairs, release 4519a0c02 (the run's base) vs
+                 568f9a5e9, separate target dir: games/s medians 308.99 /
+                 315.29, paired B/A median +0.70 %, mean +0.44 %, sd 5.78 —
+                 flat
 ```
 
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved
