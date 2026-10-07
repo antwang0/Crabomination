@@ -10453,6 +10453,11 @@ fn main_phase_action_with(
         return BotStep::plain(action);
     }
 
+    // Pods: Chainer's "discard: cast a creature from your graveyard".
+    if let Some(action) = super::graveyard_cast::pick_graveyard_cast_permission(state, seat, w) {
+        return BotStep::plain(action);
+    }
+
     // Pods: draw two and hand the small body to an opponent (Humble Defector).
     if let Some(action) = super::donate_draw::pick_donate_draw(state, seat) {
         return BotStep::plain(action);

@@ -184,18 +184,24 @@ pub(super) fn pick_self_counter_sink(state: &GameState, seat: usize) -> Option<G
 }
 
 /// Lands at which a land in hand is spare enough to discard.
-const SPARE_LAND_AT: usize = 6;
+const SPARE_LAND_AT: usize = 4;
+/// Hand size at which the cheapest card is spare even when it isn't a land.
+const SPARE_HAND_AT: usize = 2;
 
 /// "{1}, {T}, discard a card: put a study counter on this" (Grimoire of the
 /// Dead — never charged in a 183-deck census, so its mass reanimation never
 /// came): at an opponent's end step, with [`SPARE_LAND_AT`] lands out and a
-/// land in hand for the cost to take (it pays with the cheapest card).
+/// land in hand or [`SPARE_HAND_AT`] cards for the cost to take (it pays with
+/// the cheapest card). Six lands and a land in hand charged it in none of 12
+/// four-seat games (seed 280000), so the payoff could never come; it taps, so
+/// it charges at most once a round and the gate has to be loose.
 pub(super) fn pick_discard_charge(state: &GameState, seat: usize) -> Option<GameAction> {
     if state.players[seat].commanders.is_empty() || !state.stack.is_empty() || state.active_player_idx == seat {
         return None;
     }
     let lands = state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
-    if lands < SPARE_LAND_AT || !state.players[seat].hand.iter().any(|c| c.definition.is_land()) {
+    let hand = &state.players[seat].hand;
+    if lands < SPARE_LAND_AT || !(hand.len() >= SPARE_HAND_AT || hand.iter().any(|c| c.definition.is_land())) {
         return None;
     }
     state.battlefield.iter().filter(|c| c.controller == seat).find_map(|c| {

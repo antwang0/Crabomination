@@ -209,6 +209,32 @@ mod tests {
         ));
     }
 
+    /// Whirler Rogue taps two artifacts that aren't attacking (its Thopters
+    /// are, so a Mind Stone pair) to make the biggest ready attacker
+    /// unblockable, on a prompting pod seat too.
+    #[test]
+    fn whirler_rogue_taps_two_artifacts_for_the_biggest_attacker() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].wants_ui = true;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let rogue = g.add_card_to_battlefield(0, crate::catalog::whirler_rogue());
+        let wurm = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+        for id in [rogue, wurm] {
+            g.clear_sickness(id);
+        }
+        g.add_card_to_battlefield(0, crate::catalog::mind_stone());
+        g.add_card_to_battlefield(0, crate::catalog::mind_stone());
+        let got = pick_evasion_grant(&g, 0);
+        assert!(matches!(
+            got,
+            Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
+                if card_id == rogue && t == wurm
+        ));
+    }
+
     /// Rogue's Passage makes the biggest ready attacker unblockable in the
     /// first main phase of a Commander game, and not in a duel.
     #[test]

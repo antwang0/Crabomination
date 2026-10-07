@@ -673,8 +673,15 @@ arm) — `find_card_anywhere` cannot see the spell that is resolving.
   resolved eval beats passing. ✅ *(2026-10-07, fifth run)* untap-a-land ramp
   (`server/untap_ramp.rs`: Arbor Elf, Kiora's Follower untap a tapped land in
   the seat's own main phase when that makes a hand card castable).
-  ⏳ Still never taken: discard / graveyard / exile costs (Grimoire of the
-  Dead, Chainer), until-end-of-turn gains outside combat (Whirler Rogue).
+  ✅ Grimoire of the Dead: its charge (`counter_sink::pick_discard_charge`)
+  was gated on six lands and a land in hand and fired in none of 12 games;
+  at four lands and a spare card it charges ~once a round and the payoff
+  fires (1 of 40 four-seat games, seed 280000). Whirler Rogue IS taken
+  (`server/evasion.rs`; `whirler_rogue_taps_two_artifacts_*`) — the old row
+  was stale. ✅ Chainer, Nightmare Adept's "discard a card: cast a creature
+  from your graveyard this turn" (`server/graveyard_cast.rs`: own main
+  phase, a spare card, when the permission makes a graveyard creature
+  castable) — taken in both 40-game censuses (seeds 280000 / 281000).
   `{X}` abilities (Geth) and Class levels (no eval can price one) are taken
   now. 💡 **The two-player bot never levels a Class either** — the generic
   pass is pods-only to keep `--bench` fixed; porting the Class rule moves it.
