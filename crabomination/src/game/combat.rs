@@ -1021,6 +1021,53 @@ impl GameState {
     ///
     /// Deliberately the same walkers the declaration gate runs, because a
     /// requirement the gate then rejects has no legal answer.
+    /// CR 508.1 — the tightest "no more than N creatures can attack you"
+    /// cap seat `d` controls (Crawlspace).
+    fn attacker_cap_against(&self, d: usize) -> Option<usize> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == d)
+            .filter_map(|c| {
+                c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::AttackerCapAgainstController { n } => Some(n),
+                    crate::effect::StaticEffect::AttackerCapAgainstControllerWhileTapped { n } if c.tapped => {
+                        Some(n)
+                    }
+                    _ => None,
+                })
+            })
+            .min()
+    }
+
+    /// CR 508.1d — a creature a requirement binds may stay home when a cap
+    /// leaves it no room: the global cap (Silent Arbiter) is full, or every
+    /// opponent it could attack is at its own cap (Crawlspace) and controls
+    /// nothing else to attack. Only maximal when every declared attacker is
+    /// itself bound — the caller's half.
+    fn attack_cap_leaves_no_room(&self, p: usize, card: &crate::card::CardInstance, kws: &[Keyword], attacks: &[Attack], statics: u32) -> bool {
+        if let Some(cap) = self.combat_participation_cap(false)
+            && self.attacking.len() + attacks.len() >= cap as usize
+        {
+            return true;
+        }
+        if statics & attack_static::ATTACKER_CAP == 0 {
+            return false;
+        }
+        (0..self.players.len())
+            .filter(|&d| {
+                !self.same_team(p, d)
+                    && self.players[d].is_alive()
+                    && self.attacker_target_block(p, card.id, kws, Some(d)).is_none()
+            })
+            .all(|d| {
+                self.attacker_cap_against(d).is_some_and(|cap| {
+                    attacks.iter().filter(|a| a.target == AttackTarget::Player(d)).count() >= cap
+                }) && !self.battlefield.iter().any(|c| {
+                    c.controller == d && (c.definition.is_planeswalker() || c.definition.is_battle())
+                })
+            })
+    }
+
     pub(crate) fn attacker_is_able(
         &self,
         p: usize,
@@ -1405,23 +1452,7 @@ impl GameState {
             if statics & attack_static::ATTACKER_CAP == 0 {
                 break; // no cap on the board — the per-seat walks below are all `None`
             }
-            let Some(cap) = self
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == p)
-                .filter_map(|c| {
-                    c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
-                        crate::effect::StaticEffect::AttackerCapAgainstController { n } => Some(n),
-                        crate::effect::StaticEffect::AttackerCapAgainstControllerWhileTapped { n }
-                            if c.tapped =>
-                        {
-                            Some(n)
-                        }
-                        _ => None,
-                    })
-                })
-                .min()
-            else {
+            let Some(cap) = self.attacker_cap_against(p) else {
                 continue;
             };
             let against =
@@ -1609,6 +1640,7 @@ impl GameState {
         }
 
         if attack_requirement {
+            let mut missing: SmallVec<[&crate::card::CardInstance; 4]> = SmallVec::new();
             for c in &self.battlefield {
                 // The controller test first: it decides the whole iteration
                 // and costs a field compare, where `must` below costs three
@@ -1656,6 +1688,19 @@ impl GameState {
                 }
                 had_to.push(c.id);
                 if able_to_attack(c) && !attacks.iter().any(|atk| atk.attacker == c.id) {
+                    missing.push(c);
+                }
+            }
+            // CR 508.1d — the most requirements obeyed without breaking a
+            // restriction: a bound creature a full cap shuts out is excused,
+            // provided no declared attacker is unbound (a swap obeys more).
+            if let Some(c) = missing.first() {
+                let all_bound = attacks.iter().all(|a| had_to.contains(&a.attacker));
+                if !all_bound
+                    || !missing.iter().all(|c| {
+                        self.attack_cap_leaves_no_room(p, c, computed_kw(c.id), &attacks, statics)
+                    })
+                {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }

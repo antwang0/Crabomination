@@ -12742,12 +12742,19 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
     restore_forced_attackers(state, seat, &attack_power_caps, &mut attackers);
     // CR 506.2 — Silent Arbiter caps the whole combat. An
     // over-sized batch is rejected outright, so trim to the
-    // cap keeping the biggest attackers.
+    // cap keeping the attackers a requirement binds (CR 508.1d: an unbound
+    // one in their slot obeys fewer), then the biggest.
     if let Some(cap) = state.combat_participation_cap(false)
         && attackers.len() > cap as usize
     {
+        let lured = state.attack_lure_of(seat).is_some() || state.side_attacks_if_able(seat);
         attackers.sort_by_cached_key(|id| {
-            -state.computed_permanent(*id).map(|cp| cp.power).unwrap_or(0)
+            let bound = lured
+                || state.creature_lure_of(seat, *id).is_some()
+                || state.battlefield_find(*id).zip(state.computed_permanent(*id)).is_some_and(|(c, cp)| {
+                    must_attack(state, c, cp.keywords(), true)
+                });
+            (!bound, -state.computed_permanent(*id).map(|cp| cp.power).unwrap_or(0))
         });
         attackers.truncate(cap as usize);
     }
