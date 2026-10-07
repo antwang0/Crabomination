@@ -185,9 +185,18 @@ CR 610.3 until-leaves exiles, CR 514.1 hand size, `CRAB_POD_SWEEP_PROBE=1`;
   event is `CardPutIntoGraveyard`, a departure when it has a death snapshot
   this dispatch) — `core_rules::cr_recent113`. The payoff goes through
   `trigger_effect_for` like the walk's.
-  ⏳ Still open: casts (a cast mid-resolution), deaths of *other* creatures
-  seen by a listener that dies later in the same resolution, and
-  once-per-turn/batch listeners, which this pass skips.
+  ✅ *(2026-10-07, fifth Commander run)* **creature deaths**: a "whenever a
+  creature dies" listener bounced / exiled later in the resolution saw the
+  deaths before it left (`departed_listeners.rs`), and a NONCREATURE listener
+  destroyed with the creatures looks back (CR 603.10a — `simultaneous_deaths.rs`
+  takes every synthesized `PermanentDied` as an observer, and the
+  `CreatureOrArtifactDied` / `PermanentDied` kinds; Bastion of Remembrance
+  under Planar Cleansing, `core_rules::cr_recent116`). An Aura / attachment
+  whose host died is skipped there: its SBA death came after (Dying Wish,
+  Fate Foretold double-fired in the first cut).
+  ⏳ Still open: casts (a cast mid-resolution), once-per-turn/batch
+  listeners, and the old over-reach — two deaths in one resolution that were
+  *sequential* are read as simultaneous (no event marks the step boundary).
 
 ## FIXED/OPEN 2026-10-03 (Commander routine, `01QFHGia`) — per-recipient combat triggers, countered flashback, a reanimated token
 

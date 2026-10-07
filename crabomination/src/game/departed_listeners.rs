@@ -21,14 +21,17 @@ use crate::effect::{EventKind, EventScope};
 use crate::game::effects::{EffectContext, events};
 
 /// The listener kinds this pass serves: "whenever [a permanent] enters",
-/// "whenever you gain / an opponent loses life", "whenever a player draws /
-/// discards a card" and "whenever a counter is put on". Printed listeners of
+/// "whenever a creature dies" (one bounced or exiled; one that died looks back
+/// in `simultaneous_deaths`), "whenever you gain / an opponent loses life",
+/// "whenever a player draws / discards a card" and "whenever a counter is put
+/// on". Printed listeners of
 /// each fire only from the walk (`fire_life_gained_watchers` serves delayed
 /// ones).
 fn looks_back(kind: &EventKind) -> bool {
     matches!(
         kind,
         EventKind::EntersBattlefield
+            | EventKind::CreatureDied
             | EventKind::LifeGained
             | EventKind::LifeLost
             | EventKind::CardDrawn
@@ -43,6 +46,7 @@ fn looked_back_on(ev: &GameEvent) -> bool {
     matches!(
         ev,
         GameEvent::PermanentEntered { .. }
+            | GameEvent::CreatureDied { .. }
             | GameEvent::LifeGained { .. }
             | GameEvent::LifeLost { .. }
             | GameEvent::CardDrawn { .. }
@@ -92,8 +96,15 @@ impl GameState {
             else {
                 continue;
             };
+            let died = !matches!(
+                ev,
+                GameEvent::PermanentLeftBattlefield { .. }
+                    | GameEvent::PermanentExiled { .. }
+                    | GameEvent::PermanentReturnedToHand { .. }
+            );
             let listens = |ta: &&crate::card::TriggeredAbility| {
                 looks_back(&ta.event.kind)
+                    && !(died && ta.event.kind == EventKind::CreatureDied)
                     && !ta.event.zone.command_zone_only()
                     && !ta.event.once_per_turn
                     && !ta.event.once_per_batch
@@ -135,7 +146,7 @@ impl GameState {
                         subject,
                         event_amount,
                         triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
-                        triggered_by_death: false,
+                        triggered_by_death: matches!(ev, GameEvent::CreatureDied { .. }),
                         triggered_by_attack: false,
                         triggered_by_land_entry: false,
                         triggered_by_face_up: false,

@@ -2,7 +2,8 @@
 //! creatures die at the same time (a Wrath, one state-based sweep), each
 //! dying creature's "whenever another creature [you control] dies" trigger
 //! sees every other creature that died with it — Midnight Reaper and a Bear
-//! under Wrath of God draw two. The battlefield walk in
+//! under Wrath of God draw two. A noncreature listener destroyed in the same
+//! batch looks back too (Bastion of Remembrance under Planar Cleansing). The battlefield walk in
 //! `dispatch_triggers_for_events` can't find these observers (they are in
 //! the graveyard by dispatch time), and the self-death funnel only fires a
 //! creature's triggers for its own death, so this pass supplies the rest from
@@ -15,9 +16,9 @@ use crate::effect::{EventKind, EventScope};
 use crate::game::effects::{EffectContext, events};
 
 impl GameState {
-    /// One candidate per (dying observer, other creature that died in the
+    /// One candidate per (dying observer, other permanent that died in the
     /// same batch) its printed death trigger matches. Empty unless two or
-    /// more creatures died in `events`.
+    /// more permanents died in `events`.
     pub(crate) fn simultaneous_death_observer_candidates(
         &self,
         events: &[GameEvent],
@@ -27,9 +28,11 @@ impl GameState {
         if dies_suppressed {
             return out;
         }
+        // `PermanentDied` is synthesized for every death (a noncreature emits
+        // no `CreatureDied`), so it names the noncreature observers.
         let mut died: Vec<CardId> = Vec::new();
         for ev in events {
-            if let GameEvent::CreatureDied { card_id } = ev
+            if let GameEvent::CreatureDied { card_id } | GameEvent::PermanentDied { card_id, .. } = ev
                 && !died.contains(card_id)
                 && !self.death_was_replaced(*card_id)
             {
@@ -46,15 +49,25 @@ impl GameState {
                 continue;
             }
             let Some(snap) = self.died_card_snapshots.get(&observer) else { continue };
+            // An attachment whose host died went to the graveyard after it,
+            // by a later sweep (CR 704.5m/n): it didn't die with the host.
+            if snap.attached_to.is_some_and(|h| h != observer && died.contains(&h)) {
+                continue;
+            }
             for ta in &snap.definition.triggered_abilities {
                 // Battlefield abilities only: a graveyard-functioning trigger
                 // (Nether Traitor) wasn't in the graveyard when the others
                 // died, and a command-zone one isn't a permanent's.
-                if ta.event.kind != EventKind::CreatureDied
-                    || ta.event.zone.command_zone_only()
+                if !matches!(
+                    ta.event.kind,
+                    EventKind::CreatureDied | EventKind::CreatureOrArtifactDied | EventKind::PermanentDied
+                ) || ta.event.zone.command_zone_only()
                     || matches!(
                         ta.event.scope,
-                        EventScope::SelfSource | EventScope::FromYourGraveyard | EventScope::FromYourGraveyardAnyPlayer
+                        EventScope::SelfSource
+                            | EventScope::EnchantedBySource
+                            | EventScope::FromYourGraveyard
+                            | EventScope::FromYourGraveyardAnyPlayer
                     )
                 {
                     continue;
@@ -63,7 +76,9 @@ impl GameState {
                     && !ta.event.once_per_turn
                     && !ta.event.once_per_batch;
                 for ev in events {
-                    let GameEvent::CreatureDied { card_id } = ev else { continue };
+                    let (GameEvent::CreatureDied { card_id } | GameEvent::PermanentDied { card_id, .. }) = ev else {
+                        continue;
+                    };
                     // Its own death is the self-death funnel's.
                     if *card_id == observer || !died.contains(card_id) {
                         continue;
