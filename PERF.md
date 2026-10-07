@@ -3193,6 +3193,29 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
+### 2026-10-07 (Commander routine) — guardrail; CR 702.175 / 118.9a cast options, CR 508.1d / 509.1c cap deadlocks
+
+Hot-path touches: the cast pipeline reads `kicked_options` for a sentinel (an
+empty-`Vec` `contains`); the requirement excusals run only on a declaration's
+reject path; the bot's attack trim adds an Okk pass (a keyword find per
+attacker). release-fast, 4-core Xeon @ 2.80 GHz, noisy box.
+
+```text
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); same-box ABAB vs 948fc34a
+                 (this run's first two commits): 103.8/116.6, 112.5/114.3,
+                 116.3/120.0 k decisions/s — flat
+suite            24,289 run, 1 fail fixed (printed type read), 5 skipped;
+                 clippy workspace 0
+pods (release)   seeds 71000-77039 every deck in 3/4/5/6/8-seat pods + 5-seat
+                 concessions ~9,200; seed 81000 2..8 x 400 = 2,800; 82000
+                 4-seat concessions 1,840; 83000 5-seat 1,480 — zero panics,
+                 stall rate 0 %, 7 CR 104.4a draws
+2-player pools   seed 84000 cube / sos / sealed x 300 a deck: 7,500 decided
+strict debug     seeds 73000, 78000, 79000, 79500 (6-seat concessions),
+                 CRAB_POD_SWEEP_PROBE, ~590 games: clean
+```
+
 ### 2026-10-06 (Commander routine, fourth) — guardrail; CR 506.4 noncreature combatants, CR 508.1d defender scoring, CR 603.2 departed listeners
 
 Hot-path touches: the sweep removes noncreature combatants (gated on a

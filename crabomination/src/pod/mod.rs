@@ -1687,6 +1687,7 @@ fn owned_card_counts(g: &GameState) -> Vec<Vec<crate::card::CardId>> {
     n
 }
 
+#[cfg(debug_assertions)]
 fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
     let has = |z: &[crate::card::CardInstance]| z.iter().any(|c| c.id == id);
     if g.battlefield_find(id).is_some() {
