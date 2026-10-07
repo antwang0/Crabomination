@@ -1368,6 +1368,29 @@ fn cr_800_4a_a_steal_ends_and_returns_to_whoever_it_was_taken_from() {
     assert!(g.exile.iter().all(|c| c.id != dead));
 }
 
+/// CR 800.4a / 610.3 / 702.26a — a phased-out permanent is still on the
+/// battlefield, so leaving the game with its owner ends its "until this
+/// leaves" exile: seat 2's Banisher Priest, phased out, holds seat 1's Bears
+/// when seat 2 concedes, and the Bears come back. (A strict 5-seat debug pod
+/// with concessions, seed 203033 game 26: Summon: Ixion phased out under
+/// Clever Concealment kept Etherium Sculptor exiled for ever.)
+#[test]
+fn cr_800_4a_a_phased_out_departed_holders_exile_ends() {
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let priest = g.add_card_to_hand(2, catalog::banisher_priest());
+    cast_for(&mut g, 2, priest, None);
+    assert!(g.exile.iter().any(|c| c.id == bears), "the Priest exiled the Bears");
+    let card = g.battlefield.iter().find(|c| c.id == priest).unwrap().clone();
+    g.battlefield.retain(|c| c.id != priest);
+    g.phased_out.push(card);
+
+    g.concede(2);
+
+    assert_eq!(g.battlefield_find(bears).map(|c| c.controller), Some(1), "the Bears return");
+    assert!(g.exile.iter().all(|c| c.id != bears));
+}
+
 /// CR 704.3 / 117.5 — state-based actions wait until a player would receive
 /// priority. A seat at 4 life that pays a cast with four Talismans is at 0 while
 /// casting, not out: the spell reaches the stack, and only the sweep after the

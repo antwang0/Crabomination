@@ -6017,7 +6017,9 @@ impl GameState {
         // stack (CR 800.4d): its card stays exiled, the link spent.
         let mut durations: Vec<CardId> = Vec::new();
         let mut leave_triggers: Vec<CardId> = Vec::new();
-        for c in self.battlefield.iter().filter(|c| c.owner == p) {
+        // A phased-out permanent is still on the battlefield (CR 702.26a) and
+        // leaves it with its owner: its "until this leaves" exile ends too.
+        for c in self.battlefield.iter().chain(self.phased_out.iter()).filter(|c| c.owner == p) {
             let trigger = c
                 .definition
                 .static_abilities
