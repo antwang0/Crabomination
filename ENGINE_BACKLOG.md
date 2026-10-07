@@ -117,7 +117,8 @@ the handoff.
 
 Debug-pod invariants (`pod/mod.rs`: CR 506.4 combatants, CR 509.1a blockers,
 CR 400.3 owner zones, CR 903.8 tax / 903.10a commander damage per action,
-`CRAB_POD_SWEEP_PROBE=1`) found every item here but the 508.1d deadlock.
+CR 610.3 until-leaves exiles, CR 514.1 hand size, `CRAB_POD_SWEEP_PROBE=1`;
+`CRAB_POD_CONCEDE=<per 10k>` exercises leaving) found every item here but the 508.1d deadlock.
 
 - ✅ **CR 506.4** — a combatant that stops being a creature leaves combat (an
   attacking Mogis below devotion; Satya's token copy of a crewed Vehicle
@@ -141,6 +142,13 @@ CR 400.3 owner zones, CR 903.8 tax / 903.10a commander damage per action,
 - ✅ **CR 509.4 / 509.1a** — Brimaz's "token blocking that creature" asked
   for a target, so a seat aimed it at an attacker another player was
   defending; `Effect::CreateTokenBlockingThat` is untargeted.
+- ✅ **CR 800.4a** — a concession mid-resolution dropped only an ask the
+  departed seat owed; a paused spell / ability OF the departed seat waiting
+  on another seat's answer survived and leaked its replay log
+  (`PendingDecision::resolves_for`). ⏳ The same for a `suspend_signal`
+  not yet installed (its controller isn't recorded there).
+- ✅ **CR 800.4d** — a departed seat's leave-TRIGGER exile (Leonin
+  Relic-Warder's printed text) keeps its card and now spends the link.
 
 ## FIXED/OPEN 2026-10-04 (Commander routine, `01WwQaPJ`) — paid costs read back at resolution, and a listener that leaves in the same resolution
 
