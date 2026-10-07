@@ -1,11 +1,6 @@
 //! Commander: the cards the **Family Matters** precon (BLC, Zinnia, Valley's
 //! Voice) needed beyond what the catalog had. Tests in
 //! `tests/recent_b/cmdr_zinnia.rs`.
-//!
-//! Residuals (each also on its card):
-//! - **Zinnia, Valley's Voice** — the granted offspring copy is Zinnia's
-//!   trigger, so it is lost if Zinnia leaves before the creature enters; a
-//!   creature with its own kicker or offspring gets no second one.
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, EventKind, EventScope,
@@ -58,8 +53,9 @@ fn alliance(effect: Effect) -> TriggeredAbility {
 
 /// Zinnia, Valley's Voice — flying; +X/+0 for your other creatures with base
 /// power 1; creature spells you cast gain offspring {2} — the copy is the
-/// creature's own trigger (`game/offspring.rs`), Zinnia gone or not.
-/// Residual: a creature with its own kicker or offspring gets no second one.
+/// creature's own trigger (`game/offspring.rs`), Zinnia gone or not. A
+/// creature with its own kicker or offspring pays both
+/// (`GRANTED_OFFSPRING_OPTION`).
 pub fn zinnia_valleys_voice() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

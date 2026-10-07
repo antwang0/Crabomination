@@ -8397,14 +8397,32 @@ pub(super) fn cast_candidates<'a>(
         } else {
             (None, vec![])
         };
-        let action = GameAction::CastSpellKicked {
+        let kicked = GameAction::CastSpellKicked {
             card_id: c.id,
+            target: target.clone(),
+            additional_targets: additional_targets.clone(),
+            mode: None,
+            x_value: None,
+        };
+        // CR 702.175 — a granted offspring paid beside the card's own kicker
+        // or offspring (Agate Instigator under Zinnia) is pure upside too.
+        let both = (facts.grants_offspring
+            && c.definition.kicker_options.is_empty()
+            && state.granted_offspring_beside_own(seat, &c.definition).is_some())
+        .then(|| GameAction::CastSpellKickers {
+            card_id: c.id,
+            kickers: vec![crate::card::GRANTED_OFFSPRING_OPTION],
             target,
             additional_targets,
             mode: None,
             x_value: None,
+        })
+        .filter(|a| GameState::would_accept_on(state, a.clone()));
+        let action = match both {
+            Some(a) => Some(a),
+            None => GameState::would_accept_on(state, kicked.clone()).then_some(kicked),
         };
-        if GameState::would_accept_on(state, action.clone()) {
+        if let Some(action) = action {
             // Offspring (CR 702.175) is pure upside — a free 1/1 token copy
             // with no downside beyond the mana. When affordable, prefer it
             // over the plain cast of the same card (mirrors Conspire above).
@@ -8438,10 +8456,15 @@ pub(super) fn cast_candidates<'a>(
         } else {
             (None, vec![])
         };
-        let n = c.definition.kicker_options.len() as u8;
+        let mut opts: Vec<u8> = (0..c.definition.kicker_options.len() as u8).collect();
+        if facts.grants_offspring && state.granted_offspring_beside_own(seat, &c.definition).is_some() {
+            opts.push(crate::card::GRANTED_OFFSPRING_OPTION);
+        }
+        let n = opts.len() as u32;
         let mut best: Option<GameAction> = None;
         for mask in (1u32..(1 << n)).rev() {
-            let kickers: Vec<u8> = (0..n).filter(|i| mask & (1 << i) != 0).collect();
+            let kickers: Vec<u8> =
+                opts.iter().enumerate().filter(|(i, _)| mask & (1 << i) != 0).map(|(_, &o)| o).collect();
             let action = GameAction::CastSpellKickers {
                 card_id: c.id,
                 kickers,

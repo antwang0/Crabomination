@@ -1907,7 +1907,6 @@ For the full machine-generated list, run the auditor (`--comments-only`).
 
 | Card | Deck | Gap |
 |---|---|---|
-| 🟡 Zinnia, Valley's Voice | Family Matters (BLC) | a creature with its own kicker or offspring gets no second, granted offspring (one optional cost per cast action). |
 
 ### The `modern_decks` Commander routine's precons (seats 23, 25, 27, 29, 30) — open residuals, 2026-09-24
 

@@ -84,6 +84,63 @@ fn zinnia_grants_offspring() {
     assert_eq!(named(&g, 0, "Grizzly Bears").len(), 3);
 }
 
+/// CR 702.175 / 601.2f — a creature with its own offspring (Agate
+/// Instigator) under Zinnia can pay both costs: two offspring triggers, two
+/// 1/1 copies, and both costs are added to the total. Paying its own alone
+/// makes one.
+#[test]
+fn agate_instigator_pays_its_own_and_zinnias_offspring() {
+    use crabomination::card::GRANTED_OFFSPRING_OPTION;
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::zinnia_valleys_voice());
+    let agate = g.add_card_to_hand(0, catalog::agate_instigator());
+    // {1}{R} + offspring {1}{R} + Zinnia's {2} = six mana, exactly.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellKickers {
+        card_id: agate,
+        kickers: vec![GRANTED_OFFSPRING_OPTION],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast paying both offspring costs");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "all six spent");
+    drain_stack(&mut g);
+    let tokens: Vec<CardId> = named(&g, 0, "Agate Instigator").into_iter().filter(|&id| id != agate).collect();
+    assert_eq!(tokens.len(), 2, "one copy for each offspring cost paid");
+    // Its own offspring alone: one copy.
+    let agate2 = g.add_card_to_hand(0, catalog::agate_instigator());
+    cast_full(&mut g, agate2, &[], None, true);
+    assert_eq!(named(&g, 0, "Agate Instigator").len(), 5);
+}
+
+/// The bot pays both offspring costs when it can afford them.
+#[test]
+fn bot_pays_both_offspring_costs() {
+    use crabomination::card::GRANTED_OFFSPRING_OPTION;
+    let mut g = pod(2);
+    g.step = TurnStep::PostCombatMain;
+    for seat in 0..2 {
+        for _ in 0..10 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.add_card_to_battlefield(0, catalog::zinnia_valleys_voice());
+    let agate = g.add_card_to_hand(0, catalog::agate_instigator());
+    for land in [catalog::mountain(), catalog::mountain(), catalog::plains(), catalog::plains(), catalog::island(), catalog::island()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(&action, Some(GameAction::CastSpellKickers { card_id, kickers, .. })
+            if *card_id == agate && kickers == &vec![GRANTED_OFFSPRING_OPTION]),
+        "{action:?}"
+    );
+}
+
 /// Fortune Teller's Talent: level 2 opens the library top once a spell has
 /// been cast this turn (CR 401.6); level 3 takes {2} off that cast.
 #[test]

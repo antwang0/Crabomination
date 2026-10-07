@@ -9342,18 +9342,44 @@ impl GameState {
 
     /// CR 702.175 — the offspring cost a `CreatureSpellsGainOffspring` static
     /// `p` controls grants this creature spell (Zinnia, Valley's Voice).
-    /// `None` for a card with its own kicker or offspring: the kicked cast
-    /// path carries one optional cost, and the printed one wins.
+    /// `None` for a card with its own kicker or offspring, whose `kicked`
+    /// stamp pays that one ([`Self::granted_offspring_beside_own`]).
     pub fn granted_offspring_cost(
         &self,
         p: usize,
         def: &crate::card::CardDefinition,
     ) -> Option<crate::mana::ManaCost> {
-        if !def.is_creature()
-            || def.has_kicker().is_some()
-            || def.kicker_action_cost.is_some()
-            || !def.kicker_options.is_empty()
-        {
+        if Self::has_own_optional_cost(def) {
+            return None;
+        }
+        self.granted_offspring_static_cost(p, def)
+    }
+
+    /// A kicker, action kicker or "and/or" kicker of the card's own.
+    fn has_own_optional_cost(def: &crate::card::CardDefinition) -> bool {
+        def.has_kicker().is_some() || def.kicker_action_cost.is_some() || !def.kicker_options.is_empty()
+    }
+
+    /// CR 702.175 — the granted offspring cost of a creature spell that has
+    /// its own kicker or offspring (Agate Instigator under Zinnia): paid
+    /// beside it as [`crate::card::GRANTED_OFFSPRING_OPTION`].
+    pub fn granted_offspring_beside_own(
+        &self,
+        p: usize,
+        def: &crate::card::CardDefinition,
+    ) -> Option<crate::mana::ManaCost> {
+        if !Self::has_own_optional_cost(def) {
+            return None;
+        }
+        self.granted_offspring_static_cost(p, def)
+    }
+
+    fn granted_offspring_static_cost(
+        &self,
+        p: usize,
+        def: &crate::card::CardDefinition,
+    ) -> Option<crate::mana::ManaCost> {
+        if !def.is_creature() {
             return None;
         }
         self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
@@ -9996,9 +10022,13 @@ impl GameState {
         let kicker_options: Vec<u8> = if self.cast_kicker_options.is_empty() {
             Vec::new()
         } else {
+            let beside = self.granted_offspring_beside_own(p, &card.definition).is_some();
             std::mem::take(&mut self.cast_kicker_options)
                 .into_iter()
-                .filter(|i| (*i as usize) < card.definition.kicker_options.len())
+                .filter(|i| {
+                    (*i as usize) < card.definition.kicker_options.len()
+                        || (beside && *i == crate::card::GRANTED_OFFSPRING_OPTION)
+                })
                 .collect()
         };
         let kicked = kicked
@@ -10755,6 +10785,12 @@ impl GameState {
             cost.symbols.extend(kick.symbols.iter().cloned());
         } else if kicked && let Some(off) = self.granted_offspring_cost(p, &card.definition) {
             // CR 702.175 — a granted offspring cost (Zinnia).
+            cost.symbols.extend(off.symbols);
+        }
+        // …or one paid beside the card's own kicker / offspring.
+        if card.kicked_options.contains(&crate::card::GRANTED_OFFSPRING_OPTION)
+            && let Some(off) = self.granted_offspring_beside_own(p, &card.definition)
+        {
             cost.symbols.extend(off.symbols);
         }
         // …and each chosen "and/or" kicker option (the Volver cycle).

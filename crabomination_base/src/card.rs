@@ -1261,6 +1261,11 @@ impl MayPlayDuration {
 /// `TurnsHolderAttacksWithAToken` grant between its live turns.
 pub const MAY_PLAY_DORMANT: usize = usize::MAX;
 
+/// CR 702.175 — a `kicked_options` entry (`GameAction::CastSpellKickers`)
+/// paying a granted offspring cost (Zinnia) on a card that has a kicker or
+/// offspring of its own, so a cast can pay both.
+pub const GRANTED_OFFSPRING_OPTION: u8 = u8::MAX;
+
 /// Per-instance permission for "you may cast that card without paying its
 /// mana cost" — granted by Practiced Scrollsmith, Suspend Aggression,
 /// Elemental Mascot, Tablet of Discovery, Ark of Hunger, Archaic's Agony,
@@ -8295,7 +8300,8 @@ pub struct CardCold {
     pub chosen_numbers: Vec<u8>,
     /// CR 702.33b — which of the definition's `kicker_options` were paid for
     /// this cast (Anavolver kicked with {1}{U} only). Empty for every other
-    /// spell.
+    /// spell. [`GRANTED_OFFSPRING_OPTION`] marks a granted offspring paid
+    /// beside the card's own kicker or offspring.
     pub kicked_options: Vec<u8>,
     /// Two colors chosen as this permanent entered (Tablet of the Guilds).
     /// Empty until an `Effect::ChooseTwoColorsForSource` stamps them.
@@ -11593,12 +11599,15 @@ impl CardInstance {
     /// share, and nearly every leaving card holds none of them. The
     /// end-of-turn effects, saddle and crew are `clear_effects_on_zone_
     /// change`'s; the damage is the entry's (`stack.rs`).
-    /// CR 702.175 — see `SelectionRequirement::PaidGrantedOffspring`.
+    /// CR 702.175 — see `SelectionRequirement::PaidGrantedOffspring`. A
+    /// card with no optional cost of its own pays it through `kicked`; one
+    /// with its own (Agate Instigator) through [`GRANTED_OFFSPRING_OPTION`].
     pub fn paid_granted_offspring(&self) -> bool {
         self.kicked
-            && self.definition.has_kicker().is_none()
-            && self.definition.kicker_action_cost.is_none()
-            && self.definition.kicker_options.is_empty()
+            && ((self.definition.has_kicker().is_none()
+                && self.definition.kicker_action_cost.is_none()
+                && self.definition.kicker_options.is_empty())
+                || self.kicked_options.contains(&GRANTED_OFFSPRING_OPTION))
     }
 
     pub fn leave_battlefield_state(&mut self) {

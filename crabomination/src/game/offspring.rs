@@ -18,32 +18,36 @@ impl GameState {
             let granted = c.paid_granted_offspring()
                 && self.computed_is_creature(c)
                 && c.definition.has_multikicker().is_none();
-            if !c.kicked || (c.definition.has_offspring().is_none() && !granted) {
+            if !c.kicked {
                 continue;
             }
+            // A printed and a granted offspring both paid are two triggers.
+            let n = usize::from(c.definition.has_offspring().is_some()) + usize::from(granted);
             let controller = c.controller;
-            self.push_stack(
-                TriggerPush::new(
-                    card_id,
-                    controller,
-                    Effect::CreateTokenCopyOf {
-                        who: PlayerRef::You,
-                        count: Value::ONE,
-                        source: Selector::This,
-                        extra_creature_types: vec![],
-                        extra_card_types: vec![],
-                        override_pt: Some((1, 1)),
-                        override_colors: None,
-                        enters_tapped: false,
-                        non_legendary: false,
-                        legendary: false,
-                        extra_keywords: vec![],
-                        no_mana_cost: false,
-                        enters_with_counters: None,
-                    },
-                )
-                .build(),
-            );
+            for _ in 0..n {
+                self.push_stack(
+                    TriggerPush::new(
+                        card_id,
+                        controller,
+                        Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            source: Selector::This,
+                            extra_creature_types: vec![],
+                            extra_card_types: vec![],
+                            override_pt: Some((1, 1)),
+                            override_colors: None,
+                            enters_tapped: false,
+                            non_legendary: false,
+                            legendary: false,
+                            extra_keywords: vec![],
+                            no_mana_cost: false,
+                            enters_with_counters: None,
+                        },
+                    )
+                    .build(),
+                );
+            }
         }
     }
 }
