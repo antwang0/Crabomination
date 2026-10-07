@@ -113,6 +113,30 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED/OPEN 2026-10-07 (sixth Commander routine) — strict sweeps at 200000-224000
+
+Strict debug pods (`CRAB_ANSWER_LOG=strict CRAB_POD_SWEEP_PROBE=1`, every
+deck in `--pod-decks` groups, 3..8 seats, with and without
+`CRAB_POD_CONCEDE=20`). Fixed, each with a CR-citing test:
+- ✅ **CR 608.2** — a resumed pick whose candidates all left while it waited
+  (Yuffie's "attach an Equipment" after the steal under it ended) returned
+  with its stashed answer (`choose_one.rs`); Florian's look shrank to zero
+  cards when a seat conceded mid-pick and left its logged pick
+  (`LookTopExileOneMayPlay`). `cr_recent118::cr_608_2_*`.
+- ✅ **CR 800.4a / 610.3** — a departed seat's PHASED-OUT permanent leaving
+  the game didn't end its "until this leaves" exile (Summon: Ixion under
+  Clever Concealment). `multiplayer::cr_800_4a_a_phased_out_departed_*`.
+- ⏳ **The class behind the first two, open:** an asking arm whose early-out
+  sits BEFORE its ask can take that early-out on its re-run (the question
+  went moot while it waited) and leave its answer behind. The outermost
+  resolution drops it, so it never crosses resolutions — but inside one, a
+  LATER asking arm takes the single-slot stash as its own answer (any kind:
+  most arms read a mismatch as "no" / empty). A rough scan (`take_opt_scratch!
+  (stashed_resolution_answer)` with an unguarded `return Ok(())` above it in
+  the same arm) lists ~37 arms. The class fix is in the resume path (drop an
+  unconsumed stash once the resumed arm returns), not per arm; it needs the
+  first-leaf boundary inside a resumed `Seq`, which the resume doesn't carry.
+
 ## FIXED 2026-10-07 (fifth Commander routine) — a combatant its own declaration cost removed, an exile link that outlived the exile, a departed caster's stolen spell
 
 Strict debug pods at fresh seeds (121000 4-seat; 130000+ every deck in

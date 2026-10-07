@@ -1401,6 +1401,64 @@ fn cr_800_4a_a_phased_out_departed_holders_exile_ends() {
     assert!(g.exile.iter().all(|c| c.id != bears));
 }
 
+/// CR 800.4a — a per-opponent ask owed by a seat that leaves while it waits
+/// doesn't end the ability, and the departed seat's turn of the body never
+/// comes: Braids' "each opponent may sacrifice …; for each who doesn't, that
+/// player loses 2 life and you draw" asks seat 1, seat 1 concedes, seat 2 is
+/// asked next, and Braids' controller draws for seat 2 alone. (A strict
+/// 6-seat debug pod with concessions, seed 221000: the resumed fan-out ran
+/// the departed seat's "doesn't" branch and drew for it.)
+#[test]
+fn cr_800_4a_a_departed_seats_turn_of_a_fan_out_never_comes() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::game::types::TurnStep;
+    let mut g = multi_player_game(3);
+    for s in 0..3 {
+        g.players[s].wants_ui = true;
+        g.add_card_to_battlefield(s, catalog::forest());
+        g.add_card_to_library(s, catalog::island());
+    }
+    g.add_card_to_battlefield(0, catalog::braids_arisen_nightmare());
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(g.step, TurnStep::End);
+    let hand = g.players[0].hand.len();
+    let mut asked = Vec::new();
+    for _ in 0..40 {
+        let Some(d) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            g.resolve_top_of_stack().expect("resolve");
+            continue;
+        };
+        let seat = d.acting_player();
+        asked.push(seat);
+        if seat == 1 {
+            g.concede(1);
+            continue;
+        }
+        let answer = match (&d.decision, seat) {
+            (Decision::ChooseMode { .. }, _) => DecisionAnswer::Mode(0),
+            (Decision::ChooseCards { .. }, 0) => DecisionAnswer::Cards(vec![swamp]),
+            (Decision::ChooseTarget { .. }, 0) => {
+                DecisionAnswer::Target(crabomination::game::types::Target::Permanent(swamp))
+            }
+            (Decision::ChooseTarget { .. }, _) => DecisionAnswer::DeclineTarget,
+            (Decision::ChooseCards { .. }, _) => DecisionAnswer::Cards(vec![]),
+            _ => DecisionAnswer::Bool(seat == 0),
+        };
+        let shown = format!("{:?}", d.decision);
+        g.submit_decision(answer).unwrap_or_else(|e| panic!("{e:?} answering {shown}"));
+    }
+    assert!(asked.contains(&1) && asked.contains(&2), "both opponents were asked: {asked:?}");
+    assert_eq!(g.players[2].life, 18, "seat 2 declined and lost 2");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one draw, for seat 2 alone");
+}
+
 /// CR 704.3 / 117.5 — state-based actions wait until a player would receive
 /// priority. A seat at 4 life that pays a cast with four Talismans is at 0 while
 /// casting, not out: the spell reaches the stack, and only the sweep after the

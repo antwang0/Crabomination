@@ -3366,7 +3366,9 @@ impl GameState {
                 || self.scratch.stashed_resolution_answer.is_some())
         {
             #[cfg(all(debug_assertions, not(test)))]
-            self.report_answer_log_leak(effect, ctx);
+            if self.scratch.stashed_resolution_answer.is_some() || self.answer_log_holds_live_answers() {
+                self.report_answer_log_leak(effect, ctx);
+            }
             self.clear_answer_log();
             clear_opt_scratch!(self.stashed_resolution_answer);
         }
@@ -43412,6 +43414,10 @@ impl GameState {
 
     fn resolve_players_unranged(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
         match pref {
+            // CR 800.4a — a fan-out's continuation names its seats; one that
+            // has left since is no longer a player, and its turn of the body
+            // (Braids' "that player loses 2 life and you draw") never comes.
+            PlayerRef::Seat(p) => self.players.get(*p).filter(|q| q.is_alive()).map(|_| *p).into_iter().collect(),
             PlayerRef::CurrentVoter => vec![self.current_voter.unwrap_or(ctx.controller)],
             // CR 101.4 / 121.2c — "each player"/"each opponent" fan-outs
             // resolve in APNAP order (active player first, then turn order),

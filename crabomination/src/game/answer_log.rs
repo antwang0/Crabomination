@@ -19,6 +19,18 @@ impl GameState {
         s.resolution_answer_seats.push(tag);
     }
 
+    /// Does the log hold an answer someone still in the game gave (or an
+    /// untagged one)? A departed seat's answers are left unread on purpose —
+    /// the re-run skips that seat (CR 800.4a) — so they are not a leak.
+    #[cfg(all(debug_assertions, not(test)))]
+    pub(crate) fn answer_log_holds_live_answers(&self) -> bool {
+        let s = &self.scratch;
+        (0..s.resolution_answer_log.len()).any(|i| match s.resolution_answer_seats.get(i) {
+            Some(&t) if t != u8::MAX => self.players.get(t as usize).is_none_or(|p| p.is_alive()),
+            _ => true,
+        })
+    }
+
     /// Before `seat` replays the entry at `cursor`: step past every entry a
     /// different, departed seat gave (CR 800.4a).
     pub(crate) fn skip_departed_answers(&self, cursor: &mut usize, seat: usize) {
