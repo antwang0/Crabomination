@@ -1706,8 +1706,22 @@ impl GameState {
                         o.controller == p && o.id != c.id && self.computed_is_creature(o) && able_to_attack(o)
                     })
             };
+            // …and Okk with no bigger creature able to attack beside it.
+            let power = |id: CardId| computed.iter().find(|x| x.id == id).map_or(0, |x| x.power);
+            let okk_excused = |c: &crate::card::CardInstance| {
+                computed_kw(c.id).has_kw(&Keyword::CantAttackUnlessGreaterPowerAttacks)
+                    && !self.battlefield.iter().any(|o| {
+                        o.controller == p
+                            && o.id != c.id
+                            && power(o.id) > power(c.id)
+                            && self.computed_is_creature(o)
+                            && able_to_attack(o)
+                    })
+                    && !self.attacking.iter().any(|a| power(a.attacker) > power(c.id))
+            };
             if let Some(c) = missing.iter().find(|c| {
                 !alone_excused(c)
+                    && !okk_excused(c)
                     && !(all_bound && self.attack_cap_leaves_no_room(p, c, computed_kw(c.id), &attacks, statics))
             }) {
                 return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));

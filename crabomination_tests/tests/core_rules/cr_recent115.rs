@@ -97,3 +97,21 @@ fn cr_508_1d_a_goaded_creature_that_cant_attack_alone() {
     assert!(attacks.iter().any(|a| a.attacker == kronch), "{attacks:?}");
     g.perform_action(GameAction::DeclareAttackers(attacks)).expect("the bot's declaration is legal");
 }
+
+/// CR 508.1d — a goaded Okk with no bigger creature able to attack can't
+/// attack, so it stays home; with a bigger one, the pair must attack.
+#[test]
+fn cr_508_1d_a_goaded_okk() {
+    let mut g = multi_player_game(3);
+    let okk = ready(&mut g, 0, catalog::okk());
+    goad(&mut g, 1, okk);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    to_attacks(&mut g);
+    declare(&mut g, &[], 2).expect("nothing bigger to attack with it");
+    use crabomination::server::bot::pick_attacks;
+    let attacks = pick_attacks(&g, 0);
+    declare(&mut g, &attacks.iter().map(|a| a.attacker).collect::<Vec<_>>(), 2).expect("the bot's declaration");
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    assert!(declare(&mut g, &[], 2).is_err(), "the Wurm lets it attack");
+    declare(&mut g, &[okk, wurm], 2).expect("both");
+}

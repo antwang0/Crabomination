@@ -12796,6 +12796,41 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
             None => attackers.clear(),
         }
     }
+    // CR 508.1a — Okk: an attacker that needs a bigger one beside it. A bound
+    // one takes the biggest able partner (CR 508.1d); otherwise it stays home.
+    loop {
+        let power = |id: CardId| state.computed_permanent(id).map_or(0, |cp| cp.power);
+        let Some(okk) = attackers.iter().copied().find(|&id| {
+            state
+                .computed_permanent(id)
+                .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantAttackUnlessGreaterPowerAttacks))
+                && !attackers.iter().chain(state.attacking.iter().map(|a| &a.attacker)).any(|&o| power(o) > power(id))
+        }) else {
+            break;
+        };
+        let bound = state.battlefield_find(okk).zip(state.computed_permanent(okk)).is_some_and(|(c, cp)| {
+            must_attack(state, c, cp.keywords(), true) || state.side_attacks_if_able(seat)
+        });
+        let partner = bound
+            .then(|| {
+                state
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && !attackers.contains(&c.id) && power(c.id) > power(okk))
+                    .filter_map(|c| state.computed_permanent_on(c).map(|cp| (c, cp)))
+                    .filter(|(c, cp)| {
+                        state.computed_is_creature(c)
+                            && state.attacker_is_able(seat, c, Some(cp), &attack_power_caps, statics)
+                    })
+                    .max_by_key(|(c, cp)| (cp.power, std::cmp::Reverse(c.id)))
+                    .map(|(c, _)| c.id)
+            })
+            .flatten();
+        match partner {
+            Some(id) => attackers.push(id),
+            None => attackers.retain(|&id| id != okk),
+        }
+    }
     // CR 508.0, the other half — `AttacksAlone` (Aisling Leprechaun's
     // cousins): a creature that *attacks alone* makes any batch with a
     // second attacker illegal, and the engine rejects the batch rather than
