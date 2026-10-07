@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep](#fixed-2026-10-07-eighth-commander-run-019mkdqk--the-uniform-pilots-first-pod-sweep) | 14 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets](#fixedopen-2026-10-06-commander-routine--a-prompting-seat-never-named-a-directly-pushed-triggers-targets) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine) — face-down exile, and the implicit "target opponent"](#fixedopen-2026-10-02-commander-routine-claudemodern_decks--face-down-exile-and-the-implicit-target-opponent) | 16 |
@@ -292,6 +293,21 @@ CR 610.3 until-leaves exiles, CR 514.1 hand size, `CRAB_POD_SWEEP_PROBE=1`;
   not yet installed (its controller isn't recorded there).
 - ✅ **CR 800.4d** — a departed seat's leave-TRIGGER exile (Leonin
   Relic-Warder's printed text) keeps its card and now spends the link.
+
+## FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep
+
+`--a uniform` (the uniform-random ladder control) had never piloted a pod; a
+random answerer reaches offers no scored bot takes. Strict debug sweep, 4
+seats, seeds 540000+.
+
+- ✅ **CR 601.2f / 733.1** — a prompting seat casting a strive / Fireball
+  spell was offered an extra target it could not pay for; taking it made the
+  cast illegal and rewound it, and the seat re-cast it into the action cap
+  (Launch the Fleet 643 times, Call the Coppercoats 3,823). The slot is offered
+  only when a probe with it is payable (`game/strive_slots.rs`;
+  `core_rules::multiplayer::cr_601_2f_an_unpayable_strive_slot_is_not_offered`).
+- ✅ The pod `RepeatGuard` also caps casts of one card per turn (CR 733.1: any
+  rewound-cast loop ends in a pass), `pod::tests::cr_733_1_*`.
 
 ## FIXED/OPEN 2026-10-04 (Commander routine, `01WwQaPJ`) — paid costs read back at resolution, and a listener that leaves in the same resolution
 

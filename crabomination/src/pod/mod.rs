@@ -1582,11 +1582,14 @@ pub fn play_one_pod_game(
 /// in a turn is in a loop the bot cannot price (Woe Strider sacrificing
 /// Prowling Geistcatcher's returns, which pay Gravespawn Sovereign to bring
 /// the Geistcatcher back: 2,723 scries in one main phase); its next one is a
-/// pass instead. Pods only — the two-player drivers never reach it.
+/// pass instead. Casts of one card count the same way: a cast its own answer
+/// made illegal is rewound (CR 733.1), and a seat that answers the same way
+/// again re-casts it until the cap (Launch the Fleet, 643 casts in one turn).
+/// Pods only — the two-player drivers never reach it.
 const POD_SAME_ACTIVATION_PER_TURN: u32 = 64;
 
-/// This turn's activation counts by (seat, source, ability index); see
-/// [`POD_SAME_ACTIVATION_PER_TURN`].
+/// This turn's activation counts by (seat, source, ability index; a cast is
+/// index `usize::MAX`); see [`POD_SAME_ACTIVATION_PER_TURN`].
 #[derive(Default)]
 struct RepeatGuard {
     turn: u32,
@@ -1596,7 +1599,13 @@ struct RepeatGuard {
 impl RepeatGuard {
     /// Count `action` for `seat`; `false` once it is past the per-turn cap.
     fn admit(&mut self, turn: u32, seat: usize, action: &crate::game::GameAction) -> bool {
-        let crate::game::GameAction::ActivateAbility { card_id, ability_index, .. } = *action else { return true };
+        let (card_id, ability_index) = match *action {
+            crate::game::GameAction::ActivateAbility { card_id, ability_index, .. } => (card_id, ability_index),
+            _ => match action.cast_card_id() {
+                Some(id) => (id, usize::MAX),
+                None => return true,
+            },
+        };
         if turn != self.turn {
             self.turn = turn;
             self.seen.clear();
@@ -2931,6 +2940,27 @@ mod tests {
         assert!(guard.admit(7, 2, &act(408, 0)), "another seat");
         assert!(guard.admit(7, 1, &crate::game::GameAction::PassPriority));
         assert!(guard.admit(8, 1, &act(408, 0)), "a new turn resets it");
+    }
+
+    /// CR 733.1 — a cast its own answer made illegal is rewound; casting the
+    /// same card again past the per-turn cap is a pass (Launch the Fleet, 643
+    /// rewound casts in one turn under `--a uniform`).
+    #[test]
+    fn cr_733_1_a_seat_stops_recasting_one_card_past_the_cap() {
+        let cast = |card| crate::game::GameAction::CastSpell {
+            card_id: crate::card::CardId(card),
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        let mut guard = RepeatGuard::default();
+        for _ in 0..POD_SAME_ACTIVATION_PER_TURN {
+            assert!(guard.admit(3, 0, &cast(6)));
+        }
+        assert!(!guard.admit(3, 0, &cast(6)), "the 65th cast in one turn is a pass");
+        assert!(guard.admit(3, 0, &cast(7)), "another card");
+        assert!(guard.admit(4, 0, &cast(6)), "a new turn resets it");
     }
 
     /// The pod loop is reproducible: same seed, same outcome. Cross-process
