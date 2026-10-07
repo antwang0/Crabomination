@@ -3230,7 +3230,13 @@ strict debug     121000 (4 seats, 60): found CR 506.4 (Wall of Roots);
                  then 180000+ 3-seat x 24 (1,464) and 190000+ 8-seat x 16
                  (368), probe + concessions: clean; 200000+ 6-seat x 30
                  with concessions (930) and 210000+ 4-seat x 30 probe only
-                 (1,380): clean
+                 (1,380): clean; after the CR 800.4a battlefield half,
+                 220000+ 5-seat x 24 with CRAB_POD_CONCEDE=20 (888): clean
+closing tip      6e1c85c2: --bench 196,176 / 613.0 byte-identical,
+                 determinism ok; every deck in 6-seat groups x 150 with
+                 CRAB_POD_CONCEDE=20 (230000+) = 4,650: zero panics, zero
+                 stalls, 2 draws; cube / sos / sealed x 300 (231000) =
+                 7,500, 0 undecided
 ```
 
 ### 2026-10-07 (Commander routine) — guardrail; CR 702.175 / 118.9a cast options, CR 508.1d / 509.1c cap deadlocks
