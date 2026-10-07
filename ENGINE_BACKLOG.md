@@ -139,10 +139,10 @@ Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
   would have returned with its OLD exiler. Every exile-leaving site now goes
   through `exile_return.rs::take_from_exile` / `exile_remove_at`, which drop
   the return link (27 sites; `return_linked_exiles` still reads it first);
-  `move_card_to` drops `exiled_with` too. ⏳ The cast-from-exile paths keep
-  `exiled_with` — Aminatou's Augury, Share the Spoils and Abaddon read it off
-  the card as it is cast — so a card cast from exile, and exiled again by a
-  path that doesn't restamp, still counts as "exiled with" its first exiler.
+  `move_card_to` drops `exiled_with` too. ✅ *(sixth run)* the cast-from-
+  exile paths keep `exiled_with` for the cast's own reads (Aminatou's Augury,
+  Share the Spoils, Abaddon) and drop it as the spell resolves or reaches a
+  graveyard (`route_to_graveyard`).
   `core_rules::cr_recent118`.
 - ✅ **CR 800.4a** — a card spell the departed seat was casting but did not
   own (Villainous Wealth's free casts of an opponent's library, then a

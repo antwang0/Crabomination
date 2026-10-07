@@ -69,3 +69,34 @@ fn cr_400_7_a_reexiled_card_does_not_return_with_its_old_exiler() {
     resolve(&mut g, taker, None, &Effect::Destroy { what: Selector::ExactObjects(vec![taker]) });
     assert!(g.battlefield_find(bear).is_none(), "the Taker's leave returns only what it holds");
 }
+
+/// CR 400.7 / 607 — a card cast from exile leaves the link behind with the
+/// exile: the Bear a Steamboat held resolves as a new permanent, and when a
+/// later effect exiles it, it is not "exiled with" the Steamboat again.
+#[test]
+fn cr_400_7_a_card_cast_from_exile_is_not_exiled_with_its_old_exiler() {
+    use crabomination::game::types::StackItem;
+    let mut g = main_phase();
+    let boat = g.add_card_to_battlefield(0, catalog::foreboding_steamboat());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let mut card = g.players[0].hand.pop().unwrap();
+    assert_eq!(card.id, bear);
+    card.exiled_with = Some(boat);
+    card.cast_from_exile = true;
+    g.stack.push(StackItem::Spell {
+        card: Box::new(card),
+        caster: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        mana_spent: 2,
+        uncounterable: false,
+    });
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the Bear resolved");
+    g.remove_from_battlefield_to_exile(bear);
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("exiled");
+    assert_eq!(exiled.exiled_with, None, "a plain exile, not the Steamboat's");
+}

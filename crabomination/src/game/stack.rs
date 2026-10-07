@@ -2517,7 +2517,13 @@ impl GameState {
                 mana_spent,
                 uncounterable: _,
             } => {
-                let card = *card;
+                let mut card = *card;
+                // CR 400.7 / 607 — a card cast from exile was "exiled with" its
+                // exiler only while it sat there; the cast read the link, and
+                // the permanent or graveyard card it becomes is a new object.
+                if card.exiled_with.is_some() {
+                    card.exiled_with = None;
+                }
                 let card_id = card.id;
                 // CR 706 — stash the copy-relevant fields before anything else
                 // runs; a "copy this spell" rider resolves after the stack

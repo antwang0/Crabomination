@@ -10983,6 +10983,11 @@ impl GameState {
         if !card.spliced_effects.is_empty() {
             card.spliced_effects.clear();
         }
+        // CR 400.7 / 607 — a card cast from exile and countered is no longer
+        // "exiled with" anything.
+        if card.exiled_with.is_some() {
+            card.exiled_with = None;
+        }
         // CR 122.2 — counters don't survive the zone change (replacement
         // riders below add to the new object afterward).
         card.counters.clear();
