@@ -3203,6 +3203,19 @@ strict debug     later rounds: 230000+ 5/8/4/2/6 seats (7,515: Augusta's
                  determinism + thread determinism ok
 pods (release)   --a dflt, every deck: 4 seats x 60 concede (320000+), 6 x
                  30 (321000+) = 3,700 games, all decided, zero panics
+strict debug     --a dflt, later: 260000+ 5/2 seats (2,271: the Room colors,
+                 seed 261036), 270000+ 6/4 seats (502), 272000+ 3/5/2 seats
+                 (2,804), 280000+ 7/8 seats (142): clean after the fix.
+                 Run total ~32,000 strict games, 11 finds (5 of them only the
+                 default pilot reached)
+closing tip      568f9a5e9: suite 24,323 / 0 / 5 (strict); clippy 0;
+                 --bench 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical,
+                 determinism + thread determinism ok, 204,028 decisions/s on
+                 a quiet box; pods (release) 340002-340008 2..8 seats x 400 =
+                 2,800 all decided, turns/game 19.34 / 33.02 / 46.17 / 56.91 /
+                 70.09 / 82.66 / 97.42; every deck 4 x 200 concede (350000+)
+                 and --a dflt 5 x 40 concede (351000+) = 10,689, all decided,
+                 zero panics
 ```
 
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved
