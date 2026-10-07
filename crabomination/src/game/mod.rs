@@ -19877,7 +19877,14 @@ impl GameState {
             // Its continuation's replay log goes too, as when a departed
             // seat's ask is dropped (CR 800.4a): the next resolution's first
             // ask would otherwise replay these answers as its own.
-            if answered {
+            // An answer of the wrong shape to a paused RESOLUTION is the
+            // exception: the resolving card is held off-zone until the
+            // resolution resumes, so dropping its ask deleted the card (CR
+            // 400.1; a fuzzed pod answered Trap the Trespassers' option with a
+            // mode). Nothing was applied, so the ask stands and is posed again.
+            let wrong_shape = matches!(result, Err(GameError::DecisionAnswerMismatch))
+                && self.pending_decision.as_ref().is_some_and(|pd| !pd.resume.is_action_replay());
+            if answered && !wrong_shape {
                 self.pending_decision = None;
                 self.clear_answer_log();
             }

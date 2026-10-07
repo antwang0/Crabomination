@@ -365,3 +365,38 @@ fn cr_709_5_a_locked_room_is_colorless_and_a_door_colors_it() {
     assert!(g.battlefield_find_mut(room).unwrap().unlock_room_door(false));
     assert_eq!(red(&g), (true, true), "the Corridor's {{R}} colors it");
 }
+
+/// CR 400.1 / 608.2 — an answer of the wrong shape to a paused resolution is
+/// rejected and the ask stands: the resolving card is held off-zone until the
+/// resolution resumes, and dropping the ask deleted it (a fuzzed 8-seat pod,
+/// seed 487016, answered Trap the Trespassers' option with a mode).
+#[test]
+fn cr_400_1_a_wrong_shape_answer_leaves_the_resolution_paused() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::effect::Value;
+    use crabomination::game::types::GameAction;
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "A May",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::MayDo {
+            description: "may".into(),
+            body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+        },
+        ..Default::default()
+    });
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Mode(0))).is_err(), "a mode is not a yes/no");
+    assert!(
+        matches!(g.pending_decision.as_ref().map(|d| &d.decision), Some(Decision::OptionalTrigger { .. })),
+        "the ask is posed again"
+    );
+    let life = g.players[0].life;
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true))).expect("answer");
+    assert_eq!(g.players[0].life, life + 3);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "the spell finished resolving");
+}
