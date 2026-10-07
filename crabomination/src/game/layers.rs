@@ -1719,6 +1719,14 @@ fn compute_permanent_pass(
 /// Determine which colors a card has from its mana cost symbols
 /// (CR 105.2 + the Devoid CDA).
 fn colors_from_card(card: &crate::card::CardInstance) -> ColorSet {
+    // CR 709.5 — a Room permanent has only its unlocked doors' mana cost, so
+    // its colors are theirs: a locked Room is colorless, not both doors'
+    // colors (the requirement walker already read it this way).
+    if card.definition.room.is_some()
+        && let Some(v) = card.room_battlefield_view()
+    {
+        return v.definition.printed_color_set();
+    }
     // The memoized form: this is one of `compute_permanent_pass`'s three
     // per-call definition reads and by far the most expensive (~56 Ir against
     // `base_power`'s 13), and the answer cannot change without a write

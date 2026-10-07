@@ -4601,8 +4601,9 @@ impl GameState {
     ) -> Option<bool> {
         use SelectionRequirement as R;
         // A card whose zone face differs from its printed one (a split card,
-        // an X spell — `face_view_of`) is the walker's to answer.
-        if OFF && Self::may_have_zone_face(card) {
+        // an X spell — `face_view_of`) is the walker's to answer; so is a Room
+        // permanent, whose cost and colors are its unlocked doors' (CR 709.5).
+        if if OFF { Self::may_have_zone_face(card) } else { card.definition.room.is_some() } {
             return None;
         }
         let cid = card.id;

@@ -342,3 +342,26 @@ fn cr_601_2c_destroy_x_targets_takes_exactly_x_and_a_bot_still_casts_it() {
     assert_eq!(Some(targets.len() as u32), x, "one target per X");
     assert!(targets.iter().all(|t| targets.iter().filter(|u| *u == t).count() == 1), "no repeats");
 }
+
+/// CR 709.5 / 105.2 — a Room permanent has only its unlocked doors' mana
+/// cost, so a locked Room is colorless and an unlocked red door makes it red.
+/// The layer system seeded colors from both doors (a locked Spiked Corridor
+/// // Torture Pit read red, and the requirement walker's colorless answer
+/// tripped the colour gate's ratchet in a default-pilot 2-seat strict pod,
+/// seed 261036 game 7).
+#[test]
+fn cr_709_5_a_locked_room_is_colorless_and_a_door_colors_it() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::mana::Color;
+    let mut g = main_phase();
+    let room = g.add_card_to_battlefield(0, catalog::spiked_corridor_torture_pit());
+    let red = |g: &GameState| {
+        (
+            g.computed_permanent(room).expect("on the battlefield").colors.contains(Color::Red),
+            g.evaluate_requirement_static(&R::HasColor(Color::Red), &Target::Permanent(room), 0, None),
+        )
+    };
+    assert_eq!(red(&g), (false, false), "locked: no mana cost, no color");
+    assert!(g.battlefield_find_mut(room).unwrap().unlock_room_door(false));
+    assert_eq!(red(&g), (true, true), "the Corridor's {{R}} colors it");
+}
