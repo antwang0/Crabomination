@@ -119,14 +119,6 @@ impl GameState {
         self.players.get(seat).is_some_and(|p| p.wants_ui && p.is_alive())
     }
 
-    /// [`route_ask`](Self::route_ask) for a question that is *not* about
-    /// paying a cost, which is every ask but the yes/no ones — CR 800.4f
-    /// cannot apply, so there is always a seat to ask.
-    ///
-    /// Built on [`reseat_ask`](Self::reseat_ask) rather than by unwrapping
-    /// `route_ask`'s answer: `audit_panics` counts an `unreachable!` as a bare
-    /// panic reachable from self-play, and "the other variant cannot happen
-    /// here" is a claim a total function does not have to make.
     /// CR 800.4a / 800.4g — a resolution paused on a per-seat ask whose seat
     /// has since left goes on without it: the ask takes a placeholder logged
     /// under the departed seat, and the re-run skips it — a vote is not cast,
@@ -145,17 +137,41 @@ impl GameState {
             else {
                 return;
             };
+            // The paused spell's card, should the resume fail: it must land
+            // somewhere, as on the leave pass's own drop.
+            let paused = match self.pending_decision.as_ref().map(|d| &d.resume) {
+                Some(crate::game::types::ResumeContext::Spell { card, .. }) if !card.is_token => {
+                    Some((**card).clone())
+                }
+                _ => None,
+            };
             match self.submit_decision(filler) {
                 Ok(mut evs) => events.append(&mut evs),
                 Err(_) => {
                     self.pending_decision = None;
                     self.clear_answer_log();
+                    if let Some(mut card) = paused
+                        && self.find_card_anywhere(card.id).is_none()
+                    {
+                        card.controller = card.owner;
+                        if let Some(card) = self.bottom_instead_of_graveyard(card) {
+                            self.route_to_graveyard(card, events);
+                        }
+                    }
                     return;
                 }
             }
         }
     }
 
+    /// [`route_ask`](Self::route_ask) for a question that is *not* about
+    /// paying a cost, which is every ask but the yes/no ones — CR 800.4f
+    /// cannot apply, so there is always a seat to ask.
+    ///
+    /// Built on [`reseat_ask`](Self::reseat_ask) rather than by unwrapping
+    /// `route_ask`'s answer: `audit_panics` counts an `unreachable!` as a bare
+    /// panic reachable from self-play, and "the other variant cannot happen
+    /// here" is a claim a total function does not have to make.
     pub(crate) fn route_ask_choice(&self, seat: usize, source: crate::card::CardId) -> usize {
         if self.players.get(seat).is_none_or(|p| p.is_alive()) {
             return seat;
