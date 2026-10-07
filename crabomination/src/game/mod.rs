@@ -31682,6 +31682,13 @@ fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool
         {
             true
         }
+        // The same bonus spelled as a `PumpPT` (the shipped Augusta: a cast
+        // that tapped the creature left it lethally damaged with priority).
+        SE::PumpPT { applies_to: crate::effect::Selector::EachPermanent(filter), toughness, .. }
+            if *toughness > 0 && filter.mentions_tap_state() =>
+        {
+            true
+        }
         // CR 613.4c — a toughness bonus behind its own condition is lost
         // when the condition lapses, which can happen with no event at all
         // (a turn change, a hand-size count).

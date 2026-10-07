@@ -9114,6 +9114,31 @@ fn cr_704_5f_tapping_out_of_an_untapped_anthem_is_swept_before_acting_again() {
     assert!(g.battlefield_find(pinger).is_none(), "tapped, it is a 0/0 and dies before p0 acts again");
 }
 
+/// The same rule when the tap is the action's ONLY event: a mana ability.
+/// Augusta's "+0/+1" is a `PumpPT` over untapped creatures, and the
+/// post-action gate knew only the anthem spelling of a tap-state bonus — the
+/// ping above sweeps for its own reasons (a 2-seat strict debug pod, seed
+/// 233050 game 38: Nicol Bolas, tapped paying for a cast, sat at 4 damage on
+/// 4 toughness with priority).
+#[test]
+fn cr_704_5f_a_mana_tap_out_of_an_untapped_bonus_is_swept_before_acting_again() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, *catalog::plargg_dean_of_chaos().back_face.expect("Augusta"));
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.clear_sickness(elf);
+    g.battlefield_find_mut(elf).unwrap().counters.add(crabomination::card::CounterType::MinusOneMinusOne, 1);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(elf).is_some(), "a 0/1 while untapped");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elf, ability_index: 0, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("tap for mana");
+    assert!(g.battlefield_find(elf).is_none(), "tapped, it is a 0/0 and dies before p0 acts again");
+}
+
 /// CR 605.3a / 700.4 — a mana source sacrificed while an alternative cast
 /// is paid (a flashback here) leaves the battlefield with its events: the
 /// flashback path dropped the auto-tapper's, so the sacrifice fired no
