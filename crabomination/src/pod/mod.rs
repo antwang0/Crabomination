@@ -1688,7 +1688,11 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
         "the battlefield"
     } else if g.battlefield.iter().any(|c| c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|p| p.id == id)) {
         "a melded or merged permanent"
-    } else if has(&g.phased_out) {
+    } else if has(&g.phased_out)
+        // A phased-out merged or melded permanent keeps its parts (Talon Gates
+        // of Madara phasing out a mutated commander, seed 221030).
+        || g.phased_out.iter().any(|c| c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|p| p.id == id))
+    {
         "phased out"
     } else if has(&g.exile) {
         "exile"
