@@ -9,7 +9,7 @@
 //! It is not on the 2-player throughput path and does not touch it.
 
 pub mod decks;
-mod fuzz;
+pub(crate) mod fuzz;
 pub mod power;
 mod power_table;
 

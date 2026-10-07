@@ -2052,6 +2052,14 @@ fn play_one_game_traced(
     }
     g.start_mulligan_phase();
     let mut bots: Vec<Box<dyn Bot>> = pilots.into_iter().map(Pilot::build).collect();
+    if let Some(rate) = crate::pod::fuzz::ladder_fuzz_rate() {
+        let seed = jitter_seed.unwrap_or(0) ^ g.rng.position();
+        bots = bots
+            .into_iter()
+            .enumerate()
+            .map(|(i, b)| crate::pod::fuzz::FuzzBot::wrap(b, rate, seed ^ 0xF0CC_0000 ^ i as u64))
+            .collect();
+    }
     let (mut actions, mut stale) = (0usize, 0usize);
     // `CRAB_PROGRESS_WATCH=<turn>` — see `progress_watch_line`. Hoisted out of
     // the loop: one `OnceLock` load a *game*, not one an action.

@@ -1,13 +1,14 @@
-//! `CRAB_POD_FUZZ=<n>`: each seat's bot is wrapped so that `n` in 10,000 of
-//! its steps are swapped for a random alternative — another of its own cast /
-//! activation candidates at whatever priority window it holds, the other
-//! answer to a yes/no ask, a random answer to an ask that lists its options
-//! (targets, modes, cards, scry piles, divisions, trigger order, mulligans),
-//! a random subset of its attack or block declaration. A sweep tool: the
-//! tuned bots build the same boards over and over, and a panic or invariant
-//! that only an odd line of play reaches is still a panic self-play can hit.
-//! Seeded per game, so a fuzzed game replays. A swap the engine rejects is
-//! simply not taken.
+//! `CRAB_POD_FUZZ=<n>` (pods) / `CRAB_LADDER_FUZZ=<n>` (two-player ladder
+//! games): each seat's bot is wrapped so that `n` in 10,000 of its steps are
+//! swapped for a random alternative — another of its own cast / activation
+//! candidates at whatever priority window it holds, the other answer to a
+//! yes/no ask, a random answer to an ask that lists its options (targets,
+//! modes, cards, scry piles, divisions, trigger order, mulligans), a random
+//! subset of its attack or block declaration. A sweep tool: the tuned bots
+//! build the same boards over and over, and a panic or invariant that only an
+//! odd line of play reaches is still a panic self-play can hit. Seeded per
+//! game, so a fuzzed game replays. A swap the engine rejects is simply not
+//! taken.
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
@@ -17,20 +18,30 @@ use crate::decision::{Decision, DecisionAnswer};
 use crate::game::{GameAction, GameState};
 use crate::server::bot::{Bot, BotStep, EvalWeights};
 
-/// The fuzz rate in 10,000ths, read once (`None`: off).
-pub(super) fn fuzz_rate() -> Option<u32> {
-    static RATE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
-    *RATE.get_or_init(|| std::env::var("CRAB_POD_FUZZ").ok().and_then(|s| s.parse().ok()).filter(|&n| n > 0))
+fn rate_of(var: &str) -> Option<u32> {
+    std::env::var(var).ok().and_then(|s| s.parse().ok()).filter(|&n| n > 0)
 }
 
-pub(super) struct FuzzBot {
+/// The pod fuzz rate in 10,000ths, read once (`None`: off).
+pub(crate) fn fuzz_rate() -> Option<u32> {
+    static RATE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
+    *RATE.get_or_init(|| rate_of("CRAB_POD_FUZZ"))
+}
+
+/// The two-player ladder's fuzz rate, read once.
+pub(crate) fn ladder_fuzz_rate() -> Option<u32> {
+    static RATE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
+    *RATE.get_or_init(|| rate_of("CRAB_LADDER_FUZZ"))
+}
+
+pub(crate) struct FuzzBot {
     inner: Box<dyn Bot>,
     rng: StdRng,
     rate: u32,
 }
 
 impl FuzzBot {
-    pub(super) fn wrap(inner: Box<dyn Bot>, rate: u32, seed: u64) -> Box<dyn Bot> {
+    pub(crate) fn wrap(inner: Box<dyn Bot>, rate: u32, seed: u64) -> Box<dyn Bot> {
         Box::new(Self { inner, rng: StdRng::seed_from_u64(seed), rate })
     }
 
