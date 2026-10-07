@@ -935,6 +935,10 @@ impl GameState {
             .unwrap_or((controller + 1) % self.players.len());
         // Cap at 16 slots — no real card uses more than 4, but cap defensively.
         while slot < 16 {
+            // "Destroy X target …": no slot past a known X.
+            if x.is_some_and(|x| eff.slot_past_x_cap(slot, x)) {
+                break;
+            }
             // Borrowed, not cloned: the filter lives in `eff`, which outlives
             // this frame, and a `SelectionRequirement` clone deep-copies the
             // whole `And`/`Or` tree.
@@ -1184,6 +1188,9 @@ impl GameState {
                         Some((2, ..)) if optional => {}
                         Some((.., id)) => found = Some(Target::Permanent(id)),
                         None if optional => {}
+                        // CR 115.3 — one "X target …" names distinct objects:
+                        // once they run out, the slot stays empty.
+                        None if distinct.is_some() => {}
                         None => {
                             // Mandatory slot: allow reuse of an
                             // already-picked permanent rather than leave a

@@ -10400,7 +10400,15 @@ impl GameState {
         // CR 601.2c — "X target …" (`TargetsExactlyX`: Curse of the Swine,
         // Doppelgang) needs exactly X targets; the activation path already
         // asks it, the cast path took any number up to X.
-        if matches!(card.definition.effect, Effect::TargetsExactlyX { .. })
+        // So does "destroy X target …" (By Force; Heliod's Intervention's
+        // first mode), whose every slot carries the filter.
+        let destroy_x = |e: &Effect| matches!(e, Effect::DestroyTargets { .. } | Effect::DestroyTargetsPolymorph { .. });
+        let exactly_x = match &card.definition.effect {
+            Effect::TargetsExactlyX { .. } => true,
+            Effect::ChooseMode(modes) => mode.and_then(|m| modes.get(m)).is_some_and(destroy_x),
+            e => destroy_x(e),
+        };
+        if exactly_x
             && usize::from(target.is_some()) + additional_targets.len() != x_value.unwrap_or(0) as usize
         {
             cast_census::rollback(line!());

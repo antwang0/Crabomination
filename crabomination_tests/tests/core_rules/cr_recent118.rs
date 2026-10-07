@@ -303,3 +303,42 @@ fn cr_115_3_x_target_slots_stop_at_x_and_never_repeat() {
     assert!(g.battlefield_find(rocks[0]).is_none() && g.battlefield_find(rocks[1]).is_none());
     assert!(g.battlefield_find(rocks[2]).is_some());
 }
+
+/// CR 601.2c / 115.3 — "destroy X target artifacts" takes exactly X
+/// different targets: X = 1 with three is not a cast. The target walker that
+/// fills a bot's cast filled all sixteen slots, repeating the first artifact
+/// once fresh ones ran out, and the cast path took any count at any X; once
+/// repeats were refused, the bot stopped casting By Force at all.
+#[test]
+fn cr_601_2c_destroy_x_targets_takes_exactly_x_and_a_bot_still_casts_it() {
+    use crabomination::game::types::GameAction;
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    let rocks: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, catalog::sol_ring())).collect();
+    let force = g.add_card_to_hand(0, catalog::by_force());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    let all: Vec<Target> = rocks.iter().map(|&r| Target::Permanent(r)).collect();
+    let mut h = g.clone();
+    let over = h.perform_action(GameAction::CastSpell {
+        card_id: force, target: Some(all[0].clone()), additional_targets: all[1..].to_vec(), mode: None, x_value: Some(1),
+    });
+    assert!(over.is_err(), "three targets at X = 1");
+    let mut cast = None;
+    for _ in 0..12 {
+        let Some(a) = HeuristicBot::new().next_action(&g, 0) else { break };
+        if let GameAction::CastSpell { card_id, ref target, ref additional_targets, x_value, .. } = a
+            && card_id == force
+        {
+            cast = Some((target.iter().chain(additional_targets).cloned().collect::<Vec<_>>(), x_value));
+        }
+        g.perform_action(a).expect("the bot's action is legal");
+        if cast.is_some() {
+            break;
+        }
+    }
+    let (targets, x) = cast.expect("the bot casts By Force");
+    assert_eq!(Some(targets.len() as u32), x, "one target per X");
+    assert!(targets.iter().all(|t| targets.iter().filter(|u| *u == t).count() == 1), "no repeats");
+}
