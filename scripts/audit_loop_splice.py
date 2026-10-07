@@ -110,8 +110,7 @@ NEVER_ASKS = {
 # whitespace-collapsed.
 ALLOW = {
     # ── The loop provably runs at most once ───────────────────────────────
-    ("PlayersMayAccept", "on_accept"): "the first acceptor returns; the loop ends there",
-    ("AnyPlayerMayAccept", "accepted"): "ditto",
+    ("AnyPlayerMayAccept", "accepted"): "the first acceptor returns; the loop ends there",
     ("AnyPlayerMayExileFromGraveyard", "then"): "ditto",
     # ── The effect run cannot ask ─────────────────────────────────────────
     ("DrainDefendersLandsForManaNextMain", "&ability.effect"):
