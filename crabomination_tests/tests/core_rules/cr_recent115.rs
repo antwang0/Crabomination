@@ -75,7 +75,7 @@ fn goad(g: &mut GameState, goader: usize, id: CardId) {
     use crabomination::effect::{Effect, Selector};
     let ctx = EffectContext::for_spell(goader, None, 0, 0);
     let name = g.battlefield_find(id).unwrap().definition.name.to_string();
-    g.resolve_effect(&Effect::Goad { what: Selector::EachPermanent(R::HasName(name.into())) }, &ctx).expect("goad");
+    g.resolve_effect(&Effect::Goad { what: Selector::EachPermanent(R::HasName(name)) }, &ctx).expect("goad");
 }
 
 /// CR 508.1d / 701.15b — a goaded creature that can't attack alone: with no

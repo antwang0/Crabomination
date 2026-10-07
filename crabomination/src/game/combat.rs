@@ -1063,7 +1063,9 @@ impl GameState {
                 self.attacker_cap_against(d).is_some_and(|cap| {
                     attacks.iter().filter(|a| a.target == AttackTarget::Player(d)).count() >= cap
                 }) && !self.battlefield.iter().any(|c| {
-                    c.controller == d && (c.definition.is_planeswalker() || c.definition.is_battle())
+                    c.controller == d
+                        && (self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
+                            || self.computed_has_card_type(c, crate::card::CardType::Battle))
                 })
             })
     }
@@ -1720,9 +1722,8 @@ impl GameState {
                     && !self.attacking.iter().any(|a| power(a.attacker) > power(c.id))
             };
             if let Some(c) = missing.iter().find(|c| {
-                !alone_excused(c)
-                    && !okk_excused(c)
-                    && !(all_bound && self.attack_cap_leaves_no_room(p, c, computed_kw(c.id), &attacks, statics))
+                let capped = all_bound && self.attack_cap_leaves_no_room(p, c, computed_kw(c.id), &attacks, statics);
+                !(alone_excused(c) || okk_excused(c) || capped)
             }) {
                 return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
             }
