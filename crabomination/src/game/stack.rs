@@ -8448,11 +8448,19 @@ impl GameState {
             // library, so the armed deck-out is spent with it (inside
             // `apply_loss_reset`, before its own draws).
             if lost && !self.player_cant_lose_game(i) {
-                if self.apply_loss_reset(i) || self.apply_loss_exile_self(i) {
+                if self.apply_loss_reset(i) {
                     // ⚠ The armed deck-out is spent INSIDE the reset now,
                     // before its own seven draws — which can arm a fresh one
                     // off a card pool smaller than seven, and clearing the
                     // flag out here would erase that.
+                    continue;
+                }
+                // CR 704.3 — the Golden Throne's exile is a change the sweep
+                // must see, so it repeats: commander damage and poison are not
+                // reset, and that loss comes back with the shield gone (a
+                // fuzzed 2-seat pod left a seat at 25 commander damage).
+                if let Some(throne) = self.apply_loss_exile_self(i) {
+                    events.push(GameEvent::PermanentExiled { card_id: throne });
                     continue;
                 }
                 // Stamp the authoritative cause most-specific-first, matching

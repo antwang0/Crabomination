@@ -9,10 +9,10 @@ use crate::effect::StaticEffect;
 impl GameState {
     /// Exile the first permanent `p` controls carrying
     /// `ReplaceControllerLossWithExileSelf` and set `p`'s life to 1. Returns
-    /// true when the replacement applied. An armed CR 104.3c deck-out is
+    /// the exiled permanent when the replacement applied. An armed CR 104.3c deck-out is
     /// spent with it; poison and commander damage are not reset, so those
     /// losses come back at the next check with the shield gone.
-    pub(crate) fn apply_loss_exile_self(&mut self, p: usize) -> bool {
+    pub(crate) fn apply_loss_exile_self(&mut self, p: usize) -> Option<crate::card::CardId> {
         let Some(id) = self
             .battlefield
             .iter()
@@ -25,7 +25,7 @@ impl GameState {
             })
             .map(|c| c.id)
         else {
-            return false;
+            return None;
         };
         self.remove_from_battlefield_to_exile(id);
         self.players[p].pending_deck_loss = false;
@@ -33,6 +33,6 @@ impl GameState {
         // through the CR 119 funnel.
         let delta = 1 - self.effective_life(p);
         self.adjust_life_applied(p, delta);
-        true
+        Some(id)
     }
 }

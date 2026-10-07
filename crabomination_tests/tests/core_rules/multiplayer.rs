@@ -1512,6 +1512,27 @@ fn cr_506_4_a_token_warp_world_shuffles_away_leaves_combat() {
     assert!(g.attacking().iter().all(|a| a.attacker != token), "and is no longer attacking");
 }
 
+/// CR 704.3 / 704.5u / 614 — The Golden Throne replaces a loss ("exile this
+/// and your life total becomes 1") but resets neither commander damage nor
+/// poison, so the check repeats and the seat loses with the shield gone. The
+/// replacement put nothing into the sweep's event list, the repeat stopped,
+/// and a fuzzed 2-seat strict pod (seed 362051 game 18) left a seat alive at
+/// 25 commander damage.
+#[test]
+fn cr_704_3_a_loss_the_golden_throne_leaves_comes_back_in_the_same_sweep() {
+    let mut g = multi_player_game(3);
+    let throne = g.add_card_to_battlefield(0, catalog::the_golden_throne());
+    let cmdr = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[1].commanders = vec![cmdr];
+    g.record_commander_damage(0, cmdr, 21);
+    let events = g.check_state_based_actions();
+    let exiled = events.iter().position(|e| matches!(e, GameEvent::PermanentExiled { card_id } if *card_id == throne));
+    let lost = events.iter().position(|e| matches!(e, GameEvent::PlayerLost { player: 0, .. }));
+    assert!(exiled.is_some(), "the Throne replaced the first loss");
+    assert!(lost > exiled, "and the commander damage it left took the seat out after it");
+    assert!(!g.players[0].is_alive());
+}
+
 /// CR 704.3 / 117.5 — state-based actions wait until a player would receive
 /// priority. A seat at 4 life that pays a cast with four Talismans is at 0 while
 /// casting, not out: the spell reaches the stack, and only the sweep after the
