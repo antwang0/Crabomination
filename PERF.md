@@ -3193,7 +3193,7 @@ pods             release-fast census 4 seats (41000+, 46 x 200 = 9,200) and
                  zero panics
 ```
 
-### 2026-10-07 (Commander routine, fifth) — guardrail; CR 603.10a death listeners, CR 506.4 cost-killed combatants, CR 400.7 exile links, CR 800.4a stolen spells
+### 2026-10-07 (Commander routine, fifth) — guardrail; CR 603.10a death listeners, CR 506.4 cost-killed combatants, CR 400.7 exile links, CR 800.4a stolen spells and dropped asks, CR 704.3 can't-lose expiry
 
 Hot-path touches: the dispatch's departed-listener gate now opens on every
 batch with a creature death (`CreatureDied` is a looked-back event and a
@@ -3207,7 +3207,7 @@ site goes through one helper. release-fast, 4-core Xeon @ 2.80 GHz.
                  (the run's base), 5 pairs, decisions/s base / cand:
                  116.9/114.6, 103.2/103.3, 101.3/95.0, 103.4/115.3,
                  112.3/115.5 k — means 107.4 / 108.7 k, flat
-suite            24,300 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
+suite            24,302 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
 pods (release)   seeds 150002-150008, 2..8 seats x 400 = 2,800; every deck
                  in 6-seat groups x 200 (160000+) = 6,200 and 4-seat
                  groups x 200 with CRAB_POD_CONCEDE=20 (161000+) = 9,200:
@@ -3223,7 +3223,12 @@ strict debug     121000 (4 seats, 60): found CR 506.4 (Wall of Roots);
                  CRAB_POD_SWEEP_PROBE (930): found CR 400.7 (Steamboat, 2);
                  140000+ every deck in 4-seat groups x 24 with
                  CRAB_POD_CONCEDE=20 + probe (1,104): found CR 800.4a
-                 (Villainous Wealth); all fixed, group 140029 re-run clean
+                 (Villainous Wealth); 170000+ every deck in 5-seat groups x
+                 24, CRAB_POD_CONCEDE=10 + probe (888): found CR 800.4a
+                 (a dropped vote ask took Mob Verdict's card) and CR 704.3
+                 (Everybody Lives! expiry); all fixed, groups re-run clean;
+                 then 180000+ 3-seat x 24 (1,464) and 190000+ 8-seat x 16
+                 (368), probe + concessions: clean
 ```
 
 ### 2026-10-07 (Commander routine) — guardrail; CR 702.175 / 118.9a cast options, CR 508.1d / 509.1c cap deadlocks

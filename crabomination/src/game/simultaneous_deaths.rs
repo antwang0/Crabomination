@@ -3,11 +3,11 @@
 //! dying creature's "whenever another creature [you control] dies" trigger
 //! sees every other creature that died with it — Midnight Reaper and a Bear
 //! under Wrath of God draw two. A noncreature listener destroyed in the same
-//! batch looks back too (Bastion of Remembrance under Planar Cleansing). The battlefield walk in
-//! `dispatch_triggers_for_events` can't find these observers (they are in
-//! the graveyard by dispatch time), and the self-death funnel only fires a
-//! creature's triggers for its own death, so this pass supplies the rest from
-//! the death snapshots.
+//! batch looks back too (Bastion of Remembrance under Planar Cleansing). The
+//! battlefield walk in `dispatch_triggers_for_events` can't find these
+//! observers (they are in the graveyard by dispatch time), and the self-death
+//! funnel only fires a creature's triggers for its own death, so this pass
+//! supplies the rest from the death snapshots.
 
 use super::GameState;
 use super::types::{GameEvent, TriggerCandidate};
