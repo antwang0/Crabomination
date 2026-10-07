@@ -6082,7 +6082,9 @@ impl GameState {
                     {
                         return None;
                     }
-                    let slot = 1 + additional_targets.len() as u8;
+                    // Total: a slot count past `u8` is past every printed cap
+                    // (an unbounded slot run once overflowed here).
+                    let slot = u8::try_from(1 + additional_targets.len()).ok()?;
                     if card.definition.effect.slot_past_x_cap(slot, x_value.unwrap_or(0)) {
                         return None;
                     }
@@ -21009,7 +21011,7 @@ impl GameState {
         // slot resolves to nothing and the effect half-fires.
         // A divided-damage / "up to N targets" ability's slots past its minimum
         // are optional (CR 115.3), so only a genuinely required slot rejects.
-        let next_slot = 1 + additional_targets.len() as u8;
+        let next_slot = u8::try_from(1 + additional_targets.len()).unwrap_or(u8::MAX);
         if target.is_some()
             && ability.effect.target_filter_for_slot_in_mode(next_slot, chosen_mode).is_some()
             && !ability.effect.target_slot_optional_x(

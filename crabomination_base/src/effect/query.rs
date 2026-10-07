@@ -5858,6 +5858,9 @@ impl Effect {
     pub fn slot_past_x_cap(&self, slot: u8, x: u32) -> bool {
         match self {
             Effect::TargetsExactlyX { .. } | Effect::CapTargetsAtX { .. } => u32::from(slot) >= x,
+            // "Destroy X target …" (By Force, Heliod's Intervention, Indomitable
+            // Creativity): every slot carries the filter, so X is the cap.
+            Effect::DestroyTargets { .. } | Effect::DestroyTargetsPolymorph { .. } => u32::from(slot) >= x,
             // "Destroy up to X target …" written as a cap on the paid X
             // (Klauth's Will): no slot prompt past the X-th.
             Effect::CapTargetsAt { amount: crate::effect::Value::XFromCost, .. } => u32::from(slot) >= x,
@@ -6035,6 +6038,8 @@ impl Effect {
             | Effect::DeliverUntoEvil { max_targets, .. }
             | Effect::DistributeCounters { max_targets, .. } => Some(*max_targets),
             Effect::FinaleOfPromise => Some(2),
+            // "Destroy X target …" is one instance of "target" (CR 115.3).
+            Effect::DestroyTargets { .. } | Effect::DestroyTargetsPolymorph { .. } => Some(u8::MAX),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),

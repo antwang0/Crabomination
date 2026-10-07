@@ -264,3 +264,42 @@ fn cr_608_2_a_moot_asker_does_not_hand_its_answer_to_the_next() {
     assert!(g.pending_decision.is_none());
     assert_eq!(g.players[0].life, life, "declined, so no life");
 }
+
+/// CR 115.3 / 601.2c — "destroy X target artifacts and/or enchantments" is
+/// one instance of "target": X slots, each a different object. A prompting
+/// seat's Heliod's Intervention at X = 2 was offered a slot past X, and the
+/// first artifact again, without end — a default-pilot 4-seat strict pod
+/// (seed 250011 game 21) appended the same Sol Ring 255 times and overflowed
+/// the slot count.
+#[test]
+fn cr_115_3_x_target_slots_stop_at_x_and_never_repeat() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::game::types::GameAction;
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let rocks: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, catalog::sol_ring())).collect();
+    let heliod = g.add_card_to_hand(0, catalog::heliods_intervention());
+    let cast = |g: &mut GameState, extra: Vec<Target>| {
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: heliod,
+            target: Some(Target::Permanent(rocks[0])),
+            additional_targets: extra,
+            mode: Some(0),
+            x_value: Some(2),
+        })
+    };
+    assert!(cast(&mut g, vec![Target::Permanent(rocks[0])]).is_err(), "the same Sol Ring twice is not two targets");
+    g.players[0].mana_pool = Default::default();
+    cast(&mut g, vec![]).expect("cast");
+    let Some(Decision::ChooseTarget { legal, .. }) = g.pending_decision.as_ref().map(|d| d.decision.clone()) else {
+        panic!("the second slot is asked");
+    };
+    assert!(!legal.contains(&Target::Permanent(rocks[0])), "the first pick is not offered again");
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(rocks[1]))).expect("second target");
+    assert!(g.pending_decision.is_none(), "no third slot at X = 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rocks[0]).is_none() && g.battlefield_find(rocks[1]).is_none());
+    assert!(g.battlefield_find(rocks[2]).is_some());
+}
