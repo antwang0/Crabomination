@@ -1782,6 +1782,8 @@ fn play_pod_game(
     let trace_from = pod_trace_from();
     let mut repeats = RepeatGuard::default();
     #[cfg(debug_assertions)]
+    let mut last_turn: Option<(u32, usize)> = None;
+    #[cfg(debug_assertions)]
     let mut commanders_seen: Vec<(crate::card::CardId, &'static str, u32)> = Vec::new();
     let mut concede = concede_rate.map(|n| (n, StdRng::seed_from_u64(seed ^ 0xC0DE_C0DE)));
     // One `OnceLock` read a game, not a bool per action: off, `record` is a
@@ -1838,6 +1840,25 @@ fn play_pod_game(
                 census.note_triggers(&g);
                 #[cfg(debug_assertions)]
                 check_commanders(&g, seed, actions, &mut commanders_seen);
+                // CR 514.1 — the turn that just ended left its active player at
+                // or under their maximum hand size. Debug-only.
+                #[cfg(debug_assertions)]
+                {
+                    if let Some((turn, prev)) = last_turn
+                        && turn != g.turn_number
+                        && !g.is_game_over()
+                        && g.players.get(prev).is_some_and(|p| p.is_alive())
+                        && let Some(max) = g.effective_max_hand_size(prev)
+                    {
+                        assert!(
+                            g.players[prev].hand.len() <= max + g.players[prev].cards_drawn_this_turn as usize,
+                            "seed {seed}: p{prev} ended turn {turn} with {} cards in hand, max {max} (after {actions} actions, now {:?})",
+                            g.players[prev].hand.len(),
+                            g.step,
+                        );
+                    }
+                    last_turn = Some((g.turn_number, g.active_player_idx));
+                }
                 any = true;
                 actions += 1;
                 plays += usize::from(!is_pass);
@@ -1847,6 +1868,9 @@ fn play_pod_game(
                 {
                     let live: Vec<usize> = g.living_seats().collect();
                     if let Some(&quitter) = live.get(rng.random_range(0..live.len().max(1))) {
+                        if trace_from.is_some_and(|n| actions >= n) {
+                            eprintln!("{actions} t{} {:?} p{quitter} CONCEDES", g.turn_number, g.step);
+                        }
                         let events = g.concede(quitter);
                         g.recycle_events(events);
                     }
