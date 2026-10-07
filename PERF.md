@@ -3160,6 +3160,12 @@ strict debug     sweep.py groups (every deck, shuffled per seed):
                  concede, 223000+ 3 x 30 concede (4,748): found Braids'
                  departed turn (221000) and the phased-out merged commander
                  (detector, 221030); all fixed and re-run clean
+pods (release)   seeds 300002-300008, 2..8 seats x 400 = 2,800, all decided;
+                 turns/game 19.26 / 32.44 / 46.14 / 57.29 / 70.44 / 82.10 /
+                 96.68; every deck in shuffled groups: 4 seats x 200 with
+                 CRAB_POD_CONCEDE=20 (310000+), 6 x 150 concede (311000+),
+                 5 x 150 (312000+) = 19,415 games, 3 CR 104.4a draws, zero
+                 panics, zero stalls
 ```
 
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved

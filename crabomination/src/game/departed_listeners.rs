@@ -104,7 +104,7 @@ impl GameState {
             );
             let listens = |ta: &&crate::card::TriggeredAbility| {
                 looks_back(&ta.event.kind)
-                    && !(died && ta.event.kind == EventKind::CreatureDied)
+                    && (!died || ta.event.kind != EventKind::CreatureDied)
                     && !ta.event.zone.command_zone_only()
                     && !ta.event.once_per_turn
                     && !ta.event.once_per_batch
