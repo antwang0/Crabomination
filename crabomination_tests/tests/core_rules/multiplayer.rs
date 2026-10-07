@@ -1074,9 +1074,7 @@ fn cr_800_4a_departed_players_objects_leave_and_control_reverts() {
     // Seat 0 owns a creature; seat 2 owns one but seat 0 has stolen it.
     let owned = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let stolen = g.add_card_to_battlefield(2, catalog::grizzly_bears());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == stolen) {
-        c.controller = 0; // seat 0 controls seat 2's creature
-    }
+    steal(&mut g, stolen, 0); // seat 0 controls seat 2's creature
     g.add_card_to_hand(0, catalog::lightning_bolt());
 
     g.players[0].life = 0; // seat 0 leaves the game
@@ -1274,7 +1272,7 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
     }
     let mine = g.add_card_to_battlefield(2, catalog::grizzly_bears());
     let borrowed = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.battlefield_find_mut(borrowed).unwrap().controller = 2;
+    steal(&mut g, borrowed, 2);
     // Held by their own source: its "until this leaves" return ran inside
     // the leave pass and phased the card back in (a departed commander).
     let holder = g.add_card_to_battlefield(2, catalog::grizzly_bears());
@@ -1298,6 +1296,76 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
     assert!(g.phased_out.iter().all(|c| c.id != mine));
     let back = g.phased_out.iter().find(|c| c.id == borrowed).expect("its owner's card stays phased out");
     assert_eq!(back.controller, 0, "control reverts to the owner");
+}
+
+/// A control-changing effect's hold, as `change_control` leaves it: the
+/// permanent remembers who it was taken from (CR 800.4a reverts it there).
+fn steal(g: &mut GameState, id: crabomination::card::CardId, to: usize) {
+    let c = g.battlefield_find_mut(id).unwrap();
+    c.pre_effect_controller = Some(c.controller as u8);
+    c.controller = to;
+}
+
+fn cast_for(g: &mut GameState, seat: usize, id: crabomination::card::CardId, target: Option<crabomination::game::types::Target>) {
+    use crabomination::mana::Color;
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[seat].mana_pool.add(c, 5);
+    }
+    g.active_player_idx = seat;
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(g);
+}
+
+/// CR 800.4a — "Then, if there are any objects still controlled by that
+/// player, those objects are exiled." Seat 0 casts seat 2's Grizzly Bears
+/// (a Gonti / Villainous Wealth cast) and reanimates seat 1's: no effect gives
+/// seat 0 either, so both are exiled when it leaves rather than handed back.
+#[test]
+fn cr_800_4a_a_permanent_the_departed_seat_controls_without_an_effect_is_exiled() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let cast = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.find_card_anywhere_mut(cast).unwrap().owner = 2;
+    cast_for(&mut g, 0, cast, None);
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let reanimate = g.add_card_to_hand(0, catalog::reanimate());
+    cast_for(&mut g, 0, reanimate, Some(Target::Permanent(dead)));
+    for id in [cast, dead] {
+        assert_eq!(g.battlefield_find(id).map(|c| c.controller), Some(0), "seat 0 controls {id:?}");
+    }
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    for id in [cast, dead] {
+        assert!(g.battlefield_find(id).is_none(), "{id:?} left the battlefield");
+        assert!(g.exile.iter().any(|c| c.id == id), "{id:?} is exiled");
+    }
+}
+
+/// CR 800.4a — "any effects which give that player control of any objects
+/// … end": Control Magic's control ends with its controller, and the
+/// permanent goes back to the player it was taken from — seat 1, which
+/// reanimated seat 2's creature — not to its owner and not to exile.
+#[test]
+fn cr_800_4a_a_steal_ends_and_returns_to_whoever_it_was_taken_from() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let dead = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    let reanimate = g.add_card_to_hand(1, catalog::reanimate());
+    cast_for(&mut g, 1, reanimate, Some(Target::Permanent(dead)));
+    let magic = g.add_card_to_hand(0, catalog::control_magic());
+    cast_for(&mut g, 0, magic, Some(Target::Permanent(dead)));
+    assert_eq!(g.battlefield_find(dead).unwrap().controller, 0, "seat 0 stole it");
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert_eq!(g.battlefield_find(dead).map(|c| c.controller), Some(1), "back to seat 1");
+    assert!(g.exile.iter().all(|c| c.id != dead));
 }
 
 /// CR 704.3 / 117.5 — state-based actions wait until a player would receive
@@ -1677,7 +1745,7 @@ fn cr_800_4d_a_departed_players_delayed_trigger_is_not_put_on_the_stack() {
 
     // Seat 0 controls a creature seat 2 owns, and points its own Extract at it.
     let stolen = g.add_card_to_battlefield(2, catalog::grizzly_bears());
-    g.battlefield_find_mut(stolen).unwrap().controller = 0;
+    steal(&mut g, stolen, 0);
     arm(&mut g, 0, stolen);
     // Seat 1 arms the same ability against its own creature.
     let control = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -1778,7 +1846,7 @@ fn cr_800_4m_through_a_departed_players_next_combat_ends_when_that_turn_would_ha
         }
     }
     let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
-    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    steal(&mut g, bear, 1);
     g.active_player_idx = 0;
     let ctx = EffectContext {
         targets: vec![crabomination::game::types::Target::Permanent(bear)],
@@ -5041,7 +5109,7 @@ fn cr_800_4a_a_seat_an_effect_eliminates_still_leaves_the_game() {
     let mut g = multi_player_game(4);
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let stolen = g.add_card_to_battlefield(2, catalog::llanowar_elves());
-    g.battlefield_find_mut(stolen).unwrap().controller = 1;
+    steal(&mut g, stolen, 1);
 
     // What every `Effect::LoseGame`-shaped arm does, and all it did.
     g.players[1].eliminated = true;

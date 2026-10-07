@@ -10314,6 +10314,10 @@ impl GameState {
                     .map(|c| c.id)
                     .collect();
                 if let Some(c) = self.battlefield_find_mut(aura) {
+                    // CR 800.4a — an effect's hold, as `change_control` records it.
+                    if c.controller != ctx.controller && c.pre_effect_controller.is_none() {
+                        c.pre_effect_controller = Some(c.controller as u8);
+                    }
                     c.controller = ctx.controller;
                 }
                 // Prefer a permanent the new controller already owns; the

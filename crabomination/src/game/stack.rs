@@ -6038,21 +6038,30 @@ impl GameState {
         // the owner; this also drops the departed seat's entries so a later
         // steal of the same permanent still ends.
         self.end_temporary_control_granted_to(p);
-        let reverts: Vec<(CardId, usize)> = self
+        // CR 800.4a — control-changing effects that give the departed seat a
+        // permanent end, handing it back to whoever held it before the first
+        // of them (its owner if that seat is gone too); one it controls with
+        // no such effect — it cast another seat's card, or an effect put the
+        // card onto the battlefield under its control — "is still controlled
+        // by that player" and is exiled.
+        let held: Vec<(CardId, Option<usize>, usize)> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == p)
-            .map(|c| (c.id, c.owner))
+            .map(|c| (c.id, c.pre_effect_controller.map(usize::from).filter(|&q| q != p), c.owner))
             .collect();
-        for (id, owner) in reverts {
-            // CR 800.4a — control effects end; what is "still controlled by
-            // that player" (it entered under them: a reanimated or
-            // theft-cast card) is exiled.
-            if self.entered_under_nonowner.contains(&id) {
-                self.remove_from_battlefield_to_exile(id);
-                events.push(GameEvent::PermanentExiled { card_id: id });
-            } else {
-                self.change_control(id, owner);
+        for (id, before, owner) in held {
+            match before {
+                Some(q) if self.players.get(q).is_some_and(|pl| pl.is_alive()) => {
+                    self.change_control(id, q);
+                }
+                Some(_) => {
+                    self.change_control(id, owner);
+                }
+                None => {
+                    self.remove_from_battlefield_to_exile(id);
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                }
             }
         }
         // CR 800.4a — "any effects which give that player control of any
@@ -6106,9 +6115,24 @@ impl GameState {
         }
         if self.phased_out.iter().any(|c| c.owner == p || c.controller == p) {
             self.phased_out.retain(|c| c.owner != p);
+            // The battlefield's rule above: an effect's hold ends, a hold
+            // with no effect under it is exiled.
+            let mut exiled = Vec::new();
             for c in self.phased_out.iter_mut() {
                 if c.controller == p {
-                    c.controller = c.owner;
+                    match c.pre_effect_controller.map(usize::from).filter(|&q| q != p) {
+                        Some(q) if self.players.get(q).is_some_and(|pl| pl.is_alive()) => c.controller = q,
+                        Some(_) => c.controller = c.owner,
+                        None => exiled.push(c.id),
+                    }
+                }
+            }
+            for id in exiled {
+                if let Some(pos) = self.phased_out.iter().position(|c| c.id == id) {
+                    let mut card = self.phased_out.remove(pos);
+                    card.controller = card.owner;
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                    self.exile.push(card);
                 }
             }
         }

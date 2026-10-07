@@ -9679,6 +9679,10 @@ pub struct CardData {
     /// a permanent without echo). `false` on battlefield entry; `process_echo`
     /// checks unpaid echoes at the controller's upkeep.
     pub echo_paid: bool,
+    /// CR 800.4a — who controlled this permanent before a control-changing
+    /// effect first took it (`change_control`); `None` while its controller is
+    /// the one it entered under. Reset on each battlefield entry.
+    pub pre_effect_controller: Option<u8>,
     /// CR 702.62a — this exiled card gained suspend from an effect (the card
     /// "Suspend"): `process_suspend` ticks it even though its definition
     /// carries no `Keyword::Suspend`.
@@ -10617,6 +10621,7 @@ impl CardInstance {
             chosen_mode: None,
             chosen_card_type: None,
             echo_paid: false,
+            pre_effect_controller: None,
             granted_suspend: false,
             phased_out_by: None,
             bounce_at_next_untap: false,
@@ -11582,6 +11587,7 @@ impl CardInstance {
             self.crewed_by.clear();
         }
         self.echo_paid = false;
+        self.pre_effect_controller = None;
         // A kicker / offspring payment belongs to the spell that paid it; a
         // flickered or reanimated creature was not cast kicked (its ETB
         // rider and an offspring copy do not fire again).
@@ -11656,6 +11662,7 @@ impl CardInstance {
             || !self.saddled_by.is_empty()
             || !self.crewed_by.is_empty()
             || self.echo_paid
+            || self.pre_effect_controller.is_some()
             || self.kicked
     }
 
@@ -11952,6 +11959,8 @@ struct CardInstanceWire {
     #[serde(default)]
     echo_paid: bool,
     #[serde(default)]
+    pre_effect_controller: Option<u8>,
+    #[serde(default)]
     granted_suspend: bool,
     #[serde(default)]
     phased_out_by: Option<CardId>,
@@ -12224,6 +12233,7 @@ impl serde::Serialize for CardInstance {
             chosen_mode: self.chosen_mode,
             chosen_card_type: self.chosen_card_type.clone(),
             echo_paid: self.echo_paid,
+            pre_effect_controller: self.pre_effect_controller,
             granted_suspend: self.granted_suspend,
             phased_out_by: self.phased_out_by,
             name_choices_used: self.name_choices_used,
@@ -12403,6 +12413,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         }
         c.chosen_card_type = wire.chosen_card_type;
         c.echo_paid = wire.echo_paid;
+        c.pre_effect_controller = wire.pre_effect_controller;
         c.granted_suspend = wire.granted_suspend;
         c.phased_out_by = wire.phased_out_by;
         c.name_choices_used = wire.name_choices_used;
