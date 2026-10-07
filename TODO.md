@@ -58,6 +58,7 @@ sixty-seventh pass, so don't re-take that.
 6. ⚠ **Several sessions are live on this branch on 2026-10-07** (`011LGd2W`, `015XULoK`, `01W3Tmnx`); two landed the same CR 800.4a / `exiled_with` fixes within minutes — announce your lane here first. `011LGd2W` (sixth run): strict sweeps at 200000-260000 (its `sweep.py` groups, `baseline` and `--a dflt`) and release pods at 300000-312000.
 7. **`015XULoK` (fifth run) took the BOT never-activated lane** after its sweeps went quiet: `server/untap_ramp.rs` (Arbor Elf, Kiora's Follower), Grimoire of the Dead's charge loosened (its payoff fires now), Chainer's discard-to-cast (`server/graveyard_cast.rs`), hideaway lands' free play (`server/hideaway.rs`); Whirler Rogue was already taken. A 183-deck census (seed 290000, 30 games a group) left mostly noise; token makers (Selesnya Guildmage, Trading Post) are the next real gap (ENGINE_BACKLOG).
 8. **`01W3Tmnx` (seventh run) took the stash class (✅ `run_effect` claim, ENGINE_BACKLOG) and strict sweeps at seeds 410000-499999.**
+9. **`019mKDqk` (eighth run, 18:20) takes strict debug sweeps under `--a dflt` (the default bot) at seeds 500000-599999** and fixes what they find.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
