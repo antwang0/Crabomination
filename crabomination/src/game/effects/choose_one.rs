@@ -150,6 +150,12 @@ impl GameState {
             .collect();
         let Some(seat) = self.resolve_player(chooser, ctx) else { return Ok(()) };
         if ids.is_empty() || n == 0 {
+            // A resumed pick whose candidates all left while it waited (a
+            // "while you control" steal ended under it) has nothing to apply
+            // its answer to: spend it, or it leaks into the next ask.
+            if matches!(self.scratch.stashed_resolution_answer, Some(crate::decision::DecisionAnswer::Cards(_))) {
+                clear_opt_scratch!(self.stashed_resolution_answer);
+            }
             return Ok(());
         }
         let source = ctx.source.unwrap_or(CardId(0));

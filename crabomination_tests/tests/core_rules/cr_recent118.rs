@@ -1,6 +1,6 @@
 //! CR 400.7 / 607 — a card that leaves exile is a new object: the exiler's
 //! "until this leaves" link (`exiled_by`) does not follow it into its next
-//! zone, nor into a later exile.
+//! zone, nor into a later exile. Plus a CR 608.2 answer-log leak.
 
 use crabomination::catalog;
 use crabomination::effect::{Effect, PlayerRef, Selector, ZoneDest};
@@ -99,4 +99,52 @@ fn cr_400_7_a_card_cast_from_exile_is_not_exiled_with_its_old_exiler() {
     g.remove_from_battlefield_to_exile(bear);
     let exiled = g.exile.iter().find(|c| c.id == bear).expect("exiled");
     assert_eq!(exiled.exiled_with, None, "a plain exile, not the Steamboat's");
+}
+
+/// CR 608.2 — an asked pick whose candidates all left while it waited spends
+/// its answer. Yuffie took Lightning Greaves "for as long as you control
+/// Yuffie" and asked which Equipment to attach; the steal ended before the
+/// answer came back (Clever Concealment phased Yuffie out), the re-run found
+/// no Equipment, and the stashed pick leaked (a strict 6-seat debug pod, seed
+/// 201019 game 18). Nextest runs each test in its own process, so the strict
+/// leak check (read once) is switched on here.
+#[test]
+fn cr_608_2_a_pick_whose_candidates_left_spends_its_answer() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::game::types::GameAction;
+    // SAFETY: set before any thread reads the environment.
+    unsafe { std::env::set_var("CRAB_ANSWER_LOG", "strict") };
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let greaves = g.add_card_to_battlefield(1, catalog::lightning_greaves());
+    let yuffie = g.add_card_to_hand(0, catalog::yuffie_materia_hunter());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: yuffie, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Yuffie");
+    let mut asked = false;
+    for _ in 0..20 {
+        if let Some(d) = g.pending_decision.as_ref() {
+            let answer = match &d.decision {
+                Decision::ChooseTarget { .. } => DecisionAnswer::Target(Target::Permanent(greaves)),
+                Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                Decision::ChooseCards { .. } => {
+                    // The steal ends before the answer comes back.
+                    g.battlefield_find_mut(greaves).unwrap().controller = 1;
+                    asked = true;
+                    DecisionAnswer::Cards(vec![greaves])
+                }
+                other => panic!("unexpected ask {other:?}"),
+            };
+            g.submit_decision(answer).expect("answer");
+            continue;
+        }
+        if g.stack.is_empty() {
+            break;
+        }
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert!(asked, "the Equipment pick was asked");
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.battlefield_find(greaves).and_then(|c| c.attached_to), None, "nothing to attach");
 }
