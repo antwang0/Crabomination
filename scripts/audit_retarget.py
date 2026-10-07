@@ -54,7 +54,7 @@ COPY_PRINTED = re.compile(r"\bcopy\b|\bcopies\b", re.I)
 
 # Effects that move an object already on the stack.
 MOVES = re.compile(
-    r"Effect::(ChooseNewTargetsForSpell|ChangeSpellTarget|ChangeTargetOfAbility"
+    r"Effect::(ChooseNewTargetsForSpell|ChooseNewTargetsForAnyNumber|ChangeSpellTarget|ChangeTargetOfAbility"
     r"|RedirectSpellTargetToSelf|RevealTopGreatestMayChangeTargets"
     # Sudden Substitution: the exchange lets the new controller retarget.
     r"|ExchangeSpellAndCreatureControl)"

@@ -758,6 +758,19 @@ mod recent239 {
         let before = g.players[0].hand.len();
         g.resolve_effect(&def.triggered_abilities[0].effect.clone(), &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
         assert_eq!(g.players[0].hand.len(), before, "no draw after an expensive discard");
+        // Multiplayer: one draw per opponent who didn't discard a 4+ — the
+        // cheap discard and the empty hand count, the Angel doesn't.
+        let mut g = crabomination::game::multi_player_game(4);
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+        g.add_card_to_hand(2, catalog::serra_angel());
+        let src = g.add_card_to_battlefield(0, catalog::hollow_marauder());
+        let before = g.players[0].hand.len();
+        g.resolve_effect(&def.triggered_abilities[0].effect.clone(), &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+        assert_eq!(g.players[0].hand.len(), before + 2, "seat 1 and the empty-handed seat 3");
+        assert!(g.players[1].hand.is_empty() && g.players[2].hand.is_empty());
     }
 
     /// Feed the Cycle forages (exiling three graveyard cards) to pay its additional

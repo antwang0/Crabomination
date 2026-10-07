@@ -765,9 +765,9 @@ pub fn whiskervale_forerunner() -> CardDefinition {
 }
 
 /// Hollow Marauder — {6}{B} Specter Rogue 4/2. Costs {1} less per creature card
-/// in your graveyard. Flying. ETB: each opponent discards a card, and you draw a
-/// card for each who discarded a card with mana value 3 or less. (The "any
-/// number of target opponents" slot collapses to each opponent — 1v1-faithful.)
+/// in your graveyard. Flying. ETB: each opponent discards a card; for each who
+/// didn't discard one of mana value 4 or more (an empty hand included), you
+/// draw. The "any number of target opponents" pick is every opponent.
 pub fn hollow_marauder() -> CardDefinition {
     CardDefinition {
         name: "Hollow Marauder",
@@ -783,21 +783,23 @@ pub fn hollow_marauder() -> CardDefinition {
         affinity_graveyard_filter: Some(R::Creature),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::ONE,
-                    random: false,
-                },
-                Effect::If {
-                    cond: Predicate::LastDiscardedManaValueAtMost(3),
-                    then: Box::new(Effect::Draw {
-                        who: Selector::You,
+            effect: Effect::ForEachOpponent {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::Triggerer),
                         amount: Value::ONE,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
+                        random: false,
+                    },
+                    Effect::If {
+                        cond: Predicate::Any(vec![
+                            Predicate::Not(Box::new(Predicate::DiscardedThisEffect { who: PlayerRef::Triggerer })),
+                            Predicate::LastDiscardedManaValueAtMost(3),
+                        ]),
+                        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
         }],
         ..Default::default()
     }
