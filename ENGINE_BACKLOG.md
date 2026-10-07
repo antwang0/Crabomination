@@ -158,6 +158,10 @@ deck in `--pod-decks` groups, 3..8 seats, with and without
   distinct, exactly X. `cr_recent118::cr_115_3_*`, `cr_601_2c_destroy_x_*`.
 - ✅ **CR 506.4** — Warp World dropped tokens with a bare retain, leaving one
   attacking (`--a dflt`, seed 250014). `multiplayer::cr_506_4_a_token_warp_*`.
+- ✅ **CR 709.5 / 105.2** — a Room permanent's colors: the layer system read
+  both doors' costs (a locked Room was red), the walker only unlocked doors'
+  (colorless); the colour gate's ratchet caught the split (`--a dflt`, 2
+  seats, seed 261036). `cr_recent118::cr_709_5_a_locked_room_*`.
 - ✅ Detector fixes (debug pod invariants): a commander inside a phased-out
   merged pile (Talon Gates on mutated Otrimi, seed 221030); the CR 514.1
   hand-size check read the maximum after an "until end of turn" Body of
