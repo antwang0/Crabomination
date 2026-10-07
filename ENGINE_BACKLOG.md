@@ -682,6 +682,13 @@ arm) — `find_card_anywhere` cannot see the spell that is resolving.
   from your graveyard this turn" (`server/graveyard_cast.rs`: own main
   phase, a spare card, when the permission makes a graveyard creature
   castable) — taken in both 40-game censuses (seeds 280000 / 281000).
+  ✅ Hideaway lands' free play (`server/hideaway.rs`, asked ahead of the
+  main-phase casts so the land isn't tapped for mana first): Mosswort Bridge
+  had never been activated in eleven decks (6-seat census, seed 290000).
+  The census's other large classes (30 games a group, so noisy) are mostly
+  not gaps: emblem ultimates are taken when affordable (the walkers rarely
+  reach them), and a Monolith's untap is mana-neutral or worse. Left:
+  Selesnya Guildmage / Trading Post token makers.
   `{X}` abilities (Geth) and Class levels (no eval can price one) are taken
   now. 💡 **The two-player bot never levels a Class either** — the generic
   pass is pods-only to keep `--bench` fixed; porting the Class rule moves it.

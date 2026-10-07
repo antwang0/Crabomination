@@ -3022,6 +3022,14 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed 2026-10-07 (`server/hideaway.rs`, a pod bot plays a
+        // hideaway land's hidden card once its condition holds — Mosswort
+        // Bridge had never been activated; the suite passed on the parent
+        // with the session's other bot pickers in): seed 4242 70→58 turns,
+        // 3143→2771 actions, same winner; 0xC0FFEE and 43 unmoved. Release
+        // pods, 1,000 games at seeds 152003/4/6/8, before/after: 32.85/32.81,
+        // 46.01/45.95, 69.71/69.59, 97.00/97.23 turns at 3/4/6/8 seats, all
+        // decided; `--bench` byte-identical.
         // Re-blessed 2026-10-06 (CR 603.3d, the asking queue also takes a
         // prompting seat's non-cast ETB, attack, "whenever you attack",
         // spell-cast and self-cast triggers): seed 4242 67→70 turns, same
@@ -3344,7 +3352,7 @@ mod tests {
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2490),
             (43, Some(0), 74, 3800),
-            (4242, Some(3), 70, 3143),
+            (4242, Some(3), 58, 2771),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

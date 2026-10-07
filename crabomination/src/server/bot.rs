@@ -9962,6 +9962,12 @@ fn main_phase_action_with(
         }
     }
 
+    // Pods: a hideaway land's free play, ahead of the casts that would tap
+    // the land for mana (`server/hideaway.rs`).
+    if let Some(action) = super::hideaway::pick_hideaway_play(state, seat) {
+        return BotStep::plain(action);
+    }
+
     // Everything castable this tick — see `cast_candidates`.
     let pool = cast_candidates(state, seat, w, Some(&have_mana));
 
