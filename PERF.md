@@ -3274,6 +3274,11 @@ closing tip      6e1c85c2: --bench 196,176 / 613.0 byte-identical,
                  7,500, 0 undecided; scripts/pod_census.sh strict debug,
                  4 seats x 24 with CRAB_POD_CONCEDE=15 (240000+, 1,104) and
                  6 seats x 24 probe only (250000+, 744): clean
+bot lane         untap_ramp / Grimoire charge / graveyard_cast / hideaway
+                 (pods only): --bench 196,176 / 613.0 byte-identical;
+                 release pods 1,000 a block at seeds 152003/4/6/8, before /
+                 after: 32.85/32.81, 46.01/45.95, 69.71/69.59, 97.00/97.23
+                 turns at 3/4/6/8 seats, all decided
 ```
 
 ### 2026-10-07 (Commander routine) — guardrail; CR 702.175 / 118.9a cast options, CR 508.1d / 509.1c cap deadlocks
