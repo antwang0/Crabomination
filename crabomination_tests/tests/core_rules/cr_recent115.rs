@@ -141,3 +141,25 @@ fn cr_509_1c_lure_requirements_are_maximized_under_a_blocker_cap() {
     let picked = crabomination::server::bot::pick_blocks_for_test(&g, 1);
     blocks(&g, picked).expect("the bot's blocks are legal");
 }
+
+/// CR 508.1d — Magnetic Web's group under Silent Arbiter: one magnetized
+/// creature attacking fills the cap, so its partner staying home is the most
+/// the declaration can obey.
+#[test]
+fn cr_508_1d_an_attack_together_group_under_an_attacker_cap() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    ready(&mut g, 1, catalog::silent_arbiter());
+    ready(&mut g, 0, catalog::magnetic_web());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    for id in [a, b] {
+        g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Magnet, 1);
+    }
+    to_attacks(&mut g);
+    declare(&mut g, &[a], 1).expect("the cap leaves the partner no room");
+    declare(&mut g, &[], 1).expect("the group needs one to attack first");
+    use crabomination::server::bot::pick_attacks;
+    let attacks = pick_attacks(&g, 0);
+    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("the bot's declaration is legal");
+}

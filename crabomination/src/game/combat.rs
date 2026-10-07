@@ -1745,11 +1745,17 @@ impl GameState {
             if !attacks.iter().any(|atk| matches(atk.attacker)) {
                 continue;
             }
+            // A full cap excuses a member it shuts out while every declared
+            // attacker is a member or otherwise bound (CR 508.1d).
+            let all_bound = attacks.iter().all(|a| matches(a.attacker) || had_to.contains(&a.attacker));
             for c in &self.battlefield {
                 if c.controller != p || !matches(c.id) {
                     continue;
                 }
-                if able_to_attack(c) && !attacks.iter().any(|atk| atk.attacker == c.id) {
+                if able_to_attack(c)
+                    && !attacks.iter().any(|atk| atk.attacker == c.id)
+                    && !(all_bound && self.attack_cap_leaves_no_room(p, c, computed_kw(c.id), &attacks, statics))
+                {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
