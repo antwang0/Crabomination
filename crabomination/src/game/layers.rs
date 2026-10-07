@@ -2074,7 +2074,10 @@ pub(crate) fn requirement_matches_card_typed(
 ) -> bool {
     use SelectionRequirement as R;
     let def = &card.definition;
-    let color_set = || colors.unwrap_or_else(|| colors_from_card(card));
+    // Printed, not `colors_from_card`: this matcher also reads cards off the
+    // battlefield, where a Room is both doors (CR 709.4), not its unlocked
+    // ones. Battlefield callers pass the computed colors in.
+    let color_set = || colors.unwrap_or_else(|| def.printed_color_set());
     let has_ctype = |ct: &CreatureType| match ctypes {
         Some((t, changeling)) => t.contains(ct) || changeling.every_type(card),
         None => def.subtypes.creature_types.contains(ct) || card.has_keyword(&Keyword::Changeling),
