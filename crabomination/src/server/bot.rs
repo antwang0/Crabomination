@@ -12767,7 +12767,34 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
             .computed_permanent(attackers[0])
             .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantAttackAlone))
     {
-        attackers.clear();
+        // CR 508.1d — unless a requirement binds it and a partner is able:
+        // then the pair attacking is the declaration that obeys the most.
+        let lone = attackers[0];
+        let bound = state.battlefield_find(lone).zip(state.computed_permanent(lone)).is_some_and(|(c, cp)| {
+            must_attack(state, c, cp.keywords(), false)
+                || state.creature_lure_of(seat, lone).is_some()
+                || state.attack_lure_of(seat).is_some()
+                || state.side_attacks_if_able(seat)
+        });
+        let partner = bound
+            .then(|| {
+                state
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.id != lone)
+                    .filter_map(|c| state.computed_permanent_on(c).map(|cp| (c, cp)))
+                    .filter(|(c, cp)| {
+                        state.computed_is_creature(c)
+                            && state.attacker_is_able(seat, c, Some(cp), &attack_power_caps, statics)
+                    })
+                    .max_by_key(|(c, cp)| (cp.toughness, std::cmp::Reverse(c.id)))
+                    .map(|(c, _)| c.id)
+            })
+            .flatten();
+        match partner {
+            Some(id) => attackers.push(id),
+            None => attackers.clear(),
+        }
     }
     // CR 508.0, the other half — `AttacksAlone` (Aisling Leprechaun's
     // cousins): a creature that *attacks alone* makes any batch with a

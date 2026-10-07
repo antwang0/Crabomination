@@ -69,3 +69,31 @@ fn bot_declares_a_legal_capped_attack() {
     assert!([j1, j2].contains(&attacks[0].attacker));
     g.perform_action(GameAction::DeclareAttackers(attacks)).expect("legal");
 }
+
+fn goad(g: &mut GameState, goader: usize, id: CardId) {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector};
+    let ctx = EffectContext::for_spell(goader, None, 0, 0);
+    let name = g.battlefield_find(id).unwrap().definition.name.to_string();
+    g.resolve_effect(&Effect::Goad { what: Selector::EachPermanent(R::HasName(name.into())) }, &ctx).expect("goad");
+}
+
+/// CR 508.1d / 701.15b — a goaded creature that can't attack alone: with no
+/// other creature able to join, attacking breaks a restriction, so staying
+/// home is legal; with one, both attacking obeys the requirement, so the
+/// empty declaration is not.
+#[test]
+fn cr_508_1d_a_goaded_creature_that_cant_attack_alone() {
+    let mut g = multi_player_game(3);
+    let kronch = ready(&mut g, 0, catalog::raging_kronch());
+    goad(&mut g, 1, kronch);
+    to_attacks(&mut g);
+    declare(&mut g, &[], 2).expect("alone it can't attack, so it stays home");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert!(declare(&mut g, &[], 2).is_err(), "the bear lets it attack");
+    declare(&mut g, &[kronch, bear], 2).expect("both");
+    use crabomination::server::bot::pick_attacks;
+    let attacks = pick_attacks(&g, 0);
+    assert!(attacks.iter().any(|a| a.attacker == kronch), "{attacks:?}");
+    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("the bot's declaration is legal");
+}

@@ -1694,15 +1694,23 @@ impl GameState {
             // CR 508.1d — the most requirements obeyed without breaking a
             // restriction: a bound creature a full cap shuts out is excused,
             // provided no declared attacker is unbound (a swap obeys more).
-            if let Some(c) = missing.first() {
-                let all_bound = attacks.iter().all(|a| had_to.contains(&a.attacker));
-                if !all_bound
-                    || !missing.iter().all(|c| {
-                        self.attack_cap_leaves_no_room(p, c, computed_kw(c.id), &attacks, statics)
+            // A bound creature that can't attack alone, with no other
+            // creature able to join it, is excused the same way.
+            let all_bound = attacks.iter().all(|a| had_to.contains(&a.attacker));
+            let alone_excused = |c: &crate::card::CardInstance| {
+                let kws = computed_kw(c.id);
+                (kws.has_kw(&Keyword::CantAttackAlone) || kws.has_kw(&Keyword::CantAttackOrBlockAlone))
+                    && attacks.is_empty()
+                    && self.attacking.is_empty()
+                    && !self.battlefield.iter().any(|o| {
+                        o.controller == p && o.id != c.id && self.computed_is_creature(o) && able_to_attack(o)
                     })
-                {
-                    return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
-                }
+            };
+            if let Some(c) = missing.iter().find(|c| {
+                !alone_excused(c)
+                    && !(all_bound && self.attack_cap_leaves_no_room(p, c, computed_kw(c.id), &attacks, statics))
+            }) {
+                return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
             }
         }
         // CR 508.1d — Seeker of Slaanesh: at least one attacker, if able.
