@@ -113,10 +113,11 @@ the handoff.
 
 # Bugs & robustness
 
-## FIXED 2026-10-07 (fifth Commander routine) — a combatant its own declaration cost removed
+## FIXED 2026-10-07 (fifth Commander routine) — a combatant its own declaration cost removed, and an exile link that outlived the exile
 
-A strict debug pod (seed 121000, 4 seats, game 15) tripped the CR 506.4
-invariant at its first fresh seed: Wall of Roots at 0/1 blocked beside a
+Strict debug pods at fresh seeds (121000 4-seat; 130000+ every deck in
+6-seat groups × 30 with `CRAB_POD_SWEEP_PROBE`) found both. Seed 121000
+game 15 tripped the CR 506.4 invariant: Wall of Roots at 0/1 blocked beside a
 Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
 "-0/-1 counter: add {G}", and the dead Wall stayed in `block_map`.
 - ✅ **CR 509.1d / 506.4** — `declare_blockers` removes a blocker that left
@@ -127,6 +128,20 @@ Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
   `CardNotOnBattlefield` *after* paying (the action checkpoint rolled it
   back, so a bot lost the attack). The declaration drops attackers the costs
   removed and the rest attack. Both in `core_rules::cr_recent117`.
+- ✅ **CR 400.7 / 607** — a card leaving exile kept its exiler's
+  `exiled_by` / `exiled_with` link (only a re-exile cleared it): Foreboding
+  Steamboat's attack trigger put a card it held into a graveyard, the card
+  was exiled again later, and it sat "exiled until the Steamboat leaves" with
+  the Steamboat long gone (6-seat strict pods, seed 130026 games 10 and 27);
+  a card that came back by another route and was exiled by something else
+  would have returned with its OLD exiler. Every exile-leaving site now goes
+  through `exile_return.rs::take_from_exile` / `exile_remove_at`, which drop
+  the return link (27 sites; `return_linked_exiles` still reads it first);
+  `move_card_to` drops `exiled_with` too. ⏳ The cast-from-exile paths keep
+  `exiled_with` — Aminatou's Augury, Share the Spoils and Abaddon read it off
+  the card as it is cast — so a card cast from exile, and exiled again by a
+  path that doesn't restamp, still counts as "exiled with" its first exiler.
+  `core_rules::cr_recent118`.
 - ✅ CR 603.10a / 603.2 death listeners (see the 2026-10-04 section).
 
 ## FIXED 2026-10-06 (fourth Commander routine) — combat removal, defender scoring, owner zones

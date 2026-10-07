@@ -140,7 +140,7 @@ impl GameState {
         }
         for (s, ids) in exiled {
             for id in ids {
-                if let Some(card) = Self::take_card(&mut self.exile, id) {
+                if let Some(card) = self.take_from_exile(id) {
                     let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(s), tapped: false };
                     self.place_card_in_dest(card, s, &dest, events);
                 }

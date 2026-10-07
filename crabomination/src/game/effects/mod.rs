@@ -4549,7 +4549,7 @@ impl GameState {
                 if let Some(pos) =
                     self.exile.iter().position(|c| c.exiled_with == Some(source) && c.owner == seat)
                 {
-                    let card = self.exile.remove(pos);
+                    let card = self.exile_remove_at(pos);
                     self.place_card_in_dest(
                         card,
                         seat,
@@ -7873,7 +7873,7 @@ impl GameState {
                     return Ok(());
                 }
                 for id in eligible {
-                    if let Some(card) = Self::take_card(&mut self.exile, id) {
+                    if let Some(card) = self.take_from_exile(id) {
                         // CR 614.6 — graveyard-hate redirects apply.
                         self.route_to_graveyard(card, events);
                     }
@@ -15397,7 +15397,7 @@ impl GameState {
                 }
                 // …then puts the exiled cards onto the battlefield.
                 for id in returning {
-                    if let Some(card) = Self::take_card(&mut self.exile, id) {
+                    if let Some(card) = self.take_from_exile(id) {
                         let owner = card.owner;
                         self.place_card_in_dest(
                             card,
@@ -20658,7 +20658,7 @@ impl GameState {
                     .collect();
                 for cid in ids {
                     if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
-                        let mut card = self.exile.remove(i);
+                        let mut card = self.exile_remove_at(i);
                         card.face_down = false;
                         card.exiled_with = None;
                         self.players[p].hand.push(card);
@@ -21817,7 +21817,7 @@ impl GameState {
                     .collect();
                 for cid in reclaim {
                     if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
-                        let mut card = self.exile.remove(i);
+                        let mut card = self.exile_remove_at(i);
                         card.face_down = false;
                         card.exiled_with = None;
                         self.players[p].hand.push(card);
@@ -21943,13 +21943,13 @@ impl GameState {
                 }
                 for cid in keep {
                     if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
-                        let card = self.exile.remove(i);
+                        let card = self.exile_remove_at(i);
                         self.players[p].hand.push(card);
                     }
                 }
                 for cid in bin {
                     if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
-                        let card = self.exile.remove(i);
+                        let card = self.exile_remove_at(i);
                         self.players[p].graveyard.push(card);
                     }
                 }
@@ -28880,7 +28880,7 @@ impl GameState {
                 }
                 for id in exiled {
                     if self.exile.iter().any(|c| c.id == id)
-                        && let Some(card) = Self::take_card(&mut self.exile, id)
+                        && let Some(card) = self.take_from_exile(id)
                     {
                         self.players[p].hand.push(card);
                     }
@@ -44561,7 +44561,7 @@ impl GameState {
                     first
                 };
                 let card = Self::take_card(&mut self.players[p].sideboard, chosen)
-                    .or_else(|| Self::take_card(&mut self.exile, chosen));
+                    .or_else(|| self.take_from_exile(chosen));
                 // A wish puts the card into your hand — not a draw (CR 121.1).
                 if let Some(card) = card {
                     self.players[p].hand.push(card);

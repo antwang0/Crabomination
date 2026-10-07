@@ -2484,18 +2484,17 @@ impl GameState {
         }
         // Then exile.
         if let Some(pos) = self.exile.iter().position(|c| c.id == cid) {
-            let mut card = self.exile.remove(pos);
+            // CR 400.7 / 406.7 — leaving exile, or re-exiling an exiled
+            // object, makes a *new* object: the exiler's links (CR 607) can
+            // no longer find it (Foreboding Steamboat put a card into a
+            // graveyard; exiled again later, it still waited on the boat).
+            let mut card = self.exile_remove_at(pos);
+            card.exiled_with = None;
             let owner = card.owner;
-            // CR 406.7 — re-exiling an exiled object doesn't change zones, but
-            // it becomes a *new* object that has just been exiled: the first
-            // exiler's linked abilities (CR 607) can no longer find it.
-            if matches!(
-                resolved_dest,
-                ZoneDest::Exile | ZoneDest::ExilePlotted | ZoneDest::ExileWithSourceStamp
-            ) {
-                card.exiled_with = None;
-                card.exiled_by = None;
-            } else if card.face_down && card.face_up_def.is_none() {
+            if !matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted | ZoneDest::ExileWithSourceStamp)
+                && card.face_down
+                && card.face_up_def.is_none()
+            {
                 // CR 406.3 — a face-down exiled card leaves exile face up.
                 card.face_down = false;
             }
@@ -3397,7 +3396,7 @@ impl GameState {
             .collect();
         for cid in freed {
             let Some(pos) = self.exile.iter().position(|c| c.id == cid) else { continue };
-            let mut card = self.exile.remove(pos);
+            let mut card = self.exile_remove_at(pos);
             card.exiled_by = None;
             let owner = card.owner;
             let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false };

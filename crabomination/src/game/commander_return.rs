@@ -150,7 +150,7 @@ impl GameState {
             Zone::Graveyard => Self::take_card(&mut self.players[owner].graveyard, id),
             Zone::Hand => Self::take_card(&mut self.players[owner].hand, id),
             Zone::Library => Self::take_card(&mut self.players[owner].library, id),
-            _ => Self::take_card(&mut self.exile, id),
+            _ => self.take_from_exile(id),
         };
         let Some(mut card) = card else { return };
         if zone == Zone::Graveyard {

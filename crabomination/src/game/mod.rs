@@ -8955,7 +8955,7 @@ impl GameState {
                 continue;
             }
             let pos = self.exile.iter().position(|c| c.id == id).expect("just found");
-            let card = self.exile.remove(pos);
+            let card = self.exile_remove_at(pos);
             let owner = card.owner;
             self.players[owner].graveyard.push(card);
             let ctx = crate::game::effects::EffectContext::for_ability(id, owner, None);
@@ -20859,7 +20859,7 @@ impl GameState {
                 if !self.offer_madness_cast(p, card_id, &cost, madness_life, events) {
                     // CR 702.35b — declined / unaffordable: the card goes
                     // from exile to its owner's graveyard.
-                    if let Some(c) = Self::take_card(&mut self.exile, card_id) {
+                    if let Some(c) = self.take_from_exile(card_id) {
                         let owner = c.owner;
                         self.players[owner].send_to_graveyard(c);
                         events.push(GameEvent::CardPutIntoGraveyard {
@@ -22089,7 +22089,7 @@ impl GameState {
                 // CR 616.1e — "put a card from the pile into your hand
                 // INSTEAD" replaces the draw: no draw happened (no tally, no
                 // draw event), as the other instead-of-draw digs.
-                let mut card = self.exile.remove(pos);
+                let mut card = self.exile_remove_at(pos);
                 card.face_down = false;
                 self.players[p].hand.push(card);
                 true
@@ -29449,13 +29449,13 @@ impl GameState {
         match decline {
             crate::game::types::MayCastDecline::LeaveInExile => {}
             crate::game::types::MayCastDecline::ToHand => {
-                if let Some(c) = Self::take_card(&mut self.exile, card) {
+                if let Some(c) = self.take_from_exile(card) {
                     let owner = c.owner;
                     self.players[owner].hand.push(c);
                 }
             }
             crate::game::types::MayCastDecline::ToBottom => {
-                if let Some(c) = Self::take_card(&mut self.exile, card) {
+                if let Some(c) = self.take_from_exile(card) {
                     let owner = c.owner;
                     self.players[owner].library.push(c);
                 }

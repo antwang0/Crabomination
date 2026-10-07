@@ -4747,7 +4747,7 @@ impl GameState {
         } else if self.players[p].has_in_hand(card_id) {
             self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?
         } else if from_exile {
-            Self::take_card(&mut self.exile, card_id)
+            self.take_from_exile(card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?
         } else {
             return Err(GameError::CardNotInHand(card_id));
@@ -8592,7 +8592,7 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
         // Re-locate by id: payment ran after `pos` was captured.
-        let mut card = Self::take_card(&mut self.exile, card_id)
+        let mut card = self.take_from_exile(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.face_down = false;
         // CR 702.143a — a foretold card is cast from exile (Faldorn).
@@ -8857,7 +8857,7 @@ impl GameState {
             self.players[p].free_exile_cast_used_this_turn = true;
         }
         // Re-locate by id: payment ran after `pos` was captured.
-        let mut card = Self::take_card(&mut self.exile, card_id)
+        let mut card = self.take_from_exile(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         card.on_adventure = false;
         card.adventuring = false;
@@ -9254,7 +9254,7 @@ impl GameState {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;
         }
         // Re-locate by id at removal time (target checks ran in between).
-        let mut card = Self::take_card(&mut self.exile, card_id)
+        let mut card = self.take_from_exile(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         // CR 702.170d — a plotted card is cast from exile.
         card.cast_from_exile = true;
@@ -11885,7 +11885,7 @@ impl GameState {
                         .min_by_key(|c| c.definition.cost.cmc())
                         .map(|c| c.id);
                     if let Some(id) = pick
-                        && let Some(card) = Self::take_card(&mut self.exile, id)
+                        && let Some(card) = self.take_from_exile(id)
                     {
                         self.route_to_graveyard(card, &mut events);
                     }
@@ -13835,7 +13835,7 @@ impl GameState {
         // Lift the card out of the named zone. Owner-based zones
         // (graveyard, hand, library) walk all players to locate it.
         let mut card = match source_zone {
-            Zone::Exile => Self::take_card(&mut self.exile, card_id)
+            Zone::Exile => self.take_from_exile(card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?,
             Zone::Graveyard => {
                 let mut found: Option<crate::card::CardInstance> = None;
@@ -23411,7 +23411,7 @@ impl GameState {
         // Process-as-cost: the pre-flight-picked exile cards go to their
         // owners' graveyards (CR 614.6 hate redirects still apply).
         for cid in process_picks.into_iter().chain(exiled_with_pick) {
-            if let Some(card) = Self::take_card(&mut self.exile, cid) {
+            if let Some(card) = self.take_from_exile(cid) {
                 self.route_to_graveyard(card, events);
             }
         }

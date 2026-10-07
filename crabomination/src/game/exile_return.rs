@@ -19,6 +19,23 @@ impl GameState {
         self.remove_from_battlefield_to_exile(id);
         events.push(GameEvent::PermanentExiled { card_id: id });
         let pos = self.exile.iter().position(|c| c.id == id)?;
-        Some(self.exile.remove(pos))
+        Some(self.exile_remove_at(pos))
+    }
+
+    /// Lift card `id` out of exile. CR 400.7 — what leaves exile is a new
+    /// object: an exiler's "until this leaves" return link (`exiled_by`) does
+    /// not ride along into the next zone, or into a later exile. `exiled_with`
+    /// stays for the cast paths that read it as the card leaves (Aminatou's
+    /// Augury, Share the Spoils); `move_card_to` drops both.
+    pub(crate) fn take_from_exile(&mut self, id: CardId) -> Option<CardInstance> {
+        let pos = self.exile.iter().position(|c| c.id == id)?;
+        Some(self.exile_remove_at(pos))
+    }
+
+    /// [`take_from_exile`](Self::take_from_exile) by position.
+    pub(crate) fn exile_remove_at(&mut self, pos: usize) -> CardInstance {
+        let mut card = self.exile.remove(pos);
+        card.exiled_by = None;
+        card
     }
 }
