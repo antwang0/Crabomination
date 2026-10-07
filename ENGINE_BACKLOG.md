@@ -359,8 +359,10 @@ seats, seeds 540000+.
   death from a later step than the observer's (Blood Artist under Season of
   Loss's edict twice drains twice, `core_rules::cr_recent116`). Residual: a
   `Seq` nested inside `EachPlayerDoes` / `ForEach` marks per iteration.
-  ⏳ Still open: casts (a cast mid-resolution), once-per-turn/batch
-  listeners.
+  ✅ *(2026-10-07, seventh run)* once-each-turn / "one or more" listeners
+  fire once within the turn's budget, in both look-back passes; casts need
+  nothing (a cast trigger fires at the cast) — `cr_recent110::cr_603_3d_*`,
+  `cr_recent118::cr_603_2_a_cast_listener_*`.
 
 ## FIXED/OPEN 2026-10-03 (Commander routine, `01QFHGia`) — per-recipient combat triggers, countered flashback, a reanimated token
 

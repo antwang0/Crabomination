@@ -1,18 +1,18 @@
 //! `CRAB_POD_FUZZ=<n>`: each seat's bot is wrapped so that `n` in 10,000 of
-//! its steps are swapped for a random alternative — another of its own
-//! main-phase candidates, the other answer to a yes/no ask, a random answer
-//! to an ask that lists its options (targets, modes, cards, trigger order),
-//! a random subset of its attack or block declaration. A sweep tool: the
-//! tuned bots build the same boards over and over, and a panic or invariant that only an odd line
-//! of play reaches is still a panic self-play can hit. Seeded per game, so a
-//! fuzzed game replays. A swap the engine rejects is simply not taken.
+//! its steps are swapped for a random alternative — another of its own cast /
+//! activation candidates at whatever priority window it holds, the other
+//! answer to a yes/no ask, a random answer to an ask that lists its options
+//! (targets, modes, cards, trigger order), a random subset of its attack or
+//! block declaration. A sweep tool: the tuned bots build the same boards over
+//! and over, and a panic or invariant that only an odd line of play reaches
+//! is still a panic self-play can hit. Seeded per game, so a fuzzed game
+//! replays. A swap the engine rejects is simply not taken.
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::{RngExt, SeedableRng};
 
 use crate::decision::{Decision, DecisionAnswer};
-use crate::game::types::TurnStep;
 use crate::game::{GameAction, GameState};
 use crate::server::bot::{Bot, BotStep, EvalWeights};
 
@@ -103,11 +103,10 @@ impl FuzzBot {
             }
             GameAction::DeclareAttackers(v) if !v.is_empty() => Some(GameAction::DeclareAttackers(self.subset(v))),
             GameAction::DeclareBlockers(v) if !v.is_empty() => Some(GameAction::DeclareBlockers(self.subset(v))),
-            _ if state.pending_decision.is_none()
-                && state.active_player_idx == seat
-                && state.stack.is_empty()
-                && matches!(state.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain) =>
-            {
+            // Any window this seat holds priority in — a response in combat
+            // or at end of turn as much as a main-phase play. The candidates
+            // ignore timing; the engine refuses what it must.
+            _ if state.pending_decision.is_none() && state.player_with_priority() == seat => {
                 let mut c = crate::server::bot::main_phase_candidates_for_mcts(state, seat, &EvalWeights::default());
                 c.push((GameAction::PassPriority, 0));
                 let i = self.rng.random_range(0..c.len());
