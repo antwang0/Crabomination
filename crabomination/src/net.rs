@@ -3004,6 +3004,13 @@ pub enum GameEventWire {
     RolledToVisitAttractions { player: usize, result: u8 },
     /// Wire mirror of `GameEvent::AttractionVisited` (CR 717.5).
     AttractionVisited { card_id: CardId },
+    /// Wire mirror of `GameEvent::DeathStepEnded` (CR 608.2c).
+    DeathStepEnded,
+}
+
+/// The wire form of an action's events, minus the engine-internal markers.
+pub fn wire_events(events: &[GameEvent]) -> Vec<GameEventWire> {
+    events.iter().filter(|e| !matches!(e, GameEvent::DeathStepEnded)).map(Into::into).collect()
 }
 
 impl From<&GameEvent> for GameEventWire {
@@ -3425,6 +3432,7 @@ impl From<&GameEvent> for GameEventWire {
                 }
             }
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
+            GameEvent::DeathStepEnded => GameEventWire::DeathStepEnded,
             GameEvent::GameRestarted { starter } => {
                 GameEventWire::GameRestarted { starter: *starter }
             }
@@ -3455,6 +3463,8 @@ impl GameEventWire {
                 format!("{} rolled a {result} to visit their Attractions", pn(*player))
             }
             E::AttractionVisited { card_id } => format!("{} was visited", name(*card_id)),
+            // Engine-internal; the server never sends it.
+            E::DeathStepEnded => String::new(),
             E::TurnStarted { player, turn } => format!("Turn {turn} — {}", pn(*player)),
             E::CardDrawn { player, card_id } => format!("{} drew {}", pn(*player), name(*card_id)),
             E::CardDiscarded { player, card_id } => {

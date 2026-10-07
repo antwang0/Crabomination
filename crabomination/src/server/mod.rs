@@ -841,7 +841,7 @@ fn run_match_inner(
                     if left.is_zero() {
                         report_error(seat, "chess clock expired — you concede", &seat_tx);
                         let events = state.concede(seat);
-                        let wire: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+                        let wire: Vec<GameEventWire> = crate::net::wire_events(&events);
                         broadcast_update(&state, &wire, &seat_tx, &spectator_tx);
                         if state.is_game_over() {
                             broadcast_match_over(&state, &seat_tx, &spectator_tx);
@@ -1479,7 +1479,7 @@ fn concede_dropped_seat(
     }
     broadcast_notice(&format!("{} {why}", state.players[seat].name), seat_tx, spectator_tx);
     let events = state.concede(seat);
-    let wire: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+    let wire: Vec<GameEventWire> = crate::net::wire_events(&events);
     broadcast_update(state, &wire, seat_tx, spectator_tx);
     state.is_game_over()
 }
@@ -1555,7 +1555,7 @@ fn handle_action(
         if events.is_empty() {
             return Applied::Rejected; // already eliminated / game already over
         }
-        let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+        let wire_events: Vec<GameEventWire> = crate::net::wire_events(&events);
         broadcast_update(state, &wire_events, seat_tx, spectator_tx);
         return Applied::Accepted;
     }
@@ -1575,7 +1575,7 @@ fn handle_action(
     match state.perform_action(action) {
         Ok(events) => {
             decision_log::commit(shadow_line);
-            let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+            let wire_events: Vec<GameEventWire> = crate::net::wire_events(&events);
             send_mark();
             broadcast_update(state, &wire_events, seat_tx, spectator_tx);
             Applied::Accepted

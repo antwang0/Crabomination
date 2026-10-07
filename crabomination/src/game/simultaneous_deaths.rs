@@ -7,7 +7,8 @@
 //! battlefield walk in `dispatch_triggers_for_events` can't find these
 //! observers (they are in the graveyard by dispatch time), and the self-death
 //! funnel only fires a creature's triggers for its own death, so this pass
-//! supplies the rest from the death snapshots.
+//! supplies the rest from the death snapshots. Deaths a later resolution step
+//! caused (`GameEvent::DeathStepEnded` between them) happened after it left.
 
 use super::GameState;
 use super::types::{GameEvent, TriggerCandidate};
@@ -42,6 +43,20 @@ impl GameState {
         if died.len() < 2 {
             return out;
         }
+        // CR 608.2c — the resolution step each creature died in; a death in a
+        // later step than the observer's happened after it left.
+        let step_of = |id: CardId| -> Option<usize> {
+            let mut step = 0usize;
+            for ev in events {
+                match ev {
+                    GameEvent::DeathStepEnded => step += 1,
+                    GameEvent::CreatureDied { card_id } if *card_id == id => return Some(step),
+                    _ => {}
+                }
+            }
+            None
+        };
+        let stepped = events.iter().any(|e| matches!(e, GameEvent::DeathStepEnded));
         for &observer in &died {
             // Only a creature that is gone: one still on the battlefield
             // (returned by a replacement) is found by the battlefield walk.
@@ -49,6 +64,7 @@ impl GameState {
                 continue;
             }
             let Some(snap) = self.died_card_snapshots.get(&observer) else { continue };
+            let observer_step = if stepped { step_of(observer) } else { None };
             // An attachment whose host died went to the graveyard after it,
             // by a later sweep (CR 704.5m/n): it didn't die with the host.
             if snap.attached_to.is_some_and(|h| h != observer && died.contains(&h)) {
@@ -81,6 +97,11 @@ impl GameState {
                     };
                     // Its own death is the self-death funnel's.
                     if *card_id == observer || !died.contains(card_id) {
+                        continue;
+                    }
+                    if let (Some(o), Some(d)) = (observer_step, step_of(*card_id))
+                        && d > o
+                    {
                         continue;
                     }
                     if !events::event_matches_spec(self, ev, &ta.event, snap) {
@@ -118,5 +139,17 @@ impl GameState {
             }
         }
         out
+    }
+}
+
+/// CR 608.2c / 603.10a — after a resolution step that killed something,
+/// with another step still to come, mark the boundary so the death
+/// look-back reads the deaths on either side as sequential.
+pub(crate) fn mark_death_step(events: &mut Vec<GameEvent>, before: usize) {
+    if events[before.min(events.len())..]
+        .iter()
+        .any(|e| matches!(e, GameEvent::CreatureDied { .. } | GameEvent::PermanentDied { .. }))
+    {
+        events.push(GameEvent::DeathStepEnded);
     }
 }

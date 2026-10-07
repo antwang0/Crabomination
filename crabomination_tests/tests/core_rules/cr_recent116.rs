@@ -103,3 +103,52 @@ fn cr_603_10a_an_exile_sweep_is_no_death() {
     );
     assert_eq!((g.players[0].life, g.players[1].life), (20, 20));
 }
+
+/// CR 608.2c / 603.10a — Blood Artist dies with a Bear in the first step, a
+/// second Bear in the next: the first death was simultaneous with its own, the
+/// second came after it left. It drains twice (itself and the first Bear).
+#[test]
+fn cr_608_2c_a_death_in_a_later_step_is_not_seen_by_an_earlier_one() {
+    let mut g = main_phase();
+    let artist = g.add_card_to_battlefield(0, catalog::blood_artist());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve(
+        &mut g,
+        artist,
+        Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::ExactObjects(vec![artist, a]),
+            },
+            Effect::Destroy {
+                what: Selector::ExactObjects(vec![b]),
+            },
+        ]),
+    );
+    assert!(g.battlefield.is_empty());
+    assert_eq!((g.players[0].life, g.players[1].life), (22, 18));
+}
+
+/// CR 700.2 / 608.2c — Season of Loss with its edict mode twice: Blood Artist
+/// goes in the first edict with one Bear, the second Bear in the second edict
+/// after Blood Artist was gone. Two drains, not three.
+#[test]
+fn cr_608_2c_season_of_loss_second_edict_is_after_the_first() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let season = g.add_card_to_hand(0, catalog::season_of_loss());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 5);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: season,
+        spree_modes: vec![0, 0],
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.is_empty());
+    assert_eq!((g.players[0].life, g.players[1].life), (22, 18));
+}

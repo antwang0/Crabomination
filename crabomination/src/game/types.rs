@@ -3165,6 +3165,10 @@ pub enum GameEvent {
     /// game goes on, and this is what says who went out.
     PlayerLost { player: usize, cause: crate::player::LossCause },
     GameOver { winner: Option<usize> },
+    /// CR 608.2c — a resolution's instructions are followed in order: the
+    /// step before this one killed something and a later step follows, so
+    /// deaths on either side were sequential, not simultaneous (CR 603.10a).
+    DeathStepEnded,
     /// CR 727.1 — the game was restarted; `starter` takes the first turn.
     GameRestarted { starter: usize },
 }

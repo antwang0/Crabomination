@@ -5786,7 +5786,11 @@ impl GameState {
 
             Effect::Seq(steps) => {
                 for (idx, step) in steps.iter().enumerate() {
+                    let before = events.len();
                     self.run_effect(step, ctx, events)?;
+                    if idx + 1 < steps.len() {
+                        crate::game::simultaneous_deaths::mark_death_step(events, before);
+                    }
                     // A child effect signalled suspension — append the rest of
                     // this Seq after whatever remaining effects it already
                     // saved (the child's own continuation runs first).
@@ -7403,6 +7407,7 @@ impl GameState {
                 }
                 for (k, &i) in run.iter().enumerate() {
                     let Some(m) = modes.get(i as usize) else { continue };
+                    let before = events.len();
                     if m.requires_target() {
                         let slot = slot_of_mode.get(&i).copied().unwrap_or(0);
                         let mut sub_ctx = ctx.clone();
@@ -7416,6 +7421,9 @@ impl GameState {
                         });
                     } else {
                         self.run_effect(m, ctx, events)?;
+                    }
+                    if k + 1 < run.len() {
+                        crate::game::simultaneous_deaths::mark_death_step(events, before);
                     }
                     // CR 700.2 — the modes after a suspending one were dropped.
                     if splice_after_suspend(&mut self.suspend_signal, || {
@@ -7476,7 +7484,11 @@ impl GameState {
                 // Modes are self-targeting (no chosen slots) — run with full ctx.
                 for (k, &i) in run.iter().enumerate() {
                     let Some(m) = modes.get(i as usize) else { continue };
+                    let before = events.len();
                     self.run_effect(m, ctx, events)?;
+                    if k + 1 < run.len() {
+                        crate::game::simultaneous_deaths::mark_death_step(events, before);
+                    }
                     // CR 700.2 — the modes after a suspending one were dropped.
                     if splice_after_suspend(&mut self.suspend_signal, || {
                         modal_continuation(
@@ -7573,6 +7585,7 @@ impl GameState {
                 let mut next_slot = 0usize;
                 for (k, &i) in run.iter().enumerate() {
                     let Some(m) = modes.get(i as usize) else { continue };
+                    let before = events.len();
                     if m.requires_target() {
                         let mut sub_ctx = ctx.clone();
                         sub_ctx.targets =
@@ -7586,6 +7599,9 @@ impl GameState {
                         next_slot += 1;
                     } else {
                         self.run_effect(m, ctx, events)?;
+                    }
+                    if k + 1 < run.len() {
+                        crate::game::simultaneous_deaths::mark_death_step(events, before);
                     }
                     // CR 700.2 — a mode that asks (a discard, a sacrifice, a
                     // search) suspends, and the modes after it were dropped.
@@ -7617,6 +7633,7 @@ impl GameState {
                 let mut next_slot = 0usize;
                 for (k, &i) in chosen.iter().enumerate() {
                     let Some(m) = modes.get(i as usize) else { continue };
+                    let before = events.len();
                     if m.effect.requires_target() {
                         let mut sub_ctx = ctx.clone();
                         sub_ctx.targets =
@@ -7630,6 +7647,9 @@ impl GameState {
                         next_slot += 1;
                     } else {
                         self.run_effect(&m.effect, ctx, events)?;
+                    }
+                    if k + 1 < chosen.len() {
+                        crate::game::simultaneous_deaths::mark_death_step(events, before);
                     }
                     // CR 700.2 — the modes after a suspending one were dropped.
                     if splice_after_suspend(&mut self.suspend_signal, || {
@@ -7670,6 +7690,7 @@ impl GameState {
                 let mut next_slot = 0usize;
                 for (k, &i) in chosen.iter().enumerate() {
                     let Some(m) = modes.get(i as usize) else { continue };
+                    let before = events.len();
                     if m.requires_target() {
                         let n = mode_slot_count(m);
                         let from = next_slot.min(ctx.targets.len());
@@ -7690,6 +7711,9 @@ impl GameState {
                         });
                     } else {
                         self.run_effect(m, ctx, events)?;
+                    }
+                    if k + 1 < chosen.len() {
+                        crate::game::simultaneous_deaths::mark_death_step(events, before);
                     }
                     // CR 700.2 — the modes after a suspending one were dropped.
                     if splice_after_suspend(&mut self.suspend_signal, || {

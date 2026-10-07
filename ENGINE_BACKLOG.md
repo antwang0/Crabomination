@@ -332,9 +332,14 @@ CR 610.3 until-leaves exiles, CR 514.1 hand size, `CRAB_POD_SWEEP_PROBE=1`;
   under Planar Cleansing, `core_rules::cr_recent116`). An Aura / attachment
   whose host died is skipped there: its SBA death came after (Dying Wish,
   Fate Foretold double-fired in the first cut).
+  ✅ *(2026-10-07, eighth Commander run)* **sequential deaths**: a step of a
+  `Seq` / modal run that killed something, with a step after it, pushes
+  `GameEvent::DeathStepEnded` (CR 608.2c); `simultaneous_deaths.rs` drops a
+  death from a later step than the observer's (Blood Artist under Season of
+  Loss's edict twice drains twice, `core_rules::cr_recent116`). Residual: a
+  `Seq` nested inside `EachPlayerDoes` / `ForEach` marks per iteration.
   ⏳ Still open: casts (a cast mid-resolution), once-per-turn/batch
-  listeners, and the old over-reach — two deaths in one resolution that were
-  *sequential* are read as simultaneous (no event marks the step boundary).
+  listeners.
 
 ## FIXED/OPEN 2026-10-03 (Commander routine, `01QFHGia`) — per-recipient combat triggers, countered flashback, a reanimated token
 
