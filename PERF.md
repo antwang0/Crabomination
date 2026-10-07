@@ -3241,7 +3241,8 @@ site goes through one helper. release-fast, 4-core Xeon @ 2.80 GHz.
                  (the run's base), 5 pairs, decisions/s base / cand:
                  116.9/114.6, 103.2/103.3, 101.3/95.0, 103.4/115.3,
                  112.3/115.5 k — means 107.4 / 108.7 k, flat
-suite            24,305 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict)
+suite            24,312 run, 0 fail, 5 skipped (CRAB_ANSWER_LOG=strict), at
+                 the tip with the concurrent sixth run's commits merged
 pods (release)   seeds 150002-150008, 2..8 seats x 400 = 2,800; every deck
                  in 6-seat groups x 200 (160000+) = 6,200 and 4-seat
                  groups x 200 with CRAB_POD_CONCEDE=20 (161000+) = 9,200:

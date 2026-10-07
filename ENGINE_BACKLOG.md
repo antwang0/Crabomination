@@ -666,10 +666,11 @@ arm) — `find_card_anywhere` cannot see the spell that is resolving.
 - 💡 **The ability census** (`--card-census` lists a played card's printed
   abilities no seat activated): ~1,500 across the 183 seats. The pod-only
   `server/generic_sink.rs` takes the ones no shape generator covers when the
-  resolved eval beats passing. ⏳ Still never taken: discard / graveyard /
-  exile costs (Grimoire of the Dead, Chainer),
-  untap-a-land ramp (Arbor Elf), until-end-of-turn gains outside combat
-  (Whirler Rogue).
+  resolved eval beats passing. ✅ *(2026-10-07, fifth run)* untap-a-land ramp
+  (`server/untap_ramp.rs`: Arbor Elf, Kiora's Follower untap a tapped land in
+  the seat's own main phase when that makes a hand card castable).
+  ⏳ Still never taken: discard / graveyard / exile costs (Grimoire of the
+  Dead, Chainer), until-end-of-turn gains outside combat (Whirler Rogue).
   `{X}` abilities (Geth) and Class levels (no eval can price one) are taken
   now. 💡 **The two-player bot never levels a Class either** — the generic
   pass is pods-only to keep `--bench` fixed; porting the Class rule moves it.
