@@ -57,6 +57,7 @@ sixty-seventh pass, so don't re-take that.
 5. **Next moves:** strict sweep at fresh seeds; the stash CLASS (ENGINE_BACKLOG "sixth Commander routine": an asker's pre-ask early-out taken on its re-run leaves its answer for the next asker in the same resolution — ~37 arms, needs a resume-side fix that knows the first leaf); sequential deaths in one resolution still read as simultaneous; CR 603.2 departed listeners for casts and once-per-turn listeners.
 6. ⚠ **Two sessions were live on this branch on 2026-10-07** (`011LGd2W` and `015XULoK`) and landed the same CR 800.4a / `exiled_with` fixes twice within minutes; announce what you take here before starting. `011LGd2W` swept seeds 200000-234000 (its `sweep.py` groups) and 300000-312000 (release).
 7. **`015XULoK` (fifth run) took the BOT never-activated lane** after its sweeps went quiet: `server/untap_ramp.rs` (Arbor Elf, Kiora's Follower) landed; next in that lane — Whirler Rogue's tap-two-artifacts evasion grant (named in `server/evasion.rs`, still never taken), Grimoire of the Dead / Chainer's discard-and-reanimate costs (ENGINE_BACKLOG "The ability census").
+8. **`01W3Tmnx` (seventh run) took the stash class (✅ `run_effect` claim, ENGINE_BACKLOG) and strict sweeps at seeds 410000-499999.**
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
