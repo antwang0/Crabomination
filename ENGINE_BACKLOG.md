@@ -113,6 +113,22 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-10-07 (fifth Commander routine) — a combatant its own declaration cost removed
+
+A strict debug pod (seed 121000, 4 seats, game 15) tripped the CR 506.4
+invariant at its first fresh seed: Wall of Roots at 0/1 blocked beside a
+Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
+"-0/-1 counter: add {G}", and the dead Wall stayed in `block_map`.
+- ✅ **CR 509.1d / 506.4** — `declare_blockers` removes a blocker that left
+  during the payment after recording the block; its attacker stays blocked
+  (CR 509.1h).
+- ✅ **CR 508.1g / 506.4** — the attacking side was worse: Blood Pet
+  sacrificed to Ghostly Prison's tax made the whole declaration fail with
+  `CardNotOnBattlefield` *after* paying (the action checkpoint rolled it
+  back, so a bot lost the attack). The declaration drops attackers the costs
+  removed and the rest attack. Both in `core_rules::cr_recent117`.
+- ✅ CR 603.10a / 603.2 death listeners (see the 2026-10-04 section).
+
 ## FIXED 2026-10-06 (fourth Commander routine) — combat removal, defender scoring, owner zones
 
 Debug-pod invariants (`pod/mod.rs`: CR 506.4 combatants, CR 509.1a blockers,

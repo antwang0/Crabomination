@@ -2058,6 +2058,11 @@ impl GameState {
             }
         }
 
+        // CR 508.1g / 506.4 — a creature the attack costs removed (Blood Pet
+        // sacrificed for Ghostly Prison's tax) was declared but is not in
+        // combat; the rest attack.
+        let mut attacks = attacks;
+        attacks.retain(|a| self.battlefield.find_by_id(a.attacker).is_some_and(|c| c.controller == p));
         let any_attackers = !attacks.is_empty();
         // CR 702.121a — Melee counts the distinct OPPONENTS this player
         // attacked this combat; a planeswalker or battle attacked doesn't
@@ -3626,6 +3631,14 @@ impl GameState {
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.pump(d, 0);
             }
+        }
+        // CR 506.4 / 509.1h — a blocker its own block cost killed (Wall of
+        // Roots paying Archangel of Tithes' tax at 0/1) was declared, so its
+        // attacker is blocked, but it leaves combat.
+        let gone: SmallVec<[CardId; 2]> =
+            self.block_map.keys().copied().filter(|&b| self.battlefield_find(b).is_none()).collect();
+        for b in gone {
+            self.remove_from_combat(b);
         }
         self.give_priority_to_active();
         Ok(events)
