@@ -3214,6 +3214,12 @@ pods (release)   seeds 71000-77039 every deck in 3/4/5/6/8-seat pods + 5-seat
 2-player pools   seed 84000 cube / sos / sealed x 300 a deck: 7,500 decided
 strict debug     seeds 73000, 78000, 79000, 79500 (6-seat concessions),
                  CRAB_POD_SWEEP_PROBE, ~590 games: clean
+after close      seeds 93000-99024 every deck in 3..8-seat pods x 200 +
+                 6-seat concessions ~50,000 games: 0 panics, 0 stalls, 13
+                 draws; `--a dflt` pilot seeds 101000 (4-seat x 100, 4,600)
+                 and 102000 (6-seat): 0 panics, draws only; strict debug
+                 103000 (4), 104000 (8), 105000 (5-seat, CRAB_POD_CONCEDE=20)
+                 ~340 games: clean
 ```
 
 ### 2026-10-06 (Commander routine, fourth) — guardrail; CR 506.4 noncreature combatants, CR 508.1d defender scoring, CR 603.2 departed listeners
