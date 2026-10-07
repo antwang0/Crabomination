@@ -1461,6 +1461,17 @@ pub struct PendingDecision {
 }
 
 impl PendingDecision {
+    /// CR 800.4a — whether the spell or ability this decision is resolving
+    /// belongs to seat `p` (cast by it, owned by it, or controlled by it):
+    /// when `p` leaves the game, that object ceases to exist mid-resolution.
+    pub fn resolves_for(&self, p: usize) -> bool {
+        match &self.resume {
+            ResumeContext::Spell { card, caster, .. } => *caster == p || card.owner == p,
+            ResumeContext::Trigger { controller, .. } | ResumeContext::Ability { controller, .. } => *controller == p,
+            _ => false,
+        }
+    }
+
     pub fn acting_player(&self) -> usize {
         // A library search is answered by the seat the decision names — the
         // searching player (CR 701.19a), which for an opponent-owned search

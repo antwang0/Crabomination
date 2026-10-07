@@ -8857,3 +8857,48 @@ fn cr_605_3a_a_mana_source_sacrificed_paying_flashback_reports_its_sacrifice() {
         "and its sacrifice is reported: {events:?}"
     );
 }
+
+/// CR 800.4a — a spell its caster's departure takes off the game ceases to
+/// exist even mid-resolution, while another seat owes it an answer: seat 0's
+/// Mana Leak is paused on seat 1's "pay {3}?" when seat 0 concedes, so the ask
+/// and its replay log go with it and seat 1's Bears stays on the stack. Found
+/// by a strict debug pod with concessions (an answer left in the log).
+#[test]
+fn cr_800_4a_a_departed_casters_spell_waiting_on_another_seat_ceases_to_exist() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].wants_ui = true;
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Green, 2);
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the Bears");
+    g.players[1].mana_pool.add_colorless(3);
+    let leak = g.add_card_to_hand(0, catalog::mana_leak());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: leak,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Mana Leak");
+    for _ in 0..6 {
+        if g.pending_decision.is_some() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.pending_decision.as_ref().map(|d| d.acting_player()), Some(1), "seat 1 is asked to pay");
+    g.concede(0);
+    assert!(g.pending_decision.is_none(), "the departed caster's Mana Leak took its ask with it");
+    assert!(
+        g.stack.iter().any(|si| matches!(si, crabomination::game::types::StackItem::Spell { card, .. } if card.id == bears)),
+        "the Bears was never countered",
+    );
+}

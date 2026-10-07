@@ -6156,7 +6156,10 @@ impl GameState {
         // four-player pod produced 15 % "no legal move" games.
         // The dropped continuation's replay log goes with it, or the next
         // resolution's first ask would replay the departed seat's answers.
-        if self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p) {
+        // Likewise an ask another seat owes while the departed player's own
+        // spell or ability resolves (CR 800.4a — it ceases to exist with its
+        // controller): a fan-out paused on the next opponent's answer.
+        if self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p || d.resolves_for(p)) {
             self.pending_decision = None;
             self.clear_answer_log();
         }
