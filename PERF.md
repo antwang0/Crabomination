@@ -3192,6 +3192,17 @@ pods (release)   seeds 300002-300008, 2..8 seats x 400 = 2,800, all decided;
                  CRAB_POD_CONCEDE=20 (310000+), 6 x 150 concede (311000+),
                  5 x 150 (312000+) = 19,415 games, 3 CR 104.4a draws, zero
                  panics, zero stalls
+strict debug     later rounds: 230000+ 5/8/4/2/6 seats (7,515: Augusta's
+                 tap-state PumpPT, seed 233050; the hand-size detector,
+                 234002); 240000+ 5/4/7/3 seats at CRAB_POD_CONCEDE=60-80
+                 (4,879, clean); --a dflt 250000+ 4/6 seats (1,690: the
+                 destroy-X-target overflow panic 250011, Warp World's token
+                 250014) and 255000+ 3/4 seats (995, clean)
+--bench (again)  release at d2bac7dda (after the slot-walker change):
+                 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism + thread determinism ok
+pods (release)   --a dflt, every deck: 4 seats x 60 concede (320000+), 6 x
+                 30 (321000+) = 3,700 games, all decided, zero panics
 ```
 
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved

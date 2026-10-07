@@ -143,6 +143,28 @@ deck in `--pod-decks` groups, 3..8 seats, with and without
 - ✅ **CR 800.4a / 610.3** — a departed seat's PHASED-OUT permanent leaving
   the game didn't end its "until this leaves" exile (Summon: Ixion under
   Clever Concealment). `multiplayer::cr_800_4a_a_phased_out_departed_*`.
+- ✅ **CR 800.4a** — Braids' per-opponent fan-out, resumed past a departed
+  asker, ran the departed seat's "doesn't" branch (plural `PlayerRef::Seat`
+  now skips a departed seat). `multiplayer::cr_800_4a_a_departed_seats_turn_*`.
+- ✅ **CR 704.5f / 117.5** — Augusta's "+0/+1 to untapped creatures" is a
+  `PumpPT`, which the post-action gate didn't count as a toughness reducer:
+  a mana tap left Nicol Bolas lethally damaged with priority (2 seats, seed
+  233050). `multiplayer::cr_704_5f_a_mana_tap_*`.
+- ✅ **CR 115.3 / 601.2c** — "destroy X target …" (`DestroyTargets`): the
+  extra-target prompt had no X cap and re-offered chosen objects — a
+  default-pilot seat appended one Sol Ring 255 times and overflowed `u8`
+  (panic; `--a dflt`, seed 250011) — and the bot's slot walker filled all 16
+  slots with repeats, which the cast path accepted at any X. Capped, made
+  distinct, exactly X. `cr_recent118::cr_115_3_*`, `cr_601_2c_destroy_x_*`.
+- ✅ **CR 506.4** — Warp World dropped tokens with a bare retain, leaving one
+  attacking (`--a dflt`, seed 250014). `multiplayer::cr_506_4_a_token_warp_*`.
+- ✅ Detector fixes (debug pod invariants): a commander inside a phased-out
+  merged pile (Talon Gates on mutated Otrimi, seed 221030); the CR 514.1
+  hand-size check read the maximum after an "until end of turn" Body of
+  Knowledge had lapsed (seed 234002).
+- 📐 **`--commander` without `--a` pilots the legacy `baseline` profile**;
+  the default pilot (`--a dflt`) found the last two panics in ~1,700 strict
+  games where `baseline` had run ~23,000 clean. Sweep both.
 - ✅ *(2026-10-07, seventh run)* **The class behind the first two:** an asking arm whose early-out
   sits BEFORE its ask can take that early-out on its re-run (the question
   went moot while it waited) and leave its answer behind. The outermost
