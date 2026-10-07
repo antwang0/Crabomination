@@ -2507,6 +2507,11 @@ pub struct ResolutionScratch {
     /// `submit_decision` call, so it never crosses a serialization boundary.
     #[serde(skip, default)]
     pub(crate) stashed_resolution_answer: Option<DecisionAnswer>,
+    /// Set while the first non-wrapper arm a resumed continuation runs (the
+    /// asker the stash was answered for) is on the stack; it spends any stash
+    /// it left (`GameState::run_effect`), so a later asker can't read it.
+    #[serde(skip, default)]
+    pub(crate) stash_owner_claimed: bool,
     /// Replay log for multi-question resolution effects (Clash,
     /// `PlayersMayAccept`, `TemptingOffer`, `UnlessPlayerPays`, `MayPay`):
     /// each suspend re-queues the *originating effect*, whose re-run replays

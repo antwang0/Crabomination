@@ -218,3 +218,49 @@ fn cr_400_7_a_card_cast_out_of_exile_sheds_its_exile_links() {
     resolve(&mut g, taker, None, &Effect::Destroy { what: Selector::ExactObjects(vec![taker]) });
     assert!(g.exile.iter().any(|c| c.id == bear));
 }
+
+/// CR 608.2 — a resumed asker whose question went moot while it waited spends
+/// its stashed answer, whatever arm it is. "You may discard a card. If you do,
+/// draw" was answered yes after the hand emptied; the re-run's may stops
+/// offering (an unpayable cost) and the yes used to leak into the next may in
+/// the same resolution, which then gained 5 life without asking.
+#[test]
+fn cr_608_2_a_moot_asker_does_not_hand_its_answer_to_the_next() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::effect::Value;
+    use crabomination::game::types::GameAction;
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let fodder = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let may = |body: Effect| Effect::MayDo { description: "may".into(), body: Box::new(body) };
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Two Mays",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            may(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+            may(Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+        ]),
+        ..Default::default()
+    });
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(matches!(g.pending_decision.as_ref().map(|d| &d.decision), Some(Decision::OptionalTrigger { .. })));
+    // The hand empties before the answer comes back.
+    let pos = g.players[0].hand.iter().position(|c| c.id == fodder).unwrap();
+    let card = g.players[0].hand.remove(pos);
+    g.players[0].graveyard.push(card);
+    let life = g.players[0].life;
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("answer");
+    assert!(
+        matches!(g.pending_decision.as_ref().map(|d| &d.decision), Some(Decision::OptionalTrigger { .. })),
+        "the second may asks for itself"
+    );
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("decline");
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.players[0].life, life, "declined, so no life");
+}

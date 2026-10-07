@@ -126,7 +126,7 @@ deck in `--pod-decks` groups, 3..8 seats, with and without
 - ✅ **CR 800.4a / 610.3** — a departed seat's PHASED-OUT permanent leaving
   the game didn't end its "until this leaves" exile (Summon: Ixion under
   Clever Concealment). `multiplayer::cr_800_4a_a_phased_out_departed_*`.
-- ⏳ **The class behind the first two, open:** an asking arm whose early-out
+- ✅ *(2026-10-07, seventh run)* **The class behind the first two:** an asking arm whose early-out
   sits BEFORE its ask can take that early-out on its re-run (the question
   went moot while it waited) and leave its answer behind. The outermost
   resolution drops it, so it never crosses resolutions — but inside one, a
@@ -136,6 +136,10 @@ deck in `--pod-decks` groups, 3..8 seats, with and without
   the same arm) lists ~37 arms. The class fix is in the resume path (drop an
   unconsumed stash once the resumed arm returns), not per arm; it needs the
   first-leaf boundary inside a resumed `Seq`, which the resume doesn't carry.
+  Fixed there: `run_effect`'s first non-wrapper arm (`is_resume_wrapper`)
+  entered with a stash owns it and spends it on return
+  (`cr_608_2_a_moot_asker_does_not_hand_its_answer_to_the_next`);
+  `CRAB_ANSWER_LOG` prints `unclaimed stash` when it fires.
 
 ## FIXED 2026-10-07 (fifth Commander routine) — a combatant its own declaration cost removed, an exile link that outlived the exile, a departed caster's stolen spell
 

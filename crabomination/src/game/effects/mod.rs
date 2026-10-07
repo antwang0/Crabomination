@@ -229,6 +229,27 @@ pub(crate) fn selector_for_entity(ent: &EntityRef) -> Selector {
     }
 }
 
+/// A combinator a parked continuation can be rebuilt from (`rewrap_parked`,
+/// `splice_after_suspend`, `Seq`): it asks nothing itself, so the stash
+/// belongs to the first arm inside it, not to it.
+fn is_resume_wrapper(effect: &Effect) -> bool {
+    matches!(
+        effect,
+        Effect::Noop
+            | Effect::Seq(_)
+            | Effect::If { .. }
+            | Effect::WithX { .. }
+            | Effect::ForEach { .. }
+            | Effect::EachPlayerDoes { .. }
+            | Effect::BindScratch { .. }
+            | Effect::BindTargetObjects { .. }
+            | Effect::BindTargetSlot { .. }
+            | Effect::AsPlayer { .. }
+            | Effect::WithTargets { .. }
+            | Effect::WithTriggerBatch { .. }
+    )
+}
+
 /// Re-wrap whatever a body just parked, when it suspended, so a wrapper that
 /// rebinds the context keeps its binding across the suspend.
 ///
@@ -2006,6 +2027,22 @@ impl GameState {
         eprintln!("{msg}");
     }
 
+    /// `CRAB_ANSWER_LOG=warn` names an asker that returned without spending
+    /// the stash it was re-run for (debug builds; never fatal — it is handled).
+    #[cfg(all(debug_assertions, not(test)))]
+    fn report_unclaimed_stash(&self, effect: &Effect, ctx: &EffectContext) {
+        if crate::game::answer_log_level() == 0 {
+            return;
+        }
+        let dbg = format!("{effect:?}");
+        eprintln!(
+            "unclaimed stash {:?} spent after {} / {}",
+            self.scratch.stashed_resolution_answer,
+            ctx.source_name.unwrap_or("<no source>"),
+            &dbg[..dbg.len().min(200)],
+        );
+    }
+
     /// Pin the object targets a resolution bound on a derived context around
     /// whatever `body` just parked: a continuation resumes under the stack
     /// item's targets. Player targets can't be pinned this way (left as is).
@@ -3122,6 +3159,7 @@ impl GameState {
             )
         };
         let outer_stash = take_opt_scratch!(self.stashed_resolution_answer);
+        let outer_claim = std::mem::replace(&mut self.scratch.stash_owner_claimed, false);
         let run = |g: &mut Self| -> Result<Vec<GameEvent>, GameError> {
             let mut events = g.resolve_effect(effect, ctx)?;
             g.drive_suspensions(ctx, &mut events, Some(ctx.controller))?;
@@ -3135,6 +3173,7 @@ impl GameState {
         if outer_stash.is_some() {
             self.scratch.stashed_resolution_answer = outer_stash;
         }
+        self.scratch.stash_owner_claimed = outer_claim;
         result
     }
 
@@ -4021,6 +4060,33 @@ impl GameState {
     }
 
     pub(crate) fn run_effect(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        // CR 608.2 — a stash answers the asker a resumed continuation re-runs
+        // first. If that arm returns without taking it (its question went
+        // moot while it waited), spend it there: unclaimed, the next asker
+        // in the same resolution would read it as its own answer.
+        if self.scratch.stashed_resolution_answer.is_some()
+            && !self.scratch.stash_owner_claimed
+            && !is_resume_wrapper(effect)
+        {
+            self.scratch.stash_owner_claimed = true;
+            let r = self.run_effect_batched(effect, ctx, events);
+            self.scratch.stash_owner_claimed = false;
+            if self.scratch.stashed_resolution_answer.is_some() {
+                #[cfg(all(debug_assertions, not(test)))]
+                self.report_unclaimed_stash(effect, ctx);
+                self.scratch.stashed_resolution_answer = None;
+            }
+            return r;
+        }
+        self.run_effect_batched(effect, ctx, events)
+    }
+
+    fn run_effect_batched(
         &mut self,
         effect: &Effect,
         ctx: &EffectContext,
