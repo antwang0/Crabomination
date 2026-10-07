@@ -135,6 +135,13 @@ CR-citing test:
   mode; `cr_recent118::cr_400_1_a_wrong_shape_answer_*`). Found by the new
   `CRAB_POD_FUZZ` (`pod/fuzz.rs`) at 5,000 / 10,000 in its first 8-seat
   groups; five groups, one cause.
+- ✅ **CR 122.2** — a card that keeps its counters off the battlefield (Me,
+  the Immortal, Skullbriar) entered with a keyword counter and never armed
+  `board_instance_keywords`, so whole-board keyword asks skipped it (a
+  fuzzed `--a dflt` 5-seat pod, seed 469022, in a bot look-ahead;
+  `cr_recent118::cr_122_2_a_card_entering_*`).
+- ✅ **CR 603.3d** — once-each-turn / "one or more" listeners in both
+  look-back passes (above, the sixth run's section).
 
 ## FIXED/OPEN 2026-10-07 (sixth Commander routine) — strict sweeps at 200000-224000
 
