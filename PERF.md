@@ -3269,6 +3269,10 @@ callgrind Ir     `profiling-fast`, `--games 6 --seed 1`, the two gate widenings
                  (+0.91 %)  cube 344,072,555 -> 345,888,223 (+0.53 %) — rejected;
                  flagged on an actual expiry  fixed -> 188,159,360 (+0.015 %)
                  cube -> 344,018,621 (-0.016 %)
+                 conditional toughness bonus as a reducer (vs the tip without
+                 it): fixed 188,304,760 -> 188,199,499 (-0.056 %), cube
+                 344,348,613 -> 345,271,337 (+0.27 %), sealed 549,195,799 ->
+                 549,089,862 (-0.019 %)
 ```
 
 ### 2026-10-06 (Commander session, second) — guardrail; the state-based check after every action, and its gate

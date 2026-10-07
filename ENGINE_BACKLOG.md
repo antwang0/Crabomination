@@ -264,7 +264,16 @@ games: ✅ casting a creature out of a graveyard (`CardLeftGraveyard` +
 is a P/T term, so `CardLeftGraveyard` is no longer inert; ✅ the untap step's
 "until your next turn" ends (a Synth Infiltrator's copy reverting to 0/0)
 emit nothing — those expiries set the step-advance gate's flag when they
-remove something (an unconditional upkeep sweep cost +0.91 % Ir, PERF). Both in `cr_recent98::cr_704_3_*`.
+remove something (an unconditional upkeep sweep cost +0.91 % Ir, PERF).
+Two more from the same run: a **card-conservation** pod invariant (each living
+seat's nontoken cards, every zone, meld parts and mutate piles included, are
+the set it started with) found a stolen Sensei's Divining Top put onto its
+controller's library and gone when that seat left (CR 400.3; the fix landed
+concurrently as `ee0d8aedd`), and the 3-seat sweep probe found a 0/0 kept
+alive by Sentinel Sarah Lyons' "while an artifact entered this turn, +2/+2"
+past the turn change — ✅ a conditional positive toughness bonus
+(`WhileCondition` / `WhileYourTurn` / `WhileNotYourTurn`, the `*If` pumps)
+is a toughness reducer to the gates (CR 613.4c; cube +0.27 % Ir). Both in `cr_recent98::cr_704_3_*`.
 ✅ *(fixed: 1.5 s grace)* **(test robustness):** `server::tests::reconnect_within_grace_keeps_match_alive`
 failed once under full-suite load on a 4-core box (its 400 ms wall-clock grace
 elapsed before the second reattach; `mod.rs:2910`), and passes alone. A
