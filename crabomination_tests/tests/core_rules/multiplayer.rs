@@ -1151,6 +1151,40 @@ fn cr_800_4a_a_spell_the_departed_player_cast_but_doesnt_own_is_exiled() {
     assert_eq!(g.players[2].life, 20, "nothing resolved");
 }
 
+/// CR 800.4a — a seat that leaves owing a vote on another seat's Mob Verdict
+/// takes the ask with it, but not the card: the paused spell leaves the stack
+/// into its owner's graveyard. (A 5-seat strict pod with concessions, seed
+/// 170018 game 9, lost the card from the game.)
+#[test]
+fn cr_800_4a_a_departed_voters_ask_does_not_take_the_paused_spell_with_it() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = multi_player_game(3);
+    for s in 0..3 {
+        g.players[s].wants_ui = true;
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let verdict = g.add_card_to_hand(0, catalog::mob_verdict());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: verdict, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Mob Verdict");
+    for _ in 0..12 {
+        if g.pending_decision.as_ref().is_some_and(|d| d.acting_player() == 1) {
+            break;
+        }
+        let who = g.pending_decision.as_ref().map_or(g.priority.player_with_priority, |d| d.acting_player());
+        let action = HeuristicBot::new().next_action(&g, who).expect("the bot acts");
+        g.perform_action(action).expect("accepted");
+    }
+    assert!(g.pending_decision.as_ref().is_some_and(|d| d.acting_player() == 1), "seat 1 owes a vote");
+    g.concede(1);
+    assert!(g.pending_decision.is_none());
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == verdict), "the card reached its owner's graveyard");
+}
+
 /// CR 800.4a, the ability half: a triggered ability the departed player
 /// controls ceases to exist along with their spells. Kokusho's death trigger
 /// is on the stack when its controller leaves, so nobody loses 5 life.
@@ -2366,6 +2400,32 @@ fn twenty_one_commander_damage_eliminates_victim() {
         g.players[1].eliminated,
         "seat 1 should lose to 21 commander damage even with life > 0",
     );
+}
+
+/// CR 104.3d / 704.3 — 21 commander damage taken while "players can't lose
+/// the game this turn" (Everybody Lives!) loses the game once the turn ends:
+/// the expiry leaves no event, and nothing swept before the next upkeep's
+/// priority. (A 5-seat strict pod's sweep probe, seed 170036 game 1.)
+#[test]
+fn cr_704_3_a_cant_lose_expiry_is_swept_before_the_next_upkeep() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = multi_player_game(3);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.players[1].cant_lose_this_turn = true;
+    g.record_commander_damage(1, cmd, 21);
+    g.check_state_based_actions();
+    assert!(!g.players[1].eliminated, "it can't lose this turn");
+    g.active_player_idx = 0;
+    g.step = TurnStep::End;
+    g.priority.player_with_priority = 0;
+    for _ in 0..12 {
+        if g.active_player_idx != 0 && g.step == TurnStep::Upkeep {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.step, TurnStep::Upkeep);
+    assert!(g.players[1].eliminated, "the loss is swept before upkeep priority");
 }
 
 /// Phase M — accumulated damage below 21 does NOT eliminate, even

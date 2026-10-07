@@ -5175,6 +5175,12 @@ impl GameState {
         if self.players[p].sorceries_as_flash {
             self.players[p].sorceries_as_flash = false;
         }
+        // CR 104.3d / 704.3 — a seat that couldn't lose this turn may have to
+        // now (21 commander damage taken under Everybody Lives!): the end
+        // leaves no event, so the step-advance sweep gate is told.
+        if self.players.iter().any(|pl| pl.cant_lose_this_turn) {
+            self.scratch.phased_since_sweep = true;
+        }
         // Clear "this turn" lifegain locks across **every player** — CR
         // "this turn" means the current turn, so a Skullcrack-style
         // lock set during the previous turn expires before priority
@@ -6171,8 +6177,26 @@ impl GameState {
         // spell or ability resolves (CR 800.4a — it ceases to exist with its
         // controller): a fan-out paused on the next opponent's answer.
         if self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p || d.resolves_for(p)) {
-            self.pending_decision = None;
+            let dropped = self.pending_decision.take();
             self.clear_answer_log();
+            // The paused spell's card is off the stack, in the resume: it
+            // must land somewhere (a 5-seat pod: a seat conceded owing its
+            // Mob Verdict vote, and the card left the game). Cast by the
+            // departed seat → exiled, as on the stack above; another seat's
+            // spell stops here and leaves the stack as a fizzle does.
+            if let Some(crate::game::types::ResumeContext::Spell { card, caster, .. }) = dropped.map(|d| d.resume)
+                && card.owner != p
+                && !card.is_token
+            {
+                let mut card = *card;
+                card.controller = card.owner;
+                if caster == p || card.cast_via_flashback {
+                    events.push(GameEvent::PermanentExiled { card_id: card.id });
+                    self.exile.push(card);
+                } else if let Some(card) = self.bottom_instead_of_graveyard(card) {
+                    self.route_to_graveyard(card, events);
+                }
+            }
         }
         // The same ask one step earlier: suspended but not yet installed as
         // `pending_decision` when the seat left mid-action. Left in place, the

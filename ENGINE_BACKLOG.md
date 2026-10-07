@@ -117,7 +117,8 @@ the handoff.
 
 Strict debug pods at fresh seeds (121000 4-seat; 130000+ every deck in
 6-seat groups × 30 with `CRAB_POD_SWEEP_PROBE`; 140000+ every deck in 4-seat
-groups × 24 with `CRAB_POD_CONCEDE=20`) found all three. Seed 121000
+groups × 24 with `CRAB_POD_CONCEDE=20`; 170000+ 5-seat groups × 24 with
+`CRAB_POD_CONCEDE=10`) found all five. Seed 121000
 game 15 tripped the CR 506.4 invariant: Wall of Roots at 0/1 blocked beside a
 Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
 "-0/-1 counter: add {G}", and the dead Wall stayed in `block_map`.
@@ -151,6 +152,18 @@ Delver under Archangel of Tithes, the {2} block tax auto-tapped the Wall's own
   ⏳ The battlefield half still hands such a permanent back to its owner
   (`change_control`) rather than exiling it: telling a control EFFECT that
   ends from control by casting needs the control source recorded.
+- ✅ **CR 800.4a** — a seat that left owing an ask on ANOTHER seat's paused
+  spell (its Mob Verdict vote; 5 seats, seed 170018 game 9) dropped the
+  pending decision and the card inside its resume with it. The card now
+  leaves the stack as a fizzle does (exiled if the departed seat cast it);
+  the rest of that spell's resolution is still not run (⏳ resuming it with
+  the departed seat skipped is the full fix).
+  `multiplayer::cr_800_4a_a_departed_voters_ask_*`.
+- ✅ **CR 104.3d / 704.3** — 21 commander damage taken under "players can't
+  lose the game this turn" (Everybody Lives!) was not swept when the turn
+  ended: the expiry leaves no event. It now sets the step-advance gate's
+  flag (seed 170036 game 1's sweep probe).
+  `multiplayer::cr_704_3_a_cant_lose_expiry_*`.
 - ✅ CR 603.10a / 603.2 death listeners (see the 2026-10-04 section).
 
 ## FIXED 2026-10-06 (fourth Commander routine) — combat removal, defender scoring, owner zones
