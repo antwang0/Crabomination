@@ -1459,6 +1459,30 @@ fn cr_800_4a_a_departed_seats_turn_of_a_fan_out_never_comes() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "one draw, for seat 2 alone");
 }
 
+/// CR 506.4 / 111.8 — Warp World shuffles every permanent away, tokens
+/// included, and a token that leaves the battlefield is removed from combat
+/// like any permanent: its tokens were dropped from the battlefield list but
+/// left attacking (a default-pilot 4-seat strict pod, seed 250014 game 24 —
+/// Warp World cast off an attack trigger).
+#[test]
+fn cr_506_4_a_token_warp_world_shuffles_away_leaves_combat() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_library(0, catalog::island());
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    g.clear_sickness(token);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: token, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    assert!(g.attacking().iter().any(|a| a.attacker == token));
+    let ctx = EffectContext::for_ability(token, 0, None);
+    g.resolve_effect(&crabomination::effect::Effect::WarpWorld, &ctx).expect("Warp World");
+    assert!(g.battlefield_find(token).is_none(), "the token ceased to exist");
+    assert!(g.attacking().iter().all(|a| a.attacker != token), "and is no longer attacking");
+}
+
 /// CR 704.3 / 117.5 — state-based actions wait until a player would receive
 /// priority. A seat at 4 life that pays a cast with four Talismans is at 0 while
 /// casting, not out: the spell reaches the stack, and only the sweep after the

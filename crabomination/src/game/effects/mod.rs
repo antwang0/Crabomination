@@ -21795,7 +21795,20 @@ impl GameState {
                         );
                     }
                     // Tokens cease to exist; they still counted for the reveal.
+                    // They leave the battlefield like the cards do: out of
+                    // combat (CR 506.4 — a Warp World cast off an attack
+                    // trigger left a token attacking), seen by leave watchers,
+                    // their until-leaves exiles ended.
+                    let tokens: Vec<CardInstance> =
+                        self.battlefield.iter().filter(|c| c.owner == p && c.is_token).cloned().collect();
+                    for t in &tokens {
+                        self.remove_permanent_from_combat(t.id);
+                        self.note_left_without_dying(t, events);
+                    }
                     self.battlefield.retain(|c| c.owner != p || !c.is_token);
+                    for t in &tokens {
+                        self.on_left_battlefield(t.id, events);
+                    }
                     self.shuffle_library(p, events);
                     let take: Vec<CardId> = self.players[p]
                         .library
