@@ -3134,6 +3134,41 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-07 (Commander routine, eighth — session `019mKDqk`) — guardrail; CR 608.2c sequential deaths, strive slots, CR 122.6 persist counters
+
+Hot-path touches: `Seq` and the modal arms read `events.len()` per step and
+scan the step's events for a death only when another step follows
+(`mark_death_step`); the strive probe runs only for a prompting seat's
+per-extra-target-cost cast. `release` at `c180e35ec`+, 4-core Xeon @ 2.10
+GHz, debug sweeps running beside it (no throughput filed).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs
+                 1); peak_rss 28.7 MiB
+                 — and again after the CR 122.6 persist commit (05be53e33)
+2-player pools   --seed 570001 x 300, 570002-3 x 1,000: cube 18,400, sos
+                 11,500, sealed 27,600 — 0 undecided; 572001 x 1,000 after
+                 05be53e33: 25,000, 2 CR 104.4a draws (cube); --a uniform --b
+                 uniform x 300 at 571001: cube 4 CR 104.4a draws, sos / sealed
+                 clean
+suite            24,327 / 0 / 5 (CRAB_ANSWER_LOG=strict); clippy 0 (workspace
+                 minus the client, --all-targets)
+release pods     pod_census --a dflt 3..8 seats at 581000-586000 (6,100 /
+                 4,600 / 2,960 / 1,860 / 1,350 / 920) + --a uniform 5 seats,
+                 concessions, 587000 (2,220): 20,010 games, zero panics, zero
+                 caps; 1 CR 104.4a draw, 1 board cap (584021 g16: Chain
+                 Reaction under Everlasting Torment + Flourishing Defenses,
+                 981 Elves — per the card's ruling); --a mcts 4 seats, every
+                 deck once, 596000 (46 games, ~30 s each): clean
+strict debug     --a dflt: 4 seats 500000 (552), 6 seats concessions 510000
+                 (248), 8 seats 530000 (138) — clean. --a uniform (first pod
+                 sweep with the random pilot): 4 seats 540000 (552, two strive
+                 caps before the fix, clean after), 6 seats concessions 550000
+                 (248), 8 seats concessions 590000 (138), 3 seats 591000 (732)
+                 — clean
+```
+
 ### 2026-10-07 (Commander routine, seventh — session `01W3Tmnx`) — guardrail; the stash claim, CR 506.3b
 
 Hot-path touches: `run_effect` reads `stashed_resolution_answer.is_some()`
