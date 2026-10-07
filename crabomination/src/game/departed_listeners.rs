@@ -11,8 +11,9 @@
 //! fires, so a departed listener can't also have fired from a direct hook —
 //! and only departures with an in-order event — the synthesized
 //! `PermanentDied` is appended after the batch, so it can't date a departure.
-//! Once-per-turn / once-per-batch listeners are left to the walk's budget
-//! bookkeeping and skipped here.
+//! A once-each-turn / "one or more" listener fires at most once, and a
+//! once-each-turn one only if the turn's budget (`triggered_once_per_turn_used`)
+//! is unspent; the caller records what it spends.
 
 use super::GameState;
 use super::types::{GameEvent, TriggerCandidate};
@@ -76,7 +77,12 @@ fn departure_of(g: &GameState, ev: &GameEvent) -> Option<CardId> {
 impl GameState {
     /// One candidate per (departed listener, event it saw before it left).
     /// Empty unless the batch holds both a looked-back event and a departure.
-    pub(crate) fn departed_listener_candidates(&self, events: &[GameEvent]) -> Vec<TriggerCandidate> {
+    /// Pushes the once-each-turn keys it fires onto `once_spent`.
+    pub(crate) fn departed_listener_candidates(
+        &self,
+        events: &[GameEvent],
+        once_spent: &mut Vec<(CardId, usize)>,
+    ) -> Vec<TriggerCandidate> {
         let mut out: Vec<TriggerCandidate> = Vec::new();
         if !events.iter().any(looked_back_on)
             || !events.iter().any(|e| departure_of(self, e).is_some())
@@ -106,8 +112,6 @@ impl GameState {
                 looks_back(&ta.event.kind)
                     && (!died || ta.event.kind != EventKind::CreatureDied)
                     && !ta.event.zone.command_zone_only()
-                    && !ta.event.once_per_turn
-                    && !ta.event.once_per_batch
                     && !matches!(
                         ta.event.scope,
                         EventScope::SelfSource | EventScope::FromYourGraveyard | EventScope::FromYourGraveyardAnyPlayer
@@ -122,7 +126,17 @@ impl GameState {
                 .iter()
                 .rposition(|e| matches!(e, GameEvent::PermanentEntered { card_id } if *card_id == listener))
                 .map_or(0, |i| i + 1);
-            for ta in snap.definition.triggered_abilities.iter().filter(listens) {
+            for (idx, ta) in snap.definition.triggered_abilities.iter().enumerate() {
+                if !listens(&ta) {
+                    continue;
+                }
+                // CR 603.3d — "only once each turn": not if the turn's one fire
+                // is spent; "one or more" / once each turn: one fire here.
+                let once_key = (listener, idx);
+                if ta.event.once_per_turn && self.triggered_once_per_turn_used.contains(&once_key) {
+                    continue;
+                }
+                let single = ta.event.once_per_turn || ta.event.once_per_batch;
                 for ev in &events[start..dep] {
                     if !looked_back_on(ev)
                         || matches!(ev, GameEvent::PermanentEntered { card_id } if *card_id == listener)
@@ -155,6 +169,12 @@ impl GameState {
                         from_mana_ability: false,
                         actor: events::event_actor(self, ev),
                     });
+                    if single {
+                        if ta.event.once_per_turn {
+                            once_spent.push(once_key);
+                        }
+                        break;
+                    }
                 }
             }
         }

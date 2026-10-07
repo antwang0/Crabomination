@@ -400,3 +400,38 @@ fn cr_400_1_a_wrong_shape_answer_leaves_the_resolution_paused() {
     assert_eq!(g.players[0].life, life + 3);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "the spell finished resolving");
 }
+
+/// CR 603.2 — a cast trigger fires the moment the spell is cast, so a listener
+/// the same resolution destroys after casting still triggered: a "whenever you
+/// cast a spell, gain 2" creature sees the free cast before the sweep.
+#[test]
+fn cr_603_2_a_cast_listener_destroyed_later_in_the_resolution_saw_the_cast() {
+    use crabomination::card::{CardDefinition, CardType, TriggeredAbility};
+    use crabomination::effect::{EventKind, EventScope, EventSpec, Value};
+    let mut g = main_phase();
+    let watcher = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Cast Watcher",
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    });
+    let freebie = g.add_card_to_exile(0, CardDefinition {
+        name: "Freebie",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Noop,
+        ..Default::default()
+    });
+    let life = g.players[0].life;
+    let effect = Effect::Seq(vec![
+        Effect::CastExiledFree { what: Selector::ExactObjects(vec![freebie]) },
+        Effect::Destroy { what: Selector::ExactObjects(vec![watcher]) },
+    ]);
+    resolve(&mut g, watcher, None, &effect);
+    assert!(g.battlefield_find(watcher).is_none(), "destroyed");
+    assert_eq!(g.players[0].life, life + 2, "the cast was seen before the sweep");
+}

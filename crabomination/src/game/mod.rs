@@ -24217,10 +24217,11 @@ impl GameState {
         let scan = self.dispatch_board_scan();
         let dies_suppressed = scan.dies_suppressed;
         // CR 603.10a — creatures that died together see each other die.
-        candidates.extend(self.simultaneous_death_observer_candidates(events, dies_suppressed));
+        let mut once_spent: Vec<(CardId, usize)> = Vec::new();
+        candidates.extend(self.simultaneous_death_observer_candidates(events, dies_suppressed, &mut once_spent));
         // CR 603.2 — a listener this batch removed saw what happened while it
         // was still there (Soul Warden under Martial Coup).
-        candidates.extend(self.departed_listener_candidates(events));
+        candidates.extend(self.departed_listener_candidates(events, &mut once_spent));
         // Which permanents have lost their abilities (Turn to Frog,
         // Mercurial Transformation, Lignify) — printed triggered abilities
         // are skipped while a strip-abilities effect is in scope per CR
@@ -24836,7 +24837,7 @@ impl GameState {
         if freeze {
             self.freeze_layers_pop();
         }
-        for key in once_fired_this_batch.drain() {
+        for key in once_fired_this_batch.drain().chain(once_spent) {
             self.triggered_once_per_turn_used.insert(key);
         }
         for key in capped_fired_this_batch {

@@ -1059,3 +1059,70 @@ fn cr_608_2c_a_nested_step_keeps_the_resolutions_token() {
     let mite = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("the token");
     assert_eq!(g.computed_permanent(mite).unwrap().power, 3, "the third step still names the token");
 }
+
+/// A 1/1 with "whenever another creature `kind`s, you gain 1 life. This
+/// ability triggers only once each turn."
+fn once_each_turn_watcher(kind: crabomination::effect::EventKind) -> CardDefinition {
+    use crabomination::card::{CardType, TriggeredAbility};
+    use crabomination::effect::{Effect, EventScope, EventSpec, Selector, Value};
+    CardDefinition {
+        name: "Once Watcher",
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(kind, EventScope::AnotherOfYours).once_per_turn(),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+fn cast_martial_coup(g: &mut GameState) {
+    let coup = g.add_card_to_hand(0, catalog::martial_coup());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell { card_id: coup, target: None, additional_targets: vec![], mode: None, x_value: Some(5) })
+        .expect("cast Martial Coup for X=5");
+    drain_stack(g);
+}
+
+/// CR 603.2 / 603.3d — a once-each-turn listener the resolution removed saw the
+/// entries before it left, and fires once for them (it fired never: the
+/// departed pass skipped once-each-turn listeners).
+#[test]
+fn cr_603_3d_a_departed_once_each_turn_listener_fires_once() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, once_each_turn_watcher(crabomination::effect::EventKind::EntersBattlefield));
+    cast_martial_coup(&mut g);
+    assert_eq!(g.players[0].life, 21, "one fire for the five Soldiers");
+}
+
+/// CR 603.3d — and not at all once the turn's fire is spent.
+#[test]
+fn cr_603_3d_a_departed_once_each_turn_listener_respects_the_spent_fire() {
+    let mut g = main_phase();
+    let w = g.add_card_to_battlefield(0, once_each_turn_watcher(crabomination::effect::EventKind::EntersBattlefield));
+    g.triggered_once_per_turn_used.insert((w, 0));
+    cast_martial_coup(&mut g);
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// CR 603.10a / 603.3d — creatures that die together see each other die, but a
+/// once-each-turn death listener whose fire is spent stays quiet (the look-back
+/// pass ignored the turn's budget).
+#[test]
+fn cr_603_3d_a_simultaneous_death_observer_respects_the_spent_fire() {
+    let mut g = main_phase();
+    let w = g.add_card_to_battlefield(0, once_each_turn_watcher(crabomination::effect::EventKind::CreatureDied));
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.triggered_once_per_turn_used.insert((w, 0));
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell { card_id: wrath, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Wrath");
+    drain_stack(&mut g);
+    assert!(g.battlefield.is_empty());
+    assert_eq!(g.players[0].life, 20);
+}

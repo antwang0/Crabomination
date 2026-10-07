@@ -24,6 +24,7 @@ impl GameState {
         &self,
         events: &[GameEvent],
         dies_suppressed: bool,
+        once_spent: &mut Vec<(CardId, usize)>,
     ) -> Vec<TriggerCandidate> {
         let mut out: Vec<TriggerCandidate> = Vec::new();
         if dies_suppressed {
@@ -70,7 +71,7 @@ impl GameState {
             if snap.attached_to.is_some_and(|h| h != observer && died.contains(&h)) {
                 continue;
             }
-            for ta in &snap.definition.triggered_abilities {
+            for (idx, ta) in snap.definition.triggered_abilities.iter().enumerate() {
                 // Battlefield abilities only: a graveyard-functioning trigger
                 // (Nether Traitor) wasn't in the graveyard when the others
                 // died, and a command-zone one isn't a permanent's.
@@ -86,6 +87,11 @@ impl GameState {
                             | EventScope::FromYourGraveyardAnyPlayer
                     )
                 {
+                    continue;
+                }
+                // CR 603.3d — a once-each-turn fire already spent this turn.
+                let once_key = (observer, idx);
+                if ta.event.once_per_turn && self.triggered_once_per_turn_used.contains(&once_key) {
                     continue;
                 }
                 let fanout = events::event_kind_fans_out(&ta.event.kind)
@@ -132,6 +138,9 @@ impl GameState {
                         from_mana_ability: false,
                         actor: events::event_actor(self, ev),
                     });
+                    if ta.event.once_per_turn {
+                        once_spent.push(once_key);
+                    }
                     if !fanout {
                         break;
                     }
