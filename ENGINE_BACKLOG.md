@@ -117,7 +117,8 @@ the handoff.
 
 Strict debug sweeps at 410000-445000 (every deck in shuffled groups, 3..8
 seats, `baseline` and `--a dflt`, with and without concessions) and release
-censuses at 500000-550000 / 460000+ (`--a dflt`). Fixed, each with a
+censuses at 500000-550000 / 460000+ (`--a dflt`); fuzzed strict sweeps
+(`CRAB_POD_FUZZ` 1,000-5,000) at 481000-496000. Fixed, each with a
 CR-citing test:
 - ✅ **CR 608.2** — the stash class below (`run_effect` claim).
 - ✅ **CR 506.3a-c** — `put_into_combat_attacking` (every "enters attacking"
@@ -126,9 +127,13 @@ CR-citing test:
   entered under an opponent and stayed in the attack (7-seat seed 431005
   game 2, the CR 506.4 invariant;
   `multiplayer::cr_506_3b_a_copy_entering_under_an_opponent_is_never_attacking`).
-- Not taken: sequential deaths read as simultaneous. A `Seq` step is not a
-  sentence boundary (many one-sentence cards are spelled as a `Seq`), so no
-  boundary exists to split on; needs a per-sentence marker first.
+- ✅ **CR 400.1 / 608.2** — a wrong-shape answer to a paused RESOLUTION is
+  rejected and the ask re-posed; `perform_action`'s rejected-answer path
+  dropped it (right for a cast/activation replay, which has paid nothing),
+  deleting the spell held off-zone (Trap the Trespassers answered with a
+  mode; `cr_recent118::cr_400_1_a_wrong_shape_answer_*`). Found by the new
+  `CRAB_POD_FUZZ` (`pod/fuzz.rs`) at 5,000 / 10,000 in its first 8-seat
+  groups; five groups, one cause.
 
 ## FIXED/OPEN 2026-10-07 (sixth Commander routine) — strict sweeps at 200000-224000
 
