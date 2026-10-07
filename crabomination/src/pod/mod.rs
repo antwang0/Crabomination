@@ -9,6 +9,7 @@
 //! It is not on the 2-player throughput path and does not touch it.
 
 pub mod decks;
+mod fuzz;
 pub mod power;
 mod power_table;
 
@@ -1822,6 +1823,13 @@ fn play_pod_game(
 
     let mut bots: Vec<Box<dyn Bot>> =
         pilots.iter().take(g.players.len()).map(|p| p.build()).collect();
+    if let Some(rate) = fuzz::fuzz_rate() {
+        bots = bots
+            .into_iter()
+            .enumerate()
+            .map(|(i, b)| fuzz::FuzzBot::wrap(b, rate, seed ^ 0xF0CC_0000 ^ i as u64))
+            .collect();
+    }
     let (mut actions, mut plays, mut stale) = (0usize, 0usize, 0usize);
     let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
     let trace_from = pod_trace_from();
@@ -1947,10 +1955,6 @@ fn play_pod_game(
             g.pending_decision.as_ref().map(|pd| pd.acting_player()).unwrap_or(usize::MAX),
             g.pending_decision.as_ref().map(|pd| &pd.decision),
         );
-        // CR 903.9b — every pod seat answers the library redirect "yes", so a
-        // commander in a library and not waiting on its offer reached it past
-        // `resolve_zone_change` (an inline push the replacement never saw).
-        // Debug-only.
         // CR 400.1 — one object, one zone: the golden traces check this in
         // duels only, and a pod reaches far more cards. Debug-only.
         #[cfg(debug_assertions)]
@@ -2212,8 +2216,13 @@ fn play_pod_game(
                 );
             }
         }
+        // CR 903.9b — every pod seat answers the library redirect "yes", so a
+        // commander in a library and not waiting on its offer reached it past
+        // `resolve_zone_change` (an inline push the replacement never saw).
+        // Debug-only; off under fuzz, whose seats may decline (CR 903.9b allows it).
         #[cfg(debug_assertions)]
-        if let Some(c) = g
+        if fuzz::fuzz_rate().is_none()
+            && let Some(c) = g
             .players
             .iter()
             .flat_map(|p| p.library.iter())
