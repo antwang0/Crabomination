@@ -3274,6 +3274,26 @@ strict debug     after the close: --a dflt 290000-295999 6/8/7/4/5/6 seats
                  27f166a0d: 24,332 / 0 / 5; clippy 0
 ```
 
+### 2026-10-07 (Commander routine, sixth, late) — guardrail; both sweep gates read every standing loss
+
+Hot-path touch: the post-action and step-advance sweep gates call
+`GameState::a_seat_stands_on_a_loss` (life, deck-out, poison behind a
+`poison_counters > 0` prefilter, commander damage behind an `is_empty`)
+instead of the life / deck-out closure. `release`, 4-core Xeon @ 2.10 GHz.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism + thread determinism ok
+wall (--bench)   bench_ab.py vs 568f9a5e9 (which also differs by concurrent
+                 commits), two passes of 16 pairs: paired B/A median -1.96 % /
+                 -0.92 %, mean -1.28 % / +2.13 %, sd 6.55 / 7.21 — flat
+suite            24,337 / 0 / 5 (strict) at 74b48a1fd
+strict debug     CRAB_POD_FUZZ=2000-3000 360000-362999 4/6/2 seats (5,498):
+                 found the mulligan chain handing a departed seat its turn
+                 (360013) and the Golden Throne's unrepeated sweep (362051);
+                 --a dflt + CRAB_POD_FUZZ=1000 363000-364999 (771, clean)
+```
+
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved
 
 Hot-path touches: every damage event to a player folds into a per-player,

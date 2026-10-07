@@ -184,6 +184,17 @@ deck in `--pod-decks` groups, 3..8 seats, with and without
   merged pile (Talon Gates on mutated Otrimi, seed 221030); the CR 514.1
   hand-size check read the maximum after an "until end of turn" Body of
   Knowledge had lapsed (seed 234002).
+- ✅ **CR 800.4a / 103.5** — the mulligan chain handed a departed seat its
+  turn, and a seat leaving mid-decision dropped the chain (`CRAB_POD_FUZZ`,
+  seed 360013). `multiplayer::cr_800_4a_the_mulligans_skip_*`.
+- ✅ **CR 704.3 / 704.5u** — The Golden Throne's loss replacement reset
+  neither commander damage nor poison but pushed no event, so the sweep's
+  repeat stopped and a seat lived at 25 commander damage (seed 362051); and
+  the class behind it: both gated sweeps now read every standing loss
+  (`a_seat_stands_on_a_loss`). `multiplayer::cr_704_3_a_loss_the_golden_*`,
+  `cr_704_3_an_inert_action_sweeps_*`.
+- 📐 **`CRAB_POD_FUZZ` at 20-30 %** (`pod/fuzz.rs`, another session's) found
+  two in ~5,500 games after ~40,000 tuned-bot games had gone quiet.
 - 📐 **`--commander` without `--a` pilots the legacy `baseline` profile**;
   the default pilot (`--a dflt`) found the last two panics in ~1,700 strict
   games where `baseline` had run ~23,000 clean. Sweep both.
