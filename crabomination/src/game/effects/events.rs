@@ -221,7 +221,7 @@ fn event_payload_matches(
         }
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -229,6 +229,7 @@ fn event_payload_matches(
                 T::LifePaid => *life_paid > 0,
                 T::Exhaust => *exhaust,
                 T::Adapt => *adapt,
+                T::Ninjutsu => *ninjutsu,
             }
         }
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land, .. }) => {
@@ -386,7 +387,7 @@ fn reference_event_kind_matches(
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -394,6 +395,7 @@ fn reference_event_kind_matches(
                 T::LifePaid => *life_paid > 0,
                 T::Exhaust => *exhaust,
                 T::Adapt => *adapt,
+                T::Ninjutsu => *ninjutsu,
             }
         }
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
@@ -1853,11 +1855,11 @@ mod tests {
             E::LandPlayed { player: 0, card_id: c, played: true, from_hand: true },
             E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
             E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0 },
-            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, life_paid: 0 },
-            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, life_paid: 0 },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0 },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 2 },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false },
+            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, life_paid: 0, ninjutsu: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 2, ninjutsu: false },
             E::ManaAdded { player: 0, color: crate::mana::Color::Green, source: Some(c) },
             E::ColorlessManaAdded { player: 0, source: None },
             E::PermanentEntered { card_id: c },

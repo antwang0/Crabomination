@@ -2553,6 +2553,9 @@ pub enum StaticEffect {
     /// last in the noncombat funnel: the damaged player orders replacements,
     /// and after the doublers and bonuses is the order that deals least.
     RaiseRedNoncombatDamageToOpponentsToPower,
+    /// CR 702.49 — "each creature card in your hand has ninjutsu [cost]"
+    /// (Satoru Umezawa). Read by `GameState::hand_ninjutsu_cost`.
+    HandCreaturesHaveNinjutsu(crate::mana::ManaCost),
     /// "Instant and sorcery spells you control have deathtouch" (Pestilent
     /// Spirit, Tainted Strike-style). Read in `deal_damage_to_from`: damage a
     /// controller's resolving instant/sorcery deals to a creature is treated

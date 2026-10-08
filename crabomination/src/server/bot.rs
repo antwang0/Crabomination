@@ -20574,7 +20574,7 @@ fn pick_ninjutsu(state: &GameState, seat: usize) -> Option<GameAction> {
     let carriers: Vec<&crate::card::CardInstance> = state.players[seat]
         .hand
         .iter()
-        .filter(|c| c.definition.keywords.iter().any(|k| matches!(k, Keyword::Ninjutsu(_))))
+        .filter(|c| state.hand_ninjutsu_cost(seat, c).is_some())
         .chain(state.players[seat].command.iter().filter(|c| {
             c.definition.keywords.iter().any(|k| matches!(k, Keyword::CommanderNinjutsu(_)))
         }))

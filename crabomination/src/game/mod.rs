@@ -23190,7 +23190,7 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == ninja)
-            .and_then(|c| ninjutsu_cost(c, false))
+            .and_then(|c| self.hand_ninjutsu_cost(p, c))
             .or_else(|| {
                 self.players[p]
                     .command
@@ -23222,6 +23222,16 @@ impl GameState {
         self.pay_life_cost(p, receipt.side_effects.life_lost);
 
         let mut events = receipt.auto_events;
+        // CR 702.49a — ninjutsu is an activated ability.
+        events.push(GameEvent::AbilityActivated {
+            source: ninja,
+            exhaust: false,
+            adapt: false,
+            tap_cost: false,
+            sacrificed: false,
+            life_paid: 0,
+            ninjutsu: true,
+        });
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).
         let owner = self.find_card_owner(returning).unwrap_or(p);
@@ -23255,6 +23265,32 @@ impl GameState {
         // attacking — bypassing the declare-attackers timing/sickness gates.
         self.put_into_combat_attacking(ninja, atk.target);
         Ok(events)
+    }
+
+    /// CR 702.49 — the ninjutsu cost `card` (in `p`'s hand) can be activated
+    /// for: its own printed one, else one a `HandCreaturesHaveNinjutsu` static
+    /// of `p`'s grants a creature card (Satoru Umezawa); the cheaper if both.
+    pub fn hand_ninjutsu_cost(&self, p: usize, card: &crate::card::CardInstance) -> Option<crate::mana::ManaCost> {
+        let own = card.definition.keywords.iter().find_map(|kw| match kw {
+            Keyword::Ninjutsu(mc) => Some(mc.clone()),
+            _ => None,
+        });
+        let granted = if card.definition.is_creature() {
+            self.battlefield
+                .iter()
+                .filter(|s| s.controller == p)
+                .flat_map(|s| &s.definition.static_abilities)
+                .find_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::HandCreaturesHaveNinjutsu(mc) => Some(mc.clone()),
+                    _ => None,
+                })
+        } else {
+            None
+        };
+        match (own, granted) {
+            (Some(a), Some(b)) => Some(if b.cmc() < a.cmc() { b } else { a }),
+            (a, b) => a.or(b),
+        }
     }
 
     /// Walk the battlefield looking for triggered abilities whose `EventSpec`
@@ -33027,6 +33063,8 @@ fn static_effect_to_effects(
             | StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities
             // Read by `deal_damage_to_from`'s noncombat funnel.
             | StaticEffect::RaiseRedNoncombatDamageToOpponentsToPower
+            // Read by `hand_ninjutsu_cost`; no layer effect.
+            | StaticEffect::HandCreaturesHaveNinjutsu(_)
             // YourISSpellsHaveDeathtouch — read in `deal_damage_to_from`; no
             // layer effect.
             | StaticEffect::YourISSpellsHaveDeathtouch

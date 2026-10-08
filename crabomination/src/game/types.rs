@@ -2821,6 +2821,9 @@ pub enum GameEvent {
         /// was paid to activate it … pay that much life again"). The event's
         /// amount.
         life_paid: u32,
+        /// CR 702.49a — a ninjutsu ability (Satoru Umezawa's "whenever you
+        /// activate a ninjutsu ability"); `source` is the ninja.
+        ninjutsu: bool,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.

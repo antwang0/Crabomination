@@ -3898,6 +3898,8 @@ pub enum ActivationTrait {
     /// CR 702.108 — an adapt ability (Gyre Engineer), detected structurally
     /// from the activated ability's counter-check shape (`Effect::is_adapt`).
     Adapt,
+    /// CR 702.49 — a ninjutsu ability (Satoru Umezawa).
+    Ninjutsu,
 }
 
 /// The zones [`EventKind::CardExiledFrom`] distinguishes (a bitmask).

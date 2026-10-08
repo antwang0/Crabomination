@@ -22825,6 +22825,7 @@ impl GameState {
                     || ability.sac_all_matching_cost.is_some()
                     || ability.sac_any_number_filter.is_some(),
                 life_paid: life_spent,
+                ninjutsu: false,
             });
         }
 
