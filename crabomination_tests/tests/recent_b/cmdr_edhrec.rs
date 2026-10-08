@@ -1037,3 +1037,33 @@ fn gold_forged_thopteryx_wards_legends() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(will).is_some(), "ward countered the unpaid bolt");
 }
+
+/// Emiel: paying {G/W} as a creature enters puts a +1/+1 counter on it.
+#[test]
+fn emiel_pays_for_an_entering_counter() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::emiel_the_blessed());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, bear, None);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
+
+/// Misthollow Griffin is castable from exile.
+#[test]
+fn misthollow_griffin_casts_from_exile() {
+    let mut g = pod(2);
+    let griffin = g.add_card_to_hand(0, catalog::misthollow_griffin());
+    let card = g.players[0].hand.iter().position(|c| c.id == griffin).unwrap();
+    let c = g.players[0].hand.remove(card);
+    g.exile.push(c);
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventureCreature {
+        card_id: griffin, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("cast from exile");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(griffin).is_some());
+}

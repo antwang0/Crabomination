@@ -1673,3 +1673,64 @@ pub fn will_scion_of_peace() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Emiel the Blessed — {2}{W}{W} 4/4 Unicorn. {3}: blink another target
+/// creature you control. Whenever another creature you control enters, you
+/// may pay {G/W} for a +1/+1 counter on it (two if it's a Unicorn).
+pub fn emiel_the_blessed() -> CardDefinition {
+    use crate::card::CounterType;
+    let counters = |n: i32| Effect::AddCounter {
+        what: Selector::TriggerSource,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Emiel the Blessed",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Unicorn]),
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::ExileAndReturnToOwner {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::OtherThanSource) },
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {G/W} for a +1/+1 counter?".into(),
+                mana_cost: cost(&[hybrid(Color::Green, Color::White)]),
+                body: Box::new(Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Unicorn),
+                    },
+                    then: Box::new(counters(2)),
+                    else_: Box::new(counters(1)),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Misthollow Griffin — {2}{U}{U} 3/3 flying; may be cast from exile.
+pub fn misthollow_griffin() -> CardDefinition {
+    CardDefinition {
+        name: "Misthollow Griffin",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Griffin]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::ExileCast],
+        ..Default::default()
+    }
+}
