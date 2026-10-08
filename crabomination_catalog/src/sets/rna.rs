@@ -3634,6 +3634,7 @@ pub fn gate_colossus() -> CardDefinition {
 /// twelve cards.
 pub fn persistent_petitioners() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::sets::deck_may_have_copies(None)],
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),

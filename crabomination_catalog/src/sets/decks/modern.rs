@@ -35199,6 +35199,7 @@ pub fn splash_lasher() -> CardDefinition {
 /// Rabbit token for each other creature you control named Hare Apparent.
 pub fn hare_apparent() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::sets::deck_may_have_copies(None)],
         name: "Hare Apparent",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],

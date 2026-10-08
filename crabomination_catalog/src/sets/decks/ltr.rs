@@ -1774,6 +1774,7 @@ pub fn hobbits_sting() -> CardDefinition {
 pub fn nazgul() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
+        static_abilities: vec![crate::sets::deck_may_have_copies(Some(9))],
         name: "Nazgûl",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],

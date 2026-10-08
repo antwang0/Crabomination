@@ -1387,6 +1387,10 @@ pub enum StaticEffect {
     /// CR 100.2 — "Your minimum deck size is reduced by N" (Advantageous
     /// Proclamation). Read by `format::validate_full_deck`, not the game loop.
     ReduceMinimumDeckSize(u32),
+    /// CR 100.2a / 903.5b — "A deck can have any number of cards named ~"
+    /// (`None`: Relentless Rats, Hare Apparent) or "up to N" (`Some(N)`:
+    /// Seven Dwarves, Nazgûl). Read by `format`'s copy counts, not the game.
+    DeckMayHaveCopies(Option<u32>),
     /// "Your starting hand size is reduced by N" (Sovereign's Realm's five).
     StartingHandSizeReduced(u32),
     /// "Your starting deck can't have basic land cards" (Sovereign's Realm).

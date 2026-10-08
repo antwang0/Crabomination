@@ -102,6 +102,23 @@ fn basic_lands_are_unlimited() {
     assert!(validate_deck(&standard_deck, Format::Standard).is_ok());
 }
 
+/// CR 100.2a / 903.5b — "A deck can have any number of cards named Hare
+/// Apparent" lifts singleton; Nazgûl's "up to nine" caps at nine.
+#[test]
+fn cr_903_5b_any_number_and_up_to_n_cards() {
+    let mut deck = make_deck(catalog::forest, 79);
+    deck.extend(make_deck(catalog::hare_apparent, 21));
+    assert!(validate_deck(&deck, Format::Commander).is_ok());
+
+    let mut deck = make_deck(catalog::forest, 90);
+    deck.extend(make_deck(catalog::nazgul, 10));
+    let errs = validate_deck(&deck, Format::Commander).unwrap_err();
+    assert!(errs.iter().any(|e| matches!(e, DeckError::TooManyCopies { maximum: 9, found: 10, .. })));
+    deck.pop();
+    deck.push(catalog::forest());
+    assert!(validate_deck(&deck, Format::Commander).is_ok());
+}
+
 /// Banned cards are rejected per format; restricted cards cap at one copy.
 #[test]
 fn banlist_and_restricted_list_enforced() {

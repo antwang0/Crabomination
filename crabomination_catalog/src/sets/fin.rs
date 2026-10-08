@@ -1883,7 +1883,8 @@ pub fn cid_timeless_artificer() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Cycling(cost(&[w(), u()]))],
-        static_abilities: vec![StaticAbility {
+        static_abilities: vec![
+            crate::sets::deck_may_have_copies(None),StaticAbility {
             description: "Artifact creatures and Heroes you control get +1/+1 for each \
                           Artificer you control and each Artificer card in your graveyard.",
             effect: StaticEffect::PumpTeamByControlledPermanents {

@@ -585,3 +585,15 @@ pub fn tri_land(name: &'static str, a: Color, b: Color, c: Color) -> CardDefinit
         ..Default::default()
     }
 }
+
+/// CR 100.2a / 903.5b — "A deck can have any number of cards named ~"
+/// (`None`) or "up to N" (`Some(N)`).
+pub fn deck_may_have_copies(n: Option<u32>) -> StaticAbility {
+    StaticAbility {
+        description: match n {
+            None => "A deck can have any number of cards with this name.",
+            Some(_) => "A deck can have up to the printed number of cards with this name.",
+        },
+        effect: StaticEffect::DeckMayHaveCopies(n),
+    }
+}

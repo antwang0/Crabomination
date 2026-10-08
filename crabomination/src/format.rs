@@ -325,6 +325,19 @@ const BASIC_LANDS: &[&str] = &["Plains", "Island", "Swamp", "Mountain", "Forest"
                                 "Wastes", "Snow-Covered Plains", "Snow-Covered Island",
                                 "Snow-Covered Swamp", "Snow-Covered Mountain", "Snow-Covered Forest"];
 
+/// CR 100.2a / 903.5b — the most copies of `def` a deck may hold: the
+/// format's limit unless the card says otherwise (`u32::MAX` for "any
+/// number").
+fn copy_limit(def: &CardDefinition, format_max: u32) -> u32 {
+    def.static_abilities
+        .iter()
+        .find_map(|sa| match sa.effect {
+            crate::effect::StaticEffect::DeckMayHaveCopies(n) => Some(n.unwrap_or(u32::MAX)),
+            _ => None,
+        })
+        .unwrap_or(format_max)
+}
+
 fn is_basic_land(def: &CardDefinition) -> bool {
     // Prefer the supertype check; fall back to the name list for legacy definitions.
     if def.supertypes.contains(&Supertype::Basic) && def.is_land() {
@@ -365,19 +378,19 @@ pub fn validate_deck_refs(deck: &[&CardDefinition], format: Format) -> Result<()
     }
 
     // Count copies of each non-basic card.
-    let mut copy_counts: HashMap<&'static str, u32> = HashMap::default();
+    let mut copy_counts: HashMap<&'static str, (u32, u32)> = HashMap::default();
     for card in deck {
         if !is_basic_land(card) {
-            *copy_counts.entry(card.name).or_insert(0) += 1;
+            copy_counts.entry(card.name).or_insert((0, copy_limit(card, rules.max_copies))).0 += 1;
         }
     }
 
-    for (name, count) in &copy_counts {
-        if *count > rules.max_copies {
+    for (name, (count, max)) in &copy_counts {
+        if count > max {
             errors.push(DeckError::TooManyCopies {
                 card_name: name,
                 found: *count,
-                maximum: rules.max_copies,
+                maximum: *max,
             });
         }
     }
@@ -385,7 +398,7 @@ pub fn validate_deck_refs(deck: &[&CardDefinition], format: Format) -> Result<()
     // Ban / restricted lists.
     let banned = format.banned_cards();
     let restricted = format.restricted_cards();
-    for (name, count) in &copy_counts {
+    for (name, (count, _)) in &copy_counts {
         if banned.contains(name) {
             errors.push(DeckError::BannedCard { card_name: name });
         } else if *count > 1 && restricted.contains(name) {
@@ -451,25 +464,25 @@ pub fn validate_full_deck(deck: &Deck, format: Format) -> Result<(), Vec<DeckErr
     // already flagged main-only overruns, so only report names the combined
     // count pushes over that the main deck alone did not.
     let mut main_counts: HashMap<&'static str, u32> = HashMap::default();
-    let mut total_counts: HashMap<&'static str, u32> = HashMap::default();
+    let mut total_counts: HashMap<&'static str, (u32, u32)> = HashMap::default();
     for card in deck.main.iter().chain(deck.sideboard.iter()) {
         if is_basic_land(card) {
             continue;
         }
-        *total_counts.entry(card.name).or_insert(0) += 1;
+        total_counts.entry(card.name).or_insert((0, copy_limit(card, rules.max_copies))).0 += 1;
     }
     for card in &deck.main {
         if !is_basic_land(card) {
             *main_counts.entry(card.name).or_insert(0) += 1;
         }
     }
-    for (name, total) in &total_counts {
+    for (name, (total, max)) in &total_counts {
         let main = main_counts.get(name).copied().unwrap_or(0);
-        if *total > rules.max_copies && main <= rules.max_copies {
+        if total > max && main <= *max {
             errors.push(DeckError::TooManyCopies {
                 card_name: name,
                 found: *total,
-                maximum: rules.max_copies,
+                maximum: *max,
             });
         }
     }

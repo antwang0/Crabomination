@@ -214,7 +214,8 @@ pub fn nim_grotesque() -> CardDefinition {
 /// Relentless Rats — every other Rat of the same name pumps it.
 pub fn relentless_rats() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![StaticAbility {
+        static_abilities: vec![
+            crate::sets::deck_may_have_copies(None),StaticAbility {
             description: "Gets +1/+1 for each other Relentless Rats",
             effect: StaticEffect::PumpSelfByValue {
                 amount: Value::CountOf(Box::new(Selector::EachPermanent(

@@ -230,6 +230,7 @@ pub fn vineglimmer_snarl() -> CardDefinition {
 /// card onto the battlefield (search auto-shuffles).
 pub fn dragons_approach() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::sets::deck_may_have_copies(None)],
         name: "Dragon's Approach",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],

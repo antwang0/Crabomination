@@ -2871,6 +2871,7 @@ pub fn sultai_devotee() -> CardDefinition {
 /// may search for a card named Tempest Hawk and put it into your hand.
 pub fn tempest_hawk() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![crate::sets::deck_may_have_copies(None)],
         name: "Tempest Hawk",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],

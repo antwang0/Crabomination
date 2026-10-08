@@ -503,6 +503,7 @@ pub fn slime_against_humanity() -> CardDefinition {
         ..Default::default()
     };
     CardDefinition {
+        static_abilities: vec![crate::sets::deck_may_have_copies(None)],
         name: "Slime Against Humanity",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
