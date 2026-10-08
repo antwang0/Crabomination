@@ -400,3 +400,24 @@ fn a_bounced_melded_commander_can_go_home() {
     assert!(g.players[0].command.iter().any(|c| c.id == gisela), "Gisela took the replacement");
     assert!(g.players[0].hand.iter().any(|c| c.id == bruna), "Bruna went to hand");
 }
+
+/// CR 701.37 / 400.7 — meld exiles both halves, so each is a new object:
+/// a tapped half comes back out of a bounced Brisela untapped (a Gisela did
+/// not, pod seed 818500).
+#[test]
+fn cr_400_7_a_melded_half_comes_back_untapped() {
+    let mut g = main_phase(2);
+    let gisela = g.add_card_to_battlefield(0, catalog::gisela_the_broken_blade());
+    let bruna = g.add_card_to_battlefield(0, catalog::bruna_the_fading_light());
+    g.battlefield_find_mut(bruna).unwrap().tapped = true;
+    to_end_step(&mut g);
+    let brisela = melded(&g).expect("melded");
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bounce = g.add_card_to_hand(0, catalog::unsummon());
+    cast(&mut g, bounce, Some(Target::Permanent(brisela)));
+    for id in [gisela, bruna] {
+        assert!(g.players[0].hand.iter().find(|c| c.id == id).is_some_and(|c| !c.tapped), "{id:?} untapped in hand");
+    }
+}

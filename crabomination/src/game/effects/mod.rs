@@ -18651,7 +18651,7 @@ impl GameState {
                 // then stash them inside the new melded object.
                 let mut parts = Vec::new();
                 for id in [source, partner_id] {
-                    let Some(card) = self.battlefield.take_by_id(id) else {
+                    let Some(mut card) = self.battlefield.take_by_id(id) else {
                         continue;
                     };
                     self.remove_effects_from_source(id);
@@ -18659,6 +18659,11 @@ impl GameState {
                     events.push(GameEvent::PermanentExiled { card_id: id });
                     self.note_left_without_dying(&card, events);
                     self.on_left_battlefield(id, events);
+                    // CR 400.7 — exiled, each half is a new object: a tapped
+                    // Gisela came back out of a bounced Brisela tapped.
+                    card.tapped = false;
+                    card.leave_battlefield_state();
+                    card.drop_counters_for_zone_change(crate::card::Zone::Exile);
                     parts.push(card);
                 }
                 if parts.len() != 2 {
