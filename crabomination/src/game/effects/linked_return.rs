@@ -30,17 +30,13 @@ impl GameState {
             controller: ctx.controller,
             source,
             kind: DelayedKind::WhenCardLeavesBattlefield(watched),
-            effect: Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: SelectionRequirement::InExile },
-                then: Box::new(Effect::Move {
-                    what: Selector::Target(0),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                        tapped: false,
-                    },
-                }),
-                else_: Box::new(Effect::Noop),
-            },
+            effect: exiled_card_only(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            }),
             target: Some(Target::Permanent(source)),
             bound_token: None,
             bound_subject: None,
@@ -48,5 +44,18 @@ impl GameState {
             expires_after_turn: None,
         });
         Ok(())
+    }
+}
+
+/// CR 400.7 — a delayed "return it from exile" finds the card only while it
+/// is still in exile; one that left (a commander gone home) is a new object.
+pub(super) fn exiled_card_only(body: Effect) -> Effect {
+    Effect::If {
+        cond: Predicate::EntityMatches {
+            what: Selector::Target(0),
+            filter: SelectionRequirement::InExile,
+        },
+        then: Box::new(body),
+        else_: Box::new(Effect::Noop),
     }
 }

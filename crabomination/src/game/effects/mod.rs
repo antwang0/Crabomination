@@ -15078,17 +15078,24 @@ impl GameState {
                     } else {
                         CounterType::PlusOnePlusOne
                     };
-                    let body = Effect::Seq(vec![
+                    // "Under its owner's control", and only while the card is
+                    // still in exile (CR 400.7): a commander that went home in
+                    // between took the counter in the command zone (pod seed
+                    // 818238, the CR 400.7 invariant).
+                    let body = linked_return::exiled_card_only(Effect::Seq(vec![
                         Effect::Move {
                             what: Selector::Target(0),
-                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                tapped: false,
+                            },
                         },
                         Effect::AddCounter {
                             what: Selector::Target(0),
                             kind: counter_kind,
                             amount: crate::effect::Value::Const(1),
                         },
-                    ]);
+                    ]));
                     self.delayed_triggers.push(DelayedTrigger {
                         controller: ctx.controller,
                         source,
@@ -15117,13 +15124,13 @@ impl GameState {
                         controller: ctx.controller,
                         source,
                         kind: DelayedKind::YourNextUpkeep,
-                        effect: Effect::Move {
+                        effect: linked_return::exiled_card_only(Effect::Move {
                             what: Selector::Target(0),
                             to: ZoneDest::Battlefield {
                                 controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                                 tapped: false,
                             },
-                        },
+                        }),
                         target: Some(Target::Permanent(cid)),
                         bound_token: None,
                         bound_subject: None,
@@ -15151,13 +15158,13 @@ impl GameState {
                         controller: ctx.controller,
                         source,
                         kind: DelayedKind::NextEndStep,
-                        effect: Effect::Move {
+                        effect: linked_return::exiled_card_only(Effect::Move {
                             what: Selector::Target(0),
                             to: ZoneDest::Battlefield {
                                 controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                                 tapped: *tapped,
                             },
-                        },
+                        }),
                         target: Some(Target::Permanent(cid)),
                         bound_token: None,
                         bound_subject: None,
@@ -45668,3 +45675,4 @@ pub(crate) fn for_trigger_event(state: &GameState, effect: &Effect, ev: &GameEve
     fix(&mut out, kind, crate::game::effects::events::counter_placer(state, ev));
     out
 }
+

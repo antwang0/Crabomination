@@ -742,3 +742,53 @@ fn cr_903_9a_a_face_down_exiled_commander_goes_home_face_up() {
     let home = g.players[0].command.iter().find(|c| c.id == cmd).expect("home");
     assert!(!home.face_down, "face up in the command zone");
 }
+
+fn cast_semesters_end(g: &mut GameState, target: crabomination::card::CardId) {
+    let id = g.add_card_to_hand(0, catalog::semesters_end());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 4);
+    g.perform_action(crabomination::game::types::GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(g);
+}
+
+fn to_end_step(g: &mut GameState) {
+    while g.step != TurnStep::End {
+        g.perform_action(crabomination::game::types::GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(g);
+}
+
+/// CR 400.7 / 903.9a — Semester's End exiles a commander, which goes home;
+/// at the end step its delayed return finds nothing in exile. It used to put
+/// the "additional counter" on the card in the command zone (pod seed 818238).
+#[test]
+fn cr_400_7_semesters_end_leaves_a_commander_that_went_home_alone() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    cast_semesters_end(&mut g, cmd);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd), "home under CR 903.9a");
+    to_end_step(&mut g);
+    let home = g.players[0].command.iter().find(|c| c.id == cmd).expect("still home");
+    assert!(home.counters.is_empty(), "no counter on the new object");
+    assert!(g.battlefield_find(cmd).is_none());
+}
+
+/// Semester's End returns each card "under its owner's control" — a stolen
+/// creature comes back to its owner, with its +1/+1 counter.
+#[test]
+fn semesters_end_returns_a_stolen_creature_to_its_owner() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().controller = 0;
+    cast_semesters_end(&mut g, bear);
+    to_end_step(&mut g);
+    let back = g.battlefield_find(bear).expect("returned");
+    assert_eq!(back.controller, 1, "its owner's control");
+    assert_eq!(back.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
