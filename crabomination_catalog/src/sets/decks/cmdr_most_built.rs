@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, if_discarded, magecraft, target_filtered, with_copies};
 use crate::effect::{Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, r, u, x, Color, ManaCost};
 use crabomination_base::tokens::treasure_token;
 use std::sync::Arc;
 
@@ -769,6 +769,142 @@ pub fn virtue_of_courage() -> CardDefinition {
                 }),
             },
         }],
+        ..Default::default()
+    }
+}
+
+// ── Rowan, Scion of War (BR) ────────────────────────────────────────────────
+
+fn black_or_red() -> R {
+    R::HasColor(Color::Black).or(R::HasColor(Color::Red))
+}
+
+/// Rowan, Scion of War — menace; {T}: black and/or red spells you cast this
+/// turn cost {X} less, X the life you lost this turn as it resolves
+/// (2023-09-01 rulings). Sorcery speed.
+pub fn rowan_scion_of_war() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::SpellsCostLessThisTurnByValue {
+                filter: black_or_red(),
+                amount: Value::TotalLifeLostThisTurn(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Rowan, Scion of War",
+            cost(&[generic(1), b(), r()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            4,
+            2,
+        )
+    }
+}
+
+/// Vilis, Broker of Blood — flying; {B}, pay 2 life: target creature gets
+/// -1/-1; whenever you lose life, draw that many cards.
+pub fn vilis_broker_of_blood() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            life_cost: 2,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeLost, EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        ..legend("Vilis, Broker of Blood", cost(&[generic(5), b(), b(), b()]), vec![CreatureType::Demon], 8, 8)
+    }
+}
+
+/// March of Wretched Sorrow — {X}{B}: X damage to target creature or
+/// planeswalker and you gain X life. (The optional "exile black cards from
+/// your hand, {2} less each" additional cost is omitted.)
+pub fn march_of_wretched_sorrow() -> CardDefinition {
+    CardDefinition {
+        name: "March of Wretched Sorrow",
+        cost: cost(&[x(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(R::Creature.or(R::HasCardType(CardType::Planeswalker))),
+                amount: Value::XFromCost,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Battle at the Bridge — {X}{B} sorcery with improvise: target creature
+/// gets -X/-X and you gain X life.
+pub fn battle_at_the_bridge() -> CardDefinition {
+    CardDefinition {
+        name: "Battle at the Bridge",
+        cost: cost(&[x(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Improvise],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Negate(Box::new(Value::XFromCost)),
+                toughness: Value::Negate(Box::new(Value::XFromCost)),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Inspired Tinkering — exile your top three to play until the end of your
+/// next turn, and create three Treasures.
+pub fn inspired_tinkering() -> CardDefinition {
+    CardDefinition {
+        name: "Inspired Tinkering",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: Arc::new(treasure_token()) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Peer into the Abyss — target player draws half their library and loses
+/// half their life, each rounded up (2020-06-23 rulings).
+pub fn peer_into_the_abyss() -> CardDefinition {
+    CardDefinition {
+        name: "Peer into the Abyss",
+        cost: cost(&[generic(4), b(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: target_filtered(R::Player),
+                amount: Value::HalfLibrarySizeRoundedUp(PlayerRef::Target(0)),
+            },
+            Effect::LoseHalfLife { who: Selector::Player(PlayerRef::Target(0)), rounded_up: true },
+        ]),
         ..Default::default()
     }
 }

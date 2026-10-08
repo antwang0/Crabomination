@@ -539,3 +539,88 @@ fn virtue_of_courage_impulses_the_damage_dealt() {
     shock_player(&mut g, 1);
     assert_eq!(g.exile.iter().filter(|c| c.owner == 0 && c.may_play_until.is_some()).count(), 2);
 }
+
+/// Rowan — X is the life you lost this turn, fixed as the ability resolves;
+/// only black and/or red spells get the discount, and only on generic mana.
+#[test]
+fn rowan_discounts_black_and_red_spells_by_life_lost() {
+    let mut g = pod(2);
+    let rowan = ready(&mut g, 0, catalog::rowan_scion_of_war());
+    g.adjust_life(0, -3);
+    g.players[0].life_lost_this_turn = 3;
+    activate(&mut g, rowan, 0);
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let tink = g.add_card_to_hand(0, catalog::inspired_tinkering());
+    cast_at(&mut g, tink, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 3, "{{4}}{{R}} less 3");
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.players[0].mana_pool.empty();
+    g.priority.player_with_priority = 0;
+    assert!(g
+        .perform_action(GameAction::CastSpell { card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .is_err(), "a colorless spell keeps its {{2}}");
+}
+
+/// Vilis — losing 3 life draws 3.
+#[test]
+fn vilis_draws_for_life_lost() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::vilis_broker_of_blood());
+    let hand = g.players[0].hand.len();
+    shock_player_from(&mut g, 1, 0);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+fn shock_player_from(g: &mut GameState, caster: usize, seat: usize) {
+    let shock = g.add_card_to_hand(caster, catalog::shock());
+    g.players[caster].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = caster;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock,
+        target: Some(crabomination::game::types::Target::Player(seat)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("shock");
+    drain_stack(g);
+}
+
+/// Erebos's Intervention's second mode exiles up to twice X TARGET graveyard
+/// cards (the printed targets; the catalog read it as a resolution pick).
+#[test]
+fn erebos_s_intervention_exiles_twice_x_cards() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::erebos_s_intervention());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: Some(1),
+        x_value: Some(1),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b));
+}
+
+/// Peer into the Abyss — half the library and half the life, rounded up.
+#[test]
+fn peer_into_the_abyss_rounds_up() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    g.players[0].life = 7;
+    let peer = g.add_card_to_hand(0, catalog::peer_into_the_abyss());
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, peer, Some(Target::Player(0)));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 5, "10 cards: draw 5");
+    assert_eq!(g.players[0].life, 3, "7 life: lose 4");
+}
+

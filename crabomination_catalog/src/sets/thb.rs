@@ -4719,10 +4719,16 @@ pub fn erebos_s_intervention() -> CardDefinition {
                     amount: Value::XFromCost,
                 },
             ]),
-            Effect::ExileUpToNFromGraveyards {
-                count: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
-                of: None,
-                single: false,
+            // "Up to twice X target cards": targets, chosen on cast and capped
+            // at 2X slots (`slot_past_x_cap`).
+            Effect::CapTargetsAt {
+                amount: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(2))),
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 40,
+                    min_targets: 0,
+                    filter: SelectionRequirement::InGraveyard,
+                    effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+                }),
             },
         ]),
         ..Default::default()
