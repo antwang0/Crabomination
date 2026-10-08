@@ -551,3 +551,40 @@ fn the_sick_wall_of_roots_pair_passes_the_gate_audit() {
     assert!(t.winner.is_some(), "not decided after {} lines, turn {}", t.lines.len(), t.turns);
 }
 
+
+/// Fixed-seed Commander pods, pinned across processes the way
+/// [`DIGESTS`] pins the duels: the in-process replay test
+/// (`pod::tests::a_seeded_pod_game_replays_identically`) cannot see a
+/// `HashMap` order or an unseeded draw that differs per process, and a pod's
+/// seat walks, APNAP orders and fan-outs are the new places for one. Each row
+/// is (seats, seed, winner, actions, plays, turns); a change that moves a pod
+/// game updates the row in the same commit, with a one-line justification.
+const POD_DIGESTS: &[(usize, u64, Option<usize>, usize, usize, u32)] = &[
+    (3, 0x903_0001, Some(0), 1730, 238, 50),
+    (4, 0x903_0002, Some(2), 3780, 416, 76),
+];
+
+#[test]
+fn seeded_commander_pods_match_their_digests() {
+    use crabomination::pod::{build_pod_template, play_one_pod_game, pod_field};
+    use crabomination::recommend::Pilot;
+    let mut rows = Vec::new();
+    let mut bad = Vec::new();
+    let runs: &[(usize, u64)] = &[(3, 0x903_0001), (4, 0x903_0002)];
+    for &(seats, seed) in runs {
+        let t = build_pod_template(&pod_field(seats));
+        let o = play_one_pod_game(&t, &vec![Pilot::default(); seats], seats.max(4) * 1_000, seed);
+        let row = (seats, seed, o.winner, o.actions, o.plays, o.turns);
+        rows.push(format!("    ({seats}, {seed:#x}, {:?}, {}, {}, {}),", o.winner, o.actions, o.plays, o.turns));
+        if !POD_DIGESTS.contains(&row) {
+            bad.push(seed);
+        }
+    }
+    if !bad.is_empty() {
+        panic!(
+            "pod seeds {bad:x?} drifted. Current values (paste into POD_DIGESTS, with a \
+             one-line justification in the commit):\n{}",
+            rows.join("\n")
+        );
+    }
+}
