@@ -1204,3 +1204,44 @@ fn dreadmaws_ire_breaks_an_artifact() {
     assert_eq!(life - g.players[1].life, 4);
     assert!(g.battlefield_find(rock).is_none(), "Ornithopter destroyed");
 }
+
+/// Khenra Spellspear transforms (sorcery speed) into a 3/3 whose two
+/// prowess instances each trigger on one noncreature spell.
+#[test]
+fn khenra_spellspear_transforms_into_double_prowess() {
+    let mut g = pod(2);
+    let jackal = ready(&mut g, 0, catalog::khenra_spellspear());
+    flood(&mut g);
+    activate(&mut g, jackal, None);
+    let cp = g.computed_permanent(jackal).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "Gitaxian Spellstalker");
+    let wisps = g.add_card_to_hand(0, catalog::cerulean_wisps());
+    cast(&mut g, wisps, Some(Target::Permanent(jackal)));
+    assert_eq!(g.computed_permanent(jackal).unwrap().power, 5, "two prowess triggers");
+}
+
+/// Vraska, Soul of Stone: a noncreature spell makes a 1/1 Sculpture
+/// Treasure creature, which has vigilance.
+#[test]
+fn vraska_soul_of_stone_makes_sculptures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::vraska_soul_of_stone());
+    let wisps = g.add_card_to_hand(0, catalog::cerulean_wisps());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, wisps, Some(Target::Permanent(bear)));
+    let s = g.battlefield.iter().find(|c| c.definition.name == "Sculpture").expect("Sculpture").id;
+    assert!(g.computed_permanent(s).unwrap().keywords().contains(&crabomination::card::Keyword::Vigilance));
+}
+
+/// See the Truth from hand: one of three to hand.
+#[test]
+fn see_the_truth_takes_one_from_hand() {
+    let mut g = pod(2);
+    let spell = g.add_card_to_hand(0, catalog::see_the_truth());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let (hand, lib) = (g.players[0].hand.len(), g.players[0].library.len());
+    cast(&mut g, spell, None);
+    assert_eq!(g.players[0].hand.len(), hand);
+    assert_eq!(g.players[0].library.len(), lib - 1);
+}

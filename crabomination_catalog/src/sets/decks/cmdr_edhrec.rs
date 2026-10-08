@@ -1968,3 +1968,106 @@ pub fn angelfire_ignition() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Khenra Spellspear // Gitaxian Spellstalker — {1}{R} 2/2 trample,
+/// prowess; {3}{U/P} (sorcery speed): transform into a 3/3 trample, ward
+/// {2} with two instances of prowess (each triggers, CR 702.108b).
+pub fn khenra_spellspear() -> CardDefinition {
+    use crate::card::WardCost;
+    use crate::effect::shortcut::prowess;
+    use crate::mana::phyrexian;
+    let stalker = CardDefinition {
+        name: "Gitaxian Spellstalker",
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Jackal]),
+        color_indicator: vec![Color::Blue, Color::Red],
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample, Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))), Keyword::Prowess],
+        // Two printed prowess instances: explicit pumps, each its own trigger.
+        triggered_abilities: vec![prowess(), prowess()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Khenra Spellspear",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Jackal, CreatureType::Warrior]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample, Keyword::Prowess],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), phyrexian(Color::Blue)]),
+            sorcery_speed: true,
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(stalker)),
+        ..Default::default()
+    }
+}
+
+/// Vraska, Soul of Stone — {U}{R}{W} 3/3. Artifact creatures you control
+/// have vigilance; each noncreature spell you cast makes a 1/1 Sculpture
+/// Treasure artifact creature.
+pub fn vraska_soul_of_stone() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, StaticAbility, StaticEffect};
+    let mut sculpture = crabomination_base::tokens::treasure_token();
+    sculpture.name = "Sculpture".into();
+    sculpture.power = 1;
+    sculpture.toughness = 1;
+    sculpture.card_types = vec![CardType::Artifact, CardType::Creature];
+    sculpture.subtypes = Subtypes {
+        artifact_subtypes: vec![ArtifactSubtype::Treasure],
+        creature_types: vec![CreatureType::Sculpture],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Vraska, Soul of Stone",
+        cost: cost(&[u(), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Gorgon, CreatureType::Wizard]),
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Artifact creatures you control have vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Artifact.and(R::Creature).and(R::ControlledByYou)),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCardType(CardType::Creature).negate(),
+            }),
+            effect: mint(sculpture, Value::ONE),
+        }],
+        ..Default::default()
+    }
+}
+
+/// See the Truth — {1}{U} Sorcery. Look at the top three; one to hand, the
+/// rest on the bottom — all three to hand if it wasn't cast from your hand.
+pub fn see_the_truth() -> CardDefinition {
+    CardDefinition {
+        name: "See the Truth",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::CastFromHand,
+            then: Box::new(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                ..Default::default()
+            }))),
+            // Put into hand, not drawn (no draw triggers).
+            else_: Box::new(Effect::Move {
+                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(3) },
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
+        ..Default::default()
+    }
+}
