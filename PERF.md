@@ -3134,6 +3134,47 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-08 (Commander routine, ninth — session `01NdGdpR`) — guardrail; audit-build sweeps, seated asks, CR 613.7d / 704.3
+
+Hot-path touches: every battlefield entry takes a timestamp at entry as well
+as at the dispatch (`next_timestamp`, one counter bump); the layer pass's
+`CardMatch` arm checks `definition.room` per permanent; `run_effect`'s stash
+branch also runs for wrappers (only while a stash is pending). `release` at
+`82f5dd2d7`, 4-core Xeon @ 2.80 GHz; base `7452783ed` (the run's start) built
+in a separate worktree and target dir.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (base reads the same); determinism ok (all pairs split);
+                 peak_rss 28.4-30.7 MiB; games_per_s, ten single reads
+                 204-281 (median ~262)
+paired A/B       scripts/bench_ab.py base vs tip, 16 pairs: median +1.04 %,
+                 mean -0.51 %, sd 8.27 — flat
+final tip        e2436f5f8 (+ CR 704.3 sweep gate, stuck diag): --bench
+                 196,176 / 27.64 / 613.0 byte-identical, determinism ok;
+                 paired vs base, 16 pairs: median -0.82 %, mean +0.31 %, sd 6.32
+sweep 7          850000 (dflt, concede 10, fuzz 2500) on the final engine:
+                 224 / 224 groups clean, no draws
+2-player pools   base vs tip, seeds 830001-2 x 1,000, cube / sos / sealed:
+                 68,000 games, outcome counts identical; then, after the CR
+                 704.3 fix, cube 830002: 8 stuck -> 0 (5 draws left);
+                 CRAB_LADDER_FUZZ=2500 dflt x 200 (5,000) and =3000 uniform x
+                 300 (7,500) on the audit build: 0 panics, 2 draws
+release pods     --a dflt, seeds 820004/6/8 x 600 at 4/6/8 seats: 1,800 / 1,800
+                 decided; turns/game 63.25 / 83.53 / 122.19; 4 seats identical
+                 to the base binary (12.25 vs 12.14 games/s)
+audit sweeps     overflow + debug-assertions, every deck in shuffled groups
+                 3..8 seats x 30, strict answer log, sweep probe: seeds 710000
+                 (dflt, fuzz 2500), 720000 (uniform, concede 10), 740000
+                 (dflt, concede 10), 760000 (uniform, concede 20, fuzz 3000),
+                 780000 (dflt, concede 15, fuzz 4000), 790000 (baseline,
+                 concede 10, fuzz 3000) — ~40,000 games, 8 finds (ENGINE_BACKLOG
+                 "ninth Commander run"), then three clean sweeps
+suite            24,351 / 0 / 5 (CRAB_ANSWER_LOG=strict); the precon-seats pod
+                 test 734 s (its seeded games' trajectories moved with the bot
+                 fixes); workspace clippy 0
+```
+
 ### 2026-10-07 (Commander routine, eighth — session `019mKDqk`) — guardrail; CR 608.2c sequential deaths, strive slots, CR 122.6 persist counters
 
 Hot-path touches: `Seq` and the modal arms read `events.len()` per step and
