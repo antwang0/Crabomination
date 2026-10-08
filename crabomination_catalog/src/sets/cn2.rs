@@ -511,6 +511,7 @@ pub fn splitting_slime() -> CardDefinition {
                 extra_keywords: vec![],
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
         )],
         ..creature("Splitting Slime", cost(&[generic(3), g(), g()]), vec![CreatureType::Ooze], 3, 3)
@@ -929,6 +930,7 @@ pub fn daretti_ingenious_iconoclast() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 ..Default::default()
             },

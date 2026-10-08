@@ -105,6 +105,7 @@ pub fn cleaver_skaab() -> CardDefinition {
                 extra_keywords: vec![],
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
             ..Default::default()
         }],
@@ -378,6 +379,7 @@ pub fn hour_of_eternity() -> CardDefinition {
                         extra_keywords: vec![],
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                     Effect::SetCopiableCreatureTypes {
                         what: Selector::LastCreatedToken,

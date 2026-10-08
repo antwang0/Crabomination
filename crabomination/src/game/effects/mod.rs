@@ -5183,6 +5183,7 @@ impl GameState {
                         legendary: false,
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                     ctx,
                     events,
@@ -6019,6 +6020,7 @@ impl GameState {
                         extra_keywords: vec![crate::card::Keyword::Haste],
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                     ctx,
                     events,
@@ -22679,6 +22681,7 @@ impl GameState {
                                 extra_keywords: vec![],
                                 no_mana_cost: false,
                                 enters_with_counters: None,
+                                remove_keywords: vec![],
                             },
                             &EffectContext {
                                 controller: p,
@@ -23087,6 +23090,7 @@ impl GameState {
                 extra_keywords,
                 no_mana_cost,
                 enters_with_counters,
+                remove_keywords,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let base = self.evaluate_value(count, ctx).max(0) as u32;
@@ -23184,6 +23188,9 @@ impl GameState {
                         def.keywords.push(kw.clone());
                     }
                 }
+                if !remove_keywords.is_empty() {
+                    def.keywords.retain(|k| !remove_keywords.contains(k));
+                }
                 // One allocation for the whole batch; the mint takes
                 // `Into<Arc<_>>`, so `clone` below is a refcount bump.
                 let def: std::sync::Arc<crate::card::CardDefinition> = std::sync::Arc::from(def);
@@ -23234,6 +23241,7 @@ impl GameState {
                             legendary: false,
                             no_mana_cost: false,
                             enters_with_counters: None,
+                            remove_keywords: vec![],
                         },
                         &sub,
                         events,
@@ -31507,6 +31515,7 @@ impl GameState {
                             extra_keywords: vec![],
                             no_mana_cost: false,
                             enters_with_counters: None,
+                            remove_keywords: vec![],
                         },
                         &sub,
                         events,

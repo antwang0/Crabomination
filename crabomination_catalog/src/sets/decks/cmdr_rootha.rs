@@ -80,6 +80,7 @@ fn token_copy_of(source: Selector, enters_tapped: bool) -> Effect {
         extra_keywords: vec![],
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     }
 }
 

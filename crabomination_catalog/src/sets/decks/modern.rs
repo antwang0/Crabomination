@@ -12463,6 +12463,7 @@ pub fn saheeli_rai() -> CardDefinition {
                 legendary: false,
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
             Effect::GrantKeyword {
                 what: Selector::LastCreatedToken,
@@ -22940,6 +22941,7 @@ pub fn esikas_chariot() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
             },
         ],
@@ -27094,6 +27096,7 @@ pub fn helm_of_the_host() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -28816,6 +28819,7 @@ pub fn followed_footsteps() -> CardDefinition {
                 legendary: false,
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
         }],
         ..Default::default()
@@ -38072,6 +38076,7 @@ pub fn kiki_jiki_mirror_breaker() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -44381,6 +44386,7 @@ pub fn stolen_identity() -> CardDefinition {
                 legendary: false,
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
             Effect::Cipher,
         ]),
@@ -47820,6 +47826,7 @@ pub fn reflection_of_kiki_jiki() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -50144,6 +50151,7 @@ pub fn splinter_twin() -> CardDefinition {
                             legendary: false,
                             no_mana_cost: false,
                             enters_with_counters: None,
+                            remove_keywords: vec![],
                         },
                         Effect::GrantKeyword {
                             what: Selector::LastCreatedToken,
@@ -52147,6 +52155,7 @@ pub fn scute_swarm() -> CardDefinition {
                 legendary: false,
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
@@ -52243,6 +52252,7 @@ pub fn pack_rat() -> CardDefinition {
                 legendary: false,
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
             ..Default::default()
         }],
@@ -52584,6 +52594,7 @@ pub fn ocelot_pride() -> CardDefinition {
                                     legendary: false,
                                     no_mana_cost: false,
                                     enters_with_counters: None,
+                                    remove_keywords: vec![],
                                 }),
                             }),
                             else_: Box::new(Effect::Noop),
@@ -55250,6 +55261,7 @@ pub fn springheart_nantuko() -> CardDefinition {
                         enters_tapped: false,
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     }),
                     else_: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
@@ -56690,6 +56702,7 @@ pub fn fractured_identity() -> CardDefinition {
                 legendary: false,
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
                 }),
             },
             Effect::Exile {
@@ -58599,6 +58612,7 @@ pub fn tempt_with_reflections() -> CardDefinition {
                 legendary: false,
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             }),
         },
         ..Default::default()
@@ -63134,6 +63148,7 @@ pub fn mythos_of_illuna() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::If {
                     cond: Predicate::All(vec![

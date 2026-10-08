@@ -398,6 +398,7 @@ pub fn genestealer_patriarch() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
             },
         ],

@@ -476,6 +476,7 @@ pub fn redoubled_stormsinger() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 }),
             },
             Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::LastCreatedTokens },

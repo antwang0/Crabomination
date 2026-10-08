@@ -1328,6 +1328,7 @@ pub fn dance_of_many() -> CardDefinition {
                         legendary: false,
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                     Effect::RememberPermanentOnSource { what: Selector::LastCreatedToken },
                 ]),

@@ -1049,6 +1049,7 @@ pub fn squad_etb() -> TriggeredAbility {
         legendary: false,
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     })
 }
 
@@ -3200,6 +3201,7 @@ fn embalm_like(
             legendary: false,
             no_mana_cost: true,
             enters_with_counters: None,
+            remove_keywords: vec![],
         },
         ..Default::default()
     }
@@ -3443,6 +3445,7 @@ pub fn token_copy_of(who: PlayerRef, count: Value, source: Selector) -> Effect {
         extra_keywords: vec![],
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     }
 }
 

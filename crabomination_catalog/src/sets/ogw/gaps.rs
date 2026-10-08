@@ -170,6 +170,7 @@ pub fn mirrorpool() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 ..Default::default()
             },

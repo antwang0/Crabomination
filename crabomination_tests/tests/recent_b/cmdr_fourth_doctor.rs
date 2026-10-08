@@ -496,6 +496,7 @@ fn curse_of_fenric_ii_name_is_not_copiable() {
         extra_keywords: vec![],
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     };
     g.resolve_effect(&copy, &EffectContext::for_ability(src, 0, None)).expect("copy");
     let tok = g.battlefield.iter().find(|c| c.is_token && c.controller == 0).expect("the copy");

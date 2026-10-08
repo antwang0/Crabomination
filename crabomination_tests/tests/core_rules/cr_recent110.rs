@@ -661,6 +661,7 @@ fn cr_707_2_a_token_copy_skips_a_permanent_keyword_grant() {
         legendary: false,
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     };
     g.resolve_effect(&copy, &ctx).expect("token copy");
     let token = g.battlefield.iter().find(|c| c.is_token).expect("a token").id;

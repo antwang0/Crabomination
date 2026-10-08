@@ -3644,6 +3644,7 @@ pub fn relms_sketching() -> CardDefinition {
             legendary: false,
             no_mana_cost: false,
             enters_with_counters: None,
+            remove_keywords: vec![],
         },
         ..Default::default()
     }
@@ -6262,6 +6263,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
             ]),
         }],
@@ -9716,6 +9718,7 @@ pub fn firion_wild_rose_warrior() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::ReduceEquipCost {
                     what: Selector::LastCreatedToken,

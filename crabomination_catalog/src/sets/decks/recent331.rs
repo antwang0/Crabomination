@@ -354,6 +354,7 @@ pub fn miirym_sentinel_wyrm() -> CardDefinition {
                 extra_keywords: Vec::new(),
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
         }],
         ..Default::default()

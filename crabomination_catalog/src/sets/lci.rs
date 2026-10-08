@@ -3443,6 +3443,7 @@ pub fn self_reflection() -> CardDefinition {
             legendary: false,
             no_mana_cost: false,
             enters_with_counters: None,
+            remove_keywords: vec![],
         },
         ..Default::default()
     }

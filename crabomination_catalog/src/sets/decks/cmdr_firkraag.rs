@@ -109,6 +109,7 @@ pub fn artificer_class() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
             },
         ],
@@ -139,6 +140,7 @@ pub fn astral_dragon() -> CardDefinition {
             extra_keywords: vec![Keyword::Flying],
             no_mana_cost: false,
             enters_with_counters: None,
+            remove_keywords: vec![],
         })],
         ..creature("Astral Dragon", cost(&[generic(6), u(), u()]), vec![CreatureType::Dragon], 4, 4)
     }

@@ -841,6 +841,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
                         legendary: false,
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                     // "When that token leaves the battlefield, return the exiled
                     // card to its owner's graveyard."

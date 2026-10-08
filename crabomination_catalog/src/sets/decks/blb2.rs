@@ -179,6 +179,7 @@ pub fn the_jolly_balloon_man() -> CardDefinition {
                     extra_keywords: vec![Keyword::Flying, Keyword::Haste],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,
             ]),

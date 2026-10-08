@@ -375,6 +375,7 @@ pub fn haunting_imitation() -> CardDefinition {
                     extra_keywords: vec![Keyword::Flying],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 }),
             }),
             else_: Box::new(Effect::ReturnResolvingSpellToHand),

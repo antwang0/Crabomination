@@ -158,6 +158,7 @@ fn copy_your_creature(extra_keywords: Vec<Keyword>) -> Effect {
         extra_keywords,
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     }
 }
 

@@ -418,6 +418,7 @@ pub fn schema_thief() -> CardDefinition {
                 extra_keywords: vec![],
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             },
         }],
         ..creature(
@@ -454,6 +455,7 @@ pub fn skyclave_relic() -> CardDefinition {
                 extra_keywords: vec![],
                 no_mana_cost: false,
                 enters_with_counters: None,
+                remove_keywords: vec![],
             }),
             else_: Box::new(Effect::Noop),
         })],

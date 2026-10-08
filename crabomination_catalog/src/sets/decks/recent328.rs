@@ -131,6 +131,7 @@ pub fn season_of_weaving() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::Move {
                     what: Selector::EachPermanent(R::Nonland.and(R::NotToken)),

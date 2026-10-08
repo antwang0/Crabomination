@@ -9310,6 +9310,10 @@ pub enum Effect {
         /// the copy never exists without it.
         #[serde(default)]
         enters_with_counters: Option<(crate::card::CounterType, Value)>,
+        /// Keywords the copy loses ("except it has haste and loses soulbond" —
+        /// Mirage Phalanx), stripped before it enters.
+        #[serde(default)]
+        remove_keywords: Vec<crate::card::Keyword>,
     },
     /// CR 707.9b — a copy exception written into the copiable values of each
     /// permanent `what` names, so a copy of it carries it too: "except its

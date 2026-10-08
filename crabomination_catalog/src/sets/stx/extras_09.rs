@@ -1800,6 +1800,7 @@ pub fn lorehold_tomb_robber() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 // ...except it has haste.
                 Effect::GrantKeyword {

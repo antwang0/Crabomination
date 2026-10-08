@@ -447,6 +447,7 @@ pub fn littjara_mirrorlake() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+                    remove_keywords: vec![],
                 },
                 ..Default::default()
             },

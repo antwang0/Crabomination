@@ -1193,6 +1193,7 @@ pub fn abyssal_harvester() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
             ]),
             ..Default::default()
@@ -1291,6 +1292,7 @@ pub fn endless_evil() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
             },
             TriggeredAbility {

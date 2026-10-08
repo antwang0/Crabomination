@@ -889,6 +889,7 @@ pub fn the_eleventh_hour() -> CardDefinition {
                         extra_keywords: vec![],
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                     Effect::SetCopiableNameAndTypes {
                         what: Selector::LastCreatedToken,
@@ -1209,6 +1210,7 @@ pub fn wedding_ring() -> CardDefinition {
                         extra_keywords: vec![],
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                 ]),
             },

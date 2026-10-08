@@ -3531,6 +3531,7 @@ fn cr_707_2_token_copy_enters_tapped() {
         legendary: false,
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     }, &ctx).unwrap();
     let token = g.battlefield.iter().find(|c| c.is_token && c.id != src)
         .expect("token copy minted");

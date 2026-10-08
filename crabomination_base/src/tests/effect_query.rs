@@ -80,6 +80,7 @@ fn targeted_effects_carry_slot_filters() {
             legendary: false,
             no_mana_cost: false,
             enters_with_counters: None,
+            remove_keywords: vec![],
         },
     ];
     for e in &cases {

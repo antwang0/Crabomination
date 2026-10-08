@@ -692,6 +692,7 @@ pub fn tempestra_dame_of_games() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -1146,6 +1147,7 @@ pub fn here_comes_a_new_hero() -> CardDefinition {
                     legendary: false,
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
             ])),
         },

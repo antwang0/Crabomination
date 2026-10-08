@@ -212,6 +212,7 @@ pub fn gruff_triplets() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 }),
                 else_: Box::new(Effect::Noop),
             }),

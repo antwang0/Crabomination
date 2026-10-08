@@ -145,6 +145,7 @@ pub fn ashling_the_limitless() -> CardDefinition {
                     extra_keywords: vec![],
                     no_mana_cost: false,
                     enters_with_counters: None,
+                    remove_keywords: vec![],
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,

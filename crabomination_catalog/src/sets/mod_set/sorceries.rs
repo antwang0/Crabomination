@@ -1479,6 +1479,7 @@ pub fn rite_of_replication() -> CardDefinition {
         legendary: false,
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     };
     CardDefinition {
         name: "Rite of Replication",

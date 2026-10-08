@@ -138,6 +138,7 @@ pub fn brenard_ginger_sculptor() -> CardDefinition {
                         extra_keywords: vec![],
                         no_mana_cost: false,
                         enters_with_counters: None,
+                        remove_keywords: vec![],
                     },
                     Effect::StampTokenCopyExceptions {
                         artifact_subtypes: vec![ArtifactSubtype::Food],
