@@ -882,3 +882,16 @@ fn cr_716_a_destroyed_class_has_no_level_in_the_graveyard() {
     let gy = g.players[0].graveyard.iter().find(|c| c.id == class).expect("destroyed");
     assert_eq!(gy.class_level, 0);
 }
+
+/// CR 702.95e — a paired creature that leaves the battlefield is unpaired: a
+/// bounced Cathodion kept its soulbond link in hand (pod seed 818500).
+#[test]
+fn cr_702_95e_a_bounced_partner_is_unpaired() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().soulbond_partner = Some(b);
+    g.battlefield_find_mut(b).unwrap().soulbond_partner = Some(a);
+    resolve(&mut g, a, None, &Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) });
+    assert_eq!(g.players[0].hand.iter().find(|c| c.id == a).expect("bounced").soulbond_partner, None);
+}

@@ -11716,6 +11716,11 @@ impl CardInstance {
         if self.class_level != 0 {
             self.class_level = 0;
         }
+        // CR 702.95e — leaving unpairs it (the SBA clears the partner's side);
+        // a bounced Cathodion kept its link in hand.
+        if self.soulbond_partner.is_some() {
+            self.soulbond_partner = None;
+        }
     }
 
     /// CR 122.2 — counters cease to exist as the object changes zones, unless
