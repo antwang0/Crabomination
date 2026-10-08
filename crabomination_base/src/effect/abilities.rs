@@ -1367,6 +1367,10 @@ pub enum StaticEffect {
     /// relaxes the cost's coloured pips to generic for every seat while any
     /// source of this static is on the battlefield.
     PlayersMaySpendManaAsAnyColor,
+    /// CR 609.4b, controller-scoped — "You may spend mana as though it were
+    /// mana of any color" (Chromatic Orrery): every spell and ability its
+    /// controller pays for.
+    YouMaySpendManaAsAnyColor,
     /// CR 609.4b, name-restricted — "You may spend mana as though it were mana
     /// of any color to cast spells with the chosen name" (Unexpected
     /// Potential). Reads the source's `named_card`; a face-down hidden agenda

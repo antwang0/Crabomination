@@ -17431,6 +17431,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
             let mine = p.controller == seat;
             fused_relax |= p.definition.static_abilities.iter().any(|sa| match sa.effect {
                 StaticEffect::PlayersMaySpendManaAsAnyColor => true,
+                StaticEffect::YouMaySpendManaAsAnyColor => mine,
                 StaticEffect::MaySpendManaAsAnyColorForNamedSpells
                 | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
                     mine && !p.face_down

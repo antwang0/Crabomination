@@ -11265,10 +11265,11 @@ impl GameState {
         }
         self.battlefield.has_any_color_static()
             && self.battlefield.iter().any(|src| {
-                src.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::PlayersMaySpendManaAsAnyColor))
+                src.definition.static_abilities.iter().any(|sa| match sa.effect {
+                    StaticEffect::PlayersMaySpendManaAsAnyColor => true,
+                    StaticEffect::YouMaySpendManaAsAnyColor => seat == Some(src.controller),
+                    _ => false,
+                })
             })
     }
 
@@ -11318,6 +11319,7 @@ impl GameState {
             let mine = seat.is_some_and(|s| c.controller == s && !c.face_down);
             c.definition.static_abilities.iter().any(|sa| match sa.effect {
                 StaticEffect::PlayersMaySpendManaAsAnyColor => true,
+                StaticEffect::YouMaySpendManaAsAnyColor => mine,
                 StaticEffect::MaySpendManaAsAnyColorForNamedSpells => {
                     mine && kind.name.zip(c.named_card.as_deref()).is_some_and(|(k, n)| crate::card::name_has(k, n))
                 }
@@ -11366,7 +11368,8 @@ impl GameState {
         let mine = c.controller == seat && !c.face_down;
         c.definition.static_abilities.iter().any(|sa| match sa.effect {
             StaticEffect::PlayersMaySpendManaAsAnyColor => true,
-            StaticEffect::MaySpendManaAsAnyColorForNamedSpells
+            StaticEffect::YouMaySpendManaAsAnyColor
+            | StaticEffect::MaySpendManaAsAnyColorForNamedSpells
             | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => mine,
             _ => false,
         })
@@ -32933,6 +32936,7 @@ fn static_effect_to_effects(
             // PlayersMaySpendManaAsAnyColor — read by the payment funnel via
             // `relax_cost_colors` (Mycosynth Lattice); no layer effect.
             | StaticEffect::PlayersMaySpendManaAsAnyColor
+            | StaticEffect::YouMaySpendManaAsAnyColor
             | StaticEffect::MaySpendManaAsAnyColorForNamedSpells
             | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv
             | StaticEffect::GrantsAllNonlegendaryCreatureNames

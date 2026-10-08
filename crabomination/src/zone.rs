@@ -811,6 +811,7 @@ fn card_has_any_color_static(c: &CardInstance) -> bool {
         matches!(
             sa.effect,
             S::PlayersMaySpendManaAsAnyColor
+                | S::YouMaySpendManaAsAnyColor
                 | S::MaySpendManaAsAnyColorForNamedSpells
                 | S::MaySpendManaAsAnyColorForCreaturesWithChosenMv
         )
