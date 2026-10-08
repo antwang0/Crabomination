@@ -795,3 +795,99 @@ fn tor_wauki_the_younger_adds_one_to_other_noncombat() {
     cast(&mut g, bolt, Some(Target::Player(1)));
     assert_eq!(life - g.players[1].life, 4 + 2, "bolt 3+1, trigger 2");
 }
+
+/// Linvala, Keeper of Silence locks an opponent's creature ability.
+#[test]
+fn linvala_keeper_of_silence_locks_opposing_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::linvala_keeper_of_silence());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    g.priority.player_with_priority = 1;
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: elf,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(r.is_err(), "Elves' mana ability is locked");
+}
+
+/// Jin-Gitaxias counters an opponent's first instant each turn, but only
+/// the first (CR 603.3d — triggers only once each turn).
+#[test]
+fn jin_gitaxias_counters_only_the_first_opposing_instant() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::jin_gitaxias_progress_tyrant());
+    let life = g.players[0].life;
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("bolt");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, life - 3, "first bolt countered, second hits");
+}
+
+/// Jin-Gitaxias copies your first sorcery each turn.
+#[test]
+fn jin_gitaxias_copies_your_first_sorcery() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::jin_gitaxias_progress_tyrant());
+    let spell = g.add_card_to_hand(0, catalog::gelatinous_genesis());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(1) })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Ooze"), 2, "the copy keeps X = 1 (CR 707.10)");
+}
+
+/// Phylath makes a Plant per basic land, and landfall grows a Plant by four.
+#[test]
+fn phylath_plants_and_grows() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let phylath = g.add_card_to_hand(0, catalog::phylath_world_sculptor());
+    flood(&mut g);
+    cast(&mut g, phylath, None);
+    let plants: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Plant").map(|c| c.id).collect();
+    assert_eq!(plants.len(), 3);
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    assert!(plants.iter().any(|&p| g.computed_permanent(p).unwrap().power == 4));
+}
+
+/// Nissa, Vital Force's +1 animates a land into a 5/5 haste Elemental.
+#[test]
+fn nissa_vital_force_animates_a_land() {
+    let mut g = pod(2);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let nissa = ready(&mut g, 0, catalog::nissa_vital_force());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: nissa, ability_index: 0, target: Some(Target::Permanent(land)), x_value: None })
+        .expect("+1");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+}
+
+/// Cerulean Wisps untaps and draws.
+#[test]
+fn cerulean_wisps_untaps_and_draws() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let wisps = g.add_card_to_hand(0, catalog::cerulean_wisps());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, wisps, Some(Target::Permanent(bear)));
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+    assert_eq!(g.players[0].hand.len(), hand);
+}

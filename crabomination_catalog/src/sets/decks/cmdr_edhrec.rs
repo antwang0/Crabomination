@@ -1218,3 +1218,172 @@ pub fn tor_wauki_the_younger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Linvala, Keeper of Silence — {2}{W}{W} 3/4 flying. Activated abilities of
+/// creatures your opponents control can't be activated.
+pub fn linvala_keeper_of_silence() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Linvala, Keeper of Silence",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Angel]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of creatures your opponents control can't be activated.",
+            effect: StaticEffect::OpponentsCreatureAbilitiesLocked,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Jin-Gitaxias, Progress Tyrant — {5}{U}{U} 5/5. Once each turn, copy your
+/// artifact, instant, or sorcery spell (a permanent copy becomes a token,
+/// CR 707.10f); once each turn, counter an opponent's.
+pub fn jin_gitaxias_progress_tyrant() -> CardDefinition {
+    let ais = || {
+        Predicate::CastSpellMatches(
+            R::HasCardType(CardType::Artifact)
+                .or(R::HasCardType(CardType::Instant))
+                .or(R::HasCardType(CardType::Sorcery)),
+        )
+    };
+    CardDefinition {
+        name: "Jin-Gitaxias, Progress Tyrant",
+        cost: cost(&[generic(5), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Praetor]),
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(ais()).once_per_turn(),
+                effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(ais()).once_per_turn(),
+                effect: Effect::CounterSpell { what: Selector::TriggerSource },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Cerulean Wisps — {U} Instant. Target creature becomes blue until end of
+/// turn; untap it. Draw a card.
+pub fn cerulean_wisps() -> CardDefinition {
+    CardDefinition {
+        name: "Cerulean Wisps",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::BecomeColor {
+                what: target_filtered(R::Creature),
+                colors: vec![Color::Blue],
+                duration: Duration::EndOfTurn,
+                additive: false,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Phylath, World Sculptor — {4}{R}{G} 5/5. ETB: a 0/1 Plant per basic land
+/// you control; landfall: four +1/+1 counters on target Plant you control.
+pub fn phylath_world_sculptor() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::landfall;
+    CardDefinition {
+        name: "Phylath, World Sculptor",
+        cost: cost(&[generic(4), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elemental]),
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountOf(Box::new(Selector::EachPermanent(
+                    R::Land.and(R::HasSupertype(Supertype::Basic)).and(R::ControlledByYou),
+                ))),
+                definition: Arc::new(TokenDefinition {
+                    name: "Plant".into(),
+                    power: 0,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: creature_types(vec![CreatureType::Plant]),
+                    ..Default::default()
+                }),
+            }),
+            landfall(Effect::AddCounter {
+                what: target_filtered(R::HasCreatureType(CreatureType::Plant).and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nissa, Vital Force — {3}{G}{G}, loyalty 5. +1: untap target land you
+/// control; until your next turn it's a 5/5 Elemental with haste. −3: return
+/// a permanent card from your graveyard to hand. −6: emblem "whenever a land
+/// you control enters, you may draw a card."
+pub fn nissa_vital_force() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Nissa, Vital Force",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Nissa], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Untap { what: target_filtered(R::Land.and(R::ControlledByYou)), up_to: None },
+                    Effect::BecomeCreature {
+                        what: Selector::Target(0),
+                        power: Value::Const(5),
+                        toughness: Value::Const(5),
+                        creature_types: vec![CreatureType::Elemental],
+                        keywords: vec![Keyword::Haste],
+                        duration: Duration::UntilNextTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Move {
+                    what: target_filtered(R::Permanent.and(R::InYourGraveyard)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Nissa, Vital Force".into(),
+                    triggered: vec![crate::effect::shortcut::landfall(Effect::MayDo {
+                        description: "Draw a card?".into(),
+                        body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    })],
+                    statics: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
