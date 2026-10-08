@@ -910,3 +910,99 @@ fn bot_activates_volos_targeted_draw() {
     let a = HeuristicBot::new().next_action(&g, 0);
     assert!(matches!(a, Some(GameAction::ActivateAbility { card_id, target: Some(_), .. }) if card_id == volo), "{a:?}");
 }
+
+/// CR 701.55 — Dr. Eggman's end step: a draw, then the opponent either
+/// discards or lets a Robot out of Eggman's hand.
+#[test]
+fn dr_eggman_draws_then_offers_a_villainous_choice() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::dr_eggman());
+    g.add_card_to_hand(0, catalog::ultron_machine_overlord());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    let deployed = named(&g, "Ultron, Machine Overlord") == 1;
+    let discarded = g.players[1].hand.is_empty();
+    assert!(deployed != discarded, "exactly one option ran");
+    assert_eq!(g.players[0].hand.len(), if deployed { 1 } else { 2 }, "drew one");
+}
+
+/// Blitzwing, Cruel Tormentor doubles an opponent's life lost this turn; with
+/// none lost it converts to its Vehicle face.
+#[test]
+fn blitzwing_repeats_life_loss_or_converts() {
+    let mut g = pod(2);
+    let blitz = ready(&mut g, 0, catalog::blitzwing_cruel_tormentor());
+    g.players[1].life -= 3;
+    g.players[1].life_lost_this_turn = 3;
+    let life = g.players[1].life;
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    assert!(!g.battlefield_find(blitz).unwrap().transformed);
+
+    let mut g = pod(2);
+    let blitz = ready(&mut g, 0, catalog::blitzwing_cruel_tormentor());
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blitz).unwrap().transformed, "no life lost: converted");
+}
+
+/// Cityscape Leveler's cast trigger destroys a nonland permanent and hands
+/// its controller a tapped Powerstone.
+#[test]
+fn cityscape_leveler_cast_trigger_levels_and_pays_a_powerstone() {
+    let mut g = pod(2);
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    flood(&mut g);
+    let lev = g.add_card_to_hand(0, catalog::cityscape_leveler());
+    cast_at(&mut g, lev, None);
+    assert!(g.battlefield_find(ring).is_none());
+    let stone = g.battlefield.iter().find(|c| c.definition.name == "Powerstone").expect("powerstone");
+    assert!(stone.controller == 1 && stone.tapped);
+}
+
+/// Krang lends its keywords to other artifact creatures; Ultron, Machine
+/// Overlord pumps other Robots and Constructs.
+#[test]
+fn krang_and_ultron_overlord_lords() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::krang_utrom_warlord());
+    ready(&mut g, 0, catalog::ultron_machine_overlord());
+    let mite = ready(&mut g, 0, catalog::memnite());
+    let cp = g.computed_permanent(mite).unwrap();
+    assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::Haste));
+    assert_eq!((cp.power, cp.toughness), (3, 3), "Memnite is a Construct");
+}
+
+/// Ultron, Artificial Malevolence copies an entering artifact for {2}; a
+/// noncreature copy is a 2/2 Robot Villain.
+#[test]
+fn ultron_copies_an_artifact_as_a_robot() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ultron_artificial_malevolence());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast_at(&mut g, ring, None);
+    let copy = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Sol Ring").expect("copy").id;
+    let cp = g.computed_permanent(copy).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+}
+
+/// CR 700.6 — Desynchronization bounces only the non-historic nonland
+/// permanents.
+#[test]
+fn desynchronization_spares_historic_permanents() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let ultron = ready(&mut g, 1, catalog::ultron_machine_overlord());
+    flood(&mut g);
+    let d = g.add_card_to_hand(0, catalog::desynchronization());
+    cast_at(&mut g, d, None);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(ring).is_some() && g.battlefield_find(ultron).is_some());
+}

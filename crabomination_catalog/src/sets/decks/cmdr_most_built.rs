@@ -1407,3 +1407,290 @@ pub fn dutiful_replicator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Dr. Eggman (BRU) ────────────────────────────────────────────────────────
+
+fn robot_types() -> crate::card::Subtypes {
+    crate::card::Subtypes { creature_types: vec![CreatureType::Robot, CreatureType::Villain], ..Default::default() }
+}
+
+/// Dr. Eggman — flying; at your end step draw, then each opponent discards or
+/// lets you put a Construct, Robot, or Vehicle card from your hand onto the
+/// battlefield (CR 701.55 villainous choice).
+pub fn dr_eggman() -> CardDefinition {
+    let me = PlayerRef::ControllerOf(Box::new(Selector::This));
+    let deploy = Effect::EachPlayerDoes {
+        who: me,
+        body: Box::new(Effect::MayDo {
+            description: "Put a Construct, Robot, or Vehicle card from your hand onto the battlefield?".into(),
+            body: Box::new(Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Construct)
+                    .or(R::HasCreatureType(CreatureType::Robot))
+                    .or(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Vehicle)),
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+                return_eot: false,
+                then: None,
+            }),
+        }),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::VillainousChoice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    option_a: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+                    option_b: Box::new(deploy),
+                },
+            ]),
+        }],
+        ..legend(
+            "Dr. Eggman",
+            cost(&[generic(2), u(), b(), r()]),
+            vec![CreatureType::Human, CreatureType::Scientist],
+            3,
+            6,
+        )
+    }
+}
+
+/// Blitzwing, Adaptive Assailant — living metal; flying or indestructible at
+/// random each of your combats; converts after it connects.
+pub fn blitzwing_adaptive_assailant() -> CardDefinition {
+    CardDefinition {
+        name: "Blitzwing, Adaptive Assailant",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        color_indicator: vec![Color::Black],
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::LivingMetal],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+                effect: Effect::ChooseModeAtRandom(
+                    [Keyword::Flying, Keyword::Indestructible]
+                        .into_iter()
+                        .map(|keyword| Effect::GrantKeyword {
+                            what: Selector::This,
+                            keyword,
+                            duration: crate::effect::Duration::EndOfTurn,
+                        })
+                        .collect(),
+                ),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Transform { what: Selector::This },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Blitzwing, Cruel Tormentor — at your end step target opponent loses the
+/// life they lost this turn again; with none lost, it converts.
+pub fn blitzwing_cruel_tormentor() -> CardDefinition {
+    let lost = || Value::LifeLostThisTurn(PlayerRef::Target(0));
+    CardDefinition {
+        name: "Blitzwing, Cruel Tormentor",
+        cost: cost(&[generic(5), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(3), b()]),
+            converted: true,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(lost(), Value::ONE),
+                then: Box::new(Effect::LoseLife { who: target_filtered(R::OpponentPlayer), amount: lost() }),
+                else_: Box::new(Effect::Transform { what: Selector::This }),
+            },
+        }],
+        back_face: Some(Box::new(blitzwing_adaptive_assailant())),
+        ..Default::default()
+    }
+}
+
+/// Cityscape Leveler — cast and attack triggers destroy up to one nonland
+/// permanent, whose controller gets a tapped Powerstone; unearth {8}.
+pub fn cityscape_leveler() -> CardDefinition {
+    let level = || Effect::ApplyToTargets {
+        max_targets: 1,
+        min_targets: 0,
+        filter: R::Nonland,
+        effect: Box::new(Effect::DestroyThenVictimControllersMakeToken {
+            what: Selector::Target(0),
+            definition: Arc::new(crate::card::TokenDefinition {
+                tapped: true,
+                ..crabomination_base::tokens::powerstone_token()
+            }),
+            no_regen: false,
+        }),
+    };
+    CardDefinition {
+        name: "Cityscape Leveler",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            crate::effect::shortcut::on_cast(level()),
+            crate::effect::shortcut::on_attack(level()),
+        ],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(8)]))],
+        ..Default::default()
+    }
+}
+
+/// Krang, Utrom Warlord — a 9/9 that gives its four keywords to your other
+/// artifact creatures.
+pub fn krang_utrom_warlord() -> CardDefinition {
+    let keywords = vec![Keyword::Flying, Keyword::Trample, Keyword::Indestructible, Keyword::Haste];
+    CardDefinition {
+        name: "Krang, Utrom Warlord",
+        cost: cost(&[generic(9)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Utrom, CreatureType::Robot],
+            ..Default::default()
+        },
+        power: 9,
+        toughness: 9,
+        keywords: keywords.clone(),
+        static_abilities: vec![StaticAbility {
+            description: "Other artifact creatures you control have flying, trample, indestructible, and haste.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Artifact.and(R::Creature).and(R::ControlledByYou).and(R::OtherThanSource),
+                power: 0,
+                toughness: 0,
+                keywords,
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ultron, Artificial Malevolence — another nontoken artifact of yours
+/// entering may be copied for {2}; a noncreature copy is a 2/2 Robot Villain.
+pub fn ultron_artificial_malevolence() -> CardDefinition {
+    let animated = Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        source: Selector::TriggerSource,
+        extra_creature_types: vec![CreatureType::Robot, CreatureType::Villain],
+        extra_card_types: vec![CardType::Creature],
+        override_pt: Some((2, 2)),
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: false,
+        legendary: false,
+        extra_keywords: vec![],
+        no_mana_cost: false,
+        enters_with_counters: None,
+        remove_keywords: vec![],
+    };
+    CardDefinition {
+        name: "Ultron, Artificial Malevolence",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: robot_types(),
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.and(R::NotToken) },
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {2} to copy that artifact?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                    then: Box::new(crate::effect::shortcut::token_copy_of(
+                        PlayerRef::You,
+                        Value::ONE,
+                        Selector::TriggerSource,
+                    )),
+                    else_: Box::new(animated),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ultron, Machine Overlord — flying; other Robots and Constructs you control
+/// get +2/+2.
+pub fn ultron_machine_overlord() -> CardDefinition {
+    CardDefinition {
+        name: "Ultron, Machine Overlord",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: robot_types(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Other Robots and Constructs you control get +2/+2.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::HasCreatureType(CreatureType::Robot)
+                    .or(R::HasCreatureType(CreatureType::Construct))
+                    .and(R::Creature)
+                    .and(R::ControlledByYou)
+                    .and(R::OtherThanSource),
+                power: 2,
+                toughness: 2,
+                keywords: vec![],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Desynchronization — bounce every nonland permanent that isn't historic
+/// (CR 700.6: artifacts, legendaries and Sagas are).
+pub fn desynchronization() -> CardDefinition {
+    let historic = R::Artifact
+        .or(R::HasSupertype(Supertype::Legendary))
+        .or(R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Saga));
+    CardDefinition {
+        name: "Desynchronization",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: Selector::EachPermanent(R::Nonland.and(R::Not(Box::new(historic)))),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
+        ..Default::default()
+    }
+}
