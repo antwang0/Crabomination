@@ -432,6 +432,7 @@ fn yannik_prompting_controller_picks_and_divides() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     });
     let _ = g.resolve_top_of_stack();
     assert_eq!(g.pending_decision.as_ref().expect("the exile pick").acting_player(), 0);

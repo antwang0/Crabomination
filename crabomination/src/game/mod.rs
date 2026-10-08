@@ -27628,7 +27628,7 @@ impl GameState {
                 self.continue_trigger_resolution_with_source_into(
                     source, controller, remaining, target, mode, x_value, converged_value,
                     mana_spent, trigger_source_ent, event_amount, trigger_player,
-                    additional_targets, true, &mut evs,
+                    additional_targets, 0, true, &mut evs,
                 )?;
                 let suspended_again = self.pending_decision.is_some();
                 // The Master, Multiplied's shield, armed by the first pass.
@@ -30413,6 +30413,8 @@ impl GameState {
         additional_targets: Vec<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut events = Vec::new();
+        // Resolving straight away: the board now is the board it targeted.
+        let bf_slots = self.battlefield_target_slots(target.as_ref(), &additional_targets);
         self.continue_trigger_resolution_with_source_into(
             source,
             controller,
@@ -30426,6 +30428,7 @@ impl GameState {
             event_amount,
             trigger_player,
             additional_targets,
+            bf_slots,
             false,
             &mut events,
         )?;
@@ -30453,7 +30456,7 @@ impl GameState {
         source: CardId,
         controller: usize,
         effect: crate::effect::Effect,
-        target: Option<Target>,
+        mut target: Option<Target>,
         mode: usize,
         x_value: u32,
         converged_value: u32,
@@ -30461,7 +30464,9 @@ impl GameState {
         trigger_source_ent: Option<crate::game::effects::EntityRef>,
         event_amount: u32,
         trigger_player: Option<usize>,
-        additional_targets: Vec<Target>,
+        mut additional_targets: Vec<Target>,
+        // `StackItem::Trigger::bf_slots` (CR 608.2b).
+        bf_slots: u8,
         // True when this is the continuation of a trigger resolution that
         // suspended: the per-resolution scratch the first pass built is kept.
         resuming: bool,
@@ -30489,12 +30494,25 @@ impl GameState {
         // converge — before evaluating; an unresolved `ManaValueAtMost
         // Converged` reads false-for-everything and fizzled every
         // correctly-chosen Sundering Archaic target.
-        // CR 800.4a — a target player who has left the game is illegal too.
-        if let Some(Target::Player(p)) = target.as_ref()
-            && self.players.get(*p).is_some_and(|pl| !pl.is_alive())
+        // CR 608.2b — slots past the first that left their zone hold their
+        // place as holes; the ability is removed only if EVERY target is
+        // illegal, so a still-legal later slot keeps it resolving.
+        let rest_legal = !resuming
+            && !additional_targets.is_empty()
+            && crate::game::target_hole::hole_departed_slots(self, &effect, mode, bf_slots, &mut additional_targets);
+        // CR 608.2b / 800.4a — slot 0 left its zone (a permanent off the
+        // battlefield, a player out of the game).
+        // A departed player is re-checked on a resume too, as it always was.
+        if (!resuming || matches!(target, Some(Target::Player(_))))
+            && target
+                .as_ref()
+                .is_some_and(|t| crate::game::target_hole::target_departed(self, &effect, mode, bf_slots, 0, t))
         {
-            self.drop_resume_channels_on_fizzle(resuming);
-            return Ok(());
+            if !rest_legal {
+                self.drop_resume_channels_on_fizzle(resuming);
+                return Ok(());
+            }
+            target = Some(crate::game::target_hole::TARGET_HOLE);
         }
         // CR 603.7c — a reflexive trigger's carried scratch is what its target
         // filter reads too ("mana value less than or equal to the discarded
@@ -30521,8 +30539,11 @@ impl GameState {
                     if !resuming
                         && !self.evaluate_requirement_static(&filter, t, controller, Some(source)) =>
                 {
-                    self.drop_resume_channels_on_fizzle(resuming);
-                    return Ok(());
+                    if !rest_legal {
+                        self.drop_resume_channels_on_fizzle(resuming);
+                        return Ok(());
+                    }
+                    Some(crate::game::target_hole::TARGET_HOLE)
                 }
                 // CR 702.18a / 702.11b / 702.16b — shroud, an opponent's
                 // hexproof or protection from the source, gained since the

@@ -15,7 +15,22 @@ impl GameState {
     /// is a new object (CR 707.10), so a cloned item is restamped too.
     pub fn push_stack(&mut self, mut item: StackItem) {
         self.stamp_ability_id(&mut item);
+        if let StackItem::Trigger { target, additional_targets, bf_slots, .. } = &mut item {
+            *bf_slots = self.battlefield_target_slots(target.as_ref(), additional_targets);
+        }
         self.stack.push(item);
+    }
+
+    /// CR 608.2b — which of slots 0..8 name a permanent on the battlefield
+    /// right now (`StackItem::Trigger::bf_slots`).
+    pub(crate) fn battlefield_target_slots(&self, target: Option<&Target>, rest: &[Target]) -> u8 {
+        target
+            .into_iter()
+            .chain(rest)
+            .take(8)
+            .enumerate()
+            .filter(|(_, t)| matches!(t, Target::Permanent(id) if self.battlefield_find(*id).is_some()))
+            .fold(0u8, |m, (i, _)| m | (1 << i))
     }
 
     /// One past every ability id on the stack or named by a stack target, so

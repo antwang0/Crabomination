@@ -1680,6 +1680,7 @@ fn cr_603_4_intervening_if_re_checked_at_resolve_time() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1724,6 +1725,7 @@ fn cr_603_4_intervening_if_runs_when_true_at_resolve_time() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1786,6 +1788,7 @@ fn cr_705_3_coin_flip_advantage_lets_tails_be_recovered() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -1835,6 +1838,7 @@ fn cr_705_3_no_advantage_means_one_flip_one_result() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2168,6 +2172,7 @@ fn cr_705_3_static_grants_coin_flip_advantage() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);

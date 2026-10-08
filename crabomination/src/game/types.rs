@@ -3362,6 +3362,13 @@ pub enum StackItem {
         /// ([`is_stack_ability_id`]); a copy is stamped afresh. 0 = unstamped.
         #[serde(default)]
         ability_id: u32,
+        /// CR 608.2b — bit `i` set when target slot `i` was a battlefield
+        /// permanent as the ability went on the stack (stamped by
+        /// `GameState::push_stack`), so resolution can tell "no longer in the
+        /// zone it was in when it was targeted" from a card target whose slot
+        /// aimed at a graveyard all along. Slots past 7 are unchecked.
+        #[serde(default)]
+        bf_slots: u8,
     },
 }
 
@@ -3499,6 +3506,7 @@ impl TriggerPush {
             // sets it on items already on the stack.
             source_transformed_since_push: false,
             ability_id: 0,
+            bf_slots: 0,
         }
     }
 }

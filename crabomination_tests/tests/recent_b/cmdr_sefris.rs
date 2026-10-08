@@ -529,6 +529,7 @@ fn a_prompting_player_chooses_the_dungeon_and_the_room() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     };
     g.stack.push(venture());
     let _ = g.resolve_top_of_stack();
@@ -571,6 +572,7 @@ fn a_prompting_player_picks_the_card_exiled_from_hand() {
         activated: false,
         source_transformed_since_push: false,
         ability_id: 0,
+        bf_slots: 0,
     });
     let _ = g.resolve_top_of_stack();
     assert!(g.pending_decision.is_some(), "the pick is asked");

@@ -3474,6 +3474,7 @@ impl GameState {
                 mana_spent_by_color,
                 source_transformed_since_push,
                 ability_id: _,
+                bf_slots,
             } => {
                 // `mana_spent_by_color` is empty for every *triggered*
                 // ability and for every activation that paid no coloured
@@ -3556,6 +3557,7 @@ impl GameState {
                     event_amount,
                     trigger_player,
                     additional_targets,
+                    bf_slots,
                     false,
                     &mut events,
                 );

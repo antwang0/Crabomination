@@ -910,3 +910,97 @@ fn cr_302_6_a_skipped_untap_step_still_lifts_sickness() {
     g.do_untap();
     assert!(!g.battlefield_find(bear).unwrap().summoning_sick);
 }
+
+/// Push a trigger aimed at `target` / `rest` (CR 608.2b's "when it was
+/// targeted" is now), let `meanwhile` change the board, then resolve it.
+fn push_then_resolve(
+    g: &mut GameState,
+    src: crabomination::card::CardId,
+    body: Effect,
+    target: Target,
+    rest: Vec<Target>,
+    meanwhile: impl FnOnce(&mut GameState),
+) {
+    let item = crabomination::game::types::TriggerPush::new(src, 0, body)
+        .target(Some(target))
+        .additional_targets(rest)
+        .build();
+    g.push_stack(item);
+    meanwhile(g);
+    drain_stack(g);
+}
+
+/// A two-slot trigger body: a counter on target land, then exile target
+/// creature (slot 1).
+fn mark_land_exile_creature() -> Effect {
+    use crabomination::card::SelectionRequirement as R;
+    Effect::Seq(vec![
+        Effect::AddCounter {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Land },
+            kind: crabomination::card::CounterType::PlusOnePlusOne,
+            amount: crabomination::effect::Value::Const(1),
+        },
+        Effect::Move { what: Selector::TargetFiltered { slot: 1, filter: R::Creature }, to: ZoneDest::Exile },
+    ])
+}
+
+/// CR 608.2b — "a target that's no longer in the zone it was in when it was
+/// targeted is illegal", for a trigger's later slots too: the slot-1 creature
+/// died, so the exile finds nothing (it used to exile the card from the
+/// graveyard — Omo's counter reached a commander gone home the same way),
+/// while the still-legal land slot resolves.
+#[test]
+fn cr_608_2b_a_later_trigger_slot_that_left_its_zone_is_illegal() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    push_then_resolve(&mut g, src, mark_land_exile_creature(), Target::Permanent(land), vec![Target::Permanent(bear)], |g| {
+        g.destroy_permanent(bear, false, &mut Vec::new());
+    });
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "not exiled from the graveyard");
+}
+
+/// CR 608.2b — an ability is removed only if EVERY target is illegal: slot 0
+/// names a player who has left the game, slot 1's creature is still there and
+/// is exiled. The trigger used to be removed whole on its first slot.
+#[test]
+fn cr_608_2b_a_trigger_with_one_legal_target_left_still_resolves() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let body = Effect::Seq(vec![
+        Effect::LoseLife { who: Selector::Target(0), amount: crabomination::effect::Value::Const(1) },
+        Effect::Move {
+            what: Selector::TargetFiltered { slot: 1, filter: crabomination::card::SelectionRequirement::Creature },
+            to: ZoneDest::Exile,
+        },
+    ]);
+    push_then_resolve(&mut g, src, body, Target::Player(2), vec![Target::Permanent(bear)], |g| {
+        g.concede(2);
+    });
+    assert!(g.exile.iter().any(|c| c.id == bear), "the legal target is exiled");
+}
+
+/// CR 608.2b — a trigger's "exile target creature" whose creature died in
+/// response does nothing: the creature card in the graveyard is a new object,
+/// though it still matches "creature". The move used to find it there and
+/// exile it from the graveyard.
+#[test]
+fn cr_608_2b_a_trigger_target_that_died_is_not_exiled_from_the_graveyard() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let exile = Effect::Move {
+        what: Selector::TargetFiltered { slot: 0, filter: crabomination::card::SelectionRequirement::Creature },
+        to: ZoneDest::Exile,
+    };
+    push_then_resolve(&mut g, src, exile, Target::Permanent(bear), vec![], |g| {
+        g.destroy_permanent(bear, false, &mut Vec::new());
+    });
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "still in the graveyard");
+}
