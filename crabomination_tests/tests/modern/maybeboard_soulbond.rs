@@ -301,6 +301,19 @@ fn icetill_explorer_mills_on_landfall_and_grants_extra_land() {
     assert_eq!(g.players[0].library.len(), lib_before - 1, "landfall mills a card");
 }
 
+/// Icetill Explorer — "You may play lands from your graveyard" (CR 305.1),
+/// beside the extra land drop.
+#[test]
+fn icetill_explorer_plays_a_land_from_the_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::icetill_explorer());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let land = g.add_card_to_graveyard(0, catalog::forest());
+    g.perform_action(GameAction::PlayLandFromGraveyard(land)).expect("play from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some());
+}
+
 #[test]
 fn the_endstone_draws_on_land_and_spell() {
     let mut g = two_player_game();

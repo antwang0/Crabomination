@@ -26354,8 +26354,8 @@ pub fn baloth_prime() -> CardDefinition {
 }
 
 /// Icetill Explorer — {2}{G}{G} 2/4. You may play an additional land each
-/// turn. Landfall — whenever a land you control enters, mill a card. (The
-/// "play lands from your graveyard" permission is dropped — no such primitive.)
+/// turn; you may play lands from your graveyard. Landfall — whenever a land you
+/// control enters, mill a card.
 pub fn icetill_explorer() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -26369,10 +26369,16 @@ pub fn icetill_explorer() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        static_abilities: vec![StaticAbility {
-            description: "You may play an additional land on each of your turns.",
-            effect: StaticEffect::ExtraLandPerTurn,
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may play an additional land on each of your turns.",
+                effect: StaticEffect::ExtraLandPerTurn,
+            },
+            StaticAbility {
+                description: "You may play lands from your graveyard.",
+                effect: StaticEffect::MayPlayLandsFromGraveyard,
+            },
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
             effect: Effect::Mill {

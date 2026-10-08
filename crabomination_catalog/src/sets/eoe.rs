@@ -6062,9 +6062,8 @@ pub fn timeline_culler() -> CardDefinition {
 }
 
 /// Tannuk, Memorial Ensign — {1}{R}{G} 2/4 Legendary Kavu Pilot. Landfall —
-/// whenever a land you control enters, deal 1 damage to each opponent. (The
-/// second-landfall-this-turn card draw is dropped — no per-source resolution
-/// counter yet.)
+/// whenever a land you control enters, deal 1 damage to each opponent; the
+/// second resolution this turn also draws a card.
 pub fn tannuk_memorial_ensign() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {

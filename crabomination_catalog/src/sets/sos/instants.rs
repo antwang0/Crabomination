@@ -1698,8 +1698,7 @@ pub fn choreographed_sparks() -> CardDefinition {
 /// (slot 0, I/S-in-your-graveyard filter) so the caster chooses which
 /// card gains flashback. The controller recasts it this turn through the
 /// regular `GameAction::CastFlashback` path — paying the printed mana
-/// cost and exiling on resolve (CR 702.34a) — rather than the earlier
-/// free-cast approximation.
+/// cost and exiling on resolve (CR 702.34a).
 pub fn sos_flashback_instant() -> CardDefinition {
     use crate::mana::r;
     CardDefinition {

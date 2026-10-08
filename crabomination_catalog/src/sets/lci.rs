@@ -1709,8 +1709,8 @@ pub fn hidden_nursery() -> CardDefinition {
 }
 
 /// Spelunking — {2}{G} Enchantment. ETB: draw a card, then you may put a land
-/// from your hand onto the battlefield (the "gain 4 if it's a Cave" rider is
-/// dropped). Lands you control enter untapped.
+/// from your hand onto the battlefield, gaining 4 life if it's a Cave. Lands
+/// you control enter untapped.
 pub fn spelunking() -> CardDefinition {
     CardDefinition {
         name: "Spelunking",

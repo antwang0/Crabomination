@@ -420,8 +420,8 @@ pub fn hunters_edge() -> CardDefinition {
 }
 
 /// Kitsa, Otterball Elite — {1}{U} Legendary Otter Wizard 1/3 with vigilance and
-/// prowess. {T}: Draw a card, then discard a card. (The copy-spell ability is
-/// dropped — see TODO.md.)
+/// prowess. {T}: Draw a card, then discard a card. {2}, {T}: copy target
+/// instant or sorcery spell you control, while its power is 3 or greater.
 pub fn kitsa_otterball_elite() -> CardDefinition {
     CardDefinition {
         name: "Kitsa, Otterball Elite",
