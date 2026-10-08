@@ -265,6 +265,8 @@ fn mirage_phalanx_pairs_and_copies_both_at_combat() {
     assert_eq!(g.battlefield_find(phalanx).unwrap().soulbond_partner, Some(bear));
     assert_eq!(g.battlefield_find(bear).unwrap().soulbond_partner, Some(phalanx));
 
+    // An unpaired creature the copies could pair with, had they kept soulbond.
+    let spare = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     g.step = TurnStep::BeginCombat;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
@@ -274,6 +276,9 @@ fn mirage_phalanx_pairs_and_copies_both_at_combat() {
         .collect();
     assert_eq!(copies.len(), 2, "one copy of each paired creature");
     assert!(copies.iter().all(|t| a_has_haste(&g, *t)), "the copies have haste");
+    // "… except it has haste and loses soulbond."
+    assert!(g.battlefield_find(spare).unwrap().soulbond_partner.is_none(), "no copy paired");
+    assert!(copies.iter().all(|t| !g.battlefield_find(*t).unwrap().definition.keywords.contains(&crabomination::card::Keyword::Soulbond)));
 
     a_finish_combat(&mut g);
     assert!(a_tokens_named(&g, "Mirage Phalanx").is_empty(), "exiled at end of combat");

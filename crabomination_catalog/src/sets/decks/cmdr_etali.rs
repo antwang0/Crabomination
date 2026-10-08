@@ -139,6 +139,7 @@ fn a_copy_of(
         extra_keywords,
         no_mana_cost: false,
         enters_with_counters: None,
+        remove_keywords: vec![],
     }
 }
 
@@ -322,8 +323,8 @@ pub fn orthion_hero_of_lavabrink() -> CardDefinition {
 /// attacks, choose target creature you control, then roll a d20. 1–14: create a
 /// tapped and attacking non-legendary token copy of it that's exiled at end of
 /// combat. 15–20: create one of those tokens; you may roll again.
-/// Approximation: "you may roll again" always re-rolls (each roll only adds a
-/// token), bounded at five extra rolls. The token's own "At end of combat,
+/// "You may roll again" is asked (`MayDo`). Approximation: the chain is
+/// bounded at five extra rolls. The token's own "At end of combat,
 /// exile this token" is a delayed end-of-combat exile bound to it — a copy of
 /// the token would not inherit it. Under a token doubler only the last minted
 /// token of each roll is bound to the exile.
@@ -370,13 +371,28 @@ pub fn flamerush_rider() -> CardDefinition {
 /// while it is paired (`Selector::SoulbondPartner` is non-empty), your
 /// beginning of combat makes a hasty copy of it and one of its partner, each
 /// exiled at end of combat.
-/// Approximation: one trigger instead of two (a response between the two
-/// copies isn't possible), and "loses soulbond" is not modeled — a token copy
-/// of Mirage Phalanx keeps Soulbond, so it may pair as it enters.
+/// The copies lose soulbond (`remove_keywords`), so neither pairs as it
+/// enters. Approximation: one trigger instead of two (a response between the
+/// two copies isn't possible).
 pub fn mirage_phalanx() -> CardDefinition {
     let temp_copy = |source: Selector| {
         [
-            a_copy_of(source, Value::ONE, false, false, vec![Keyword::Haste]),
+            Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source,
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: false,
+                legendary: false,
+                extra_keywords: vec![Keyword::Haste],
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: vec![Keyword::Soulbond],
+            },
             Effect::DelayUntil {
                 kind: DelayedTriggerKind::EndOfCombat,
                 body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
