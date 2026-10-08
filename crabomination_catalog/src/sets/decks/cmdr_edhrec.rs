@@ -1734,3 +1734,36 @@ pub fn misthollow_griffin() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mnemonic Deluge — {6}{U}{U}{U} Sorcery. Exile target instant or sorcery
+/// card from a graveyard; cast up to three copies of it free (CR 707.12).
+/// Exile Mnemonic Deluge.
+pub fn mnemonic_deluge() -> CardDefinition {
+    use crate::card::Zone;
+    let free_copy = || Effect::CastWithoutPayingImmediate {
+        what: Selector::LastMoved,
+        source_zone: Zone::Exile,
+        exile_after: false,
+        copy: true,
+        reduce_generic: 0,
+        pay_own_cost: false,
+    };
+    CardDefinition {
+        name: "Mnemonic Deluge",
+        cost: cost(&[generic(6), u(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InGraveyard),
+                ),
+                to: ZoneDest::Exile,
+            },
+            free_copy(),
+            free_copy(),
+            free_copy(),
+        ]),
+        ..Default::default()
+    }
+}

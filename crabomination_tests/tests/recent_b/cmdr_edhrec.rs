@@ -1067,3 +1067,18 @@ fn misthollow_griffin_casts_from_exile() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(griffin).is_some());
 }
+
+/// Mnemonic Deluge recasts an opponent's graveyard Lightning Bolt three
+/// times and exiles itself.
+#[test]
+fn mnemonic_deluge_triples_a_graveyard_spell() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let deluge = g.add_card_to_hand(0, catalog::mnemonic_deluge());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    cast(&mut g, deluge, Some(Target::Permanent(bolt)));
+    assert_eq!(life - g.players[1].life, 9, "three bolts");
+    assert!(g.exile.iter().any(|c| c.id == deluge), "Deluge exiles itself");
+}
