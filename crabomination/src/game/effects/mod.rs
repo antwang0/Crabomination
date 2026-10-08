@@ -15909,6 +15909,13 @@ impl GameState {
                     // the controller cast the exiled card (Hostage Taker).
                     self.scratch.last_moved_cards.push(cid);
                 }
+                // CR 610.3 — the source exiled itself (a copy of its trigger
+                // aimed back at it, Aboleth Spawn on Constricting Sliver): the
+                // event the exile waits on is this very move, so the return
+                // follows at once. Its leave hook ran before the link existed.
+                if self.battlefield_find(source).is_none() {
+                    self.return_linked_exiles(source, events);
+                }
                 Ok(())
             }
 
@@ -15971,6 +15978,10 @@ impl GameState {
                         });
                         c.exiled_with = Some(source);
                     }
+                }
+                // CR 610.3 — as above, when the source picked itself.
+                if self.battlefield_find(source).is_none() {
+                    self.return_linked_exiles(source, events);
                 }
                 Ok(())
             }

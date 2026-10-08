@@ -601,3 +601,25 @@ fn cr_613_7d_an_entering_permanent_is_timestamped_before_dispatch() {
     let ts = |id| g.battlefield_find(id).unwrap().object_timestamp();
     assert!(ts(token) > ts(wall) && ts(token) > ts(src), "newest on entry");
 }
+
+/// CR 610.3 — "exile it until this leaves the battlefield" aimed at the
+/// source itself: the leave IS the exile, so the return follows at once (a
+/// fuzzed 5-seat audit-build pod, seed 740008 game 7: Aboleth Spawn copied
+/// Constricting Sliver's trigger and aimed it at the Sliver, which then sat
+/// in exile for good — its leave hook ran before the link was made).
+#[test]
+fn cr_610_3_a_source_that_exiles_itself_until_it_leaves_comes_back() {
+    let mut g = main_phase();
+    let sliver = g.add_card_to_battlefield(0, catalog::constricting_sliver());
+    resolve(
+        &mut g,
+        sliver,
+        None,
+        &Effect::ExileUntilSourceLeaves {
+            what: Selector::ExactObjects(vec![sliver]),
+            return_to: crabomination::card::ExileReturnZone::Battlefield,
+        },
+    );
+    assert!(g.exile.iter().all(|c| c.definition.name != "Constricting Sliver"), "not left in exile");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Constricting Sliver"), "back on the battlefield");
+}
