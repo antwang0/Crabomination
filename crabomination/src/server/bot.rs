@@ -10973,8 +10973,8 @@ fn pick_team_pump(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Gam
     None
 }
 
-/// Activate a bare "{cost}: draw a card" ability (no target, doesn't sacrifice
-/// the source) when the bot is card-starved (≤2 cards in hand) and can afford
+/// Activate a "{cost}: draw" ability (auto-targeted when it counts off a
+/// target; doesn't sacrifice the source) when the bot is card-starved (≤2 cards in hand) and can afford
 /// it. Fired last, as a mana sink, so it never pre-empts casting spells or
 /// playing lands. Dry-run-gated through `would_accept`.
 fn pick_card_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
@@ -10988,10 +10988,17 @@ fn pick_card_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Op
             if sink_sacrifice_cost(ab, w) {
                 continue; // don't spend a permanent just to draw
             }
+            // A draw counted off a target (Volo's Journal's noted types).
+            let target = if ab.effect.requires_target() {
+                let Some(t) = state.auto_target_for_effect(&ab.effect, seat) else { continue };
+                Some(t)
+            } else {
+                None
+            };
             let action = GameAction::ActivateAbility {
                 card_id: card.id,
                 ability_index: idx,
-                target: None,
+                target,
                 additional_targets: Vec::new(),
                 x_value: None, mode: None,
             };

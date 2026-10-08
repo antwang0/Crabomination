@@ -889,3 +889,24 @@ fn dutiful_replicator_copies_a_token_for_one() {
     cast_at(&mut g, rep, None);
     assert_eq!(named(&g, "Treasure"), 2);
 }
+
+/// The bot spends Volo, Itinerant Scholar's draw on its Journal: the
+/// draw-sink generator activated untargeted draws only, so a census never saw
+/// it fire.
+#[test]
+fn bot_activates_volos_targeted_draw() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    let volo = g.add_card_to_hand(0, catalog::volo_itinerant_scholar());
+    flood(&mut g);
+    cast_at(&mut g, volo, None);
+    g.clear_sickness(volo);
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast_at(&mut g, elf, None);
+    g.players[0].mana_pool = Default::default();
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let a = HeuristicBot::new().next_action(&g, 0);
+    assert!(matches!(a, Some(GameAction::ActivateAbility { card_id, target: Some(_), .. }) if card_id == volo), "{a:?}");
+}
