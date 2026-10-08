@@ -641,3 +641,48 @@ fn a_costly_mana_source_does_not_pay_for_itself() {
     ready(&mut g, 0, catalog::swamp());
     assert!(g.perform_action(cast).is_ok(), "the Swamp pays for the Celebrant, which pays for the Ritual");
 }
+
+/// CR 612 / 400.7 — Deadpool exchanges text boxes with an opponent's Llanowar
+/// Elves: Deadpool taps for {G}, the Elves carry the upkeep life loss and the
+/// sacrifice ability; Deadpool leaving the battlefield reverts only Deadpool.
+#[test]
+fn deadpool_exchanges_text_boxes() {
+    let mut g = pod(2);
+    let elves = ready(&mut g, 1, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![elves])]));
+    let dp = g.add_card_to_hand(0, catalog::deadpool_trading_card());
+    flood(&mut g);
+    cast_at(&mut g, dp, None);
+    let elves_def = &g.battlefield_find(elves).unwrap().definition;
+    assert_eq!(elves_def.name, "Llanowar Elves");
+    assert!(elves_def.activated_abilities.iter().any(|a| a.sac_cost), "the Elves have Deadpool's sacrifice");
+    assert_eq!(elves_def.triggered_abilities.len(), 1, "and its upkeep trigger");
+    let dp_def = &g.battlefield_find(dp).unwrap().definition;
+    assert!(dp_def.triggered_abilities.is_empty() && !dp_def.activated_abilities.iter().any(|a| a.sac_cost));
+    assert_eq!((dp_def.power, dp_def.toughness), (5, 3), "P/T stays");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    cast_at(&mut g, bolt, Some(crabomination::game::types::Target::Permanent(dp)));
+    let back = g.players[0].graveyard.iter().chain(g.players[0].command.iter()).find(|c| c.id == dp).expect("left");
+    assert!(back.definition.activated_abilities.iter().any(|a| a.sac_cost), "Deadpool's card reverts");
+    assert!(g.battlefield_find(elves).unwrap().definition.activated_abilities.iter().any(|a| a.sac_cost));
+}
+
+/// Elturel Survivors gets +X/+0 while attacking, X the defending player's
+/// lands; myriad copies it at each other opponent.
+#[test]
+fn elturel_survivors_counts_the_defenders_lands() {
+    let mut g = pod(3);
+    let surv = ready(&mut g, 0, catalog::elturel_survivors());
+    for _ in 0..3 {
+        ready(&mut g, 1, catalog::mountain());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    assert_eq!(g.computed_permanent(surv).unwrap().power, 0);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: surv, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(surv).unwrap().power, 3);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Elturel Survivors").count(), 2, "myriad");
+}

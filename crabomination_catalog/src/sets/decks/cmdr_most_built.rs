@@ -908,3 +908,75 @@ pub fn peer_into_the_abyss() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Deadpool, Trading Card (BR) ─────────────────────────────────────────────
+
+/// Deadpool, Trading Card — as it enters, you may exchange its text box with
+/// another creature's (CR 612 / 613.1c); your upkeep costs you 3 life; {3},
+/// sacrifice it: each other player draws a card.
+pub fn deadpool_trading_card() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::MayDo {
+            description: "Exchange Deadpool's text box with another creature's?".into(),
+            body: Box::new(Effect::ChooseOneAmong {
+                what: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::ExchangeTextBoxes {
+                    a: Selector::This,
+                    b: Selector::SeparatedPile { chosen: true },
+                }),
+                other: Box::new(Effect::Noop),
+            }),
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..legend(
+            "Deadpool, Trading Card",
+            cost(&[generic(2), b(), r()]),
+            vec![CreatureType::Mutant, CreatureType::Mercenary, CreatureType::Hero],
+            5,
+            3,
+        )
+    }
+}
+
+/// Elturel Survivors — trample, myriad; while attacking, +X/+0 where X is
+/// the number of lands the defending player controls.
+pub fn elturel_survivors() -> CardDefinition {
+    CardDefinition {
+        name: "Elturel Survivors",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Tiefling, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is attacking, it gets +X/+0, where X is the number of lands defending player controls.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::EntityMatches { what: Selector::This, filter: R::IsAttacking },
+                inner: Box::new(StaticEffect::PumpSelfByValue {
+                    amount: Value::CountOf(Box::new(Selector::ControlledBy { who: PlayerRef::DefendingPlayer, filter: R::Land })),
+                    per_power: 1,
+                    per_toughness: 0,
+                }),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Myriad,
+        }],
+        ..Default::default()
+    }
+}

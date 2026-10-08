@@ -4540,6 +4540,8 @@ static DECKS: &[Factory] = &[
     super::decks::battle_at_the_bridge,
     super::decks::inspired_tinkering,
     super::decks::peer_into_the_abyss,
+    super::decks::deadpool_trading_card,
+    super::decks::elturel_survivors,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,
