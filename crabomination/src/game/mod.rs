@@ -10641,6 +10641,8 @@ impl GameState {
         {
             self.players[ctrl].mounts_vehicles_entered_this_turn += 1;
         }
+        // CR 613.7d — its timestamp is its entry time; the dispatch restamps it.
+        inst.battlefield_timestamp = self.next_timestamp();
         self.battlefield.push(inst);
         // CR 707.2 — a token minted from a clone-y definition (Vizier of
         // Many Faces' embalm token) applies its `enters_as_copy` replacement
@@ -28279,6 +28281,8 @@ impl GameState {
                             card.controller = p;
                             card.tapped = tapped;
                             card.summoning_sick = card.definition.is_creature();
+                            // CR 613.7d — its timestamp is its entry time; the dispatch restamps it.
+                            card.battlefield_timestamp = self.next_timestamp();
                             self.battlefield.push(card);
                             // Run the optional follow-up effect (e.g. Gemstone
                             // Caverns wants a luck counter on its newly-entered

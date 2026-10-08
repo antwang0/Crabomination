@@ -4993,6 +4993,8 @@ impl GameState {
         if card.controller != p {
             card.controller = p;
         }
+        // CR 613.7d — its timestamp is its entry time; the dispatch restamps it.
+        card.battlefield_timestamp = self.next_timestamp();
         self.battlefield.push(card);
         // CR 707.2 — "enter as a copy of any land" (Vesuva) is chosen as it
         // enters, before the as-enters replacements below, which then read

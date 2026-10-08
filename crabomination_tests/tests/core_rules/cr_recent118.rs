@@ -573,3 +573,31 @@ fn cr_704_5m_an_aura_whose_host_became_a_land_is_shed() {
     }
     assert!(g.battlefield_find(minimus).is_none(), "the host is a land now");
 }
+
+/// CR 613.7d — a permanent's timestamp is the time it entered, already as it
+/// enters: before the event dispatch runs, a token is newer than everything
+/// on the battlefield. Unstamped, it read as its `CardId`, which in a long
+/// game is far behind the timestamp counter (tokens, persist / undying
+/// returns, a played land and an opening-hand start all were).
+#[test]
+fn cr_613_7d_an_entering_permanent_is_timestamped_before_dispatch() {
+    use crabomination::effect::Value;
+    let mut g = main_phase();
+    for _ in 0..1000 {
+        g.next_timestamp(); // a long game's worth of effects
+    }
+    let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.resolve_effect(
+        &Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: std::sync::Arc::new(crabomination_base::tokens::fractal_token()),
+        },
+        &EffectContext::for_ability(src, 0, None),
+    )
+    .expect("resolves");
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Fractal").unwrap().id;
+    let ts = |id| g.battlefield_find(id).unwrap().object_timestamp();
+    assert!(ts(token) > ts(wall) && ts(token) > ts(src), "newest on entry");
+}

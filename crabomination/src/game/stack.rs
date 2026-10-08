@@ -9541,6 +9541,8 @@ impl GameState {
             returned.controller = owner;
             let rid = returned.id;
             events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
+            // CR 613.7d — its timestamp is its entry time; the dispatch restamps it.
+            returned.battlefield_timestamp = self.next_timestamp();
             self.battlefield.push(returned);
             // CR 702.79a / 702.93a — it returns "with" the counter: an
             // enters-with placement, so the CR 614.16 chain (Hardened Scales
