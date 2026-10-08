@@ -1924,7 +1924,7 @@ fn play_pod_game(
             } else {
                 match g.perform_action(action) {
                     Ok(events) => {
-                                                g.recycle_events(events);
+                        g.recycle_events(events);
                         true
                     }
                     Err(e) => {
@@ -1938,7 +1938,8 @@ fn play_pod_game(
             };
             if ok {
                 if let Some(a) = traced {
-                    eprintln!("{actions} t{} {:?} stack {} p{seat} {a}", g.turn_number, g.step, g.stack.len());
+                    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+                    eprintln!("{actions} t{} {:?} stack {} life {life:?} p{seat} {a}", g.turn_number, g.step, g.stack.len());
                 }
                 census.bump(key);
                 census.note_triggers(&g);
