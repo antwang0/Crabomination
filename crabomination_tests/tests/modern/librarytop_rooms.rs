@@ -279,6 +279,23 @@ fn agathas_cauldron_exiles_and_grants_abilities() {
     assert!(!granted.is_empty(), "Bear borrows the exiled creature's activated ability");
 }
 
+/// CR 609.4b — Agatha's Soul Cauldron: mana of any color activates your
+/// creatures' abilities (Shivan Dragon's {R} paid with {G}); a non-creature's
+/// stays colored.
+#[test]
+fn agathas_cauldron_lets_any_color_pay_creature_abilities() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::agathas_soul_cauldron());
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dragon, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("{R} paid with {G}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(dragon).unwrap().power, 6);
+}
+
 #[test]
 fn mutated_cultist_discounts_next_spell_by_counters_removed() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};

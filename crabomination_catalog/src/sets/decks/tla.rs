@@ -4533,7 +4533,7 @@ pub fn razor_rings() -> CardDefinition {
 
 /// The Last Agni Kai — {1}{R} Instant. Target creature you control fights
 /// target creature an opponent controls; add {R} equal to the excess damage
-/// dealt this way. (The "don't lose unspent red mana" rider is omitted.)
+/// dealt this way. Until end of turn, you don't lose unspent red mana.
 pub fn the_last_agni_kai() -> CardDefinition {
     CardDefinition {
         name: "The Last Agni Kai",
@@ -4556,6 +4556,7 @@ pub fn the_last_agni_kai() -> CardDefinition {
                 who: PlayerRef::You,
                 pool: ManaPayload::OfColor(Color::Red, Value::ExcessDamageDealtThisResolution),
             },
+            Effect::KeepUnspentColorManaThisTurn { who: PlayerRef::You, color: Color::Red },
         ]),
         ..Default::default()
     }

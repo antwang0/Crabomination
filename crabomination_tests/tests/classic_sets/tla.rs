@@ -2467,6 +2467,18 @@ fn last_agni_kai_fights_and_adds_red_for_excess() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none(), "4-power kills the 2/2");
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Red), 2, "excess 2 → {{R}}{{R}}");
+    // CR 500.4 — "until end of turn, you don't lose unspent red mana": it
+    // survives the step changes, and the cleanup step ends the effect.
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Red), 2, "red kept");
+    assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Blue), 0, "blue lost");
+    while g.active_player_idx == 0 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Red), 0, "gone after cleanup");
 }
 
 /// Hei Bai sacrifices for two +1/+1 counters, then moves them on leaving.

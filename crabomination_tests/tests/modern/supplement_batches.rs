@@ -41,7 +41,7 @@ fn cathartic_reunion_discards_two_then_draws_three() {
         "Two discards plus the Reunion itself = at least 3 cards in graveyard");
 }
 
-/// Gitaxian Probe: lose 2 life, draw 1 card.
+/// Gitaxian Probe: lose 2 life, look at target opponent's hand, draw 1 card.
 #[test]
 fn gitaxian_probe_pays_two_life_and_draws() {
     let mut g = two_player_game();
@@ -51,7 +51,7 @@ fn gitaxian_probe_pays_two_life_and_draws() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(crabomination::game::types::Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Gitaxian Probe castable by paying the {U/P} pip with life");
     drain_stack(&mut g);
@@ -59,6 +59,7 @@ fn gitaxian_probe_pays_two_life_and_draws() {
     // -1 cast +1 draw → net hand 0.
     assert_eq!(g.players[0].hand.len(), hand_before);
     assert_eq!(g.players[0].life, life_before - 2, "Probe pays the Phyrexian pip with 2 life");
+    assert!(g.hands_revealed_to.contains(&(0, 1)), "the opponent's hand is seen (CR 701.19)");
 }
 
 #[test]
@@ -71,7 +72,7 @@ fn gitaxian_probe_paid_with_blue_costs_no_life() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(crabomination::game::types::Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Gitaxian Probe castable for {U}");
     drain_stack(&mut g);

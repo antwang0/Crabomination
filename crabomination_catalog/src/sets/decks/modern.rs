@@ -1810,18 +1810,16 @@ pub fn cathartic_reunion() -> CardDefinition {
 ///
 /// The Phyrexian pip `{U/P}` is a real `ManaSymbol::Phyrexian(Blue)`:
 /// paying it with blue mana costs no life, while paying with life costs 2
-/// (handled by the mana payment side-effect on cast). The "look at
-/// opponent's hand" half is dropped (information-only effect with no
-/// engine state hook), leaving a free-or-2-life cantrip.
+/// (handled by the mana payment side-effect on cast).
 pub fn gitaxian_probe() -> CardDefinition {
     CardDefinition {
         name: "Gitaxian Probe",
         cost: cost(&[phyrexian(Color::Blue)]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(1),
-        },
+        effect: Effect::Seq(vec![
+            Effect::LookAtHand { who: crate::effect::shortcut::target_filtered(SelectionRequirement::OpponentPlayer) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
         ..Default::default()
     }
 }
@@ -1853,12 +1851,8 @@ pub fn force_spike() -> CardDefinition {
     }
 }
 
-/// Vampiric Tutor — {B} Instant. Pay 2 life, search your library for a
-/// card, and put it on top.
-///
-/// Approximated as a `LoseLife 2 + Search(Any → Library{Top})`. The "look
-/// at and put on top" half collapses to a direct top-of-library tutor —
-/// the decider supplies the chosen card via `Decision::SearchLibrary`.
+/// Vampiric Tutor — {B} Instant. Search your library for a card, then
+/// shuffle and put that card on top. You lose 2 life.
 pub fn vampiric_tutor() -> CardDefinition {
     use crate::effect::LibraryPosition;
     CardDefinition {
@@ -1866,10 +1860,6 @@ pub fn vampiric_tutor() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Any,
@@ -1877,6 +1867,10 @@ pub fn vampiric_tutor() -> CardDefinition {
                     who: PlayerRef::You,
                     pos: LibraryPosition::Top,
                 },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
             },
         ]),
         ..Default::default()
@@ -45608,8 +45602,8 @@ pub fn muldrotha_the_gravetide() -> CardDefinition {
 /// Agatha's Soul Cauldron — {2} Legendary Artifact. Creatures you control
 /// with +1/+1 counters have all activated abilities of creature cards
 /// exiled with this. {T}: Exile target card from a graveyard; if it was a
-/// creature card, put a +1/+1 counter on a creature you control. (The
-/// any-color-for-creature-abilities clause is dropped.)
+/// creature card, put a +1/+1 counter on a creature you control; mana of
+/// any color activates your creatures' abilities.
 pub fn agathas_soul_cauldron() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::{Predicate, StaticAbility, StaticEffect};
@@ -45618,10 +45612,16 @@ pub fn agathas_soul_cauldron() -> CardDefinition {
         cost: cost(&[generic(2)]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
-        static_abilities: vec![StaticAbility {
-            description: "Creatures you control with +1/+1 counters on them have all activated abilities of all creature cards exiled with this.",
-            effect: StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource,
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control with +1/+1 counters on them have all activated abilities of all creature cards exiled with this.",
+                effect: StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource,
+            },
+            StaticAbility {
+                description: "You may spend mana as though it were mana of any color to activate abilities of creatures you control.",
+                effect: StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities,
+            },
+        ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
