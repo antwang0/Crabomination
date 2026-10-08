@@ -3126,6 +3126,7 @@ pub fn ugins_conjurant() -> CardDefinition {
             effect: StaticEffect::PreventDamageByRemovingCounters {
                 kind: CounterType::PlusOnePlusOne,
                 single: false,
+                even_without: false,
             },
         }],
         ..Default::default()

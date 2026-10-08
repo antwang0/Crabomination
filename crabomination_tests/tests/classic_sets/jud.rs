@@ -376,6 +376,21 @@ fn phantom_centaur_sheds_one_counter_per_hit() {
     assert_eq!(g.battlefield_find(centaur).unwrap().damage, 0, "the damage was prevented");
 }
 
+/// CR 615 — the Phantom shield has no "while it has a counter" clause: with
+/// its counters gone (and an anthem keeping it alive) damage is still
+/// prevented. The counters removed are a CounterRemoved event.
+#[test]
+fn phantom_prevents_damage_with_no_counter_left() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let centaur = g.add_card_to_battlefield(0, catalog::phantom_centaur());
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    assert_eq!(g.battlefield_find(centaur).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(centaur)));
+    assert_eq!(g.battlefield_find(centaur).expect("still there").damage, 0);
+}
+
 /// Phantom Nantuko can rebuild its own counters.
 #[test]
 fn phantom_nantuko_regrows_counters() {

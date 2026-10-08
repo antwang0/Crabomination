@@ -295,6 +295,19 @@ fn undergrowth_champion_sheds_a_counter_instead_of_taking_damage() {
     assert_eq!(g.battlefield_find(champ).unwrap().damage, 0, "and no damage was marked");
 }
 
+/// Undergrowth Champion removes *a* counter per hit, not "that many": two
+/// landfall counters survive a 5-damage hit with one left.
+#[test]
+fn undergrowth_champion_sheds_one_counter_however_big_the_hit() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::undergrowth_champion());
+    play_land(&mut g, catalog::forest());
+    g.battlefield_find_mut(champ).unwrap().counters.insert(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(champ), 5, None, &mut evs);
+    assert_eq!(counters(&g, champ), 1);
+}
+
 /// Titan's Presence exiles only a creature whose power the revealed card matches.
 #[test]
 fn titans_presence_needs_a_big_enough_reveal() {

@@ -1009,6 +1009,7 @@ fn phantom(
             effect: StaticEffect::PreventDamageByRemovingCounters {
                 kind: CounterType::PlusOnePlusOne,
                 single: true,
+                even_without: true,
             },
         }],
         ..creature(name, c, types, 0, 0)

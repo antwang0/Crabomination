@@ -313,6 +313,7 @@ pub fn polukranos_unchained() -> CardDefinition {
             effect: crate::effect::StaticEffect::PreventDamageByRemovingCounters {
                 kind: CounterType::PlusOnePlusOne,
                 single: false,
+                even_without: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

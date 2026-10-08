@@ -880,7 +880,8 @@ impl GameState {
                     crate::effect::StaticEffect::PreventDamageByRemovingCounters {
                         kind,
                         single,
-                    } => (c.counter_count(kind) > 0).then_some((kind, single)),
+                        even_without,
+                    } => (even_without || c.counter_count(kind) > 0).then_some((kind, single)),
                     _ => None,
                 })
             })
@@ -890,8 +891,15 @@ impl GameState {
                 to_player: None,
                 to_card: Some(cid),
             });
+            // CR 122.8-style bookkeeping: the counters removed are an event
+            // (Protean Hydra's "whenever a +1/+1 counter is removed").
             if let Some(c) = self.battlefield_find_mut(cid) {
+                let had = c.counter_count(kind);
                 c.remove_counters(kind, if single { 1 } else { amount });
+                let removed = had - c.counter_count(kind);
+                if removed > 0 {
+                    events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: removed });
+                }
             }
             return 0;
         }

@@ -194,7 +194,8 @@ pub fn undergrowth_champion() -> CardDefinition {
             description: "Damage is prevented by removing a +1/+1 counter instead.",
             effect: StaticEffect::PreventDamageByRemovingCounters {
                 kind: CounterType::PlusOnePlusOne,
-                single: false,
+                single: true,
+                even_without: false,
             },
         }],
         triggered_abilities: vec![landfall(Effect::AddCounter {

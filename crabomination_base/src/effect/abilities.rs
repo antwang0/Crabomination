@@ -3360,6 +3360,11 @@ pub enum StaticEffect {
         /// removes "that many", so it leaves this `false`.
         #[serde(default)]
         single: bool,
+        /// Prevents even with no `kind` counter left — the printed "If damage
+        /// would be dealt to this creature, prevent that damage" with no
+        /// "while it has a counter" (the Phantom cycle, Protean Hydra).
+        #[serde(default)]
+        even_without: bool,
     },
     /// Mindsplice Apparatus — "[filter] spells you cast cost {1} less to
     /// cast for each [kind] counter on this artifact."

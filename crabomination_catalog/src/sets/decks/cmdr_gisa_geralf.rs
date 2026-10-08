@@ -454,6 +454,7 @@ pub fn unbreathing_horde() -> CardDefinition {
             effect: StaticEffect::PreventDamageByRemovingCounters {
                 kind: CounterType::PlusOnePlusOne,
                 single: true,
+                even_without: true,
             },
         }],
         ..creature("Unbreathing Horde", cost(&[generic(2), b()]), vec![CreatureType::Zombie], 0, 0)
