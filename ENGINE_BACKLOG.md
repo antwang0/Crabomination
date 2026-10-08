@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-10-08 (tenth Commander run, `01GdFPW9`) — state invariants on the audit build](#fixed-2026-10-08-tenth-commander-run-01gdfpw9--state-invariants-on-the-audit-build) | 113 |
 | Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 80 |
 | Bugs & robustness | [FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep](#fixed-2026-10-07-eighth-commander-run-019mkdqk--the-uniform-pilots-first-pod-sweep) | 14 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets](#fixedopen-2026-10-06-commander-routine--a-prompting-seat-never-named-a-directly-pushed-triggers-targets) | 33 |
@@ -114,6 +115,120 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-10-08 (tenth Commander run, `01GdFPW9`) — state invariants on the audit build
+
+The ninth run's fuzzed sweeps had gone quiet (three clean in a row), and a
+first pass here agreed: ~5,000 fuzzed `--a dflt` + concession pod games,
+two-player `CRAB_LADDER_FUZZ=2500` ladders over cube / sos / sealed (~19,000
+games) and a few `--a mcts` pods (~150 s a game) found nothing. The finds
+came from **new debug invariants in the pod loop** (`pod/mod.rs`, every one
+checked after each settled action on the audit build): a panic is no longer
+the only thing a sweep can see — silently wrong state is. Each invariant
+names a rule; each find below has a test in `core_rules::cr_recent118`.
+
+Invariants added: CR 514.2 / 500.4 / 302.6 at every turn boundary (no
+marked damage, no end-of-turn bonus or effect, empty pools save a
+retention static, nothing summoning sick for the new active player); CR
+511.3 (nothing attacks or blocks outside combat); CR 506.2 / 506.4 (an
+attacker attacks a living opponent; a blocker's attackers still attack);
+CR 725.4 / 726.4 (monarch and initiative never with a departed seat); CR
+704.5d (no token off the battlefield once an action settles); CR 408.1 /
+903.3 (a command zone holds its own player's commanders and command-zone
+cards); CR 704.5m (a
+player Aura is on a player still in the game); CR 701.37 (a melded
+permanent's halves hold no state of their own); and **CR
+400.7, the productive one**: off the battlefield a card is untapped,
+unattached, unpumped, face up (outside exile / a library), front face up
+(outside exile), holds no counters but its built-in loyalty / defense
+(exile, and a graveyard Skullbriar, may), and carries none of the
+battlefield designations (flip, Room doors, Class level, Case, soulbond,
+phasing link, this turn's loyalty activations, "as this enters, choose"
+answers). `damage` is exempt on purpose (cleared at entry, 2026-09-08), and
+`chosen_player` is a spell's gift recipient.
+
+Fixed (sweeps at seeds 816000-818500, `--a dflt`, `CRAB_POD_FUZZ=2500`,
+`CRAB_POD_CONCEDE=10`):
+- ✅ **CR 800.4a / 800.4h** — Master Warcraft's (or Odric's) chooser leaving
+  the game left `combat_chooser` naming them; the declare step handed
+  priority to the departed seat (seed 817083 game 7). Cleared on leave, and
+  both declare arms route through `priority_recipient` (CR 800.4j).
+- ✅ **CR 400.7** — `move_card_to`'s leave leg never called
+  `leave_battlefield_state`: Urza's Ruinous Blast left an enchant-player
+  Curse attached to its player in exile (seed 819001; four more Curses in
+  hands and exile at 818031-818093).
+- ✅ **CR 400.7 / 406.3** — a commander exiled face down off its library
+  (after a declined CR 903.9b redirect) went home face down (818221).
+- ✅ **CR 400.7** — Semester's End's delayed return put its "additional
+  counter" on a commander that had gone home in between, and returned cards
+  under the caster's control instead of the owner's (818238). The three
+  delayed exile returns now run under `linked_return::exiled_card_only`.
+- ✅ **CR 404.2** — a processor cost (Void Attendant) put a face-down
+  hideaway card into a graveyard face down (818272). `route_to_graveyard`
+  reveals (`CardInstance::reveal`).
+- ✅ **CR 712.4** — Evacuation bounced a disturbed Generous Soul into a hand
+  as its back face (818288): the direct move path skipped the DFC /
+  prototype reverts for every destination, not just exile.
+- ✅ **CR 400.7 / 901.7** — `AddCounter`'s command-zone fallback (a plane's
+  own counters) took any card there: Omo's token copies' everything counter
+  landed on Omo after the legend rule sent it home (818308; T'Challa,
+  Valgavoth and Edgar Markov the same way).
+- ✅ **CR 400.7** — a bounced or dead permanent kept its "as this enters,
+  choose" answers (Unclaimed Territory's Knight, Vanquisher's Banner's
+  Human), and a destroyed Class its level (Fortune Teller's Talent, only
+  `move_card_to` reset it); `leave_battlefield_state` drops both, and a
+  bounced soulbond creature's own link (Cathodion; only the death route
+  cleared it).
+- ✅ **CR 701.37 / 400.7** — meld exiles both halves, but the halves kept
+  their battlefield state inside the melded shell: a tapped Gisela came back
+  out of a bounced Brisela tapped (818500).
+
+- ✅ **CR 302.6** — a seat skipping its untap step was left out of the
+  untap loop, which is where its sickness clears: its creatures stayed sick
+  all turn (Kotori, 818652; the CR 302.6 turn-boundary invariant).
+- ✅ **CR 608.2b, the class** — "a target that's no longer in the zone it was
+  in when it was targeted is illegal", and a filter cannot say so (a creature
+  card in a graveyard is still a creature): a trigger whose creature died in
+  response exiled the card from the graveyard, slots past the first were
+  never re-checked (the Omo root), and an illegal slot 0 removed the whole
+  trigger even with a legal slot 1. `StackItem::Trigger::bf_slots` records,
+  at `push_stack`, which slots held battlefield permanents; each that left
+  becomes a target hole (`target_hole::target_departed`), and the trigger is
+  removed only when none is left. A first filter-based draft holed 14 suite
+  tests' graveyard-card targets (an `Any` slot aimed at a graveyard) — the
+  mask is the zone the target was IN, which no filter carries.
+
+- ✅ **CR 704.5m / 800.4a** — the SBA's player-Aura arm shed a Curse only
+  for protection: Curses on a seat that left stayed on the battlefield
+  attached to nobody (ten in the first 38 groups at 819000, the Aura
+  invariant).
+
+- ✅ **CR 605.3b / 106.6** — a payment whose ordinary auto-tap came up
+  short retried with spend-restricted sources from a snapshot that cannot
+  un-sacrifice: a Treasure the short attempt used lost its mana and its
+  events, so it sat in a graveyard unswept (819163; Admiral Brass over an
+  Unclaimed Territory). Found by instrumenting the battlefield container
+  with a backtrace on one `CardId` — the pod's trace showed only the cast.
+
+- ✅ **CR 506.4** — removal from combat lived in the post-action sweep, which
+  waits on a pending decision: Klothys, its devotion taken by a Butcher of
+  Malakir sacrifice, kept attacking while the next sacrificer was asked
+  (819257). It now also runs when an action leaves a decision pending.
+- Open: a Gold token sat in a graveyard after a settled action (819316, the
+  token invariant) on the binary before the CR 506.4 fix; the fix moved that
+  group's games and the case no longer replays. Likely a cousin of the
+  CR 605.3b Treasure path — watch the token invariant.
+
+Also measured: cross-process determinism of a fixed-seed 8-seat pod (two
+processes, full `CRAB_POD_TRACE=0` traces byte-identical) — no hash-order
+leak in turn order, APNAP or opponent iteration.
+
+Open: a SPELL's later slots are re-checked only through the all-illegal
+test, scoped by `cast_target_was_battlefield` (slot 0's zone); a per-slot
+mask like the trigger's would close it. Slots a prompting seat fills after
+the push (`game/trigger_slots.rs`) carry no mask bit and stay unchecked. The
+CR 400.7 🟡 roadmap row is the same root (a `CardId` survives a zone
+change). Not swept for: a library's face-down flag, a stack spell's state.
 
 ## FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build
 
@@ -11979,3 +12094,10 @@ the server's human-seat path, which neither bots nor the bench run.
 8. **`01W3Tmnx` (seventh run, closed):** ✅ the stash class (`run_effect` claim, CR 608.2), ✅ CR 506.3b (a copy entering attacking under a non-attacker), ✅ CR 400.1 a wrong-shape answer to a paused resolution re-poses it (it deleted the spell), ✅ CR 603.3d once-each-turn listeners in both look-back passes (casts needed nothing), ✅ CR 122.2 a card entering with kept keyword counters arms the board gate. **New tool: `CRAB_POD_FUZZ=<n per 10k>` / `CRAB_LADDER_FUZZ` for 2-player ladder games (`pod/fuzz.rs`)** — random candidates at any priority window, random answers to listed-option asks, random attack/block subsets; ~6,000 strict debug + 15,700 release fuzzed games after its one find were clean. Gates at `771f573d8`+: suite 24,332 / 0 / 5 strict, clippy 0, `--bench` 196,176 byte-identical, 7,000 + 10,000 release pods 0 panics (PERF "seventh"). Next: `--a dflt` + fuzz is the most productive pairing (found the CR 122.2 gate) — run more of it; asks still unfuzzed: `NameCard`, `Learn`, creature-type picks, coin/die calls.
 9. **`019mKDqk` (eighth run, closed):** ✅ CR 608.2c sequential deaths (`GameEvent::DeathStepEnded`, never on the wire); ✅ CR 601.2f an unpayable strive / Fireball slot isn't offered (`game/strive_slots.rs`) and the pod repeat guard caps re-casts of one card (CR 733.1); ✅ CR 122.6 a persist / undying return is a counter put on the creature. **`--a uniform` piloted pods for the first time**: ~2,600 strict debug games 3..8 seats after the fix, clean; `--a dflt` strict 4/6/8 seats (~940) and `--a dflt` + `CRAB_POD_FUZZ=2000` 4/7 seats (552 + 156) clean.
 10. **`01NdGdpR` (ninth run, live 2026-10-08) — lane: fuzzed strict sweeps on the OPTIMIZED audit build** (`RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit cargo build --profile overflow --bin bot_ladder`, Cargo.toml's recipe: every `debug_assert!` at ~1 s a 4-seat game, ~50x the debug pods), seeds 710000+; ✅ CR 709.4a / 709.5 names (split halves, a Room's locked door has no name).
+
+## The Commander NEXT's session lines as the tenth 2026-10-08 run (`01GdFPW9`) found them (moved verbatim from TODO.md)
+
+3. **Gates at the ninth run** (session `01NdGdpR`, tip `e2436f5f8`, PERF "2026-10-08 (Commander routine, ninth …)"): suite **24,351 / 0 / 5** strict; clippy 0; `--bench` **196,176 / 27.64 / 613.0 byte-identical**, paired A/B vs the run's base flat (-0.82 % median); 68,000 two-player pool games identical to base; release pods 1,800 / 1,800 decided; seven audit-build sweeps (~47,000 strict fuzzed pod games), the last three clean.
+5. **Ninth-run yield:** seven sweeps (~47,000 games) → 8 finds, then three clean sweeps in a row, plus two from 2-player pool draws (Browbeat bot offer, CR 704.3 Pox Plague freeze — `CRAB_STUCK_DIAG=1` prints a stuck game's refused answer): CR 613.7d entry timestamps (a resolving Aura lost a layer race; every entry path), u32 counter overflow (`COUNTER_CAP`), **CR 608.2d — 27 parked asks answered by the caster instead of the seat they prompted** (`PendingEffectState::Seated`, now a structural gate), a moot wrapper's stash, Sadistic Shell Game / join-combat leftovers, CR 610.3 self-exile, Imprisoned in the Moon's filter. Concessions (`CRAB_POD_CONCEDE`) found three of them — keep them in the mix.
+6. **Next moves:** the 2-player pools' DRAWS are a cheap bot-bug detector — `CRAB_DUMP_TRACES=<dir> CRAB_TRACE_NAMES=1` (names every `CardId`; off by default, the format is the golden traces') found every bot taking Browbeat's 5 at 2 life (`server/accept_offer.rs`); read the next pool's draws (`grep -l "= winner none"`) the same way. Room / split names (CR 709.4a / 709.5) are done.
+7. **`01GdFPW9` (tenth run, live 2026-10-08) — lane: audit-build sweeps the ninth run did not take** — `--a mcts` pods and two-player `CRAB_LADDER_FUZZ` ladder games over the cube / sos / sealed pools, seeds 810000+.

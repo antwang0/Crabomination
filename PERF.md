@@ -3134,6 +3134,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-08 (Commander routine, tenth — session `01GdFPW9`) — guardrail; state invariants, CR 608.2b trigger slots, CR 400.7 leave state
+
+Hot-path touches: `push_stack` stamps `StackItem::Trigger::bf_slots` (one
+`battlefield_find` per target slot, ≤ 8); trigger resolution re-checks each
+marked slot (one find each); `leave_battlefield_state` gained seven guarded
+field clears; the post-action path runs `remove_noncreature_combatants` only
+while combatants exist AND a decision is pending. `release` at `a7d623aec`,
+4-core Xeon @ 2.80 GHz. No paired A/B this run (the build budget went to
+audit sweeps); the deterministic workload is the guardrail.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 to the ninth run; determinism ok (all pairs split); peak_rss
+                 27.0 MiB; games_per_s 240.9 (single read)
+audit sweeps     overflow + debug-assertions, shuffled 3..8-seat groups x 20,
+                 dflt, fuzz 2500, concede 10, strict, sweep probe, seeds
+                 816000-819631, with the new pod invariants (ENGINE_BACKLOG
+                 "tenth Commander run"): 16 finds; the last 232 groups clean
+suite            24,377 / 0 / 5 strict after the CR 608.2b change (361b8f5be);
+                 24,408 / 2 / 5 at a7d623aec, both failures (and clippy's
+                 one warning) other sessions' and fixed upstream (TODO NEXT 3)
+```
+
 ### 2026-10-08 (Commander routine, ninth — session `01NdGdpR`) — guardrail; audit-build sweeps, seated asks, CR 613.7d / 704.3
 
 Hot-path touches: every battlefield entry takes a timestamp at entry as well
