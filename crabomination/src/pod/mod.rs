@@ -1753,6 +1753,78 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CRUELCLAW_COMMANDERS,
             main: decks::CRUELCLAW_MAIN,
         },
+        // Seat 223: Vivi Ornitier's EDHREC average deck. `--pod-decks 223`.
+        PodDeck {
+            name: "Vivi Ornitier (RU)",
+            commanders: decks::VIVI_COMMANDERS,
+            main: decks::VIVI_MAIN,
+        },
+        // Seat 224: Nekusar, the Mindrazer's EDHREC average deck. `--pod-decks 224`.
+        PodDeck {
+            name: "Nekusar, the Mindrazer (BRU)",
+            commanders: decks::NEKUSAR_COMMANDERS,
+            main: decks::NEKUSAR_MAIN,
+        },
+        // Seat 225: Sephiroth, Fabled SOLDIER's EDHREC average deck. `--pod-decks 225`.
+        PodDeck {
+            name: "Sephiroth, Fabled SOLDIER (B)",
+            commanders: decks::SEPHIROTH_COMMANDERS,
+            main: decks::SEPHIROTH_MAIN,
+        },
+        // Seat 226: Zaxara, the Exemplary's EDHREC average deck. `--pod-decks 226`.
+        PodDeck {
+            name: "Zaxara, the Exemplary (BGU)",
+            commanders: decks::ZAXARA_COMMANDERS,
+            main: decks::ZAXARA_MAIN,
+        },
+        // Seat 227: Omnath, Locus of Creation's EDHREC average deck. `--pod-decks 227`.
+        PodDeck {
+            name: "Omnath, Locus of Creation (GRUW)",
+            commanders: decks::OMNATH_LOC_COMMANDERS,
+            main: decks::OMNATH_LOC_MAIN,
+        },
+        // Seat 228: Marneus Calgar's EDHREC average deck. `--pod-decks 228`.
+        PodDeck {
+            name: "Marneus Calgar (BUW)",
+            commanders: decks::MARNEUS_COMMANDERS,
+            main: decks::MARNEUS_MAIN,
+        },
+        // Seat 229: Kykar, Wind's Fury's EDHREC average deck. `--pod-decks 229`.
+        PodDeck {
+            name: "Kykar, Wind's Fury (RUW)",
+            commanders: decks::KYKAR_COMMANDERS,
+            main: decks::KYKAR_MAIN,
+        },
+        // Seat 230: Varina, Lich Queen's EDHREC average deck. `--pod-decks 230`.
+        PodDeck {
+            name: "Varina, Lich Queen (BUW)",
+            commanders: decks::VARINA_COMMANDERS,
+            main: decks::VARINA_MAIN,
+        },
+        // Seat 231: Alania, Divergent Storm's EDHREC average deck. `--pod-decks 231`.
+        PodDeck {
+            name: "Alania, Divergent Storm (RU)",
+            commanders: decks::ALANIA_COMMANDERS,
+            main: decks::ALANIA_MAIN,
+        },
+        // Seat 232: Veyran, Voice of Duality's EDHREC average deck. `--pod-decks 232`.
+        PodDeck {
+            name: "Veyran, Voice of Duality (RU)",
+            commanders: decks::VEYRAN_COMMANDERS,
+            main: decks::VEYRAN_MAIN,
+        },
+        // Seat 233: Bria, Riptide Rogue's EDHREC average deck. `--pod-decks 233`.
+        PodDeck {
+            name: "Bria, Riptide Rogue (RU)",
+            commanders: decks::BRIA_COMMANDERS,
+            main: decks::BRIA_MAIN,
+        },
+        // Seat 234: Noctis, Prince of Lucis's EDHREC average deck. `--pod-decks 234`.
+        PodDeck {
+            name: "Noctis, Prince of Lucis (BUW)",
+            commanders: decks::NOCTIS_COMMANDERS,
+            main: decks::NOCTIS_MAIN,
+        },
     ]
 }
 
@@ -3478,6 +3550,22 @@ mod tests {
             ("Chulane, Teller of Tales", [0xC401, 220, 9144]),
             ("Finneas, Ace Archer", [0xF1EA, 221, 9145]),
             ("The Infamous Cruelclaw", [0xC2E1, 222, 9146]),
+            // Spell-cast payoffs (Vivi, Kykar, Alania, Veyran, Bria), draw
+            // pings (Nekusar), death drains and a transform (Sephiroth), X
+            // Hydras (Zaxara), landfall tiers (Omnath), token draws (Marneus),
+            // Zombie loots (Varina), graveyard artifact casts (Noctis).
+            ("Vivi Ornitier", [0x0171, 223, 9147]),
+            ("Nekusar, the Mindrazer", [0x4E45, 224, 9148]),
+            ("Sephiroth, Fabled SOLDIER", [0x5E91, 225, 9149]),
+            ("Zaxara, the Exemplary", [0x2A4A, 226, 9150]),
+            ("Omnath, Locus of Creation", [0x0C2E, 227, 9151]),
+            ("Marneus Calgar", [0x4A2E, 228, 9152]),
+            ("Kykar, Wind's Fury", [0x4F4A, 229, 9153]),
+            ("Varina, Lich Queen", [0x7A21, 230, 9154]),
+            ("Alania, Divergent Storm", [0xA1A1, 231, 9155]),
+            ("Veyran, Voice of Duality", [0x7E72, 232, 9156]),
+            ("Bria, Riptide Rogue", [0xB21A, 233, 9157]),
+            ("Noctis, Prince of Lucis", [0x40C7, 234, 9158]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
