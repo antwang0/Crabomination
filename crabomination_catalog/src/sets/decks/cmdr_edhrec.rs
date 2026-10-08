@@ -1847,3 +1847,124 @@ pub fn south_wind_avatar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mirkwood Spider — {G} 1/1 deathtouch Spider. Attacking, it gives target
+/// legendary creature you control deathtouch until end of turn.
+pub fn mirkwood_spider() -> CardDefinition {
+    CardDefinition {
+        name: "Mirkwood Spider",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Spider]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou)),
+            keyword: Keyword::Deathtouch,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Oakhame Adversary — {3}{G} 2/3 deathtouch; {2} less if an opponent
+/// controls a green permanent; combat damage to a player draws a card.
+pub fn oakhame_adversary() -> CardDefinition {
+    CardDefinition {
+        name: "Oakhame Adversary",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Warrior]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        self_cost_reduction_if: Some((
+            Predicate::SelectorExists(Selector::EachPermanent(R::HasColor(Color::Green).and(R::ControlledByOpponent))),
+            2,
+        )),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tajuru Blightblade — {G} 1/1 deathtouch Elf Rogue.
+pub fn tajuru_blightblade() -> CardDefinition {
+    CardDefinition {
+        name: "Tajuru Blightblade",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Rogue]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Dreadmaw's Ire — {R} Instant. Target attacking creature gets +2/+2 and
+/// trample, and "deals combat damage to a player: destroy target artifact
+/// that player controls," until end of turn.
+pub fn dreadmaws_ire() -> CardDefinition {
+    let target = || Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::IsAttacking) };
+    CardDefinition {
+        name: "Dreadmaw's Ire",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT { what: target(), power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: target(), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            Effect::GrantTriggeredAbility {
+                what: target(),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                    effect: Effect::Destroy { what: target_filtered(R::Artifact.and(R::ControlledByDefendingPlayer)) },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sheltering Light — {W} Instant. Target creature gains indestructible
+/// until end of turn. Scry 1.
+pub fn sheltering_light() -> CardDefinition {
+    CardDefinition {
+        name: "Sheltering Light",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Angelfire Ignition — {1}{R}{W} Sorcery. Two +1/+1 counters on target
+/// creature; it gains vigilance, trample, lifelink, indestructible, and
+/// haste until end of turn. Flashback {2}{R}{W}.
+pub fn angelfire_ignition() -> CardDefinition {
+    use crate::card::CounterType;
+    let target = || Selector::TargetFiltered { slot: 0, filter: R::Creature };
+    let mut steps = vec![Effect::AddCounter { what: target(), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) }];
+    for keyword in [Keyword::Vigilance, Keyword::Trample, Keyword::Lifelink, Keyword::Indestructible, Keyword::Haste] {
+        steps.push(Effect::GrantKeyword { what: target(), keyword, duration: Duration::EndOfTurn });
+    }
+    CardDefinition {
+        name: "Angelfire Ignition",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), r(), w()]))],
+        effect: Effect::Seq(steps),
+        ..Default::default()
+    }
+}

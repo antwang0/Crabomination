@@ -1135,3 +1135,72 @@ fn south_wind_avatar_drains_on_gain() {
     assert_eq!(g.players[0].life, mine + 2);
     assert_eq!(g.players[1].life, theirs - 1);
 }
+
+/// Oakhame Adversary costs {G} against a green opponent, and its hit draws.
+#[test]
+fn oakhame_adversary_discount_and_draw() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::llanowar_elves());
+    let oak = g.add_card_to_hand(0, catalog::oakhame_adversary());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, oak, None);
+    assert!(g.battlefield_find(oak).is_some(), "{{1}}{{G}} after the {{2}} discount");
+    g.clear_sickness(oak);
+    let hand = g.players[0].hand.len();
+    connect(&mut g, oak);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Angelfire Ignition: +2 counters and lifelink on a bear.
+#[test]
+fn angelfire_ignition_suits_up() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::angelfire_ignition());
+    flood(&mut g);
+    cast(&mut g, spell, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Lifelink));
+}
+
+/// Sheltering Light saves a creature from a destroy.
+#[test]
+fn sheltering_light_makes_indestructible() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let light = g.add_card_to_hand(0, catalog::sheltering_light());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, light, Some(Target::Permanent(bear)));
+    let kill = g.add_card_to_hand(1, catalog::murder());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: kill, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("murder");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Dreadmaw's Ire: +2/+2 on an attacker, and its hit destroys an artifact
+/// the defending player controls.
+#[test]
+fn dreadmaws_ire_breaks_an_artifact() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let rock = ready(&mut g, 1, catalog::ornithopter());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let ire = g.add_card_to_hand(0, catalog::dreadmaws_ire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, ire, Some(Target::Permanent(bear)));
+    let life = g.players[1].life;
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(life - g.players[1].life, 4);
+    assert!(g.battlefield_find(rock).is_none(), "Ornithopter destroyed");
+}
