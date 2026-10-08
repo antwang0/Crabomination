@@ -18101,9 +18101,10 @@ impl GameState {
     }
 
 
-    /// `activate_ability_into` for a mana source the auto-tapper picked,
-    /// with the source marked as paying (`mana_sources_paying`) so its own
-    /// cost's auto-tap cannot pick it again.
+    /// `activate_ability_into` for a mana source the auto-tapper picked. A
+    /// source whose ability costs mana (or is granted, so unread here) is
+    /// marked as paying (`mana_sources_paying`) so its own cost's auto-tap
+    /// cannot pick it again; a free one cannot recurse and writes nothing.
     fn activate_mana_source_into(
         &mut self,
         id: CardId,
@@ -18111,6 +18112,13 @@ impl GameState {
         x_value: Option<u32>,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        let costly = self
+            .battlefield_find(id)
+            .and_then(|c| c.definition.activated_abilities.get(idx))
+            .is_none_or(|a| !a.mana_cost.symbols.is_empty());
+        if !costly {
+            return self.activate_ability_into(id, idx, None, Vec::new(), x_value, None, events);
+        }
         self.mana_sources_paying.push(id);
         let r = self.activate_ability_into(id, idx, None, Vec::new(), x_value, None, events);
         self.mana_sources_paying.pop();
