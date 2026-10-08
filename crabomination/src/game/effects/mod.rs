@@ -14510,6 +14510,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileUntilCastOneTakeOne { count, filter } => {
+                self.exile_until_cast_one_take_one(*count, filter, ctx, events);
+                Ok(())
+            }
             Effect::AddManaAmongColorsOf { what, amount } => {
                 let p = ctx.controller;
                 let colors: Vec<crate::mana::Color> = self

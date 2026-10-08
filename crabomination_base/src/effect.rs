@@ -7150,6 +7150,12 @@ pub enum Effect {
     /// of All): `what` is a card in any zone; each pip is one of its colors,
     /// the controller's pick. A colorless card adds nothing.
     AddManaAmongColorsOf { what: Selector, amount: Value },
+    /// Invasion of Alara: "Exile cards from the top of your library until
+    /// you exile `count` nonland cards [matching `filter`]. You may cast one
+    /// of those without paying its mana cost. Put one of them into your hand.
+    /// Then put the other cards exiled this way on the bottom of your library
+    /// in a random order."
+    ExileUntilCastOneTakeOne { count: u32, filter: SelectionRequirement },
     /// CR 500.4 exception — add these fixed color pips to the resolving
     /// player's pool and mark them "you don't lose this mana as steps and
     /// phases end" (Savage Ventmaw's attack trigger). The mana survives every

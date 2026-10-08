@@ -160,4 +160,82 @@ impl GameState {
         }
         Ok(())
     }
+
+    /// `Effect::ExileUntilCastOneTakeOne` (Invasion of Alara). The bot casts
+    /// the highest mana value hit it can and keeps the next; a seat with a UI
+    /// is asked per hit, then which hit goes to hand.
+    pub(super) fn exile_until_cast_one_take_one(
+        &mut self,
+        count: u32,
+        filter: &SelectionRequirement,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let p = ctx.controller;
+        let (mut exiled, mut hits) = (Vec::new(), Vec::new());
+        while hits.len() < count as usize {
+            let Some(top) = self.players[p].library.first().map(|c| c.id) else { break };
+            self.move_card_to(top, &ZoneDest::Exile, ctx, events);
+            exiled.push(top);
+            if self.exile.iter().find(|c| c.id == top).is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p)) {
+                hits.push(top);
+            }
+        }
+        let mv = |g: &Self, id: CardId| g.exile.iter().find(|c| c.id == id).map_or(0, |c| c.definition.cost.cmc());
+        hits.sort_by_key(|&id| std::cmp::Reverse(mv(self, id)));
+        let auto = matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+        let mut cast = None;
+        for &h in &hits {
+            let Some(def) = self.exile.iter().find(|c| c.id == h).map(|c| c.definition.arc()) else { continue };
+            let take = auto
+                || matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        description: format!("Cast {} without paying its mana cost?", def.name),
+                        kind: OptionalKind::CastFree,
+                    }),
+                    DecisionAnswer::Bool(true)
+                );
+            if !take {
+                continue;
+            }
+            let (target, more) = self.auto_targets_for_effect_all_slots_sourced(&def.effect, p, None, Some(h));
+            if let Ok(mut ev) = self.cast_card_for_free(p, h, Zone::Exile, target, more, None, None, false) {
+                events.append(&mut ev);
+                cast = Some(h);
+                break;
+            }
+        }
+        let left: Vec<CardId> = hits.iter().copied().filter(|&h| Some(h) != cast).collect();
+        let keep = match left.as_slice() {
+            [] => None,
+            [only] => Some(*only),
+            [first, second, ..] if !auto => {
+                let name = self.exile.iter().find(|c| c.id == *first).map_or("", |c| c.definition.name);
+                let first_ok = matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        description: format!("Put {name} into your hand (otherwise the other card)?"),
+                        kind: OptionalKind::MayBody,
+                    }),
+                    DecisionAnswer::Bool(true)
+                );
+                Some(if first_ok { *first } else { *second })
+            }
+            [first, ..] => Some(*first),
+        };
+        if let Some(k) = keep {
+            self.move_card_to(k, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+        }
+        let rest: Vec<CardId> = exiled.into_iter().filter(|id| self.exile.iter().any(|c| c.id == *id)).collect();
+        for &id in &rest {
+            self.move_card_to(
+                id,
+                &ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom },
+                ctx,
+                events,
+            );
+        }
+        self.bottom_in_random_order(p, &rest);
+    }
 }

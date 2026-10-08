@@ -756,6 +756,7 @@ impl Effect {
             | Effect::SpreadCounterKindToOthers { .. }
             | Effect::ReverseTurnOrder
             | Effect::AddManaAmongColorsOf { .. }
+            | Effect::ExileUntilCastOneTakeOne { .. }
             | Effect::RevealDeployOneTakeOne { .. }
             | Effect::ChooseModeAtRandom(_)
             | Effect::EachOpponentReturnsFromYourGraveyard { .. }
