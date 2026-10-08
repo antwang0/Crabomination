@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 24 |
 | Bugs & robustness | [FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep](#fixed-2026-10-07-eighth-commander-run-019mkdqk--the-uniform-pilots-first-pod-sweep) | 14 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets](#fixedopen-2026-10-06-commander-routine--a-prompting-seat-never-named-a-directly-pushed-triggers-targets) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
@@ -113,6 +114,32 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build
+
+The audit build (`RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=
+target-audit cargo build --profile overflow --bin bot_ladder`, Cargo.toml's
+recipe) runs every `debug_assert!`, overflow check, `CRAB_ANSWER_LOG=strict`
+and `CRAB_POD_SWEEP_PROBE` at ~1 s a 4-seat game — ~50x the debug pods. Sweep
+1: every deck in shuffled groups at 3..8 seats × 30, `--a dflt`,
+`CRAB_POD_FUZZ=2500`, seeds 710000-710223 (~6,700 games): two finds, three
+draws (Molten Disaster for X ≥ every life total; a bot that is losing anyway
+takes the draw). Fixed, each with a test:
+- ✅ **CR 613.7d** — a resolving permanent spell's own SBA sweep ran before
+  the event dispatch stamped its timestamp, so the new permanent read as
+  older than every effect already in play (an unstamped object falls back
+  to its `CardId`): Imprisoned in the Moon lost the layer-4 race to the
+  Minimus Containment it should have made illegal (CR 704.5m; seed 710168
+  game 7, the sweep probe). `cr_recent118::cr_704_5m_an_aura_whose_host_*`.
+  And Imprisoned in the Moon enchanted any permanent ("creature, land, or
+  planeswalker"; the only bare-`Permanent` Aura filter whose oracle is
+  narrower).
+- ✅ **Counter overflow** — a doubling chain passed `u32::MAX` (seed 710202
+  game 13, Adrix and Nev's Fractals at turn 206); release wraps silently and
+  a count past `i32::MAX` reads as negative power. `COUNTER_CAP` (2^30).
+  `counters::counters_saturate_at_the_engine_cap`.
+- ✅ CR 709.4a / 709.5 names (split halves; a Room's locked door has no
+  name), from the Room residual below.
 
 ## FIXED 2026-10-07 (seventh Commander routine, `01W3Tmnx`) — the stash class, and a creature entering attacking under a non-attacker
 
