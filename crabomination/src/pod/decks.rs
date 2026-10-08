@@ -5757,3 +5757,31 @@ pub const DEADPOOL_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SATORU_COMMANDERS: &[CardFactory] = &[satoru_umezawa];
+
+/// **Satoru Umezawa**'s EDHREC average deck (fetched 2026-10-08), card for
+/// card: 80 nonbasic cards + 10 Islands + 9 Swamps = 99. Dimir ninjutsu —
+/// every creature card in hand sneaks in for {2}{U}{B}.
+pub const SATORU_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, dimir_signet, fellwar_stone, lightning_greaves, sol_ring,
+    swiftfoot_boots, talisman_of_dominance, thought_vessel, choked_estuary, command_tower,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, exotic_orchard, morphic_pool,
+    reliquary_tower, rogues_passage, shipwreck_marsh, sunken_hollow, tainted_isle,
+    temple_of_deceit, underground_river, watery_grave, ancient_silver_dragon, archon_of_cruelty,
+    baleful_strix, blightsteel_colossus, changeling_outcast, dimir_infiltrator, faerie_seer,
+    fallen_shinobi, gingerbrute, grazilaxx_illithid_scholar, gudul_lurker,
+    ingenious_infiltrator, ink_eyes_servant_of_oni, invisible_stalker, jin_gitaxias_core_augur,
+    lord_of_the_void, mindleech_mass, mist_cloaked_herald, moon_circuit_hacker, ornithopter,
+    ornithopter_of_paradise, prosperous_thief, rune_scarred_demon, satoru_the_infiltrator,
+    sheoldred_whispering_one, silent_blade_oni, silver_fur_master, siren_stormtamer,
+    slither_blade, starwinder, tetsuko_umezawa_fugitive, thousand_faced_shadow, tormented_soul,
+    triton_shorestalker, yuriko_the_tigers_shadow, cunning_evasion, propaganda,
+    reconnaissance_mission, rhystic_study, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    counterspell, cyclonic_rift, dark_ritual, deadly_rollick, infernal_grasp, negate, pongify,
+    swan_song, kaito_shizuki, demonic_tutor, enter_the_enigma, feed_the_swarm, ponder,
+    toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
