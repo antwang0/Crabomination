@@ -34138,6 +34138,50 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NoteCreatureTypeOf { what } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(noted) = self.battlefield_find(src).map(|c| c.noted_creature_types.clone()) else {
+                    return Ok(());
+                };
+                let Some(spell) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id().and_then(|id| self.find_card_anywhere(id)).cloned())
+                else {
+                    return Ok(());
+                };
+                let pool = if self.card_off_battlefield_is_every_creature_type(&spell) {
+                    self.creature_type_suggestions(ctx.controller)
+                } else {
+                    spell.definition.subtypes.creature_types.clone()
+                };
+                let open: Vec<_> = pool.into_iter().filter(|t| !noted.contains(t)).collect();
+                let pick = match open.len() {
+                    0 => return Ok(()),
+                    1 => open[0],
+                    _ => {
+                        let names = open.iter().map(|t| format!("{t:?}")).collect();
+                        let mut cursor = 0;
+                        let Some(i) = self.ask_seat_option(
+                            &mut cursor,
+                            ctx.controller,
+                            "Note a creature type".into(),
+                            src,
+                            names,
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        self.clear_answer_log();
+                        open[i]
+                    }
+                };
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.noted_creature_types.push(pick);
+                }
+                Ok(())
+            }
+
             Effect::SecretNumbersMatch { opponent, max, on_match, on_miss, fresh } => {
                 use rand::seq::IteratorRandom;
                 let Some(opp) = self.resolve_player(opponent, ctx) else { return Ok(()) };

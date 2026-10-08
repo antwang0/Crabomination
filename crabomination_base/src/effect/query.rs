@@ -1424,6 +1424,7 @@ impl Effect {
             Effect::ExchangeLifeWithSourceToughness => false,
             Effect::ExchangePlayerLifeWithSourceToughness { .. } => false,
             Effect::RadOnCastUntilEndOfTheirNextTurn { .. } => false,
+            Effect::NoteCreatureTypeOf { what } => sel_has_target(what),
             Effect::SecretNumbersMatch { on_match, on_miss, .. } => {
                 on_match.requires_target() || on_miss.requires_target()
             }
@@ -4764,6 +4765,7 @@ impl Effect {
                 | Value::PowerOf(s)
                 | Value::ToughnessOf(s)
                 | Value::ManaValueOf(s)
+                | Value::NotedCreatureTypesOf(s)
                 | Value::LoyaltyOf(s) => sel_find(s, slot),
                 Value::CountersOn { what, .. } => sel_find(what, slot),
                 // Arithmetic combinators can wrap a target-bearing value
@@ -6197,6 +6199,7 @@ fn value_has_target(v: &Value) -> bool {
         Value::NonNeg(v) => value_has_target(v),
         Value::ManaValueOf(s) => sel_has_target(s),
         Value::ColorCountOf(s) => sel_has_target(s),
+        Value::NotedCreatureTypesOf(s) => sel_has_target(s),
         Value::LoyaltyOf(s) => sel_has_target(s),
         _ => false,
     }

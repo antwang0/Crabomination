@@ -1888,6 +1888,12 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
+            Value::NotedCreatureTypesOf(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_permanent_id().and_then(|id| self.battlefield_find(id)))
+                .map(|c| c.noted_creature_types.len() as i32)
+                .sum(),
             Value::ColorsAmongYoursAndSpellsCastThisTurn => {
                 let seat = ctx.controller;
                 let mut set = crate::mana::ColorSet::default();
@@ -6906,6 +6912,20 @@ impl GameState {
                                         || cp.keywords().contains(&crate::card::Keyword::Changeling)
                                         || cp.subtypes().creature_types.iter().any(|t| mine.contains(t)))
                             })
+                    })
+            }
+            R::SharesCreatureTypeWithCreatureCardInYourGraveyard => {
+                let mine = &card.definition.subtypes.creature_types;
+                let wild = self.card_off_battlefield_is_every_creature_type(card);
+                (wild || !mine.is_empty())
+                    && self.players.get(controller).is_some_and(|p| {
+                        p.graveyard.iter().any(|c| {
+                            c.id != card.id
+                                && c.definition.is_creature()
+                                && (wild
+                                    || self.card_off_battlefield_is_every_creature_type(c)
+                                    || mine.iter().any(|t| self.card_off_battlefield_has_creature_type(c, *t)))
+                        })
                     })
             }
             R::SharesColorWithPermanentYouControl => {

@@ -1330,6 +1330,10 @@ pub enum Value {
     /// "for each of its colors"). Reads printed colors; a colorless/devoid
     /// object counts 0. Breathe Your Last.
     ColorCountOf(Box<Selector>),
+    /// How many creature types are noted for the permanents the selector
+    /// resolves to (Volo, Itinerant Scholar's "for each creature type noted
+    /// for target permanent you control named Volo's Journal").
+    NotedCreatureTypesOf(Box<Selector>),
     /// CR 903.4 — the number of distinct colors in a player's commanders'
     /// color identity. Zero outside a Commander game and zero for a seat
     /// whose commander is colorless; a two-commander seat reads the union
@@ -8184,6 +8188,11 @@ pub enum Effect {
         #[serde(default)]
         fresh: bool,
     },
+    /// "Note one of its creature types that hasn't been noted for [this]"
+    /// (Volo's Journal): the first spell `what` resolves to offers its
+    /// unnoted types (a changeling, the game's suggested types); the pick
+    /// lands in the source's `CardCold::noted_creature_types`.
+    NoteCreatureTypeOf { what: Selector },
     /// "At the beginning of combat on enchanted opponent's turn, that player
     /// may pay {1} for each artifact they control. If they don't, creatures
     /// can't attack this combat" (Overencumbered) — the payment half; the

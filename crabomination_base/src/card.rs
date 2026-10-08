@@ -3024,6 +3024,10 @@ pub enum SelectionRequirement {
     /// (Descendants' Path's revealed card). Changelings on either side share
     /// with everything; a creature's layer-4 types count.
     SharesCreatureTypeWithCreatureYouControl,
+    /// Shares a creature type with a creature card in the evaluating player's
+    /// graveyard (Volo, Guide to Monsters). Changelings on either side share
+    /// with everything; the card itself never counts.
+    SharesCreatureTypeWithCreatureCardInYourGraveyard,
     /// Shares a colour with the permanent sacrificed to pay this spell's
     /// additional cost (Mind Extraction). False with nothing sacrificed.
     SharesColorWithSacrificed,
@@ -8331,6 +8335,9 @@ pub struct CardCold {
     /// The numbers this permanent has secretly chosen (The Toymaker's Trap's
     /// "a number … that hasn't been chosen").
     pub chosen_numbers: Vec<u8>,
+    /// Creature types noted for this permanent (Volo's Journal). Read by
+    /// `Value::NotedCreatureTypesOf`; a new object starts with none.
+    pub noted_creature_types: Vec<CreatureType>,
     /// CR 702.33b — which of the definition's `kicker_options` were paid for
     /// this cast (Anavolver kicked with {1}{U} only). Empty for every other
     /// spell. [`GRANTED_OFFSPRING_OPTION`] marks a granted offspring paid
