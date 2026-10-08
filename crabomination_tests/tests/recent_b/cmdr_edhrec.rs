@@ -891,3 +891,149 @@ fn cerulean_wisps_untaps_and_draws() {
     assert!(!g.battlefield_find(bear).unwrap().tapped);
     assert_eq!(g.players[0].hand.len(), hand);
 }
+
+/// Nissa of Shadowed Boughs: landfall adds loyalty; −5 puts a graveyard
+/// creature onto the battlefield with two +1/+1 counters.
+#[test]
+fn nissa_of_shadowed_boughs_landfall_and_reanimate() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let nissa = ready(&mut g, 0, catalog::nissa_of_shadowed_boughs());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    let loyalty = |g: &GameState| g.battlefield_find(nissa).unwrap().counter_count(crabomination::card::CounterType::Loyalty);
+    assert_eq!(loyalty(&g), 5);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: nissa, ability_index: 1, target: None, x_value: None })
+        .expect("-5");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).expect("bear on the battlefield");
+    assert_eq!(cp.power, 4);
+}
+
+/// Mikaeus, the Unhallowed: a bolted non-Human comes back with a +1/+1
+/// counter (undying granted, CR 702.93a).
+#[test]
+fn mikaeus_the_unhallowed_grants_undying() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mikaeus_the_unhallowed());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 2);
+    for b in [bolt, bolt2] {
+        let target = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").map(|c| c.id);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: b, target: target.map(Target::Permanent), additional_targets: vec![], mode: None, x_value: None })
+            .expect("bolt");
+        drain_stack(&mut g);
+    }
+    // First death: undying returns it with a counter (4/4 under Mikaeus); the
+    // second bolt only deals 3, so it survives.
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("returned");
+    assert_eq!(g.computed_permanent(back.id).unwrap().power, 4);
+}
+
+/// Lich's Mastery: a bolt to the face exiles three things; a 2-life gain
+/// draws two.
+#[test]
+fn lichs_mastery_pays_in_cards() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::lichs_mastery());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "three graveyard cards exiled");
+    let hand = g.players[0].hand.len();
+    let lifelink = g.add_card_to_hand(0, catalog::healing_salve());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, lifelink, Some(Target::Player(0)));
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three for three life");
+}
+
+/// Talion, named 1: an opponent's bolt (mana value 1) drains 2 and draws.
+#[test]
+fn talion_punishes_the_named_number() {
+    let mut g = pod(2);
+    let talion = g.add_card_to_hand(0, catalog::talion_the_kindly_lord());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    cast(&mut g, talion, None);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let (life, hand) = (g.players[1].life, g.players[0].hand.len());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Ruthless Technomancer: two artifacts sacrificed (X = 2) bring back a
+/// 2-power creature card.
+#[test]
+fn ruthless_technomancer_trades_artifacts_for_a_body() {
+    let mut g = pod(2);
+    let tech = ready(&mut g, 0, catalog::ruthless_technomancer());
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::ornithopter());
+    }
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tech,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("activate with X = 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(named(&g, "Ornithopter"), 0);
+}
+
+/// Will, Scion of Peace: with 3 life gained this turn, a blue {1}{U}
+/// Wizard's Staff costs just {U}.
+#[test]
+fn will_scion_of_peace_discounts_by_life_gained() {
+    let mut g = pod(2);
+    let will = ready(&mut g, 0, catalog::will_scion_of_peace());
+    g.players[0].life_gained_this_turn = 3;
+    activate(&mut g, will, None);
+    let staff = g.add_card_to_hand(0, catalog::wizards_staff());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: staff, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{1}{U} paid with {U}");
+}
+
+/// Gold-Forged Thopteryx gives a legendary permanent ward {2}.
+#[test]
+fn gold_forged_thopteryx_wards_legends() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::gold_forged_thopteryx());
+    let will = ready(&mut g, 0, catalog::will_scion_of_peace());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(will)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(will).is_some(), "ward countered the unpaid bolt");
+}

@@ -1387,3 +1387,289 @@ pub fn nissa_vital_force() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nissa of Shadowed Boughs — {2}{B}{G}, loyalty 4. Landfall adds a loyalty
+/// counter. +1: untap target land you control; you may make it a 3/3 haste,
+/// menace Elemental until end of turn. −5: you may put a creature card with
+/// mana value up to your land count from your hand or graveyard onto the
+/// battlefield with two +1/+1 counters (placed as it lands, not an
+/// enters-with replacement).
+pub fn nissa_of_shadowed_boughs() -> CardDefinition {
+    use crate::card::{CounterType, LoyaltyAbility, PlaneswalkerSubtype, Zone};
+    use crate::effect::shortcut::{choose_one_then, chosen_one, landfall};
+    let creature_cards = || {
+        let card = |zone| Selector::CardsInZone {
+            who: PlayerRef::You,
+            zone,
+            filter: R::Creature.and(R::ManaValueAtMostYourCount(Box::new(R::Land))),
+        };
+        Selector::Both(Box::new(card(Zone::Hand)), Box::new(card(Zone::Graveyard)))
+    };
+    CardDefinition {
+        name: "Nissa of Shadowed Boughs",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Nissa], ..Default::default() },
+        base_loyalty: 4,
+        triggered_abilities: vec![landfall(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Loyalty,
+            amount: Value::ONE,
+        })],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Untap { what: target_filtered(R::Land.and(R::ControlledByYou)), up_to: None },
+                    Effect::MayDo {
+                        description: "Make it a 3/3 Elemental with haste and menace?".into(),
+                        body: Box::new(Effect::BecomeCreature {
+                            what: Selector::Target(0),
+                            power: Value::Const(3),
+                            toughness: Value::Const(3),
+                            creature_types: vec![CreatureType::Elemental],
+                            keywords: vec![Keyword::Haste, Keyword::Menace],
+                            duration: Duration::EndOfTurn,
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::If {
+                    cond: Predicate::SelectorExists(creature_cards()),
+                    then: Box::new(Effect::MayDo {
+                        description: "Put a creature card from your hand or graveyard onto the battlefield?".into(),
+                        body: Box::new(choose_one_then(
+                            creature_cards(),
+                            PlayerRef::You,
+                            Effect::Seq(vec![
+                                Effect::Move {
+                                    what: chosen_one(),
+                                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                                },
+                                Effect::AddCounter {
+                                    what: Selector::LastMoved,
+                                    kind: CounterType::PlusOnePlusOne,
+                                    amount: Value::Const(2),
+                                },
+                            ]),
+                        )),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mikaeus, the Unhallowed — {3}{B}{B}{B} 5/5 intimidate. A Human that
+/// damages you is destroyed (opponents' Humans: the `OpponentSourceDamagedYou`
+/// scope; a Human of your own hitting you is not covered). Other non-Human
+/// creatures you control get +1/+1 and have undying.
+pub fn mikaeus_the_unhallowed() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Mikaeus, the Unhallowed",
+        cost: cost(&[generic(3), b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Zombie, CreatureType::Cleric]),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Intimidate],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentSourceDamagedYou).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Human),
+                },
+            ),
+            effect: Effect::Destroy { what: Selector::TriggerSource },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Other non-Human creatures you control get +1/+1 and have undying.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature
+                    .and(R::OtherThanSource)
+                    .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Human)))),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Undying],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lich's Mastery — {3}{B}{B}{B} legendary enchantment, hexproof. You can't
+/// lose the game; gaining life draws that many; each 1 life lost exiles a
+/// permanent you control or a card from your hand or graveyard (graveyard
+/// cards offered first); leaving the battlefield loses you the game.
+pub fn lichs_mastery() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, Zone};
+    use crate::effect::shortcut::{choose_some_then, chosen_one};
+    let card = |zone| Selector::CardsInZone { who: PlayerRef::You, zone, filter: R::Any };
+    let fodder = Selector::Both(
+        Box::new(card(Zone::Graveyard)),
+        Box::new(Selector::Both(
+            Box::new(card(Zone::Hand)),
+            Box::new(Selector::EachPermanent(R::Permanent.and(R::ControlledByYou))),
+        )),
+    );
+    CardDefinition {
+        name: "Lich's Mastery",
+        cost: cost(&[generic(3), b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Hexproof],
+        static_abilities: vec![StaticAbility {
+            description: "You can't lose the game.",
+            effect: StaticEffect::ControllerCantLoseGame,
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeLost, EventScope::YourControl),
+                effect: choose_some_then(
+                    fodder,
+                    PlayerRef::You,
+                    Value::TriggerEventAmount,
+                    false,
+                    Effect::Move { what: chosen_one(), to: ZoneDest::Exile },
+                ),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::LoseGame { who: PlayerRef::You },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Talion, the Kindly Lord — {2}{U}{B} 3/4 flying. As it enters, choose a
+/// number from 1 to 10; whenever an opponent casts a spell with that mana
+/// value, power, or toughness, they lose 2 life and you draw a card.
+pub fn talion_the_kindly_lord() -> CardDefinition {
+    let spell_stat_is_chosen = |stat: Value| Predicate::ValueEquals(stat, Value::ChosenNumberOfSource);
+    let spell = || Box::new(Selector::TriggerSource);
+    CardDefinition {
+        name: "Talion, the Kindly Lord",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Faerie, CreatureType::Noble]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        as_enters_effect: Some(Effect::ChooseNumberForSource { max: 10, pays_life: false, min: 1 }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(Predicate::Any(vec![
+                spell_stat_is_chosen(Value::ManaValueOf(spell())),
+                spell_stat_is_chosen(Value::PowerOf(spell())),
+                spell_stat_is_chosen(Value::ToughnessOf(spell())),
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ruthless Technomancer — {3}{B} 2/4. ETB: you may sacrifice another
+/// creature for Treasures equal to its power. {2}{B}, sacrifice X artifacts
+/// (X ≥ 1): return a creature card with power X or less from your graveyard
+/// to the battlefield.
+pub fn ruthless_technomancer() -> CardDefinition {
+    CardDefinition {
+        name: "Ruthless Technomancer",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::MaySacrifice {
+            description: "Sacrifice another creature for Treasures equal to its power?".into(),
+            filter: R::Creature.and(R::OtherThanSource),
+            count: Value::ONE,
+            then: Box::new(mint(crabomination_base::tokens::treasure_token(), Value::SacrificedPower)),
+            else_: None,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sac_other_filter: Some((R::Artifact, 1)),
+            sac_other_x: true,
+            x_nonzero: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::PowerAtMostXFromCost)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gold-Forged Thopteryx — {W}{U} 1/3 flying, lifelink artifact creature.
+/// Each legendary permanent you control has ward {2}.
+pub fn gold_forged_thopteryx() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, WardCost};
+    CardDefinition {
+        name: "Gold-Forged Thopteryx",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Dinosaur, CreatureType::Thopter]),
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "Each legendary permanent you control has ward {2}.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::HasSupertype(Supertype::Legendary).and(R::ControlledByYou)),
+                keyword: Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Will, Scion of Peace — {1}{W}{U} 2/4 vigilance. {T} (sorcery speed):
+/// white and/or blue spells you cast this turn cost {X} less, X = the life
+/// you gained this turn, fixed as it resolves (the Rowan, Scion of War
+/// ruling).
+pub fn will_scion_of_peace() -> CardDefinition {
+    CardDefinition {
+        name: "Will, Scion of Peace",
+        cost: cost(&[generic(1), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::SpellsCostLessThisTurnByValue {
+                filter: R::HasColor(Color::White).or(R::HasColor(Color::Blue)),
+                amount: Value::LifeGainedThisTurn(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
