@@ -5729,3 +5729,31 @@ pub const ROWAN_SCION_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const DEADPOOL_COMMANDERS: &[CardFactory] = &[deadpool_trading_card];
+
+/// **Deadpool, Trading Card**'s EDHREC average deck (fetched 2026-10-08),
+/// card for card: 80 nonbasic cards + 9 Mountains + 10 Swamps = 99. Rakdos
+/// group slug — trade the text box, hand the drawback across the table.
+pub const DEADPOOL_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_selves, conjurers_closet, cursed_mirror, fellwar_stone,
+    helm_of_the_host, mirror_box, rakdos_signet, sol_ring, swiftfoot_boots,
+    sword_of_hearth_and_home, talisman_of_indulgence, the_fire_crystal, blazemire_verge,
+    blood_crypt, bloodstained_mire, bojuka_bog, command_tower, dragonskull_summit,
+    exotic_orchard, foreboding_ruins, haunted_ridge, luxury_suite, rakdos_carnarium,
+    shadowblood_ridge, smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice,
+    alexios_deimos_of_kosmos, blood_artist, dalek_squadron, delina_wild_mage, dualcaster_mage,
+    elturel_survivors, goldlust_triad, jaxis_the_troublemaker, kardur_doomscourge, mayhem_devil,
+    mirage_phalanx, mirkwood_bats, morbid_opportunist, orthion_hero_of_lavabrink,
+    pitiless_plunderer, professional_face_breaker, rionya_fire_dancer, solemn_simulacrum,
+    the_master_multiplied, valgavoth_harrower_of_souls, xantcha_sleeper_agent, animate_dead,
+    black_market_connections, echoing_assault, flameshadow_conjuring, mirror_march,
+    phyrexian_arena, splinter_twin, chaos_warp, dark_ritual, deadly_dispute, deadly_rollick,
+    deflecting_swat, feign_death, malakir_rebirth, not_dead_after_all, rakdos_charm,
+    saw_in_half, terminate, undying_malice, blasphemous_act, demonic_tutor, electroduplicate,
+    feed_the_swarm, harmless_offering, heat_shimmer, jeskas_will, molten_duplication, reanimate,
+    twinflame, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

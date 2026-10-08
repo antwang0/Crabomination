@@ -1551,6 +1551,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ROWAN_SCION_COMMANDERS,
             main: decks::ROWAN_SCION_MAIN,
         },
+        // Hundred-and-ninetieth: Deadpool, Trading Card's EDHREC average deck
+        // (CR 612's exchanged text boxes). `--pod-decks 190`.
+        PodDeck {
+            name: "Deadpool, Trading Card (BR)",
+            commanders: decks::DEADPOOL_COMMANDERS,
+            main: decks::DEADPOOL_MAIN,
+        },
     ]
 }
 
@@ -3203,6 +3210,8 @@ mod tests {
             ("Ojer Axonil", [0x03E5, 188, 9112]),
             // A turn discount sized by life lost (Rowan), Vilis' draws.
             ("Rowan, Scion", [0x2043, 189, 9113]),
+            // CR 612 exchanged text boxes, CR 702.116 myriad.
+            ("Deadpool", [0xDEAD, 190, 9114]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
