@@ -1609,6 +1609,11 @@ pub struct ColdState {
     /// at most once a turn per seat.
     #[serde(default)]
     pub counter_on_creature: Option<(u32, u64)>,
+    /// `(turn, seat, count)`: +1/+1 counters each seat put on creatures it
+    /// controls this turn (Iridescent Hornbeetle). Turn-stamped; stale rows
+    /// are dropped on the next write.
+    #[serde(default)]
+    pub own_p1p1_counters: Vec<(u32, u8, u32)>,
     /// Sower of Discord's "two chosen players", per source.
     #[serde(default)]
     pub chosen_player_pairs: Vec<(CardId, usize, usize)>,
@@ -9762,6 +9767,26 @@ impl GameState {
     /// `HalveDamageToYou` halves events hitting the controller's own side,
     /// CR 614.5), and the source-scoped additive bonus (Torbran —
     /// `AddDamageToOpponents`, applied before the multipliers).
+    /// +1/+1 counters `seat` put on creatures it controls this turn.
+    pub fn own_p1p1_counters_this_turn(&self, seat: usize) -> u32 {
+        let turn = self.turn_number;
+        self.own_p1p1_counters
+            .iter()
+            .filter(|(t, s, _)| *t == turn && usize::from(*s) == seat)
+            .map(|(_, _, n)| *n)
+            .sum()
+    }
+
+    fn note_own_p1p1_counters(&mut self, seat: usize, n: u32) {
+        let turn = self.turn_number;
+        self.own_p1p1_counters.retain(|(t, _, _)| *t == turn);
+        let seat = seat.min(u8::MAX as usize) as u8;
+        match self.own_p1p1_counters.iter_mut().find(|(_, s, _)| *s == seat) {
+            Some(row) => row.2 = row.2.saturating_add(n),
+            None => self.own_p1p1_counters.push((turn, seat, n)),
+        }
+    }
+
     /// Total turn-scoped bonus `seat`'s sources add to noncombat damage
     /// (Taii Wakeen's {X}). Mirrored in the client view.
     pub fn noncombat_damage_bonus_of_seat(&self, seat: usize) -> u32 {
@@ -24036,11 +24061,16 @@ impl GameState {
         }
         let mut placed = 0u64;
         for e in events {
-            if let GameEvent::CounterAdded { card_id, .. } = e
-                && self.battlefield_find(*card_id).is_some_and(|c| self.computed_is_creature(c))
+            if let GameEvent::CounterAdded { card_id, counter_type, count, .. } = e
+                && let Some(c) = self.battlefield_find(*card_id)
+                && self.computed_is_creature(c)
                 && let Some(p) = crate::game::effects::events::counter_placer(self, e)
             {
+                let mine = *counter_type == crate::card::CounterType::PlusOnePlusOne && c.controller == p;
                 placed |= 1u64.checked_shl(p as u32).unwrap_or(0);
+                if mine {
+                    self.note_own_p1p1_counters(p, *count);
+                }
             }
         }
         if placed != 0 {

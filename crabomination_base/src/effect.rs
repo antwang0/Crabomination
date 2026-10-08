@@ -837,6 +837,9 @@ pub enum Value {
     /// "the total amount of life your opponents lost this turn" (Florian,
     /// Voldaren Scion). The summing sibling of `LifeLostThisTurn`'s max.
     TotalLifeLostThisTurn(PlayerRef),
+    /// +1/+1 counters the player put on creatures they control this turn
+    /// (Iridescent Hornbeetle). Read from `GameState::own_p1p1_counters`.
+    PlusOneCountersPutOnYourCreaturesThisTurn(PlayerRef),
     /// The {E} the players `who` resolves to have (summed) — Razorfield
     /// Ripper's "+X/+X, where X is the amount of {E} you have".
     EnergyOf(PlayerRef),
