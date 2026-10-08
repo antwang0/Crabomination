@@ -1544,6 +1544,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OJER_AXONIL_COMMANDERS,
             main: decks::OJER_AXONIL_MAIN,
         },
+        // Hundred-and-eighty-ninth: Rowan, Scion of War's EDHREC average deck
+        // (a turn discount sized by the life lost). `--pod-decks 189`.
+        PodDeck {
+            name: "Rowan, Scion of War (BR)",
+            commanders: decks::ROWAN_SCION_COMMANDERS,
+            main: decks::ROWAN_SCION_MAIN,
+        },
     ]
 }
 
@@ -3194,6 +3201,8 @@ mod tests {
             ("Shadow the", [0x5ADE, 187, 9111]),
             // CR 614.1a the noncombat floor, CR 712 Ojer and Urabrask flipping.
             ("Ojer Axonil", [0x03E5, 188, 9112]),
+            // A turn discount sized by life lost (Rowan), Vilis' draws.
+            ("Rowan, Scion", [0x2043, 189, 9113]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

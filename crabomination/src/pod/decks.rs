@@ -5701,3 +5701,31 @@ pub const OJER_AXONIL_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const ROWAN_SCION_COMMANDERS: &[CardFactory] = &[rowan_scion_of_war];
+
+/// **Rowan, Scion of War**'s EDHREC average deck (fetched 2026-10-08), card
+/// for card: 84 nonbasic cards + 7 Mountains + 8 Swamps = 99. Rakdos life
+/// payment — every point lost is a discount.
+pub const ROWAN_SCION_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, fellwar_stone, lightning_greaves, rakdos_signet, sol_ring,
+    staff_of_compleation, swiftfoot_boots, talisman_of_indulgence, ancient_tomb, barbarian_ring,
+    blood_crypt, bloodstained_mire, cabal_pit, city_of_brass, command_tower, dragonskull_summit,
+    foreboding_ruins, ifnir_deadlands, luxury_suite, mana_confluence, mount_doom, ramunap_ruins,
+    smoldering_marsh, sulfurous_springs, tarnished_citadel, birgi_god_of_storytelling,
+    blood_celebrant, boggart_trawler, dark_confidant, darkstar_augur, doom_whisperer,
+    dualcaster_mage, gray_merchant_of_asphodel, hexing_squelcher, immolating_souleater,
+    judith_carnage_connoisseur, krrik_son_of_yawgmoth, pinnacle_monk, simian_spirit_guide,
+    storm_kiln_artist, treasonous_ogre, vilis_broker_of_blood, wall_of_blood,
+    black_market_connections, dark_tutelage, exquisite_blood, necropotence, phyrexian_arena,
+    big_score, comet_storm, dark_ritual, deflecting_swat, dismember, erebos_s_intervention,
+    fell_the_profane, fire_covenant, imps_mischief, march_of_wretched_sorrow, pyroblast,
+    red_elemental_blast, seething_song, snuff_out, vampiric_tutor, apex_of_power,
+    battle_at_the_bridge, blasphemous_act, crackle_with_power, cut_ribbons, damnable_pact,
+    demonic_tutor, exsanguinate, feed_the_swarm, inspired_tinkering, jayas_immolating_inferno,
+    jeskas_will, nights_whisper, past_in_flames, peer_into_the_abyss, read_the_bones, reanimate,
+    sign_in_blood, torment_of_hailfire, toxic_deluge,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
