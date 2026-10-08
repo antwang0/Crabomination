@@ -425,6 +425,9 @@ fn cr_709_4a_naming_one_half_of_a_split_card_names_the_card() {
     g.players[0].mana_pool.add_colorless(1);
     let cast = g.perform_action(GameAction::CastSpell { card_id: hit, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None });
     assert!(matches!(cast, Err(GameError::SpellNameLocked)), "{cast:?}");
+    // A restricted name ask ("a nonland card name") looks the half up too.
+    let half = catalog::lookup_by_name("Run").map(|d| d.name);
+    assert_eq!(half, Some("Hit // Run"));
 }
 
 /// CR 400.1 / 608.2 — an answer of the wrong shape to a paused resolution is

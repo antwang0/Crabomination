@@ -133,6 +133,7 @@ fn name_index() -> &'static HashMap<&'static str, CardFactory> {
     static INDEX: OnceLock<HashMap<&'static str, CardFactory>> = OnceLock::new();
     INDEX.get_or_init(|| {
         let mut map: HashMap<&'static str, CardFactory> = HashMap::default();
+        let mut halves = Vec::new();
         for f in all_known_factories() {
             // Calling each factory once at index-build time is cheap (it
             // just allocates a struct) and gives us the card name. We
@@ -145,6 +146,14 @@ fn name_index() -> &'static HashMap<&'static str, CardFactory> {
             if let Some(back) = def.back_face.as_ref() {
                 map.entry(back.name).or_insert(f);
             }
+            // CR 709.4a — each half's name names a split card or Room.
+            if def.name.contains(" // ") {
+                halves.extend(def.name.split(" // ").map(|h| (h, f)));
+            }
+        }
+        // After every whole name, which wins a collision.
+        for (h, f) in halves {
+            map.entry(h).or_insert(f);
         }
         map
     })
