@@ -1833,6 +1833,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OMNATH_LOCUS_COMMANDERS,
             main: decks::OMNATH_LOCUS_MAIN,
         },
+        // Seat 236: Muldrotha, the Gravetide's EDHREC average deck. `--pod-decks 236`.
+        PodDeck {
+            name: "Muldrotha, the Gravetide (BGU)",
+            commanders: decks::MULDROTHA_COMMANDERS,
+            main: decks::MULDROTHA_MAIN,
+        },
+        // Seat 237: Flubs, the Fool's EDHREC average deck. `--pod-decks 237`.
+        PodDeck {
+            name: "Flubs, the Fool (GRU)",
+            commanders: decks::FLUBS_COMMANDERS,
+            main: decks::FLUBS_MAIN,
+        },
+        // Seat 238: Liesa, Shroud of Dusk's EDHREC average deck. `--pod-decks 238`.
+        PodDeck {
+            name: "Liesa, Shroud of Dusk (BW)",
+            commanders: decks::LIESA_SHROUD_COMMANDERS,
+            main: decks::LIESA_SHROUD_MAIN,
+        },
+        // Seat 239: Ramos, Dragon Engine's EDHREC average deck. `--pod-decks 239`.
+        PodDeck {
+            name: "Ramos, Dragon Engine (BGRUW)",
+            commanders: decks::RAMOS_COMMANDERS,
+            main: decks::RAMOS_MAIN,
+        },
+        // Seat 240: Omnath, Locus of Mana's EDHREC average deck. `--pod-decks 240`.
+        PodDeck {
+            name: "Omnath, Locus of Mana (G)",
+            commanders: decks::OMNATH_MANA_COMMANDERS,
+            main: decks::OMNATH_MANA_MAIN,
+        },
+        // Seat 241: Tannuk, Memorial Ensign's EDHREC average deck. `--pod-decks 241`.
+        PodDeck {
+            name: "Tannuk, Memorial Ensign (GR)",
+            commanders: decks::TANNUK_COMMANDERS,
+            main: decks::TANNUK_MAIN,
+        },
+        // Seat 242: Gargos, Vicious Watcher's EDHREC average deck. `--pod-decks 242`.
+        PodDeck {
+            name: "Gargos, Vicious Watcher (G)",
+            commanders: decks::GARGOS_COMMANDERS,
+            main: decks::GARGOS_MAIN,
+        },
     ]
 }
 
@@ -3576,6 +3618,17 @@ mod tests {
             ("Noctis, Prince of Lucis", [0x40C7, 234, 9158]),
             // CR 106.4 lost mana turned black; CR 310.12b Invasion of Alara.
             ("Omnath, Locus of All", [0x0A11, 235, 9159]),
+            // Graveyard replays (Muldrotha), play/cast loots (Flubs), cast
+            // drains and a life-paid CR 903.8 tax (Liesa), counters spent as mana
+            // (Ramos), kept green mana (Omnath), landfall pings (Tannuk),
+            // Hydra cost cuts and fights (Gargos).
+            ("Muldrotha, the Gravetide", [0x40D2, 236, 9160]),
+            ("Flubs, the Fool", [0xF1B5, 237, 9161]),
+            ("Liesa, Shroud of Dusk", [0x1E5A, 238, 9162]),
+            ("Ramos, Dragon Engine", [0x2A05, 239, 9163]),
+            ("Omnath, Locus of Mana", [0x0A7A, 240, 9164]),
+            ("Tannuk, Memorial Ensign", [0x7A44, 241, 9165]),
+            ("Gargos, Vicious Watcher", [0x6A26, 242, 9166]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
