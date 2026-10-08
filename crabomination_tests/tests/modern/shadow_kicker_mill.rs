@@ -372,6 +372,22 @@ fn tashas_hideous_laughter_exiles_to_twenty_mana_value() {
     assert_eq!(g.exile.len(), 3, "exiled, not milled");
 }
 
+/// CR 800.4 / multiplayer — "each opponent exiles … until *that player* has
+/// exiled 20": every opponent's library is counted on its own (the selector
+/// resolved one seat and debug-panicked a five-seat pod).
+#[test]
+fn tashas_hideous_laughter_exiles_from_each_opponent() {
+    let mut g = multi_player_game(3);
+    for seat in [1, 2] {
+        for _ in 0..4 { g.add_card_to_library(seat, catalog::pelakka_wurm()); }
+    }
+    let effect = catalog::tashas_hideous_laughter().effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let _ = g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!([g.players[1].library.len(), g.players[2].library.len()], [1, 1]);
+    assert_eq!(g.exile.len(), 6);
+}
+
 #[test]
 fn court_of_cunning_mills_more_while_monarch() {
     let mut g = two_player_game();

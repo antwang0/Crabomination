@@ -43296,30 +43296,32 @@ impl GameState {
                     .flat_map(|p| self.players[p].library.iter().take(n).map(|c| EntityRef::Card(c.id)))
                     .collect()
             }
+            // Both fan out per seat, each library counted on its own: Tasha's
+            // Hideous Laughter makes *each* opponent exile until that player
+            // reaches 20 (a singular resolve read seat one's library only).
             Selector::TopOfLibraryUntilMvAtLeast { who, threshold } => {
-                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
                 let cap = self.evaluate_value(threshold, ctx).max(0);
-                let mut sum: i32 = 0;
                 let mut out: Vec<EntityRef> = Vec::new();
-                for c in self.players[p].library.iter() {
-                    out.push(EntityRef::Card(c.id));
-                    sum += c.definition.cost.cmc() as i32;
-                    if sum >= cap {
-                        break;
+                for p in self.resolve_players(who, ctx) {
+                    let mut sum: i32 = 0;
+                    for c in self.players[p].library.iter() {
+                        out.push(EntityRef::Card(c.id));
+                        sum += c.definition.cost.cmc() as i32;
+                        if sum >= cap {
+                            break;
+                        }
                     }
                 }
                 out
             }
             Selector::BottomOfLibrary { who, count } => {
-                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                let lib = &self.players[p].library;
-                let total = lib.len();
-                if n >= total {
-                    lib.iter().map(|c| EntityRef::Card(c.id)).collect()
-                } else {
-                    lib.iter().skip(total - n).map(|c| EntityRef::Card(c.id)).collect()
+                let mut out: Vec<EntityRef> = Vec::new();
+                for p in self.resolve_players(who, ctx) {
+                    let lib = &self.players[p].library;
+                    out.extend(lib.iter().skip(lib.len().saturating_sub(n)).map(|c| EntityRef::Card(c.id)));
                 }
+                out
             }
             Selector::CardsInZone { who, zone, filter } => {
                 // Use the multi-player resolver so EachPlayer / EachOpponent
