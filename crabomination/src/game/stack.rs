@@ -5894,7 +5894,7 @@ impl GameState {
 
     /// CR 506.4 — an attacker or blocker that stopped being a creature (a God
     /// below its devotion, an animation that ended) is removed from combat.
-    fn remove_noncreature_combatants(&mut self) {
+    pub(crate) fn remove_noncreature_combatants(&mut self) {
         let gone: SmallVec<[CardId; 4]> = self
             .attacking
             .iter()

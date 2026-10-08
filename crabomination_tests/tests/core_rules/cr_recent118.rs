@@ -1054,3 +1054,62 @@ fn cr_605_3b_a_treasure_sacrificed_by_a_short_auto_tap_still_pays() {
     .expect("Territory + Treasure pay {G}{G}");
     assert!(g.battlefield_find(treasure).is_none() && !g.players[0].graveyard.iter().any(|c| c.id == treasure));
 }
+
+/// CR 506.4 — a combatant that stops being a creature is removed from combat
+/// at once, even while another player's ask is still pending: Klothys lost
+/// devotion to a Butcher of Malakir sacrifice and kept attacking as an
+/// enchantment, because the answer's sweep waited on the next asker (pod
+/// seed 819257, the CR 506.4 invariant).
+#[test]
+fn cr_506_4_a_god_that_loses_devotion_leaves_combat_while_an_ask_is_pending() {
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    let klothys = g.add_card_to_battlefield(0, catalog::klothys_god_of_destiny());
+    g.add_card_to_battlefield(0, catalog::leatherback_baloth());
+    let tusker = g.add_card_to_battlefield(0, catalog::kalonian_tusker());
+    // Two, so the second asker has a real choice to wait on.
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let butcher = g.add_card_to_battlefield(2, catalog::butcher_of_malakir());
+    g.clear_sickness(klothys);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: klothys, target: AttackTarget::Player(2) }]))
+        .expect("Klothys attacks at devotion 7");
+    for seat in 0..3 {
+        g.players[seat].wants_ui = true;
+    }
+    g.destroy_permanent(butcher, false, &mut Vec::new());
+    g.priority.player_with_priority = 2;
+    for _ in 0..8 {
+        if g.pending_decision.is_some() || g.stack.is_empty() {
+            break;
+        }
+        let p = g.player_with_priority();
+        g.priority.player_with_priority = p;
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    // The first asker sacrifices the Tusker; the second ask is left pending.
+    let mut answered = false;
+    for _ in 0..2 {
+        let Some(pd) = g.pending_decision.as_ref() else { break };
+        if let crabomination::decision::Decision::ChooseTarget { legal, .. } = &pd.decision
+            && legal.contains(&Target::Permanent(tusker))
+        {
+            g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(tusker))))
+                .expect("sacrifice the Tusker");
+            answered = true;
+            break;
+        }
+        let first = match &pd.decision {
+            crabomination::decision::Decision::ChooseTarget { legal, .. } => legal[0].clone(),
+            _ => break,
+        };
+        g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(first))).expect("answer");
+    }
+    assert!(answered, "the Tusker's controller was asked");
+    assert!(g.battlefield_find(tusker).is_none());
+    assert!(!g.attacking.iter().any(|a| a.attacker == klothys), "Klothys left combat");
+}
