@@ -623,3 +623,53 @@ fn cr_610_3_a_source_that_exiles_itself_until_it_leaves_comes_back() {
     assert!(g.exile.iter().all(|c| c.definition.name != "Constricting Sliver"), "not left in exile");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Constricting Sliver"), "back on the battlefield");
 }
+
+/// CR 704.3 — no state-based sweep while a resolution is paused on its next
+/// ask: Pox Plague's seat 0 sacrificed the land under seat 1's Spreading
+/// Seas, the post-answer sweep put the Seas in the graveyard under seat 1's
+/// pending pick, the pick was refused every round and the game froze (cube
+/// seed 830002, eight "stuck" games).
+#[test]
+fn cr_704_3_pox_plague_takes_the_offered_sacrifice() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::game::types::GameAction;
+    let mut g = main_phase();
+    for s in 0..2 {
+        g.players[s].wants_ui = true;
+        for _ in 0..6 {
+            g.add_card_to_battlefield(s, catalog::swamp());
+        }
+    }
+    // Seat 1's Spreading Seas on one of seat 0's lands.
+    let land = g.battlefield.iter().find(|c| c.controller == 0).unwrap().id;
+    let seas = g.add_card_to_battlefield(1, catalog::spreading_seas());
+    g.battlefield_find_mut(seas).unwrap().attached_to = Some(land);
+    let plague = g.add_card_to_hand(0, catalog::pox_plague());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 5);
+    g.perform_action(GameAction::CastSpell { card_id: plague, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    for _ in 0..20 {
+        let Some(d) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            g.resolve_top_of_stack().expect("resolve");
+            continue;
+        };
+        let answer = match &d.decision {
+            // Seat 0 gives up the land under the Seas; seat 1 the Seas.
+            Decision::ChooseCards { candidates, min, .. } => {
+                let mut ids: Vec<_> = candidates.iter().map(|c| c.0).collect();
+                ids.sort_by_key(|id| !(*id == land || *id == seas));
+                DecisionAnswer::Cards(ids.into_iter().take(*min as usize).collect())
+            }
+            Decision::Discard { .. } => DecisionAnswer::Discard(vec![]),
+            other => panic!("unexpected ask {other:?}"),
+        };
+        let shown = format!("{:?}", d.decision);
+        g.submit_decision(answer).unwrap_or_else(|e| panic!("{e:?} answering {shown}"));
+    }
+    for s in 0..2 {
+        assert!(g.battlefield.iter().filter(|c| c.controller == s).count() <= 4, "seat {s} gave up half");
+    }
+}

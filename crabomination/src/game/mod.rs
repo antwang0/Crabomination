@@ -28177,7 +28177,20 @@ impl GameState {
                 return self.replay_activation(card_id, ability_index, target, additional_targets, x_value);
             }
         };
-        self.check_state_based_actions_into(&mut events);
+        // CR 704.3 — not while the resolution this answer resumed is paused
+        // again on the next ask: a sweep there put Pox Plague's offered
+        // Spreading Seas (its land just sacrificed) in the graveyard under
+        // the pending pick, the pick was refused, and the game froze (cube
+        // seed 830002). The resolution sweeps when it finishes.
+        let paused = self.pending_decision.as_ref().is_some_and(|d| {
+            matches!(
+                d.resume,
+                ResumeContext::Spell { .. } | ResumeContext::Trigger { .. } | ResumeContext::Ability { .. }
+            )
+        });
+        if !paused {
+            self.check_state_based_actions_into(&mut events);
+        }
         self.dispatch_triggers_for_events(&events);
         Ok(events)
     }
