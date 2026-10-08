@@ -5674,3 +5674,30 @@ pub const SHADOW_HEDGEHOG_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const OJER_AXONIL_COMMANDERS: &[CardFactory] = &[ojer_axonil_deepest_might];
+
+/// **Ojer Axonil, Deepest Might**'s EDHREC average deck (fetched 2026-10-08),
+/// card for card: 69 nonbasic cards + 30 Mountains = 99. Mono-red pingers —
+/// every 1-damage ping becomes four.
+pub const OJER_AXONIL_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, champions_helm, commanders_plate, fire_diamond,
+    lightning_greaves, mind_stone, ruby_medallion, sol_ring, swiftfoot_boots,
+    nykthos_shrine_to_nyx, shivan_gorge, tyrite_sanctum, valakut_the_molten_pinnacle, war_room,
+    birgi_god_of_storytelling, blisterspit_gremlin, chandras_incinerator, coruscation_mage,
+    defiler_of_instinct, electrostatic_field, erebor_flamesmith, firebrand_archer,
+    firespitter_whelp, guttersnipe, harsh_mentor, kessig_flamebreather, neheb_the_eternal,
+    rampaging_ferocidon, razorkin_needlehead, runaway_steam_kin, spear_spewer, thermo_alchemist,
+    unruly_catapult, urabrask, burning_earth, fiery_inscription, impact_tremors, manabarbs,
+    pyrohemia, roiling_vortex, sulfuric_vortex, virtue_of_courage, abrade, bolt_bend, bulk_up,
+    chaos_warp, deflecting_swat, gut_shot, lava_dart, lightning_bolt, seething_song, shock,
+    spikefield_hazard, thrill_of_possibility, unleash_fury, chandra_torch_of_defiance,
+    blasphemous_act, boltwave, end_the_festivities, faithless_looting, fiery_confluence,
+    grab_the_prize, grapeshot, jeskas_will, light_up_the_stage, mana_geyser, tectonic_hazard,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];

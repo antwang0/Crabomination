@@ -1536,6 +1536,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHADOW_HEDGEHOG_COMMANDERS,
             main: decks::SHADOW_HEDGEHOG_MAIN,
         },
+        // Hundred-and-eighty-eighth: Ojer Axonil, Deepest Might's EDHREC
+        // average deck (CR 614.1a's red noncombat floor, a god that dies into
+        // a land). `--pod-decks 188`.
+        PodDeck {
+            name: "Ojer Axonil, Deepest Might (R)",
+            commanders: decks::OJER_AXONIL_COMMANDERS,
+            main: decks::OJER_AXONIL_MAIN,
+        },
     ]
 }
 
@@ -3156,6 +3164,8 @@ mod tests {
             ("Indoraptor", [0x1D0A, 186, 9110]),
             // CR 702.61 split second from artifact mana, Knuckles' Treasures.
             ("Shadow the", [0x5ADE, 187, 9111]),
+            // CR 614.1a the noncombat floor, CR 712 Ojer and Urabrask flipping.
+            ("Ojer Axonil", [0x03E5, 188, 9112]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
