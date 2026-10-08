@@ -1004,3 +1004,20 @@ fn cr_608_2b_a_trigger_target_that_died_is_not_exiled_from_the_graveyard() {
     });
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "still in the graveyard");
 }
+
+/// CR 704.5m / 800.4a — a Curse on a player who leaves the game is attached
+/// to no player, so it goes to its owner's graveyard. Curses stayed on the
+/// battlefield on a departed seat (pod seed 819008, the new Aura invariant).
+#[test]
+fn cr_704_5m_a_curse_on_a_departed_player_goes_to_the_graveyard() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let curse = g.add_card_to_battlefield(0, catalog::curse_of_clinging_webs());
+    g.battlefield_find_mut(curse).unwrap().attached_to_player = Some(2);
+    g.concede(2);
+    g.perform_action(crabomination::game::types::GameAction::PassPriority).expect("pass");
+    assert!(g.battlefield_find(curse).is_none(), "shed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == curse));
+}

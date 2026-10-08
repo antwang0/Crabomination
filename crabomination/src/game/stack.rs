@@ -8217,10 +8217,13 @@ impl GameState {
             .filter_map(|c| {
                 // CR 702.16b/704.5m — a Curse on a player who now has
                 // protection from it (from everything, its color, or its
-                // controller) is shed too.
+                // controller) is shed too, and so is one on a player who
+                // has left the game (CR 800.4a: no longer a player; their
+                // Curses stayed on the battlefield, pod seed 819008).
                 if let Some(p) = c.attached_to_player {
                     let pl = self.players.get(p)?;
-                    let shed = pl.protected_from_everything
+                    let shed = !pl.is_alive()
+                        || pl.protected_from_everything
                         || pl.protected_from_seat(c.controller)
                         || c.definition.printed_colors().iter().any(|col| pl.protection_colors_eot.contains(col));
                     return shed.then_some(c.id);
