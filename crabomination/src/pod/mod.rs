@@ -2119,6 +2119,101 @@ fn play_pod_game(
                 );
             }
         }
+        // CR 511.3 — outside the combat phase nothing is attacking or
+        // blocking (an "enters attacking" effect outside combat does nothing,
+        // CR 506.3). Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over()
+            && !matches!(
+                g.step,
+                crate::game::types::TurnStep::DeclareAttackers
+                    | crate::game::types::TurnStep::DeclareBlockers
+                    | crate::game::types::TurnStep::FirstStrikeDamage
+                    | crate::game::types::TurnStep::CombatDamage
+                    | crate::game::types::TurnStep::EndCombat
+            )
+            && (!g.attacking.is_empty() || !g.block_map.is_empty())
+        {
+            panic!(
+                "seed {seed}: {} attackers / {} blockers outside combat (turn {}, {:?}, after {actions} actions)",
+                g.attacking.len(),
+                g.block_map.len(),
+                g.turn_number,
+                g.step,
+            );
+        }
+        // CR 725.4 / 726.4 — the monarch and the initiative pass on when their
+        // holder leaves; neither stays with a seat that has left. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            for (what, holder) in [("monarch", g.monarch), ("initiative", g.initiative)] {
+                if let Some(p) = holder.filter(|&p| !g.players.get(p).is_some_and(|q| q.is_alive())) {
+                    panic!("seed {seed}: p{p} left holding the {what} (turn {}, after {actions} actions)", g.turn_number);
+                }
+            }
+        }
+        // CR 400.7 — a card that changed zones is a new object: off the
+        // battlefield it is untapped and attached to nothing, and
+        // in a hand or library it carries no counters but the printed loyalty
+        // / defense it was built with (exile keeps suspend's time counters).
+        // Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            let stale = |c: &crate::card::CardInstance, counters: bool| {
+                // Not `damage`: it is cleared as a card enters, not as it
+                // leaves (ENGINE_BACKLOG 2026-09-08, a priced CoW write).
+                c.tapped
+                    || c.attached_to.is_some()
+                    || c.attached_to_player.is_some()
+                    || (counters
+                        && c.counters.iter().any(|(k, &n)| match k {
+                            // A new instance is built holding its printed
+                            // loyalty / defense (`CardInstance::new`).
+                            crate::card::CounterType::Loyalty => n != c.definition.base_loyalty,
+                            crate::card::CounterType::Defense => n != c.definition.defense,
+                            _ => true,
+                        }))
+            };
+            let found = g
+                .players
+                .iter()
+                .flat_map(|p| p.hand.iter().chain(p.library.iter()).map(|c| (c, true)))
+                .chain(g.players.iter().flat_map(|p| p.graveyard.iter().chain(p.command.iter()).map(|c| (c, false))))
+                .chain(g.exile.iter().map(|c| (c, false)))
+                .find(|(c, counters)| stale(c, *counters));
+            if let Some((c, _)) = found {
+                panic!(
+                    "seed {seed}: {} {:?} in {} kept battlefield state (tapped {}, attached {:?}/{:?}, counters {:?}; turn {}, after {actions} actions)",
+                    c.definition.name,
+                    c.id,
+                    zone_label(&g, c.id),
+                    c.tapped,
+                    c.attached_to,
+                    c.attached_to_player,
+                    c.counters.iter().collect::<Vec<_>>(),
+                    g.turn_number,
+                );
+            }
+            // CR 704.5d / 704.5e — a token or a copy of a card off the
+            // battlefield and the stack ceases to exist at the next sweep, so
+            // none survives a settled action (one may wait out a paused one).
+            let token = g
+                .players
+                .iter()
+                .flat_map(|p| p.hand.iter().chain(p.library.iter()).chain(p.graveyard.iter()).chain(p.command.iter()))
+                .chain(g.exile.iter())
+                .find(|c| c.is_token);
+            if let Some(c) = token.filter(|_| g.pending_decision.is_none()) {
+                panic!(
+                    "seed {seed}: token {} {:?} survived in {} (turn {}, {:?}, after {actions} actions)",
+                    c.definition.name,
+                    c.id,
+                    zone_label(&g, c.id),
+                    g.turn_number,
+                    g.step,
+                );
+            }
+        }
         // CR 509.1a — a blocker is controlled by the defending player of each
         // attacker it blocks (control changes remove it, CR 506.4); CR 400.3 —
         // a card in a hand, library, graveyard or command zone is in its
