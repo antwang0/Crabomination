@@ -1084,3 +1084,46 @@ fn wrenn_and_realmbreaker_emblem_plays_from_the_graveyard() {
     cast_at(&mut g, bear, None);
     assert!(g.battlefield_find(forest).is_some() && g.battlefield_find(bear).is_some());
 }
+
+/// Invasion of Alara's entry: exile until two nonland cards of mana value 4
+/// or less; the bot casts the costlier (Grizzly Bears) free, keeps the other
+/// (Lightning Bolt) and bottoms the land.
+#[test]
+fn invasion_of_alara_casts_one_hit_and_keeps_the_other() {
+    let mut g = omnath_game();
+    g.step = TurnStep::PreCombatMain;
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    flood(&mut g);
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_alara());
+    cast_at(&mut g, inv, None);
+    assert!(g.battlefield_find(bear).is_some(), "the costlier hit is cast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "the other goes to hand");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(forest), "the land is bottomed");
+}
+
+/// CR 310.12b — a defeated Siege with a sorcery back face is exiled and its
+/// back face cast free: Awaken the Maelstrom draws two, copies a permanent,
+/// spreads three +1/+1 counters and destroys an opponent's permanent, then
+/// goes to the graveyard as Invasion of Alara (CR 712.4).
+#[test]
+fn invasion_of_alara_defeated_casts_awaken_the_maelstrom() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let inv = g.add_card_to_battlefield(0, catalog::invasion_of_alara());
+    g.battlefield_find_mut(inv).unwrap().remove_counters(CounterType::Defense, 7);
+    let hand = g.players[0].hand.len();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none(), "the opponent's permanent is destroyed");
+    let bears: Vec<CardId> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").map(|c| c.id).collect();
+    assert_eq!(bears.len(), 2, "a token copy");
+    assert!(bears.contains(&bear));
+    assert_eq!(bears.iter().map(|&b| plus_ones(&g, b)).sum::<u32>(), 3, "three counters among them");
+    assert!(g.players[0].hand.len() >= hand + 2 || g.players.iter().skip(1).any(|p| p.hand.len() >= 2));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == inv && c.definition.name == "Invasion of Alara"));
+}

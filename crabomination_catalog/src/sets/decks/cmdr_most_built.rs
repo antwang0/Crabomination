@@ -1846,3 +1846,73 @@ pub fn wrenn_and_realmbreaker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Invasion of Alara // Awaken the Maelstrom — a defense-7 Siege whose entry
+/// digs two cheap nonland cards (cast one free, keep one); defeated, its
+/// all-colors sorcery back face is cast free (CR 310.12b).
+pub fn invasion_of_alara() -> CardDefinition {
+    let maelstrom = CardDefinition {
+        name: "Awaken the Maelstrom",
+        card_types: vec![CardType::Sorcery],
+        color_indicator: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::TargetFiltered { slot: 0, filter: R::Player }, amount: Value::Const(2) },
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::Artifact,
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+                return_eot: false,
+                then: None,
+            },
+            Effect::ChooseOneAmong {
+                what: Selector::EachPermanent(R::ControlledByYou),
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::SeparatedPile { chosen: true },
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                }),
+                other: Box::new(Effect::Noop),
+            },
+            Effect::DistributeCountersAmong {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                total: Value::Const(3),
+                counter: CounterType::PlusOnePlusOne,
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered { slot: 1, filter: R::Permanent.and(R::ControlledByOpponent) },
+            },
+        ]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of Alara",
+        cost: ManaCost::new(vec![crate::mana::w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Battle],
+        subtypes: crate::card::Subtypes {
+            battle_subtypes: vec![crate::card::BattleSubtype::Siege],
+            ..Default::default()
+        },
+        defense: 7,
+        triggered_abilities: vec![etb(Effect::ExileUntilCastOneTakeOne {
+            count: 2,
+            filter: R::Nonland.and(R::ManaValueAtMost(4)),
+        })],
+        back_face: Some(Box::new(maelstrom)),
+        ..Default::default()
+    }
+}

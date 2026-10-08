@@ -4586,6 +4586,7 @@ static DECKS: &[Factory] = &[
     super::decks::liberator_urzas_battlethopter,
     super::decks::ratadrabik_of_urborg,
     super::decks::the_cabbage_merchant,
+    super::decks::invasion_of_alara,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,
