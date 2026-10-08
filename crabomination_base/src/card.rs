@@ -3527,6 +3527,9 @@ pub enum SelectionRequirement {
     /// targeting, the on-battlefield permanent's printed cost is read
     /// the same way.
     HasXInCost,
+    /// The card's mana cost has at least N colored mana symbols (Omnath,
+    /// Locus of All's reveal).
+    ColoredManaSymbolsAtLeast(u32),
     /// True when the card's mana cost contains two or more *distinct*
     /// colored pips. Hybrid pips (`{W/B}`) count both halves; Phyrexian
     /// pips count their colored half only. Used by Mage Tower Referee

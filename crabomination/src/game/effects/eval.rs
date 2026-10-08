@@ -6129,6 +6129,7 @@ impl GameState {
                     R::Colorless => color_set().is_empty(),
                     R::Monocolored => color_set().is_monocolored(),
                     R::HasXInCost => card.definition.cost.has_x(),
+                    R::ColoredManaSymbolsAtLeast(n) => card.definition.cost.colored_symbol_count() >= *n,
                     // OtherThanSource: enforce "different from the source"
                     // when a source CardId is threaded into this call (effect
                     // resolvers pass `ctx.source`, cast-time validators pass
@@ -7023,6 +7024,7 @@ impl GameState {
             // `CastManaSpent` is source-relative; no source here, so vacuous.
             R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::PowerExactlyXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower | R::ManaValueLessThanSourcePower | R::ManaValueAtMostLifeGainedThisTurn | R::ManaValueAtMostLifeLostThisTurn => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
+            R::ColoredManaSymbolsAtLeast(n) => card.definition.cost.colored_symbol_count() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,
             // Unresolved source-counter MV gate (concretized at resolution

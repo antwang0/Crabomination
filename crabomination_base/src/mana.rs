@@ -272,6 +272,26 @@ impl ManaCost {
         Self { symbols }
     }
 
+    /// CR 107.4 — how many colored mana symbols the cost has (hybrid and
+    /// Phyrexian ones included, each counted once): Omnath, Locus of All's
+    /// "three or more colored mana symbols".
+    pub fn colored_symbol_count(&self) -> u32 {
+        self.symbols
+            .iter()
+            .filter(|s| {
+                matches!(
+                    s,
+                    ManaSymbol::Colored(_)
+                        | ManaSymbol::Hybrid(..)
+                        | ManaSymbol::Phyrexian(_)
+                        | ManaSymbol::PhyrexianHybrid(..)
+                        | ManaSymbol::MonoHybrid(..)
+                        | ManaSymbol::ColorlessHybrid(_)
+                )
+            })
+            .count() as u32
+    }
+
     /// Mana value (formerly converted mana cost): sum of all pip values.
     /// CR 107.4f — does this cost contain a Phyrexian mana symbol?
     /// ("a spell with {H} in its mana cost" — Rage Extractor.)
