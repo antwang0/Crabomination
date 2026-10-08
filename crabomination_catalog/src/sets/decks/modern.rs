@@ -48039,8 +48039,8 @@ pub fn dryad_of_the_ilysian_grove() -> CardDefinition {
 }
 
 /// Valakut, the Molten Pinnacle — Land, enters tapped. Whenever a Mountain
-/// enters under your control while you control six or more Mountains, deal
-/// 3 damage to any target (the printed "may" is dropped).
+/// enters under your control while you control six or more Mountains, you
+/// may have it deal 3 damage to any target.
 pub fn valakut_the_molten_pinnacle() -> CardDefinition {
     CardDefinition {
         name: "Valakut, the Molten Pinnacle",
@@ -48067,11 +48067,12 @@ pub fn valakut_the_molten_pinnacle() -> CardDefinition {
                         n: Value::Const(6),
                     },
                 ])),
-            effect: Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::any_target(),
-                ),
-                amount: Value::Const(3),
+            effect: Effect::MayDo {
+                description: "Deal 3 damage to any target?".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::any_target()),
+                    amount: Value::Const(3),
+                }),
             },
         }],
         activated_abilities: vec![crate::catalog::sets::tap_add(Color::Red)],

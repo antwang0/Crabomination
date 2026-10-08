@@ -946,8 +946,12 @@ fn valakut_triggers_on_sixth_mountain() {
     g.perform_action(GameAction::PlayLand(m5)).expect("play");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 20, "below threshold — no bolt");
-    // Sixth Mountain: five others — Valakut fires at the opponent.
+    // Sixth Mountain: five others — Valakut may fire at the opponent.
     g.players[0].lands_played_this_turn = 0;
+    g.players[0].hostile_player_targets = true;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     let m6 = g.add_card_to_hand(0, catalog::mountain());
     g.perform_action(GameAction::PlayLand(m6)).expect("play");
     drain_stack(&mut g);
