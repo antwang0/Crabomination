@@ -22532,6 +22532,19 @@ impl GameState {
         if let Some(color) = ability.spend_color_as_any {
             effective_mana_cost = effective_mana_cost.colored_payable_by(color);
         }
+        // Agatha's Soul Cauldron — a creature of yours activates with mana of
+        // any color.
+        if effective_mana_cost.symbols.iter().any(|s| !matches!(s, crate::mana::ManaSymbol::Generic(_)))
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities)
+                    })
+            })
+            && self.battlefield_find(card_id).is_some_and(|c| c.controller == p && self.computed_is_creature(c))
+        {
+            effective_mana_cost = effective_mana_cost.colored_as_generic();
+        }
         self.phyrexianize_for_payer(p, &mut effective_mana_cost);
 
         // CR 601.2g — float-spend confirmation. Before tapping anything, if the

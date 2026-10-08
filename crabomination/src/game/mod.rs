@@ -17716,7 +17716,9 @@ impl GameState {
                 // until the pool's counter overflowed (six-seat pod, seed
                 // 34097).
                 let mut kept: Vec<(crate::mana::Color, u32)> = Vec::new();
-                for &(_, col) in color_keepers.iter().filter(|(p, _)| *p == i) {
+                let this_turn = player.kept_colors_this_turn;
+                let turn_keepers = crate::mana::Color::ALL.into_iter().filter(|c| this_turn.contains(*c));
+                for col in color_keepers.iter().filter(|(p, _)| *p == i).map(|&(_, c)| c).chain(turn_keepers) {
                     if !kept.iter().any(|(c, _)| *c == col) {
                         kept.push((col, player.mana_pool.amount(col)));
                     }
@@ -32985,6 +32987,8 @@ fn static_effect_to_effects(
             | StaticEffect::GrantStormToISSpells
             // Read by `stack_has_split_second`; no layer effect.
             | StaticEffect::YourSpellsHaveSplitSecondIfArtifactManaSpent
+            // Read by `activate_ability`'s cost path; no layer effect.
+            | StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities
             // YourISSpellsHaveDeathtouch — read in `deal_damage_to_from`; no
             // layer effect.
             | StaticEffect::YourISSpellsHaveDeathtouch

@@ -39412,6 +39412,12 @@ impl GameState {
                 self.players[ctx.controller].next_spell_convoke_this_turn = true;
                 Ok(())
             }
+            Effect::KeepUnspentColorManaThisTurn { who, color } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].kept_colors_this_turn.insert(*color);
+                }
+                Ok(())
+            }
             Effect::NextInstantOrSorceryGainsStormThisTurn => {
                 self.players[ctx.controller].next_is_spell_storm_this_turn = true;
                 Ok(())

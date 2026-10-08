@@ -1052,6 +1052,7 @@ impl GameState {
                         pl.instants_sorceries_cast_from_graveyard_this_turn = 0;
                     }
                     pl.oil_activity_this_turn = false;
+                    pl.kept_colors_this_turn = crate::mana::ColorSet::empty();
                     pl.channel_life_for_mana = false;
                     // CR 603.7e — unused "your next creature spell this turn"
                     // riders expire with the turn.

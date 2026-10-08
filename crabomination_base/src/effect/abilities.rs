@@ -2543,6 +2543,10 @@ pub enum StaticEffect {
     /// artifact was spent to cast it" (Shadow the Hedgehog's Chaos Control).
     /// Read live by `stack_has_split_second` off `cast_artifact_mana`.
     YourSpellsHaveSplitSecondIfArtifactManaSpent,
+    /// CR 609.4b — "you may spend mana as though it were mana of any color to
+    /// activate abilities of creatures you control" (Agatha's Soul Cauldron).
+    /// Read by the activation cost path, which makes the coloured pips generic.
+    MaySpendManaAsAnyColorForYourCreatureAbilities,
     /// "Instant and sorcery spells you control have deathtouch" (Pestilent
     /// Spirit, Tainted Strike-style). Read in `deal_damage_to_from`: damage a
     /// controller's resolving instant/sorcery deals to a creature is treated

@@ -12545,6 +12545,10 @@ pub enum Effect {
     /// "The next instant or sorcery spell you cast this turn has storm"
     /// (CR 702.40 — Storm, Force of Nature's Ceaseless Tempest).
     NextInstantOrSorceryGainsStormThisTurn,
+    /// CR 500.4 exception — "until end of turn, you don't lose unspent
+    /// `color` mana as steps and phases end" (The Last Agni Kai). Ends in the
+    /// cleanup step with the turn's other until-end-of-turn effects.
+    KeepUnspentColorManaThisTurn { who: PlayerRef, color: crate::mana::Color },
     /// For each of `keywords` a creature card in your graveyard has, a counter
     /// of it on a creature you control; then a +1/+1 counter on the source per
     /// counter placed (Kathril, Aspect Warper).

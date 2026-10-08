@@ -863,6 +863,10 @@ pub struct PlayerData {
     /// (Storm, Force of Nature). Spent by that cast; reset at the turn boundary.
     #[serde(default)]
     pub next_is_spell_storm_this_turn: bool,
+    /// Colors whose unspent mana this player keeps as steps end, until the
+    /// cleanup step (The Last Agni Kai's red).
+    #[serde(default)]
+    pub kept_colors_this_turn: crate::mana::ColorSet,
     /// "The next spell you cast this turn has improvise" (Archway of
     /// Innovation). Spent by that cast; reset at the turn boundary.
     #[serde(default)]
@@ -1693,6 +1697,7 @@ impl Player {
             attacked_players_this_turn: Vec::new(),
             next_spell_convoke_this_turn: false,
             next_is_spell_storm_this_turn: false,
+            kept_colors_this_turn: crate::mana::ColorSet::empty(),
             next_spell_improvise_this_turn: false,
             next_spell_flash_this_turn: false,
             next_typed_spell_flash_this_turn: Vec::new(),
