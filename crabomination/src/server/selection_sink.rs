@@ -36,8 +36,12 @@ fn is_selection(e: &Effect) -> bool {
     }
 }
 
-/// The first accepted selection sink `seat` can activate, paid with mana
-/// and at most a tap of its own source.
+/// Life a selection sink may pay down to (Doom Whisperer's "pay 2 life:
+/// surveil 2"): a Commander seat starts at 40, so the first fifteen are spare.
+const LIFE_FLOOR: i32 = 25;
+
+/// The first accepted selection sink `seat` can activate, paid with mana, at
+/// most a tap of its own source, and life it can spare above `LIFE_FLOOR`.
 pub(super) fn pick_selection_sink(state: &GameState, seat: usize) -> Option<GameAction> {
     if state.players[seat].commanders.is_empty() {
         return None;
@@ -52,7 +56,8 @@ pub(super) fn pick_selection_sink(state: &GameState, seat: usize) -> Option<Game
                     && ab.sac_other_filter.is_none()
                     && ab.tap_other_filter.is_none()
                     && ab.discard_cost.is_none()
-                    && ab.life_cost == 0
+                    && (ab.life_cost == 0 || state.players[seat].life - ab.life_cost as i32 >= LIFE_FLOOR)
+                    && ab.life_cost_value.is_none()
                     && ab.energy_cost == 0
                     && ab.remove_counter_x.is_none();
                 // An untapped rearrange (Sensei's Divining Top) would repeat
@@ -136,6 +141,22 @@ mod tests {
         assert!(pick_selection_sink(&g, 0).is_none(), "outside Commander");
         g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
         assert!(matches!(pick_selection_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == castle));
+    }
+
+    /// Doom Whisperer's "pay 2 life: surveil 2" is spent while life stays
+    /// at `LIFE_FLOOR` or more, not below.
+    #[test]
+    fn doom_whisperer_surveils_with_spare_life() {
+        for (life, want) in [(40, true), (26, false)] {
+            let mut g = crate::game::multi_player_game(3);
+            g.active_player_idx = 1;
+            g.step = TurnStep::End;
+            g.priority.player_with_priority = 0;
+            g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+            g.add_card_to_battlefield(0, crate::catalog::doom_whisperer());
+            g.players[0].life = life;
+            assert_eq!(pick_selection_sink(&g, 0).is_some(), want, "life {life}");
+        }
     }
 
     /// Arcade Gannon's "{T}: draw, then discard, then a quest counter" is a
