@@ -1825,6 +1825,14 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NOCTIS_COMMANDERS,
             main: decks::NOCTIS_MAIN,
         },
+        // Seat 235: Omnath, Locus of All's EDHREC average deck (CR 106.4 mana
+        // that becomes black, CR 310.12b a Siege's sorcery back face).
+        // `--pod-decks 235`.
+        PodDeck {
+            name: "Omnath, Locus of All (WUBRG)",
+            commanders: decks::OMNATH_LOCUS_COMMANDERS,
+            main: decks::OMNATH_LOCUS_MAIN,
+        },
     ]
 }
 
@@ -3566,6 +3574,8 @@ mod tests {
             ("Veyran, Voice of Duality", [0x7E72, 232, 9156]),
             ("Bria, Riptide Rogue", [0xB21A, 233, 9157]),
             ("Noctis, Prince of Lucis", [0x40C7, 234, 9158]),
+            // CR 106.4 lost mana turned black; CR 310.12b Invasion of Alara.
+            ("Omnath, Locus of All", [0x0A11, 235, 9159]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -6967,3 +6967,32 @@ pub const NOCTIS_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, island, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const OMNATH_LOCUS_COMMANDERS: &[CardFactory] = &[omnath_locus_of_all];
+
+/// **Omnath, Locus of All**'s EDHREC average deck (fetched 2026-10-08), card
+/// for card: 88 nonbasic cards + 11 basics = 99. Five-color three-pip
+/// spells, lost mana kept as black.
+pub const OMNATH_LOCUS_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, chromatic_orrery, commanders_sphere, doubling_cube,
+    fellwar_stone, lightning_greaves, sol_ring, breeding_pool, command_tower, exotic_orchard,
+    flooded_strand, godless_shrine, hallowed_fountain, indatha_triome, jetmirs_garden,
+    ketria_triome, misty_rainforest, overgrown_tomb, path_of_ancestry, reliquary_tower,
+    sparas_headquarters, steam_vents, stomping_ground, temple_garden, the_world_tree,
+    verdant_catacombs, watery_grave, windswept_heath, wooded_foothills, zagoth_triome,
+    ziatoras_proving_ground, invasion_of_alara, animar_soul_of_elements, aragorn_the_uniter,
+    atraxa_grand_unifier, birds_of_paradise, bloom_tender, dryad_of_the_ilysian_grove,
+    elesh_norn_mother_of_machines, faeburrow_elder, glarb_calamitys_augur, helga_skittish_seer,
+    ignoble_hierarch, maelstrom_archangel, maelstrom_wanderer, muldrotha_the_gravetide,
+    nyxbloom_ancient, omnath_locus_of_creation, omnath_locus_of_rage, omnath_locus_of_the_roil,
+    omnath_locus_of_the_void, rienne_angel_of_rebirth, rocco_cabaretti_caterer, seedborn_muse,
+    thalia_and_the_gitrog_monster, vorinclex_voice_of_hunger, yarok_the_desecrated,
+    zacama_primal_calamity, annie_joins_up, leyline_of_the_guildpact, maelstrom_nexus,
+    miraris_wake, rhystic_study, temur_ascendancy, wilderness_reclamation, abzan_charm,
+    bant_charm, brokers_charm, crackling_doom, heroic_intervention, naya_charm, path_to_exile,
+    sultai_charm, swords_to_plowshares, void_rend, wrenn_and_realmbreaker, cultivate,
+    debt_to_the_deathless, eerie_ultimatum, farseek, genesis_ultimatum, kodamas_reach,
+    natures_lore, rampant_growth, ruinous_ultimatum, three_visits, villainous_wealth,
+    // Basics
+    forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp, swamp,
+];
