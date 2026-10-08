@@ -4,11 +4,12 @@
 //! candidates at whatever priority window it holds, the other answer to a
 //! yes/no ask, a random answer to an ask that lists its options (targets,
 //! modes, cards, names, types, lessons, die faces, scry piles, divisions,
-//! trigger order, mulligans), a random subset of its attack or block declaration. A sweep
-//! tool: the tuned bots build the same boards over and over, and a panic or
-//! invariant that only an odd line of play reaches is still a panic
-//! self-play can hit. Seeded per game, so a fuzzed game replays. A swap the
-//! engine rejects is simply not taken.
+//! trigger order, mulligans) or a cancel of a cast's own choice, a random
+//! subset of its attack or block declaration. A sweep tool: the tuned bots
+//! build the same boards over and over, and a panic or invariant that only an
+//! odd line of play reaches is still a panic self-play can hit. Seeded per
+//! game, so a fuzzed game replays. A swap the engine rejects is simply not
+//! taken.
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
@@ -172,6 +173,14 @@ impl FuzzBot {
         match action {
             GameAction::SubmitDecision(DecisionAnswer::Bool(b)) => {
                 Some(GameAction::SubmitDecision(DecisionAnswer::Bool(!b)))
+            }
+            // Backing out of a cast / activation mid-choice now and then:
+            // the engine promises the pre-action state back exactly.
+            GameAction::SubmitDecision(_)
+                if state.pending_decision.as_ref().is_some_and(|d| d.resume.is_action_replay())
+                    && self.rng.random_range(0..4u8) == 0 =>
+            {
+                Some(GameAction::SubmitDecision(DecisionAnswer::CancelAction))
             }
             GameAction::SubmitDecision(_) => {
                 let d = &state.pending_decision.as_ref()?.decision;
