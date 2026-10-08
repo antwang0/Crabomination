@@ -12559,6 +12559,12 @@ pub enum Effect {
     /// `color` mana as steps and phases end" (The Last Agni Kai). Ends in the
     /// cleanup step with the turn's other until-end-of-turn effects.
     KeepUnspentColorManaThisTurn { who: PlayerRef, color: crate::mana::Color },
+    /// CR 613.1c / 612 — "exchange [a]'s text box and [b]'s" (Deadpool,
+    /// Trading Card): each takes the other's keywords and static, activated,
+    /// triggered and loyalty abilities, for as long as it stays on the
+    /// battlefield (CR 400.7 — a new object reverts). Name, types, cost and
+    /// P/T stay. No-op unless both are permanents.
+    ExchangeTextBoxes { a: Selector, b: Selector },
     /// For each of `keywords` a creature card in your graveyard has, a counter
     /// of it on a creature you control; then a +1/+1 counter on the source per
     /// counter placed (Kathril, Aspect Warper).

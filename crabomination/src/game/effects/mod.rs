@@ -39420,6 +39420,40 @@ impl GameState {
                 self.players[ctx.controller].next_spell_convoke_this_turn = true;
                 Ok(())
             }
+            Effect::ExchangeTextBoxes { a, b } => {
+                let first = |g: &Self, s: &Selector| {
+                    g.resolve_selector(s, ctx).into_iter().find_map(|e| match e {
+                        EntityRef::Permanent(id) if g.battlefield_find(id).is_some() => Some(id),
+                        _ => None,
+                    })
+                };
+                let (Some(a), Some(b)) = (first(self, a), first(self, b)) else { return Ok(()) };
+                if a == b {
+                    return Ok(());
+                }
+                let text = |g: &Self, id: CardId| {
+                    let d = &g.battlefield_find(id).expect("checked").definition;
+                    (
+                        d.keywords.clone(),
+                        d.static_abilities.clone(),
+                        d.activated_abilities.clone(),
+                        d.triggered_abilities.clone(),
+                        d.loyalty_abilities.clone(),
+                    )
+                };
+                let (ta, tb) = (text(self, a), text(self, b));
+                for (id, (kw, st, ac, tr, lo)) in [(a, tb), (b, ta)] {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let d = c.bake_grant();
+                        d.keywords = kw;
+                        d.static_abilities = st;
+                        d.activated_abilities = ac;
+                        d.triggered_abilities = tr;
+                        d.loyalty_abilities = lo;
+                    }
+                }
+                Ok(())
+            }
             Effect::KeepUnspentColorManaThisTurn { who, color } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].kept_colors_this_turn.insert(*color);

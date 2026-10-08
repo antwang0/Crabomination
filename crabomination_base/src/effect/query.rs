@@ -907,6 +907,7 @@ impl Effect {
             | Effect::NextSpellGainsImproviseThisTurn
             | Effect::NextInstantOrSorceryGainsStormThisTurn
             | Effect::KeepUnspentColorManaThisTurn { .. }
+            | Effect::ExchangeTextBoxes { .. }
             | Effect::KeywordCountersFromGraveyard { .. }
             | Effect::RevealTopChooseByKeyword { .. }
             | Effect::ChooseCardTypeAmongForSource(_)
