@@ -2221,6 +2221,34 @@ fn play_pod_game(
                 );
             }
         }
+        // CR 704.5m / 800.4a — an Aura on a player is on one still in the
+        // game; CR 701.37 — a melded permanent's halves were exiled into it,
+        // so they hold no battlefield state of their own. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            if let Some(c) = g
+                .battlefield
+                .iter()
+                .find(|c| c.attached_to_player.is_some_and(|p| !g.players.get(p).is_some_and(|q| q.is_alive())))
+            {
+                panic!(
+                    "seed {seed}: {} {:?} is attached to p{:?}, who has left (turn {}, after {actions} actions)",
+                    c.definition.name, c.id, c.attached_to_player, g.turn_number,
+                );
+            }
+            if let Some((shell, part)) = g.battlefield.iter().find_map(|c| {
+                c.meld_parts.iter().find(|p| p.tapped || p.attached_to.is_some() || !p.counters.is_empty()).map(|p| (c, p))
+            }) {
+                panic!(
+                    "seed {seed}: {}'s half {} kept battlefield state (tapped {}, counters {:?}; turn {}, after {actions} actions)",
+                    shell.definition.name,
+                    part.definition.name,
+                    part.tapped,
+                    part.counters.iter().collect::<Vec<_>>(),
+                    g.turn_number,
+                );
+            }
+        }
         // CR 725.4 / 726.4 — the monarch and the initiative pass on when their
         // holder leaves; neither stays with a seat that has left. Debug-only.
         #[cfg(debug_assertions)]
