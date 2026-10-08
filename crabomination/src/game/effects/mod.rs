@@ -14634,7 +14634,8 @@ impl GameState {
                         || self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cid))
                     {
                         let def = crabomination_base::tokens::token_card_arc(definition);
-                        self.mint_tokens_scaled(def, seat, 1, false, events);
+                        // Cityscape Leveler's Powerstone enters tapped.
+                        self.mint_tokens_scaled(def, seat, 1, definition.tapped, events);
                     }
                 }
                 Ok(())
