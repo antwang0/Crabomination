@@ -3537,6 +3537,14 @@ pub struct GameState {
     /// power/toughness read to that one resolution. `#[serde(skip)]`.
     #[serde(skip)]
     pub(crate) resolving_lki_source: Option<CardId>,
+    /// Mana sources the auto-tapper is activating right now. A source whose
+    /// mana ability costs mana and no {T} (Blood Celebrant's {B}) is never
+    /// re-entered to pay its own cost — it recursed until the stack overflowed
+    /// (four-seat pod, seed 31701 game 90). A plain inline field, not the
+    /// CoW scratch or a `Vec`: it is written on every auto-tapped activation,
+    /// in every cloned simulation state.
+    #[serde(skip)]
+    pub(crate) mana_sources_paying: SmallVec<[CardId; 4]>,
     /// CR 603.10 — the dead *subject* CardId of the leaves-battlefield trigger
     /// currently resolving (distinct from its source: Jenova's "whenever a
     /// Mutant you control dies, draw cards equal to its power" reads the dead
@@ -4433,6 +4441,7 @@ impl Clone for GameState {
             graveyard_play_pooled_for: self.graveyard_play_pooled_for,
             next_replacement_id: self.next_replacement_id,
             resolving_lki_source: self.resolving_lki_source,
+            mana_sources_paying: self.mana_sources_paying.clone(),
             resolving_lki_subject: self.resolving_lki_subject,
             subgame_depth: self.subgame_depth,
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
@@ -4659,6 +4668,7 @@ impl GameState {
             died_card_snapshots: Default::default(),
             leaves_bf_lki: Default::default(),
             resolving_lki_source: None,
+            mana_sources_paying: SmallVec::new(),
             resolving_lki_subject: None,
             subgame_depth: 0,
             resolving_spell_lifelink_seat: None,

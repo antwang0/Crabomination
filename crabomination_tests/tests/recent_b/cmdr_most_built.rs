@@ -624,3 +624,20 @@ fn peer_into_the_abyss_rounds_up() {
     assert_eq!(g.players[0].life, 3, "7 life: lose 4");
 }
 
+
+/// Bug fix (pod seed 31701 game 90): Blood Celebrant's mana ability costs {B}
+/// and has no {T}, so the auto-tapper paid its {B} with the Celebrant again,
+/// forever, until the thread's stack overflowed. A source mid-activation is
+/// never re-entered: with no other black source the cast is simply refused,
+/// and with one it pays.
+#[test]
+fn a_costly_mana_source_does_not_pay_for_itself() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::blood_celebrant());
+    let ritual = g.add_card_to_hand(0, catalog::dark_ritual());
+    g.priority.player_with_priority = 0;
+    let cast = GameAction::CastSpell { card_id: ritual, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(cast.clone()).is_err());
+    ready(&mut g, 0, catalog::swamp());
+    assert!(g.perform_action(cast).is_ok(), "the Swamp pays for the Celebrant, which pays for the Ritual");
+}
