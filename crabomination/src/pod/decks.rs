@@ -5841,3 +5841,197 @@ pub const EGGMAN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const TEYSA_COMMANDERS: &[CardFactory] = &[teysa_karlov];
+
+/// **Teysa Karlov**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 80 nonbasic cards + 8 Plains + 11 Swamps = 99.
+/// Orzhov aristocrats — Teysa doubles every death trigger.
+pub const TEYSA_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bolass_citadel, orzhov_signet, phyrexian_altar, skullclamp,
+    sol_ring, talisman_of_hierarchy, bojuka_bog, caves_of_koilos, command_tower, fetid_heath,
+    godless_shrine, high_market, isolated_chapel, marsh_flats, orzhov_basilica, phyrexian_tower,
+    shattered_sanctum, shineshadow_snarl, tainted_field, temple_of_silence, vault_of_champions,
+    athreos_god_of_passage, bartolome_del_presidio, blood_artist, braids_arisen_nightmare,
+    carrion_feeder, cruel_celebrant, doomed_traveler, drivnod_carnage_dominus,
+    elas_il_kor_sadistic_pilgrim, elenda_the_dusk_rose, grim_haruspex, hallowed_spiritkeeper,
+    hunted_witness, luminous_broodmoth, marionette_apprentice, midnight_reaper,
+    ministrant_of_obligation, mirkwood_bats, ophiomancer, orzhov_enforcer, pawn_of_ulamog,
+    pitiless_plunderer, priest_of_forgotten_gods, reassembling_skeleton, sephiroth_fabled_soldier,
+    sifter_of_skulls, solemn_simulacrum, syr_konrad_the_grim, teysa_orzhov_scion, viscera_seer,
+    warren_soultrader, yahenni_undying_partisan, zulaport_cutthroat, bastion_of_remembrance,
+    bitterblossom, black_market, dictate_of_erebos, grave_pact, phyrexian_arena, smothering_tithe,
+    the_meathook_massacre, anguished_unmaking, corrupted_conviction, dark_ritual, deadly_dispute,
+    despark, mortify, path_to_exile, swords_to_plowshares, village_rites,
+    liliana_dreadhorde_general, damn, diabolic_intent, reanimate, rite_of_oblivion, toxic_deluge,
+    victimize,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KILO_COMMANDERS: &[CardFactory] = &[kilo_apogee_mind];
+
+/// **Kilo, Apogee Mind**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 88 nonbasic cards + 5 Islands + 2 Mountains + 4 Plains = 99.
+/// Grixis untappers — every untap of Kilo proliferates.
+pub const KILO_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, clock_of_omens, cloud_key, darksteel_reactor,
+    empowered_autogenerator, everflowing_chalice, golem_foundry, insight_engine,
+    inspirit_flagship_vessel, long_range_sensor, lux_artillery, lux_cannon, moxite_refinery,
+    paradise_mantle, pentad_prism, relic_of_legends, sol_ring, solar_array, unwinding_clock,
+    uthros_research_craft, adarkar_wastes, ancient_den, battlefield_forge, buried_ruin,
+    cascade_bluffs, clifftop_retreat, command_tower, exotic_orchard, glacial_fortress,
+    great_furnace, hallowed_fountain, karns_bastion, mystic_monastery, radiant_summit,
+    razortide_bridge, rugged_prairie, rustvale_bridge, sacred_foundry, seat_of_the_synod,
+    shivan_reef, silverbluff_bridge, skycloud_expanse, spire_of_industry, sulfur_falls,
+    the_mycosynth_gardens, uthros_titanic_godcore, alibou_ancient_witness, coretapper,
+    crystalline_crawler, cyberdrive_awakener, deepglow_skate, dreamtide_whale,
+    emry_lurker_of_the_loch, enthusiastic_mechanaut, etherium_sculptor, hangarback_walker,
+    jhoira_weatherlight_captain, kappa_cannoneer, mindless_automaton, patrolling_peacemaker,
+    phyrexian_metamorph, steel_overseer, surge_conductor, tekuthal_inquiry_dominus,
+    thought_monitor, thrummingbird, walking_ballista, all_will_be_one, freed_from_the_real,
+    pemmins_aura, resourceful_defense, chaos_warp, counterspell, dispatch, experimental_augury,
+    prologue_to_phyresis, ripples_of_potential, swan_song, swords_to_plowshares,
+    thirst_for_knowledge, tezzeret_the_seeker, tezzeret_cruel_captain, fabricate,
+    organic_extinction, tezzerets_gambit, universal_surveillance, wake_the_past,
+    // Basics
+    island, island, island, island, island, mountain, mountain, plains, plains, plains, plains,
+];
+
+pub const NIV_PARUN_COMMANDERS: &[CardFactory] = &[niv_mizzet_parun];
+
+/// **Niv-Mizzet, Parun**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 78 nonbasic cards + 12 Islands + 9 Mountains = 99.
+/// Izzet spellslinger — each draw pings, each instant or sorcery draws.
+pub const NIV_PARUN_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, decanter_of_endless_water, fellwar_stone, izzet_signet,
+    sol_ring, swiftfoot_boots, talisman_of_creativity, thought_vessel, cascade_bluffs,
+    command_tower, exotic_orchard, frostboil_snarl, izzet_boilerworks, mystic_sanctuary,
+    reliquary_tower, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls, swiftwater_cliffs,
+    temple_of_epiphany, training_center, archmage_emeritus, baral_chief_of_compliance,
+    electrostatic_field, goblin_electromancer, guttersnipe, harmonic_prodigy, laboratory_maniac,
+    niv_mizzet_visionary, niv_mizzet_the_firemind, psychosis_crawler, storm_kiln_artist,
+    stormcatch_mentor, talrand_sky_summoner, tandem_lookout, veyran_voice_of_duality,
+    young_pyromancer, curiosity, mystic_remora, ophidian_eye, rhystic_study,
+    teferis_ageless_insight, abrade, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    chaos_warp, consider, counterspell, cyclonic_rift, fierce_guardianship, flame_of_anor,
+    frantic_search, izzet_charm, lightning_bolt, mystical_tutor, negate, opt, pongify,
+    prismari_command, rapid_hybridization, snap, swan_song, thrill_of_possibility,
+    narset_parter_of_veils, blasphemous_act, expressive_iteration, faithless_looting,
+    gitaxian_probe, mizzixs_mastery, ponder, preordain, serum_visions, treasure_cruise,
+    vandalblast, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const YUNA_COMMANDERS: &[CardFactory] = &[yuna_grand_summoner];
+
+/// **Yuna, Grand Summoner**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 86 nonbasic cards + 6 Forests + 3 Islands + 4 Plains = 99.
+/// Selesnya enchantments and Sagas flickered back with counters.
+pub const YUNA_MAIN: &[CardFactory] = &[
+    arcane_signet, blitzball_stadium, ozolith_the_shattered_spire, sol_ring, the_earth_crystal,
+    the_great_henge, the_ozolith, bountiful_promenade, breeding_pool, brushland, canopy_vista,
+    command_tower, exotic_orchard, flooded_grove, flooded_strand, fortified_village,
+    glacial_fortress, hallowed_fountain, hinterland_harbor, misty_rainforest, nesting_grounds,
+    path_of_ancestry, prairie_stream, rejuvenating_springs, seaside_citadel, sparas_headquarters,
+    sunpetal_grove, temple_garden, windswept_heath, auron_venerated_guardian, birds_of_paradise,
+    chocobo_knights, duskshell_crawler, fathom_mage, forgotten_ancient, gatta_and_luzzu,
+    grateful_apparition, gyre_sage, herald_of_secret_streams, incubation_druid,
+    kami_of_whispered_hopes, kimahri_valiant_guardian, kutzil_malamet_exemplar,
+    lulu_stern_guardian, luminous_broodmoth, maester_seymour, noble_hierarch,
+    oaka_traveling_merchant, ouroboroid, rikku_resourceful_guardian, shelinda_yevon_acolyte,
+    sin_unending_cataclysm, summon_ixion, summon_magus_sisters, summon_valefor, summon_yojimbo,
+    tidus_yunas_guardian, tromell_seymours_butler, wakka_devoted_guardian, walking_ballista,
+    branching_evolution, bred_for_the_hunt, freed_from_the_real, hardened_scales, pemmins_aura,
+    resourceful_defense, sphere_grid, terrasymbiosis, together_forever, an_offer_you_cant_refuse,
+    counterspell, cyclonic_rift, heroic_intervention, inspiring_call, path_to_exile,
+    protection_magic, ripples_of_potential, swords_to_plowshares, yunas_whistle, damning_verdict,
+    farewell, farseek, natures_lore, three_visits, wave_goodbye, yunas_decision,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, plains, plains, plains,
+    plains,
+];
+
+pub const ELSHA_COMMANDERS: &[CardFactory] = &[elsha_threefold_master];
+
+/// **Elsha, Threefold Master**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 86 nonbasic cards + 5 Islands + 4 Mountains + 4 Plains = 99.
+/// Jeskai prowess spellslinger casting off the library top.
+pub const ELSHA_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, boros_signet, fellwar_stone, izzet_signet, sol_ring,
+    swiftfoot_boots, talisman_of_conviction, talisman_of_creativity, talisman_of_progress,
+    adarkar_wastes, battlefield_forge, cascade_bluffs, clifftop_retreat, command_tower,
+    exotic_orchard, glacial_fortress, hallowed_fountain, mystic_monastery, path_of_ancestry,
+    perilous_landscape, prairie_stream, raugrin_triome, reliquary_tower, rugged_prairie,
+    sacred_foundry, shivan_reef, steam_vents, sulfur_falls, training_center, archmage_emeritus,
+    balmor_battlemage_captain, bria_riptide_rogue, elsha_of_the_infinite, goblin_electromancer,
+    kykar_winds_fury, leonin_lightscribe, lier_disciple_of_the_drowned, monastery_mentor,
+    narset_enlightened_exile, storm_kiln_artist, stormcatch_mentor, third_path_iconoclast,
+    veyran_voice_of_duality, aligned_heart, aqueous_form, frostcliff_siege, impact_tremors,
+    jeskai_ascendancy, renewed_solidarity, tempest_technique, warleaders_call,
+    whirlwind_of_thought, an_offer_you_cant_refuse, arcane_denial, boros_charm, brainstorm,
+    consider, counterspell, expedite, fists_of_flame, flawless_maneuver, frantic_search, leap,
+    legion_leadership, narsets_reversal, opt, path_to_exile, pongify, psychotic_fury, shadow_rift,
+    snap, swords_to_plowshares, temur_battle_rage, ral_crackling_wit, artful_dodge, crash_through,
+    distortion_strike, enter_the_enigma, expressive_iteration, faithless_looting, gitaxian_probe,
+    ponder, preordain, slip_through_space, will_of_the_jeskai,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains,
+];
+
+pub const KINNAN_COMMANDERS: &[CardFactory] = &[kinnan_bonder_prodigy];
+
+/// **Kinnan, Bonder Prodigy**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 89 nonbasic cards + 5 Forests + 5 Islands = 99.
+/// Simic mana rocks — every nonland mana ability makes one more.
+pub const KINNAN_MAIN: &[CardFactory] = &[
+    arcane_signet, basalt_monolith, chrome_mox, fellwar_stone, lotus_petal, mana_vault,
+    mirage_mirror, mox_amber, mox_diamond, mox_opal, simic_signet, sol_ring, springleaf_drum,
+    talisman_of_curiosity, ancient_tomb, boseiju_who_endures, breeding_pool, city_of_brass,
+    command_tower, flooded_strand, gaeas_cradle, gemstone_caverns, mana_confluence,
+    misty_rainforest, otawara_soaring_city, polluted_delta, rejuvenating_springs, scalding_tarn,
+    treasure_vault, tropical_island, waterlogged_grove, yavimaya_coast, badgermole_cub,
+    birds_of_paradise, bloom_tender, clever_impersonator, colossal_skyturtle, consecrated_sphinx,
+    delighted_halfling, drift_of_phantasms, elvish_mystic, elvish_spirit_guide, endurance,
+    enduring_vitality, faerie_mastermind, fyndhorn_elves, high_fae_trickster, hullbreaker_horror,
+    llanowar_elves, nezahal_primal_tide, nyxbloom_ancient, phyrexian_metamorph, seedborn_muse,
+    spellskite, thrasios_triton_hero, tidespout_tyrant, trophy_mage, valley_floodcaller,
+    walking_ballista, wan_shi_tong_librarian, wandering_archaic, freed_from_the_real, mirrormade,
+    mystic_remora, rhystic_study, sylvan_library, an_offer_you_cant_refuse, chord_of_calling,
+    crop_rotation, cyclonic_rift, dramatic_reversal, fierce_guardianship, flusterstorm,
+    force_of_negation, force_of_will, mana_drain, mental_misstep, mindbreak_trap, pact_of_negation,
+    sink_into_stupor, swan_song, veil_of_summer, worldly_tutor, tezzeret_the_seeker, fabricate,
+    finale_of_devastation, green_suns_zenith, natures_rhythm, transmute_artifact,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island,
+];
+
+pub const TOXRILL_COMMANDERS: &[CardFactory] = &[toxrill_the_corrosive];
+
+/// **Toxrill, the Corrosive**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 78 nonbasic cards + 9 Islands + 12 Swamps = 99.
+/// Dimir control — slime counters melt the opponents' boards.
+pub const TOXRILL_MAIN: &[CardFactory] = &[
+    arcane_signet, contagion_clasp, dimir_signet, fellwar_stone, jet_medallion, lightning_greaves,
+    mind_stone, skullclamp, sol_ring, swiftfoot_boots, talisman_of_dominance, thought_vessel,
+    bojuka_bog, cabal_coffers, choked_estuary, command_tower, drowned_catacomb, karns_bastion,
+    morphic_pool, polluted_delta, reliquary_tower, shipwreck_marsh, sunken_hollow, tainted_isle,
+    underground_river, urborg_tomb_of_yawgmoth, watery_grave, ayara_first_of_locthwain,
+    blood_artist, clackbridge_troll, crypt_ghast, flux_channeler, gisa_glorious_resurrector,
+    hunted_phantasm, maha_its_feathers_night, massacre_girl_known_killer, massacre_wurm,
+    mirkwood_bats, morbid_opportunist, slaughter_specialist, sludge_monster, solemn_simulacrum,
+    spark_double, syr_konrad_the_grim, tekuthal_inquiry_dominus, thrummingbird,
+    yawgmoth_thran_physician, zulaport_cutthroat, black_market, inexorable_tide, phyrexian_arena,
+    propaganda, revel_in_riches, rhystic_study, the_meathook_massacre, an_offer_you_cant_refuse,
+    arcane_denial, counterspell, cyclonic_rift, dark_ritual, experimental_augury, flatline,
+    mana_drain, negate, polymorphists_jest, sudden_spoiling, swan_song, vampiric_tutor,
+    whisper_of_the_dross, vraska_betrayals_sting, contentious_plan, demonic_tutor, drown_in_ichor,
+    feed_the_swarm, mass_diminish, reanimate, tezzerets_gambit, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

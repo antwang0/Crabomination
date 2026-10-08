@@ -1579,6 +1579,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EGGMAN_COMMANDERS,
             main: decks::EGGMAN_MAIN,
         },
+        // Seat 194: Teysa Karlov's EDHREC average deck. `--pod-decks 194`.
+        PodDeck {
+            name: "Teysa Karlov (BW)",
+            commanders: decks::TEYSA_COMMANDERS,
+            main: decks::TEYSA_MAIN,
+        },
+        // Seat 195: Kilo, Apogee Mind's EDHREC average deck. `--pod-decks 195`.
+        PodDeck {
+            name: "Kilo, Apogee Mind (RUW)",
+            commanders: decks::KILO_COMMANDERS,
+            main: decks::KILO_MAIN,
+        },
+        // Seat 196: Niv-Mizzet, Parun's EDHREC average deck. `--pod-decks 196`.
+        PodDeck {
+            name: "Niv-Mizzet, Parun (RU)",
+            commanders: decks::NIV_PARUN_COMMANDERS,
+            main: decks::NIV_PARUN_MAIN,
+        },
+        // Seat 197: Yuna, Grand Summoner's EDHREC average deck. `--pod-decks 197`.
+        PodDeck {
+            name: "Yuna, Grand Summoner (GUW)",
+            commanders: decks::YUNA_COMMANDERS,
+            main: decks::YUNA_MAIN,
+        },
+        // Seat 198: Elsha, Threefold Master's EDHREC average deck. `--pod-decks 198`.
+        PodDeck {
+            name: "Elsha, Threefold Master (RUW)",
+            commanders: decks::ELSHA_COMMANDERS,
+            main: decks::ELSHA_MAIN,
+        },
+        // Seat 199: Kinnan, Bonder Prodigy's EDHREC average deck. `--pod-decks 199`.
+        PodDeck {
+            name: "Kinnan, Bonder Prodigy (GU)",
+            commanders: decks::KINNAN_COMMANDERS,
+            main: decks::KINNAN_MAIN,
+        },
+        // Seat 200: Toxrill, the Corrosive's EDHREC average deck. `--pod-decks 200`.
+        PodDeck {
+            name: "Toxrill, the Corrosive (BU)",
+            commanders: decks::TOXRILL_COMMANDERS,
+            main: decks::TOXRILL_MAIN,
+        },
     ]
 }
 
@@ -3260,6 +3302,16 @@ mod tests {
             ("Volo, Guide", [0x7010, 192, 9116]),
             // CR 701.55 villainous choices each end step, Blitzwing converting.
             ("Dr. Eggman", [0xE66, 193, 9117]),
+            // Death triggers twice (Teysa), CR 701.21 untap-proliferate (Kilo),
+            // draw pings (Niv-Mizzet), enchantment flicker (Yuna), library-top
+            // casting (Elsha), extra mana (Kinnan), slime counters (Toxrill).
+            ("Teysa Karlov", [0x7E5A, 194, 9118]),
+            ("Kilo, Apogee", [0x4110, 195, 9119]),
+            ("Niv-Mizzet, Parun", [0x41F0, 196, 9120]),
+            ("Yuna, Grand", [0x4A1A, 197, 9121]),
+            ("Elsha", [0xE15A, 198, 9122]),
+            ("Kinnan", [0x4144, 199, 9123]),
+            ("Toxrill", [0x7055, 200, 9124]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
