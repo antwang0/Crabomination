@@ -2972,6 +2972,13 @@ fn imprisoned_in_the_moon_neutralizes_to_a_colorless_land() {
     let aura = g.add_card_to_hand(0, catalog::imprisoned_in_the_moon());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
+    // "Enchant creature, land, or planeswalker" — not a noncreature artifact
+    // (a fuzzed pod enchanted a Minimus-contained Treasure, seed 710168).
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "an artifact is not a legal target");
     g.perform_action(GameAction::CastSpell {
         card_id: aura, target: Some(Target::Permanent(angel)),
         additional_targets: vec![], mode: None, x_value: None,

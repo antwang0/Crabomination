@@ -18179,7 +18179,11 @@ pub fn imprisoned_in_the_moon() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: target_filtered(SelectionRequirement::Permanent),
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Land)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
         },
         equipped_bonus: Some(EquipBonus {
             set_card_types: Some(vec![CardType::Land]),
