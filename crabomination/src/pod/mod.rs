@@ -2226,6 +2226,27 @@ fn play_pod_game(
                     // battlefield (exile keeps foretold / hidden cards down).
                     || (z != Off::Exile && z != Off::Library && c.face_down)
                     || (z != Off::Exile && c.transformed)
+                    // CR 710.4 / 709.5c / 716 / MKM — flip, Room, Class and
+                    // Case designations are battlefield-only; so are a soulbond
+                    // pair, a phasing link and this turn's loyalty activations
+                    // (a planeswalker back the same turn is a new object).
+                    || c.flipped
+                    || c.unlocked_doors != 0
+                    || c.class_level != 0
+                    || c.case_solved
+                    || c.soulbond_partner.is_some()
+                    || c.phased_out_by.is_some()
+                    || c.loyalty_uses_this_turn != 0
+                    || c.loyalty_twice_this_turn
+                    // CR 400.7 — an "as this enters, choose" answer belongs to
+                    // the permanent (exile may hold a link's chosen card; a
+                    // spell's gift recipient, `chosen_player`, rides along).
+                    || (z != Off::Exile
+                        && (c.chosen_creature_type.is_some()
+                            || c.chosen_land_type.is_some()
+                            || c.chosen_number.is_some()
+                            || c.chosen_card_type.is_some()
+                            || c.chosen_permanent.is_some()))
                     || (!counters_kept
                         && c.counters.iter().any(|(k, &n)| match k {
                             // A new instance is built holding its printed
@@ -2250,7 +2271,7 @@ fn play_pod_game(
                 .find(|(c, z)| stale(c, *z));
             if let Some((c, _)) = found {
                 panic!(
-                    "seed {seed}: {} {:?} in {} kept battlefield state (tapped {}, pump {}/{}, echo {}, face down {}, transformed {}, attached {:?}/{:?}, counters {:?}; turn {}, after {actions} actions)",
+                    "seed {seed}: {} {:?} in {} kept battlefield state (tapped {}, pump {}/{}, echo {}, face down {}, transformed {}, attached {:?}/{:?}, counters {:?}; flipped {} doors {} class {} case {} soulbond {:?} phased-by {:?} loyalty uses {}/{} chosen {:?}/{:?}/{:?}/{:?}/{:?}; turn {}, after {actions} actions)",
                     c.definition.name,
                     c.id,
                     zone_label(&g, c.id),
@@ -2263,6 +2284,19 @@ fn play_pod_game(
                     c.attached_to,
                     c.attached_to_player,
                     c.counters.iter().collect::<Vec<_>>(),
+                    c.flipped,
+                    c.unlocked_doors,
+                    c.class_level,
+                    c.case_solved,
+                    c.soulbond_partner,
+                    c.phased_out_by,
+                    c.loyalty_uses_this_turn,
+                    c.loyalty_twice_this_turn,
+                    c.chosen_creature_type,
+                    c.chosen_land_type,
+                    c.chosen_number,
+                    c.chosen_card_type,
+                    c.chosen_permanent,
                     g.turn_number,
                 );
             }
