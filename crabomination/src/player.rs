@@ -859,6 +859,10 @@ pub struct PlayerData {
     /// boundary.
     #[serde(default)]
     pub next_spell_convoke_this_turn: bool,
+    /// "The next instant or sorcery spell you cast this turn has storm"
+    /// (Storm, Force of Nature). Spent by that cast; reset at the turn boundary.
+    #[serde(default)]
+    pub next_is_spell_storm_this_turn: bool,
     /// "The next spell you cast this turn has improvise" (Archway of
     /// Innovation). Spent by that cast; reset at the turn boundary.
     #[serde(default)]
@@ -1688,6 +1692,7 @@ impl Player {
             life_alt_next_spell_this_turn: false,
             attacked_players_this_turn: Vec::new(),
             next_spell_convoke_this_turn: false,
+            next_is_spell_storm_this_turn: false,
             next_spell_improvise_this_turn: false,
             next_spell_flash_this_turn: false,
             next_typed_spell_flash_this_turn: Vec::new(),

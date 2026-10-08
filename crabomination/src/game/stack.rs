@@ -5069,6 +5069,7 @@ impl GameState {
             }
             pl.life_alt_next_spell_this_turn = false;
             pl.next_spell_convoke_this_turn = false;
+            pl.next_is_spell_storm_this_turn = false;
             pl.next_spell_improvise_this_turn = false;
             pl.next_spell_flash_this_turn = false;
             if !pl.next_typed_spell_flash_this_turn.is_empty() {

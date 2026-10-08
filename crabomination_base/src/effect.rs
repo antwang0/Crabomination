@@ -12542,6 +12542,9 @@ pub enum Effect {
     /// Archway of Innovation). The artifact sibling of
     /// `NextSpellGainsConvokeThisTurn`.
     NextSpellGainsImproviseThisTurn,
+    /// "The next instant or sorcery spell you cast this turn has storm"
+    /// (CR 702.40 — Storm, Force of Nature's Ceaseless Tempest).
+    NextInstantOrSorceryGainsStormThisTurn,
     /// For each of `keywords` a creature card in your graveyard has, a counter
     /// of it on a creature you control; then a +1/+1 counter on the source per
     /// counter placed (Kathril, Aspect Warper).

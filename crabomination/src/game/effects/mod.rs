@@ -39412,6 +39412,10 @@ impl GameState {
                 self.players[ctx.controller].next_spell_convoke_this_turn = true;
                 Ok(())
             }
+            Effect::NextInstantOrSorceryGainsStormThisTurn => {
+                self.players[ctx.controller].next_is_spell_storm_this_turn = true;
+                Ok(())
+            }
             Effect::NextSpellGainsImproviseThisTurn => {
                 self.players[ctx.controller].next_spell_improvise_this_turn = true;
                 Ok(())

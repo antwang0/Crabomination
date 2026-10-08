@@ -12370,13 +12370,22 @@ impl GameState {
         // Statics-granted storm ("Instant and sorcery spells you cast have
         // storm" — Prismari, the Inspiration): granted at cast time so the
         // copy count is the true CR 702.40 storm count.
-        let granted_storm = (card.definition.is_instant() || card.definition.is_sorcery())
-            && self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::GrantStormToISSpells)
-                    })
-            });
+        let is_spell = card.definition.is_instant() || card.definition.is_sorcery();
+        // "The next instant or sorcery spell you cast this turn has storm"
+        // (Storm, Force of Nature) — spent by this cast.
+        // `Player` is a CoW handle: read first, write only when set.
+        let next_storm = is_spell && self.players[p].next_is_spell_storm_this_turn;
+        if next_storm {
+            self.players[p].next_is_spell_storm_this_turn = false;
+        }
+        let granted_storm = is_spell
+            && (next_storm
+                || self.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, crate::effect::StaticEffect::GrantStormToISSpells)
+                        })
+                }));
         let storm_copies = (card
             .definition
             .keywords

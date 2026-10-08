@@ -905,6 +905,7 @@ impl Effect {
             | Effect::RevealUntilPutAttachedElseHand { .. }
             | Effect::NextSpellGainsConvokeThisTurn
             | Effect::NextSpellGainsImproviseThisTurn
+            | Effect::NextInstantOrSorceryGainsStormThisTurn
             | Effect::KeywordCountersFromGraveyard { .. }
             | Effect::RevealTopChooseByKeyword { .. }
             | Effect::ChooseCardTypeAmongForSource(_)
