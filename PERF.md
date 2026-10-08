@@ -3298,6 +3298,10 @@ strict debug     CRAB_POD_FUZZ=2000-3000 360000-362999 4/6/2 seats (5,498):
                  found the mulligan chain handing a departed seat its turn
                  (360013) and the Golden Throne's unrepeated sweep (362051);
                  --a dflt + CRAB_POD_FUZZ=1000 363000-364999 (771, clean)
+                 after both fixes: CRAB_POD_FUZZ=2500-5000 370000-378999
+                 2..8 seats (10,598) and --a dflt + fuzz 380000-381999 6/5
+                 seats (252) — clean (the last two chains were reclaimed
+                 part-way, no panic in any log)
 ```
 
 ### 2026-10-05 (Commander session `01CyDrsA`) — guardrail; a CoW store found and moved
