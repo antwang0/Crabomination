@@ -1101,3 +1101,37 @@ fn cultivator_colossus_chains_lands() {
     assert_eq!(lands, 5);
     assert_eq!(g.computed_permanent(colossus).unwrap().power, 5);
 }
+
+/// Iridescent Hornbeetle: Emiel's paid counter on an entering bear is a
+/// +1/+1 counter you put on your own creature, so the end step makes an
+/// Insect.
+#[test]
+fn iridescent_hornbeetle_counts_your_counters() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::iridescent_hornbeetle());
+    ready(&mut g, 0, catalog::emiel_the_blessed());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, bear, None);
+    assert_eq!(g.own_p1p1_counters_this_turn(0), 1);
+    to_end_step(&mut g);
+    assert_eq!(named(&g, "Insect"), 1);
+}
+
+/// South Wind Avatar: a bear dying gains 2, and each gain drains 1.
+#[test]
+fn south_wind_avatar_drains_on_gain() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::south_wind_avatar());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, mine + 2);
+    assert_eq!(g.players[1].life, theirs - 1);
+}

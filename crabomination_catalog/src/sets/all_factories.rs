@@ -4627,6 +4627,8 @@ static DECKS: &[Factory] = &[
     super::decks::misthollow_griffin,
     super::decks::mnemonic_deluge,
     super::decks::cultivator_colossus,
+    super::decks::iridescent_hornbeetle,
+    super::decks::south_wind_avatar,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

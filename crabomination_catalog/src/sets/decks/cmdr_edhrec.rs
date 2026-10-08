@@ -1798,3 +1798,52 @@ pub fn cultivator_colossus() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Iridescent Hornbeetle — {4}{G} 3/4. At your end step, a 1/1 Insect for
+/// each +1/+1 counter you put on creatures you control this turn.
+pub fn iridescent_hornbeetle() -> CardDefinition {
+    CardDefinition {
+        name: "Iridescent Hornbeetle",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Insect]),
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: mint(
+                token_1_1("Insect", Color::Green, CreatureType::Insect),
+                Value::PlusOneCountersPutOnYourCreaturesThisTurn(PlayerRef::You),
+            ),
+        }],
+        ..Default::default()
+    }
+}
+
+/// South Wind Avatar — {3}{B} 3/4 deathtouch. Another creature of yours
+/// dying gains you its toughness; each life gain drains each opponent 1.
+pub fn south_wind_avatar() -> CardDefinition {
+    CardDefinition {
+        name: "South Wind Avatar",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Snake, CreatureType::Spirit, CreatureType::Avatar]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
