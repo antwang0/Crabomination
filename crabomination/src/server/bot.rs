@@ -20594,6 +20594,9 @@ fn pick_ninjutsu(state: &GameState, seat: usize) -> Option<GameAction> {
         })
         .min_by_key(|&id| (power_of(id), id))?;
     let give_up = power_of(returning);
+    // A ninja's own "when this enters" trigger pays too: Thousand-Faced
+    // Shadow's copy needs the attack ninjutsu enters into (seed 31901 census:
+    // never fired, hard-cast as a 1/1 flyer instead).
     let pays_off = |c: &crate::card::CardInstance| {
         c.definition.power >= give_up
             || c.definition.triggered_abilities.iter().any(|t| {
@@ -20603,7 +20606,7 @@ fn pick_ninjutsu(state: &GameState, seat: usize) -> Option<GameAction> {
                         | EventKind::YouAttack
                         | EventKind::DealsCombatDamageToPlayer
                         | EventKind::DealsCombatDamage
-                )
+                ) || (t.event.kind == EventKind::EntersBattlefield && t.event.scope == crate::effect::EventScope::SelfSource)
             })
     };
     let mut ninjas: Vec<(i32, CardId)> = carriers
