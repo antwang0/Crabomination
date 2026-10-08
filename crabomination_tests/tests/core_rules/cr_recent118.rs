@@ -726,3 +726,19 @@ fn cr_400_7_an_exiled_curse_is_attached_to_no_player() {
     let exiled = g.exile.iter().find(|c| c.id == curse).expect("exiled");
     assert_eq!(exiled.attached_to_player, None, "a new object, attached to no one");
 }
+
+/// CR 400.7 / 406.3 / 903.9a — a commander exiled face down (off its library,
+/// after its owner declined the CR 903.9b redirect) goes home a new, face-up
+/// object. It used to arrive face down (pod seed 818221 game 19).
+#[test]
+fn cr_903_9a_a_face_down_exiled_commander_goes_home_face_up() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let mut card = g.players[0].command.remove(pos);
+    card.face_down = true;
+    g.exile.push(card);
+    g.check_state_based_actions();
+    let home = g.players[0].command.iter().find(|c| c.id == cmd).expect("home");
+    assert!(!home.face_down, "face up in the command zone");
+}
