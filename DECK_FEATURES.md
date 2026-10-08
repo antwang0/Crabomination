@@ -34,7 +34,16 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-183 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS.
+184 / 187 pod decks carry no residual (2026-10-08, after seats 184-187 —
+the first EDHREC average decks — and `pod_residuals.py` learning "is
+omitted"):
+
+| # | Deck | Cards with a residual |
+|---|---|---|
+| 184 | Ob Nixilis, Captive Kingpin (BR) | agathas_soul_cauldron, party_thrasher, the_last_agni_kai, vampiric_tutor |
+| 185 | Storm, Force of Nature (GUR) | gitaxian_probe |
+| 186 | Indoraptor, the Perfect Hybrid (BGR) | the_last_agni_kai |
+
 
 169 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 

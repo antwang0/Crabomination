@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MARKERS = re.compile(
-    r"residual|approximat|not modell?ed|engine's pick|engine picks|isn't modell?ed|is dropped|are dropped|collapses|always taken|rather than targeted",
+    r"residual|approximat|not modell?ed|engine's pick|engine picks|isn't modell?ed|is dropped|are dropped|is omitted|are omitted|collapses|always taken|rather than targeted",
     re.I,
 )
 

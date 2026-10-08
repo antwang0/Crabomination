@@ -14,47 +14,43 @@ mechanic a card leans on, not a verdict on what it needs.
 | Top 250 Commander cards by EDHREC rank | 250 / 250 |
 | Top 500 Commander cards by EDHREC rank | 500 / 500 |
 | Top 1000 Commander cards by EDHREC rank | 1000 / 1000 |
-| Top 2000 Commander cards by EDHREC rank | 1926 / 2000 |
-| Top 5000 Commander cards by EDHREC rank | 4504 / 5000 |
+| Top 2000 Commander cards by EDHREC rank | 1930 / 2000 |
+| Top 5000 Commander cards by EDHREC rank | 4514 / 5000 |
 | Top 100 commanders by decks built | 96 / 100 |
-| Top 300 commanders by decks built | 270 / 300 |
+| Top 300 commanders by decks built | 274 / 300 |
 
-## 1. Most-built commanders not in the catalog (30)
+## 1. Most-built commanders not in the catalog (26)
 
 A partner pair lists only its missing halves.
 
 | EDHREC # | Commander | Decks | Identity | Type | Flags |
 | --- | --- | --- | --- | --- | --- |
-| 44 | Maralen, Fae Ascendant | 22,999 | BGU | Legendary Creature — Elf Faerie Noble |  |
-| 61 | Tom Bombadil | 21,338 | BGRUW | Legendary Creature — God Bard |  |
-| 70 | Avatar Aang | 20,615 | BGRUW | Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Ally |  |
-| 88 | Norman Osborn | 18,953 | BRU | Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain |  |
-| 103 | Ezio Auditore da Firenze | 17,701 | BGRUW | Legendary Creature — Human Assassin |  |
-| 105 | Deadpool, Trading Card | 17,429 | BR | Legendary Creature — Mutant Mercenary Hero | multiplayer |
-| 114 | Storm, Force of Nature | 16,657 | GRU | Legendary Creature — Mutant Hero |  |
-| 118 | Captain America, First Avenger | 16,201 | RUW | Legendary Creature — Human Soldier Hero |  |
-| 120 | Tovolar, Dire Overlord | 15,918 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
-| 135 | Satoru Umezawa | 14,669 | BU | Legendary Creature — Human Ninja |  |
-| 137 | Omnath, Locus of All | 14,417 | BGRUW | Legendary Creature — Phyrexian Elemental |  |
-| 146 | Cosmic Spider-Man | 14,176 | BGRUW | Legendary Creature — Spider Human Hero |  |
-| 154 | Shelob, Child of Ungoliant | 13,720 | BG | Legendary Creature — Spider Demon |  |
-| 157 | Rocco, Street Chef | 13,591 | GRW | Legendary Creature — Elf Druid |  |
-| 162 | Dr. Eggman | 13,303 | BRU | Legendary Creature — Human Scientist |  |
-| 168 | Wolverine, Best There Is | 13,065 | GR | Legendary Creature — Mutant Berserker Hero |  |
-| 169 | Edward Kenway | 13,018 | BRU | Legendary Creature — Human Assassin Pirate |  |
-| 176 | Yurlok of Scorch Thrash | 12,757 | BGR | Legendary Creature — Lizard Shaman |  |
-| 183 | Light-Paws, Emperor's Voice | 12,435 | W | Legendary Creature — Fox Advisor |  |
-| 192 | Shadow the Hedgehog | 12,090 | BR | Legendary Creature — Hedgehog Mercenary |  |
-| 196 | Indoraptor, the Perfect Hybrid | 11,908 | BGR | Legendary Creature — Dinosaur Mutant |  |
-| 206 | Tinybones, Bauble Burglar | 11,495 | B | Legendary Creature — Skeleton Rogue |  |
-| 207 | Orvar, the All-Form | 11,482 | U | Legendary Creature — Shapeshifter |  |
-| 224 | Ob Nixilis, Captive Kingpin | 10,724 | BR | Legendary Creature — Demon |  |
-| 231 | Volo, Guide to Monsters | 10,418 | GU | Legendary Creature — Human Wizard |  |
-| 236 | Ojer Axonil, Deepest Might | 10,322 | R | Legendary Creature — God // Land |  |
-| 248 | Eddie Brock | 10,039 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
-| 273 | Rowan, Scion of War | 9,285 | BR | Legendary Creature — Human Wizard |  |
-| 280 | Indominus Rex, Alpha | 9,241 | BGU | Legendary Creature — Dinosaur Mutant |  |
-| 289 | Arna Kennerüd, Skycaptain | 9,013 | BUW | Legendary Creature — Human Knight |  |
+| 44 | Maralen, Fae Ascendant | 23,024 | BGU | Legendary Creature — Elf Faerie Noble |  |
+| 62 | Tom Bombadil | 21,346 | BGRUW | Legendary Creature — God Bard |  |
+| 70 | Avatar Aang | 20,643 | BGRUW | Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Ally |  |
+| 88 | Norman Osborn | 18,971 | BRU | Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain |  |
+| 103 | Ezio Auditore da Firenze | 17,711 | BGRUW | Legendary Creature — Human Assassin |  |
+| 105 | Deadpool, Trading Card | 17,452 | BR | Legendary Creature — Mutant Mercenary Hero | multiplayer |
+| 118 | Captain America, First Avenger | 16,212 | RUW | Legendary Creature — Human Soldier Hero |  |
+| 120 | Tovolar, Dire Overlord | 15,930 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
+| 135 | Satoru Umezawa | 14,685 | BU | Legendary Creature — Human Ninja |  |
+| 137 | Omnath, Locus of All | 14,428 | BGRUW | Legendary Creature — Phyrexian Elemental |  |
+| 146 | Cosmic Spider-Man | 14,203 | BGRUW | Legendary Creature — Spider Human Hero |  |
+| 154 | Shelob, Child of Ungoliant | 13,726 | BG | Legendary Creature — Spider Demon |  |
+| 157 | Rocco, Street Chef | 13,594 | GRW | Legendary Creature — Elf Druid |  |
+| 162 | Dr. Eggman | 13,317 | BRU | Legendary Creature — Human Scientist |  |
+| 168 | Wolverine, Best There Is | 13,074 | GR | Legendary Creature — Mutant Berserker Hero |  |
+| 169 | Edward Kenway | 13,023 | BRU | Legendary Creature — Human Assassin Pirate |  |
+| 176 | Yurlok of Scorch Thrash | 12,779 | BGR | Legendary Creature — Lizard Shaman |  |
+| 182 | Light-Paws, Emperor's Voice | 12,449 | W | Legendary Creature — Fox Advisor |  |
+| 205 | Tinybones, Bauble Burglar | 11,510 | B | Legendary Creature — Skeleton Rogue |  |
+| 207 | Orvar, the All-Form | 11,497 | U | Legendary Creature — Shapeshifter |  |
+| 231 | Volo, Guide to Monsters | 10,419 | GU | Legendary Creature — Human Wizard |  |
+| 236 | Ojer Axonil, Deepest Might | 10,331 | R | Legendary Creature — God // Land |  |
+| 247 | Eddie Brock | 10,053 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
+| 273 | Rowan, Scion of War | 9,294 | BR | Legendary Creature — Human Wizard |  |
+| 279 | Indominus Rex, Alpha | 9,248 | BGU | Legendary Creature — Dinosaur Mutant |  |
+| 289 | Arna Kennerüd, Skycaptain | 9,018 | BUW | Legendary Creature — Human Knight |  |
 
 ## 2. Top 1000 Commander cards not in the catalog (0)
 
@@ -82,72 +78,72 @@ commander's-colour-identity mana source, "if you control your commander").
 | 74 | Deflecting Swat | Instant |
 | 82 | Fierce Guardianship | Instant |
 | 105 | Jeska's Will | Sorcery |
-| 106 | Deadly Rollick | Instant |
+| 107 | Deadly Rollick | Instant |
 | 140 | War Room | Land |
 | 175 | Flawless Maneuver | Instant |
 | 183 | Command Beacon | Land |
 | 187 | Akroma's Will | Instant |
 | 476 | Commander's Plate | Artifact — Equipment |
 | 682 | Opal Palace | Land |
-| 749 | Loyal Apprentice | Creature — Human Artificer |
-| 933 | Bastion Protector | Creature — Human Soldier |
+| 748 | Loyal Apprentice | Creature — Human Artificer |
+| 935 | Bastion Protector | Creature — Human Soldier |
 | 1066 | Witch's Clinic | Land |
 | 1178 | Kediss, Emberclaw Familiar | Legendary Creature — Elemental Lizard |
-| 1492 | Obscuring Haze | Instant |
+| 1493 | Obscuring Haze | Instant |
 | 1545 | Codsworth, Handy Helper | Legendary Artifact Creature — Robot |
-| 1719 | Timely Ward | Enchantment — Aura |
-| 1874 | Passionate Archaeologist | Legendary Enchantment — Background |
-| 1900 | Hellkite Courser | Creature — Dragon |
-| 2029 | Daretti, Scrap Savant | Legendary Planeswalker — Daretti |
-| 2033 | Thunderfoot Baloth | Creature — Beast |
-| 2114 | Drown in Dreams | Instant |
-| 2131 | Ainok Strike Leader | Creature — Dog Warrior |
-| 2155 | Will of the Jeskai | Sorcery |
-| 2167 | Thunderclap Drake | Creature — Drake |
-| 2201 | Forge of Heroes | Land |
-| 2207 | Will of the Mardu | Instant |
-| 2235 | Tome of Legends | Artifact — Book |
-| 2303 | Agent of the Iron Throne | Legendary Enchantment — Background |
-| 2519 | Yuriko, the Tiger's Shadow | Legendary Creature — Human Ninja |
-| 2556 | Will of the Abzan | Sorcery |
+| 1721 | Timely Ward | Enchantment — Aura |
+| 1875 | Passionate Archaeologist | Legendary Enchantment — Background |
+| 1901 | Hellkite Courser | Creature — Dragon |
+| 2030 | Daretti, Scrap Savant | Legendary Planeswalker — Daretti |
+| 2034 | Thunderfoot Baloth | Creature — Beast |
+| 2115 | Drown in Dreams | Instant |
+| 2124 | Ainok Strike Leader | Creature — Dog Warrior |
+| 2154 | Will of the Jeskai | Sorcery |
+| 2168 | Thunderclap Drake | Creature — Drake |
+| 2202 | Forge of Heroes | Land |
+| 2206 | Will of the Mardu | Instant |
+| 2228 | Tome of Legends | Artifact — Book |
+| 2302 | Agent of the Iron Throne | Legendary Enchantment — Background |
+| 2524 | Yuriko, the Tiger's Shadow | Legendary Creature — Human Ninja |
+| 2554 | Will of the Abzan | Sorcery |
 | 2575 | Siege-Gang Lieutenant | Creature — Goblin |
-| 2655 | The Ur-Dragon | Legendary Creature — Dragon Avatar |
-| 2676 | Freyalise, Llanowar's Fury | Legendary Planeswalker — Freyalise |
-| 2754 | Guardian Augmenter | Creature — Troll Wizard |
-| 2904 | Inspiring Leader | Legendary Enchantment — Background |
-| 2953 | Will of the Sultai | Sorcery |
-| 2963 | Derevi, Empyrial Tactician | Legendary Creature — Bird Wizard |
-| 3077 | Loyal Guardian | Creature — Rhino |
-| 3161 | Edgar Markov | Legendary Creature — Vampire Knight |
+| 2656 | The Ur-Dragon | Legendary Creature — Dragon Avatar |
+| 2679 | Freyalise, Llanowar's Fury | Legendary Planeswalker — Freyalise |
+| 2755 | Guardian Augmenter | Creature — Troll Wizard |
+| 2909 | Inspiring Leader | Legendary Enchantment — Background |
+| 2950 | Will of the Sultai | Sorcery |
+| 2970 | Derevi, Empyrial Tactician | Legendary Creature — Bird Wizard |
+| 3080 | Loyal Guardian | Creature — Rhino |
+| 3158 | Edgar Markov | Legendary Creature — Vampire Knight |
 | 3209 | Geode Golem | Artifact Creature — Golem |
-| 3257 | Skyhunter Strike Force | Creature — Cat Knight |
-| 3333 | Norn's Choirmaster | Creature — Phyrexian Angel |
-| 3400 | Stinging Study | Instant |
-| 3415 | Esior, Wardwing Familiar | Legendary Creature — Bird |
-| 3495 | Dihada, Binder of Wills | Legendary Planeswalker — Dihada |
-| 3526 | Study Hall | Land |
-| 3572 | Hidden Hideout | Land |
-| 3616 | Guild Artisan | Legendary Enchantment — Background |
-| 3736 | Astarion's Thirst | Instant |
-| 3769 | Sanctum of Eternity | Land |
-| 3793 | Folk Hero | Legendary Enchantment — Background |
-| 3906 | Tevesh Szat, Doom of Fools | Legendary Planeswalker — Szat |
-| 3913 | Noble Heritage | Legendary Enchantment — Background |
-| 3933 | Cactus Preserve | Land — Desert |
-| 3993 | Minsc & Boo, Timeless Heroes | Legendary Planeswalker — Minsc |
-| 3998 | Will of the Temur | Sorcery |
+| 3262 | Skyhunter Strike Force | Creature — Cat Knight |
+| 3325 | Norn's Choirmaster | Creature — Phyrexian Angel |
+| 3401 | Stinging Study | Instant |
+| 3416 | Esior, Wardwing Familiar | Legendary Creature — Bird |
+| 3493 | Dihada, Binder of Wills | Legendary Planeswalker — Dihada |
+| 3521 | Study Hall | Land |
+| 3561 | Hidden Hideout | Land |
+| 3615 | Guild Artisan | Legendary Enchantment — Background |
+| 3740 | Astarion's Thirst | Instant |
+| 3772 | Sanctum of Eternity | Land |
+| 3791 | Folk Hero | Legendary Enchantment — Background |
+| 3902 | Tevesh Szat, Doom of Fools | Legendary Planeswalker — Szat |
+| 3912 | Noble Heritage | Legendary Enchantment — Background |
+| 3934 | Cactus Preserve | Land — Desert |
+| 3992 | Will of the Temur | Sorcery |
+| 3995 | Minsc & Boo, Timeless Heroes | Legendary Planeswalker — Minsc |
+| 4050 | Teferi, Temporal Archmage | Legendary Planeswalker — Teferi |
 | 4054 | Anara, Wolvid Familiar | Legendary Creature — Wolf Beast |
-| 4071 | Teferi, Temporal Archmage | Legendary Planeswalker — Teferi |
-| 4205 | Dancer's Chakrams | Artifact — Equipment |
-| 4289 | Tavern Brawler | Legendary Enchantment — Background |
+| 4201 | Dancer's Chakrams | Artifact — Equipment |
+| 4291 | Tavern Brawler | Legendary Enchantment — Background |
 | 4332 | Vexilus Praetor | Creature — Custodes Warrior |
-| 4338 | Lozhan, Dragons' Legacy | Legendary Creature — Dragon Shaman |
-| 4343 | Master Chef | Legendary Enchantment — Background |
-| 4393 | Angelic Field Marshal | Creature — Angel |
-| 4496 | Tasha, the Witch Queen | Legendary Planeswalker — Tasha |
-| 4578 | Aminatou, the Fateshifter | Legendary Planeswalker — Aminatou |
-| 4614 | Tyrant's Familiar | Creature — Dragon |
-| 4636 | Jeska, Thrice Reborn | Legendary Planeswalker — Jeska |
-| 4734 | Haunted One | Legendary Enchantment — Background |
-| 4791 | Far Traveler | Legendary Enchantment — Background |
-| 4933 | Loyal Subordinate | Creature — Zombie |
+| 4341 | Lozhan, Dragons' Legacy | Legendary Creature — Dragon Shaman |
+| 4349 | Master Chef | Legendary Enchantment — Background |
+| 4381 | Angelic Field Marshal | Creature — Angel |
+| 4501 | Tasha, the Witch Queen | Legendary Planeswalker — Tasha |
+| 4563 | Aminatou, the Fateshifter | Legendary Planeswalker — Aminatou |
+| 4607 | Tyrant's Familiar | Creature — Dragon |
+| 4637 | Jeska, Thrice Reborn | Legendary Planeswalker — Jeska |
+| 4736 | Haunted One | Legendary Enchantment — Background |
+| 4792 | Far Traveler | Legendary Enchantment — Background |
+| 4936 | Loyal Subordinate | Creature — Zombie |
