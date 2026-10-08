@@ -2270,6 +2270,27 @@ fn play_pod_game(
                 );
             }
         }
+        // CR 408.1 / 903.3 — a command zone holds its own player's objects,
+        // and a card there is a commander or a card that lives there (a
+        // plane, phenomenon, scheme, conspiracy or vanguard). Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            use crate::card::CardType as T;
+            for (i, p) in g.players.iter().enumerate() {
+                if let Some(c) = p.command.iter().find(|c| {
+                    c.owner != i
+                        || (!p.commanders.contains(&c.id)
+                            && !c.definition.card_types.iter().any(|t| {
+                                matches!(t, T::Plane | T::Phenomenon | T::Scheme | T::Conspiracy | T::Vanguard)
+                            }))
+                }) {
+                    panic!(
+                        "seed {seed}: {} {:?} (owner p{}) is in p{i}'s command zone (turn {}, after {actions} actions)",
+                        c.definition.name, c.id, c.owner, g.turn_number,
+                    );
+                }
+            }
+        }
         // CR 725.4 / 726.4 — the monarch and the initiative pass on when their
         // holder leaves; neither stays with a seat that has left. Debug-only.
         #[cfg(debug_assertions)]
