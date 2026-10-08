@@ -2104,6 +2104,19 @@ fn play_pod_game(
                 }
             }
         }
+        // CR 613.7d — every permanent carries its entry timestamp once the
+        // action is done; an unstamped one reads as its `CardId`, older than
+        // everything (the resolving-spell and token paths were). Debug-only.
+        #[cfg(debug_assertions)]
+        if let Some(c) = g.battlefield.iter().find(|c| c.battlefield_timestamp == 0) {
+            panic!(
+                "seed {seed}: {} ({:?}) is on the battlefield with no timestamp (turn {}, {:?}, after {actions} actions)",
+                c.definition.name,
+                c.id,
+                g.turn_number,
+                g.step,
+            );
+        }
         // CR 610.3 — a card exiled "until [source] leaves the battlefield"
         // returns once the source has left (a phased-out source hasn't). A
         // printed leave TRIGGER returns it as it resolves, so only with the
