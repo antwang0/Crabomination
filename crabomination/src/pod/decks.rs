@@ -7717,3 +7717,31 @@ pub const CODIE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, island, island, island, mountain, mountain,
     mountain, plains, plains, plains, swamp, swamp, swamp,
 ];
+
+pub const BLECH_COMMANDERS: &[CardFactory] = &[blech_loafing_pest];
+
+/// **Blech, Loafing Pest**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 11 Forests + 9 Swamps = 99.
+/// Golgari lifegain growing Pests, Bats, Insects, Snakes and Spiders with counters.
+pub const BLECH_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_essence, pristine_talisman, skullclamp, sol_ring,
+    talisman_of_resilience, whip_of_erebos, bojuka_bog, command_tower, deathcap_glade,
+    exotic_orchard, high_market, jungle_hollow, llanowar_wastes, necroblossom_snarl,
+    overgrown_tomb, swarmyard, tainted_wood, twilight_mire, undergrowth_stadium, vernal_fen,
+    woodland_cemetery, arasta_of_the_endless_web, beledros_witherbloom, blex_vexing_pest,
+    bogwater_lumaret, dina_soul_steeper, duskshell_crawler, eccentric_pestfinder,
+    enduring_tenacity, essence_warden, essenceknit_scholar, eumidian_terrabotanist,
+    gorma_the_gullet, haywire_mite, iridescent_hornbeetle, kazandu_nectarpot,
+    lluwen_exchange_student, meltstrider_eulogist, mirkwood_bats, moseo_veins_new_dean,
+    ohran_frostfang, pest_mascot, pest_rescuer, ribtruss_roaster, sakura_tribe_elder, scute_swarm,
+    shopkeepers_bane, south_wind_avatar, starscape_cleric, teachers_pest, twitching_doll,
+    virulent_emissary, winding_constrictor, blight_mound, comforting_counsel, doubling_season,
+    feral_appetite, hardened_scales, moldervine_reclamation, springleaf_parade, arachnogenesis,
+    assassins_trophy, dinas_guidance, heroic_intervention, inspiring_call, mortality_spear,
+    tend_the_pests, witherbloom_charm, professor_dellian_fel, cultivate, grapple_with_death,
+    immoral_bargain, natures_lore, pest_infestation, rampant_growth, root_manipulation,
+    send_in_the_pest, toxic_deluge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
