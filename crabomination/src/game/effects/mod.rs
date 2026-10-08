@@ -36415,7 +36415,7 @@ impl GameState {
                     None if self.seat_suspends(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: *max },
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::AmountAnswerPending { max: *max }),
                             effect.clone(),
                         )));
                         return Ok(());

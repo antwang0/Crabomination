@@ -1713,3 +1713,62 @@ fn printed_type_line_reads_only_shrink() {
         assert!(n <= cap, "{n} printed `{pat}` reads under game/ (cap {cap}): use the layer-aware helper");
     }
 }
+
+/// CR 608.2d — a parked ask that prompted a seat must name it. A seat-less
+/// `PendingEffectState` is answered by the resume's owner (the caster), so
+/// an arm that gated on `seat_prompts(p)` / `seat_suspends(p)` for anyone
+/// else — and `ctx.controller` is a fan-out's opponent under `EachPlayerDoes`
+/// — had the caster answer for them (26 sites, 2026-10-08, off "each
+/// opponent may draw"). Wrap with `PendingEffectState::seated(p, …)` or use a
+/// variant `answering_player` maps. `scripts/audit_seatless_ask.py` is the
+/// same scan.
+#[test]
+fn a_parked_ask_names_the_seat_it_prompted() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../crabomination/src/game");
+    let types = std::fs::read_to_string(root.join("types.rs")).expect("types.rs");
+    let body = &types[types.find("fn answering_player").expect("answering_player")..];
+    let body = &body[..body.find("\n    }\n").expect("end of answering_player")];
+    let seated: Vec<&str> = body
+        .split("PendingEffectState::")
+        .skip(1)
+        .map(|s| s.split(|c: char| !c.is_alphanumeric() && c != '_').next().unwrap_or(""))
+        .collect();
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for e in std::fs::read_dir(dir).expect("engine source dir") {
+            let p = e.expect("dir entry").path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                out.push(p);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    walk(&root, &mut files);
+    files.sort();
+    let (mut bad, mut parked) = (Vec::new(), 0usize);
+    for f in &files {
+        let text = std::fs::read_to_string(f).expect("engine source file");
+        let lines: Vec<&str> = text.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            let Some(at) = line.find("PendingEffectState::") else { continue };
+            let variant: String = line[at + 20..].chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
+            let before = lines[i.saturating_sub(8)..=i].join("\n");
+            if !before.contains("suspend_signal = Some") && !before.contains("suspend_signal =\n") {
+                continue;
+            }
+            parked += 1;
+            if variant == "Seated" || seated.contains(&variant.as_str()) || lines[i.saturating_sub(2)..=i].iter().any(|l| l.contains("seated(")) {
+                continue;
+            }
+            let gate = (i.saturating_sub(60)..=i).rev().find_map(|j| {
+                ["seat_prompts(", "seat_suspends("].iter().find_map(|g| lines[j].find(g).map(|k| lines[j][k..].to_string()))
+            });
+            if let Some(gate) = gate {
+                bad.push(format!("{}:{}: {variant} after {gate}", f.display(), i + 1));
+            }
+        }
+    }
+    assert!(parked >= 40, "the scan found only {parked} parked asks — it has gone vacuous");
+    assert!(bad.is_empty(), "{} parked ask(s) prompt a seat and name none:\n  {}", bad.len(), bad.join("\n  "));
+}
