@@ -33240,8 +33240,8 @@ pub fn skyclave_squid() -> CardDefinition {
 
 /// Sink into Stupor // Soporific Springs — {1}{U}{U} Instant MDFC (MKM).
 /// Front: "Return target spell or nonland permanent an opponent controls to
-/// its owner's hand." (The spell-on-stack half collapses to the nonland-
-/// permanent bounce; the engine has no return-a-spell-to-hand primitive.)
+/// its owner's hand" — the spell or the permanent picked as a mode, Sudden
+/// Setback's shape (`MoveSpellToZone` lifts the spell).
 /// Back: Soporific Springs — a Land that enters tapped unless you pay 3 life,
 /// taps for {U}. Played via `GameAction::PlayLandBack`.
 pub fn sink_into_stupor() -> CardDefinition {
@@ -33258,12 +33258,20 @@ pub fn sink_into_stupor() -> CardDefinition {
         name: "Sink into Stupor",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
-            ),
-            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-        },
+        effect: Effect::ChooseMode(vec![
+            Effect::MoveSpellToZone {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                zone: crate::effect::CounteredSpellZone::OwnerHand,
+            },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
         back_face: Some(Box::new(back)),
         ..Default::default()
     }
@@ -63517,8 +63525,7 @@ pub fn mythos_of_snapdax() -> CardDefinition {
 /// Clackbridge Troll — {3}{B}{B} 8/8 Troll, Trample, Haste. ETB: an opponent
 /// makes three 0/1 white Goats. At the beginning of combat on your turn, an
 /// opponent may sacrifice a creature; if one does, tap Clackbridge Troll, you
-/// gain 3 life, and you draw a card. (Multiplayer "target opponent" collapses
-/// to each opponent, the catalog convention.)
+/// gain 3 life, and you draw a card. Any opponent may make the offer.
 pub fn clackbridge_troll() -> CardDefinition {
     use crate::game::types::TurnStep;
     let goat = TokenDefinition {
@@ -63546,10 +63553,15 @@ pub fn clackbridge_troll() -> CardDefinition {
         keywords: vec![Keyword::Trample, Keyword::Haste],
         triggered_abilities: vec![
             // "target opponent creates three … Goats" — one opponent.
-            etb(Effect::CreateToken {
-                who: PlayerRef::Target(0),
-                count: Value::Const(3),
-                definition: std::sync::Arc::new(goat),
+            etb(Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 1,
+                filter: SelectionRequirement::OpponentPlayer,
+                effect: Box::new(Effect::CreateToken {
+                    who: PlayerRef::Target(0),
+                    count: Value::Const(3),
+                    definition: std::sync::Arc::new(goat),
+                }),
             }),
             TriggeredAbility {
                 event: EventSpec::new(

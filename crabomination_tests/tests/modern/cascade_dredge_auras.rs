@@ -903,11 +903,29 @@ fn sink_into_stupor_bounces_then_plays_as_a_land() {
     g.players[0].mana_pool.add(Color::Blue, 3);
     g.perform_action(GameAction::CastSpell {
         card_id: sis, target: Some(Target::Permanent(bears)),
-        additional_targets: vec![], mode: None, x_value: None,
+        additional_targets: vec![], mode: Some(1), x_value: None,
     }).expect("cast front face");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bears).is_none(), "bounced");
     assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    // Front, spell half: the opponent's Bolt goes back to their hand.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent bolts");
+    let sis2 = g.add_card_to_hand(0, catalog::sink_into_stupor());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sis2, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("bounce the spell");
+    drain_stack(&mut g);
+    assert!(g.stack.is_empty() && g.players[0].life == life);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "the spell went to hand");
     // Back: play Soporific Springs as a land (pay 3 life to stay untapped).
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let springs = g.add_card_to_hand(0, catalog::sink_into_stupor());
