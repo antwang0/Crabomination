@@ -434,3 +434,17 @@ fn cabbage_merchant_foods_and_mana() {
     assert_eq!(g.players[0].mana_pool.total(), pool + 1);
     assert!(g.battlefield.iter().filter(|c| c.definition.name == "Food").all(|c| c.tapped));
 }
+
+/// CR 702.108 — Bria's "other creatures you control have prowess" is a
+/// layer grant; the prowess site read printed keywords only, so the Bear
+/// never pumped.
+#[test]
+fn bria_grants_prowess_to_the_team() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::bria_riptide_rogue());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
