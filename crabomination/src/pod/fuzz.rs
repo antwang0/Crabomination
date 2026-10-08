@@ -3,8 +3,8 @@
 //! swapped for a random alternative — another of its own cast / activation
 //! candidates at whatever priority window it holds, the other answer to a
 //! yes/no ask, a random answer to an ask that lists its options (targets,
-//! modes, cards, names, types, lessons, scry piles, divisions, trigger order,
-//! mulligans), a random subset of its attack or block declaration. A sweep
+//! modes, cards, names, types, lessons, die faces, scry piles, divisions,
+//! trigger order, mulligans), a random subset of its attack or block declaration. A sweep
 //! tool: the tuned bots build the same boards over and over, and a panic or
 //! invariant that only an odd line of play reaches is still a panic
 //! self-play can hit. Seeded per game, so a fuzzed game replays. A swap the
@@ -130,12 +130,29 @@ impl FuzzBot {
                 }
                 DecisionAnswer::CombatDamageAssignment(split)
             }
-            Decision::ChooseCreatureType { suggestions, .. } => {
-                DecisionAnswer::CreatureType(suggestions[pick(&mut self.rng, suggestions.len())?])
+            // An excluded type now and then probes the CR 205.3m refusal.
+            Decision::ChooseCreatureType { suggestions, excluded, .. } => {
+                let pool: Vec<_> = suggestions.iter().chain(excluded).copied().collect();
+                DecisionAnswer::CreatureType(pool[pick(&mut self.rng, pool.len())?])
             }
-            Decision::NameCard { suggestions, .. } => {
-                DecisionAnswer::NamedCard(suggestions[pick(&mut self.rng, suggestions.len())?].clone())
+            Decision::ChooseCreatureTypePair { suggestions, .. } => {
+                let a = suggestions[pick(&mut self.rng, suggestions.len())?];
+                let b = suggestions[pick(&mut self.rng, suggestions.len())?];
+                DecisionAnswer::CreatureTypePair(a, b)
             }
+            // A suggestion, the asking card's own name, a name no card has,
+            // or nothing (CR 201.3).
+            Decision::NameCard { suggestions, source_name, .. } => {
+                let i = self.rng.random_range(0..suggestions.len() + 3);
+                DecisionAnswer::NamedCard(match i.checked_sub(suggestions.len()) {
+                    None => suggestions[i].clone(),
+                    Some(0) => source_name.clone(),
+                    Some(1) => "Not A Card Name".into(),
+                    _ => String::new(),
+                })
+            }
+            // Out-of-range faces too: the engine clamps a die answer.
+            Decision::DieRoll { sides, .. } => DecisionAnswer::DieRoll(self.rng.random_range(0..=sides.saturating_add(1))),
             Decision::Learn { lessons, hand, .. } => {
                 let i = self.rng.random_range(0..lessons.len() + hand.len() + 1);
                 DecisionAnswer::Learn(match (lessons.get(i), hand.get(i.wrapping_sub(lessons.len()))) {
