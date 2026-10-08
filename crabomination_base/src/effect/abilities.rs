@@ -1708,6 +1708,12 @@ pub enum StaticEffect {
         #[serde(default)]
         players_only: bool,
     },
+    /// "If another source you control would deal noncombat damage to a
+    /// permanent or player, it deals that much damage plus `amount` instead"
+    /// (Tor Wauki the Younger). Any recipient, your own side included; the
+    /// static's own permanent is excluded. Applied in the same
+    /// `deal_damage_to_from` funnel as `NoncombatDamageToOpponentsBonus`.
+    NoncombatDamageFromOtherSourcesBonus { amount: u32 },
     /// CR 614.5/615 — "If a source would deal damage to you or a permanent
     /// you control, prevent half that damage, rounded up." (Gisela.) The
     /// remainder is floor(amount/2) — same arithmetic as a halver, scoped

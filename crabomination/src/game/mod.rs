@@ -9349,7 +9349,8 @@ impl GameState {
             .count() as u32
     }
 
-    /// Additive noncombat-damage bonus (Aether Revolt): sum of
+    /// Additive noncombat-damage bonus (Aether Revolt; Tor Wauki the Younger
+    /// for any recipient via `NoncombatDamageFromOtherSourcesBonus`): sum of
     /// `NoncombatDamageToOpponentsBonus.amount` over battlefield permanents
     /// whose controller controls `source` and where `ent` is an opponent /
     /// their permanent. `while_revolt` statics only count while that
@@ -9380,13 +9381,18 @@ impl GameState {
         self.battlefield
             .iter()
             .map(|c| {
-                if c.controller != src_ctrl || self.same_team(src_ctrl, target_player) {
+                if c.controller != src_ctrl {
                     return 0;
                 }
+                let hits_opponent = !self.same_team(src_ctrl, target_player);
                 c.definition
                     .static_abilities
                     .iter()
                     .filter_map(|sa| match sa.effect {
+                        StaticEffect::NoncombatDamageFromOtherSourcesBonus { amount } => {
+                            (source != Some(c.id)).then_some(amount)
+                        }
+                        StaticEffect::NoncombatDamageToOpponentsBonus { .. } if !hits_opponent => None,
                         StaticEffect::NoncombatDamageToOpponentsBonus { amount, while_revolt, players_only } => {
                             if (players_only && !matches!(ent, EntityRef::Player(_)))
                                 || while_revolt
@@ -33173,6 +33179,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::DoubleYourNoncombatDamageWhile { .. }
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
+            | StaticEffect::NoncombatDamageFromOtherSourcesBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::ReduceDamageToYouBy(_)
             | StaticEffect::ReduceSpellDamageBy { .. }
