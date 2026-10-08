@@ -409,3 +409,133 @@ fn super_state_splashes_combat_damage() {
     drain_stack(&mut g);
     assert_eq!([g.players[1].life, g.players[2].life], [11, 11]);
 }
+
+fn shock_player(g: &mut GameState, seat: usize) {
+    flood(g);
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast_at(g, shock, Some(crabomination::game::types::Target::Player(seat)));
+}
+
+/// CR 614.1a — Ojer Axonil: a red source of yours dealing an opponent less
+/// noncombat damage than its power deals its power instead; damage to a
+/// creature is untouched.
+#[test]
+fn ojer_axonil_raises_red_noncombat_damage_to_its_power() {
+    use crabomination::game::types::Target;
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::ojer_axonil_deepest_might());
+    shock_player(&mut g, 1);
+    assert_eq!(g.players[1].life, 16, "Shock's 2 became 4");
+    let bear = ready(&mut g, 2, catalog::grizzly_bears());
+    flood(&mut g);
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast_at(&mut g, shock, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[2].life, 20);
+}
+
+/// Ojer Axonil dies into Temple of Power, tapped; the Temple transforms back
+/// only once red sources you controlled dealt 4+ noncombat damage this turn.
+#[test]
+fn ojer_axonil_returns_as_a_temple_that_needs_four_red_damage() {
+    let mut g = pod(2);
+    let ojer = ready(&mut g, 0, catalog::ojer_axonil_deepest_might());
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_at(&mut g, bolt, Some(crabomination::game::types::Target::Permanent(ojer)));
+    cast_at(&mut g, bolt2, Some(crabomination::game::types::Target::Permanent(ojer)));
+    let temple = g.battlefield.iter().find(|c| c.definition.name == "Temple of Power").expect("returned transformed");
+    assert!(temple.tapped);
+    let temple = temple.id;
+    g.battlefield_find_mut(temple).unwrap().tapped = false;
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    let transform = GameAction::ActivateAbility {
+        card_id: temple, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    };
+    assert!(g.perform_action(transform.clone()).is_ok(), "6 red noncombat damage this turn");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(temple).unwrap().definition.name, "Ojer Axonil, Deepest Might");
+}
+
+/// Chandra's Incinerator — {X} less per noncombat damage to opponents this
+/// turn, and a source of yours burning an opponent burns one of their
+/// creatures for the same amount.
+#[test]
+fn chandras_incinerator_discounts_and_redirects_burn() {
+    let mut g = pod(3);
+    shock_player(&mut g, 1);
+    shock_player(&mut g, 2);
+    let inc = g.add_card_to_hand(0, catalog::chandras_incinerator());
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast_at(&mut g, inc, None);
+    assert!(g.battlefield_find(inc).is_some(), "{{5}}{{R}} less 4 is {{1}}{{R}}");
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    shock_player(&mut g, 1);
+    assert!(g.battlefield_find(bear).is_none(), "2 more to the bear");
+}
+
+/// Defiler of Instinct — a red permanent spell cast pings any target.
+#[test]
+fn defiler_of_instinct_pings_on_red_permanent_spells() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    ready(&mut g, 0, catalog::defiler_of_instinct());
+    let goblin = g.add_card_to_hand(0, catalog::raging_goblin());
+    flood(&mut g);
+    cast_at(&mut g, goblin, None);
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Urabrask — each instant or sorcery pings target opponent and adds {R};
+/// after three, {R} flips it into The Great Work, whose chapter I deals 3 to
+/// target opponent and each creature they control.
+#[test]
+fn urabrask_flips_into_the_great_work() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    let ura = ready(&mut g, 0, catalog::urabrask());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        let opt = g.add_card_to_hand(0, catalog::opt());
+        flood(&mut g);
+        cast_at(&mut g, opt, None);
+    }
+    assert_eq!(g.players[1].life, 17);
+    activate(&mut g, ura, 0);
+    assert_eq!(g.battlefield_find(ura).map(|c| c.definition.name), Some("The Great Work"));
+    assert!(g.battlefield_find(bear).is_none(), "chapter I");
+    assert_eq!(g.players[1].life, 14);
+}
+
+/// Burning Earth burns a nonbasic land's tapper, not a basic's.
+#[test]
+fn burning_earth_burns_nonbasic_taps_only() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::burning_earth());
+    let tower = ready(&mut g, 1, catalog::command_tower());
+    let mountain = ready(&mut g, 1, catalog::mountain());
+    for land in [tower, mountain] {
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("tap");
+    }
+    g.priority.player_with_priority = 1;
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Virtue of Courage — burning an opponent for 2 may exile your top two to
+/// play this turn.
+#[test]
+fn virtue_of_courage_impulses_the_damage_dealt() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::virtue_of_courage());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    shock_player(&mut g, 1);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0 && c.may_play_until.is_some()).count(), 2);
+}

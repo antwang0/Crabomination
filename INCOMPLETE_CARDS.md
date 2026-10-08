@@ -437,6 +437,7 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 |---|---|---|
 | Zidane, Tantalus Thief | "whenever an opponent gains control of a permanent from you, create a Treasure" is absent | no control-change event from the loser's side (only `LostControlOfThis` on the permanent) |
 | Clement, the Worrywort | Frogs you control don't gain "{T}: Add {G} or {U}" (creature-spell-only) | no static grant of a restricted mana ability to a filter |
+| Urabrask // The Great Work | chapter III's "cast instant and sorcery spells from any graveyard" covers only the cards in graveyards as it resolves | the permission is a `GrantMayPlay` stamp (Past in Flames' shape), not a rules-permission static over graveyards |
 | Party Thrasher | noncreature spells cast from exile lack convoke (the "choose one of them" half ✅ 2026-10-08) | the paying cast-from-exile path (`cast_card_from_zone_spending`) has no convoke |
 | The Necrobloom | land cards in your graveyard don't have dredge 2 | dredge is read off the card's own definition |
 | Ragost, Deft Gastronaut | artifacts you control aren't Foods and don't gain the Food ability | no type-and-ability grant to a filter |

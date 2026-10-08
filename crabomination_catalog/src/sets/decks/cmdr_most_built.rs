@@ -556,3 +556,219 @@ pub fn super_state() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ojer Axonil, Deepest Might (R) ──────────────────────────────────────────
+
+/// Ojer Axonil, Deepest Might // Temple of Power — trample; a red source of
+/// yours deals an opponent at least Ojer's power in noncombat damage; dies
+/// into the Temple, which taps for {R} and transforms back for {2}{R} once
+/// your red sources dealt 4+ noncombat damage this turn (sorcery speed).
+pub fn ojer_axonil_deepest_might() -> CardDefinition {
+    let temple = CardDefinition {
+        name: "Temple of Power",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Red),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), r()]),
+                sorcery_speed: true,
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::RedNoncombatDamageDealtThisTurn(PlayerRef::You),
+                    Value::Const(4),
+                )),
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "If a red source you control would deal an amount of noncombat damage less than Ojer Axonil's power to an opponent, that source deals damage equal to Ojer Axonil's power instead.",
+            effect: StaticEffect::RaiseRedNoncombatDamageToOpponentsToPower,
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::ReturnSelfTransformedTappedToOwner)],
+        back_face: Some(Box::new(temple)),
+        ..legend("Ojer Axonil, Deepest Might", cost(&[generic(2), r(), r()]), vec![CreatureType::God], 4, 4)
+    }
+}
+
+/// Chandra's Incinerator — costs {X} less (X = noncombat damage dealt to your
+/// opponents this turn); trample; a source of yours dealing an opponent
+/// noncombat damage has it deal that much to a creature or planeswalker
+/// that player controls.
+pub fn chandras_incinerator() -> CardDefinition {
+    CardDefinition {
+        name: "Chandra's Incinerator",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is the total amount of noncombat damage dealt to your opponents this turn.",
+            effect: StaticEffect::SelfCostReducedByValue {
+                amount: Value::NoncombatDamageTakenThisTurn(PlayerRef::EachOpponent),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDealtNoncombatDamage, EventScope::YourSourceDamagedOpponent),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    R::Creature.or(R::HasCardType(CardType::Planeswalker)).and(R::ControlledByTriggerPlayer),
+                ),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Defiler of Instinct — first strike; red permanent spells may pay 2 life
+/// for {R}; casting one deals 1 damage to any target.
+pub fn defiler_of_instinct() -> CardDefinition {
+    let red_permanent = || R::HasColor(Color::Red).and(R::PermanentCard);
+    CardDefinition {
+        name: "Defiler of Instinct",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Kavu],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![StaticAbility {
+            description: "Red permanent spells may pay 2 life for {R}.",
+            effect: StaticEffect::PhyrexianPipForSpells { filter: red_permanent(), color: Color::Red },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(red_permanent())),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Urabrask // The Great Work — first strike; an instant or sorcery cast
+/// pings target opponent for 1 and adds {R}; {R}, after three such spells
+/// this turn: exile it and return it transformed (sorcery speed). The Saga:
+/// 3 to target opponent and each creature they control; three Treasures;
+/// cast instants and sorceries from any graveyard this turn (exiled after),
+/// then it returns front face up. Chapter III is approximated: the permission
+/// is stamped on the cards in graveyards as it resolves, so one put there
+/// later that turn is not castable.
+pub fn urabrask() -> CardDefinition {
+    let any_graveyard_spells = Effect::GrantMayPlay {
+        what: Selector::CardsInZone {
+            who: PlayerRef::EachPlayer,
+            zone: crate::card::Zone::Graveyard,
+            filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+        },
+        duration: MayPlayDuration::EndOfThisTurn,
+        to_owner: false,
+        exile_after: true,
+        pay_own_cost: true,
+        any_color: false,
+    };
+    let saga = CardDefinition {
+        name: "The Great Work",
+        card_types: vec![CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::Const(3) },
+                    Effect::DealDamage {
+                        to: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                        amount: Value::Const(3),
+                    },
+                ]),
+            ),
+            (2, Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: Arc::new(treasure_token()) }),
+            (3, Effect::Seq(vec![any_graveyard_spells, Effect::ExileSelfReturnFrontFace])),
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::ONE },
+            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red]) },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            sorcery_speed: true,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::InstantsOrSorceriesCastThisTurn(PlayerRef::You),
+                Value::Const(3),
+            )),
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(saga)),
+        ..legend("Urabrask", cost(&[generic(2), r(), r()]), vec![CreatureType::Phyrexian, CreatureType::Praetor], 4, 4)
+    }
+}
+
+/// Burning Earth — a nonbasic land tapped for mana deals its tapper 1 damage.
+pub fn burning_earth() -> CardDefinition {
+    CardDefinition {
+        name: "Burning Earth",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TappedForMana, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Land.and(R::IsBasicLand.negate()),
+            }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Virtue of Courage // Embereth Blaze — a source of yours dealing an
+/// opponent noncombat damage may exile that many cards from your library's
+/// top to play this turn. Adventure: 2 damage to any target.
+pub fn virtue_of_courage() -> CardDefinition {
+    CardDefinition {
+        name: "Virtue of Courage",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Embereth Blaze",
+            cost: cost(&[generic(1), r()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(2) },
+        })),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDealtNoncombatDamage, EventScope::YourSourceDamagedOpponent),
+            effect: Effect::MayDo {
+                description: "Exile that many cards from the top of your library to play this turn?".into(),
+                body: Box::new(Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::TriggerEventAmount,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
