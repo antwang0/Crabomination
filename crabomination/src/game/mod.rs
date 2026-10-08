@@ -4898,6 +4898,10 @@ impl GameState {
             self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, events);
             return;
         }
+        if c.definition.back_face.as_ref().is_some_and(|b| !b.is_permanent()) {
+            self.defeat_siege_casting_its_back_face(id, controller, &ctx, events);
+            return;
+        }
         // Transform to the back face, then flicker it onto the battlefield.
         self.transform_permanent(id, events);
         if let Some(c) = self.battlefield_find_mut(id) {
@@ -4913,6 +4917,52 @@ impl GameState {
             &ctx,
             events,
         );
+    }
+
+    /// CR 310.12b — a defeated Siege whose back face is an instant or sorcery
+    /// (Invasion of Alara // Awaken the Maelstrom): exiled, then its
+    /// controller may cast it transformed without paying its mana cost. A
+    /// declined or uncastable spell stays in exile, front face up.
+    fn defeat_siege_casting_its_back_face(
+        &mut self,
+        id: CardId,
+        controller: usize,
+        ctx: &crate::game::effects::EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        self.move_card_to(id, &crate::effect::ZoneDest::Exile, ctx, events);
+        let Some(back) = self.exile.iter().find(|c| c.id == id).and_then(|c| c.definition.back_face.clone()) else {
+            return;
+        };
+        let take = match self.decider.kind() {
+            crate::decision::DeciderKind::Auto => true,
+            _ => matches!(
+                self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                    source: id,
+                    description: format!("Cast {} without paying its mana cost?", back.name),
+                    kind: crate::decision::OptionalKind::CastFree,
+                }),
+                crate::decision::DecisionAnswer::Bool(true)
+            ),
+        };
+        if !take {
+            return;
+        }
+        let back = std::sync::Arc::new(*back);
+        if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+            c.front_face = Some(c.definition.arc());
+            c.set_definition(back.clone());
+            c.transformed = true;
+        }
+        let (target, more) = self.auto_targets_for_effect_all_slots_sourced(&back.effect, controller, None, Some(id));
+        match self.cast_card_for_free(controller, id, crate::card::Zone::Exile, target, more, None, None, false) {
+            Ok(mut ev) => events.append(&mut ev),
+            Err(_) => {
+                if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+                    c.revert_transform();
+                }
+            }
+        }
     }
 
     /// CR 710.2 — flip one flip-card permanent to its flipped face in place.
