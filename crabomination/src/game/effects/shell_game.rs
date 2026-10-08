@@ -38,6 +38,9 @@ impl GameState {
             .map(|c| Target::Permanent(c.id))
             .collect();
         if legal.is_empty() {
+            // CR 800.4a — a re-run after the only candidates' controller left
+            // the game: the picks already made name nothing now.
+            self.clear_answer_log();
             return Ok(());
         }
         let mut cursor = 0;
