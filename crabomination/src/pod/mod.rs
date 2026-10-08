@@ -2142,6 +2142,36 @@ fn play_pod_game(
                 g.step,
             );
         }
+        // CR 506.2 / 508.1b — an attacker attacking a player attacks a living
+        // opponent of its controller; CR 506.4 — a blocker's attackers are all
+        // still attacking. Debug-only.
+        #[cfg(debug_assertions)]
+        if !g.is_game_over() {
+            for a in g.attacking.iter() {
+                if let crate::game::types::AttackTarget::Player(q) = a.target
+                    && let Some(c) = g.battlefield_find(a.attacker)
+                    && !g.opponents_of(c.controller).contains(&q)
+                {
+                    panic!(
+                        "seed {seed}: {} {:?} (p{}) attacks p{q}, no living opponent (turn {}, {:?}, after {actions} actions)",
+                        c.definition.name,
+                        a.attacker,
+                        c.controller,
+                        g.turn_number,
+                        g.step,
+                    );
+                }
+            }
+            if let Some((b, atk)) = g.block_map.iter().find_map(|(b, atks)| {
+                atks.iter().find(|x| !g.attacking.iter().any(|a| a.attacker == **x)).map(|x| (*b, *x))
+            }) {
+                panic!(
+                    "seed {seed}: {b:?} blocks {atk:?}, which is not attacking (turn {}, {:?}, after {actions} actions)",
+                    g.turn_number,
+                    g.step,
+                );
+            }
+        }
         // CR 725.4 / 726.4 — the monarch and the initiative pass on when their
         // holder leaves; neither stays with a seat that has left. Debug-only.
         #[cfg(debug_assertions)]
@@ -2153,19 +2183,41 @@ fn play_pod_game(
             }
         }
         // CR 400.7 — a card that changed zones is a new object: off the
-        // battlefield it is untapped and attached to nothing, and
-        // in a hand or library it carries no counters but the printed loyalty
-        // / defense it was built with (exile keeps suspend's time counters).
-        // Debug-only.
+        // battlefield it is untapped, unpumped and attached to nothing, and
+        // carries no counters but the printed loyalty / defense it was built
+        // with (exile keeps suspend's time counters). Debug-only.
         #[cfg(debug_assertions)]
         if !g.is_game_over() {
-            let stale = |c: &crate::card::CardInstance, counters: bool| {
+            // Which zone a card sits in, for what it may keep there.
+            #[derive(Clone, Copy, PartialEq)]
+            enum Off {
+                Hand,
+                Library,
+                Graveyard,
+                Command,
+                Exile,
+            }
+            let stale = |c: &crate::card::CardInstance, z: Off| {
+                let counters_kept = match z {
+                    // Suspend's time counters, a hideaway card, …
+                    Off::Exile => true,
+                    // CR 122.2 — a card that keeps its counters (Skullbriar).
+                    Off::Graveyard => c.definition.keeps_counters_off_battlefield,
+                    Off::Hand | Off::Library | Off::Command => false,
+                };
                 // Not `damage`: it is cleared as a card enters, not as it
                 // leaves (ENGINE_BACKLOG 2026-09-08, a priced CoW write).
                 c.tapped
                     || c.attached_to.is_some()
                     || c.attached_to_player.is_some()
-                    || (counters
+                    || c.perm_power_bonus != 0
+                    || c.perm_toughness_bonus != 0
+                    || c.echo_paid
+                    // CR 708.9 / 712.8 — face up and front face up off the
+                    // battlefield (exile keeps foretold / hidden cards down).
+                    || (z != Off::Exile && z != Off::Library && c.face_down)
+                    || (z != Off::Exile && c.transformed)
+                    || (!counters_kept
                         && c.counters.iter().any(|(k, &n)| match k {
                             // A new instance is built holding its printed
                             // loyalty / defense (`CardInstance::new`).
@@ -2177,17 +2229,28 @@ fn play_pod_game(
             let found = g
                 .players
                 .iter()
-                .flat_map(|p| p.hand.iter().chain(p.library.iter()).map(|c| (c, true)))
-                .chain(g.players.iter().flat_map(|p| p.graveyard.iter().chain(p.command.iter()).map(|c| (c, false))))
-                .chain(g.exile.iter().map(|c| (c, false)))
-                .find(|(c, counters)| stale(c, *counters));
+                .flat_map(|p| {
+                    p.hand
+                        .iter()
+                        .map(|c| (c, Off::Hand))
+                        .chain(p.library.iter().map(|c| (c, Off::Library)))
+                        .chain(p.graveyard.iter().map(|c| (c, Off::Graveyard)))
+                        .chain(p.command.iter().map(|c| (c, Off::Command)))
+                })
+                .chain(g.exile.iter().map(|c| (c, Off::Exile)))
+                .find(|(c, z)| stale(c, *z));
             if let Some((c, _)) = found {
                 panic!(
-                    "seed {seed}: {} {:?} in {} kept battlefield state (tapped {}, attached {:?}/{:?}, counters {:?}; turn {}, after {actions} actions)",
+                    "seed {seed}: {} {:?} in {} kept battlefield state (tapped {}, pump {}/{}, echo {}, face down {}, transformed {}, attached {:?}/{:?}, counters {:?}; turn {}, after {actions} actions)",
                     c.definition.name,
                     c.id,
                     zone_label(&g, c.id),
                     c.tapped,
+                    c.perm_power_bonus,
+                    c.perm_toughness_bonus,
+                    c.echo_paid,
+                    c.face_down,
+                    c.transformed,
                     c.attached_to,
                     c.attached_to_player,
                     c.counters.iter().collect::<Vec<_>>(),
