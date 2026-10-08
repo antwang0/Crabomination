@@ -252,3 +252,66 @@ fn electro_adds_red_and_burns_as_it_leaves() {
     assert!(g.battlefield_find(electro).is_none());
     assert_eq!(g.players[1].life, 17, "paid {{X}} = 3 for 3 damage");
 }
+
+fn shock_it(g: &mut GameState, id: CardId) {
+    flood(g);
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast_at(g, shock, Some(crabomination::game::types::Target::Permanent(id)));
+}
+
+/// CR 702.54 — Indoraptor's bloodthirst X counts all damage dealt to your
+/// opponents this turn (2023-11-10 ruling), summed across opponents.
+#[test]
+fn indoraptor_enters_with_the_turns_damage_to_opponents() {
+    let mut g = pod(3);
+    g.players[1].damage_taken_this_turn = 2;
+    g.players[2].damage_taken_this_turn = 3;
+    let raptor = g.add_card_to_hand(0, catalog::indoraptor_the_perfect_hybrid());
+    flood(&mut g);
+    cast_at(&mut g, raptor, None);
+    assert_eq!(plus_ones(&g, raptor), 5);
+}
+
+/// Indoraptor's enrage: the random opponent with no nontoken creature to
+/// sacrifice is dealt damage equal to its power.
+#[test]
+fn indoraptor_enrage_punishes_a_random_opponent() {
+    let mut g = pod(2);
+    let raptor = ready(&mut g, 0, catalog::indoraptor_the_perfect_hybrid());
+    g.battlefield_find_mut(raptor).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    shock_it(&mut g, raptor);
+    assert!(g.battlefield_find(raptor).is_some(), "a 6/4 survives the Shock");
+    assert_eq!(g.players[1].life, 14, "6 damage to the only opponent");
+}
+
+/// Polyraptor's enrage copies it; Silverclad Ferocidons' makes each opponent
+/// sacrifice a permanent.
+#[test]
+fn polyraptor_copies_itself_and_ferocidons_eats_a_permanent() {
+    let mut g = pod(3);
+    let poly = ready(&mut g, 0, catalog::polyraptor());
+    shock_it(&mut g, poly);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Polyraptor").count(), 2);
+
+    let mut g = pod(3);
+    let fero = ready(&mut g, 0, catalog::silverclad_ferocidons());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 2, catalog::mountain());
+    shock_it(&mut g, fero);
+    assert!(g.battlefield.iter().all(|c| c.controller == 0), "each opponent lost its one permanent");
+}
+
+/// Forerunner of the Empire: a Dinosaur of yours entering may have it deal 1
+/// damage to each creature.
+#[test]
+fn forerunner_of_the_empire_pings_each_creature_when_a_dinosaur_enters() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::forerunner_of_the_empire());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let dino = g.add_card_to_hand(0, catalog::polyraptor());
+    flood(&mut g);
+    cast_at(&mut g, dino, None);
+    assert!(g.battlefield_find(elf).is_none(), "the 1/1 took 1");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Polyraptor").count(), 2, "and Polyraptor copied itself");
+}

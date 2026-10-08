@@ -8,8 +8,8 @@ use crate::card::{
     EventSpec, Keyword, MayPlayDuration, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{if_discarded, magecraft, target_filtered, with_copies};
-use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate};
+use crate::effect::shortcut::{etb, if_discarded, magecraft, target_filtered, with_copies};
+use crate::effect::{Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
 
@@ -260,6 +260,131 @@ pub fn ice_storm() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy { what: target_filtered(R::Land) },
+        ..Default::default()
+    }
+}
+
+// ── Indoraptor, the Perfect Hybrid (BGR) ────────────────────────────────────
+
+fn dinosaur() -> R {
+    R::HasCreatureType(CreatureType::Dinosaur)
+}
+
+/// CR 702.130 — Enrage: "whenever this creature is dealt damage".
+fn enrage(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource), effect }
+}
+
+/// Indoraptor, the Perfect Hybrid — bloodthirst X (X = damage dealt to your
+/// opponents this turn), menace; enrage: a random opponent sacrifices a
+/// nontoken creature of their choice or takes damage equal to its power.
+pub fn indoraptor_the_perfect_hybrid() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::DamageTakenThisTurn(PlayerRef::EachOpponent))),
+        triggered_abilities: vec![enrage(Effect::WithRandomOpponent {
+            body: Box::new(Effect::Punisher {
+                chooser: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                options: vec![Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::You),
+                    count: Value::ONE,
+                    filter: R::Creature.and(R::IsToken.negate()),
+                }],
+                otherwise: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                }),
+            }),
+        })],
+        ..legend(
+            "Indoraptor, the Perfect Hybrid",
+            cost(&[generic(1), crate::mana::hybrid(Color::Black, Color::Green), r()]),
+            vec![CreatureType::Dinosaur, CreatureType::Mutant],
+            3,
+            1,
+        )
+    }
+}
+
+/// Forerunner of the Empire — may tutor a Dinosaur to the top on entry; a
+/// Dinosaur of yours entering may have it deal 1 damage to each creature.
+pub fn forerunner_of_the_empire() -> CardDefinition {
+    CardDefinition {
+        name: "Forerunner of the Empire",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::MayDo {
+                description: "Search your library for a Dinosaur card to put on top?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: dinosaur(),
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: dinosaur() }),
+                effect: Effect::MayDo {
+                    description: "Deal 1 damage to each creature?".into(),
+                    body: Box::new(Effect::DealDamage { to: Selector::EachPermanent(R::Creature), amount: Value::ONE }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Polyraptor — enrage: create a token that's a copy of it (2018-01-19
+/// rulings: from last-known copiable values if it already died).
+pub fn polyraptor() -> CardDefinition {
+    CardDefinition {
+        name: "Polyraptor",
+        cost: cost(&[generic(6), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![enrage(Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            source: Selector::This,
+            extra_creature_types: vec![],
+            extra_card_types: vec![],
+            override_pt: None,
+            override_colors: None,
+            enters_tapped: false,
+            non_legendary: false,
+            legendary: false,
+            extra_keywords: vec![],
+            no_mana_cost: false,
+            enters_with_counters: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Silverclad Ferocidons — enrage: each opponent sacrifices a permanent of
+/// their choice.
+pub fn silverclad_ferocidons() -> CardDefinition {
+    CardDefinition {
+        name: "Silverclad Ferocidons",
+        cost: cost(&[generic(5), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 8,
+        toughness: 5,
+        triggered_abilities: vec![enrage(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::ONE,
+            filter: R::Permanent,
+        })],
         ..Default::default()
     }
 }
