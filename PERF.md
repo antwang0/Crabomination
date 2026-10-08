@@ -3134,6 +3134,30 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-08 (Commander routine, eleventh — session `01F4sBdR`) — guardrail; EDHREC seats 184-191 and Omnath 235, auto-tap guard
+
+Hot-path touches: the auto-tap reentrancy guard (`ColdState::mana_sources_paying`,
+written only for a source whose mana ability costs mana); `empty_mana_pools_slow`'s
+keepers list carries a color; the any-color spend checks gained one static arm.
+`release-fast` at `95657b38b`, 4-core Xeon @ 2.10 GHz; A/B base `d0aa27fa9`
+(this run's start — the tip also carries the tenth run's and a deck session's
+commits).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak_rss 31.4 MiB
+paired A/B       40 pairs (16 + 24) tip/base median -3.58 % / -3.04 %, mean
+                 -3.06 % / -1.95 %, sd 9-10: inside this instrument's noise
+pools x1000      seed 830101: sos and sealed byte-identical to base; cube moves
+                 one deck by 3 games — all 238 diverging games are Icetill
+                 Explorer's graveyard land plays (9fe275652, a card fix)
+release pods     600 games (4 seats x2, 6, 3) over seats 184-193 and 235: 600
+                 decided, 0 stalls, 0 panics
+suite            24,458 / 2 / 5 strict at 95657b38b — both failures another
+                 session's unregistered Blitzwing back face, fixed here; clippy
+                 2 (the same session's test), fixed here
+```
+
 ### 2026-10-08 (Commander routine, tenth — session `01GdFPW9`) — guardrail; state invariants, CR 608.2b trigger slots, CR 400.7 leave state
 
 Hot-path touches: `push_stack` stamps `StackItem::Trigger::bf_slots` (one
