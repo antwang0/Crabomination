@@ -17553,7 +17553,15 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     debug_assert_eq!(
         fused_relax,
         state.spend_mana_as_any_color_possible_for(seat)
-            || state.mana_production_multiplier_for(seat) > 1,
+            || state.mana_production_multiplier_for(seat) > 1
+            // Virtue of Strength's basic-land tripler lives outside the
+            // seat-wide multiplier (it scales per tapped source).
+            || state.battlefield.iter().any(|c| {
+                c.controller == seat
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::BasicLandManaTripled)
+                    })
+            }),
         "available_mana's fused budget scan drifted from the two walks it fuses",
     );
     // CR 609.4b — under a spend-as-any-colour permission a colour's own
