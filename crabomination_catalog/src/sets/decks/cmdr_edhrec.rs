@@ -2214,3 +2214,68 @@ pub fn likeness_looter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Thornbite Staff — {2} Kindred Artifact — Shaman Equipment. Equipped
+/// creature has "{2}, {T}: 1 damage to any target" and "whenever a creature
+/// dies, untap this creature." A Shaman creature entering under your control
+/// may pick it up. Equip {4}.
+pub fn thornbite_staff() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Thornbite Staff",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Kindred, CardType::Artifact],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shaman],
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::ONE },
+                ..Default::default()
+            }],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+            }],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Shaman)),
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Attach Thornbite Staff to the entering Shaman?".into(),
+                body: Box::new(Effect::Attach { what: Selector::This, to: Selector::TriggerSource }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Life Finds a Way — {2}{G} Enchantment. Whenever a nontoken creature with
+/// power 4 or greater enters under your control, populate.
+pub fn life_finds_a_way() -> CardDefinition {
+    CardDefinition {
+        name: "Life Finds a Way",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::NotToken).and(R::PowerAtLeast(4)),
+                },
+            ),
+            effect: Effect::Populate { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}

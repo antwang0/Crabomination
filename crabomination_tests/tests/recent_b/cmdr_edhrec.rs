@@ -1312,3 +1312,44 @@ fn likeness_looter_copies_a_graveyard_creature() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
     assert_eq!(g.battlefield_find(looter).unwrap().definition.activated_abilities.len(), 1, "keeps the copy ability");
 }
+
+/// Life Finds a Way: a 4-power nontoken creature entering copies a token.
+#[test]
+fn life_finds_a_way_populates() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::life_finds_a_way());
+    let ooze = g.add_card_to_hand(0, catalog::gelatinous_genesis());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: ooze, target: None, additional_targets: vec![], mode: None, x_value: Some(1) })
+        .expect("one Ooze");
+    drain_stack(&mut g);
+    let big = g.add_card_to_hand(0, catalog::phylath_world_sculptor());
+    cast(&mut g, big, None);
+    assert_eq!(named(&g, "Ooze"), 2);
+}
+
+/// Thornbite Staff: the equipped creature pings for {2}, {T}, and untaps
+/// when a creature dies.
+#[test]
+fn thornbite_staff_pings_and_untaps() {
+    let mut g = pod(2);
+    let staff = ready(&mut g, 0, catalog::thornbite_staff());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(staff).unwrap().attached_to = Some(bear);
+    flood(&mut g);
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: Some(Target::Permanent(elf)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("granted ping");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none());
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "the elf's death untapped it");
+}
