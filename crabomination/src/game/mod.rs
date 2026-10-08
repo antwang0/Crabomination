@@ -24653,6 +24653,12 @@ impl GameState {
                     if is_event_hardcoded(ev, &ta.event) {
                         continue;
                     }
+                    if let Some(n) = ta.event.batch_life_lost_exactly
+                        && let GameEvent::LifeLost { player, .. } = ev
+                        && life_events::batch_life_lost(events, *player) != n
+                    {
+                        continue;
+                    }
                     if dies_suppressed && matches!(ev, GameEvent::CreatureDied { .. }) {
                         continue;
                     }

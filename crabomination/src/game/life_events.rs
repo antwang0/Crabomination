@@ -8,6 +8,19 @@
 use super::GameState;
 use super::types::GameEvent;
 
+/// CR 603.2c — `seat`'s total life lost across one batch of simultaneous
+/// events. Combat damage arrives one `LifeLost` per attacker, and "loses
+/// exactly 1 life" reads the sum (Ob Nixilis, Captive Kingpin's ruling).
+pub(crate) fn batch_life_lost(events: &[GameEvent], seat: usize) -> u32 {
+    events
+        .iter()
+        .filter_map(|ev| match ev {
+            GameEvent::LifeLost { player, amount } if *player == seat => Some(*amount),
+            _ => None,
+        })
+        .fold(0u32, u32::saturating_add)
+}
+
 impl GameState {
     /// `delta` life for `seat` through the funnel; pushes `LifeGained` or
     /// `LifeLost` for what actually happened and returns the applied delta.

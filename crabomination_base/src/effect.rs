@@ -4139,6 +4139,12 @@ pub struct EventSpec {
     /// (a spell or a triggered ability doesn't count).
     #[serde(default)]
     pub by_activated_ability: bool,
+    /// With `once_per_batch` on `LifeLost`: a player's loss counts only when
+    /// their TOTAL across the batch is exactly this — "one or more opponents
+    /// each lose exactly 1 life" (Ob Nixilis, Captive Kingpin; its ruling sums
+    /// all combat damage to a player, which the engine emits per attacker).
+    #[serde(default)]
+    pub batch_life_lost_exactly: Option<u32>,
 }
 
 /// CR 113.6b — "an ability that states which zones it functions in functions
@@ -4201,6 +4207,7 @@ impl EventSpec {
             or_copy: false,
             self_caused: false,
             by_activated_ability: false,
+            batch_life_lost_exactly: None,
         }
     }
     /// "…the target of an activated ability" — see `by_activated_ability`.
@@ -4293,6 +4300,12 @@ impl EventSpec {
     pub fn once_per_batch_per_defender(mut self) -> Self {
         self.once_per_batch = true;
         self.batch_per_defender = true;
+        self
+    }
+    /// "One or more … each lose exactly `n` life" — see `batch_life_lost_exactly`.
+    pub fn once_per_batch_losing_exactly(mut self, n: u32) -> Self {
+        self.once_per_batch = true;
+        self.batch_life_lost_exactly = Some(n);
         self
     }
     /// Once per batch, with the batch's summed damage as the event amount.
