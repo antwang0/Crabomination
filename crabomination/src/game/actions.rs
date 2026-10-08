@@ -3973,6 +3973,14 @@ impl crate::game::GameState {
         if self.players[player].play_from_graveyard_this_turn {
             return true;
         }
+        // Wrenn and Realmbreaker's emblem.
+        if self.players[player]
+            .emblems
+            .iter()
+            .any(|em| em.statics.iter().any(|sa| matches!(sa.effect, StaticEffect::MayPlayLandsFromGraveyard)))
+        {
+            return true;
+        }
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition
@@ -6561,16 +6569,18 @@ impl GameState {
         use crate::card::CardType;
         use crate::effect::StaticEffect;
         let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
-        // Abandoned Sarcophagus — any turn, no budget, for matching cards.
-        if self.battlefield.iter().any(|c| {
-            c.controller == p
-                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    StaticEffect::CastFromGraveyardMatching { filter } => {
-                        self.evaluate_requirement_on_card(filter, card, p)
-                    }
-                    _ => false,
-                })
-        }) {
+        // Abandoned Sarcophagus — any turn, no budget, for matching cards;
+        // Wrenn and Realmbreaker's emblem the same.
+        let matching = |sa: &crate::card::StaticAbility| match &sa.effect {
+            StaticEffect::CastFromGraveyardMatching { filter } => self.evaluate_requirement_on_card(filter, card, p),
+            _ => false,
+        };
+        if self
+            .battlefield
+            .iter()
+            .any(|c| c.controller == p && c.definition.static_abilities.iter().any(matching))
+            || self.players[p].emblems.iter().any(|em| em.statics.iter().any(matching))
+        {
             return Some(None);
         }
         if self.active_player_idx != p {
