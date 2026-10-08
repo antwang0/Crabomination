@@ -1875,6 +1875,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GARGOS_COMMANDERS,
             main: decks::GARGOS_MAIN,
         },
+        // Seat 243: Animar, Soul of Elements's EDHREC average deck. `--pod-decks 243`.
+        PodDeck {
+            name: "Animar, Soul of Elements (GRU)",
+            commanders: decks::ANIMAR_COMMANDERS,
+            main: decks::ANIMAR_MAIN,
+        },
+        // Seat 244: Ghyrson Starn, Kelermorph's EDHREC average deck. `--pod-decks 244`.
+        PodDeck {
+            name: "Ghyrson Starn, Kelermorph (RU)",
+            commanders: decks::GHYRSON_COMMANDERS,
+            main: decks::GHYRSON_MAIN,
+        },
+        // Seat 245: Sliver Overlord's EDHREC average deck. `--pod-decks 245`.
+        PodDeck {
+            name: "Sliver Overlord (BGRUW)",
+            commanders: decks::SLIVER_OVERLORD_COMMANDERS,
+            main: decks::SLIVER_OVERLORD_MAIN,
+        },
+        // Seat 246: The Gitrog Monster's EDHREC average deck. `--pod-decks 246`.
+        PodDeck {
+            name: "The Gitrog Monster (BG)",
+            commanders: decks::GITROG_COMMANDERS,
+            main: decks::GITROG_MAIN,
+        },
+        // Seat 247: Dina, Soul Steeper's EDHREC average deck. `--pod-decks 247`.
+        PodDeck {
+            name: "Dina, Soul Steeper (BG)",
+            commanders: decks::DINA_STEEPER_COMMANDERS,
+            main: decks::DINA_STEEPER_MAIN,
+        },
     ]
 }
 
@@ -3629,6 +3659,14 @@ mod tests {
             ("Omnath, Locus of Mana", [0x0A7A, 240, 9164]),
             ("Tannuk, Memorial Ensign", [0x7A44, 241, 9165]),
             ("Gargos, Vicious Watcher", [0x6A26, 242, 9166]),
+            // Creature-spell discounts (Animar), 1-damage pings (Ghyrson),
+            // Sliver tutors and thefts (Sliver Overlord), land-to-graveyard
+            // draws (Gitrog), lifegain drains (Dina).
+            ("Animar, Soul of Elements", [0xA41A, 243, 9167]),
+            ("Ghyrson Starn, Kelermorph", [0x6475, 244, 9168]),
+            ("Sliver Overlord", [0x5110, 245, 9169]),
+            ("The Gitrog Monster", [0x6170, 246, 9170]),
+            ("Dina, Soul Steeper", [0xD1A5, 247, 9171]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
