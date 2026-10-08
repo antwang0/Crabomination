@@ -1251,3 +1251,159 @@ pub fn kaito_shizuki() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Volo, Guide to Monsters (GU) ────────────────────────────────────────────
+
+/// A creature card sharing no creature type with a creature you control.
+fn new_creature_kind() -> R {
+    R::Creature.and(R::Not(Box::new(R::SharesCreatureTypeWithCreatureYouControl)))
+}
+
+/// Volo, Guide to Monsters — a creature spell sharing no creature type with a
+/// creature you control or a creature card in your graveyard is copied.
+pub fn volo_guide_to_monsters() -> CardDefinition {
+    let unseen = new_creature_kind().and(R::Not(Box::new(R::SharesCreatureTypeWithCreatureCardInYourGraveyard)));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(unseen)),
+            effect: Effect::CopySpell { what: Selector::TriggerSource, count: Value::ONE },
+        }],
+        ..legend(
+            "Volo, Guide to Monsters",
+            cost(&[generic(2), g(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            2,
+        )
+    }
+}
+
+/// Volo, Itinerant Scholar — enters with Volo's Journal, which notes a new
+/// creature type per creature spell; {2},{T} draws one per noted type.
+pub fn volo_itinerant_scholar() -> CardDefinition {
+    let journal = crate::card::TokenDefinition {
+        name: "Volo's Journal".into(),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Creature)),
+            effect: Effect::NoteCreatureTypeOf { what: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::ChooseABackground],
+        triggered_abilities: vec![etb(crate::effect::shortcut::mint_token(journal, 1))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::NotedCreatureTypesOf(Box::new(target_filtered(
+                    R::ControlledByYou.and(R::HasName("Volo's Journal".into())),
+                ))),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Volo, Itinerant Scholar",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            2,
+            3,
+        )
+    }
+}
+
+/// Radagast the Brown — a nontoken creature of yours entering digs its mana
+/// value deep for a creature card of a type you don't have.
+pub fn radagast_the_brown() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::NotToken) },
+            ),
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                pick_filter: Some(new_creature_kind()),
+                optional: true,
+                rest_bottom_random: true,
+                ..Default::default()
+            })),
+        }],
+        ..legend(
+            "Radagast the Brown",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Avatar, CreatureType::Wizard],
+            2,
+            5,
+        )
+    }
+}
+
+/// Silverback Elder — each creature spell you cast: destroy an artifact or
+/// enchantment, dig five for a tapped land, or gain 4 life.
+pub fn silverback_elder() -> CardDefinition {
+    CardDefinition {
+        name: "Silverback Elder",
+        cost: cost(&[generic(2), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Ape, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 7,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Creature)),
+            effect: Effect::ChooseMode(vec![
+                Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+                Effect::DigForLandToBattlefield { count: Value::Const(5) },
+                crate::effect::shortcut::gain_life(4),
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dutiful Replicator — enters: you may pay {1}; when you do, copy target
+/// token you control not named Dutiful Replicator.
+pub fn dutiful_replicator() -> CardDefinition {
+    CardDefinition {
+        name: "Dutiful Replicator",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::AssemblyWorker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MayPay {
+            description: "Pay {1} to copy a token you control?".into(),
+            mana_cost: cost(&[generic(1)]),
+            body: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(crate::effect::shortcut::token_copy_of(
+                    PlayerRef::You,
+                    Value::ONE,
+                    target_filtered(
+                        R::ControlledByYou
+                            .and(R::IsToken)
+                            .and(R::Not(Box::new(R::HasName("Dutiful Replicator".into())))),
+                    ),
+                )),
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}

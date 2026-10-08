@@ -778,3 +778,114 @@ fn kaito_shizuki_ninja_and_loot() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
 }
+
+fn named(g: &GameState, name: &str) -> usize {
+    g.battlefield.iter().filter(|c| c.definition.name == name).count()
+}
+
+/// Volo, Guide to Monsters copies a creature spell of a new type (CR 707.10:
+/// the copy resolves as a token) — not one sharing a type with a creature on
+/// the battlefield or a creature card in the graveyard.
+#[test]
+fn volo_copies_only_creature_spells_of_an_unseen_type() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::volo_guide_to_monsters());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::raging_goblin());
+    flood(&mut g);
+    for (def, name, want) in [
+        (catalog::llanowar_elves(), "Llanowar Elves", 2),
+        (catalog::goblin_piker(), "Goblin Piker", 1),
+        (catalog::grizzly_bears(), "Grizzly Bears", 2),
+    ] {
+        let id = g.add_card_to_hand(0, def);
+        cast_at(&mut g, id, None);
+        assert_eq!(named(&g, name), want, "{name}");
+    }
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "only the Elves were copied");
+}
+
+/// Volo's Journal notes one new creature type per creature spell; Volo's
+/// {2},{T} draws a card for each noted type.
+#[test]
+fn volos_journal_notes_types_and_volo_draws_for_them() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let volo = g.add_card_to_hand(0, catalog::volo_itinerant_scholar());
+    flood(&mut g);
+    cast_at(&mut g, volo, None);
+    g.clear_sickness(volo);
+    let journal = g.battlefield.iter().find(|c| c.definition.name == "Volo's Journal").expect("journal").id;
+    // Elf Druid twice notes both types; a Bear adds a third, a second Bear none.
+    for def in [catalog::llanowar_elves(), catalog::llanowar_elves(), catalog::grizzly_bears(), catalog::grizzly_bears()] {
+        let id = g.add_card_to_hand(0, def);
+        cast_at(&mut g, id, None);
+    }
+    assert_eq!(g.battlefield_find(journal).unwrap().noted_creature_types.len(), 3);
+    let hand = g.players[0].hand.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: volo,
+        ability_index: 0,
+        target: Some(Target::Permanent(journal)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+}
+
+/// Radagast digs the entering creature's mana value deep for a creature card
+/// sharing no type with a creature you control: past the Bear, to the Elves.
+#[test]
+fn radagast_digs_for_a_creature_of_a_new_type() {
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::llanowar_elves());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::radagast_the_brown());
+    flood(&mut g);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_at(&mut g, bear, None);
+    let names: Vec<_> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    assert_eq!(names, ["Llanowar Elves"]);
+    assert_eq!(g.players[0].library.len(), 6, "the Bear went to the bottom");
+}
+
+/// Silverback Elder triggers on each creature spell and resolves one mode.
+#[test]
+fn silverback_elder_triggers_on_a_creature_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::silverback_elder());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    flood(&mut g);
+    let lands = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_at(&mut g, bear, None);
+    let fired = g.battlefield_find(ring).is_none()
+        || g.players[0].life == 24
+        || g.battlefield.iter().filter(|c| c.definition.is_land()).count() == lands + 1;
+    assert!(fired);
+}
+
+/// Dutiful Replicator — pay {1} as it enters to copy a token you control.
+#[test]
+fn dutiful_replicator_copies_a_token_for_one() {
+    let mut g = pod(2);
+    let treasure = crabomination_base::tokens::treasure_token();
+    g.add_token_to_battlefield(0, &treasure);
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let rep = g.add_card_to_hand(0, catalog::dutiful_replicator());
+    cast_at(&mut g, rep, None);
+    assert_eq!(named(&g, "Treasure"), 2);
+}
