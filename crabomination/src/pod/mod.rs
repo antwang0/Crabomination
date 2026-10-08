@@ -1963,6 +1963,15 @@ fn play_pod_game(
                                 e.duration, e.source, g.step,
                             );
                         }
+                        // CR 302.6 — the new active player has controlled
+                        // each of their permanents since their turn began.
+                        let ap = g.active_player_idx;
+                        if let Some(c) = g.battlefield.iter().find(|c| c.controller == ap && c.summoning_sick) {
+                            panic!(
+                                "seed {seed}: p{ap}'s {} {:?} is still summoning sick in turn {} (after {actions} actions, {:?})",
+                                c.definition.name, c.id, g.turn_number, g.step,
+                            );
+                        }
                         // CR 500.4 — and every step change since emptied the
                         // pools, save what a retention static keeps.
                         let keeps = g.battlefield.iter().any(|c| {
