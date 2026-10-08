@@ -315,3 +315,97 @@ fn forerunner_of_the_empire_pings_each_creature_when_a_dinosaur_enters() {
     assert!(g.battlefield_find(elf).is_none(), "the 1/1 took 1");
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Polyraptor").count(), 2, "and Polyraptor copied itself");
 }
+
+/// Shadow the Hedgehog — a creature of yours with haste dying draws a card;
+/// one without flash or haste does not.
+#[test]
+fn shadow_draws_when_a_hasty_creature_dies() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::shadow_the_hedgehog());
+    let hasty = ready(&mut g, 0, catalog::raging_goblin());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    shock_it(&mut g, bear);
+    assert_eq!(g.players[0].hand.len(), hand, "no draw for the bear");
+    shock_it(&mut g, hasty);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a draw for the haste creature");
+}
+
+/// CR 702.61 — Chaos Control: a spell cast with Sol Ring's mana has split
+/// second, so the opponent can't respond; the same spell paid from lands
+/// does not.
+#[test]
+fn shadow_gives_artifact_paid_spells_split_second() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::shadow_the_hedgehog());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ring, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap Sol Ring");
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.perform_action(GameAction::CastSpell { card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast with artifact mana");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let respond = GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(respond.clone()).is_err(), "split second locks the response");
+    drain_stack(&mut g);
+
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast from the pool");
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(respond).is_ok(), "no artifact mana, no split second");
+}
+
+/// Knuckles — double strike is two combat-damage steps, each a Treasure.
+#[test]
+fn knuckles_makes_a_treasure_per_combat_damage_step() {
+    let mut g = pod(2);
+    let k = ready(&mut g, 0, catalog::knuckles_the_echidna());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: k, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    advance_to(&mut g, TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 2);
+}
+
+/// Smaug enters with a tapped Treasure per artifact the opponents control.
+#[test]
+fn smaug_counts_opponents_artifacts() {
+    let mut g = pod(3);
+    ready(&mut g, 1, catalog::sol_ring());
+    ready(&mut g, 2, catalog::mind_stone());
+    ready(&mut g, 2, catalog::sol_ring());
+    let smaug = g.add_card_to_hand(0, catalog::smaug_wicked_worm());
+    flood(&mut g);
+    cast_at(&mut g, smaug, None);
+    let mine: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").collect();
+    assert_eq!(mine.len(), 3);
+    assert!(mine.iter().all(|c| c.tapped));
+}
+
+/// Super State — the enchanted 9/9's combat damage to one opponent is dealt
+/// again to each other opponent.
+#[test]
+fn super_state_splashes_combat_damage() {
+    use crabomination::game::types::Target;
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::super_state());
+    flood(&mut g);
+    cast_at(&mut g, aura, Some(Target::Permanent(bear)));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    advance_to(&mut g, TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert_eq!([g.players[1].life, g.players[2].life], [11, 11]);
+}

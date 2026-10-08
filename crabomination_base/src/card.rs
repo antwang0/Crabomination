@@ -383,6 +383,7 @@ pub enum CreatureType {
     Utrom,
     // Sonic the Hedgehog (COMMANDER_BACKLOG §1).
     Hedgehog,
+    Echidna,
 }
 
 /// Land subtypes (basic land types + others).

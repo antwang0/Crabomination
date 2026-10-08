@@ -12,6 +12,8 @@ use crate::effect::shortcut::{etb, if_discarded, magecraft, target_filtered, wit
 use crate::effect::{Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
+use crabomination_base::tokens::treasure_token;
+use std::sync::Arc;
 
 fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -385,6 +387,172 @@ pub fn silverclad_ferocidons() -> CardDefinition {
             count: Value::ONE,
             filter: R::Permanent,
         })],
+        ..Default::default()
+    }
+}
+
+// ── Shadow the Hedgehog (BR) ────────────────────────────────────────────────
+
+/// Shadow the Hedgehog — haste; it or another creature of yours with flash
+/// or haste dying draws a card; Chaos Control: your spells cast with
+/// artifact mana have split second (CR 702.61).
+pub fn shadow_the_hedgehog() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Each spell you cast has split second if mana from an artifact was spent to cast it.",
+            effect: StaticEffect::YourSpellsHaveSplitSecondIfArtifactManaSpent,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::IsSource.or(R::HasKeyword(Keyword::Flash)).or(R::HasKeyword(Keyword::Haste)),
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..legend(
+            "Shadow the Hedgehog",
+            cost(&[b(), b(), r(), r()]),
+            vec![CreatureType::Hedgehog, CreatureType::Mercenary],
+            4,
+            2,
+        )
+    }
+}
+
+/// Knuckles the Echidna — double strike, trample, haste; combat damage to a
+/// player by one or more of your creatures makes a Treasure; an upkeep with
+/// thirty or more artifacts wins the game.
+pub fn knuckles_the_echidna() -> CardDefinition {
+    let thirty = || {
+        Predicate::ValueAtLeast(
+            Value::CountOf(Box::new(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)))),
+            Value::Const(30),
+        )
+    };
+    CardDefinition {
+        keywords: vec![Keyword::DoubleStrike, Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).once_per_batch(),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(treasure_token()) },
+            },
+            TriggeredAbility {
+                // CR 603.4 — intervening "if": checked as it triggers and again
+                // as it resolves.
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(thirty()),
+                effect: Effect::If {
+                    cond: thirty(),
+                    then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..legend(
+            "Knuckles the Echidna",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Echidna, CreatureType::Warrior],
+            2,
+            4,
+        )
+    }
+}
+
+/// Lagomos, Hand of Hatred — a hasty 2/1 trampling Elemental each combat on
+/// your turn, sacrificed at the next end step; {T}: tutor, only once five
+/// creatures died this turn.
+pub fn lagomos_hand_of_hatred() -> CardDefinition {
+    let elemental = Arc::new(crate::card::TokenDefinition {
+        name: "Elemental".into(),
+        power: 2,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elemental },
+                Effect::SacrificeAtNextEndStep { what: Selector::LastCreatedToken },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::ValueAtLeast(Value::CreaturesDiedThisTurnTotal, Value::Const(5))),
+            effect: Effect::Search { who: PlayerRef::You, filter: R::Any, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..legend(
+            "Lagomos, Hand of Hatred",
+            cost(&[generic(1), b(), r()]),
+            vec![CreatureType::Human, CreatureType::Shaman],
+            1,
+            3,
+        )
+    }
+}
+
+/// Smaug, Wicked Worm — flying; enters with a tapped Treasure per artifact
+/// your opponents control; a spell cast with Treasure mana draws you a card
+/// and costs you 1 life.
+pub fn smaug_wicked_worm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountOf(Box::new(Selector::EachPermanent(R::Artifact.and(R::ControlledByOpponent)))),
+                definition: Arc::new(crate::card::TokenDefinition { tapped: true, ..treasure_token() }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastWithTreasureMana { what: Selector::TriggerSource }),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                ]),
+            },
+        ],
+        ..legend("Smaug, Wicked Worm", cost(&[generic(3), b(), r()]), vec![CreatureType::Dragon], 5, 5)
+    }
+}
+
+/// Super State — Aura (enchant creature you control): base 9/9 with flying,
+/// first strike, trample and haste; its combat damage to an opponent is dealt
+/// again to each other opponent.
+pub fn super_state() -> CardDefinition {
+    CardDefinition {
+        name: "Super State",
+        cost: cost(&[generic(7)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            set_base_pt: Some((9, 9)),
+            keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Trample, Keyword::Haste],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::DealDamageFrom {
+                    source: Selector::This,
+                    to: Selector::Player(PlayerRef::EachOpponentExceptTriggerer),
+                    amount: Value::TriggerEventAmount,
+                },
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
