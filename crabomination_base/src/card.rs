@@ -1327,6 +1327,12 @@ pub struct MayPlayPermission {
     pub undaunted: bool,
 }
 
+/// The engine's bound on counters of one kind on one object. The rules set
+/// none, but a doubling chain (Doubling Season, Hardened Scales, a counter
+/// trigger loop) can pass `u32::MAX`, and counts are read as `i32` P/T and
+/// loyalty: 2^30 keeps those reads and their sums in range.
+pub const COUNTER_CAP: u32 = 1 << 30;
+
 /// CR 122 — the counters on a permanent, in the order they were first added.
 ///
 /// A `Vec` for the same two reasons [`KeywordCounters`] is: `HashMap`'s
@@ -1367,11 +1373,12 @@ impl CounterBag {
             }
         }
     }
-    /// Add `n` counters of `ct`, creating the entry at 0 first.
+    /// Add `n` counters of `ct`, creating the entry at 0 first. Saturates at
+    /// [`COUNTER_CAP`].
     pub fn add(&mut self, ct: CounterType, n: u32) {
         match self.0.iter_mut().find(|(k, _)| *k == ct) {
-            Some((_, have)) => *have += n,
-            None => self.0.push((ct, n)),
+            Some((_, have)) => *have = have.saturating_add(n).min(COUNTER_CAP),
+            None => self.0.push((ct, n.min(COUNTER_CAP))),
         }
     }
     pub fn remove(&mut self, ct: &CounterType) -> Option<u32> {
@@ -1457,11 +1464,12 @@ impl KeywordCounters {
     pub fn has_tag(&self, want: std::mem::Discriminant<Keyword>) -> bool {
         self.0.iter().any(|(k, _)| std::mem::discriminant(k) == want)
     }
-    /// Add `n` counters of `kw`, creating the entry at 0 first.
+    /// Add `n` counters of `kw`, creating the entry at 0 first. Saturates at
+    /// [`COUNTER_CAP`].
     pub fn add(&mut self, kw: Keyword, n: u32) {
         match self.0.iter_mut().find(|(k, _)| *k == kw) {
-            Some((_, have)) => *have += n,
-            None => self.0.push((kw, n)),
+            Some((_, have)) => *have = have.saturating_add(n).min(COUNTER_CAP),
+            None => self.0.push((kw, n.min(COUNTER_CAP))),
         }
     }
     /// Remove up to `n` counters of `kw`, dropping the entry when it hits 0

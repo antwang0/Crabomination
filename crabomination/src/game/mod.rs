@@ -7845,12 +7845,13 @@ impl GameState {
         let is_creature = self.computed_is_creature(c);
         let mut base = base;
         if base > 0 && kind == CounterType::PlusOnePlusOne {
-            base += c
-                .definition
-                .static_abilities
-                .iter()
-                .filter(|sa| matches!(sa.effect, StaticEffect::ExtraPlusOneCounterOnSelf))
-                .count() as u32;
+            base = base.saturating_add(
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::ExtraPlusOneCounterOnSelf))
+                    .count() as u32,
+            );
             // Benevolent Hydra / Ozolith — filtered "that many plus one".
             for src in self.battlefield.iter().filter(|s| s.controller == ctrl) {
                 for sa in &src.definition.static_abilities {
@@ -7862,7 +7863,7 @@ impl GameState {
                             Some(src.id),
                         )
                     {
-                        base += 1;
+                        base = base.saturating_add(1);
                     }
                 }
             }
@@ -7873,7 +7874,7 @@ impl GameState {
         if base > 0 && !is_creature {
             let adders = self.extra_any_kind_adders_for(ctrl);
             if adders > 0 && self.source_is_artifact(cid) {
-                base += adders;
+                base = base.saturating_add(adders);
             }
         }
         self.scaled_counter_count(ctrl, kind, base, is_creature)

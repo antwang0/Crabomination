@@ -1067,3 +1067,21 @@ fn cr_122_6_a_persist_return_is_a_counter_put_on_the_creature() {
     let elves = g.battlefield.iter().filter(|c| c.definition.name == "Elf Warrior").count();
     assert_eq!(elves, 1);
 }
+
+/// CR 122 sets no bound, but the engine does: a doubling chain past
+/// `u32::MAX` overflowed the counter add (a fuzzed 8-seat audit-build pod,
+/// seed 710202 game 13: Adrix and Nev's Fractals at turn 206), and a count
+/// past `i32::MAX` would read as negative power. Counts saturate at
+/// `COUNTER_CAP`.
+#[test]
+fn counters_saturate_at_the_engine_cap() {
+    use crabomination::card::COUNTER_CAP;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, u32::MAX / 2);
+    }
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), COUNTER_CAP);
+    assert!(g.computed_permanent(bear).unwrap().power > 0, "huge, not negative");
+}
