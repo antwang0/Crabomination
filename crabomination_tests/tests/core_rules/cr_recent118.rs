@@ -673,3 +673,35 @@ fn cr_704_3_pox_plague_takes_the_offered_sacrifice() {
         assert!(g.battlefield.iter().filter(|c| c.controller == s).count() <= 4, "seat {s} gave up half");
     }
 }
+
+/// CR 800.4a / 800.4h — Master Warcraft's caster leaves before declare
+/// attackers: the declaration goes back to the active player. The chooser
+/// stayed set and the step handed priority to the departed seat (an 8-seat
+/// pod under concessions, seed 817083 game 7).
+#[test]
+fn cr_800_4a_a_departed_combat_chooser_hands_the_declaration_back() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let mw = g.add_card_to_hand(1, catalog::master_warcraft());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 4);
+    g.step = TurnStep::BeginCombat;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast on another seat's turn");
+    drain_stack(&mut g);
+    assert_eq!(g.combat_chooser, Some(1));
+    g.concede(1);
+    assert_eq!(g.combat_chooser, None, "the chooser left");
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.player_with_priority(), 0, "the active player declares");
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(2) }]).expect("declares");
+    assert_eq!(g.attacking.len(), 1);
+}

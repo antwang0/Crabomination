@@ -1102,14 +1102,16 @@ impl GameState {
             // Master Warcraft — the declaration steps hand priority to the
             // outside chooser so it, not the active/defending player, submits
             // the declaration. Without a chooser these behave like `_`.
+            // CR 800.4j — never a seat that has left (Invasion Plans' "the
+            // attacking player" during a departed active player's turn).
             TurnStep::DeclareAttackers if self.combat_chooser.is_some() => {
                 self.priority.player_with_priority =
-                    self.combat_chooser.unwrap_or(self.active_player_idx);
+                    self.priority_recipient(self.combat_chooser.unwrap_or(self.active_player_idx));
                 self.priority.consecutive_passes = 0;
             }
             TurnStep::DeclareBlockers if self.block_chooser().is_some() => {
                 self.priority.player_with_priority =
-                    self.block_chooser().unwrap_or(self.active_player_idx);
+                    self.priority_recipient(self.block_chooser().unwrap_or(self.active_player_idx));
                 self.priority.consecutive_passes = 0;
             }
             _ => {
@@ -6094,6 +6096,19 @@ impl GameState {
             }
         }
         retain_cold!(self.pending_player_control, |(c, ctrl)| *c != p && *ctrl != p);
+        // CR 800.4a / 800.4h — a combat declaration handed to the departed seat
+        // (Master Warcraft's attackers and blockers, Odric's blockers) goes
+        // back to the seats the rules name; left in place, the declare step
+        // waited on a seat that can no longer act.
+        if self.combat_chooser == Some(p) {
+            self.combat_chooser = None;
+        }
+        if self.turn.block_chooser_this_turn == Some(p) {
+            self.turn.block_chooser_this_turn = None;
+        }
+        if self.turn.block_chooser_this_combat == Some(p) {
+            self.turn.block_chooser_this_combat = None;
+        }
         // CR 723.4's reveal and CR 701.19's peeks both name a player; neither
         // half means anything once one of them has left (and their hand has
         // left with them).
