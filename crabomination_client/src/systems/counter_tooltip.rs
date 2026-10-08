@@ -1536,6 +1536,7 @@ pub(crate) fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Ki => "Ki",
         CounterType::Coin => "Coin",
         CounterType::Fetch => "Fetch",
+        CounterType::Chorus => "Chorus",
         CounterType::Tide => "Tide",
         CounterType::Flood => "Flood",
         CounterType::Bounty => "Bounty",

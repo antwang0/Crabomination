@@ -984,6 +984,9 @@ pub enum CounterType {
     Hour,
     /// Pako, Arcane Retriever's mark on the cards it exiles (Haldan plays them).
     Fetch,
+    /// Malcolm, Alluring Scoundrel's tally of its combat hits; four or more
+    /// lets the looted card be cast free.
+    Chorus,
 }
 
 /// Every zone a card can occupy.
