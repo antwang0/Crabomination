@@ -46,7 +46,7 @@ def factories():
             if not f.endswith(".rs"):
                 continue
             src = open(os.path.join(dp, f), encoding="utf-8").read()
-            for m in re.finditer(r"pub fn (\w+)\(\) -> CardDefinition \{", src):
+            for m in re.finditer(r"pub fn (\w+)\(\) -> (?:[\w:]+::)?CardDefinition \{", src):
                 start, depth, i = m.end() - 1, 0, m.end() - 1
                 while i < len(src):
                     if src[i] == "{":
