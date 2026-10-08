@@ -316,7 +316,8 @@ fn eladamri_casts_creature_from_top_of_library() {
     assert!(g.battlefield_find(top).is_some(), "the top creature resolved onto the battlefield");
 }
 
-/// Party Thrasher's first-main trigger digs two after a discard.
+/// Party Thrasher's first-main trigger digs two after a discard, and only
+/// the ONE card chosen from them may be played ("then choose one of them").
 #[test]
 fn party_thrasher_digs_two_after_discard() {
     let mut g = two_player_game();
@@ -338,6 +339,7 @@ fn party_thrasher_digs_two_after_discard() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded the pitch card");
     assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Serra Angel").count(), 2, "exiled top two");
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 1, "one of them is playable");
 }
 
 /// Suppression Ray taps every creature the target player controls.

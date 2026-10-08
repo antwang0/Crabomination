@@ -3462,9 +3462,35 @@ fn redirect_lightning_repoints_a_spell() {
         target: Some(crabomination::game::types::Target::Permanent(bolt)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Redirect Lightning at the bolt");
+    assert_eq!(g.players[0].life, 15, "the additional cost paid as 5 life");
     let life1_before = g.players[1].life;
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1_before - 3, "bolt now hits its caster");
+}
+
+/// Redirect Lightning's "pay 5 life or pay {2}": a caster the life payment
+/// would drop under 10 pays the {2}, so {R} alone can't cast it.
+#[test]
+fn redirect_lightning_pays_two_mana_at_low_life() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bolt at us");
+    g.players[0].life = 12;
+    let rl = g.add_card_to_hand(0, catalog::redirect_lightning());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    let cast = |g: &mut GameState| g.perform_action(GameAction::CastSpell {
+        card_id: rl, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(cast(&mut g).is_err(), "{{R}} alone does not cover the {{2}}");
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g).expect("cast with two more");
+    assert_eq!(g.players[0].life, 12, "no life paid");
 }
 
 /// Zhao makes nonbasic lands enter tapped, and once he has a conqueror counter

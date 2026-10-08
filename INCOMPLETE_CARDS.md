@@ -437,7 +437,7 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 |---|---|---|
 | Zidane, Tantalus Thief | "whenever an opponent gains control of a permanent from you, create a Treasure" is absent | no control-change event from the loser's side (only `LostControlOfThis` on the permanent) |
 | Clement, the Worrywort | Frogs you control don't gain "{T}: Add {G} or {U}" (creature-spell-only) | no static grant of a restricted mana ability to a filter |
-| Party Thrasher | noncreature spells cast from exile lack convoke; the impulse grants both exiled cards, not the chosen one | no convoke grant by cast zone; `ExileTopAndGrantMayPlay` has no choose-one |
+| Party Thrasher | noncreature spells cast from exile lack convoke (the "choose one of them" half ✅ 2026-10-08) | the paying cast-from-exile path (`cast_card_from_zone_spending`) has no convoke |
 | The Necrobloom | land cards in your graveyard don't have dredge 2 | dredge is read off the card's own definition |
 | Ragost, Deft Gastronaut | artifacts you control aren't Foods and don't gain the Food ability | no type-and-ability grant to a filter |
 | Preacher | the caster picks the stolen creature (printed: an opponent's choice) | `GainControlWhileSourceTapped` resolves a caster target |
@@ -1538,8 +1538,8 @@ Artifact, Dredge) reads as a sacrifice. First run 62 rows; three real:
 | Caustic Exhale | no additional cost | "behold a Dragon or pay {1}" (`RevealFromHandOrPay`; the "choose a Dragon you control" half of behold is not read) |
 | Mine Collapse (training pool) | a MANDATORY Mountain sacrifice on top of {3}{R}, then the alternative dropped | "you may sacrifice a Mountain rather than pay this spell's mana cost" on your turn — `AlternativeCost { sacrifice_permanents, your_turn_only }` (the gate added 2026-09-10, third run) |
 
-Residue one row: Redirect Lightning's "pay 5 life" (the Amounts residue
-already names it).
+Redirect Lightning's "pay 5 life or pay {2}" ✅ 2026-10-08
+(`AdditionalCastCost::PayLifeOrPay`).
 
 ### The card's OWN cost and body — the fourteenth column (`scripts/audit_printed_body.py`), 2026-09-11: seven free spells
 

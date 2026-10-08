@@ -476,8 +476,9 @@ pub fn eladamri_korvecdal() -> CardDefinition {
 
 /// Party Thrasher — {1}{R} 1/4 Lizard Wizard. At the beginning of your first
 /// main phase, you may discard a card; if you do, exile the top two cards of
-/// your library and you may play them this turn (printed "one of them"; the
-/// "noncreature spells cast from exile have convoke" static is omitted).
+/// your library, choose one, and you may play it this turn. (The
+/// "noncreature spells cast from exile have convoke" static is omitted: the
+/// paying cast-from-exile path has no convoke.)
 pub fn party_thrasher() -> CardDefinition {
     CardDefinition {
         name: "Party Thrasher",
@@ -503,15 +504,27 @@ pub fn party_thrasher() -> CardDefinition {
                         amount: Value::Const(1),
                         random: false,
                     },
-                    Effect::ExileTopAndGrantMayPlay {
-                        who: PlayerRef::You,
-                        count: Value::Const(2),
-                        duration: MayPlayDuration::EndOfThisTurn,
-                        pay_any_color: false,
-                        max_mana_value: None,
-                        pay_own_cost: true,
-                        uncast_penalty: None,
-                    },
+                    crate::effect::shortcut::if_discarded(Effect::Seq(vec![
+                        Effect::ExileTopOfLibrary {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                            link_to_source: false,
+                            face_down: false,
+                        },
+                        Effect::ChooseOneAmong {
+                            what: Selector::ExiledThisResolution { filter: R::Any },
+                            chooser: PlayerRef::You,
+                            chosen: Box::new(Effect::GrantMayPlay {
+                                what: Selector::SeparatedPile { chosen: true },
+                                duration: MayPlayDuration::EndOfThisTurn,
+                                to_owner: false,
+                                exile_after: false,
+                                pay_own_cost: true,
+                                any_color: false,
+                            }),
+                            other: Box::new(Effect::Noop),
+                        },
+                    ])),
                 ])),
                 else_: None,
             },
