@@ -4557,6 +4557,7 @@ static DECKS: &[Factory] = &[
     super::decks::dutiful_replicator,
     super::decks::dr_eggman,
     super::decks::blitzwing_cruel_tormentor,
+    super::decks::blitzwing_adaptive_assailant,
     super::decks::cityscape_leveler,
     super::decks::krang_utrom_warlord,
     super::decks::ultron_artificial_malevolence,
