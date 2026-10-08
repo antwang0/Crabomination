@@ -1124,6 +1124,28 @@ fn transmute_artifact_bins_the_find_when_the_surcharge_is_declined() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == target));
 }
 
+/// A prompting seat answers the search and then the surcharge, each a
+/// suspension: the replay after the second reads the first from the answer
+/// log instead of asking again (strict pod seed 870000 left the "yes"
+/// unread).
+#[test]
+fn transmute_artifact_replays_both_answers_for_a_prompting_seat() {
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::urzas_chalice()); // {1}
+    let target = g.add_card_to_library(0, catalog::millstone()); // {2}
+    let ta = g.add_card_to_hand(0, catalog::transmute_artifact());
+    cast(&mut g, 0, ta, None);
+    assert!(g.pending_decision.is_some(), "the search suspended");
+    g.submit_decision(DecisionAnswer::Cards(vec![target])).expect("pick");
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_some(), "the surcharge suspended");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("pay");
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_none());
+    assert!(g.battlefield_find(target).is_some(), "paid the one-mana difference");
+}
+
 #[test]
 fn urzas_avenger_buys_flying_by_shrinking() {
     let mut g = main_phase();

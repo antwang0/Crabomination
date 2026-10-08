@@ -5533,7 +5533,32 @@ impl GameState {
                     self.shuffle_library(seat, events);
                     return Ok(());
                 }
-                let Some(picked) = self.ask_seat_cards(
+                // Both asks (the search, the surcharge) ride one answer log:
+                // the stashed-answer `ask_seat_cards` was consumed before the
+                // surcharge question suspended, so its replay asked the
+                // search again and could leave the logged answer unread
+                // (strict pod, seed 870000).
+                let auto_default = if self.scratch.resolution_answer_log.is_empty()
+                    && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
+                {
+                    match self.decider.decide(&crate::decision::Decision::ChooseCards {
+                        source,
+                        prompt: "Search for an artifact card".to_string(),
+                        candidates: candidates.clone(),
+                        min: 0,
+                        max: 1,
+                        eligible: None,
+                        value: PickValue::Gain,
+                    }) {
+                        crate::decision::DecisionAnswer::Cards(v) => v,
+                        _ => Vec::new(),
+                    }
+                } else {
+                    Vec::new()
+                };
+                let mut cursor = 0;
+                let Some(picked) = self.ask_seat_cards_logged(
+                    &mut cursor,
                     seat,
                     "Search for an artifact card".to_string(),
                     source,
@@ -5542,12 +5567,14 @@ impl GameState {
                     1,
                     PickValue::Gain,
                     effect,
+                    auto_default,
                 ) else {
                     return Ok(());
                 };
                 self.players[seat].searched_library_this_turn = true;
                 events.push(GameEvent::PlayerSearchedLibrary { player: seat });
                 let Some(&found) = picked.first() else {
+                    self.clear_answer_log();
                     self.shuffle_library(seat, events);
                     return Ok(());
                 };
@@ -5565,7 +5592,6 @@ impl GameState {
                 } else {
                     let diff = found_mv - paid;
                     let surcharge = crate::mana::cost(&[crate::mana::generic(diff)]);
-                    let mut cursor = 0;
                     let Some(yes) = self.ask_seat_bool(
                         &mut cursor,
                         seat,
@@ -5583,6 +5609,7 @@ impl GameState {
                         ZoneDest::Graveyard
                     }
                 };
+                self.clear_answer_log();
                 self.move_card_to(found, &dest, ctx, events);
                 self.shuffle_library(seat, events);
                 Ok(())
