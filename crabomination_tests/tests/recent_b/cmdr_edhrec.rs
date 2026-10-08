@@ -448,3 +448,129 @@ fn bria_grants_prowess_to_the_team() {
     cast(&mut g, bolt, Some(Target::Player(1)));
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
 }
+
+/// Koth: landfall pings each opponent; a Mountain also adds {R}.
+#[test]
+fn koth_pings_and_adds_red_for_a_mountain() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::koth_the_geomancer());
+    let m = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(m)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!([g.players[1].life, g.players[2].life], [19, 19]);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+}
+
+/// Gaea's Gift: a counter and four keywords until end of turn.
+#[test]
+fn gaeas_gift_counter_and_keywords() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gift = g.add_card_to_hand(0, catalog::gaeas_gift());
+    flood(&mut g);
+    cast(&mut g, gift, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords().contains(&Keyword::Indestructible) && cp.keywords().contains(&Keyword::Hexproof));
+}
+
+/// Conflux finds one card of each color.
+#[test]
+fn conflux_finds_five_colors() {
+    let mut g = pod(2);
+    for def in [catalog::serra_angel(), catalog::counterspell(), catalog::dark_ritual(), catalog::lightning_bolt(), catalog::llanowar_elves()] {
+        g.add_card_to_library(0, def);
+    }
+    let c = g.add_card_to_hand(0, catalog::conflux());
+    flood(&mut g);
+    cast(&mut g, c, None);
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        assert!(g.players[0].hand.iter().any(|h| h.definition.printed_colors().contains(&c)), "{c:?}");
+    }
+    assert_eq!(g.players[0].hand.len(), 5);
+}
+
+/// CR 121.2a — Underrealm Lich turns a draw into "look at three, keep one,
+/// bin the rest".
+#[test]
+fn underrealm_lich_bins_the_rest() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::underrealm_lich());
+    let hand = g.players[0].hand.len();
+    let gy = g.players[0].graveyard.len();
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].graveyard.len(), gy + 2);
+}
+
+/// CR 121.2a — Eruth turns a draw into two cards exiled and playable.
+#[test]
+fn eruth_exiles_two_instead_of_drawing() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::eruth_tormented_prophet());
+    let hand = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    assert_eq!(g.players[0].hand.len(), hand);
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 2);
+}
+
+/// Liesa, Forgotten Archangel: your creature that dies returns at the end
+/// step; an opponent's token is exiled rather than dying.
+#[test]
+fn liesa_returns_yours_and_exiles_theirs() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::liesa_forgotten_archangel());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bear)));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    cast(&mut g, bolt, Some(Target::Permanent(theirs)));
+    assert!(g.exile.iter().any(|c| c.id == theirs), "exiled instead of dying");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "back to hand");
+}
+
+/// Virtue of Strength triples a basic land's mana, not a nonbasic's.
+#[test]
+fn virtue_of_strength_triples_basics() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::virtue_of_strength());
+    let forest = ready(&mut g, 0, catalog::forest());
+    let grove = ready(&mut g, 0, catalog::command_tower());
+    activate(&mut g, forest, None);
+    assert_eq!(g.players[0].mana_pool.total(), 3);
+    activate(&mut g, grove, None);
+    assert_eq!(g.players[0].mana_pool.total(), 4);
+}
+
+/// CR 614 — "If a creature an opponent controls would die, exile it instead"
+/// (Misery's Shadow) covers tokens: an exiled token never died, so Blood
+/// Artist sees nothing. The redirect skipped every token before.
+#[test]
+fn miserys_shadow_exiles_an_opponents_token() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::miserys_shadow());
+    ready(&mut g, 0, catalog::blood_artist());
+    let spirit = crabomination::card::TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![crabomination::card::CardType::Creature],
+        ..Default::default()
+    };
+    let tok = g.add_token_to_battlefield(1, &spirit);
+    flood(&mut g);
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(tok)));
+    assert!(g.battlefield_find(tok).is_none());
+    assert_eq!(g.players[1].life, life, "no death, no drain");
+}

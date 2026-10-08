@@ -663,3 +663,177 @@ pub fn the_cabbage_merchant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Koth, the Geomancer — reach; landfall deals 1 to each opponent, and a
+/// Mountain adds {R}.
+pub fn koth_the_geomancer() -> CardDefinition {
+    CardDefinition {
+        name: "Koth, the Geomancer",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Warrior]),
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![crate::effect::shortcut::landfall(Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasLandType(crate::card::LandType::Mountain),
+                },
+                then: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colors(vec![Color::Red]),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Gaea's Gift — a +1/+1 counter, then reach, trample, hexproof and
+/// indestructible until end of turn, on a creature you control.
+pub fn gaeas_gift() -> CardDefinition {
+    CardDefinition {
+        name: "Gaea's Gift",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::GrantKeywords {
+                what: Selector::Target(0),
+                keywords: vec![Keyword::Reach, Keyword::Trample, Keyword::Hexproof, Keyword::Indestructible],
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Conflux — tutor one card of each color.
+pub fn conflux() -> CardDefinition {
+    CardDefinition {
+        name: "Conflux",
+        cost: cost(&[generic(3), w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(
+            [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+                .into_iter()
+                .map(|c| Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasColor(c),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                })
+                .collect(),
+        ),
+        ..Default::default()
+    }
+}
+
+/// Underrealm Lich — your draws become "look at the top three, keep one, the
+/// rest into your graveyard"; pay 4 life for indestructible (and tap it).
+pub fn underrealm_lich() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Underrealm Lich",
+        cost: cost(&[generic(3), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Zombie, CreatureType::Elf, CreatureType::Shaman]),
+        power: 4,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card, instead look at the top three cards of your library, then \
+                          put one into your hand and the rest into your graveyard.",
+            effect: StaticEffect::ReplaceDrawWithLookN { count: 3, rest_to_graveyard: true },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 4,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+                Effect::Tap { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eruth, Tormented Prophet — your draws become "exile the top two, play
+/// them this turn".
+pub fn eruth_tormented_prophet() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Eruth, Tormented Prophet",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card, exile the top two cards of your library instead. You may \
+                          play those cards this turn.",
+            effect: StaticEffect::ReplaceDrawWithImpulse { count: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Liesa, Forgotten Archangel — flying, lifelink; another nontoken creature
+/// of yours dying returns to hand at the next end step; an opponent's dying
+/// creature is exiled instead.
+pub fn liesa_forgotten_archangel() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Liesa, Forgotten Archangel",
+        cost: cost(&[generic(2), w(), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Angel]),
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If a creature an opponent controls would die, exile it instead.",
+            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None, tokens_too: true },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken }),
+            effect: Effect::ReturnToOwnersHandAtNextEndStep { what: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Virtue of Strength // Garenbrig Growth — basic lands you tap make three
+/// times the mana; the adventure returns a creature or land card to hand.
+pub fn virtue_of_strength() -> CardDefinition {
+    use crate::card::{Adventure, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Virtue of Strength",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If you tap a basic land for mana, it produces three times as much of that mana instead.",
+            effect: StaticEffect::BasicLandManaTripled,
+        }],
+        adventure: Some(Box::new(Adventure {
+            name: "Garenbrig Growth",
+            cost: cost(&[g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.or(R::Land).from_your_graveyard()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        })),
+        ..Default::default()
+    }
+}
