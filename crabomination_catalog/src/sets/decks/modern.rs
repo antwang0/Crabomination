@@ -37138,7 +37138,7 @@ pub fn anafenza_the_foremost() -> CardDefinition {
         })],
         static_abilities: vec![StaticAbility {
             description: "If a nontoken creature an opponent owns would die, exile it instead.",
-            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None },
+            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None, tokens_too: false },
         }],
         ..Default::default()
     }
@@ -38153,6 +38153,7 @@ pub fn kalitas_traitor_of_ghet() -> CardDefinition {
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(zombie_2_2_black_token()),
                 })),
+                tokens_too: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

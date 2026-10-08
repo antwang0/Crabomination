@@ -5511,7 +5511,7 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     if body.is_none() {
         for sa in &def.static_abilities {
             if let crate::effect::StaticEffect::ExileDyingOpponentCreatures {
-                when_you_do: Some(eff),
+                when_you_do: Some(eff), ..
             } = &sa.effect
                 && let Some(b) = find_maydo_body(eff, description)
             {
@@ -17453,7 +17453,9 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
                 | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
                     mine && !p.face_down
                 }
-                StaticEffect::ManaProductionDoubled | StaticEffect::ManaProductionTripled => mine,
+                StaticEffect::ManaProductionDoubled
+                | StaticEffect::ManaProductionTripled
+                | StaticEffect::BasicLandManaTripled => mine,
                 _ => false,
             });
         }

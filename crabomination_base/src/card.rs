@@ -7374,6 +7374,7 @@ impl CardDefinition {
                 sa.effect,
                 StaticEffect::ManaProductionDoubled
                     | StaticEffect::ManaProductionTripled
+                    | StaticEffect::BasicLandManaTripled
                     | StaticEffect::ExtraManaOnLandTap { .. }
                     | StaticEffect::NamedSourcesActivationTax { .. }
             ) {

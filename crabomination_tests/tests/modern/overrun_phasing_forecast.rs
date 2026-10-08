@@ -1369,6 +1369,7 @@ fn bot_declines_self_costly_static_reflexive() {
                     body: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(5) }),
                     else_: None,
                 })),
+                tokens_too: false,
             },
         }],
         ..Default::default()

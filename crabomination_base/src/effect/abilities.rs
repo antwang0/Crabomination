@@ -2920,8 +2920,17 @@ pub enum StaticEffect {
     FreeExileCastOncePerTurnMatching(SelectionRequirement),
     /// CR 121.2a — "If you would draw a card, look at the top `count` cards of
     /// your library instead. Put one into your hand and the rest on the bottom
-    /// in any order." (Tomorrow, Azami's Familiar.)
-    ReplaceDrawWithLookN { count: u32 },
+    /// in any order." (Tomorrow, Azami's Familiar.) `rest_to_graveyard`: "and
+    /// the rest into your graveyard" (Underrealm Lich).
+    ReplaceDrawWithLookN {
+        count: u32,
+        #[serde(default)]
+        rest_to_graveyard: bool,
+    },
+    /// CR 121.2a — "If you would draw a card, exile the top `count` cards of
+    /// your library instead. You may play those cards this turn" (Eruth,
+    /// Tormented Prophet).
+    ReplaceDrawWithImpulse { count: u32 },
     /// CR 121.2a — "If a player would draw a card, instead they draw a card
     /// and reveal it. If it matches `filter`, that player discards it unless
     /// they pay `life` life" (Breathstealer's Crypt). Global.
@@ -3348,6 +3357,10 @@ pub enum StaticEffect {
     /// as much of that mana instead." Nyxbloom Ancient. Composes with
     /// `ManaProductionDoubled` multiplicatively (2 + 3 → 6×).
     ManaProductionTripled,
+    /// CR 614.5 — "If you tap a basic land for mana, it produces three times
+    /// as much of that mana instead" (Virtue of Strength). The
+    /// source-scoped sibling of `ManaProductionTripled`.
+    BasicLandManaTripled,
     /// "If damage would be dealt to this permanent while it has a [kind]
     /// counter on it, prevent that damage and remove that many [kind]
     /// counters from it." Polukranos, Unchained. Consulted at both damage
@@ -3620,6 +3633,10 @@ pub enum StaticEffect {
     ExileDyingOpponentCreatures {
         #[serde(default)]
         when_you_do: Option<Box<Effect>>,
+        /// "If a creature an opponent controls would die" — tokens too (Kalitas
+        /// and Valentin print "nontoken"; Vren, Gisa and Liesa don't).
+        #[serde(default)]
+        tokens_too: bool,
     },
     /// CR 614 — "If a creature an opponent controls would die, instead exile it
     /// and put a number of +1/+1 counters equal to that creature's power on

@@ -9288,6 +9288,7 @@ pub fn the_darkness_crystal() -> CardDefinition {
                         who: Selector::You,
                         amount: Value::Const(2),
                     })),
+                    tokens_too: false,
                 },
             },
         ],

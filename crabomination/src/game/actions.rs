@@ -4050,6 +4050,29 @@ impl crate::game::GameState {
         mult.min(1 << 16)
     }
 
+    /// [`Self::mana_production_multiplier_for`] for tapping `source` —
+    /// adds the basic-land-only tripler (Virtue of Strength).
+    pub(crate) fn mana_production_multiplier_for_source(&self, player: usize, source: CardId) -> u32 {
+        use crate::effect::StaticEffect;
+        let mut mult = self.mana_production_multiplier_for(player);
+        if mult == 1 && !self.board_has_mana_static() {
+            return 1;
+        }
+        let basic_land = self
+            .battlefield_find(source)
+            .is_some_and(|c| c.definition.is_land() && c.definition.supertypes.contains(&crate::card::Supertype::Basic));
+        if basic_land {
+            for c in self.battlefield.iter().filter(|c| c.controller == player) {
+                for sa in &c.definition.static_abilities {
+                    if let StaticEffect::BasicLandManaTripled = sa.effect {
+                        mult = mult.saturating_mul(3);
+                    }
+                }
+            }
+        }
+        mult.min(1 << 16)
+    }
+
     /// Whether `cost` still has an unpaid `color` pip after `p`'s current
     /// floating pool is applied. Drives the CR 702.51 convoke choice: a
     /// tapped creature contributes a colored pip only where the cost wants
@@ -20024,7 +20047,7 @@ impl GameState {
 
         // The generic mana branch, verbatim.
         let effect = &def.activated_abilities[ability_index].effect;
-        self.mana_production_multiplier = self.mana_production_multiplier_for(p);
+        self.mana_production_multiplier = self.mana_production_multiplier_for_source(p, card_id);
         let mark = events.len();
         let resolved = self.continue_ability_resolution_x_into(
             card_id,
@@ -23851,7 +23874,7 @@ impl GameState {
             // multiplier so the `AddMana` resolver scales pip output; clear
             // it afterward. Only tapping qualifies per the printed text.
             self.mana_production_multiplier =
-                if ability.tap_cost { self.mana_production_multiplier_for(p) } else { 1 };
+                if ability.tap_cost { self.mana_production_multiplier_for_source(p, card_id) } else { 1 };
             // Resolved straight into `events`: the `Vec` this used to return
             // and append was one of the program's two largest allocation
             // sites (PERF `(-104)`). The extra-mana events below still have

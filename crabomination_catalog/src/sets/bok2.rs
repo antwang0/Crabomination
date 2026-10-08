@@ -1071,7 +1071,7 @@ pub fn tomorrow_azamis_familiar() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If you would draw a card, look at the top three cards of your \
                           library instead. Put one into your hand and the rest on the bottom.",
-            effect: StaticEffect::ReplaceDrawWithLookN { count: 3 },
+            effect: StaticEffect::ReplaceDrawWithLookN { count: 3, rest_to_graveyard: false },
         }],
         ..legend(
             "Tomorrow, Azami's Familiar",

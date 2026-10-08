@@ -40211,12 +40211,27 @@ impl GameState {
 
             Effect::ReturnToOwnersHandAtNextEndStep { what } => {
                 for ent in self.resolve_selector(what, ctx) {
-                    let Some(id) = ent.as_permanent_id() else { continue };
+                    let Some(id) = ent.as_card_id() else { continue };
+                    let back = Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) };
+                    // A card that died (Liesa, Forgotten Archangel) comes back
+                    // only from the graveyard it went to (CR 400.7).
+                    let effect = if self.battlefield_find(id).is_some() {
+                        back
+                    } else {
+                        Effect::If {
+                            cond: crate::effect::Predicate::EntityMatches {
+                                what: Selector::This,
+                                filter: crate::card::SelectionRequirement::InGraveyard,
+                            },
+                            then: Box::new(back),
+                            else_: Box::new(Effect::Noop),
+                        }
+                    };
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source: id,
                         kind: crate::game::types::DelayedKind::NextEndStep,
-                        effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                        effect,
                         target: None,
                         bound_token: None,
                         bound_subject: None,

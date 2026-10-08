@@ -5428,6 +5428,7 @@ impl GameState {
         clear_cold!(self.graveyard_cast_enters_tapped);
         clear_cold!(self.entered_from_exile_this_turn);
         clear_cold!(self.entered_from_hand_this_turn);
+        clear_cold!(self.token_deaths_replaced);
         // CR 603.3d — "triggers only once each turn" abilities reset.
         clear_cold!(self.triggered_once_per_turn_used);
         clear_cold!(self.per_subject_trigger_uses);
@@ -8714,13 +8715,13 @@ impl GameState {
             let board_walk = if redirects { usize::MAX } else { 0 };
             let valentin_redirect: Option<(CardId, usize, Option<Effect>)> = if redirects
                 && card.definition.is_creature()
-                && !card.is_token
             {
                 self.battlefield.iter().find_map(|src| {
                     src.definition.static_abilities.iter().find_map(|sa| {
-                        if let crate::effect::StaticEffect::ExileDyingOpponentCreatures { when_you_do } =
+                        if let crate::effect::StaticEffect::ExileDyingOpponentCreatures { when_you_do, tokens_too } =
                             &sa.effect
                             && src.controller != card.controller
+                            && (*tokens_too || !card.is_token)
                         {
                             Some((src.id, src.controller, when_you_do.as_deref().cloned()))
                         } else {
@@ -8895,6 +8896,9 @@ impl GameState {
                 let seat = card.controller;
                 self.players[seat].creatures_exiled_from_control_this_turn =
                     self.players[seat].creatures_exiled_from_control_this_turn.saturating_add(1);
+            }
+            if card.is_token && resolved != crate::card::Zone::Graveyard && card.definition.is_creature() {
+                self.token_deaths_replaced.insert(id);
             }
             self.place_card_at_resolved_zone(card, resolved);
             // Rayami's blood counter goes on the exiled card, after the zone

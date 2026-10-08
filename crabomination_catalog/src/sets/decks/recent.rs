@@ -12019,7 +12019,7 @@ pub fn gisa_glorious_resurrector() -> CardDefinition {
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "If a creature an opponent controls would die, exile it instead.",
-            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None },
+            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None, tokens_too: true },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(

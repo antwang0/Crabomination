@@ -26,7 +26,7 @@ pub fn miserys_shadow() -> CardDefinition {
         toughness: 2,
         static_abilities: vec![StaticAbility {
             description: "If a creature an opponent controls would die, exile it instead.",
-            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None },
+            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None, tokens_too: true },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),

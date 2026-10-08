@@ -536,6 +536,7 @@ pub fn valentin_dean_of_the_vein() -> CardDefinition {
                     }),
                     else_: None,
                 })),
+                tokens_too: false,
             },
         }],
         back_face: Some(Box::new(lisette_dean_of_the_root())),

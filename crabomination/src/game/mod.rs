@@ -1675,6 +1675,11 @@ pub struct ColdState {
     /// the Damned). Cleared with `entered_from_exile_this_turn`.
     #[serde(default)]
     pub(crate) entered_from_hand_this_turn: crate::game::types::IdSet<CardId>,
+    /// CR 700.4 — creature tokens whose trip to the graveyard a replacement
+    /// sent elsewhere (Liesa, Rest in Peace): they never died, but they cease
+    /// to exist before dispatch can see where they went. Cleared each turn.
+    #[serde(default)]
+    pub(crate) token_deaths_replaced: crate::game::types::IdSet<CardId>,
     /// Tokens minted by `Effect::CreateTokenAttacking` with a non-`None`
     /// cleanup (Mobilize sacrifice / Myriad exile). Drained when the combat
     /// phase ends (CR 511.3).
@@ -21675,15 +21680,26 @@ impl GameState {
 
     /// CR 121.2a — the look-N-keep-one draw replacement `p` controls
     /// (Tomorrow, Azami's Familiar), peeled through the gating wrappers.
-    fn look_instead_of_drawing(&self, p: usize) -> Option<u32> {
+    fn look_instead_of_drawing(&self, p: usize) -> Option<(u32, bool)> {
         self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
             c.definition.static_abilities.iter().find_map(|sa| {
                 match self.active_static(&sa.effect, c) {
-                    Some(crate::effect::StaticEffect::ReplaceDrawWithLookN { count }) => {
-                        Some(*count)
+                    Some(crate::effect::StaticEffect::ReplaceDrawWithLookN { count, rest_to_graveyard }) => {
+                        Some((*count, *rest_to_graveyard))
                     }
                     _ => None,
                 }
+            })
+        })
+    }
+
+    /// CR 121.2a — the exile-and-play draw replacement `p` controls (Eruth,
+    /// Tormented Prophet).
+    fn impulse_instead_of_drawing(&self, p: usize) -> Option<u32> {
+        self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+                Some(crate::effect::StaticEffect::ReplaceDrawWithImpulse { count }) => Some(*count),
+                _ => None,
             })
         })
     }
@@ -21920,6 +21936,9 @@ impl GameState {
             }
             if self.look_instead_of_drawing(p).is_some() {
                 applicable.push(DrawDig::LookN);
+            }
+            if self.impulse_instead_of_drawing(p).is_some() {
+                applicable.push(DrawDig::Impulse);
             }
             if self.player_may_tutor_instead_of_drawing(p) {
                 applicable.push(DrawDig::Tutor);
@@ -22235,13 +22254,34 @@ impl GameState {
             // them was a silent no-op for every training seat, and the draw it
             // replaced simply did not happen.
             DrawDig::LookN => {
-                let Some(n) = self.look_instead_of_drawing(p) else { return false };
+                let Some((n, rest_to_graveyard)) = self.look_instead_of_drawing(p) else { return false };
                 if let Ok(mut evs) = self.resolve_effect_driven(
                     &crate::effect::Effect::LookPickToHand(Box::new(crate::effect::LookPick {
                         who: crate::effect::PlayerRef::Seat(p),
                         count: crate::effect::Value::Const(n as i32),
+                        rest_to_graveyard,
     ..Default::default()
 })),
+                    &ctx,
+                ) {
+                    events.append(&mut evs);
+                }
+                true
+            }
+            // Eruth — "exile the top two cards of your library instead. You
+            // may play those cards this turn." Mandatory.
+            DrawDig::Impulse => {
+                let Some(n) = self.impulse_instead_of_drawing(p) else { return false };
+                if let Ok(mut evs) = self.resolve_effect_driven(
+                    &crate::effect::Effect::ExileTopAndGrantMayPlay {
+                        who: crate::effect::PlayerRef::Seat(p),
+                        count: crate::effect::Value::Const(n as i32),
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: false,
+                        max_mana_value: None,
+                        pay_own_cost: true,
+                        uncast_penalty: None,
+                    },
                     &ctx,
                 ) {
                     events.append(&mut evs);
@@ -30834,6 +30874,9 @@ impl GameState {
     /// the card this asks about is the most recent entry: scan them back to
     /// front and the hit is the first comparison.
     pub(crate) fn death_was_replaced(&self, card_id: CardId) -> bool {
+        if self.token_deaths_replaced.contains(&card_id) {
+            return true;
+        }
         if self.players.iter().any(|p| p.graveyard.iter().rev().any(|c| c.id == card_id)) {
             return false;
         }
@@ -33619,6 +33662,7 @@ fn static_effect_to_effects(
             // resolution via `mana_production_multiplier_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled
             | StaticEffect::ManaProductionTripled
+            | StaticEffect::BasicLandManaTripled
             // PreventDamageByRemovingCounters (Polukranos, Unchained) —
             // consulted at both damage funnels; no layer effect.
             | StaticEffect::PreventDamageByRemovingCounters { .. }
@@ -33731,6 +33775,7 @@ fn static_effect_to_effects(
             // Tomorrow, Azami's Familiar — a draw replacement consulted in
             // `draw_one`; no layer effect.
             | StaticEffect::ReplaceDrawWithLookN { .. }
+            | StaticEffect::ReplaceDrawWithImpulse { .. }
             | StaticEffect::DrawsRevealedTaxed { .. }
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
             // layer effect.
@@ -34938,6 +34983,8 @@ pub(crate) enum DrawDig {
     ExilePile,
     /// Tomorrow, Azami's Familiar — look at the top N and keep one.
     LookN,
+    /// Eruth, Tormented Prophet — exile the top N, playable this turn.
+    Impulse,
     /// Archmage Ascension — search your library instead.
     Tutor,
     /// Abundance — reveal until a land/nonland of your choice.
@@ -34951,6 +34998,7 @@ impl DrawDig {
         match self {
             DrawDig::ExilePile => "Take the top card of your exiled pile",
             DrawDig::LookN => "Look at the top cards and keep one",
+            DrawDig::Impulse => "Exile the top cards and play them this turn",
             DrawDig::Tutor => "Search your library for a card",
             DrawDig::RevealUntilKind => "Reveal until a land or nonland card",
             DrawDig::CounterOnSource => "Put a counter on it instead",
