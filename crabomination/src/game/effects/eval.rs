@@ -6922,7 +6922,8 @@ impl GameState {
                     && self.players.get(controller).is_some_and(|p| {
                         p.graveyard.iter().any(|c| {
                             c.id != card.id
-                                && c.definition.is_creature()
+                                && (c.definition.card_types.contains(&crate::card::CardType::Creature)
+                                    || self.card_off_battlefield_gains_card_type(c, crate::card::CardType::Creature))
                                 && (wild
                                     || self.card_off_battlefield_is_every_creature_type(c)
                                     || mine.iter().any(|t| self.card_off_battlefield_has_creature_type(c, *t)))
