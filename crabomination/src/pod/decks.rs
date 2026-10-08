@@ -5618,3 +5618,59 @@ pub const STORM_FORCE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, island, island, island, island, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const INDORAPTOR_COMMANDERS: &[CardFactory] = &[indoraptor_the_perfect_hybrid];
+
+/// **Indoraptor, the Perfect Hybrid**'s EDHREC average deck (fetched
+/// 2026-10-08), card for card: 83 nonbasic cards + 6 Forests + 6 Mountains +
+/// 4 Swamps = 99. Jund enrage and Dinosaurs — damage your own creatures.
+pub const INDORAPTOR_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, caltrops, fiendlash, mithril_coat, requiem_monolith,
+    sol_ring, swiftfoot_boots, blood_crypt, bloodstained_mire, cinder_glade, command_tower,
+    dragonskull_summit, exotic_orchard, luxury_suite, overgrown_tomb, rockfall_vale,
+    rootbound_crag, savage_lands, smoldering_marsh, spire_garden, stomping_ground,
+    undergrowth_stadium, wooded_foothills, woodland_cemetery, ziatoras_proving_ground,
+    birds_of_paradise, brash_taunter, creeping_bloodsucker, forerunner_of_the_empire,
+    goblin_anarchomancer, heartless_hidetsugu, ignoble_hierarch, klothys_god_of_destiny,
+    marauding_raptor, mayhem_devil, plague_spitter, polyraptor, raging_regisaur,
+    ranging_raptors, ripjaw_raptor, scytheclaw_raptor, selvala_heart_of_the_wilds,
+    silverclad_ferocidons, solphim_mayhem_dominus, wrathful_raptors, xenagos_god_of_revels,
+    zhur_taa_druid, descent_into_avernus, garruks_uprising, last_laugh, pain_for_all,
+    pestilence, pyrohemia, rhythm_of_the_wild, rite_of_passage, assassins_trophy,
+    atarkas_command, beast_within, heroic_intervention, lightning_bolt, price_of_progress,
+    rakdos_charm, return_of_the_wildspeaker, revitalizing_repast, tail_swipe,
+    tamiyos_safekeeping, the_last_agni_kai, blasphemous_act, boltwave, bushwhack,
+    chandras_ignition, cultivate, farseek, fiery_confluence, flame_rift, grab_the_prize,
+    kodamas_reach, natures_lore, rampant_growth, rile, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp,
+];
+
+pub const SHADOW_HEDGEHOG_COMMANDERS: &[CardFactory] = &[shadow_the_hedgehog];
+
+/// **Shadow the Hedgehog**'s EDHREC average deck (fetched 2026-10-08), card
+/// for card: 84 nonbasic cards + 8 Mountains + 7 Swamps = 99. Rakdos hasty
+/// artifacts and Treasures — artifact mana buys split second.
+pub const SHADOW_HEDGEHOG_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, cursed_mirror, fellwar_stone, lightning_greaves, mind_stone,
+    rakdos_signet, sol_ring, swiftfoot_boots, talisman_of_indulgence, the_fire_crystal,
+    the_reaver_cleaver, thought_vessel, urabrasks_forge, blazemire_verge, blood_crypt,
+    bloodstained_mire, bojuka_bog, command_tower, darksteel_citadel, dragonskull_summit,
+    drossforge_bridge, graven_cairns, great_furnace, haunted_ridge, luxury_suite,
+    raucous_theater, smoldering_marsh, sulfurous_springs, tainted_peak, treasure_vault,
+    vault_of_whispers, academy_manufactor, anger, blood_artist, captain_lannery_storm,
+    charming_scoundrel, dualcaster_mage, goldspan_dragon, grim_hireling, hellkite_tyrant,
+    jaxis_the_troublemaker, kellogg_dangerous_mind, kiki_jiki_mirror_breaker,
+    knuckles_the_echidna, lagomos_hand_of_hatred, loyal_apprentice, mahadi_emporium_master,
+    marionette_apprentice, mayhem_devil, mirkwood_bats, pitiless_plunderer,
+    professional_face_breaker, ragavan_nimble_pilferer, smaug_wicked_worm, urabrask_the_hidden,
+    warren_soultrader, xorn, black_market_connections, goblin_bombardment, revel_in_riches,
+    rising_of_the_day, super_state, big_score, chaos_warp, dark_ritual, deadly_dispute,
+    deadly_rollick, deflecting_swat, rakdos_charm, saw_in_half, terminate, unexpected_windfall,
+    untimely_malfunction, blasphemous_act, blood_money, demonic_tutor, diabolic_intent,
+    exsanguinate, feed_the_swarm, jeskas_will, reanimate, toxic_deluge, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

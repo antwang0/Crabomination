@@ -1520,6 +1520,22 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STORM_FORCE_COMMANDERS,
             main: decks::STORM_FORCE_MAIN,
         },
+        // Hundred-and-eighty-sixth: Indoraptor, the Perfect Hybrid's EDHREC
+        // average deck (CR 702.130 enrage, a random opponent's punisher).
+        // `--pod-decks 186`.
+        PodDeck {
+            name: "Indoraptor, the Perfect Hybrid (BGR)",
+            commanders: decks::INDORAPTOR_COMMANDERS,
+            main: decks::INDORAPTOR_MAIN,
+        },
+        // Hundred-and-eighty-seventh: Shadow the Hedgehog's EDHREC average
+        // deck (CR 702.61 split second bought with artifact mana).
+        // `--pod-decks 187`.
+        PodDeck {
+            name: "Shadow the Hedgehog (BR)",
+            commanders: decks::SHADOW_HEDGEHOG_COMMANDERS,
+            main: decks::SHADOW_HEDGEHOG_MAIN,
+        },
     ]
 }
 
@@ -3135,6 +3151,10 @@ mod tests {
             ("Ob Nixilis, Captive", [0x0B41, 184, 9108]),
             // CR 702.40 a granted storm, Ashling's escalating Magecraft.
             ("Storm, Force", [0x5704, 185, 9109]),
+            // CR 702.130 enrage loops (Polyraptor, Forerunner of the Empire).
+            ("Indoraptor", [0x1D0A, 186, 9110]),
+            // CR 702.61 split second from artifact mana, Knuckles' Treasures.
+            ("Shadow the", [0x5ADE, 187, 9111]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
