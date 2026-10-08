@@ -1557,6 +1557,7 @@ impl PendingEffectState {
         match self {
             PendingEffectState::SacrificePending { player } => Some(*player),
             PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
+            PendingEffectState::MayDoSeatAnswerPending { player } => Some(*player),
             PendingEffectState::SeatAmountAnswerPending { player, .. } => Some(*player),
             PendingEffectState::CardsAnswerPending { player } => Some(*player),
             PendingEffectState::SeatCardsAnswerPending { player } => Some(*player),
@@ -1573,7 +1574,8 @@ impl PendingEffectState {
     pub(crate) fn departed_filler(&self) -> Option<crate::decision::DecisionAnswer> {
         use crate::decision::DecisionAnswer as A;
         match self {
-            PendingEffectState::SeatBoolAnswerPending { .. } => Some(A::Bool(false)),
+            PendingEffectState::SeatBoolAnswerPending { .. }
+            | PendingEffectState::MayDoSeatAnswerPending { .. } => Some(A::Bool(false)),
             PendingEffectState::SeatAmountAnswerPending { .. } => Some(A::Amount(0)),
             PendingEffectState::SeatCardsAnswerPending { .. } => Some(A::Cards(Vec::new())),
             PendingEffectState::SeatTargetAnswerPending { .. } => Some(A::DeclineTarget),
@@ -2446,8 +2448,13 @@ pub enum PendingEffectState {
     /// than the resolving controller (Choice of Damnations, Pain's Reward).
     SeatAmountAnswerPending { player: usize, max: u32 },
     /// Suspended on the `OptionalTrigger` raised by `Effect::MayDo`. The
-    /// yes/no answer is stashed for the re-run.
+    /// yes/no answer is stashed for the re-run. Kept for older saves; new
+    /// asks name their seat (`MayDoSeatAnswerPending`).
     MayDoAnswerPending,
+    /// As `MayDoAnswerPending`, answered by `player` — the seat whose "may"
+    /// it is, which under a per-player fan-out ("each opponent may draw")
+    /// is not the resolving controller.
+    MayDoSeatAnswerPending { player: usize },
     /// Suspended on a yes/no question routed to `player` (who may differ
     /// from the resolving controller — rhystic taxes, Tempting Offer,
     /// Browbeat, Clash). The validated answer is *appended* to

@@ -29392,7 +29392,7 @@ impl GameState {
                 self.log_answer(DecisionAnswer::Amount((*n).min(max)), Some(player));
                 Ok(Vec::new())
             }
-            PendingEffectState::MayDoAnswerPending => {
+            PendingEffectState::MayDoAnswerPending | PendingEffectState::MayDoSeatAnswerPending { .. } => {
                 let DecisionAnswer::Bool(b) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };

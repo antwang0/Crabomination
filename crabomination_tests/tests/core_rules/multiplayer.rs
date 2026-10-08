@@ -9375,3 +9375,65 @@ fn cr_601_2f_an_unpayable_strive_slot_is_not_offered() {
         }
     }
 }
+
+/// CR 800.4a / 608.2 — "each opponent may draw" asks each opponent, not the
+/// caster (the `MayDo` stash was posed to the resume's owner, so the caster
+/// answered for them); and an opponent who leaves while being asked takes the
+/// question with them: the seats after them are still asked, and no answer
+/// outlives the asker. (A strict 5-seat audit-build pod with concessions,
+/// seed 720101 game 13: the resumed per-seat tail skipped the departed seat
+/// and left its stashed answer for the next asker.)
+#[test]
+fn cr_800_4a_a_departed_askers_answer_is_nobody_elses() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::Decision;
+    use crabomination::effect::{Effect, Value};
+    use crabomination::game::types::{GameAction, TurnStep};
+    for leaver in [1usize, 2] {
+        let mut g = multi_player_game(3);
+        for s in 0..3 {
+            g.players[s].wants_ui = true;
+            g.add_card_to_library(s, catalog::island());
+        }
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let spell = g.add_card_to_hand(0, CardDefinition {
+            name: "Open Offer",
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::EachOpponent,
+                body: Box::new(Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw { who: crabomination::effect::Selector::You, amount: Value::Const(1) }),
+                }),
+            },
+            ..Default::default()
+        });
+        g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        let stayer = 3 - leaver;
+        let hand = g.players[stayer].hand.len();
+        let mut asked = Vec::new();
+        for _ in 0..20 {
+            let Some(d) = g.pending_decision.as_ref() else {
+                if g.stack.is_empty() {
+                    break;
+                }
+                g.resolve_top_of_stack().expect("resolve");
+                continue;
+            };
+            assert!(matches!(d.decision, Decision::OptionalTrigger { .. }), "{:?}", d.decision);
+            let seat = d.acting_player();
+            asked.push(seat);
+            if seat == leaver {
+                g.concede(leaver);
+            } else {
+                g.submit_decision(DecisionAnswer::Bool(true)).expect("answer");
+            }
+        }
+        assert!(!asked.contains(&0), "leaver {leaver}: the caster answers for nobody: {asked:?}");
+        assert!(asked.contains(&leaver) && asked.contains(&stayer), "leaver {leaver}: both opponents are asked: {asked:?}");
+        assert_eq!(g.players[stayer].hand.len(), hand + 1, "leaver {leaver}: and draws on yes");
+    }
+}

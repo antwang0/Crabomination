@@ -4069,14 +4069,15 @@ impl GameState {
         // first. If that arm returns without taking it (its question went
         // moot while it waited), spend it there: unclaimed, the next asker
         // in the same resolution would read it as its own answer.
-        if self.scratch.stashed_resolution_answer.is_some()
-            && !self.scratch.stash_owner_claimed
-            && !is_resume_wrapper(effect)
-        {
-            self.scratch.stash_owner_claimed = true;
+        if self.scratch.stashed_resolution_answer.is_some() && !self.scratch.stash_owner_claimed {
+            let wrapper = is_resume_wrapper(effect);
+            self.scratch.stash_owner_claimed = !wrapper;
             let r = self.run_effect_batched(effect, ctx, events);
             self.scratch.stash_owner_claimed = false;
-            if self.scratch.stashed_resolution_answer.is_some() {
+            // A wrapper that ran no asker at all (its one seat left the game
+            // while it waited, its loop came up empty) leaves the stash too:
+            // spent here, before a sibling's asker reads it as its own.
+            if self.scratch.stashed_resolution_answer.is_some() && (!wrapper || self.suspend_signal.is_none()) {
                 #[cfg(all(debug_assertions, not(test)))]
                 self.report_unclaimed_stash(effect, ctx);
                 self.scratch.stashed_resolution_answer = None;
@@ -5343,7 +5344,7 @@ impl GameState {
                             None if self.seat_prompts(ctx.controller) => {
                                 self.suspend_signal = Some(Box::new((
                                     decision,
-                                    PendingEffectState::MayDoAnswerPending,
+                                    PendingEffectState::MayDoSeatAnswerPending { player: ctx.controller },
                                     tail_after(n - i),
                                 )));
                                 return Ok(());
@@ -7920,7 +7921,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::MayDoAnswerPending,
+                            PendingEffectState::MayDoSeatAnswerPending { player: ctx.controller },
                             effect.clone(),
                         )));
                         return Ok(());
@@ -29235,7 +29236,7 @@ impl GameState {
                         None if self.seat_prompts(p) => {
                             self.suspend_signal = Some(Box::new((
                                 decision,
-                                PendingEffectState::MayDoAnswerPending,
+                                PendingEffectState::MayDoSeatAnswerPending { player: p },
                                 effect.clone(),
                             )));
                             return Ok(());
@@ -41720,7 +41721,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::MayDoAnswerPending,
+                            PendingEffectState::MayDoSeatAnswerPending { player: ctx.controller },
                             effect.clone(),
                         )));
                         return Ok(());
