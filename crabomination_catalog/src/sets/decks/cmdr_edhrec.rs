@@ -1081,3 +1081,140 @@ pub fn starnheim_courser() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Diabolic Revelation — {X}{3}{B}{B} Sorcery. Search your library for up to
+/// X cards, put them into your hand, then shuffle.
+pub fn diabolic_revelation() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Diabolic Revelation",
+        cost: cost(&[x(), generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: R::Any,
+            to: ZoneDest::Hand(PlayerRef::You),
+            count: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Gelatinous Genesis — {X}{X}{G} Sorcery. Create X X/X green Ooze creature
+/// tokens.
+pub fn gelatinous_genesis() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Gelatinous Genesis",
+        cost: cost(&[x(), x(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: Arc::new(TokenDefinition {
+                name: "Ooze".into(),
+                power: 0,
+                toughness: 0,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: creature_types(vec![CreatureType::Ooze]),
+                dynamic_pt: Some((Value::XFromCost, Value::XFromCost)),
+                ..Default::default()
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Children of Korlis — {W} 1/1. Sacrifice it: you gain life equal to the
+/// life you've lost this turn.
+pub fn children_of_korlis() -> CardDefinition {
+    CardDefinition {
+        name: "Children of Korlis",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Cleric]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::LifeLostThisTurn(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rodolf Duskbringer — {5}{B} 4/4 flying, deathtouch, lifelink. Gaining
+/// life makes it indestructible this turn; at your end step you may pay
+/// {1}{W/B} to return a creature card with mana value up to the life you
+/// gained this turn from your graveyard to the battlefield.
+pub fn rodolf_duskbringer() -> CardDefinition {
+    CardDefinition {
+        name: "Rodolf Duskbringer",
+        cost: cost(&[generic(5), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Vampire, CreatureType::Angel]),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                effect: Effect::MayPay {
+                    description: "Pay {1}{W/B} to return a creature card?".into(),
+                    mana_cost: cost(&[generic(1), hybrid(Color::White, Color::Black)]),
+                    body: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(
+                                R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMostLifeGainedThisTurn),
+                            ),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    }),
+                    else_: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tor Wauki the Younger — {3}{B}{R} 3/3 reach, lifelink. Your other
+/// sources' noncombat damage gets +1; casting an instant or sorcery shoots
+/// any target for 2.
+pub fn tor_wauki_the_younger() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Tor Wauki the Younger",
+        cost: cost(&[generic(3), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Archer]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If another source you control would deal noncombat damage to a permanent or player, it deals that much damage plus 1 instead.",
+            effect: StaticEffect::NoncombatDamageFromOtherSourcesBonus { amount: 1 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_instant_or_sorcery()),
+            effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}

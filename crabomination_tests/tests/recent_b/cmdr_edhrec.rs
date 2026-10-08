@@ -715,3 +715,83 @@ fn starnheim_courser_discounts_artifacts() {
     g.perform_action(GameAction::CastSpell { card_id: staff, target: None, additional_targets: vec![], mode: None, x_value: None })
         .expect("{1}{U} paid with {U}");
 }
+
+/// Diabolic Revelation tutors X cards to hand.
+#[test]
+fn diabolic_revelation_tutors_x() {
+    let mut g = pod(2);
+    let spell = g.add_card_to_hand(0, catalog::diabolic_revelation());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([]));
+    let (hand, lib) = (g.players[0].hand.len(), g.players[0].library.len());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(3) })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3);
+    assert_eq!(g.players[0].library.len(), lib - 3);
+}
+
+/// Gelatinous Genesis with X=3 makes three 3/3 Oozes ({X}{X} counted once).
+#[test]
+fn gelatinous_genesis_makes_x_xs() {
+    let mut g = pod(2);
+    let spell = g.add_card_to_hand(0, catalog::gelatinous_genesis());
+    g.players[0].mana_pool.add(Color::Green, 7);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(3) })
+        .expect("{3}{3}{G} paid with seven");
+    drain_stack(&mut g);
+    let oozes: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Ooze").map(|c| c.id).collect();
+    assert_eq!(oozes.len(), 3);
+    assert!(oozes.iter().all(|&o| g.computed_permanent(o).unwrap().power == 3));
+}
+
+/// Children of Korlis refunds the life lost this turn (CR 119.3: damage is
+/// life loss).
+#[test]
+fn children_of_korlis_refunds_lost_life() {
+    let mut g = pod(2);
+    let kids = ready(&mut g, 0, catalog::children_of_korlis());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    activate(&mut g, kids, None);
+    assert!(g.battlefield_find(kids).is_none());
+    assert_eq!(g.players[0].life, life + 3);
+}
+
+/// Rodolf: paying {1}{W/B} at the end step returns a creature card no
+/// bigger than the life gained this turn.
+#[test]
+fn rodolf_reanimates_by_life_gained() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::rodolf_duskbringer());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].life_gained_this_turn = 2;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    // Pools empty between steps (CR 500.4): float the {1}{W/B} here.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bear back with 2 life gained");
+}
+
+/// Tor Wauki the Younger: the bolt's 3 becomes 4 (CR 614.1a), and the cast
+/// trigger's own 2 is not boosted (it's Tor Wauki's damage).
+#[test]
+fn tor_wauki_the_younger_adds_one_to_other_noncombat() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::tor_wauki_the_younger());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(life - g.players[1].life, 4 + 2, "bolt 3+1, trigger 2");
+}
