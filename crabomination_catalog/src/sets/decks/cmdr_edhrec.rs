@@ -1767,3 +1767,34 @@ pub fn mnemonic_deluge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cultivator Colossus — {4}{G}{G}{G} */* trample, P/T = lands you control.
+/// ETB: you may put a land card from your hand onto the battlefield tapped;
+/// if you do, draw a card and repeat (unrolled twenty deep — a declined or
+/// empty pick ends the chain).
+pub fn cultivator_colossus() -> CardDefinition {
+    use crate::card::DynamicPt;
+    fn process(depth: u32) -> Effect {
+        let draw = Effect::Draw { who: Selector::You, amount: Value::ONE };
+        Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: R::Land,
+            count: Value::ONE,
+            tapped: true,
+            haste: false,
+            sacrifice_eot: false,
+            return_eot: false,
+            then: Some(Box::new(if depth == 0 { draw } else { Effect::Seq(vec![draw, process(depth - 1)]) })),
+        }
+    }
+    CardDefinition {
+        name: "Cultivator Colossus",
+        cost: cost(&[generic(4), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Plant, CreatureType::Beast]),
+        keywords: vec![Keyword::Trample],
+        dynamic_pt: Some(DynamicPt::LandsControlled { base: 0 }),
+        triggered_abilities: vec![etb(process(19))],
+        ..Default::default()
+    }
+}

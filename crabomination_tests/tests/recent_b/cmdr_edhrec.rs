@@ -1082,3 +1082,22 @@ fn mnemonic_deluge_triples_a_graveyard_spell() {
     assert_eq!(life - g.players[1].life, 9, "three bolts");
     assert!(g.exile.iter().any(|c| c.id == deluge), "Deluge exiles itself");
 }
+
+/// Cultivator Colossus chains land drops: two lands in hand both go in, a
+/// card drawn for each, and it counts every land.
+#[test]
+fn cultivator_colossus_chains_lands() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    let colossus = g.add_card_to_hand(0, catalog::cultivator_colossus());
+    flood(&mut g);
+    cast(&mut g, colossus, None);
+    let lands = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands, 5);
+    assert_eq!(g.computed_permanent(colossus).unwrap().power, 5);
+}

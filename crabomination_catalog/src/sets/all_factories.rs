@@ -4626,6 +4626,7 @@ static DECKS: &[Factory] = &[
     super::decks::emiel_the_blessed,
     super::decks::misthollow_griffin,
     super::decks::mnemonic_deluge,
+    super::decks::cultivator_colossus,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,
