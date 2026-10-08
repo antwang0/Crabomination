@@ -7731,6 +7731,18 @@ pub(super) fn cast_candidates<'a>(
         if c.definition.gift.is_some() && matches!(c.definition.effect, Effect::Noop) {
             continue;
         }
+        // Pods: a ninja (printed ninjutsu — Thousand-Faced Shadow) is held
+        // through the precombat main while something of ours can attack, for
+        // `pick_ninjutsu` to swap in; unswapped, it is cast postcombat.
+        if state.players.len() > 2
+            && state.step == TurnStep::PreCombatMain
+            && c.definition.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Ninjutsu(_)))
+            && state.battlefield.iter().any(|b| {
+                b.controller == seat && !b.tapped && !b.summoning_sick && state.computed_is_creature(b)
+            })
+        {
+            continue;
+        }
         if !can_afford_in_state_with(state, seat, c, w, have_mana) {
             continue;
         }
@@ -28744,6 +28756,31 @@ mod stack_response_tests {
                 if ninja == kappa && returning == bear),
             "expected the ninjutsu swap, got {action:?}",
         );
+    }
+
+    /// Pods: a ninja in hand is no precombat cast candidate while a creature
+    /// of ours can attack (it waits for the ninjutsu window), and is one
+    /// postcombat.
+    #[test]
+    fn pod_bot_holds_a_ninja_for_ninjutsu() {
+        let mut g = crate::game::multi_player_game(3);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let kappa = g.add_card_to_hand(0, catalog::kappa_tech_wrecker());
+        for _ in 0..4 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let offered = |g: &GameState| {
+            cast_candidates(g, 0, &EvalWeights::default(), None)
+                .iter()
+                .any(|(a, _)| matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == kappa))
+        };
+        g.step = TurnStep::PreCombatMain;
+        assert!(!offered(&g), "held precombat");
+        g.step = TurnStep::PostCombatMain;
+        assert!(offered(&g), "cast postcombat");
     }
 
     /// CR 601.2f — a commander with an alternative cost gets both casts as
