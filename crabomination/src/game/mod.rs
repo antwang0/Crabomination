@@ -25576,10 +25576,15 @@ impl GameState {
                         && !card.bestowed
                 ));
                 if !is_creature_spell {
+                    // Prowess the layers grant counts too (Wizard's Staff's
+                    // "equipped creature has prowess"); the printed check
+                    // answers first so a board without one pays no lookup.
                     let prowess_ids: Vec<_> = self.battlefield.iter()
                         .filter(|c| {
                             c.controller == *player
-                                && c.has_keyword(&Keyword::Prowess)
+                                && (c.has_keyword(&Keyword::Prowess)
+                                    || (self.prowess_granter_in_play()
+                                        && self.permanent_has_keyword(c.id, &Keyword::Prowess)))
                                 && !c.definition.triggered_abilities.iter().any(is_prowess_pump)
                         })
                         .map(|c| c.id)
@@ -31550,6 +31555,21 @@ impl GameState {
             }
         }
         None
+    }
+
+    /// A permanent on the battlefield grants prowess to another (an
+    /// Equipment's bonus or a keyword static naming it) — the gate in front
+    /// of the layer read at the prowess trigger site.
+    fn prowess_granter_in_play(&self) -> bool {
+        use crate::effect::StaticEffect as SE;
+        self.battlefield.iter().any(|c| {
+            c.definition.equipped_bonus.as_ref().is_some_and(|b| b.keywords.contains(&Keyword::Prowess))
+                || c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    SE::GrantKeyword { keyword, .. } => *keyword == Keyword::Prowess,
+                    SE::AnthemForFilter { keywords, .. } => keywords.contains(&Keyword::Prowess),
+                    _ => false,
+                })
+        })
     }
 
     /// Returns true if the permanent `id` has `kw` after all layer effects are applied.
