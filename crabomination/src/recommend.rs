@@ -1916,6 +1916,24 @@ impl GameTrace {
     }
 }
 
+/// `CRAB_TRACE_NAMES=1` — a traced action line also names every `CardId` it
+/// mentions. Off by default: the golden traces are this format.
+fn trace_names() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_TRACE_NAMES").is_some_and(|v| v != "0"))
+}
+
+/// `line` with `[id=name, …]` for every `CardId(n)` in it.
+fn named_ids(g: &GameState, line: &str) -> String {
+    let names: Vec<String> = line
+        .split("CardId(")
+        .skip(1)
+        .filter_map(|r| r.split(')').next()?.parse::<u32>().ok())
+        .map(|n| format!("{n}={}", g.find_card_anywhere(crate::card::CardId(n)).map_or("?", |c| c.definition.name)))
+        .collect();
+    if names.is_empty() { line.to_string() } else { format!("{line} [{}]", names.join(", ")) }
+}
+
 /// `CRAB_DUMP_TRACES=<dir>` — every game the in-process paired loop plays is
 /// written to `<dir>/<job seed>_<pair>_<seat order>.txt` as its
 /// [`GameTrace`] text. Read once.
@@ -2136,6 +2154,7 @@ fn play_one_game_traced(
                     panic!("card {dup:?} is in two zones after action {}", actions + 1);
                 }
                 if let (Some(t), Some(p)) = (trace.as_mut(), pending) {
+                    let p = if trace_names() { named_ids(&g, &p) } else { p };
                     t.push(format!("{:>5}. {p}  ~~  {}", t.len() + 1, trace_state(&g)));
                 }
                 any = true;
