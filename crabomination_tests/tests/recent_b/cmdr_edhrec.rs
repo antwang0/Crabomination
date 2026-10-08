@@ -228,3 +228,209 @@ fn dockside_chef_sacrifices_to_draw() {
     assert!(g.battlefield_find(chef).is_none());
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+fn to_end_step(g: &mut GameState) {
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(g);
+}
+
+/// Wizard's Staff: the equipped creature has prowess, and its triggered
+/// abilities trigger twice (CR 603.2d) — two cast pumps per spell.
+#[test]
+fn wizards_staff_grants_prowess_and_doubles_its_triggers() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let staff = ready(&mut g, 0, catalog::wizards_staff());
+    flood(&mut g);
+    g.perform_action(GameAction::Equip { equipment: staff, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "prowess fired twice");
+}
+
+/// Sorcerer Class: loot two on entering; level 2 creatures tap for
+/// restricted {U}/{R}; level 3 an instant pings each opponent per spell.
+#[test]
+fn sorcerer_class_levels_up() {
+    let mut g = pod(3);
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    let class = g.add_card_to_hand(0, catalog::sorcerer_class());
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, class, None);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "drew two, discarded two");
+    activate(&mut g, class, None);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: class,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("level 3");
+    drain_stack(&mut g);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let pool = g.players[0].mana_pool.restricted_total();
+    activate(&mut g, bear, None);
+    assert_eq!(g.players[0].mana_pool.restricted_total(), pool + 1, "granted restricted mana ability");
+    let lives = [g.players[1].life, g.players[2].life];
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bear)));
+    assert_eq!([g.players[1].life, g.players[2].life], [lives[0] - 1, lives[1] - 1]);
+}
+
+/// Echo of Eons wheels every seat into seven fresh cards.
+#[test]
+fn echo_of_eons_wheels_everyone() {
+    let mut g = pod(3);
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_graveyard(2, catalog::island());
+    let echo = g.add_card_to_hand(0, catalog::echo_of_eons());
+    flood(&mut g);
+    cast(&mut g, echo, None);
+    assert!(g.players.iter().all(|p| p.hand.len() == 7));
+    assert!(g.players[2].graveyard.is_empty());
+}
+
+/// Nine-Lives Familiar enters with eight revival counters when cast and
+/// comes back at the next end step with seven.
+#[test]
+fn nine_lives_familiar_returns_with_one_fewer() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let cat = g.add_card_to_hand(0, catalog::nine_lives_familiar());
+    flood(&mut g);
+    cast(&mut g, cat, None);
+    assert_eq!(g.battlefield_find(cat).unwrap().counter_count(CounterType::Revival), 8);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(cat)));
+    assert!(g.battlefield_find(cat).is_none());
+    to_end_step(&mut g);
+    assert_eq!(g.battlefield_find(cat).expect("returned").counter_count(CounterType::Revival), 7);
+}
+
+/// Protean Hydra prevents damage by shedding counters, then regrows two per
+/// counter at the next end step.
+#[test]
+fn protean_hydra_sheds_and_regrows() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let hydra = g.add_card_to_hand(0, catalog::protean_hydra());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: hydra, target: None, additional_targets: vec![], mode: None, x_value: Some(4) })
+        .expect("cast");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(hydra)));
+    assert_eq!(g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    to_end_step(&mut g);
+    assert_eq!(g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne), 7);
+}
+
+/// Valakut Exploration: a land drop exiles the top card; the end step bins
+/// it and deals 1 to each opponent.
+#[test]
+fn valakut_exploration_burns_what_went_unplayed() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::valakut_exploration());
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len(), 1);
+    let lives = [g.players[1].life, g.players[2].life];
+    to_end_step(&mut g);
+    assert!(g.exile.is_empty());
+    assert_eq!([g.players[1].life, g.players[2].life], [lives[0] - 1, lives[1] - 1]);
+}
+
+/// The Queen of Dale recruits on an opponent's first noncreature spell of
+/// the turn — and not on their second.
+#[test]
+fn queen_of_dale_recruits_once_a_turn_per_opponent() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_queen_of_dale());
+    g.decider = Box::new(ScriptedDecider::new([]));
+    for n in 0..2 {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].graveyard.len(), 1, "one recruit discard after spell {n}");
+    }
+}
+
+/// Liberator grows when a spell cast with more mana than its power.
+#[test]
+fn liberator_grows_on_big_spells() {
+    let mut g = pod(2);
+    let lib = ready(&mut g, 0, catalog::liberator_urzas_battlethopter());
+    flood(&mut g);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast(&mut g, ring, None);
+    assert_eq!(g.computed_permanent(lib).unwrap().power, 1, "1 mana isn't more than 1");
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None);
+    assert_eq!(g.computed_permanent(lib).unwrap().power, 2);
+}
+
+/// Ratadrabik turns a dead legend into a nonlegendary 2/2 black Zombie copy.
+#[test]
+fn ratadrabik_copies_a_dead_legend() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ratadrabik_of_urborg());
+    let legend = ready(&mut g, 0, catalog::radagast_the_brown());
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(legend)));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(legend)));
+    let tok = g.battlefield.iter().find(|c| c.is_token).expect("copy").id;
+    let cp = g.computed_permanent(tok).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(!cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Zombie));
+    assert!(cp.colors.contains(&Color::Black) && cp.colors.contains(&Color::Green));
+}
+
+/// The Cabbage Merchant makes Food off an opponent's noncreature spell and
+/// taps two Foods for a mana.
+#[test]
+fn cabbage_merchant_foods_and_mana() {
+    let mut g = pod(2);
+    let merchant = ready(&mut g, 0, catalog::the_cabbage_merchant());
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+        drain_stack(&mut g);
+    }
+    assert_eq!(named(&g, "Food"), 2);
+    let pool = g.players[0].mana_pool.total();
+    activate(&mut g, merchant, None);
+    assert_eq!(g.players[0].mana_pool.total(), pool + 1);
+    assert!(g.battlefield.iter().filter(|c| c.definition.name == "Food").all(|c| c.tapped));
+}
