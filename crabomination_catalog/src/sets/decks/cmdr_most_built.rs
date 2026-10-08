@@ -981,3 +981,273 @@ pub fn elturel_survivors() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Satoru Umezawa (UB) ─────────────────────────────────────────────────────
+
+fn ninja_token() -> Arc<crate::card::TokenDefinition> {
+    Arc::new(crate::card::TokenDefinition {
+        name: "Ninja".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Ninja], ..Default::default() },
+        keywords: vec![Keyword::Unblockable],
+        ..Default::default()
+    })
+}
+
+/// Satoru Umezawa — creature cards in your hand have ninjutsu {2}{U}{B};
+/// activating a ninjutsu ability (once a turn) looks at the top three and
+/// takes one, the rest to the bottom.
+pub fn satoru_umezawa() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each creature card in your hand has ninjutsu {2}{U}{B}.",
+            effect: StaticEffect::HandCreaturesHaveNinjutsu(cost(&[generic(2), u(), b()])),
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                once_per_turn: true,
+                ..EventSpec::new(
+                    EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::Ninjutsu),
+                    EventScope::YourControl,
+                )
+            },
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                ..Default::default()
+            })),
+        }],
+        ..legend(
+            "Satoru Umezawa",
+            cost(&[generic(1), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Ninja],
+            2,
+            4,
+        )
+    }
+}
+
+/// Ancient Silver Dragon — flying; combat damage to a player rolls a d20 and
+/// draws that many, and you have no maximum hand size for the rest of the game.
+pub fn ancient_silver_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Silver Dragon",
+        cost: cost(&[generic(6), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::RollDie {
+                    sides: 20,
+                    count: Value::ONE,
+                    modifier: Value::Const(0),
+                    reroll_at_most: 0,
+                    results: vec![(1, 20, Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount })],
+                    ignore_lowest: 0,
+                    on_doubles: None,
+                },
+                Effect::SetNoMaxHandSize { who: Selector::You },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gudul Lurker — can't be blocked; megamorph {U}.
+pub fn gudul_lurker() -> CardDefinition {
+    CardDefinition {
+        name: "Gudul Lurker",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Salamander], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Megamorph(cost(&[u()])), Keyword::Unblockable],
+        ..Default::default()
+    }
+}
+
+/// Ingenious Infiltrator — ninjutsu {U}{B}; a Ninja of yours dealing combat
+/// damage to a player draws you a card.
+pub fn ingenious_infiltrator() -> CardDefinition {
+    CardDefinition {
+        name: "Ingenious Infiltrator",
+        cost: cost(&[generic(2), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Ninja],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Ninjutsu(cost(&[u(), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Ninja) },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mist-Cloaked Herald — can't be blocked.
+pub fn mist_cloaked_herald() -> CardDefinition {
+    CardDefinition {
+        name: "Mist-Cloaked Herald",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Unblockable],
+        ..Default::default()
+    }
+}
+
+/// Thousand-Faced Shadow — ninjutsu {2}{U}{U}, flying; entering from your
+/// hand while attacking makes a tapped, attacking token copy of another
+/// target attacking creature.
+pub fn thousand_faced_shadow() -> CardDefinition {
+    CardDefinition {
+        name: "Thousand-Faced Shadow",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Ninja],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Ninjutsu(cost(&[generic(2), u(), u()])), Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::EnteredFromHandThisTurn,
+            }),
+            // "If it's attacking": ninjutsu puts it into combat after the
+            // move that fires this, so the check is read as it resolves.
+            effect: Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::This, filter: R::IsAttacking },
+                then: Box::new(Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(R::Creature.and(R::IsAttacking).and(R::OtherThanSource)),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: true,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+                Effect::JoinCombatAttackingChosen {
+                    what: Selector::LastCreatedTokens,
+                    cleanup: crate::effect::AttackingTokenCleanup::None,
+                },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cunning Evasion — a creature of yours becoming blocked may return to its
+/// owner's hand.
+pub fn cunning_evasion() -> CardDefinition {
+    CardDefinition {
+        name: "Cunning Evasion",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Return the blocked creature to its owner's hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kaito Shizuki — phases out at your end step the turn he entered; +1: draw,
+/// then discard unless you attacked this turn; −2: an unblockable 1/1 Ninja;
+/// −7: an emblem tutoring a blue or black creature onto the battlefield
+/// whenever a creature of yours deals combat damage to a player.
+pub fn kaito_shizuki() -> CardDefinition {
+    CardDefinition {
+        name: "Kaito Shizuki",
+        cost: cost(&[generic(1), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: crate::card::Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Kaito],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::EnteredThisTurn }),
+            effect: Effect::PhaseOut { what: Selector::This, until_source_leaves: false },
+        }],
+        loyalty_abilities: vec![
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::If {
+                        cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+                        then: Box::new(Effect::Noop),
+                        else_: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+                    },
+                ]),
+                ..Default::default()
+            },
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: ninja_token() },
+                ..Default::default()
+            },
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Kaito Shizuki".into(),
+                    statics: vec![],
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+                        effect: Effect::Search {
+                            who: PlayerRef::You,
+                            filter: R::Creature.and(R::HasColor(Color::Blue).or(R::HasColor(Color::Black))),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                    }],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

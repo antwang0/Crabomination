@@ -686,3 +686,95 @@ fn elturel_survivors_counts_the_defenders_lands() {
     assert_eq!(g.computed_permanent(surv).unwrap().power, 3);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Elturel Survivors").count(), 2, "myriad");
 }
+
+fn unblocked_attack(g: &mut GameState, attacker: CardId) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+}
+
+/// CR 702.49 — Satoru grants ninjutsu {2}{U}{B} to a creature card in hand,
+/// and activating it (an activated ability, CR 702.49a) takes one of the top
+/// three into hand.
+#[test]
+fn satoru_grants_ninjutsu_and_digs_on_activation() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::satoru_umezawa());
+    let sneaker = ready(&mut g, 0, catalog::memnite());
+    let dragon = g.add_card_to_hand(0, catalog::ancient_silver_dragon());
+    flood(&mut g);
+    unblocked_attack(&mut g, sneaker);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::Ninjutsu { ninja: dragon, returning: sneaker }).expect("granted ninjutsu");
+    drain_stack(&mut g);
+    assert!(g.attacking.iter().any(|a| a.attacker == dragon));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1 + 1, "the dragon left, the Memnite came back, one card dug");
+}
+
+/// Thousand-Faced Shadow ninjutsu'd in copies another attacking creature,
+/// tapped and attacking.
+#[test]
+fn thousand_faced_shadow_copies_an_attacker() {
+    let mut g = pod(2);
+    let sneaker = ready(&mut g, 0, catalog::memnite());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let shadow = g.add_card_to_hand(0, catalog::thousand_faced_shadow());
+    flood(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: sneaker, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Ninjutsu { ninja: shadow, returning: sneaker }).expect("ninjutsu");
+    drain_stack(&mut g);
+    let copies: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Grizzly Bears").map(|c| c.id).collect();
+    assert_eq!(copies.len(), 1);
+    assert!(g.attacking.iter().any(|a| a.attacker == copies[0]) && g.battlefield_find(copies[0]).unwrap().tapped);
+}
+
+/// Cunning Evasion returns a blocked creature to its owner's hand.
+#[test]
+fn cunning_evasion_bounces_a_blocked_attacker() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::cunning_evasion());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wall = ready(&mut g, 1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+}
+
+/// Kaito Shizuki — −2 makes an unblockable 1/1 Ninja; +1 draws and, with no
+/// attack this turn, discards.
+#[test]
+fn kaito_shizuki_ninja_and_loot() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let kaito = ready(&mut g, 0, catalog::kaito_shizuki());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: kaito, ability_index: 1, target: None, x_value: None })
+        .expect("-2");
+    drain_stack(&mut g);
+    let ninja = g.battlefield.iter().find(|c| c.is_token).expect("ninja");
+    assert!(ninja.definition.keywords.contains(&Keyword::Unblockable));
+    g.battlefield_find_mut(kaito).unwrap().loyalty_uses_this_turn = 0;
+    g.add_card_to_hand(0, catalog::mountain());
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: kaito, ability_index: 0, target: None, x_value: None })
+        .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
+}
