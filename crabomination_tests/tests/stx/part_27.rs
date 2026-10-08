@@ -473,6 +473,27 @@ fn double_major_copies_a_creature_spell() {
     assert_eq!(bears, 2, "original + token copy resolve to battlefield");
 }
 
+/// CR 707.9b — Double Major's copy of a legendary creature spell isn't
+/// legendary, so the legend rule (CR 704.5j) keeps both.
+#[test]
+fn double_major_copy_of_a_legend_is_not_legendary() {
+    let mut g = two_player_game();
+    let legend = g.add_card_to_hand(0, catalog::radagast_the_brown());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: legend, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("legend on the stack");
+    let dm = g.add_card_to_hand(0, catalog::double_major());
+    g.perform_action(GameAction::CastSpell {
+        card_id: dm, target: Some(Target::Permanent(legend)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Double Major");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Radagast the Brown").count(), 2);
+}
+
 #[test]
 fn reject_counters_when_controller_cant_pay() {
     let mut g = two_player_game();

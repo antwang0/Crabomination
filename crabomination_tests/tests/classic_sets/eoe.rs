@@ -800,6 +800,28 @@ fn entropic_battlecruiser_charge_gated_discard_punisher() {
     assert_eq!(g.players[1].life, 17, "{{1+}} band: opponent loses 3 on discard");
 }
 
+/// Entropic Battlecruiser's attack: each opponent discards; one with an empty
+/// hand loses 3 life instead (and a discard costs 3 through the {1+} band).
+#[test]
+fn entropic_battlecruiser_attack_punishes_an_empty_hand() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    for cards in [0, 1] {
+        let mut g = two_player_game();
+        let ship = g.add_card_to_battlefield(0, catalog::entropic_battlecruiser());
+        g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 8);
+        g.clear_sickness(ship);
+        for _ in 0..cards {
+            g.add_card_to_hand(1, catalog::forest());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ship, target: AttackTarget::Player(1) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        assert!(g.players[1].hand.is_empty());
+        assert_eq!(g.players[1].life, 17, "{cards} card(s) in hand");
+    }
+}
+
 /// Synthesizer Labship's {2+} band fires a begin-combat trigger that animates
 /// another artifact you control into a 2/2 flier; below the band nothing fires.
 #[test]

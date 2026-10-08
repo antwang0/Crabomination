@@ -221,23 +221,19 @@ pub fn flunk() -> CardDefinition {
 
 /// Double Major — {G}{U} Instant. "Copy target creature spell you control,
 /// except it isn't legendary if the spell is legendary. (A copy of a
-/// creature spell becomes a token.)" The "isn't legendary" rider is not
-/// modeled — `Effect::CopySpell` has no non-legendary flag for stack
-/// copies (only `enters_as_copy.non_legendary` exists, which is a
-/// different mechanism); missing primitive: a `non_legendary` rider on
-/// the spell-copy path.
+/// creature spell becomes a token.)" CR 707.9b — the exception is the
+/// copy's (`Effect::CopySpellNotLegendary`).
 pub fn double_major() -> CardDefinition {
     CardDefinition {
         name: "Double Major",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CopySpell {
+        effect: Effect::CopySpellNotLegendary {
             what: target_filtered(
                 SelectionRequirement::IsSpellOnStack
                     .and(SelectionRequirement::HasCardType(CardType::Creature))
                     .and(SelectionRequirement::ControlledByYou),
             ),
-            count: Value::Const(1),
         },
         ..Default::default()
     }

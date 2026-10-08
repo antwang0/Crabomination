@@ -2307,8 +2307,8 @@ pub fn synthesizer_labship() -> CardDefinition {
 
 /// Entropic Battlecruiser — {3}{B} Artifact — Spacecraft. Whenever it attacks,
 /// each opponent discards a card. ({1+}: whenever an opponent discards a card,
-/// they lose 3 life. {8+}: 3/10 with flying, deathtouch.) The attack rider's
-/// "each opponent who can't loses 3 life" empty-hand branch is approximated.
+/// they lose 3 life. {8+}: 3/10 with flying, deathtouch.) An opponent with
+/// no card to discard loses 3 life instead.
 pub fn entropic_battlecruiser() -> CardDefinition {
     CardDefinition {
         name: "Entropic Battlecruiser",
@@ -2318,10 +2318,13 @@ pub fn entropic_battlecruiser() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
             ..Default::default()
         },
-        triggered_abilities: vec![on_attack(Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(1),
-            random: false,
+        triggered_abilities: vec![on_attack(Effect::EachPlayerDoes {
+            who: PlayerRef::EachOpponent,
+            body: Box::new(Effect::If {
+                cond: Predicate::ValueAtLeast(Value::HandSizeOf(PlayerRef::You), Value::ONE),
+                then: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+                else_: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }),
+            }),
         })],
         activated_abilities: vec![station()],
         station: vec![
