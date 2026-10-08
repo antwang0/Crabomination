@@ -28359,6 +28359,7 @@ impl GameState {
         answer: &DecisionAnswer,
     ) -> Result<Vec<GameEvent>, GameError> {
         match state {
+            PendingEffectState::Seated { inner, .. } => self.apply_pending_effect_answer_inner(*inner, answer),
             PendingEffectState::ScryPeeked { count, player } => {
                 let DecisionAnswer::ScryOrder { kept_top, bottom } = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

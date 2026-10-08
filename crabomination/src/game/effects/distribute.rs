@@ -45,7 +45,7 @@ impl GameState {
             None if self.seat_prompts(ctx.controller) => {
                 self.suspend_signal = Some(Box::new((
                     decision,
-                    PendingEffectState::DivisionAnswerPending,
+                    PendingEffectState::seated(ctx.controller, PendingEffectState::DivisionAnswerPending),
                     effect.clone(),
                 )));
                 return Ok(());

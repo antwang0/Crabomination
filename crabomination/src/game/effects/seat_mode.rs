@@ -38,7 +38,7 @@ impl GameState {
         if num_modes > 1 && self.seat_suspends(controller) {
             self.suspend_signal = Some(Box::new((
                 decision,
-                PendingEffectState::ModeAnswerPending { num_modes },
+                PendingEffectState::seated(controller, PendingEffectState::ModeAnswerPending { num_modes }),
                 effect.clone(),
             )));
             return None;

@@ -162,7 +162,7 @@ impl GameState {
                 if self.seat_suspends(me) {
                     let max = opps.len() as u32 - 1;
                     self.suspend_signal =
-                        Some(Box::new((decision, PendingEffectState::AmountAnswerPending { max }, effect.clone())));
+                        Some(Box::new((decision, PendingEffectState::seated(me, PendingEffectState::AmountAnswerPending { max }), effect.clone())));
                     return Ok(());
                 }
                 match self.decider.kind() {
@@ -203,7 +203,7 @@ impl GameState {
                 if self.seat_suspends(me) {
                     let max = seats.len() as u32 - 1;
                     self.suspend_signal =
-                        Some(Box::new((decision, PendingEffectState::AmountAnswerPending { max }, effect.clone())));
+                        Some(Box::new((decision, PendingEffectState::seated(me, PendingEffectState::AmountAnswerPending { max }), effect.clone())));
                     return None;
                 }
                 match self.decider.kind() {
@@ -263,7 +263,7 @@ impl GameState {
                 if self.seat_suspends(ctx.controller) {
                     let max = options.len() as u32 - 1;
                     self.suspend_signal =
-                        Some(Box::new((decision, PendingEffectState::AmountAnswerPending { max }, effect.clone())));
+                        Some(Box::new((decision, PendingEffectState::seated(ctx.controller, PendingEffectState::AmountAnswerPending { max }), effect.clone())));
                     return Ok(());
                 }
                 match self.decider.kind() {

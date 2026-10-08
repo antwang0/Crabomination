@@ -1548,6 +1548,11 @@ impl PendingDecision {
 }
 
 impl PendingEffectState {
+    /// `inner`, answered by `player` (see [`Self::Seated`]).
+    pub(crate) fn seated(player: usize, inner: Self) -> Self {
+        Self::Seated { player, inner: Box::new(inner) }
+    }
+
     /// The player who must answer this suspended decision, when it isn't the
     /// owning spell's caster / ability's controller: a forced sacrifice
     /// (CR 701.16 — the Edict's target chooses) and seat-routed yes/no
@@ -1558,6 +1563,10 @@ impl PendingEffectState {
             PendingEffectState::SacrificePending { player } => Some(*player),
             PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
             PendingEffectState::MayDoSeatAnswerPending { player } => Some(*player),
+            PendingEffectState::Seated { player, .. } => Some(*player),
+            PendingEffectState::AnyOneColorPending { player, .. }
+            | PendingEffectState::DevotionColorPending { player }
+            | PendingEffectState::LearnPending { player } => Some(*player),
             PendingEffectState::SeatAmountAnswerPending { player, .. } => Some(*player),
             PendingEffectState::CardsAnswerPending { player } => Some(*player),
             PendingEffectState::SeatCardsAnswerPending { player } => Some(*player),
@@ -1576,6 +1585,13 @@ impl PendingEffectState {
         match self {
             PendingEffectState::SeatBoolAnswerPending { .. }
             | PendingEffectState::MayDoSeatAnswerPending { .. } => Some(A::Bool(false)),
+            // CR 800.4a — a departed chooser's pick is the least it can be.
+            PendingEffectState::Seated { inner, .. } => inner.departed_filler().or(match **inner {
+                PendingEffectState::AmountAnswerPending { .. } => Some(A::Amount(0)),
+                PendingEffectState::ModeAnswerPending { .. } => Some(A::Mode(0)),
+                _ => None,
+            }),
+            PendingEffectState::LearnPending { .. } => Some(A::Learn(crate::decision::LearnChoice::Decline)),
             PendingEffectState::SeatAmountAnswerPending { .. } => Some(A::Amount(0)),
             PendingEffectState::SeatCardsAnswerPending { .. } => Some(A::Cards(Vec::new())),
             PendingEffectState::SeatTargetAnswerPending { .. } => Some(A::DeclineTarget),
@@ -2455,6 +2471,10 @@ pub enum PendingEffectState {
     /// it is, which under a per-player fan-out ("each opponent may draw")
     /// is not the resolving controller.
     MayDoSeatAnswerPending { player: usize },
+    /// `inner`, answered by `player` rather than the resume's owner: the seat
+    /// the ask prompted (a per-player fan-out's opponent, a payer, a chooser).
+    /// The answer is applied as `inner`'s.
+    Seated { player: usize, inner: Box<PendingEffectState> },
     /// Suspended on a yes/no question routed to `player` (who may differ
     /// from the resolving controller — rhystic taxes, Tempting Offer,
     /// Browbeat, Clash). The validated answer is *appended* to

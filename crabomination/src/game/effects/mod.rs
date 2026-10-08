@@ -4401,7 +4401,7 @@ impl GameState {
                     None if self.seat_prompts(seat) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::ModeAnswerPending { num_modes: modes.len() },
+                            PendingEffectState::seated(seat, PendingEffectState::ModeAnswerPending { num_modes: modes.len() }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -6786,7 +6786,7 @@ impl GameState {
                     None if self.seat_prompts(me) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: *max },
+                            PendingEffectState::seated(me, PendingEffectState::AmountAnswerPending { max: *max }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -7279,7 +7279,7 @@ impl GameState {
                         None if self.seat_prompts(ctx.controller) => {
                             self.suspend_signal = Some(Box::new((
                                 decision,
-                                PendingEffectState::ModeAnswerPending { num_modes: modes.len() },
+                                PendingEffectState::seated(ctx.controller, PendingEffectState::ModeAnswerPending { num_modes: modes.len() }),
                                 effect.clone(),
                             )));
                             return Ok(());
@@ -7348,7 +7348,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::ModesAnswerPending { num_modes: modes.len() }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -7461,7 +7461,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::ModesAnswerPending { num_modes: modes.len() }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -7525,7 +7525,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::ModesAnswerPending { num_modes: modes.len() }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -8196,7 +8196,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: pool_max },
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::AmountAnswerPending { max: pool_max }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -8292,7 +8292,7 @@ impl GameState {
                     None if self.seat_suspends(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: cap },
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::AmountAnswerPending { max: cap }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -8790,7 +8790,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::DivisionAnswerPending,
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::DivisionAnswerPending),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -8870,7 +8870,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::DivisionAnswerPending,
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::DivisionAnswerPending),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -9951,7 +9951,7 @@ impl GameState {
                                     max: avail,
                                     kind,
                                 },
-                                PendingEffectState::AmountAnswerPending { max: avail },
+                                PendingEffectState::seated(p, PendingEffectState::AmountAnswerPending { max: avail }),
                                 effect.clone(),
                             )));
                             return Ok(());
@@ -14700,7 +14700,7 @@ impl GameState {
                     None if self.seat_suspends(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: *max },
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::AmountAnswerPending { max: *max }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -18808,7 +18808,7 @@ impl GameState {
                     None if self.seat_suspends(chooser) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::CreatureTypeAnswerPending,
+                            PendingEffectState::seated(chooser, PendingEffectState::CreatureTypeAnswerPending),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -31132,9 +31132,12 @@ impl GameState {
                 if self.seat_suspends(ctx.controller) {
                     self.suspend_signal = Some(Box::new((
                         decision,
-                        PendingEffectState::PreventFromChosenColorPending {
-                            targets: vec![crate::game::types::PreventionTarget::Anything],
-                        },
+                        PendingEffectState::seated(
+                            ctx.controller,
+                            PendingEffectState::PreventFromChosenColorPending {
+                                targets: vec![crate::game::types::PreventionTarget::Anything],
+                            },
+                        ),
                         Effect::Noop,
                     )));
                     return Ok(());
@@ -32615,7 +32618,7 @@ impl GameState {
                     None if self.seat_prompts(p) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max },
+                            PendingEffectState::seated(p, PendingEffectState::AmountAnswerPending { max }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -32664,7 +32667,7 @@ impl GameState {
                     None if self.seat_prompts(p) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: life },
+                            PendingEffectState::seated(p, PendingEffectState::AmountAnswerPending { max: life }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -33164,7 +33167,7 @@ impl GameState {
                     None if self.seat_prompts(chooser) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::CreatureTypeAnswerPending,
+                            PendingEffectState::seated(chooser, PendingEffectState::CreatureTypeAnswerPending),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -33303,7 +33306,7 @@ impl GameState {
                     None if self.seat_prompts(p) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: life },
+                            PendingEffectState::seated(p, PendingEffectState::AmountAnswerPending { max: life }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -33357,7 +33360,7 @@ impl GameState {
                     None if self.seat_prompts(payer) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::AmountAnswerPending { max: life },
+                            PendingEffectState::seated(payer, PendingEffectState::AmountAnswerPending { max: life }),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -39213,7 +39216,7 @@ impl GameState {
                     None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
-                            PendingEffectState::CreatureTypeAnswerPending,
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::CreatureTypeAnswerPending),
                             effect.clone(),
                         )));
                         return Ok(());
@@ -39258,7 +39261,7 @@ impl GameState {
                 if self.seat_prompts(ctx.controller) {
                     self.suspend_signal = Some(Box::new((
                         decision,
-                        PendingEffectState::PreventFromChosenColorPending { targets: recipients },
+                        PendingEffectState::seated(ctx.controller, PendingEffectState::PreventFromChosenColorPending { targets: recipients }),
                         Effect::Noop,
                     )));
                     return Ok(());

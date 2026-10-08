@@ -9478,3 +9478,39 @@ fn cr_800_4a_a_shell_game_whose_candidates_left_spends_its_picks() {
     assert_eq!(asked, vec![1, 2], "seat 1 picks, then seat 2 leaves");
     assert!(g.battlefield_find(bear).is_none() && g.stack.is_empty());
 }
+
+/// CR 608.2d — the player an effect lets choose makes the choice: "target player
+/// sacrifices any number of creatures" asks THAT player how many. A parked
+/// amount / mode / colour / division ask named no seat, so the caster
+/// answered every one of them for whoever it prompted.
+#[test]
+fn cr_608_2d_the_sacrificing_player_chooses_how_many() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::decision::Decision;
+    use crabomination::effect::Effect;
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = multi_player_game(3);
+    for s in 0..3 {
+        g.players[s].wants_ui = true;
+    }
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Thin the Herd",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SacrificeAnyNumber {
+            who: PlayerRef::Seat(1),
+            filter: SelectionRequirement::Creature,
+            per_each: Box::new(Effect::Noop),
+        },
+        ..Default::default()
+    });
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    let d = g.pending_decision.as_ref().expect("the amount is asked");
+    assert!(matches!(d.decision, Decision::ChooseAmount { .. }), "{:?}", d.decision);
+    assert_eq!(d.acting_player(), 1, "asked of the sacrificing player");
+}
