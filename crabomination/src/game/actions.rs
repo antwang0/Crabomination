@@ -1747,6 +1747,11 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
             {
                 tax += pay;
             }
+            crate::card::AdditionalCastCost::PayLifeOrPay { life, pay }
+                if !state.pays_life_half(caster, *life) =>
+            {
+                tax += pay;
+            }
             _ => {}
         }
     }
@@ -11508,6 +11513,7 @@ impl GameState {
             // Forage-or-pay is always announceable: with no forage material the
             // pay half is folded into the cost.
             A::ForageOrPay { .. } => true,
+            A::PayLifeOrPay { .. } => true,
             // Need a creature to point at — one you control or one to reveal.
             A::ChooseOrRevealCreature => {
                 self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c))
@@ -11531,6 +11537,11 @@ impl GameState {
     /// `p` pays: the first payable in the order the caster loses least —
     /// a token to sacrifice, life with 10 to spare, a card from hand, a
     /// nontoken sacrifice, then life. Deterministic, so a replay agrees.
+    /// `PayLifeOrPay`'s choice: pay the life while it leaves `p` at 10 or more.
+    pub(crate) fn pays_life_half(&self, p: usize, life: u32) -> bool {
+        self.players.get(p).is_some_and(|pl| pl.life - life as i32 >= 10)
+    }
+
     pub(crate) fn pick_one_of_cost(
         &self,
         p: usize,
@@ -12058,6 +12069,13 @@ impl GameState {
                     if self.can_forage(p) {
                         let mut forage = self.pay_forage(p);
                         events.append(&mut forage);
+                    }
+                }
+                A::PayLifeOrPay { life, .. } => {
+                    if self.pays_life_half(p, *life) {
+                        let (mut ev, _) =
+                            self.pay_additional_costs(p, &[A::PayLife { amount: *life }], None, None);
+                        events.append(&mut ev);
                     }
                 }
                 A::CollectEvidence { amount, .. } => {
