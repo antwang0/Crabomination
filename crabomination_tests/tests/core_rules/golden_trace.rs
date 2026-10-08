@@ -559,7 +559,8 @@ fn the_sick_wall_of_roots_pair_passes_the_gate_audit() {
 /// seat walks, APNAP orders and fan-outs are the new places for one. Each row
 /// is (seats, seed, winner, actions, plays, turns); a change that moves a pod
 /// game updates the row in the same commit, with a one-line justification.
-const POD_DIGESTS: &[(usize, u64, Option<usize>, usize, usize, u32)] = &[
+type PodDigest = (usize, u64, Option<usize>, usize, usize, u32);
+const POD_DIGESTS: &[PodDigest] = &[
     (3, 0x903_0001, Some(0), 1730, 238, 50),
     (4, 0x903_0002, Some(2), 3780, 416, 76),
 ];
