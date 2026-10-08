@@ -13,7 +13,7 @@ impl GameState {
     /// spent with it; poison and commander damage are not reset, so those
     /// losses come back at the next check with the shield gone.
     pub(crate) fn apply_loss_exile_self(&mut self, p: usize) -> Option<crate::card::CardId> {
-        let Some(id) = self
+        let id = self
             .battlefield
             .iter()
             .find(|c| {
@@ -23,10 +23,7 @@ impl GameState {
                         .iter()
                         .any(|sa| matches!(sa.effect, StaticEffect::ReplaceControllerLossWithExileSelf))
             })
-            .map(|c| c.id)
-        else {
-            return None;
-        };
+            .map(|c| c.id)?;
         self.remove_from_battlefield_to_exile(id);
         self.players[p].pending_deck_loss = false;
         // CR 119.5 — "your life total becomes 1" is a gain of the difference,
