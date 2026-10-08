@@ -18108,14 +18108,11 @@ impl GameState {
         &mut self,
         id: CardId,
         idx: usize,
-        target: Option<Target>,
-        additional_targets: Vec<Target>,
         x_value: Option<u32>,
-        mode: Option<usize>,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         self.mana_sources_paying.push(id);
-        let r = self.activate_ability_into(id, idx, target, additional_targets, x_value, mode, events);
+        let r = self.activate_ability_into(id, idx, None, Vec::new(), x_value, None, events);
         self.mana_sources_paying.pop();
         r
     }
@@ -18388,7 +18385,7 @@ impl GameState {
                 if events.is_empty() {
                     events.reserve(16);
                 }
-                let _ = self.activate_mana_source_into(id, idx, None, Vec::new(), None, None, &mut events);
+                let _ = self.activate_mana_source_into(id, idx, None, &mut events);
                 crate::game::pay_census::record_tap(3, 1);
                 scripted_slot = Some(std::mem::replace(&mut self.decider, prev_decider));
                 self.players[player].wants_ui = prev_wants_ui;
@@ -18497,12 +18494,12 @@ impl GameState {
                 // a forced-synchronous auto-tap, so it must round-trip exactly.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                let r = self.activate_mana_source_into(id, idx, None, Vec::new(), None, None, &mut events);
+                let r = self.activate_mana_source_into(id, idx, None, &mut events);
                 scripted_slot = Some(std::mem::replace(&mut self.decider, prev_decider));
                 self.players[player].wants_ui = prev_wants_ui;
                 r
             } else {
-                self.activate_mana_source_into(id, idx, None, Vec::new(), None, None, &mut events)
+                self.activate_mana_source_into(id, idx, None, &mut events)
             };
             if result.is_ok() {
                 crate::game::pay_census::record_tap(3, 1);
@@ -18551,7 +18548,7 @@ impl GameState {
             let max_x = self.x_sized_mana_capacity(player, id, &ab);
             if colored == 0 && generic == 1 && plain.is_some() || max_x == 0 {
                 if colored == 0 && let Some(i) = plain {
-                    let _ = self.activate_mana_source_into(id, i, None, Vec::new(), None, None, events);
+                    let _ = self.activate_mana_source_into(id, i, None, events);
                 }
                 continue;
             }
@@ -18576,7 +18573,7 @@ impl GameState {
             let prev = std::mem::replace(&mut self.decider, Box::new(crate::decision::ScriptedDecider::new(script)));
             let prev_wants_ui = self.players[player].wants_ui;
             self.players[player].wants_ui = false;
-            let _ = self.activate_mana_source_into(id, x_idx, None, Vec::new(), Some(x), None, events);
+            let _ = self.activate_mana_source_into(id, x_idx, Some(x), events);
             self.decider = prev;
             self.players[player].wants_ui = prev_wants_ui;
         }
