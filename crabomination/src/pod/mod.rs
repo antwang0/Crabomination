@@ -1634,9 +1634,16 @@ fn pod_trace_from() -> Option<usize> {
     *FROM.get_or_init(|| std::env::var("CRAB_POD_TRACE").ok().and_then(|s| s.parse().ok()))
 }
 
-/// The action's `Debug`, then the name of every `CardId` it mentions.
+/// The action's `Debug`, then the name of every `CardId` it mentions; an
+/// answer also names the ask it answers.
 fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
-    let dbg = format!("{action:?}");
+    let mut dbg = format!("{action:?}");
+    if matches!(action, crate::game::GameAction::SubmitDecision(_))
+        && let Some(d) = g.pending_decision.as_ref()
+    {
+        let ask = format!("{:?}", d.decision);
+        dbg = format!("{dbg} <- {}", &ask[..ask.len().min(160)]);
+    }
     let names: Vec<String> = dbg
         .split("CardId(")
         .skip(1)
