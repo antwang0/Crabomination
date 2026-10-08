@@ -1923,6 +1923,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JUDITH_CARNAGE_COMMANDERS,
             main: decks::JUDITH_CARNAGE_MAIN,
         },
+        // Seat 251: Korvold, Fae-Cursed King's EDHREC average deck. `--pod-decks 251`.
+        PodDeck {
+            name: "Korvold, Fae-Cursed King (BGR)",
+            commanders: decks::KORVOLD_COMMANDERS,
+            main: decks::KORVOLD_MAIN,
+        },
+        // Seat 252: Hope Estheim's EDHREC average deck. `--pod-decks 252`.
+        PodDeck {
+            name: "Hope Estheim (UW)",
+            commanders: decks::HOPE_ESTHEIM_COMMANDERS,
+            main: decks::HOPE_ESTHEIM_MAIN,
+        },
+        // Seat 253: Alela, Artful Provocateur's EDHREC average deck. `--pod-decks 253`.
+        PodDeck {
+            name: "Alela, Artful Provocateur (BUW)",
+            commanders: decks::ALELA_COMMANDERS,
+            main: decks::ALELA_MAIN,
+        },
+        // Seat 254: The Scarab God's EDHREC average deck. `--pod-decks 254`.
+        PodDeck {
+            name: "The Scarab God (BU)",
+            commanders: decks::SCARAB_GOD_COMMANDERS,
+            main: decks::SCARAB_GOD_MAIN,
+        },
+        // Seat 255: Grand Arbiter Augustin IV's EDHREC average deck. `--pod-decks 255`.
+        PodDeck {
+            name: "Grand Arbiter Augustin IV (UW)",
+            commanders: decks::GRAND_ARBITER_COMMANDERS,
+            main: decks::GRAND_ARBITER_MAIN,
+        },
+        // Seat 256: Thalia and The Gitrog Monster's EDHREC average deck. `--pod-decks 256`.
+        PodDeck {
+            name: "Thalia and The Gitrog Monster (BGW)",
+            commanders: decks::THALIA_GITROG_COMMANDERS,
+            main: decks::THALIA_GITROG_MAIN,
+        },
+        // Seat 257: Queza, Augur of Agonies's EDHREC average deck. `--pod-decks 257`.
+        PodDeck {
+            name: "Queza, Augur of Agonies (BUW)",
+            commanders: decks::QUEZA_COMMANDERS,
+            main: decks::QUEZA_MAIN,
+        },
+        // Seat 258: Omnath, Locus of Rage's EDHREC average deck. `--pod-decks 258`.
+        PodDeck {
+            name: "Omnath, Locus of Rage (GR)",
+            commanders: decks::OMNATH_RAGE_COMMANDERS,
+            main: decks::OMNATH_RAGE_MAIN,
+        },
     ]
 }
 
@@ -3688,6 +3736,14 @@ mod tests {
             ("Betor, Ancestor's Voice", [0xBE70, 248, 9172]),
             ("Witherbloom, the Balancer", [0x3B10, 249, 9173]),
             ("Judith, Carnage Connoisseur", [0x1D17, 250, 9174]),
+            ("Korvold, Fae-Cursed King", [0xC0B0, 251, 9175]),
+            ("Hope Estheim", [0x40BE, 252, 9176]),
+            ("Alela, Artful Provocateur", [0xA1E1, 253, 9177]),
+            ("The Scarab God", [0x5CAB, 254, 9178]),
+            ("Grand Arbiter Augustin IV", [0x6A4B, 255, 9179]),
+            ("Thalia and The Gitrog Monster", [0x7A16, 256, 9180]),
+            ("Queza, Augur of Agonies", [0x0E2A, 257, 9181]),
+            ("Omnath, Locus of Rage", [0x0AA6, 258, 9182]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
