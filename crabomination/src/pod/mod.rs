@@ -1572,6 +1572,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VOLO_COMMANDERS,
             main: decks::VOLO_MAIN,
         },
+        // Hundred-and-ninety-third: Dr. Eggman's EDHREC average deck (CR
+        // 701.55 villainous choices, Transformers converting). `--pod-decks 193`.
+        PodDeck {
+            name: "Dr. Eggman (BRU)",
+            commanders: decks::EGGMAN_COMMANDERS,
+            main: decks::EGGMAN_MAIN,
+        },
     ]
 }
 
@@ -3251,6 +3258,8 @@ mod tests {
             ("Satoru", [0x5A70, 191, 9115]),
             // Volo's copied creature spells, Volo's Journal's noted types.
             ("Volo, Guide", [0x7010, 192, 9116]),
+            // CR 701.55 villainous choices each end step, Blitzwing converting.
+            ("Dr. Eggman", [0xE66, 193, 9117]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -5812,3 +5812,32 @@ pub const VOLO_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, island, island, island, island, island, island, island, island, island,
 ];
+
+pub const EGGMAN_COMMANDERS: &[CardFactory] = &[dr_eggman];
+
+/// **Dr. Eggman**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 84 nonbasic cards + 6 Islands + 4 Mountains + 5 Swamps = 99. Grixis
+/// artifacts — every end step, a discard or a free Robot.
+pub const EGGMAN_MAIN: &[CardFactory] = &[
+    arcane_signet, damocles_base_sword_of_kang, demonic_junker, entropic_battlecruiser,
+    fellwar_stone, geths_grimoire, lightning_greaves, reaver_titan, sol_ring, swiftfoot_boots,
+    talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence, the_regalia,
+    thought_vessel, unwinding_clock, weatherlight, academy_ruins, blood_crypt, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard, great_furnace,
+    inventors_fair, morphic_pool, reliquary_tower, seat_of_the_synod, smoldering_marsh,
+    steam_vents, stormcarved_coast, sulfur_falls, sunken_hollow, vault_of_whispers,
+    watery_grave, xanders_lounge, blitzwing_cruel_tormentor, chaos_defiler,
+    chief_of_the_foundry, cityscape_leveler, coalstoke_gearhulk, combustible_gearhulk,
+    cryptothrall, cyberdrive_awakener, davros_dalek_creator, depthshaker_titan,
+    etherium_sculptor, foundry_inspector, golbez_crystal_collector, krang_utrom_warlord,
+    metalwork_colossus, myr_battlesphere, noxious_gearhulk, oildeep_gearhulk,
+    padeem_consul_of_innovation, scrap_trawler, scrawling_crawler, steel_overseer, the_valeyard,
+    thought_monitor, torrential_gearhulk, ultron_artificial_malevolence, ultron_machine_overlord,
+    yshtola_rhul, lilianas_caress, mechanized_production, megrim, thopter_spy_network, waste_not,
+    an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell, desynchronization,
+    terminate, this_is_how_it_ends, tezzeret_master_of_the_bridge, blasphemous_act, fabricate,
+    great_intelligences_plan, one_with_the_machine, their_name_is_death, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp,
+];
