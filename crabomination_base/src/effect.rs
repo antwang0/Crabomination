@@ -7143,6 +7143,10 @@ pub enum Effect {
     /// that color, generic/{C} → colorless, hybrid → its first color, X →
     /// skipped. Mana goes to the resolving controller's pool.
     AddManaEqualToPermanentCost { permanent: Selector },
+    /// "Add `amount` mana in any combination of its colors" (Omnath, Locus
+    /// of All): `what` is a card in any zone; each pip is one of its colors,
+    /// the controller's pick. A colorless card adds nothing.
+    AddManaAmongColorsOf { what: Selector, amount: Value },
     /// CR 500.4 exception — add these fixed color pips to the resolving
     /// player's pool and mark them "you don't lose this mana as steps and
     /// phases end" (Savage Ventmaw's attack trigger). The mana survives every

@@ -755,6 +755,7 @@ impl Effect {
             | Effect::DoublePlayerCounters { .. }
             | Effect::SpreadCounterKindToOthers { .. }
             | Effect::ReverseTurnOrder
+            | Effect::AddManaAmongColorsOf { .. }
             | Effect::RevealDeployOneTakeOne { .. }
             | Effect::ChooseModeAtRandom(_)
             | Effect::EachOpponentReturnsFromYourGraveyard { .. }

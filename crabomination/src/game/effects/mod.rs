@@ -14506,6 +14506,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddManaAmongColorsOf { what, amount } => {
+                let p = ctx.controller;
+                let colors: Vec<crate::mana::Color> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => self.find_card_anywhere(c),
+                        _ => None,
+                    })
+                    .map(|c| c.definition.printed_colors().into_iter().collect())
+                    .unwrap_or_default();
+                if colors.is_empty() {
+                    return Ok(());
+                }
+                for _ in 0..self.evaluate_value(amount, ctx).max(0) {
+                    let color = self.chosen_mana_color(p, &colors, ctx.source);
+                    self.players[p].mana_pool.add(color, 1);
+                    events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                }
+                Ok(())
+            }
             Effect::AddManaEqualToPermanentCost { permanent } => {
                 use crate::mana::ManaSymbol;
                 let Some(p) = ctx.source.map(|_| ctx.controller) else { return Ok(()) };
