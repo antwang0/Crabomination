@@ -11082,11 +11082,16 @@ impl GameState {
             if let Some(src) = stamped_by {
                 card.exiled_with = Some(src);
             }
+            // CR 712.4 — front face up off the battlefield and stack; read
+            // after the Disturb redirect, which keys on the back face.
+            card.revert_transform();
             self.exile.push(card);
             events.push(crate::game::GameEvent::PermanentExiled { card_id: cid });
             true
         } else {
             let cid = card.id;
+            let mut card = card;
+            card.revert_transform();
             let is_land = card.definition.card_types.contains(&crate::card::CardType::Land);
             self.players[owner].send_to_graveyard(card);
             events.push(crate::game::GameEvent::CardPutIntoGraveyard {
