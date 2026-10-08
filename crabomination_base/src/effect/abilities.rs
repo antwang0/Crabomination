@@ -2539,6 +2539,10 @@ pub enum StaticEffect {
     /// (unlike a resolution-time `Value::StormCount` trigger). Powers
     /// Prismari, the Inspiration.
     GrantStormToISSpells,
+    /// CR 702.61 — "each spell you cast has split second if mana from an
+    /// artifact was spent to cast it" (Shadow the Hedgehog's Chaos Control).
+    /// Read live by `stack_has_split_second` off `cast_artifact_mana`.
+    YourSpellsHaveSplitSecondIfArtifactManaSpent,
     /// "Instant and sorcery spells you control have deathtouch" (Pestilent
     /// Spirit, Tainted Strike-style). Read in `deal_damage_to_from`: damage a
     /// controller's resolving instant/sorcery deals to a creature is treated

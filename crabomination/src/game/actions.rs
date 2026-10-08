@@ -18819,8 +18819,20 @@ impl GameState {
                 card.definition.keywords.has_kw(&crate::card::Keyword::SplitSecond)
                     || (card.kicked
                         && card.definition.keywords.has_kw(&crate::card::Keyword::SplitSecondIfKicked))
+                    || (card.cast_artifact_mana > 0 && self.grants_artifact_mana_split_second(card.controller))
             }
             _ => false,
+        })
+    }
+
+    /// Shadow the Hedgehog — `seat` controls a
+    /// `YourSpellsHaveSplitSecondIfArtifactManaSpent` static.
+    fn grants_artifact_mana_split_second(&self, seat: usize) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::YourSpellsHaveSplitSecondIfArtifactManaSpent)
+                })
         })
     }
 

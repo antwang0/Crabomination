@@ -32983,6 +32983,8 @@ fn static_effect_to_effects(
             // GrantStormToISSpells — read at cast time by `cast_spell`'s
             // intrinsic-storm branch; no layer effect.
             | StaticEffect::GrantStormToISSpells
+            // Read by `stack_has_split_second`; no layer effect.
+            | StaticEffect::YourSpellsHaveSplitSecondIfArtifactManaSpent
             // YourISSpellsHaveDeathtouch — read in `deal_damage_to_from`; no
             // layer effect.
             | StaticEffect::YourISSpellsHaveDeathtouch
