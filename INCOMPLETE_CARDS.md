@@ -139,6 +139,16 @@ constructed now; `AddRadCounters` was the second and got its cards
 | Primitive | Resolver | The card shape it is for |
 |---|---|---|
 | `Effect::GrantCastBackFromGraveyard { what }` | `effects/mod.rs` | "you may cast it from your graveyard" — ⚠ **no printed card prints this**; the row below says why the lane stays anyway |
+| `Effect::LockSpellsAfterGrantedCast { what }` | `effects/mod.rs` | the granted cast's "then you can't cast spells this turn" rider |
+| `Effect::DestroyWithinTotalManaValue { filter, cap }` | `effects/mod.rs` | "destroy any number of target … with total mana value N or less" |
+| `Effect::EnlistThen { then }` | `effects/mod.rs` | "if it enlisted, …" |
+| `Effect::RevealOpponentTopPutOntoBattlefield { count, filter }` | `effects/mod.rs` | "reveal the top N of target opponent's library; put a [filter] onto the battlefield under your control" |
+
+**Reading at 2026-10-08 (ninth Commander run):** structural pass 0 over
+25,679 cards (three reviewed empties: Braids, Elite Interceptor, Hullbreaker
+Horror); `audit_variant_coverage.py`: 0 dead capabilities, **5** dead
+primitives (the table). None is a shipped card's gap; each waits for a card
+or a deletion.
 
 **Closed 2026-09-13:** `Effect::AddRadCounters { who, amount }` — Nuclear
 Fallout (`decks::recent329`) plus `sets::pip`'s Contaminated Drink, Glowing One
