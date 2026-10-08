@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 24 |
+| Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 46 |
 | Bugs & robustness | [FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep](#fixed-2026-10-07-eighth-commander-run-019mkdqk--the-uniform-pilots-first-pod-sweep) | 14 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets](#fixedopen-2026-10-06-commander-routine--a-prompting-seat-never-named-a-directly-pushed-triggers-targets) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
@@ -140,6 +140,25 @@ takes the draw). Fixed, each with a test:
   `counters::counters_saturate_at_the_engine_cap`.
 - ✅ CR 709.4a / 709.5 names (split halves; a Room's locked door has no
   name), from the Room residual below.
+- ✅ **CR 613.7d, the class** — tokens, persist / undying returns, a played
+  land and an opening-hand start were timestamped only by the dispatch too
+  (`cr_recent118::cr_613_7d_an_entering_permanent_*`); marked damage and
+  poison saturate like counters.
+
+Sweep 2: `--a uniform`, `CRAB_POD_CONCEDE=10`, `CRAB_POD_FUZZ=2500`, seeds
+720000-720223 (~6,700 games): two finds, two draws (a random pilot's Comet
+Storm at itself). Fixed:
+- ✅ **CR 608.2d — a parked ask is answered by the seat it prompted.**
+  `MayDo` parked a seat-less `MayDoAnswerPending`, so "each opponent may
+  draw" was answered by the caster for each opponent; and 25 more sites
+  (amount / mode / modes / division / creature type / prevention colour,
+  asked of a fan-out's opponent, a payer, a chooser, a sacrificing player)
+  did the same. `PendingEffectState::Seated { player, inner }`.
+  `multiplayer::cr_800_4a_a_departed_askers_*`, `cr_608_2d_the_sacrificing_*`.
+- ✅ **CR 800.4a / 608.2** — a resume wrapper that ran no asker (its one seat
+  left while it waited) now spends the stash before a sibling seat's asker
+  reads it (seed 720101 game 13); Sadistic Shell Game spends its picks when
+  every candidate left with their controller (seed 720192 game 19).
 
 ## FIXED 2026-10-07 (seventh Commander routine, `01W3Tmnx`) — the stash class, and a creature entering attacking under a non-attacker
 
