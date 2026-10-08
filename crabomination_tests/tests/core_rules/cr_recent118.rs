@@ -1021,3 +1021,36 @@ fn cr_704_5m_a_curse_on_a_departed_player_goes_to_the_graveyard() {
     assert!(g.battlefield_find(curse).is_none(), "shed");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == curse));
 }
+
+
+/// CR 605.3b / 106.6 — a payment whose ordinary auto-tap falls short retries
+/// with spend-restricted sources (Unclaimed Territory) from the snapshot; a
+/// Treasure the short attempt sacrificed can't be untapped, so its mana stays
+/// in the pool and its sacrifice stands. The retry used to drop both: the
+/// Treasure sat in a graveyard (pod seed 819163) and its mana was lost, so
+/// this cast failed.
+#[test]
+fn cr_605_3b_a_treasure_sacrificed_by_a_short_auto_tap_still_pays() {
+    let mut g = main_phase();
+    let territory = g.add_card_to_battlefield(0, catalog::unclaimed_territory());
+    g.battlefield_find_mut(territory).unwrap().chosen_creature_type = Some(crabomination::card::CreatureType::Beast);
+    let tok = EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
+    g.resolve_effect(
+        &Effect::CreateToken {
+            who: PlayerRef::You,
+            count: crabomination::card::Value::ONE,
+            definition: std::sync::Arc::new(crabomination::game::effects::treasure_token()),
+        },
+        &tok,
+    )
+    .unwrap();
+    let treasure = g.battlefield.iter().find(|c| c.definition.name == "Treasure").unwrap().id;
+    // {G}{G}: the Territory's {C} can't help, so the ordinary attempt taps the
+    // Treasure, comes up a pip short, and the restricted retry runs.
+    let beast = g.add_card_to_hand(0, catalog::kalonian_tusker());
+    g.perform_action(crabomination::game::types::GameAction::CastSpell {
+        card_id: beast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Territory + Treasure pay {G}{G}");
+    assert!(g.battlefield_find(treasure).is_none() && !g.players[0].graveyard.iter().any(|c| c.id == treasure));
+}

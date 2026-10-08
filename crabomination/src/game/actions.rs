@@ -17246,7 +17246,7 @@ impl GameState {
                     }
                 }
                 crate::game::pay_census::record_kind(line!(), cost, kind, Some(&e));
-                if let Some(receipt) = self.pay_with_restricted_sources(payer, cost, kind, &snapshot) {
+                if let Some(receipt) = self.pay_with_restricted_sources(payer, cost, kind, &snapshot, &auto_events) {
                     return Ok(receipt);
                 }
                 self.restore_payment_state(payer, snapshot);
@@ -17262,14 +17262,55 @@ impl GameState {
     /// restricted sources that `kind` may spend — one more each try, each
     /// asked for a colour the cost still lacks — and pay again. Only this
     /// failure path pays for the walk; `None` leaves the caller to restore.
+    ///
+    /// `failed` is the short attempt's auto-tap events. A source it
+    /// sacrificed (a Treasure) cannot be untapped by the restore: its mana
+    /// stays in the pool and its events stand (CR 605.3b), where they used
+    /// to vanish with the attempt — no "whenever you sacrifice" trigger, no
+    /// sweep, and the Treasure sat in a graveyard (pod seed 819163).
     fn pay_with_restricted_sources(
         &mut self,
         payer: usize,
         cost: &crate::mana::ManaCost,
         kind: &crate::mana::SpellKind,
         snapshot: &PaymentSnapshot,
+        failed: &[GameEvent],
     ) -> Option<PaymentReceipt> {
         use crate::mana::{ColorSet, SpendRestriction as SR};
+        let gone = |g: &Self, id: CardId| g.battlefield_find(id).is_none();
+        let mut carried: Vec<GameEvent> = Vec::new();
+        let mut regained: SmallVec<[Option<ManaColor>; 2]> = SmallVec::new();
+        for e in failed {
+            match e {
+                GameEvent::ManaAdded { source: Some(s), color, .. } if gone(self, *s) => {
+                    regained.push(Some(*color));
+                    carried.push(e.clone());
+                }
+                GameEvent::ColorlessManaAdded { source: Some(s), .. } if gone(self, *s) => {
+                    regained.push(None);
+                    carried.push(e.clone());
+                }
+                GameEvent::PermanentTapped { card_id, .. } | GameEvent::TappedForMana { card_id, .. }
+                    if gone(self, *card_id) =>
+                {
+                    carried.push(e.clone());
+                }
+                // Undone by the restore below (the source is still here).
+                GameEvent::ManaAdded { .. }
+                | GameEvent::ColorlessManaAdded { .. }
+                | GameEvent::PermanentTapped { .. }
+                | GameEvent::TappedForMana { .. } => {}
+                _ => carried.push(e.clone()),
+            }
+        }
+        let regain = |g: &mut Self| {
+            for c in &regained {
+                match c {
+                    Some(c) => g.players[payer].mana_pool.add(*c, 1),
+                    None => g.players[payer].mana_pool.add_colorless(1),
+                }
+            }
+        };
         // The failed attempt may have tapped a restricted source for its
         // ordinary mana (Castle Garenbrig's {G}): read the board it started from.
         self.restore_payment_state(payer, snapshot.clone());
@@ -17332,7 +17373,8 @@ impl GameState {
         sources.sort_by_key(|s| s.3);
         for k in 1..=sources.len() {
             self.restore_payment_state(payer, snapshot.clone());
-            let mut events = Vec::new();
+            regain(self);
+            let mut events = carried.clone();
             for &(id, idx, colors, _) in &sources[..k] {
                 let pool = &self.players[payer].mana_pool;
                 let want = cost
