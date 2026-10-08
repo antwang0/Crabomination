@@ -3153,6 +3153,10 @@ pools x1000      seed 830101: sos and sealed byte-identical to base; cube moves
                  Explorer's graveyard land plays (9fe275652, a card fix)
 release pods     600 games (4 seats x2, 6, 3) over seats 184-193 and 235: 600
                  decided, 0 stalls, 0 panics
+audit sweeps     overflow + debug-assertions, seats 184-235 in shuffled 3..6-seat
+                 groups x 20, dflt, fuzz 2500, concede 10, strict, sweep probe,
+                 seeds 870000 / 871000: 120 groups, ~2,360 games, 1 find
+                 (Transmute Artifact's replayed search, fixed); 0 stalls
 suite            24,458 / 2 / 5 strict at 95657b38b — both failures another
                  session's unregistered Blitzwing back face, fixed here; clippy
                  2 (the same session's test), fixed here
