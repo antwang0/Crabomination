@@ -3811,6 +3811,8 @@ fn decide_pending_policy_inner(
                 // stays.
                 AmountKind::Cost { free } => (*free).min(*max),
                 AmountKind::Upside => *max,
+                // The engine names the number from the opponents' cards.
+                AmountKind::NamedNumber => 0,
             };
             crate::decision::DecisionAnswer::Amount(amount)
         }
@@ -27365,6 +27367,11 @@ mod tests {
             "the tokens the ask counts are given up, and nothing else"
         );
         assert_eq!(amount(ask(AmountKind::Upside, 2)), 2, "generic upside still takes max");
+        assert_eq!(
+            amount(ask(AmountKind::NamedNumber, 16)),
+            0,
+            "a Sanctum Prelate number is left to the engine's opponent read"
+        );
         // 20 life, so the buffer rule pays at most 3.
         assert_eq!(amount(ask(AmountKind::Life, 9)), 3, "life payments keep a buffer");
         // Empty pool, so a MayPayX spends nothing rather than tapping out.

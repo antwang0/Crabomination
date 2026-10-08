@@ -131,6 +131,11 @@ pub enum AmountKind {
     /// (Territorial Aetherkite) — `max` sweeps the chooser's own board too,
     /// so the amount that kills the most of theirs and the least of ours.
     SweepDamage,
+    /// "As this enters, choose a number" keyed to what opponents cast
+    /// (Sanctum Prelate, Talion): not more-is-better, so a headless seat
+    /// answers 0 and the engine's own pick (the opponents' most common
+    /// nonland mana value) stands.
+    NamedNumber,
 }
 
 /// What a payment on an [`OptionalKind`] buys.

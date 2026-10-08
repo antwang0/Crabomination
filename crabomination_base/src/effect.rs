@@ -11681,6 +11681,9 @@ pub enum Effect {
         /// ask is a life payment, not "more is better".
         #[serde(default)]
         pays_life: bool,
+        /// The lowest number allowed ("between 1 and 10" — Talion).
+        #[serde(default)]
+        min: u32,
     },
 
     /// CR 729 — "Players play a Magic subgame, using their libraries as their

@@ -36520,7 +36520,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseNumberForSource { max, pays_life } => {
+            Effect::ChooseNumberForSource { max, pays_life, min } => {
                 // Sanctum Prelate — "as this enters, choose a number."
                 // Suspends for wants_ui seats; the old bare ask locked the
                 // number at AutoDecider's 0 (hitting only MV-0 spells).
@@ -36532,7 +36532,7 @@ impl GameState {
                     source,
                     prompt: "Choose a number".to_string(),
                     max: *max,
-                    kind: if *pays_life { AmountKind::Life } else { AmountKind::Upside },
+                    kind: if *pays_life { AmountKind::Life } else { AmountKind::NamedNumber },
                 };
                 let n = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
@@ -36568,6 +36568,8 @@ impl GameState {
                         }
                     },
                 };
+                // "Choose a number between 1 and 10" (Talion).
+                let n = n.max(*min).min(*max);
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.chosen_number = Some(n);
                 }
