@@ -530,3 +530,46 @@ fn cr_122_2_a_card_entering_with_its_keyword_counters_arms_the_board_gate() {
     // A whole-board keyword ask (the cumulative-upkeep gate).
     let _ = g.process_cumulative_upkeep();
 }
+
+/// CR 704.5m — Minimus Containment ("enchant nonland permanent") on a
+/// creature that an Aura then makes a land is put into its owner's
+/// graveyard by the sweep that follows (a fuzzed 6-seat pod, seed 710168
+/// game 7: Imprisoned in the Moon on a contained Drakuseth). CR 613.7d — the
+/// resolving Aura's timestamp is its entry time; that sweep ran before the
+/// event dispatch stamped it, so it read as older than Minimus. (Imprisoned
+/// itself can't enchant a Treasure; a bare "it's a land" Aura stands in.)
+#[test]
+fn cr_704_5m_an_aura_whose_host_became_a_land_is_shed() {
+    let mut g = main_phase();
+    // Drawn before the others: an unstamped object's timestamp falls back to
+    // its id, which is then older than Minimus Containment's.
+    use crabomination::card::{CardDefinition, CardType, EnchantmentSubtype, EquipBonus, Subtypes};
+    let moon = g.add_card_to_hand(0, CardDefinition {
+        name: "Land Shroud",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: crabomination::effect::shortcut::target_filtered(crabomination::card::SelectionRequirement::Permanent),
+        },
+        equipped_bonus: Some(EquipBonus { set_card_types: Some(vec![CardType::Land]), ..Default::default() }),
+        ..Default::default()
+    });
+    let host = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let minimus = g.add_card_to_battlefield(1, catalog::minimus_containment());
+    g.battlefield_find_mut(minimus).unwrap().attached_to = Some(host);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(minimus).is_some(), "a contained creature is a legal host");
+    g.perform_action(crabomination::game::types::GameAction::CastSpell {
+        card_id: moon,
+        target: Some(Target::Permanent(host)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    while !g.stack.is_empty() {
+        g.perform_action(crabomination::game::types::GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.battlefield_find(minimus).is_none(), "the host is a land now");
+}

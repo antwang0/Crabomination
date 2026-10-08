@@ -2784,6 +2784,12 @@ impl GameState {
                     // `place_card_at_resolved_zone`); the `CardData` write
                     // above already unshared the card, so it is free.
                     card.damage = 0;
+                    // CR 613.7d — its timestamp is its entry time. The event
+                    // dispatch stamps it again, but this resolution's own
+                    // sweep runs first: unstamped, an Aura read as older than
+                    // every effect already there (Imprisoned in the Moon lost
+                    // to the Minimus Containment it should have shed).
+                    card.battlefield_timestamp = self.next_timestamp();
                     self.battlefield.push(card);
                     if let Some((grant_haste, sacrifice_eot)) = resolve_riders {
                         if grant_haste {
