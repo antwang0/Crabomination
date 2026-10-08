@@ -34,13 +34,16 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-186 / 187 pod decks carry no residual (2026-10-08, after seats 184-187 —
+186 / 190 pod decks carry no residual (2026-10-08, after seats 184-190 —
 the first EDHREC average decks — and `pod_residuals.py` learning "is
-omitted"):
+omitted"); each open one is an INCOMPLETE_CARDS row:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 184 | Ob Nixilis, Captive Kingpin (BR) | party_thrasher (convoke for noncreature spells cast from exile: the paying cast-from-exile path has no convoke) |
+| 188 | Ojer Axonil, Deepest Might (R) | urabrask (The Great Work III's "any graveyard" covers only the cards there as it resolves) |
+| 189 | Rowan, Scion of War (BR) | march_of_wretched_sorrow (no pitch-to-reduce cast action) |
+| 190 | Deadpool, Trading Card (BR) | delina_wild_mage (reroll chain bounded at five), mirage_phalanx (one trigger for the pair's two) |
 
 
 169 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.

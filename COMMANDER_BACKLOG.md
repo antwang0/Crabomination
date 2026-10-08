@@ -14,12 +14,12 @@ mechanic a card leans on, not a verdict on what it needs.
 | Top 250 Commander cards by EDHREC rank | 250 / 250 |
 | Top 500 Commander cards by EDHREC rank | 500 / 500 |
 | Top 1000 Commander cards by EDHREC rank | 1000 / 1000 |
-| Top 2000 Commander cards by EDHREC rank | 1930 / 2000 |
-| Top 5000 Commander cards by EDHREC rank | 4514 / 5000 |
+| Top 2000 Commander cards by EDHREC rank | 1934 / 2000 |
+| Top 5000 Commander cards by EDHREC rank | 4524 / 5000 |
 | Top 100 commanders by decks built | 96 / 100 |
-| Top 300 commanders by decks built | 274 / 300 |
+| Top 300 commanders by decks built | 277 / 300 |
 
-## 1. Most-built commanders not in the catalog (26)
+## 1. Most-built commanders not in the catalog (23)
 
 A partner pair lists only its missing halves.
 
@@ -30,7 +30,6 @@ A partner pair lists only its missing halves.
 | 70 | Avatar Aang | 20,643 | BGRUW | Legendary Creature — Human Avatar Ally // Legendary Creature — Avatar Ally |  |
 | 88 | Norman Osborn | 18,971 | BRU | Legendary Creature — Human Scientist Villain // Legendary Creature — Goblin Human Villain |  |
 | 103 | Ezio Auditore da Firenze | 17,711 | BGRUW | Legendary Creature — Human Assassin |  |
-| 105 | Deadpool, Trading Card | 17,452 | BR | Legendary Creature — Mutant Mercenary Hero | multiplayer |
 | 118 | Captain America, First Avenger | 16,212 | RUW | Legendary Creature — Human Soldier Hero |  |
 | 120 | Tovolar, Dire Overlord | 15,930 | GR | Legendary Creature — Human Werewolf // Legendary Creature — Werewolf |  |
 | 135 | Satoru Umezawa | 14,685 | BU | Legendary Creature — Human Ninja |  |
@@ -46,9 +45,7 @@ A partner pair lists only its missing halves.
 | 205 | Tinybones, Bauble Burglar | 11,510 | B | Legendary Creature — Skeleton Rogue |  |
 | 207 | Orvar, the All-Form | 11,497 | U | Legendary Creature — Shapeshifter |  |
 | 231 | Volo, Guide to Monsters | 10,419 | GU | Legendary Creature — Human Wizard |  |
-| 236 | Ojer Axonil, Deepest Might | 10,331 | R | Legendary Creature — God // Land |  |
 | 247 | Eddie Brock | 10,053 | BGR | Legendary Creature — Human Hero Villain // Legendary Creature — Symbiote Hero Villain |  |
-| 273 | Rowan, Scion of War | 9,294 | BR | Legendary Creature — Human Wizard |  |
 | 279 | Indominus Rex, Alpha | 9,248 | BGU | Legendary Creature — Dinosaur Mutant |  |
 | 289 | Arna Kennerüd, Skycaptain | 9,018 | BUW | Legendary Creature — Human Knight |  |
 
