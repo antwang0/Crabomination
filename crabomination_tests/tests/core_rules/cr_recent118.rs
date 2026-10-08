@@ -832,3 +832,26 @@ fn cr_712_4_a_bounced_disturb_back_face_is_its_front_in_hand() {
     assert!(!held.transformed);
     assert_eq!(held.definition.name, "Beloved Beggar");
 }
+
+/// CR 400.7 / 608.2b — a trigger aimed at a commander that went home before
+/// it resolved puts no counter on the card in the command zone (Omo's token
+/// copies' "everything counter" did, pod seed 818308). Only a plane counts
+/// counters there (CR 901.7).
+#[test]
+fn cr_400_7_a_counter_aimed_at_a_commander_gone_home_is_lost() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    resolve(
+        &mut g,
+        src,
+        Some(Target::Permanent(cmd)),
+        &Effect::AddCounter {
+            what: Selector::Target(0),
+            kind: crabomination::card::CounterType::PlusOnePlusOne,
+            amount: crabomination::effect::Value::Const(1),
+        },
+    );
+    let home = g.players[0].command.iter().find(|c| c.id == cmd).expect("home");
+    assert!(home.counters.is_empty());
+}

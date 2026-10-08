@@ -19570,9 +19570,15 @@ impl GameState {
                                 if *kind == CounterType::Lore {
                                     self.saga_chapters_crossed(cid, before, before + n);
                                 }
-                            } else if let Some(c) = self.command_card_mut(cid) {
+                            } else if let Some(c) = self.command_card_mut(cid)
+                                && c.definition.is_plane()
+                            {
                                 // CR 901.7 — a face-up plane tallies its own
                                 // counters from the command zone (Naar Isle).
+                                // A plane only (CR 400.7): a commander that
+                                // went home before a trigger aimed at it
+                                // resolved took Omo's counter there (pod
+                                // seed 818308).
                                 c.add_counters(*kind, n);
                                 events.push(GameEvent::CounterAdded {
                                     card_id: cid,
