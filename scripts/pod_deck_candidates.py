@@ -61,7 +61,7 @@ def factories():
                 own = next(
                     (
                         n
-                        for n in re.findall(r'"((?:[^"\\]|\\.)*)"', body)
+                        for n in re.findall(r'"((?:[^"\\]|\\[\s\S])*)"', body)
                         # Both factory spellings of "'s": `chandras_…` and `erebos_s_…`.
                         if fn in (slug(n), slug(n.replace("'", " ")))
                     ),
