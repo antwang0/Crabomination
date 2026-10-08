@@ -837,3 +837,247 @@ pub fn virtue_of_strength() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Deathgreeter — another creature dying may gain you 1 life.
+pub fn deathgreeter() -> CardDefinition {
+    CardDefinition {
+        name: "Deathgreeter",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Shaman]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
+            effect: Effect::MayDo {
+                description: "Gain 1 life?".into(),
+                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Virulent Emissary — deathtouch; another creature of yours entering gains
+/// you 1 life.
+pub fn virulent_emissary() -> CardDefinition {
+    CardDefinition {
+        name: "Virulent Emissary",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Assassin]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// "Discard a card: this creature gets +1/+1 until end of turn."
+fn discard_pump() -> ActivatedAbility {
+    ActivatedAbility {
+        discard_cost: Some((R::Any, 1)),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Noose Constrictor — reach; discard a card for +1/+1.
+pub fn noose_constrictor() -> CardDefinition {
+    CardDefinition {
+        name: "Noose Constrictor",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Snake]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![discard_pump()],
+        ..Default::default()
+    }
+}
+
+/// Oblivion Crown — flash Aura: enchanted creature discards cards for +1/+1.
+pub fn oblivion_crown() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Oblivion Crown",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has \"Discard a card: This creature gets +1/+1 until end of turn.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: discard_pump(),
+                condition: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ancestral Statue — entering returns a nonland permanent you control to
+/// its owner's hand.
+pub fn ancestral_statue() -> CardDefinition {
+    CardDefinition {
+        name: "Ancestral Statue",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Golem]),
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ReturnOneYouControl { filter: R::Nonland, keep_best: false })],
+        ..Default::default()
+    }
+}
+
+/// Rattleclaw Mystic — taps for {G}, {U} or {R}; morph {2}; turned face up,
+/// adds {G}{U}{R}.
+pub fn rattleclaw_mystic() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Rattleclaw Mystic",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Shaman]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Morph(cost(&[generic(2)]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(vec![Color::Green, Color::Blue, Color::Red], Value::ONE),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Green, Color::Blue, Color::Red]),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Basal Sliver — every Sliver has "Sacrifice this permanent: Add {B}{B}."
+pub fn basal_sliver() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Basal Sliver",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Sliver]),
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have \"Sacrifice this permanent: Add {B}{B}.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Sliver)),
+                ability: ActivatedAbility {
+                    sac_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Black, Color::Black]) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Training Grounds — your creatures' activated abilities cost {2} less, to
+/// no less than one mana.
+pub fn training_grounds() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Training Grounds",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of creatures you control cost {2} less to activate. This effect \
+                          can't reduce the mana in that cost to less than one mana.",
+            effect: StaticEffect::YourCreatureActivatedAbilitiesCostLess { amount: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Circle of Flame — a creature without flying attacking you or your
+/// planeswalker takes 1 damage.
+pub fn circle_of_flame() -> CardDefinition {
+    CardDefinition {
+        name: "Circle of Flame",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Not(Box::new(R::HasKeyword(Keyword::Flying))),
+                },
+            ),
+            effect: Effect::DealDamage { to: Selector::TriggerSource, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Smash to Dust — destroy an artifact or a defender, or 1 damage to each
+/// creature your opponents control.
+pub fn smash_to_dust() -> CardDefinition {
+    CardDefinition {
+        name: "Smash to Dust",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Defender))) },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                amount: Value::ONE,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Starnheim Courser — flying; artifact and enchantment spells cost {1}
+/// less.
+pub fn starnheim_courser() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Starnheim Courser",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Pegasus]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Artifact and enchantment spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: R::Artifact.or(R::Enchantment), amount: 1 },
+        }],
+        ..Default::default()
+    }
+}

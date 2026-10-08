@@ -574,3 +574,144 @@ fn miserys_shadow_exiles_an_opponents_token() {
     assert!(g.battlefield_find(tok).is_none());
     assert_eq!(g.players[1].life, life, "no death, no drain");
 }
+
+/// Deathgreeter and Virulent Emissary: a death and an entry each gain 1.
+#[test]
+fn deathgreeter_and_virulent_emissary_gain_life() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::deathgreeter());
+    ready(&mut g, 0, catalog::virulent_emissary());
+    flood(&mut g);
+    let life = g.players[0].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None);
+    assert_eq!(g.players[0].life, life + 1, "Emissary");
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(theirs)));
+    assert_eq!(g.players[0].life, life + 2, "Deathgreeter");
+}
+
+/// Oblivion Crown grants Noose Constrictor's discard pump to the creature it
+/// enchants.
+#[test]
+fn oblivion_crown_grants_a_discard_pump() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let crown = g.add_card_to_hand(0, catalog::oblivion_crown());
+    flood(&mut g);
+    cast(&mut g, crown, Some(Target::Permanent(bear)));
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, bear, None);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
+
+/// Ancestral Statue bounces a nonland permanent (itself, with nothing else).
+#[test]
+fn ancestral_statue_returns_a_nonland_permanent() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::forest());
+    let statue = g.add_card_to_hand(0, catalog::ancestral_statue());
+    flood(&mut g);
+    cast(&mut g, statue, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == statue));
+}
+
+/// Rattleclaw Mystic turned face up adds {G}{U}{R}.
+#[test]
+fn rattleclaw_mystic_face_up_adds_three() {
+    let mut g = pod(2);
+    let rm = g.add_card_to_hand(0, catalog::rattleclaw_mystic());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFaceDown { card_id: rm }).expect("morph");
+    drain_stack(&mut g);
+    let green = g.players[0].mana_pool.amount(Color::Green);
+    g.perform_action(GameAction::TurnFaceUp { card_id: rm }).expect("face up");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), green + 1);
+}
+
+/// Basal Sliver gives every Sliver — an opponent's too — a sacrifice for
+/// {B}{B}.
+#[test]
+fn basal_sliver_grants_every_sliver_mana() {
+    let mut g = pod(2);
+    let basal = ready(&mut g, 0, catalog::basal_sliver());
+    let pool = g.players[0].mana_pool.amount(Color::Black);
+    activate(&mut g, basal, None);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), pool + 2);
+    assert!(g.battlefield_find(basal).is_none());
+}
+
+/// Training Grounds: Basal-free check — a {4} creature ability costs {2},
+/// and a {1} one stays {1}.
+#[test]
+fn training_grounds_discounts_creature_abilities() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::training_grounds());
+    let m = ready(&mut g, 0, catalog::lesser_masticore());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m,
+        ability_index: 0,
+        target: Some(Target::Permanent(elf)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{4} paid with {2}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none());
+}
+
+/// Circle of Flame pings a ground attacker, not a flier.
+#[test]
+fn circle_of_flame_burns_ground_attackers() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::circle_of_flame());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: elf, target: AttackTarget::Player(1) },
+        Attack { attacker: angel, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none());
+    assert_eq!(g.battlefield_find(angel).unwrap().damage, 0);
+}
+
+/// Smash to Dust's third mode pings each opposing creature.
+#[test]
+fn smash_to_dust_sweeps_x1s() {
+    let mut g = pod(3);
+    let a = ready(&mut g, 1, catalog::llanowar_elves());
+    let b = ready(&mut g, 2, catalog::llanowar_elves());
+    let mine = ready(&mut g, 0, catalog::llanowar_elves());
+    let smash = g.add_card_to_hand(0, catalog::smash_to_dust());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: smash, target: None, additional_targets: vec![], mode: Some(2), x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert!(g.battlefield_find(mine).is_some());
+}
+
+/// Starnheim Courser cuts an artifact spell by {1}.
+#[test]
+fn starnheim_courser_discounts_artifacts() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::starnheim_courser());
+    let staff = g.add_card_to_hand(0, catalog::wizards_staff());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: staff, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{1}{U} paid with {U}");
+}
