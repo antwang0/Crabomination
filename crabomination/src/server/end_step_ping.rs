@@ -3,10 +3,11 @@
 //! player" — was never activated in a 6-seat census (seed 1270001): the
 //! removal ping only aims at a face when the shot is lethal. At an opponent's
 //! end step the mana and the tap are spare (both come back at the untap), so
-//! a pod bot now spends them on the lowest-life opponent. Commander games
-//! only, so two-player play is unchanged.
+//! a pod bot now spends them on the lowest-life opponent. An untargeted chip
+//! at each opponent (Blisterspit Gremlin, four apiece under Ojer Axonil) is
+//! spent the same way. Commander games only, so two-player play is unchanged.
 
-use crate::effect::{Effect, Selector, Value};
+use crate::effect::{Effect, PlayerRef, Selector, Value};
 use crate::game::GameState;
 use crate::game::types::{GameAction, Target};
 
@@ -18,6 +19,15 @@ fn chips_target(e: &Effect) -> bool {
             *n > 0
         }
         Effect::Seq(v) => v.first().is_some_and(chips_target),
+        _ => false,
+    }
+}
+
+/// A constant damage to each opponent, alone or leading a sequence.
+fn chips_each_opponent(e: &Effect) -> bool {
+    match e {
+        Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) } => *n > 0,
+        Effect::Seq(v) => v.first().is_some_and(chips_each_opponent),
         _ => false,
     }
 }
@@ -52,7 +62,24 @@ pub(super) fn pick_end_step_ping(state: &GameState, seat: usize) -> Option<GameA
     opps.sort_by_key(|&q| (state.effective_life(q), q));
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (i, ab) in c.definition.activated_abilities.iter().enumerate() {
-            if !costs_only_mana(ab) || !chips_target(&ab.effect) {
+            if !costs_only_mana(ab) {
+                continue;
+            }
+            if chips_each_opponent(&ab.effect) {
+                let action = GameAction::ActivateAbility {
+                    card_id: c.id,
+                    ability_index: i,
+                    target: None,
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                    mode: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+                continue;
+            }
+            if !chips_target(&ab.effect) {
                 continue;
             }
             for &q in &opps {
@@ -99,5 +126,23 @@ mod tests {
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
         assert_eq!(g.players[2].life, 11);
+    }
+
+    /// Blisterspit Gremlin's untargeted "{1}, {T}: 1 damage to each opponent"
+    /// is spent at an opponent's end step too.
+    #[test]
+    fn blisterspit_gremlin_chips_each_opponent() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let gremlin = g.add_card_to_battlefield(0, crate::catalog::blisterspit_gremlin());
+        g.clear_sickness(gremlin);
+        g.players[0].mana_pool.add_colorless(1);
+        g.step = TurnStep::End;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let a = pick_end_step_ping(&g, 0).expect("ping");
+        g.perform_action(a).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert_eq!([g.players[1].life, g.players[2].life], [19, 19]);
     }
 }
