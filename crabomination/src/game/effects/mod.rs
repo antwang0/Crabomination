@@ -35802,7 +35802,7 @@ impl GameState {
                 self.secret_council_permanent_vote(filter, on_most, Some(on_none), effect, ctx, events)
             }
 
-            Effect::CopySpellAsOneOneSpirit { what } => {
+            Effect::CopySpellAsOneOneSpirit { what } | Effect::CopySpellNotLegendary { what } => {
                 let ids: Vec<CardId> = match what {
                     Selector::TriggerSource => ctx
                         .trigger_source
@@ -35821,8 +35821,13 @@ impl GameState {
                         })
                         .collect(),
                 };
+                let spirit = matches!(effect, Effect::CopySpellAsOneOneSpirit { .. });
                 for cid in ids {
-                    self.copy_spell_as_one_one_spirit(cid, events);
+                    if spirit {
+                        self.copy_spell_as_one_one_spirit(cid, events);
+                    } else {
+                        self.copy_spell_not_legendary(cid, ctx.controller, events);
+                    }
                 }
                 Ok(())
             }

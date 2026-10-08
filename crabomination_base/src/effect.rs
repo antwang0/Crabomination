@@ -9688,6 +9688,10 @@ pub enum Effect {
     /// exception is part of the copy's copiable values, so the token the
     /// copy resolves into keeps it.
     CopySpellAsOneOneSpirit { what: Selector },
+    /// CR 707.9b — copy the spell `what` once, "except it isn't legendary if
+    /// the spell is legendary" (Double Major); the token it resolves into
+    /// keeps the exception.
+    CopySpellNotLegendary { what: Selector },
     /// CR 701.50 — each permanent `what` names connives `amount`: its
     /// controller draws that many, discards that many, and it gets a +1/+1
     /// counter per nonland card discarded *this way* (Kamiz, Change of

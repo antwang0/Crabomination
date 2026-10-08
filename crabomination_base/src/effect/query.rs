@@ -2129,7 +2129,7 @@ impl Effect {
             | Effect::CopySpellMayChooseTargets { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }
-            Effect::CopySpellAsOneOneSpirit { what } => sel_has_target(what),
+            Effect::CopySpellAsOneOneSpirit { what } | Effect::CopySpellNotLegendary { what } => sel_has_target(what),
             Effect::CopySpellForPlayer { what, who } => sel_has_target(what) || player_has_target(who),
             Effect::Connive { what, amount } => sel_has_target(what) || value_has_target(amount),
             Effect::ChooseNewTargetsForSpell { what } | Effect::GainControlOfSpell { what } => {
@@ -2761,6 +2761,7 @@ impl Effect {
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
             | Effect::CopySpellAsOneOneSpirit { what }
+            | Effect::CopySpellNotLegendary { what }
             | Effect::Connive { what, .. }
             | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. }
@@ -5458,6 +5459,7 @@ impl Effect {
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellWithRiders { what, .. }
                 | Effect::CopySpellAsOneOneSpirit { what }
+                | Effect::CopySpellNotLegendary { what }
                 | Effect::Connive { what, .. }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }
