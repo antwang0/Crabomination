@@ -1285,3 +1285,30 @@ fn malcolm_recasts_the_looted_card_at_four_chorus() {
     assert_eq!(g.battlefield_find(malcolm).unwrap().counter_count(crabomination::card::CounterType::Chorus), 4);
     assert_eq!(life - g.players[1].life, 2 + 3, "Malcolm's 2 and the free bolt's 3");
 }
+
+/// Likeness Looter becomes a flying copy of a 2-MV graveyard bear (X = 2)
+/// that keeps its copy ability.
+#[test]
+fn likeness_looter_copies_a_graveyard_creature() {
+    let mut g = pod(2);
+    let looter = ready(&mut g, 0, catalog::likeness_looter());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: looter,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("copy for X = 2");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(looter).unwrap();
+    assert_eq!(c.definition.name, "Grizzly Bears");
+    let cp = g.computed_permanent(looter).unwrap();
+    assert_eq!(cp.power, 2);
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
+    assert_eq!(g.battlefield_find(looter).unwrap().definition.activated_abilities.len(), 1, "keeps the copy ability");
+}

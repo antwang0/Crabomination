@@ -2162,3 +2162,55 @@ pub fn malcolm_alluring_scoundrel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Likeness Looter — {U}{B} 1/1 flying. {T}: loot. {X} (sorcery speed):
+/// becomes a copy of target creature card in your graveyard with mana value
+/// X, except it has flying and this ability (CR 707.9a).
+pub fn likeness_looter() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Likeness Looter",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Faerie, CreatureType::Shapeshifter]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[x()]),
+                sorcery_speed: true,
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCopyOf {
+                        what: Selector::This,
+                        source: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueExactlyXFromCost)),
+                        extra_creature_types: vec![],
+                        keep_own_triggered: false,
+                        keep_own_activated: false,
+                        keep_name: false,
+                    },
+                    Effect::AmendCopy {
+                        what: Selector::This,
+                        keep_activated: vec![1],
+                        keep_triggered: vec![],
+                        pt: None,
+                        keep_name: false,
+                        legendary: false,
+                        keywords: vec![Keyword::Flying],
+                        card_types: vec![],
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
