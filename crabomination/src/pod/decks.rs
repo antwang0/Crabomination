@@ -7745,3 +7745,56 @@ pub const BLECH_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const FYNN_COMMANDERS: &[CardFactory] = &[fynn_the_fangbearer];
+
+/// **Fynn, the Fangbearer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 71 nonbasic cards + 28 Forests = 99.
+/// Mono-green deathtouch aggro: every deathtouch hit is two poison counters.
+pub const FYNN_MAIN: &[CardFactory] = &[
+    arcane_signet, bow_of_nylea, contagion_clasp, emerald_medallion, lightning_greaves,
+    rhonass_monument, sol_ring, swiftfoot_boots, access_tunnel, command_tower, escape_tunnel,
+    karns_bastion, rogues_passage, war_room, acidic_slime, ambush_viper, ankle_biter,
+    beast_whisperer, bloated_contaminator, cankerbloom, contaminant_grafter, deadly_recluse,
+    deathbloom_gardener, dragon_sniper, evolution_sage, fang_of_shigeki, gnarlwood_dryad,
+    hornet_nest, hornet_queen, ichorspit_basilisk, llanowar_elves, mirkwood_spider, moss_viper,
+    narnam_renegade, nightshade_dryad, noxious_newt, oakhame_adversary, ohran_frostfang,
+    pollenbright_druid, questing_beast, saryth_the_vipers_fang, sedge_scorpion, tajuru_blightblade,
+    thornweald_archer, venerated_rotpriest, virulent_emissary, wasteland_viper, guardian_project,
+    rancor, sylvan_anthem, sylvan_library, wild_growth, beast_within, bite_down, fog,
+    gift_of_the_viper, heroic_intervention, infectious_bite, masters_rebuke, ram_through,
+    snakeskin_veil, carnivorous_canopy, cultivate, harmonize, kodamas_reach, noxious_assault,
+    planewide_celebration, rampant_growth, smell_fear, thirsting_roots, unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest,
+];
+
+pub const FEATHER_COMMANDERS: &[CardFactory] = &[feather_the_redeemed];
+
+/// **Feather, the Redeemed**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Plains = 99.
+/// Boros self-targeting tricks that Feather returns to hand each end step.
+pub const FEATHER_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, boros_signet, decanter_of_endless_water, sol_ring, sunforger,
+    swiftfoot_boots, talisman_of_conviction, thought_vessel, battlefield_forge, boros_garrison,
+    clifftop_retreat, command_tower, furycalm_snarl, inspiring_vantage, needleverge_pathway,
+    reliquary_tower, rugged_prairie, sacred_foundry, spectator_seating, sundown_pass,
+    temple_of_triumph, akroan_crusader, birgi_god_of_storytelling, electrostatic_field,
+    firebrand_archer, goldspan_dragon, guttersnipe, informed_inkwright, leonin_lightscribe,
+    mavinda_students_advocate, mirrorwing_dragon, monastery_mentor, phalanx_leader,
+    runaway_steam_kin, stirring_hopesinger, storm_kiln_artist, young_pyromancer,
+    zada_hedron_grinder, fiery_inscription, graduation_day, leyline_of_resonance, ancestors_aid,
+    bandage, blacksmiths_skill, boon_of_safety, boros_charm, brute_force, chaos_warp,
+    crimson_wisps, defiant_strike, dreadmaws_ire, expedite, fists_of_flame, gods_willing,
+    guided_strike, legion_leadership, lorans_escape, might_of_the_meek, path_to_exile,
+    psychotic_fury, reckless_rage, sejiri_shelter, shelter, sheltering_light, sudden_breakthrough,
+    swords_to_plowshares, take_up_the_shield, temur_battle_rage, titans_strength, unleash_fury,
+    angelfire_ignition, blasphemous_act, chandras_ignition, explosive_entry, honor,
+    renegade_tactics, seize_the_day,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];

@@ -1995,6 +1995,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLECH_COMMANDERS,
             main: decks::BLECH_MAIN,
         },
+        // Seat 263: Fynn, the Fangbearer's EDHREC average deck. `--pod-decks 263`.
+        PodDeck {
+            name: "Fynn, the Fangbearer (G)",
+            commanders: decks::FYNN_COMMANDERS,
+            main: decks::FYNN_MAIN,
+        },
+        // Seat 264: Feather, the Redeemed's EDHREC average deck. `--pod-decks 264`.
+        PodDeck {
+            name: "Feather, the Redeemed (RW)",
+            commanders: decks::FEATHER_COMMANDERS,
+            main: decks::FEATHER_MAIN,
+        },
     ]
 }
 
@@ -3772,6 +3784,8 @@ mod tests {
             ("Atraxa, Grand Unifier", [0xA7AA, 260, 9184]),
             ("Codie, Vociferous Codex", [0xC0D1, 261, 9185]),
             ("Blech, Loafing Pest", [0xB1EC, 262, 9186]),
+            ("Fynn, the Fangbearer", [0xF1BB, 263, 9187]),
+            ("Feather, the Redeemed", [0xFEA7, 264, 9188]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
