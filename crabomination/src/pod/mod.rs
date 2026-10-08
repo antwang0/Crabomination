@@ -2013,6 +2013,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NARSET_EXILE_COMMANDERS,
             main: decks::NARSET_EXILE_MAIN,
         },
+        // Seat 266: Raffine, Scheming Seer's EDHREC average deck. `--pod-decks 266`.
+        PodDeck {
+            name: "Raffine, Scheming Seer (BUW)",
+            commanders: decks::RAFFINE_COMMANDERS,
+            main: decks::RAFFINE_MAIN,
+        },
     ]
 }
 
@@ -3793,6 +3799,7 @@ mod tests {
             ("Fynn, the Fangbearer", [0xF1BB, 263, 9187]),
             ("Feather, the Redeemed", [0xFEA7, 264, 9188]),
             ("Narset, Enlightened Exile", [0x4A25, 265, 9189]),
+            ("Raffine, Scheming Seer", [0x4AFF, 266, 9190]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -7826,3 +7826,31 @@ pub const NARSET_EXILE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
     plains, plains,
 ];
+
+pub const RAFFINE_COMMANDERS: &[CardFactory] = &[raffine_scheming_seer];
+
+/// **Raffine, Scheming Seer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 86 nonbasic cards + 5 Islands + 3 Plains + 5 Swamps = 99.
+/// Esper connive: Raffine's attacks loot the team bigger, with flying evasion.
+pub const RAFFINE_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, monument_to_endurance, sol_ring, talisman_of_dominance,
+    talisman_of_hierarchy, talisman_of_progress, adarkar_wastes, arcane_sanctum, caves_of_koilos,
+    command_tower, drowned_catacomb, exotic_orchard, flooded_strand, glacial_fortress,
+    godless_shrine, hallowed_fountain, isolated_chapel, marsh_flats, morphic_pool,
+    otawara_soaring_city, polluted_delta, prairie_stream, raffines_tower, sea_of_clouds,
+    sunken_hollow, underground_river, vault_of_champions, watery_grave, adeline_resplendent_cathar,
+    archfiend_of_ifnir, baleful_strix, bone_miser, chasm_skulker, containment_construct,
+    dauthi_voidwalker, dream_trawler, elenda_and_azor, elesh_norn_grand_cenobite, esper_sentinel,
+    faerie_mastermind, ghostly_pilferer, hashaton_scarabs_fist, ledger_shredder, likeness_looter,
+    lotho_corrupt_shirriff, malcolm_alluring_scoundrel, mausoleum_wanderer, pollywog_prodigy,
+    priest_of_fell_rites, psychic_frog, queza_augur_of_agonies, selfless_spirit,
+    sheoldred_whispering_one, silent_hallcreeper, siren_stormtamer, sun_titan, the_queen_of_dale,
+    voice_of_victory, wonder, animate_dead, knowledge_is_power, necromancy, rhystic_study,
+    teferis_ageless_insight, an_offer_you_cant_refuse, anguished_unmaking, arcane_denial,
+    counterspell, cyclonic_rift, dovins_veto, entomb, fierce_guardianship, path_to_exile,
+    sink_into_stupor, swan_song, swords_to_plowshares, void_rend, damn, dread_return, living_death,
+    reanimate, sevinnes_reclamation, stitch_together, unburial_rites, victimize,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp,
+];
