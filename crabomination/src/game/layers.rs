@@ -2159,7 +2159,7 @@ pub(crate) fn requirement_matches_card_typed(
         }
         // A card that names itself in its own printed filter (Gravebane
         // Zombie's dies-replacement).
-        R::HasName(n) => def.name == n,
+        R::HasName(n) => def.has_name(n),
         // Bello, Bard of the Brambles' "with mana value 4 or greater" is
         // `Not(ManaValueAtMost(3))`: with no arm here the leaf fell to
         // `false` and the `Not` animated every artifact — Mind Stone too.

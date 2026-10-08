@@ -1774,7 +1774,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                     tax += amount;
                 }
                 StaticEffect::NamedSpellTax { amount }
-                    if src.named_card.as_deref() == Some(card.definition.name) =>
+                    if src.named_card.as_deref().is_some_and(|n| card.definition.has_name(n)) =>
                 {
                     tax += amount;
                 }
@@ -2178,7 +2178,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 }
                 StaticEffect::NamedSpellCostReduction { amount }
                     if src.controller == caster
-                        && src.named_card.as_deref() == Some(card.definition.name) =>
+                        && src.named_card.as_deref().is_some_and(|n| card.definition.has_name(n)) =>
                 {
                     reduction += amount;
                 }
@@ -9724,7 +9724,7 @@ impl GameState {
         // Meddling Mage — spells with the chosen name can't be cast.
         if let Some(name) = spell_name
             && self.battlefield.iter().any(|c| {
-                c.named_card.as_deref() == Some(name)
+                c.named_card.as_deref().is_some_and(|n| crate::card::name_has(name, n))
                     && c.definition.static_abilities.iter().any(|sa| {
                         matches!(sa.effect, crate::effect::StaticEffect::NamedSpellCantBeCast)
                     })
@@ -9738,7 +9738,7 @@ impl GameState {
         // permanent stays on the battlefield.
         if let Some(name) = spell_name
             && self.battlefield.iter().any(|c| {
-                c.named_card.as_deref() == Some(name)
+                c.named_card.as_deref().is_some_and(|n| crate::card::name_has(name, n))
                     && c.definition.static_abilities.iter().any(|sa| {
                         matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantCastNamed)
                     })
@@ -9771,7 +9771,7 @@ impl GameState {
         // next turn"); the lock lives on the naming player until their turn.
         if let Some(name) = spell_name
             && self.players.iter().enumerate().any(|(i, pl)| {
-                !self.same_team(i, p) && pl.opponents_cant_cast_named.iter().any(|n| n == name)
+                !self.same_team(i, p) && pl.opponents_cant_cast_named.iter().any(|n| crate::card::name_has(name, n))
             })
         {
             return Err(GameError::SpellNameLocked);
@@ -16222,8 +16222,11 @@ impl GameState {
             let battlefield = &self.battlefield;
             let fires = |dt: &crate::game::types::DelayedTrigger| {
                 watches_name(dt)
-                    && battlefield.find_by_id(dt.source).and_then(|s| s.named_card.as_deref())
-                        == cast_name
+                    && battlefield
+                        .find_by_id(dt.source)
+                        .and_then(|s| s.named_card.as_deref())
+                        .zip(cast_name)
+                        .is_some_and(|(n, cast)| crate::card::name_has(cast, n))
             };
             let (named_fire, rest): (Vec<_>, Vec<_>) =
                 std::mem::take(&mut self.delayed_triggers).into_iter().partition(fires);
@@ -20576,11 +20579,11 @@ impl GameState {
                     .find(|c| c.id == card_id)
                     .map(|c| c.definition.name)
             } else {
-                bf_src!().map(|c| c.definition.name)
+                bf_src!().map(|c| c.battlefield_name())
             };
             if let Some(name) = source_name
                 && self.battlefield.iter().any(|c| {
-                    c.cold_any(|k| k.named_card.as_deref() == Some(name))
+                    c.cold_any(|k| k.named_card.as_deref().is_some_and(|n| crate::card::name_has(name, n)))
                         && c.definition.static_abilities.iter().any(|sa| {
                             matches!(
                                 sa.effect,
@@ -22405,12 +22408,12 @@ impl GameState {
         // so it is behind the mana-static lane: no permanent's definition
         // carries the tax, no walk.
         if self.board_has_mana_static()
-            && let Some(name) = self.battlefield_find(card_id).map(|c| c.definition.name)
+            && let Some(name) = self.battlefield_find(card_id).map(|c| c.battlefield_name())
         {
             let tax: u32 = self
                 .battlefield
                 .iter()
-                .filter(|c| c.cold_any(|k| k.named_card.as_deref() == Some(name)))
+                .filter(|c| c.cold_any(|k| k.named_card.as_deref().is_some_and(|n| crate::card::name_has(name, n))))
                 .flat_map(|c| c.definition.static_abilities.iter())
                 .map(|sa| match sa.effect {
                     crate::effect::StaticEffect::NamedSourcesActivationTax { amount } => amount,

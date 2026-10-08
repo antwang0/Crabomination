@@ -6267,7 +6267,7 @@ impl GameState {
                         })
                     }
                     R::HasName(name) => {
-                        card.definition.name == name.as_str()
+                        card.definition.has_name(name)
                             || self.has_all_creature_names(card.id, name)
                     }
                     R::OriginallyPrintedIn(set) => set.contains(card.definition.name),
@@ -6305,10 +6305,10 @@ impl GameState {
                         // A resolving spell that named a card is off-zone, so
                         // fall back to the per-resolution scratchpad (Predict).
                         .or(self.scratch.named_card_this_resolution.as_deref())
-                        .is_some_and(|n| n == card.definition.name),
+                        .is_some_and(|n| card.definition.has_name(n)),
                     R::NameChosenForSource => source.and_then(|sid| self.static_source(sid)).is_some_and(|s| {
-                        s.named_card.as_deref() == Some(card.definition.name)
-                            || s.cold_any(|k| k.chosen_names.iter().any(|n| n == card.definition.name))
+                        s.named_card.as_deref().is_some_and(|n| card.definition.has_name(n))
+                            || s.cold_any(|k| k.chosen_names.iter().any(|n| card.definition.has_name(n)))
                     }),
                     R::NamedByEitherAgendaOfSource => source
                         .and_then(|sid| self.static_source(sid))
@@ -6316,7 +6316,7 @@ impl GameState {
                             [s.named_card.as_deref(), s.named_card_2.as_deref()]
                                 .iter()
                                 .flatten()
-                                .any(|n| *n == card.definition.name)
+                                .any(|n| card.definition.has_name(n))
                         }),
                     R::NameNotedForSource => source
                         .and_then(|sid| self.find_card_anywhere(sid))
@@ -7098,7 +7098,7 @@ impl GameState {
             R::HasGreatestPowerAmongAllCreatures => false,
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
-            R::HasName(name) => card.definition.name == name.as_str(),
+            R::HasName(name) => card.definition.has_name(name),
             R::OriginallyPrintedIn(set) => set.contains(card.definition.name),
             // Resolved to a concrete `HasName` by callers that have the
             // source in hand (RevealUntilFind); vacuously false otherwise.

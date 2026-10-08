@@ -366,6 +366,39 @@ fn cr_709_5_a_locked_room_is_colorless_and_a_door_colors_it() {
     assert_eq!(red(&g), (true, true), "the Corridor's {{R}} colors it");
 }
 
+/// CR 709.5 — a Room permanent has only its unlocked doors' names: a locked
+/// Room has no name, and unlocking a door gives it that door's name only.
+#[test]
+fn cr_709_5_a_locked_door_has_no_name() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = main_phase();
+    let room = g.add_card_to_battlefield(0, catalog::spiked_corridor_torture_pit());
+    let named = |g: &GameState, n: &str| {
+        g.evaluate_requirement_static(&R::HasName(n.into()), &Target::Permanent(room), 0, None)
+    };
+    assert!(!named(&g, "Spiked Corridor") && !named(&g, "Torture Pit"), "locked: no name");
+    assert!(g.battlefield_find_mut(room).unwrap().unlock_room_door(false));
+    assert!(named(&g, "Spiked Corridor"), "the unlocked door's name");
+    assert!(!named(&g, "Torture Pit"), "the locked door's name is still gone");
+}
+
+/// CR 709.4a — a split card has each half's name: Meddling Mage naming
+/// "Hit" stops Hit // Run, where comparing the whole printed name let it
+/// through.
+#[test]
+fn cr_709_4a_naming_one_half_of_a_split_card_names_the_card() {
+    use crabomination::game::types::GameAction;
+    let mut g = main_phase();
+    let mage = g.add_card_to_battlefield(1, catalog::meddling_mage());
+    g.battlefield_find_mut(mage).unwrap().named_card = Some("Hit".into());
+    let hit = g.add_card_to_hand(0, catalog::hit_run());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let cast = g.perform_action(GameAction::CastSpell { card_id: hit, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None });
+    assert!(matches!(cast, Err(GameError::SpellNameLocked)), "{cast:?}");
+}
+
 /// CR 400.1 / 608.2 — an answer of the wrong shape to a paused resolution is
 /// rejected and the ask stands: the resolving card is held off-zone until the
 /// resolution resumes, and dropping the ask deleted it (a fuzzed 8-seat pod,

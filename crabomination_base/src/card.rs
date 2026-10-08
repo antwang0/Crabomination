@@ -5793,7 +5793,27 @@ static ARABIAN_NIGHTS_NAMES: [&str; 78] = [
 
 fn one_u32() -> u32 { 1 }
 
+/// [`CardDefinition::has_name`] over a bare name: `name` ("Fire // Ice")
+/// has `n` ("Fire") per CR 709.4a; the empty `n` matches nothing.
+pub fn name_has(name: &str, n: &str) -> bool {
+    !n.is_empty() && (name == n || name.contains(" // ") && name.split(" // ").any(|h| h == n))
+}
+
 impl CardDefinition {
+    /// CR 709.4a — an object has a chosen name if one of its names is that
+    /// name: a split card or Room ("Fire // Ice") has each half's name too.
+    /// The empty name (nothing named, a fully locked Room) matches nothing.
+    pub fn has_name(&self, n: &str) -> bool {
+        name_has(self.name, n)
+    }
+
+    /// The `i`th half's name of a split card or Room (CR 709.4a); the whole
+    /// name for any other card.
+    pub fn half_name(&self, i: usize) -> &'static str {
+        let name: &'static str = self.name;
+        name.split(" // ").nth(i).unwrap_or(name)
+    }
+
     /// `self` with `modes_widen` set — the builder form for a helper-built card.
     pub fn widening_modes(mut self, w: ModesWiden) -> Self {
         self.modes_widen = Some(w);
@@ -10420,9 +10440,23 @@ impl CardInstance {
         card
     }
 
+    /// This permanent's name (CR 709.5: a Room has only its unlocked doors'
+    /// names, and none while both are locked).
+    pub fn battlefield_name(&self) -> &'static str {
+        if self.definition.room.is_none() {
+            return self.definition.name;
+        }
+        match self.unlocked_doors & 3 {
+            0 => "",
+            1 => self.definition.half_name(0),
+            2 => self.definition.half_name(1),
+            _ => self.definition.name,
+        }
+    }
+
     /// CR 709.5 — a Room on the battlefield has only its unlocked doors' mana
-    /// costs (neither door unlocked: no mana cost, mana value 0). `None` for a
-    /// non-Room. For readers only.
+    /// costs and names (neither door unlocked: no mana cost, mana value 0, no
+    /// name). `None` for a non-Room. For readers only.
     pub fn room_battlefield_view(&self) -> Option<CardInstance> {
         let r = self.definition.room.as_deref()?;
         let mut cost = ManaCost::default();
@@ -10432,7 +10466,11 @@ impl CardInstance {
         if self.unlocked_doors & 2 != 0 {
             cost.symbols.extend(r.right.cost.symbols.iter().cloned());
         }
-        Some(self.view_with(|d| d.cost = cost))
+        let name = self.battlefield_name();
+        Some(self.view_with(|d| {
+            d.cost = cost;
+            d.name = name;
+        }))
     }
 
     /// True when [`face_view`](Self::face_view) can differ from the card.
@@ -10495,18 +10533,24 @@ impl CardInstance {
                 v.toughness = 0;
                 v.effect = h.effect.clone();
             }
+            // CR 709.3b — a split spell has only the cast half's name too.
             (true, None, Some(s), _) => match self.split_cast {
                 Some(1) => {
+                    v.name = def.half_name(1);
                     v.cost = s.right.cost.clone();
                     v.card_types = s.right.card_types.clone();
                     v.effect = s.right.effect.clone();
                 }
                 // CR 709.4d — a fused split spell has both halves.
                 Some(2) => combine(&mut v, &s.right.cost, &s.right.card_types),
-                _ => return None,
+                _ => v.name = def.half_name(0),
             },
-            // CR 709.5 — a Room door spell has that door's cost.
-            (true, None, None, Some(r)) if self.split_cast == Some(1) => v.cost = r.right.cost.clone(),
+            // CR 709.5 — a Room door spell has that door's cost and name.
+            (true, None, None, Some(r)) if self.split_cast == Some(1) => {
+                v.name = def.half_name(1);
+                v.cost = r.right.cost.clone();
+            }
+            (true, None, None, Some(_)) => v.name = def.half_name(0),
             (false, _, Some(s), _) => combine(&mut v, &s.right.cost, &s.right.card_types),
             (false, _, None, Some(r)) => combine(&mut v, &r.right.cost, &[]),
             _ => return None,

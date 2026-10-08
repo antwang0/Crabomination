@@ -11282,7 +11282,7 @@ impl GameState {
             seat.is_some_and(|s| c.controller == s && !c.face_down)
                 && c.definition.static_abilities.iter().any(|sa| match sa.effect {
                     StaticEffect::MaySpendManaAsAnyColorForNamedSpells => {
-                        kind.name.is_some() && c.named_card.as_deref() == kind.name
+                        kind.name.zip(c.named_card.as_deref()).is_some_and(|(k, n)| crate::card::name_has(k, n))
                     }
                     StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
                         kind.creature && c.chosen_number == Some(kind.mana_value)
@@ -11301,7 +11301,7 @@ impl GameState {
             c.definition.static_abilities.iter().any(|sa| match sa.effect {
                 StaticEffect::PlayersMaySpendManaAsAnyColor => true,
                 StaticEffect::MaySpendManaAsAnyColorForNamedSpells => {
-                    mine && kind.name.is_some() && c.named_card.as_deref() == kind.name
+                    mine && kind.name.zip(c.named_card.as_deref()).is_some_and(|(k, n)| crate::card::name_has(k, n))
                 }
                 StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
                     mine && kind.creature && c.chosen_number == Some(kind.mana_value)
@@ -29301,7 +29301,7 @@ impl GameState {
                     else {
                         continue;
                     };
-                    let matches = card.definition.name == name;
+                    let matches = card.definition.has_name(&name);
                     if matches {
                         self.players[player].hand.push(card);
                     } else {
