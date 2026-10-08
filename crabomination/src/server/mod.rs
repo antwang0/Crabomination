@@ -96,6 +96,7 @@ mod mutate;
 mod fog;
 mod trigger_copy;
 mod voyage;
+mod accept_offer;
 mod evasion;
 mod manland;
 mod selection_sink;

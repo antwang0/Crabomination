@@ -5348,7 +5348,10 @@ pub fn decide_optional_trigger(
     // (`eval_modes` gates it off inside sims); a flat cost or a flat upside
     // does not — there is nothing to weigh.
     let (take, priced) = match kind {
-        K::MayBody => (optional_trigger_beneficial(state, source, description), true),
+        K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description) {
+            Some(yes) => (yes, false),
+            None => (optional_trigger_beneficial(state, source, description), true),
+        },
         K::PayMana { cost, purpose } => {
             let ok = affordable(cost)
                 && match purpose {
