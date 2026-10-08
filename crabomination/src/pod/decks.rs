@@ -5785,3 +5785,30 @@ pub const SATORU_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const VOLO_COMMANDERS: &[CardFactory] = &[volo_guide_to_monsters];
+
+/// **Volo, Guide to Monsters**' EDHREC average deck (fetched 2026-10-08), card
+/// for card: 77 nonbasic cards + 13 Forests + 9 Islands = 99. Simic creature
+/// variety — each creature spell of a new type is copied.
+pub const VOLO_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, panharmonicon, sol_ring, swiftfoot_boots, twinning_staff,
+    breeding_pool, command_tower, dreamroot_cascade, exotic_orchard, flooded_grove,
+    hinterland_harbor, mosswort_bridge, rejuvenating_springs, reliquary_tower,
+    simic_growth_chamber, temple_of_mystery, vineglimmer_snarl, yavimaya_coast, acidic_slime,
+    amphin_mutineer, avenger_of_zendikar, beast_whisperer, birds_of_paradise,
+    clever_impersonator, craterhoof_behemoth, dutiful_replicator, end_raze_forerunners,
+    hornet_queen, ilysian_caryatid, junk_winder, kioras_follower, loyal_drake, loyal_guardian,
+    man_o_war, managorger_hydra, maraleaf_pixie, mulldrifter, murkfiend_liege, octomancer,
+    ornithopter_of_paradise, peregrine_drake, poison_dart_frog, prosperous_innkeeper,
+    radagast_the_brown, reef_worm, sakura_tribe_elder, scute_swarm, silverback_elder,
+    solemn_simulacrum, spark_double, temur_sabertooth, terastodon, uro, volo_itinerant_scholar,
+    elemental_bond, garruks_uprising, growing_rites_of_itlimoc, rhystic_study,
+    tribute_to_the_world_tree, beast_within, counterspell, double_major, growth_spiral,
+    heroic_intervention, negate, perplexing_test, pongify, return_of_the_wildspeaker,
+    second_harvest, cultivate, farseek, kodamas_reach, natures_lore, rampant_growth,
+    shamanic_revelation, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, island, island, island, island, island, island, island, island, island,
+];

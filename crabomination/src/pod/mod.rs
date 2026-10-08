@@ -1565,6 +1565,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SATORU_COMMANDERS,
             main: decks::SATORU_MAIN,
         },
+        // Hundred-and-ninety-second: Volo, Guide to Monsters' EDHREC average
+        // deck (copied creature spells, noted creature types). `--pod-decks 192`.
+        PodDeck {
+            name: "Volo, Guide to Monsters (GU)",
+            commanders: decks::VOLO_COMMANDERS,
+            main: decks::VOLO_MAIN,
+        },
     ]
 }
 
@@ -3242,6 +3249,8 @@ mod tests {
             ("Deadpool", [0xDEAD, 190, 9114]),
             // CR 702.49 ninjutsu granted to every creature card in hand.
             ("Satoru", [0x5A70, 191, 9115]),
+            // Volo's copied creature spells, Volo's Journal's noted types.
+            ("Volo, Guide", [0x7010, 192, 9116]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
