@@ -382,6 +382,34 @@ fn cr_709_5_a_locked_door_has_no_name() {
     assert!(!named(&g, "Torture Pit"), "the locked door's name is still gone");
 }
 
+/// CR 709.5 — a static's scope over permanents reads a Room's unlocked
+/// doors' mana value: "permanents with mana value 1 or greater have
+/// hexproof" skips a locked Room (mana value 0) and covers it once a door
+/// is unlocked.
+#[test]
+fn cr_709_5_a_static_scope_reads_a_rooms_unlocked_mana_value() {
+    use crabomination::card::{CardDefinition, CardType, Keyword, SelectionRequirement as R};
+    use crabomination::effect::{StaticAbility, StaticEffect};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Costly Ward",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Permanents with mana value 1 or greater have hexproof.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::ManaValueAtLeast(1).and(R::Enchantment)),
+                keyword: Keyword::Hexproof,
+            },
+        }],
+        ..Default::default()
+    });
+    let room = g.add_card_to_battlefield(0, catalog::spiked_corridor_torture_pit());
+    let hexproof = |g: &GameState| g.computed_permanent(room).unwrap().keywords().contains(&Keyword::Hexproof);
+    assert!(!hexproof(&g), "locked: mana value 0");
+    assert!(g.battlefield_find_mut(room).unwrap().unlock_room_door(false));
+    assert!(hexproof(&g), "the Corridor's {{R}}: mana value 1");
+}
+
 /// CR 709.4a — a split card has each half's name: Meddling Mage naming
 /// "Hit" stops Hit // Run, where comparing the whole printed name let it
 /// through.

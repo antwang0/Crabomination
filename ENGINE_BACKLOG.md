@@ -175,11 +175,14 @@ deck in `--pod-decks` groups, 3..8 seats, with and without
   both doors' costs (a locked Room was red), the walker only unlocked doors'
   (colorless); the colour gate's ratchet caught the split (`--a dflt`, 2
   seats, seed 261036). `cr_recent118::cr_709_5_a_locked_room_*`.
-  ⏳ The layer-side matcher (`requirement_matches_card_typed`, static
-  scopes over permanents) still reads a Room permanent's representative
-  definition cost for mana value and, absent computed colors, color — it
-  also serves library and hand cards, where that cost is CR 709.4's answer;
-  and a Room permanent's NAME is still the whole card's (CR 709.5).
+  ✅ *(2026-10-08, ninth run)* The layer pass's `CardMatch` scope reads a
+  Room permanent through `room_battlefield_view` (mana value, colors, name);
+  a Room permanent has only its unlocked doors' names and a split card each
+  half's (CR 709.4a, `CardDefinition::has_name`).
+  `cr_recent118::cr_709_5_a_static_scope_*`, `cr_709_5_a_locked_door_*`,
+  `cr_709_4a_naming_one_half_*`. ⏳ A restricted `NameCard` ask
+  (`restrict_to`) looks a half's name up in the registry by full name only,
+  so naming one half under a restriction names nothing.
 - ✅ Detector fixes (debug pod invariants): a commander inside a phased-out
   merged pile (Talon Gates on mutated Otrimi, seed 221030); the CR 514.1
   hand-size check read the maximum after an "until end of turn" Body of

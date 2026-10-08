@@ -1901,6 +1901,16 @@ fn affected_includes_gated(
             if requirement_mentions_other_than_source(requirement) && source == card.id {
                 return false;
             }
+            // CR 709.5 — a Room permanent has only its unlocked doors' cost
+            // (mana value, uncomputed colors) and names.
+            let room;
+            let card = match card.room_battlefield_view() {
+                Some(v) => {
+                    room = v;
+                    &room
+                }
+                None => card,
+            };
             requirement_matches_card_typed(
                 requirement,
                 card,
