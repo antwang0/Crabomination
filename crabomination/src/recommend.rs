@@ -1916,6 +1916,33 @@ impl GameTrace {
     }
 }
 
+/// `CRAB_STUCK_DIAG=1` — when a game stops as stuck (no bot action accepted
+/// for [`STALE_ROUNDS`] rounds), print the pending ask and what each seat
+/// wanted and why the engine refused it. Read only on a stuck game.
+fn stuck_diag() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_STUCK_DIAG").is_some_and(|v| v != "0"))
+}
+
+fn report_stuck(g: &GameState, bots: &mut [Box<dyn crate::server::bot::Bot>]) {
+    let ask = g.pending_decision.as_ref().map(|d| {
+        let s = format!("{:?}", d.decision);
+        (s.chars().take(300).collect::<String>(), d.acting_player())
+    });
+    eprintln!(
+        "STUCK t{} {:?} priority {} stack {} ask {ask:?}",
+        g.turn_number,
+        g.step,
+        g.player_with_priority(),
+        g.stack.len(),
+    );
+    for (s, bot) in bots.iter_mut().enumerate() {
+        let want = bot.next_action_settled(g, s).map(|b| b.action);
+        let refused = want.clone().and_then(|a| g.clone().perform_action(a).err());
+        eprintln!("STUCK   seat {s} wants {} -> {refused:?}", want.map_or("nothing".into(), |a| named_ids(g, &format!("{a:?}"))));
+    }
+}
+
 /// `CRAB_TRACE_NAMES=1` — a traced action line also names every `CardId` it
 /// mentions. Off by default: the golden traces are this format.
 fn trace_names() -> bool {
@@ -2171,6 +2198,9 @@ fn play_one_game_traced(
             break;
         }
         if any { stale = 0 } else { stale += 1 }
+        if stale == STALE_ROUNDS && stuck_diag() {
+            report_stuck(&g, &mut bots);
+        }
     }
     crate::server::bot::set_jitter_seed(None);
     // The loop's own order: `is_game_over` wins over the caps, and a game
