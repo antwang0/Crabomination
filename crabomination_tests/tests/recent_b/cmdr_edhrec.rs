@@ -405,7 +405,7 @@ fn ratadrabik_copies_a_dead_legend() {
     assert_eq!((cp.power, cp.toughness), (2, 2));
     assert!(!cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
     assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Zombie));
-    assert!(cp.colors.contains(&Color::Black) && cp.colors.contains(&Color::Green));
+    assert!(cp.colors.contains(Color::Black) && cp.colors.contains(Color::Green));
 }
 
 /// The Cabbage Merchant makes Food off an opponent's noncreature spell and
