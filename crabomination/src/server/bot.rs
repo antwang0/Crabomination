@@ -10441,6 +10441,9 @@ fn main_phase_action_with(
     // Pay to flip a counter-carrying Incubator into a creature (CR 701.53).
     // Last resort, dry-run-gated.
     gated_pick!(state, sinks, sink::AB_TRANSFORM, super::transform_sink::pick_transform_self(state, seat));
+    if let Some(action) = super::transform_sink::pick_flip_to_saga(state, seat) {
+        return BotStep::plain(action);
+    }
 
     // Spend "{X}, remove X counters" abilities (Marath) on their best mode
     // and size. Dry-run-scored against passing.
