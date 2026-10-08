@@ -1621,6 +1621,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TOXRILL_COMMANDERS,
             main: decks::TOXRILL_MAIN,
         },
+        // Seat 201: The Wandering Minstrel's EDHREC average deck. `--pod-decks 201`.
+        PodDeck {
+            name: "The Wandering Minstrel (BGRUW)",
+            commanders: decks::MINSTREL_COMMANDERS,
+            main: decks::MINSTREL_MAIN,
+        },
+        // Seat 202: The First Sliver's EDHREC average deck. `--pod-decks 202`.
+        PodDeck {
+            name: "The First Sliver (BGRUW)",
+            commanders: decks::FIRST_SLIVER_COMMANDERS,
+            main: decks::FIRST_SLIVER_MAIN,
+        },
+        // Seat 203: Zur the Enchanter's EDHREC average deck. `--pod-decks 203`.
+        PodDeck {
+            name: "Zur the Enchanter (BUW)",
+            commanders: decks::ZUR_COMMANDERS,
+            main: decks::ZUR_MAIN,
+        },
+        // Seat 204: Etali, Primal Conqueror's EDHREC average deck. `--pod-decks 204`.
+        PodDeck {
+            name: "Etali, Primal Conqueror (GR)",
+            commanders: decks::ETALI_PC_COMMANDERS,
+            main: decks::ETALI_PC_MAIN,
+        },
+        // Seat 205: Magus Lucea Kane's EDHREC average deck. `--pod-decks 205`.
+        PodDeck {
+            name: "Magus Lucea Kane (GRU)",
+            commanders: decks::LUCEA_COMMANDERS,
+            main: decks::LUCEA_MAIN,
+        },
+        // Seat 206: Tivit, Seller of Secrets's EDHREC average deck. `--pod-decks 206`.
+        PodDeck {
+            name: "Tivit, Seller of Secrets (BUW)",
+            commanders: decks::TIVIT_COMMANDERS,
+            main: decks::TIVIT_MAIN,
+        },
+        // Seat 207: Umbris, Fear Manifest's EDHREC average deck. `--pod-decks 207`.
+        PodDeck {
+            name: "Umbris, Fear Manifest (BU)",
+            commanders: decks::UMBRIS_COMMANDERS,
+            main: decks::UMBRIS_MAIN,
+        },
+        // Seat 208: Prismari, the Inspiration's EDHREC average deck. `--pod-decks 208`.
+        PodDeck {
+            name: "Prismari, the Inspiration (RU)",
+            commanders: decks::PRISMARI_COMMANDERS,
+            main: decks::PRISMARI_MAIN,
+        },
+        // Seat 209: Shalai and Hallar's EDHREC average deck. `--pod-decks 209`.
+        PodDeck {
+            name: "Shalai and Hallar (GRW)",
+            commanders: decks::SHALAI_COMMANDERS,
+            main: decks::SHALAI_MAIN,
+        },
+        // Seat 210: Phenax, God of Deception's EDHREC average deck. `--pod-decks 210`.
+        PodDeck {
+            name: "Phenax, God of Deception (BU)",
+            commanders: decks::PHENAX_COMMANDERS,
+            main: decks::PHENAX_MAIN,
+        },
     ]
 }
 
@@ -3312,6 +3372,21 @@ mod tests {
             ("Elsha", [0xE15A, 198, 9122]),
             ("Kinnan", [0x4144, 199, 9123]),
             ("Toxrill", [0x7055, 200, 9124]),
+            // Towns (Minstrel), CR 702.85 granted cascade (First Sliver),
+            // enchantment tutors (Zur), free casts off every library (Etali),
+            // X copies (Lucea), CR 701.38 council's dilemma votes (Tivit),
+            // exile-until-land (Umbris), granted storm (Prismari), counter
+            // pings (Shalai and Hallar), granted mill abilities (Phenax).
+            ("The Wandering Minstrel", [0x3135, 201, 9125]),
+            ("The First Sliver", [0x5115, 202, 9126]),
+            ("Zur the Enchanter", [0x2042, 203, 9127]),
+            ("Etali, Primal Conqueror", [0xE7A1, 204, 9128]),
+            ("Magus Lucea", [0x1CEA, 205, 9129]),
+            ("Tivit", [0x7171, 206, 9130]),
+            ("Umbris", [0x0B15, 207, 9131]),
+            ("Prismari", [0x9215, 208, 9132]),
+            ("Shalai and Hallar", [0x5A1A, 209, 9133]),
+            ("Phenax", [0x9E4A, 210, 9134]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
