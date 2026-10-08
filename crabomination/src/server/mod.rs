@@ -122,6 +122,7 @@ mod fight_pick;
 mod loyalty_pick;
 mod life_draw;
 mod transform_sink;
+mod spell_discount;
 mod x_counter_sink;
 mod modal_activation;
 mod generic_sink;
