@@ -2736,10 +2736,18 @@ impl GameState {
         // CR 710.4 — a flip card has only its normal characteristics off the
         // battlefield, and keeps no memory of having flipped. (The
         // replacement-redirect path does this in `place_card_at_resolved_zone`;
-        // this is the direct path. The DFC/prototype reverts stay on that path
-        // only — a defeated battle transforms *through* exile.)
+        // this is the direct path. Its DFC/prototype reverts skip exile — a
+        // defeated battle transforms *through* exile.)
         if intended != crate::card::Zone::Battlefield {
             card.revert_flip();
+        }
+        // CR 712.4 / 702.160c — and a transformed DFC or a prototyped card
+        // bound anywhere but exile shows its front / printed face: Evacuation
+        // bounced a disturbed Generous Soul into a hand as its back face (pod
+        // seed 818288).
+        if !matches!(intended, crate::card::Zone::Battlefield | crate::card::Zone::Exile) {
+            card.revert_transform();
+            card.revert_prototype();
         }
         // CR 123.5 — stickers are not retained into a hidden zone (and the
         // sticker is free again, CR 123.3). Guarded inside.

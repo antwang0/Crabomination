@@ -813,3 +813,22 @@ fn cr_404_2_a_processed_face_down_card_lands_face_up() {
     let gy = g.players[1].graveyard.iter().find(|c| c.id == hidden).expect("processed");
     assert!(!gy.face_down, "face up in the graveyard");
 }
+
+/// CR 712.4 — a disturbed DFC bounced to a hand is its front face there
+/// (Evacuation took a Generous Soul back as its back face, pod seed 818288).
+#[test]
+fn cr_712_4_a_bounced_disturb_back_face_is_its_front_in_hand() {
+    let mut g = main_phase();
+    let beggar = g.add_card_to_graveyard(0, catalog::beloved_beggar());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 6);
+    g.perform_action(crabomination::game::types::GameAction::CastDisturb {
+        card_id: beggar, target: None, additional_targets: vec![],
+    })
+    .expect("disturb");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(beggar).is_some_and(|c| c.transformed), "Generous Soul");
+    resolve(&mut g, beggar, None, &Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) });
+    let held = g.players[0].hand.iter().find(|c| c.id == beggar).expect("bounced");
+    assert!(!held.transformed);
+    assert_eq!(held.definition.name, "Beloved Beggar");
+}
