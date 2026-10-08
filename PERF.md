@@ -3206,6 +3206,12 @@ closing tip      771f573d8 + the once-each-turn look-back (one empty `Vec`,
                  fuzzed release 497000-499700 (15,700; 6 draws, 1 board
                  cap); cube / sos / sealed --seed 9302 x 300 (7,500, 0
                  undecided) — zero panics, zero stalls
+later fixes      + CR 122.2 gate, ladder fuzz: --bench 196,176 byte-identical
+                 at da44933a7; dflt+fuzz release census 450000-452500
+                 (3,830, clean); CRAB_LADDER_FUZZ 1,000/5,000 x cube / sos /
+                 sealed / all, seeds 9411-9412 x 200 (33,600 release, 2
+                 draws) and 2,000/6,000 seeds 9401-9403 x 30 (4,500 debug,
+                 strict answer log, 6 draws) — zero panics
 ```
 
 ### 2026-10-07 (Commander routine, sixth — session `011LGd2W`) — guardrail; CR 800.4a holds, departed askers, sweep finds
