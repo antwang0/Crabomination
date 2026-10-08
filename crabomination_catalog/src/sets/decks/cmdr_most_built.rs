@@ -5,13 +5,33 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement as R, Selector, Supertype, TriggeredAbility, Value,
+    EventSpec, Keyword, MayPlayDuration, SelectionRequirement as R, Selector, StaticAbility,
+    StaticEffect, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::if_discarded;
-use crate::card::MayPlayDuration;
+use crate::effect::shortcut::{if_discarded, magecraft, target_filtered, with_copies};
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, r, Color};
+use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
+
+fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: types, ..Default::default() },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+fn keeps_red_mana() -> StaticAbility {
+    StaticAbility {
+        description: "You don't lose unspent red mana as steps and phases end.",
+        effect: StaticEffect::UnspentColorManaPersists(Color::Red),
+    }
+}
 
 // ── Ob Nixilis, Captive Kingpin (BR) ────────────────────────────────────────
 
@@ -143,6 +163,103 @@ pub fn shadow_of_the_goblin() -> CardDefinition {
                 effect: ping(),
             },
         ],
+        ..Default::default()
+    }
+}
+
+// ── Storm, Force of Nature (GUR) ────────────────────────────────────────────
+
+/// Storm, Force of Nature — flying, vigilance; combat damage to a player
+/// gives the next instant or sorcery you cast this turn storm (CR 702.40).
+pub fn storm_force_of_nature() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::NextInstantOrSorceryGainsStormThisTurn,
+        }],
+        ..legend(
+            "Storm, Force of Nature",
+            cost(&[generic(1), g(), u(), r()]),
+            vec![CreatureType::Mutant, CreatureType::Hero],
+            3,
+            4,
+        )
+    }
+}
+
+/// Ashling, Flame Dancer — keeps unspent red mana; Magecraft: discard, then
+/// draw; the second resolution this turn deals 2 to each opponent and each
+/// creature they control, the third adds {R}{R}{R}{R}.
+pub fn ashling_flame_dancer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![keeps_red_mana()],
+        triggered_abilities: vec![with_copies(magecraft(Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::NthResolutionThisTurn {
+                branches: vec![
+                    Effect::Noop,
+                    Effect::Seq(vec![
+                        Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+                        Effect::DealDamage {
+                            to: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                            amount: Value::Const(2),
+                        },
+                    ]),
+                    Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red; 4]) },
+                ],
+            },
+        ])))],
+        ..legend(
+            "Ashling, Flame Dancer",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Elemental, CreatureType::Shaman],
+            4,
+            4,
+        )
+    }
+}
+
+/// Electro, Assaulting Battery — flying; keeps unspent red mana; an instant
+/// or sorcery cast adds {R}; leaving the battlefield, you may pay {X}, and
+/// when you do it deals X damage to target player.
+pub fn electro_assaulting_battery() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![keeps_red_mana()],
+        triggered_abilities: vec![
+            magecraft(Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red]) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::MayPayX {
+                    description: "Pay {X} to deal X damage to target player?".into(),
+                    body: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::DealDamage {
+                            to: target_filtered(R::Player),
+                            amount: Value::XFromCost,
+                        }),
+                    }),
+                },
+            },
+        ],
+        ..legend(
+            "Electro, Assaulting Battery",
+            cost(&[generic(1), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Villain],
+            2,
+            3,
+        )
+    }
+}
+
+/// Ice Storm — destroy target land.
+pub fn ice_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Ice Storm",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy { what: target_filtered(R::Land) },
         ..Default::default()
     }
 }

@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -168,4 +169,86 @@ fn shadow_of_the_goblin_pings_for_a_land_played_from_elsewhere() {
     g.perform_action(GameAction::PlayLandFromGraveyard(from_yard)).expect("play from graveyard");
     drain_stack(&mut g);
     assert_eq!([g.players[1].life, g.players[2].life], [19, 19]);
+}
+
+fn cast_at(g: &mut GameState, id: CardId, target: Option<crabomination::game::types::Target>) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(g);
+}
+
+/// CR 702.40 — Storm's combat damage gives the NEXT instant or sorcery this
+/// turn storm: a Bolt after one earlier spell is copied once; the one after
+/// it is not (the grant is spent).
+#[test]
+fn storm_gives_the_next_instant_or_sorcery_storm() {
+    use crabomination::game::types::Target;
+    let mut g = pod(3);
+    let storm = ready(&mut g, 0, catalog::storm_force_of_nature());
+    flood(&mut g);
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast_at(&mut g, opt, None);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: storm, target: AttackTarget::Player(2) }]))
+        .expect("attack");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[2].life, 17);
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_at(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 14, "the Bolt and one storm copy");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_at(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 11, "the grant was spent");
+}
+
+/// Ashling's Magecraft: the second resolution this turn deals 2 to each
+/// opponent and each creature they control; the third adds {R}{R}{R}{R}.
+#[test]
+fn ashling_escalates_on_the_second_and_third_spell() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::ashling_flame_dancer());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    for i in 0..3 {
+        for _ in 0..2 {
+            g.add_card_to_hand(0, catalog::island());
+        }
+        let opt = g.add_card_to_hand(0, catalog::opt());
+        flood(&mut g);
+        let red = g.players[0].mana_pool.amount(Color::Red);
+        cast_at(&mut g, opt, None);
+        match i {
+            0 => assert_eq!(g.players[1].life, 20),
+            1 => {
+                assert_eq!([g.players[1].life, g.players[2].life], [18, 18]);
+                assert!(g.battlefield_find(bear).is_none(), "their creature took 2");
+                assert!(g.battlefield_find(mine).is_some(), "yours did not");
+            }
+            _ => assert_eq!(g.players[0].mana_pool.amount(Color::Red), red + 4),
+        }
+    }
+}
+
+/// Electro: an instant or sorcery cast adds {R}; leaving the battlefield it
+/// may pay {X} for a reflexive X damage to target player (2025-09-19 ruling).
+#[test]
+fn electro_adds_red_and_burns_as_it_leaves() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let electro = ready(&mut g, 0, catalog::electro_assaulting_battery());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast_at(&mut g, opt, None);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "Electro's red mana");
+    g.players[0].mana_pool.add_colorless(3);
+    // The bots' profile: a hostile player slot names an opponent first.
+    g.players[0].hostile_player_targets = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_at(&mut g, bolt, Some(Target::Permanent(electro)));
+    assert!(g.battlefield_find(electro).is_none());
+    assert_eq!(g.players[1].life, 17, "paid {{X}} = 3 for 3 damage");
 }
