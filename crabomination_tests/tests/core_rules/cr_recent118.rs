@@ -705,3 +705,24 @@ fn cr_800_4a_a_departed_combat_chooser_hands_the_declaration_back() {
     g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(2) }]).expect("declares");
     assert_eq!(g.attacking.len(), 1);
 }
+
+/// CR 400.7 — an "enchant player" Aura exiled by an effect is a new object
+/// in exile, attached to nobody. `move_card_to` cleared the creature-side
+/// attachment only, so Urza's Ruinous Blast left Curse of Clinging Webs
+/// attached to its player in exile (pod seed 819001, the CR 400.7 invariant).
+#[test]
+fn cr_400_7_an_exiled_curse_is_attached_to_no_player() {
+    let mut g = main_phase();
+    let curse = g.add_card_to_battlefield(0, catalog::curse_of_clinging_webs());
+    g.battlefield_find_mut(curse).unwrap().attached_to_player = Some(1);
+    let blast = g.add_card_to_hand(0, catalog::urzas_ruinous_blast());
+    g.add_card_to_battlefield(0, catalog::urza_lord_high_artificer());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 5);
+    g.perform_action(crabomination::game::types::GameAction::CastSpell {
+        card_id: blast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast with a legendary creature out");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == curse).expect("exiled");
+    assert_eq!(exiled.attached_to_player, None, "a new object, attached to no one");
+}

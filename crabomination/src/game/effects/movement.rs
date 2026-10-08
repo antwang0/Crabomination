@@ -2406,6 +2406,11 @@ impl GameState {
             if let Some(host) = card.attached_to.take() {
                 self.note_unattached(card.id, &card.definition, card.controller, host);
             }
+            // CR 400.7 — and the rest of the old object's battlefield state,
+            // as the death and bounce routes shed it: an "enchant player"
+            // Curse exiled by Urza's Ruinous Blast stayed attached to its
+            // player in exile (pod seed 819001).
+            card.leave_battlefield_state();
             // CR 506.4 — A permanent leaving the battlefield is removed
             // from combat. The helper prunes `self.attacking` and
             // `self.block_map` so the post-move combat state stays
