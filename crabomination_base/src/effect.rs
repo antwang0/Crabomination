@@ -7389,6 +7389,10 @@ pub enum Effect {
     /// Pushed onto `Player.turn_spell_discounts`, consulted by
     /// `cost_reduction_for_spell`, cleared at cleanup (CR 514.2).
     SpellsCostLessThisTurn { filter: SelectionRequirement, amount: u32 },
+    /// `SpellsCostLessThisTurn` whose amount is a `Value` fixed as it resolves
+    /// (Rowan, Scion of War: "X is the amount of life you lost this turn",
+    /// 2023-09-01 ruling).
+    SpellsCostLessThisTurnByValue { filter: SelectionRequirement, amount: Value },
     /// "Until your next turn, [filter] spells `who` casts cost {amount} less
     /// to cast" (Will Kenrith's −2) — the discount mirror of
     /// `SpellTaxUntilYourNextTurn`, expiring at the controller's untap.

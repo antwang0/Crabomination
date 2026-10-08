@@ -18695,6 +18695,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SpellsCostLessThisTurnByValue { filter, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 {
+                    self.players[ctx.controller].turn_spell_discounts.push((filter.clone(), n));
+                }
+                Ok(())
+            }
+
             Effect::FaceDownSpellsCostLessThisTurn { amount } => {
                 self.players[ctx.controller].face_down_discount_this_turn += *amount;
                 Ok(())

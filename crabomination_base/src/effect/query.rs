@@ -1415,6 +1415,7 @@ impl Effect {
             Effect::Flip { what } => sel_has_target(what),
             Effect::Meld { .. } => false,
             Effect::SpellsCostLessThisTurn { .. } => false,
+            Effect::SpellsCostLessThisTurnByValue { .. } => false,
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
             Effect::NextFaceDownSpellCostsLessThisTurn { .. } => false,
             Effect::GrantSpellsFlashThisTurn { .. } => false,
@@ -5866,6 +5867,15 @@ impl Effect {
             // "Destroy up to X target …" written as a cap on the paid X
             // (Klauth's Will): no slot prompt past the X-th.
             Effect::CapTargetsAt { amount: crate::effect::Value::XFromCost, .. } => u32::from(slot) >= x,
+            // "Up to twice X target …" (Erebos's Intervention).
+            Effect::CapTargetsAt { amount: crate::effect::Value::Times(a, k), .. }
+                if matches!(**a, crate::effect::Value::XFromCost) =>
+            {
+                match **k {
+                    crate::effect::Value::Const(k) => u32::from(slot) >= x.saturating_mul(k.max(0) as u32),
+                    _ => false,
+                }
+            }
             Effect::Seq(steps) => steps.iter().any(|e| e.slot_past_x_cap(slot, x)),
             // Past every member's slots is past the cap too.
             Effect::SlotGroups(v) => Self::slot_group_owner(v, slot).is_none_or(|(m, rel)| m.slot_past_x_cap(rel, x)),
