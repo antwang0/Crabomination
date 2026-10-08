@@ -8897,7 +8897,9 @@ impl GameState {
                 self.players[seat].creatures_exiled_from_control_this_turn =
                     self.players[seat].creatures_exiled_from_control_this_turn.saturating_add(1);
             }
-            if card.is_token && resolved != crate::card::Zone::Graveyard && card.definition.is_creature() {
+            // Read only by creature-death replacement checks, so any token is
+            // safe to record (no printed type-line read).
+            if card.is_token && resolved != crate::card::Zone::Graveyard {
                 self.token_deaths_replaced.insert(id);
             }
             self.place_card_at_resolved_zone(card, resolved);
