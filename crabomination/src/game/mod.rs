@@ -4666,7 +4666,6 @@ impl GameState {
             died_card_snapshots: Default::default(),
             leaves_bf_lki: Default::default(),
             resolving_lki_source: None,
-            mana_sources_paying: SmallVec::new(),
             resolving_lki_subject: None,
             subgame_depth: 0,
             resolving_spell_lifelink_seat: None,
@@ -23283,7 +23282,9 @@ impl GameState {
             Keyword::Ninjutsu(mc) => Some(mc.clone()),
             _ => None,
         });
-        let granted = if card.definition.is_creature() {
+        let creature = card.definition.card_types.contains(&crate::card::CardType::Creature)
+            || self.card_off_battlefield_gains_card_type(card, crate::card::CardType::Creature);
+        let granted = if creature {
             self.battlefield
                 .iter()
                 .filter(|s| s.controller == p)
