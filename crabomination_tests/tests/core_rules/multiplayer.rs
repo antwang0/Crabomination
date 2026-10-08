@@ -9437,3 +9437,44 @@ fn cr_800_4a_a_departed_askers_answer_is_nobody_elses() {
         assert_eq!(g.players[stayer].hand.len(), hand + 1, "leaver {leaver}: and draws on yes");
     }
 }
+
+/// CR 800.4a — Sadistic Shell Game's picks name creatures; when the only
+/// candidates' controller leaves mid-round, the re-run finds none and the
+/// picks already made are spent with it (a strict 3-seat audit-build pod,
+/// seed 720192 game 19: the early return left them in the answer log).
+#[test]
+fn cr_800_4a_a_shell_game_whose_candidates_left_spends_its_picks() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let mut g = multi_player_game(3);
+    for s in 0..3 {
+        g.players[s].wants_ui = true;
+    }
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::sadistic_shell_game());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    let mut asked = Vec::new();
+    for _ in 0..20 {
+        let Some(d) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            g.resolve_top_of_stack().expect("resolve");
+            continue;
+        };
+        let seat = d.acting_player();
+        asked.push(seat);
+        if seat == 2 {
+            g.concede(2);
+        } else {
+            g.submit_decision(DecisionAnswer::Target(Target::Permanent(bear))).expect("answer");
+        }
+    }
+    assert_eq!(asked, vec![1, 2], "seat 1 picks, then seat 2 leaves");
+    assert!(g.battlefield_find(bear).is_none() && g.stack.is_empty());
+}
