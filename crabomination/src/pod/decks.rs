@@ -7324,3 +7324,88 @@ pub const DINA_STEEPER_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BETOR_COMMANDERS: &[CardFactory] = &[betor_ancestors_voice];
+
+/// **Betor, Ancestor's Voice**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 85 nonbasic cards + 4 Forests + 4 Plains + 6 Swamps = 99.
+/// Lifegain-and-life-loss counters: Betor feeds +1/+1 counters off life gained and reanimates small creatures off life lost.
+pub const BETOR_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, sol_ring, staff_of_compleation, talisman_of_hierarchy,
+    talisman_of_resilience, talisman_of_unity, bojuka_bog, brushland, canopy_vista,
+    caves_of_koilos, command_tower, exotic_orchard, godless_shrine, indatha_triome,
+    isolated_chapel, llanowar_wastes, marsh_flats, overgrown_farmland, overgrown_tomb,
+    sandsteppe_citadel, sunpetal_grove, temple_garden, undergrowth_stadium, vault_of_the_archangel,
+    verdant_catacombs, windswept_heath, woodland_cemetery, archangel_of_thune,
+    beledros_witherbloom, birds_of_paradise, bloodthirsty_conqueror, celestine_the_living_saint,
+    children_of_korlis, dark_confidant, darkstar_augur, disciple_of_freyalise, doom_whisperer,
+    dragonlord_dromoka, elves_of_deep_shadow, enduring_tenacity, envoy_of_the_ancestors,
+    essence_warden, exemplar_of_light, haywire_mite, heliod_sun_crowned, kami_of_whispered_hopes,
+    kutzil_malamet_exemplar, lathiel_the_bounteous_dawn, moseo_veins_new_dean,
+    niv_mizzet_ghost_counsel, priest_of_fell_rites, rhox_faithmender, rodolf_duskbringer,
+    sakura_tribe_elder, scheming_silvertongue, selfless_spirit, soul_warden, souls_attendant,
+    vilis_broker_of_blood, vito_thorn_of_the_dusk_rose, witch_enchanter, authority_of_the_consuls,
+    black_market_connections, lunar_convocation, phyrexian_arena, ripples_of_undeath,
+    sylvan_library, terrasymbiosis, anguished_unmaking, assassins_trophy, bitter_triumph,
+    fell_the_profane, heroic_intervention, infernal_grasp, path_to_exile, swords_to_plowshares,
+    buried_alive, cultivate, eerie_ultimatum, farseek, feed_the_swarm, natures_lore, reanimate,
+    toxic_deluge,
+    // Basics
+    forest, forest, forest, forest, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const WITHERBLOOM_COMMANDERS: &[CardFactory] = &[witherbloom_the_balancer];
+
+/// **Witherbloom, the Balancer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 80 nonbasic cards + 10 Forests + 9 Swamps = 99.
+/// Instants and sorceries with affinity for creatures off a go-wide Golgari board.
+pub const WITHERBLOOM_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, skullclamp, sol_ring, bojuka_bog, command_tower,
+    deathcap_glade, dryad_arbor, llanowar_wastes, necroblossom_snarl, overgrown_tomb, tainted_wood,
+    twilight_mire, undergrowth_stadium, urborg_tomb_of_yawgmoth, verdant_catacombs, vernal_fen,
+    wastewood_verge, woodland_cemetery, yavimaya_cradle_of_growth, arasta_of_the_endless_web,
+    arbor_elf, badgermole_cub, beledros_witherbloom, birds_of_paradise, bitterbloom_bearer,
+    chatterfang_squirrel_general, craterhoof_behemoth, delighted_halfling, elves_of_deep_shadow,
+    elvish_mystic, enduring_vitality, eternal_witness, fyndhorn_elves, llanowar_elves,
+    mirkwood_bats, scute_swarm, sedgemoor_witch, stensian_sanguinist, studious_first_year,
+    tendershoot_dryad, witherbloom_apprentice, bitterblossom, cryptolith_rite, parallel_lives,
+    springleaf_parade, arachnogenesis, assassins_trophy, beast_within, chord_of_calling,
+    dark_ritual, heroic_intervention, return_of_the_wildspeaker, second_harvest, sprout_swarm,
+    stinging_study, szats_will, veil_of_summer, animists_awakening, army_of_the_damned,
+    awaken_the_woods, biorhythm, collective_unconscious, cultivate, damnable_pact,
+    diabolic_revelation, exsanguinate, ezuris_predation, finale_of_devastation,
+    for_the_common_good, gelatinous_genesis, green_suns_zenith, in_garruks_wake, lab_rats,
+    natures_rhythm, pest_infestation, rise_of_the_dark_realms, shamanic_revelation,
+    sylvan_offering, torment_of_hailfire,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const JUDITH_CARNAGE_COMMANDERS: &[CardFactory] = &[judith_carnage_connoisseur];
+
+/// **Judith, Carnage Connoisseur**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 77 nonbasic cards + 12 Mountains + 10 Swamps = 99.
+/// Rakdos instants and sorceries granting deathtouch and lifelink, with Imp tokens on death.
+pub const JUDITH_CARNAGE_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, fellwar_stone, lightning_greaves, rakdos_signet, sol_ring,
+    swiftfoot_boots, talisman_of_indulgence, blood_crypt, bojuka_bog, command_tower,
+    dragonskull_summit, foreboding_ruins, haunted_ridge, luxury_suite, rakdos_carnarium,
+    shadowblood_ridge, smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice,
+    black_waltz_no_3, coruscation_mage, electrostatic_field, firebrand_archer, guttersnipe,
+    harmonic_prodigy, kessig_flamebreather, mahadi_emporium_master, pestilent_spirit,
+    sedgemoor_witch, solphim_mayhem_dominus, storm_kiln_artist, tor_wauki_the_younger,
+    torbran_thane_of_red_fell, vito_thorn_of_the_dusk_rose, young_pyromancer, arcane_bombardment,
+    black_market_connections, fiery_inscription, phyrexian_arena, sanguine_bond, abrade, big_score,
+    blood_for_the_blood_god, chaos_warp, corrupted_conviction, dark_ritual, deadly_dispute,
+    demand_answers, electrickery, fire_covenant, lightning_bolt, not_dead_after_all, rakdos_charm,
+    seething_song, thrill_of_possibility, undying_malice, village_rites, wail_of_the_nim,
+    blasphemous_act, blazing_volley, chain_reaction, end_the_festivities, faithless_looting,
+    feed_the_swarm, fiery_confluence, jeskas_will, mana_geyser, mizzixs_mastery, nights_whisper,
+    read_the_bones, scouring_sands, sign_in_blood, smash_to_dust, tectonic_hazard, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];

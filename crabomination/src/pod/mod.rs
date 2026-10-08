@@ -1905,6 +1905,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DINA_STEEPER_COMMANDERS,
             main: decks::DINA_STEEPER_MAIN,
         },
+        // Seat 248: Betor, Ancestor's Voice's EDHREC average deck. `--pod-decks 248`.
+        PodDeck {
+            name: "Betor, Ancestor's Voice (BGW)",
+            commanders: decks::BETOR_COMMANDERS,
+            main: decks::BETOR_MAIN,
+        },
+        // Seat 249: Witherbloom, the Balancer's EDHREC average deck. `--pod-decks 249`.
+        PodDeck {
+            name: "Witherbloom, the Balancer (BG)",
+            commanders: decks::WITHERBLOOM_COMMANDERS,
+            main: decks::WITHERBLOOM_MAIN,
+        },
+        // Seat 250: Judith, Carnage Connoisseur's EDHREC average deck. `--pod-decks 250`.
+        PodDeck {
+            name: "Judith, Carnage Connoisseur (BR)",
+            commanders: decks::JUDITH_CARNAGE_COMMANDERS,
+            main: decks::JUDITH_CARNAGE_MAIN,
+        },
     ]
 }
 
@@ -3667,6 +3685,9 @@ mod tests {
             ("Sliver Overlord", [0x5110, 245, 9169]),
             ("The Gitrog Monster", [0x6170, 246, 9170]),
             ("Dina, Soul Steeper", [0xD1A5, 247, 9171]),
+            ("Betor, Ancestor's Voice", [0xBE70, 248, 9172]),
+            ("Witherbloom, the Balancer", [0x3B10, 249, 9173]),
+            ("Judith, Carnage Connoisseur", [0x1D17, 250, 9174]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
