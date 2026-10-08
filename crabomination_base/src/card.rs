@@ -11528,7 +11528,7 @@ impl CardInstance {
     /// expanded from [`eot_wear_off`], so a field can't reach one without the
     /// other; adding one to the clear alone would skip the sweep while it
     /// still mattered.
-    fn end_of_turn_effects_are_clear(&self) -> bool {
+    pub fn end_of_turn_effects_are_clear(&self) -> bool {
         macro_rules! probe {
             (scalar $f:ident, $v:expr) => {
                 if self.$f != $v {

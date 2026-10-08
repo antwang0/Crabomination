@@ -1933,6 +1933,63 @@ fn play_pod_game(
                             g.step,
                         );
                     }
+                    // CR 514.2 — and its cleanup removed every permanent's
+                    // marked damage (phased-out ones too) and ended every
+                    // "until end of turn" effect; "until end of combat" ended
+                    // before that (CR 511.3). A turn that ends without its
+                    // cleanup, or a cleanup window (CR 514.3a) that marks
+                    // damage and is not followed by another, leaves one.
+                    if let Some((turn, ..)) = last_turn
+                        && turn != g.turn_number
+                        && !g.is_game_over()
+                    {
+                        use crate::game::layers::EffectDuration;
+                        if let Some(c) = g
+                            .battlefield
+                            .iter()
+                            .chain(g.phased_out.iter())
+                            .find(|c| c.damage != 0 || !c.end_of_turn_effects_are_clear())
+                        {
+                            panic!(
+                                "seed {seed}: {} {:?} kept {} damage / an end-of-turn bonus past turn {turn}'s cleanup (after {actions} actions, now {:?})",
+                                c.definition.name, c.id, c.damage, g.step,
+                            );
+                        }
+                        if let Some(e) = g.continuous_effects.iter().find(|e| {
+                            matches!(e.duration, EffectDuration::UntilEndOfTurn | EffectDuration::UntilEndOfCombat)
+                        }) {
+                            panic!(
+                                "seed {seed}: a {:?} effect from {:?} outlived turn {turn}'s cleanup (after {actions} actions, now {:?})",
+                                e.duration, e.source, g.step,
+                            );
+                        }
+                        // CR 500.4 — and every step change since emptied the
+                        // pools, save what a retention static keeps.
+                        let keeps = g.battlefield.iter().any(|c| {
+                            c.definition.static_abilities.iter().any(|sa| {
+                                matches!(
+                                    sa.effect,
+                                    crate::effect::StaticEffect::UnspentManaBecomesColorless
+                                        | crate::effect::StaticEffect::ManaPoolsNeverEmpty
+                                        | crate::effect::StaticEffect::UnspentColorManaPersists(_)
+                                )
+                            })
+                        });
+                        if !keeps
+                            && let Some((i, p)) = g.players.iter().enumerate().find(|(_, p)| {
+                                p.is_alive()
+                                    && !p.mana_pool.is_empty()
+                                    && p.kept_mana_this_turn.is_empty()
+                                    && p.firebending_kept_red == 0
+                            })
+                        {
+                            panic!(
+                                "seed {seed}: p{i} carried {} mana past turn {turn} (after {actions} actions, now {:?})",
+                                p.mana_pool.total(),
+                                g.step,
+                            );
+                        }
+                    }
                     last_turn =
                         Some((g.turn_number, g.active_player_idx, g.effective_max_hand_size(g.active_player_idx)));
                 }
