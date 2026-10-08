@@ -1681,6 +1681,78 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PHENAX_COMMANDERS,
             main: decks::PHENAX_MAIN,
         },
+        // Seat 211: Baylen, the Haymaker's EDHREC average deck. `--pod-decks 211`.
+        PodDeck {
+            name: "Baylen, the Haymaker (GRW)",
+            commanders: decks::BAYLEN_COMMANDERS,
+            main: decks::BAYLEN_MAIN,
+        },
+        // Seat 212: Chatterfang, Squirrel General's EDHREC average deck. `--pod-decks 212`.
+        PodDeck {
+            name: "Chatterfang, Squirrel General (BG)",
+            commanders: decks::CHATTERFANG_COMMANDERS,
+            main: decks::CHATTERFANG_MAIN,
+        },
+        // Seat 213: Ureni of the Unwritten's EDHREC average deck. `--pod-decks 213`.
+        PodDeck {
+            name: "Ureni of the Unwritten (GRU)",
+            commanders: decks::URENI_COMMANDERS,
+            main: decks::URENI_MAIN,
+        },
+        // Seat 214: Xyris, the Writhing Storm's EDHREC average deck. `--pod-decks 214`.
+        PodDeck {
+            name: "Xyris, the Writhing Storm (GRU)",
+            commanders: decks::XYRIS_COMMANDERS,
+            main: decks::XYRIS_MAIN,
+        },
+        // Seat 215: Yarok, the Desecrated's EDHREC average deck. `--pod-decks 215`.
+        PodDeck {
+            name: "Yarok, the Desecrated (BGU)",
+            commanders: decks::YAROK_COMMANDERS,
+            main: decks::YAROK_MAIN,
+        },
+        // Seat 216: Rendmaw, Creaking Nest's EDHREC average deck. `--pod-decks 216`.
+        PodDeck {
+            name: "Rendmaw, Creaking Nest (BG)",
+            commanders: decks::RENDMAW_COMMANDERS,
+            main: decks::RENDMAW_MAIN,
+        },
+        // Seat 217: Celes, Rune Knight's EDHREC average deck. `--pod-decks 217`.
+        PodDeck {
+            name: "Celes, Rune Knight (BRW)",
+            commanders: decks::CELES_COMMANDERS,
+            main: decks::CELES_MAIN,
+        },
+        // Seat 218: Sheoldred, the Apocalypse's EDHREC average deck. `--pod-decks 218`.
+        PodDeck {
+            name: "Sheoldred, the Apocalypse (B)",
+            commanders: decks::SHEOLDRED_APOC_COMMANDERS,
+            main: decks::SHEOLDRED_APOC_MAIN,
+        },
+        // Seat 219: Silverquill, the Disputant's EDHREC average deck. `--pod-decks 219`.
+        PodDeck {
+            name: "Silverquill, the Disputant (BW)",
+            commanders: decks::SILVERQUILL_COMMANDERS,
+            main: decks::SILVERQUILL_MAIN,
+        },
+        // Seat 220: Chulane, Teller of Tales's EDHREC average deck. `--pod-decks 220`.
+        PodDeck {
+            name: "Chulane, Teller of Tales (GUW)",
+            commanders: decks::CHULANE_COMMANDERS,
+            main: decks::CHULANE_MAIN,
+        },
+        // Seat 221: Finneas, Ace Archer's EDHREC average deck. `--pod-decks 221`.
+        PodDeck {
+            name: "Finneas, Ace Archer (GW)",
+            commanders: decks::FINNEAS_COMMANDERS,
+            main: decks::FINNEAS_MAIN,
+        },
+        // Seat 222: The Infamous Cruelclaw's EDHREC average deck. `--pod-decks 222`.
+        PodDeck {
+            name: "The Infamous Cruelclaw (BR)",
+            commanders: decks::CRUELCLAW_COMMANDERS,
+            main: decks::CRUELCLAW_MAIN,
+        },
     ]
 }
 
@@ -3388,6 +3460,24 @@ mod tests {
             ("Prismari", [0x9215, 208, 9132]),
             ("Shalai and Hallar", [0x5A1A, 209, 9133]),
             ("Phenax", [0x9E4A, 210, 9134]),
+            // Token taps (Baylen), CR 614.1a token replacement (Chatterfang),
+            // Dragon digs (Ureni), draw triggers (Xyris, Sheoldred), CR 603.2d
+            // doubled enters triggers (Yarok), goaded Birds (Rendmaw),
+            // graveyard returns (Celes), CR 702.153 granted casualty
+            // (Silverquill), cast triggers and bounce (Chulane), Rabbit
+            // pumps (Finneas), discard-to-cast (Cruelclaw).
+            ("Baylen, the Haymaker", [0xBA71, 211, 9135]),
+            ("Chatterfang, Squirrel General", [0xC4A7, 212, 9136]),
+            ("Ureni of the Unwritten", [0x02E1, 213, 9137]),
+            ("Xyris, the Writhing Storm", [0x0715, 214, 9138]),
+            ("Yarok, the Desecrated", [0x7A40, 215, 9139]),
+            ("Rendmaw, Creaking Nest", [0x2E4D, 216, 9140]),
+            ("Celes, Rune Knight", [0xCE1E, 217, 9141]),
+            ("Sheoldred, the Apocalypse", [0x5E0A, 218, 9142]),
+            ("Silverquill, the Disputant", [0x5117, 219, 9143]),
+            ("Chulane, Teller of Tales", [0xC401, 220, 9144]),
+            ("Finneas, Ace Archer", [0xF1EA, 221, 9145]),
+            ("The Infamous Cruelclaw", [0xC2E1, 222, 9146]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
