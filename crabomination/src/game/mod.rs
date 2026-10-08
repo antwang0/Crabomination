@@ -29301,7 +29301,7 @@ impl GameState {
                     else {
                         continue;
                     };
-                    let matches = card.definition.has_name(&name);
+                    let matches = card.definition.has_name(name);
                     if matches {
                         self.players[player].hand.push(card);
                     } else {
