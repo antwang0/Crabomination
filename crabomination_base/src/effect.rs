@@ -5392,6 +5392,9 @@ pub enum Effect {
     /// Mind's Eye-style wheels). Distinct from `Discard` + `Draw` because the
     /// draw count must read the pre-discard hand.
     DiscardHandDrawThatMany { who: Selector },
+    /// [`Self::DiscardHandDrawThatMany`] drawing `less` fewer — "then draws
+    /// that many cards minus one" (Dark Deal).
+    DiscardHandDrawThatManyLess { who: Selector, less: u32 },
     /// "`who` discards `count` cards unless they discard a card matching
     /// `instead`" (Wrench Mind). With a match in hand the discarder keeps
     /// the small side automatically (lowest-MV match); otherwise the full

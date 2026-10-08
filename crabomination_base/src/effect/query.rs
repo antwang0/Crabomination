@@ -1693,7 +1693,9 @@ impl Effect {
             Effect::Drain { from, to, amount } | Effect::DrainLifeLost { from, to, amount } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
-            Effect::DiscardHandDrawThatMany { who } => sel_has_target(who),
+            Effect::DiscardHandDrawThatMany { who } | Effect::DiscardHandDrawThatManyLess { who, .. } => {
+                sel_has_target(who)
+            }
             Effect::LureCreaturesToSourceNextTurn { who } | Effect::AttackIfAbleDuringTheirNextTurn { who } => sel_has_target(who),
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount }
@@ -3026,7 +3028,7 @@ impl Effect {
                 Selector::CardsInZone { who, .. } => implicit_player_if_bare_player_ref(who),
                 _ => sel_filter(from),
             },
-            Effect::DiscardHandDrawThatMany { who } => {
+            Effect::DiscardHandDrawThatMany { who } | Effect::DiscardHandDrawThatManyLess { who, .. } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
             Effect::ExileChosenFromHand { from, .. }

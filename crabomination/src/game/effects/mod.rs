@@ -10632,7 +10632,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::DiscardHandDrawThatMany { who } => {
+            Effect::DiscardHandDrawThatMany { who } | Effect::DiscardHandDrawThatManyLess { who, .. } => {
+                let less = match effect {
+                    Effect::DiscardHandDrawThatManyLess { less, .. } => *less as usize,
+                    _ => 0,
+                };
                 let seats: Vec<usize> = self
                     .resolve_selector(who, ctx)
                     .into_iter()
@@ -10649,7 +10653,7 @@ impl GameState {
                     for cid in hand {
                         self.discard_card(p, cid, events);
                     }
-                    self.draw_n(p, n, events);
+                    self.draw_n(p, n.saturating_sub(less), events);
                 }
                 Ok(())
             }
