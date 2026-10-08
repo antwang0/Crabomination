@@ -7947,7 +7947,7 @@ impl GameState {
         if n == 0 {
             return 0;
         }
-        self.players[seat].poison_counters += n;
+        self.players[seat].poison_counters = self.players[seat].poison_counters.saturating_add(n);
         events.push(GameEvent::PoisonAdded { player: seat, amount: n });
         n
     }

@@ -1900,7 +1900,7 @@ impl GameState {
                             });
                         }
                     } else {
-                        c.damage += amount;
+                        c.damage = c.damage.saturating_add(amount);
                         if source_has_deathtouch && c.definition.is_creature() {
                             c.dealt_deathtouch_damage = true;
                         }

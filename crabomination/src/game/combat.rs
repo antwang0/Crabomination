@@ -5050,7 +5050,7 @@ impl GameState {
                     } else if dealt > 0
                         && let Some(blocker) = self.battlefield_find_mut(blocker_id)
                     {
-                        blocker.damage += dealt as u32;
+                        blocker.damage = blocker.damage.saturating_add(dealt as u32);
                         blocker.record_damage_from(atk.id, dealt as u32);
                         if atk.has_deathtouch {
                             blocker.dealt_deathtouch_damage = true;
@@ -5246,7 +5246,7 @@ impl GameState {
                                     });
                                 }
                             } else {
-                                attacker.damage += dmg;
+                                attacker.damage = attacker.damage.saturating_add(dmg);
                             }
                             // CR 120.3d — dealt either way (as counters or as
                             // marked damage): the record, deathtouch and the
@@ -5948,7 +5948,7 @@ impl GameState {
                 {
                     self.note_excess_damage(redirect, amount, atk.has_deathtouch);
                     if let Some(c) = self.battlefield_find_mut(redirect) {
-                        c.damage += amount;
+                        c.damage = c.damage.saturating_add(amount);
                         c.dealt_damage_this_turn = true;
                         c.damage_dealt_to_this_turn += amount;
                         c.damaged_by_this_turn.push(atk.id);
