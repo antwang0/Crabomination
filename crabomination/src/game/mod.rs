@@ -11017,6 +11017,9 @@ impl GameState {
         if card.exiled_with.is_some() {
             card.exiled_with = None;
         }
+        // CR 404.2 — a graveyard is a face-up pile: a hideaway card a
+        // processor cost took arrived face down (pod seed 818272).
+        card.reveal();
         // CR 122.2 — counters don't survive the zone change (replacement
         // riders below add to the new object afterward).
         card.counters.clear();

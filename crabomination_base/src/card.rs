@@ -11267,6 +11267,17 @@ impl CardInstance {
     /// the zone-change path calls all five in a row on every permanent that
     /// leaves the battlefield, where the answer is `None` for almost all of
     /// them.
+    /// CR 404.2 / 406.3 / 708.9 — a face-down card moving to a zone where
+    /// cards are face up (a graveyard, the command zone) is turned face up.
+    /// Guarded: a write unshares the CoW card.
+    pub fn reveal(&mut self) {
+        if self.face_down {
+            self.turn_face_up();
+            self.face_down = false;
+            self.cloaked = false;
+        }
+    }
+
     pub fn turn_face_up(&mut self) -> Option<&'static str> {
         self.face_up_def.as_ref()?;
         let real = self.face_up_def.take()?;

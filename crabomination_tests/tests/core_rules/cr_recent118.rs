@@ -792,3 +792,24 @@ fn semesters_end_returns_a_stolen_creature_to_its_owner() {
     assert_eq!(back.controller, 1, "its owner's control");
     assert_eq!(back.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
 }
+
+/// CR 404.2 — a graveyard is a face-up pile: a processor cost (Void
+/// Attendant) that takes a face-down exiled card (a hideaway pick) puts it
+/// there face up. It arrived face down (pod seed 818272).
+#[test]
+fn cr_404_2_a_processed_face_down_card_lands_face_up() {
+    let mut g = main_phase();
+    let va = g.add_card_to_battlefield(0, catalog::void_attendant());
+    let hidden = g.add_card_to_library(1, catalog::grizzly_bears());
+    let pos = g.players[1].library.iter().position(|c| c.id == hidden).unwrap();
+    let mut card = g.players[1].library.remove(pos);
+    card.face_down = true;
+    g.exile.push(card);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
+    g.perform_action(crabomination::game::types::GameAction::ActivateAbility {
+        card_id: va, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("process");
+    let gy = g.players[1].graveyard.iter().find(|c| c.id == hidden).expect("processed");
+    assert!(!gy.face_down, "face up in the graveyard");
+}

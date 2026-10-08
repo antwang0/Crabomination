@@ -158,11 +158,12 @@ impl GameState {
             self.note_left_graveyard(owner, id, &mut ev);
             self.scratch.pending_cost_events.extend(ev);
         }
-        // CR 400.7 — a new object in the command zone.
+        // CR 400.7 — a new object in the command zone, face up (one exiled
+        // face down off its library arrived face down, pod seed 818221).
         card.drop_counters_for_zone_change(Zone::Command);
         card.exiled_with = None;
         card.controller = owner;
-        face_up_in_the_command_zone(&mut card);
+        card.reveal();
         self.players[owner].command.push(card);
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);
@@ -193,7 +194,7 @@ impl GameState {
         card.drop_counters_for_zone_change(Zone::Command);
         card.exiled_with = None;
         card.controller = owner;
-        face_up_in_the_command_zone(&mut card);
+        card.reveal();
         self.players[owner].command.push(card);
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);
@@ -222,13 +223,3 @@ impl GameState {
     }
 }
 
-/// CR 400.7 / 406.3 — a commander that was face down (exiled face down off
-/// its library after a declined CR 903.9b redirect, pod seed 818221) is a new,
-/// face-up object in the command zone.
-fn face_up_in_the_command_zone(card: &mut crate::card::CardInstance) {
-    if card.face_down {
-        card.turn_face_up();
-        card.face_down = false;
-        card.cloaked = false;
-    }
-}
