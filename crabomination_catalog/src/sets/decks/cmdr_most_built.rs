@@ -1694,3 +1694,155 @@ pub fn desynchronization() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Omnath, Locus of All (WUBRG) ────────────────────────────────────────────
+
+/// Omnath, Locus of All — lost unspent mana becomes black; each first main
+/// phase the top card goes to hand, and one with three or more colored mana
+/// symbols may be revealed for three mana of its colors first.
+pub fn omnath_locus_of_all() -> CardDefinition {
+    let top = Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If you would lose unspent mana, that mana becomes black instead.",
+            effect: StaticEffect::UnspentManaBecomesBlack,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: top.clone(), filter: R::ColoredManaSymbolsAtLeast(3) },
+                    then: Box::new(Effect::MayDo {
+                        description: "Reveal the top card for three mana of its colors?".into(),
+                        body: Box::new(Effect::AddManaAmongColorsOf { what: top.clone(), amount: Value::Const(3) }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::Move { what: top, to: ZoneDest::Hand(PlayerRef::You) },
+            ]),
+        }],
+        ..legend(
+            "Omnath, Locus of All",
+            ManaCost::new(vec![
+                crate::mana::w(),
+                u(),
+                crate::mana::phyrexian(Color::Black),
+                r(),
+                g(),
+            ]),
+            vec![CreatureType::Phyrexian, CreatureType::Elemental],
+            4,
+            4,
+        )
+    }
+}
+
+/// Chromatic Orrery — mana of yours spends as any color; {T}: {C}{C}{C}{C}{C};
+/// {5}, {T}: draw a card per color among your permanents.
+pub fn chromatic_orrery() -> CardDefinition {
+    CardDefinition {
+        name: "Chromatic Orrery",
+        cost: cost(&[generic(7)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You may spend mana as though it were mana of any color.",
+            effect: StaticEffect::YouMaySpendManaAsAnyColor,
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(5)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                tap_cost: true,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::DistinctColorsAmong(Box::new(Selector::EachPermanent(R::ControlledByYou))),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wrenn and Realmbreaker — your lands tap for any color; +1 animates a land
+/// until your next turn; −2 mills three for a permanent card; −7 emblem:
+/// play lands and cast permanent spells from your graveyard.
+pub fn wrenn_and_realmbreaker() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Wrenn and Realmbreaker",
+        cost: cost(&[generic(1), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: crate::card::Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Wrenn],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control have \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::BecomeCreature {
+                        what: target_filtered(R::Land.and(R::ControlledByYou)),
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        creature_types: vec![CreatureType::Elemental],
+                        keywords: vec![Keyword::Vigilance, Keyword::Hexproof, Keyword::Haste],
+                        duration: Duration::UntilNextTurn,
+                    }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::MillThenToHandN {
+                    amount: Value::Const(3),
+                    filter: R::PermanentCard,
+                    take: Value::ONE,
+                    otherwise: None,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Wrenn and Realmbreaker".into(),
+                    statics: vec![
+                        StaticAbility {
+                            description: "You may play lands from your graveyard.",
+                            effect: StaticEffect::MayPlayLandsFromGraveyard,
+                        },
+                        StaticAbility {
+                            description: "You may cast permanent spells from your graveyard.",
+                            effect: StaticEffect::CastFromGraveyardMatching { filter: R::PermanentCard.and(R::Nonland) },
+                        },
+                    ],
+                    triggered: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

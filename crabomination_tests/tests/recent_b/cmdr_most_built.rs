@@ -1006,3 +1006,81 @@ fn desynchronization_spares_historic_permanents() {
     assert!(g.battlefield_find(bear).is_none());
     assert!(g.battlefield_find(ring).is_some() && g.battlefield_find(ultron).is_some());
 }
+
+fn omnath_game() -> GameState {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Draw;
+    g.priority.player_with_priority = 0;
+    g
+}
+
+/// CR 106.4 — with Omnath out, unspent mana becomes black as a step ends
+/// instead of emptying.
+#[test]
+fn omnath_turns_lost_mana_black() {
+    let mut g = omnath_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    ready(&mut g, 0, catalog::omnath_locus_of_all());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    advance_to(&mut g, TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::BeginCombat);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0);
+}
+
+/// Omnath's first-main trigger: a top card with three or more colored mana
+/// symbols (Cryptic Command) adds three mana of its colors and goes to hand;
+/// an ordinary one (Grizzly Bears) just goes to hand.
+#[test]
+fn omnath_pays_for_a_three_pip_top_card() {
+    for (card, blue) in [(catalog::cryptic_command as fn() -> _, 3), (catalog::grizzly_bears, 0)] {
+        let mut g = omnath_game();
+        let top = g.add_card_to_library(0, card());
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        ready(&mut g, 0, catalog::omnath_locus_of_all());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        advance_to(&mut g, TurnStep::PreCombatMain);
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == top), "the top card goes to hand");
+        assert_eq!(g.players[0].mana_pool.amount(Color::Blue), blue);
+    }
+}
+
+/// CR 609.4b — Chromatic Orrery: colorless mana pays a {G} pip.
+#[test]
+fn chromatic_orrery_spends_mana_as_any_color() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::chromatic_orrery());
+    g.players[0].mana_pool.add_colorless(2);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_at(&mut g, bear, None);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// CR 114 — Wrenn and Realmbreaker's emblem: a land is played and a creature
+/// card cast from the graveyard.
+#[test]
+fn wrenn_and_realmbreaker_emblem_plays_from_the_graveyard() {
+    let mut g = pod(3);
+    let wrenn = ready(&mut g, 0, catalog::wrenn_and_realmbreaker());
+    g.battlefield_find_mut(wrenn).unwrap().add_counters(CounterType::Loyalty, 4);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: wrenn,
+        ability_index: 2,
+        target: None,
+        x_value: None,
+    })
+    .expect("-7");
+    drain_stack(&mut g);
+    let forest = g.add_card_to_graveyard(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLandFromGraveyard(forest)).expect("land from the graveyard");
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g);
+    cast_at(&mut g, bear, None);
+    assert!(g.battlefield_find(forest).is_some() && g.battlefield_find(bear).is_some());
+}
