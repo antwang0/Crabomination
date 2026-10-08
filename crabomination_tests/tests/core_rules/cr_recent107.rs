@@ -654,3 +654,38 @@ fn cr_115_1_triggered_up_to_two_target_players_names_two() {
     assert_eq!(g.players[1].library.len(), libs[1] - 2, "seat 1 milled two");
     assert_eq!(g.players[2].library.len(), libs[2] - 2, "seat 2 milled two");
 }
+
+/// CR 702.103f / 704.3 — a bestowed Aura whose host stops being a creature
+/// becomes a creature, and the SBA check repeats: Nighthowler (P/T = creature
+/// cards in all graveyards, none here) dies at once, not at the next pass.
+#[test]
+fn cr_702_103f_an_unbestowed_zero_toughness_creature_dies_in_the_same_check() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let howler = g.add_card_to_hand(0, catalog::nighthowler());
+    g.players[0].mana_pool.add(Color::Black, 5);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastBestow {
+        card_id: howler,
+        target: Some(crabomination::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bestow");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(howler).is_some_and(|c| c.bestowed));
+    let vraska = g.add_card_to_battlefield(0, catalog::vraska_betrayals_sting());
+    g.battlefield_find_mut(vraska).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 6);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vraska,
+        ability_index: 1,
+        target: Some(crabomination::game::types::Target::Permanent(bear)),
+        x_value: None,
+    })
+    .expect("-2 on the host");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(howler).is_none(), "the 0/0 Nighthowler died in the same check");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == howler));
+}

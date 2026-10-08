@@ -8128,11 +8128,20 @@ impl GameState {
             .map(|c| c.id)
             .collect()
         };
+        let any_unbestowed = !unbestowed.is_empty();
         for id in unbestowed {
             if let Some(c) = self.battlefield.find_by_id_mut(id) {
                 c.bestowed = false;
                 c.attached_to = None;
             }
+        }
+        // The creature it became is checked anew (CR 704.3): a 0-toughness
+        // Nighthowler dropped off a host Vraska turned into a Treasure sat at
+        // 0/0, since this change emits no event and the repeat loop keys on
+        // events (strict audit pod, seed 872026). A pass can't unbestow twice.
+        if any_unbestowed {
+            self.check_state_based_actions_pass(events, mid_resolution);
+            return;
         }
 
         // Auras with no valid attachment target go to their owner's graveyard (CR 704.5n/5q).
