@@ -1462,7 +1462,7 @@ pub fn dr_eggman() -> CardDefinition {
 
 /// Blitzwing, Adaptive Assailant — living metal; flying or indestructible at
 /// random each of your combats; converts after it connects.
-fn blitzwing_adaptive_assailant() -> CardDefinition {
+pub fn blitzwing_adaptive_assailant() -> CardDefinition {
     CardDefinition {
         name: "Blitzwing, Adaptive Assailant",
         supertypes: vec![Supertype::Legendary],
