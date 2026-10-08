@@ -855,3 +855,30 @@ fn cr_400_7_a_counter_aimed_at_a_commander_gone_home_is_lost() {
     let home = g.players[0].command.iter().find(|c| c.id == cmd).expect("home");
     assert!(home.counters.is_empty());
 }
+
+/// CR 400.7 — an "as this enters, choose a creature type" answer belongs to
+/// the permanent: bounced, the card in hand holds none, and the next object
+/// asks again (a bounced Unclaimed Territory kept its Knight, pod seed 818500).
+#[test]
+fn cr_400_7_a_bounced_permanent_forgets_its_chosen_type() {
+    let mut g = main_phase();
+    let banner = g.add_card_to_battlefield(0, catalog::vanquishers_banner());
+    g.battlefield_find_mut(banner).unwrap().chosen_creature_type = Some(crabomination::card::CreatureType::Human);
+    resolve(&mut g, banner, None, &Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) });
+    let held = g.players[0].hand.iter().find(|c| c.id == banner).expect("bounced");
+    assert_eq!(held.chosen_creature_type, None);
+}
+
+/// CR 400.7 / 716 — a Class's level is battlefield-only: destroyed, it is a
+/// level-less card in the graveyard (Fortune Teller's Talent sat there at
+/// level 1, pod seed 818500).
+#[test]
+fn cr_716_a_destroyed_class_has_no_level_in_the_graveyard() {
+    let mut g = main_phase();
+    let class = g.add_card_to_battlefield(0, catalog::fortune_tellers_talent());
+    g.battlefield_find_mut(class).unwrap().class_level = 2;
+    let mut events = Vec::new();
+    g.destroy_permanent(class, false, &mut events);
+    let gy = g.players[0].graveyard.iter().find(|c| c.id == class).expect("destroyed");
+    assert_eq!(gy.class_level, 0);
+}

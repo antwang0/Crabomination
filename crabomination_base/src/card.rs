@@ -11693,6 +11693,29 @@ impl CardInstance {
         if self.echo_paid {
             self.echo_paid = false;
         }
+        // CR 400.7 — an "as this enters, choose" answer belongs to the
+        // permanent; the next object asks again (a bounced Unclaimed Territory
+        // kept its Knight).
+        if self.chosen_creature_type.is_some() {
+            self.chosen_creature_type = None;
+        }
+        if self.chosen_land_type.is_some() {
+            self.chosen_land_type = None;
+        }
+        if self.chosen_number.is_some() {
+            self.chosen_number = None;
+        }
+        if self.chosen_card_type.is_some() {
+            self.chosen_card_type = None;
+        }
+        if self.chosen_permanent.is_some() {
+            self.chosen_permanent = None;
+        }
+        // CR 716 — a Class's level is battlefield-only (a destroyed Fortune
+        // Teller's Talent sat in a graveyard at level 1).
+        if self.class_level != 0 {
+            self.class_level = 0;
+        }
     }
 
     /// CR 122.2 — counters cease to exist as the object changes zones, unless
