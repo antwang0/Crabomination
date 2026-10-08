@@ -661,6 +661,9 @@ impl ManaCost {
 pub enum SpendRestriction {
     /// "Spend this mana only to cast instant and sorcery spells."
     InstantSorceryOnly,
+    /// "Spend this mana only to cast an instant or sorcery spell or to gain
+    /// a Class level" (Sorcerer Class). Reads `SpellKind::class_level`.
+    InstantSorceryOrClassLevel,
     /// "Spend this mana only to cast artifact spells or activate
     /// abilities of artifacts." (Power Depot, Mishra's Workshop kin.)
     ArtifactOnly,
@@ -862,6 +865,7 @@ impl SpendRestriction {
     pub fn label(self) -> Option<&'static str> {
         Some(match self {
             SpendRestriction::InstantSorceryOnly => "only instants and sorceries",
+            SpendRestriction::InstantSorceryOrClassLevel => "only instants, sorceries and Class levels",
             SpendRestriction::ArtifactOnly => "only artifacts",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
@@ -955,6 +959,7 @@ impl SpendRestriction {
         }
         match self {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
+            SpendRestriction::InstantSorceryOrClassLevel => kind.instant_or_sorcery || kind.class_level,
             SpendRestriction::ArtifactOnly => kind.artifact,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
@@ -1119,6 +1124,9 @@ pub struct SpellKind {
     /// Casting a spell that isn't an artifact spell (Powerstone gate).
     pub casting_nonartifact_spell: bool,
     /// Activating an ability of any source (Omen Hawker's abilities-only mana).
+    /// The payment is a Class's level-up activation (CR 716.2a) — Sorcerer
+    /// Class's mana may fund it.
+    pub class_level: bool,
     pub activating_ability: bool,
     /// CR 609.4b — the source lets its abilities be paid "as though it were
     /// mana of any color" (Drana and Linvala's and Manascape Refractor's

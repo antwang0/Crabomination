@@ -20609,7 +20609,9 @@ impl GameState {
             } else {
                 bf_src!().map(|c| &c.definition)
             };
-            def.map(|d| d.ability_spend_kind()).unwrap_or_default()
+            let mut kind = def.map(|d| d.ability_spend_kind()).unwrap_or_default();
+            kind.class_level = matches!(ability.effect, crate::effect::Effect::AdvanceClassLevel);
+            kind
         };
 
         // For graveyard/hand activations, reject if the ability isn't flagged

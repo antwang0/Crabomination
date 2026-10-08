@@ -7616,6 +7616,7 @@ impl CardDefinition {
             creature_ability: false,
             casting_nonartifact_spell: !artifact,
             activating_ability: false,
+            class_level: false,
             any_color: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             devoid: self.keywords.has_kw(&Keyword::Devoid),
