@@ -7632,3 +7632,88 @@ pub const OMNATH_RAGE_MAIN: &[CardFactory] = &[
     forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const NECROBLOOM_COMMANDERS: &[CardFactory] = &[the_necrobloom];
+
+/// **The Necrobloom**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 91 nonbasic cards + 3 Forests + 2 Plains + 3 Swamps = 99.
+/// Abzan landfall: Plants and Zombies off every land, lands dredged back from the graveyard.
+pub const NECROBLOOM_MAIN: &[CardFactory] = &[
+    arcane_signet, conduit_of_worlds, hedge_shredder, sol_ring, zuran_orb, bojuka_bog,
+    boseiju_who_endures, command_tower, deceptive_landscape, evolving_wilds, exotic_orchard,
+    fabled_passage, field_of_the_dead, godless_shrine, golgari_rot_farm, indatha_triome,
+    lush_portico, marsh_flats, overgrown_tomb, selesnya_sanctuary, shadowy_backstreet,
+    shifting_woodland, snow_covered_forest, snow_covered_plains, snow_covered_swamp,
+    takenuma_abandoned_mire, temple_garden, terramorphic_expanse, thespians_stage,
+    tranquil_thicket, underground_mortuary, urborg_tomb_of_yawgmoth, urzas_cave, verdant_catacombs,
+    windswept_heath, yavimaya_cradle_of_growth, aftermath_analyst, ancient_greenwarden,
+    avenger_of_zendikar, azusa_lost_but_seeking, braids_arisen_nightmare, cultivator_colossus,
+    dryad_of_the_ilysian_grove, elvish_reclaimer, eternal_witness, icetill_explorer,
+    knight_of_the_reliquary, lotus_cobra, lumra_bellow_of_the_woods, oracle_of_mul_daya,
+    rampaging_baloths, ramunap_excavator, sakura_tribe_elder, scute_swarm, six,
+    springheart_nantuko, sylvan_safekeeper, thalia_and_the_gitrog_monster, the_gitrog_monster,
+    tireless_provisioner, titania_protector_of_argoth, wight_of_the_reliquary, world_shaper,
+    exploration, felidar_retreat, insidious_roots, retreat_to_hagra, ripples_of_undeath,
+    spelunking, walk_in_closet_forgotten_cellar, anguished_unmaking, assassins_trophy,
+    beast_within, crop_rotation, generous_gift, harrow, heroic_intervention, path_to_exile,
+    swords_to_plowshares, nissa_of_shadowed_boughs, cultivate, dread_return, eerie_ultimatum,
+    farseek, life_from_the_loam, natures_lore, scapeshift, sevinnes_reclamation,
+    splendid_reclamation, three_visits, toxic_deluge,
+    // Basics
+    forest, forest, forest, plains, plains, swamp, swamp, swamp,
+];
+
+pub const ATRAXA_GU_COMMANDERS: &[CardFactory] = &[atraxa_grand_unifier];
+
+/// **Atraxa, Grand Unifier**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 88 nonbasic cards + 3 Forests + 3 Islands + 3 Plains + 2 Swamps = 99.
+/// Four-color good-stuff that blinks Atraxa and other ETB creatures for value.
+pub const ATRAXA_GU_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, lotus_petal, mana_vault, panharmonicon,
+    sol_ring, the_one_ring, thought_vessel, boseiju_who_endures, breeding_pool, city_of_brass,
+    command_tower, exotic_orchard, flooded_strand, godless_shrine, hallowed_fountain,
+    indatha_triome, mana_confluence, marsh_flats, misty_rainforest, otawara_soaring_city,
+    overgrown_tomb, polluted_delta, raffines_tower, reliquary_tower, sparas_headquarters,
+    temple_garden, tropical_island, verdant_catacombs, watery_grave, windswept_heath,
+    zagoth_triome, baleful_strix, birds_of_paradise, bloom_tender, brago_king_eternal,
+    coiling_oracle, deathrite_shaman, delighted_halfling, displacer_kitten,
+    elesh_norn_mother_of_machines, emiel_the_blessed, esper_sentinel, eternal_witness,
+    grand_abolisher, lotho_corrupt_shirriff, misthollow_griffin, noble_hierarch, orcish_bowmasters,
+    peregrine_drake, phyrexian_metamorph, solemn_simulacrum, soulherder, thassas_oracle,
+    thassa_deep_dwelling, wood_elves, yarok_the_desecrated, food_chain, mystic_remora,
+    rhystic_study, smothering_tithe, teleportation_circle, touch_the_spirit_realm,
+    an_offer_you_cant_refuse, assassins_trophy, cloudshift, counterspell, cyclonic_rift,
+    dark_ritual, enlightened_tutor, ephemerate, ghostly_flicker, mana_drain, path_to_exile,
+    swan_song, swords_to_plowshares, vampiric_tutor, teferi_time_raveler, the_eternal_wanderer,
+    culling_ritual, cultivate, demonic_tutor, farseek, kodamas_reach, natures_lore, rampant_growth,
+    three_visits,
+    // Basics
+    forest, forest, forest, island, island, island, plains, plains, plains, swamp, swamp,
+];
+
+pub const CODIE_COMMANDERS: &[CardFactory] = &[codie_vociferous_codex];
+
+/// **Codie, Vociferous Codex**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 81 nonbasic cards + 4 Forests + 5 Islands + 3 Mountains + 3 Plains + 3 Swamps = 99.
+/// Five-color spells-only: no permanent spells, Codie's mana cascades into instants and sorceries.
+pub const CODIE_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, sol_ring, azorius_guildgate, baldurs_gate, black_dragon_gate,
+    boros_guildgate, cliffgate, command_tower, dimir_guildgate, exotic_orchard, golgari_guildgate,
+    gond_gate, gruul_guildgate, izzet_guildgate, manor_gate, mazes_end, orzhov_guildgate,
+    rakdos_guildgate, reliquary_tower, sea_gate, selesnya_guildgate, simic_guildgate,
+    the_world_tree, biomancers_familiar, birds_of_paradise, elvish_spirit_guide,
+    jadzi_oracle_of_arcavios, prismari_the_inspiration, quandrix_the_proof, simian_spirit_guide,
+    thousand_year_storm, training_grounds, beast_within, blessed_respite, brainstorm,
+    cerulean_wisps, counterspell, crop_rotation, dark_ritual, emerald_charm, eureka_moment,
+    frantic_search, galvanic_iteration, growth_spiral, increasing_vengeance, manamorphose,
+    mystical_tutor, noxious_revival, opt, path_to_exile, planar_genesis, shore_up,
+    swords_to_plowshares, ancestral_vision, approach_of_the_second_sun, blasphemous_act,
+    bring_to_light, circuitous_route, cultivate, demonic_tutor, duneblast, explore,
+    faithless_looting, farseek, improvisation_capstone, inevitable_betrayal, kodamas_reach,
+    mizzixs_mastery, mnemonic_deluge, natures_lore, open_the_gates, ponder, profane_tutor,
+    rampant_growth, reshape_the_earth, rise_from_the_tides, solve_the_equation,
+    tempt_with_discovery, three_visits, urban_evolution,
+    // Basics
+    forest, forest, forest, forest, island, island, island, island, island, mountain, mountain,
+    mountain, plains, plains, plains, swamp, swamp, swamp,
+];

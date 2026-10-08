@@ -1971,6 +1971,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OMNATH_RAGE_COMMANDERS,
             main: decks::OMNATH_RAGE_MAIN,
         },
+        // Seat 259: The Necrobloom's EDHREC average deck. `--pod-decks 259`.
+        PodDeck {
+            name: "The Necrobloom (BGW)",
+            commanders: decks::NECROBLOOM_COMMANDERS,
+            main: decks::NECROBLOOM_MAIN,
+        },
+        // Seat 260: Atraxa, Grand Unifier's EDHREC average deck. `--pod-decks 260`.
+        PodDeck {
+            name: "Atraxa, Grand Unifier (BGUW)",
+            commanders: decks::ATRAXA_GU_COMMANDERS,
+            main: decks::ATRAXA_GU_MAIN,
+        },
+        // Seat 261: Codie, Vociferous Codex's EDHREC average deck. `--pod-decks 261`.
+        PodDeck {
+            name: "Codie, Vociferous Codex (BGRUW)",
+            commanders: decks::CODIE_COMMANDERS,
+            main: decks::CODIE_MAIN,
+        },
     ]
 }
 
@@ -3744,6 +3762,9 @@ mod tests {
             ("Thalia and The Gitrog Monster", [0x7A16, 256, 9180]),
             ("Queza, Augur of Agonies", [0x0E2A, 257, 9181]),
             ("Omnath, Locus of Rage", [0x0AA6, 258, 9182]),
+            ("The Necrobloom", [0xEC0B, 259, 9183]),
+            ("Atraxa, Grand Unifier", [0xA7AA, 260, 9184]),
+            ("Codie, Vociferous Codex", [0xC0D1, 261, 9185]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
