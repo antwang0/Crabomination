@@ -1206,6 +1206,31 @@ impl GameState {
     /// the `CardId` of the damaging permanent (typically `ctx.source`).
     /// Combat damage uses a separate path in `combat.rs` that already
     /// honors infect for combat damage.
+    /// Ojer Axonil — `amount` noncombat damage from `source` (controlled by
+    /// `seat`) to opponent `victim`, raised to the greatest power among
+    /// `seat`'s `RaiseRedNoncombatDamageToOpponentsToPower` permanents when
+    /// the source is red.
+    fn raise_red_noncombat_to_power(&self, source: Option<crate::card::CardId>, seat: usize, victim: usize, amount: u32) -> u32 {
+        if self.same_team(seat, victim) {
+            return amount;
+        }
+        let power = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::RaiseRedNoncombatDamageToOpponentsToPower)
+                    })
+            })
+            .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power.max(0) as u32))
+            .max();
+        match (power, source) {
+            (Some(p), Some(src)) if p > amount && self.source_has_color(src, crate::mana::Color::Red) => p,
+            _ => amount,
+        }
+    }
+
     pub fn deal_damage_to_from(
         &mut self,
         ent: EntityRef,
@@ -1574,6 +1599,12 @@ impl GameState {
         } else {
             amount
         };
+        let amount = match (ent, from_controller) {
+            (EntityRef::Player(victim), Some(seat)) if amount > 0 => {
+                self.raise_red_noncombat_to_power(source, seat, victim, amount)
+            }
+            _ => amount,
+        };
         // CR 615.1 — prevention shields. Before applying the damage, let
         // any shield around the target soak it (unless a "damage can't be
         // prevented this turn" effect is active, CR 615.12). Returns the
@@ -1602,6 +1633,15 @@ impl GameState {
             match self.turn.artifact_damage_to_players_this_turn.iter_mut().find(|(s, _)| *s == victim) {
                 Some(entry) => entry.1 += amount,
                 None => self.turn.artifact_damage_to_players_this_turn.push((victim, amount)),
+            }
+        }
+        // Temple of Power — noncombat damage by red sources, per controller.
+        if let (Some(src), Some(seat)) = (source, from_controller)
+            && self.source_has_color(src, crate::mana::Color::Red)
+        {
+            match self.turn.red_noncombat_damage_this_turn.iter_mut().find(|(s, _)| *s == seat) {
+                Some(entry) => entry.1 = entry.1.saturating_add(amount),
+                None => self.turn.red_noncombat_damage_this_turn.push((seat, amount)),
             }
         }
         // Backdraft — tally the damage each sorcery spell deals as it resolves.

@@ -1456,6 +1456,11 @@ pub struct TurnRegistries {
     /// (Reverse Polarity). Cleared at cleanup.
     #[serde(default)]
     pub artifact_damage_to_players_this_turn: Vec<(usize, u32)>,
+    /// `(seat, damage)` of noncombat damage dealt this turn by red sources
+    /// each seat controlled as it was dealt (Temple of Power). Cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub red_noncombat_damage_this_turn: Vec<(usize, u32)>,
     /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
     /// has dealt damage this turn — Backdraft's "half the damage dealt by one
     /// of those sorcery spells". Cleared at cleanup.
@@ -33010,6 +33015,8 @@ fn static_effect_to_effects(
             | StaticEffect::YourSpellsHaveSplitSecondIfArtifactManaSpent
             // Read by `activate_ability`'s cost path; no layer effect.
             | StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities
+            // Read by `deal_damage_to_from`'s noncombat funnel.
+            | StaticEffect::RaiseRedNoncombatDamageToOpponentsToPower
             // YourISSpellsHaveDeathtouch — read in `deal_damage_to_from`; no
             // layer effect.
             | StaticEffect::YourISSpellsHaveDeathtouch

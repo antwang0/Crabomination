@@ -847,6 +847,12 @@ pub enum Value {
     /// "Bloodthirst X, where X is the damage dealt to your opponents this
     /// turn" (Petrified Wood-Kin). Sums across the resolved players.
     DamageTakenThisTurn(PlayerRef),
+    /// The noncombat slice of `DamageTakenThisTurn`, summed across the
+    /// resolved players (Chandra's Incinerator's cost reduction).
+    NoncombatDamageTakenThisTurn(PlayerRef),
+    /// Noncombat damage red sources the resolved players controlled dealt
+    /// this turn, to anything (Temple of Power's activation gate).
+    RedNoncombatDamageDealtThisTurn(PlayerRef),
     /// The combat-damage-only slice of `DamageTakenThisTurn`
     /// (`Player.combat_damage_taken_this_turn`). Takes the MAX across the
     /// resolved players, so `EachPlayer` reads "the most combat damage any one

@@ -2547,6 +2547,12 @@ pub enum StaticEffect {
     /// activate abilities of creatures you control" (Agatha's Soul Cauldron).
     /// Read by the activation cost path, which makes the coloured pips generic.
     MaySpendManaAsAnyColorForYourCreatureAbilities,
+    /// CR 614.1a — "if a red source you control would deal an amount of
+    /// noncombat damage less than [this]'s power to an opponent, that source
+    /// deals damage equal to [this]'s power instead" (Ojer Axonil). Applied
+    /// last in the noncombat funnel: the damaged player orders replacements,
+    /// and after the doublers and bonuses is the order that deals least.
+    RaiseRedNoncombatDamageToOpponentsToPower,
     /// "Instant and sorcery spells you control have deathtouch" (Pestilent
     /// Spirit, Tainted Strike-style). Read in `deal_damage_to_from`: damage a
     /// controller's resolving instant/sorcery deals to a creature is treated

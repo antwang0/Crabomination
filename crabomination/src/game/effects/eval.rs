@@ -767,6 +767,23 @@ impl GameState {
                 .iter()
                 .map(|&p| self.players[p].damage_taken_this_turn as i32)
                 .sum(),
+            Value::NoncombatDamageTakenThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| {
+                    let pl = &self.players[p];
+                    pl.damage_taken_this_turn.saturating_sub(pl.combat_damage_taken_this_turn) as i32
+                })
+                .sum(),
+            Value::RedNoncombatDamageDealtThisTurn(p) => {
+                let seats = self.resolve_players(p, ctx);
+                self.turn
+                    .red_noncombat_damage_this_turn
+                    .iter()
+                    .filter(|(s, _)| seats.contains(s))
+                    .map(|&(_, n)| n as i32)
+                    .sum()
+            }
             Value::PlayersWithLandsAtLeastMore(n) => {
                 let lands = |seat: usize| {
                     self.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count()

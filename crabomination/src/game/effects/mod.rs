@@ -45624,6 +45624,17 @@ impl GameState {
 impl GameState {
     /// A source's colors: computed on the battlefield, printed elsewhere
     /// (a spell on the stack, a card in a zone).
+    /// [`Self::source_colors`] contains `color`, without the `Vec`.
+    pub(crate) fn source_has_color(&self, src: CardId, color: Color) -> bool {
+        if let Some(cp) = self.battlefield_find(src).and_then(|_| self.computed_permanent(src)) {
+            return cp.colors.contains(color);
+        }
+        self.find_card_anywhere(src)
+            .map(|c| c.definition.printed_color_set())
+            .or_else(|| self.resolving_spell_def(src).map(|d| d.printed_color_set()))
+            .is_some_and(|set| set.contains(color))
+    }
+
     pub(crate) fn source_colors(&self, src: CardId) -> Vec<Color> {
         if let Some(cp) = self.battlefield_find(src).and_then(|_| self.computed_permanent(src)) {
             return cp.colors.iter().collect();
