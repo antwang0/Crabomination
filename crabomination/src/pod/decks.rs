@@ -7798,3 +7798,31 @@ pub const FEATHER_MAIN: &[CardFactory] = &[
     mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const NARSET_EXILE_COMMANDERS: &[CardFactory] = &[narset_enlightened_exile];
+
+/// **Narset, Enlightened Exile**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 86 nonbasic cards + 6 Islands + 4 Mountains + 3 Plains = 99.
+/// Jeskai spells: team prowess, and Narset's attacks recast noncreature cards from graveyards.
+pub const NARSET_EXILE_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, fellwar_stone, izzet_signet, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, talisman_of_creativity, talisman_of_progress, adarkar_wastes,
+    arid_mesa, battlefield_forge, clifftop_retreat, command_tower, exotic_orchard, flooded_strand,
+    glacial_fortress, hallowed_fountain, mystic_monastery, raugrin_triome, reliquary_tower,
+    sacred_foundry, scalding_tarn, sea_of_clouds, shivan_reef, spectator_seating, steam_vents,
+    sulfur_falls, training_center, archmage_emeritus, balmor_battlemage_captain,
+    bria_riptide_rogue, elsha_of_the_infinite, elsha_threefold_master, khenra_spellspear,
+    kykar_winds_fury, leonin_lightscribe, lyse_hext, monastery_mentor, pinnacle_monk,
+    storm_kiln_artist, stormcatch_mentor, talrand_sky_summoner, third_path_iconoclast,
+    veyran_voice_of_duality, vraska_soul_of_stone, young_pyromancer, aligned_heart,
+    frostcliff_siege, jeskai_ascendancy, mystic_remora, rhystic_study, whirlwind_of_thought,
+    akromas_will, an_offer_you_cant_refuse, boros_charm, brainstorm, chaos_warp, consider,
+    counterspell, cyclonic_rift, dovins_veto, expedite, frantic_search, generous_gift,
+    lightning_bolt, mystical_tutor, narsets_reversal, opt, path_to_exile, shadow_rift, snap,
+    swords_to_plowshares, ral_crackling_wit, crash_through, enter_the_enigma, expressive_iteration,
+    faithless_looting, gitaxian_probe, jeskas_will, ponder, preordain, see_the_truth,
+    serum_visions, slip_through_space, windfall,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, plains,
+];

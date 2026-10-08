@@ -2007,6 +2007,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FEATHER_COMMANDERS,
             main: decks::FEATHER_MAIN,
         },
+        // Seat 265: Narset, Enlightened Exile's EDHREC average deck. `--pod-decks 265`.
+        PodDeck {
+            name: "Narset, Enlightened Exile (RUW)",
+            commanders: decks::NARSET_EXILE_COMMANDERS,
+            main: decks::NARSET_EXILE_MAIN,
+        },
     ]
 }
 
@@ -3786,6 +3792,7 @@ mod tests {
             ("Blech, Loafing Pest", [0xB1EC, 262, 9186]),
             ("Fynn, the Fangbearer", [0xF1BB, 263, 9187]),
             ("Feather, the Redeemed", [0xFEA7, 264, 9188]),
+            ("Narset, Enlightened Exile", [0x4A25, 265, 9189]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
