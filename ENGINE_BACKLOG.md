@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 68 |
+| Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 80 |
 | Bugs & robustness | [FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep](#fixed-2026-10-07-eighth-commander-run-019mkdqk--the-uniform-pilots-first-pod-sweep) | 14 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets](#fixedopen-2026-10-06-commander-routine--a-prompting-seat-never-named-a-directly-pushed-triggers-targets) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
@@ -178,6 +178,17 @@ seats). Fixed:
   traces').
 - 🛠 `CRAB_POD_TRACE` names the ask an answer answers;
   `scripts/audit_seatless_ask.py` + `structural_audit::a_parked_ask_*`.
+
+Sweeps 7-9 on the final engine (850000 dflt concede 10; 860000 10- and
+12-seat groups × 10; 880000 dflt concede 10 fuzz 4000 with the fuzzer's new
+`CancelAction` swap): 224 + 35 + 224 groups, one draw, nothing else. Two-player
+pool draws read with `CRAB_DUMP_TRACES` + `CRAB_TRACE_NAMES=1`: ✅ CR 704.3 —
+`submit_decision` swept while the resolution it resumed was paused again (Pox
+Plague's offered Spreading Seas went to the graveyard under the pending pick;
+cube seed 830002, 8 stuck games → 0; `CRAB_STUCK_DIAG=1` prints a stuck game's
+refused answer); the legacy `baseline` / `v2` profiles size Earthquake's X
+past their own life (`x_by_outcome` off — measurement profiles, left as is);
+`dflt`'s draws are Slagstorm at 1-2 life.
 
 ## FIXED 2026-10-07 (seventh Commander routine, `01W3Tmnx`) — the stash class, and a creature entering attacking under a non-attacker
 
