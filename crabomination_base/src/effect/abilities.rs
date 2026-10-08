@@ -3177,6 +3177,9 @@ pub enum StaticEffect {
     /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
     /// the step/phase pool-empty sites.
     UnspentManaBecomesColorless,
+    /// "If you would lose unspent mana, that mana becomes black instead"
+    /// (Omnath, Locus of All). Kruphix's twin; read at the same sites.
+    UnspentManaBecomesBlack,
     /// CR 500.4 exception — "Players don't lose unspent mana as steps and
     /// phases end" (Upwelling). Every player's pool survives step/phase ends
     /// with its colors intact (it still empties at end of turn via cleanup's

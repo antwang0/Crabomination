@@ -17645,15 +17645,17 @@ impl GameState {
 
     fn empty_mana_pools_slow(&mut self) {
         use crate::effect::StaticEffect;
-        let keepers: Vec<usize> = self
+        // (seat, color the lost mana becomes; `None` is colorless).
+        let keepers: Vec<(usize, Option<crate::mana::Color>)> = self
             .battlefield
             .iter()
-            .filter(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::UnspentManaBecomesColorless)
+            .flat_map(|c| {
+                c.definition.static_abilities.iter().filter_map(move |sa| match sa.effect {
+                    StaticEffect::UnspentManaBecomesColorless => Some((c.controller, None)),
+                    StaticEffect::UnspentManaBecomesBlack => Some((c.controller, Some(crate::mana::Color::Black))),
+                    _ => None,
                 })
             })
-            .map(|c| c.controller)
             .collect();
         // CR 500.4 exception — Upwelling: no player loses unspent mana at all.
         let all_persist = self.battlefield.iter().any(|c| {
@@ -17716,10 +17718,15 @@ impl GameState {
             }
             if all_persist {
                 // Pool survives intact, firebending red with it.
-            } else if keepers.contains(&i) {
+            } else if let Some(&(_, into)) = keepers.iter().find(|(p, _)| *p == i) {
+                // Two different converters: the controller picks; the first
+                // in battlefield order stands in for that choice (CR 616.1).
                 let total = player.mana_pool.total() - firebent;
                 player.mana_pool.empty();
-                player.mana_pool.add_colorless(total);
+                match into {
+                    Some(col) => player.mana_pool.add(col, total),
+                    None => player.mana_pool.add_colorless(total),
+                }
                 player.mana_pool.add(crate::mana::Color::Red, firebent);
             } else {
                 // Preserve the amounts of any colors this player keeps.
@@ -33809,6 +33816,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToYourCreaturesFromYourSources
             | StaticEffect::PreventThisDamageToColor(_)
             | StaticEffect::UnspentManaBecomesColorless
+            | StaticEffect::UnspentManaBecomesBlack
             // Consulted directly at the step/phase pool-empty sites.
             | StaticEffect::ManaPoolsNeverEmpty
             | StaticEffect::UnspentColorManaPersists(_)
