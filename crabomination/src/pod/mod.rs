@@ -1505,6 +1505,21 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TENTH_DOCTOR_COMMANDERS,
             main: decks::TENTH_DOCTOR_MAIN,
         },
+        // Hundred-and-eighty-fourth, and the first not taken from a precon:
+        // Ob Nixilis, Captive Kingpin's EDHREC average deck (COMMANDER_BACKLOG
+        // §1, CR 603.2c's "each lose exactly 1 life" batch). `--pod-decks 184`.
+        PodDeck {
+            name: "Ob Nixilis, Captive Kingpin (BR)",
+            commanders: decks::OB_NIXILIS_KINGPIN_COMMANDERS,
+            main: decks::OB_NIXILIS_KINGPIN_MAIN,
+        },
+        // Hundred-and-eighty-fifth: Storm, Force of Nature's EDHREC average
+        // deck (CR 702.40 storm granted to the next spell). `--pod-decks 185`.
+        PodDeck {
+            name: "Storm, Force of Nature (GUR)",
+            commanders: decks::STORM_FORCE_COMMANDERS,
+            main: decks::STORM_FORCE_MAIN,
+        },
     ]
 }
 
@@ -3115,6 +3130,11 @@ mod tests {
             ("Davros", [0xDA05, 181, 9105]),
             // CR 701.54 time travel, CR 702.62 suspend, a Doctor's companion.
             ("The Tenth Doctor", [0x7E17, 183, 9107]),
+            // CR 603.2c "each lose exactly 1 life" batches, Manabarbs' per-land
+            // triggers, Mount Doom's choose-two wipe.
+            ("Ob Nixilis, Captive", [0x0B41, 184, 9108]),
+            // CR 702.40 a granted storm, Ashling's escalating Magecraft.
+            ("Storm, Force", [0x5704, 185, 9109]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -5561,3 +5561,60 @@ pub const TENTH_DOCTOR_MAIN: &[CardFactory] = &[
     // Basics
     plains, plains, plains, island, island, island, mountain, mountain, mountain,
 ];
+
+pub const OB_NIXILIS_KINGPIN_COMMANDERS: &[CardFactory] = &[ob_nixilis_captive_kingpin];
+
+/// **Ob Nixilis, Captive Kingpin**'s EDHREC average deck (fetched 2026-10-08,
+/// `json.edhrec.com/pages/average-decks/ob-nixilis-captive-kingpin`), card
+/// for card: 86 nonbasic cards + 7 Mountains + 6 Swamps = 99. Rakdos pings
+/// and rituals — every "each opponent loses 1" grows the Kingpin.
+pub const OB_NIXILIS_KINGPIN_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, arcane_signet, black_mages_rod, chrome_mox, fellwar_stone,
+    lightning_greaves, lotus_petal, mana_vault, rakdos_signet, senseis_divining_top, sol_ring,
+    talisman_of_indulgence, unstable_amulet, wishclaw_talisman, ancient_tomb, arid_mesa,
+    badlands, blazemire_verge, blood_crypt, bloodstained_mire, city_of_brass, command_tower,
+    dragonskull_summit, exotic_orchard, gemstone_caverns, luxury_suite, mana_confluence,
+    mount_doom, polluted_delta, raucous_theater, smoldering_marsh, sulfurous_springs,
+    birgi_god_of_storytelling, blood_seeker, casey_jones_back_alley_brute, coruscation_mage,
+    dualcaster_mage, fate_unraveler, firebrand_archer, hexing_squelcher, kederekt_parasite,
+    kessig_flamebreather, mayhem_devil, orcish_bowmasters, party_thrasher, prosper_tome_bound,
+    ragavan_nimble_pilferer, razorkin_needlehead, reckless_fireweaver, scrawling_crawler,
+    simian_spirit_guide, thermo_alchemist, walking_ballista, all_will_be_one, manabarbs,
+    roiling_vortex, shadow_of_the_goblin, underworld_breach, underworld_dreams, bolt_bend,
+    cabal_ritual, dark_ritual, deadly_rollick, deflecting_swat, desperate_ritual,
+    lightning_bolt, pyretic_ritual, pyroblast, rakdos_charm, red_elemental_blast,
+    redirect_lightning, seething_song, the_last_agni_kai, untimely_malfunction, vampiric_tutor,
+    ob_nixilis_the_hate_twisted, blasphemous_act, demonic_tutor, end_the_festivities,
+    feed_the_swarm, gamble, grapeshot, imperial_seal, jeskas_will, rite_of_flame,
+    wheel_of_fortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const STORM_FORCE_COMMANDERS: &[CardFactory] = &[storm_force_of_nature];
+
+/// **Storm, Force of Nature**'s EDHREC average deck (fetched 2026-10-08),
+/// card for card: 84 nonbasic cards + 4 Forests + 6 Islands + 5 Mountains =
+/// 99. Temur spellslinging — Storm's combat damage gives the next spell storm.
+pub const STORM_FORCE_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, lotus_petal, resonating_lute, sol_ring, swiftfoot_boots,
+    talisman_of_creativity, breeding_pool, command_tower, dreamroot_cascade, exotic_orchard,
+    frontier_bivouac, hinterland_harbor, ketria_triome, misty_rainforest, rejuvenating_springs,
+    reliquary_tower, rootbound_crag, scalding_tarn, shivan_reef, spire_garden, steam_vents,
+    stomping_ground, sulfur_falls, training_center, wooded_foothills, archmage_emeritus,
+    archmage_of_runes, ashling_flame_dancer, birds_of_paradise, birgi_god_of_storytelling,
+    delighted_halfling, electro_assaulting_battery, goblin_electromancer, guttersnipe,
+    prismari_the_inspiration, storm_kiln_artist, stormcatch_mentor, thunderclap_drake,
+    vivi_ornitier, mystic_remora, rhystic_study, thousand_year_storm, underworld_breach,
+    an_offer_you_cant_refuse, beast_within, big_score, brain_freeze, brainstorm, consider,
+    counterspell, cyclonic_rift, deflecting_swat, expedite, fierce_guardianship, frantic_search,
+    growth_spiral, lightning_bolt, manamorphose, mystical_tutor, noxious_revival, opt,
+    psychotic_fury, seething_song, snap, ral_crackling_wit, blasphemous_act, boltwave,
+    cultivate, enter_the_enigma, explore, farseek, gitaxian_probe, grapeshot, ice_storm,
+    jeskas_will, mana_geyser, natures_lore, ponder, preordain, rampant_growth, regrowth,
+    strike_it_rich, three_visits,
+    // Basics
+    forest, forest, forest, forest, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain,
+];
