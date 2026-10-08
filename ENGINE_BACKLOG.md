@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 46 |
+| Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 68 |
 | Bugs & robustness | [FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep](#fixed-2026-10-07-eighth-commander-run-019mkdqk--the-uniform-pilots-first-pod-sweep) | 14 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-06 (Commander routine) — a prompting seat never named a directly-pushed trigger's targets](#fixedopen-2026-10-06-commander-routine--a-prompting-seat-never-named-a-directly-pushed-triggers-targets) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-02 (Commander routine, second session) — the owner's 903.9a "may", dead draw replacements, and dice that never rolled](#fixedopen-2026-10-02-commander-routine-second-session--the-owners-9039a-may-dead-draw-replacements-and-dice-that-never-rolled) | 33 |
@@ -159,6 +159,25 @@ Storm at itself). Fixed:
   left while it waited) now spends the stash before a sibling seat's asker
   reads it (seed 720101 game 13); Sadistic Shell Game spends its picks when
   every candidate left with their controller (seed 720192 game 19).
+
+Sweeps 3-6 (seeds 740000 `--a dflt` concede 10; 760000 `--a uniform`
+concede 20 fuzz 3000; 780000 `--a dflt` concede 15 fuzz 4000; 790000
+`baseline` concede 10 fuzz 3000 — the last with a new pod invariant that every
+permanent carries its entry timestamp): ~27,000 games, two finds, then three
+clean sweeps; draws only (a symmetric burn or drain finishing the last two
+seats). Fixed:
+- ✅ **CR 610.3** — a source that exiles itself "until this leaves" returns at
+  once (Aboleth Spawn copied Constricting Sliver's trigger onto the Sliver;
+  seed 740008 game 7). `cr_recent118::cr_610_3_a_source_that_exiles_itself_*`.
+- ✅ **CR 608.2** — a join-combat defender pick outlived by combat is spent
+  (a bot dry run, seed 740013 game 9). `multiplayer::cr_506_4_a_join_combat_*`.
+- ✅ **Bot: "any player may [pay]" offers** (`server/accept_offer.rs`) — every
+  bot took Browbeat's 5 at any life total: six of the seven draws at 2-player
+  cube seed 730001 × 300 (now one, a Slagstorm). Found by naming cards in a
+  `CRAB_DUMP_TRACES` dump (a temporary patch; the dump's format is the golden
+  traces').
+- 🛠 `CRAB_POD_TRACE` names the ask an answer answers;
+  `scripts/audit_seatless_ask.py` + `structural_audit::a_parked_ask_*`.
 
 ## FIXED 2026-10-07 (seventh Commander routine, `01W3Tmnx`) — the stash class, and a creature entering attacking under a non-attacker
 
