@@ -1245,3 +1245,28 @@ fn see_the_truth_takes_one_from_hand() {
     assert_eq!(g.players[0].hand.len(), hand);
     assert_eq!(g.players[0].library.len(), lib - 1);
 }
+
+/// Simulacrum Synthesizer: a 3-MV artifact entering makes a Construct that
+/// counts every artifact you control.
+#[test]
+fn simulacrum_synthesizer_mints_constructs() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::simulacrum_synthesizer());
+    let big = g.add_card_to_hand(0, catalog::simulacrum_synthesizer());
+    flood(&mut g);
+    cast(&mut g, big, None);
+    let c = g.battlefield.iter().find(|c| c.definition.name == "Construct").expect("Construct").id;
+    // Two Synthesizers + the Construct itself.
+    assert_eq!(g.computed_permanent(c).unwrap().power, 3);
+}
+
+/// Stoneskin gives +0/+10.
+#[test]
+fn stoneskin_adds_ten_toughness() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::stoneskin());
+    flood(&mut g);
+    cast(&mut g, aura, Some(Target::Permanent(bear)));
+    assert_eq!(g.computed_permanent(bear).unwrap().toughness, 12);
+}

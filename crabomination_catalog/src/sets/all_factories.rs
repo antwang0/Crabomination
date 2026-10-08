@@ -4638,6 +4638,8 @@ static DECKS: &[Factory] = &[
     super::decks::khenra_spellspear,
     super::decks::vraska_soul_of_stone,
     super::decks::see_the_truth,
+    super::decks::simulacrum_synthesizer,
+    super::decks::stoneskin,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

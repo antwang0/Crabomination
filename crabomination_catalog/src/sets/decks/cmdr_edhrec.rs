@@ -2071,3 +2071,53 @@ pub fn see_the_truth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Simulacrum Synthesizer — {2}{U} artifact. ETB scry 2; another artifact
+/// you control with mana value 3+ entering makes a 0/0 Construct that gets
+/// +1/+1 per artifact you control.
+pub fn simulacrum_synthesizer() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let construct = TokenDefinition {
+        name: "Construct".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Construct]),
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 for each artifact you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents { filter: R::Artifact, per_power: 1, per_toughness: 1 },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Simulacrum Synthesizer",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Artifact.and(R::OtherThanSource).and(R::ManaValueAtLeast(3)),
+                    },
+                ),
+                effect: mint(construct, Value::ONE),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Stoneskin — {2}{W} Aura with flash. Enchanted creature gets +0/+10.
+pub fn stoneskin() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Stoneskin",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+        equipped_bonus: Some(EquipBonus { power: 0, toughness: 10, ..Default::default() }),
+        ..Default::default()
+    }
+}
