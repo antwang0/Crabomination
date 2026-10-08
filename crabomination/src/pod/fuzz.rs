@@ -3,12 +3,12 @@
 //! swapped for a random alternative — another of its own cast / activation
 //! candidates at whatever priority window it holds, the other answer to a
 //! yes/no ask, a random answer to an ask that lists its options (targets,
-//! modes, cards, scry piles, divisions, trigger order, mulligans), a random
-//! subset of its attack or block declaration. A sweep tool: the tuned bots
-//! build the same boards over and over, and a panic or invariant that only an
-//! odd line of play reaches is still a panic self-play can hit. Seeded per
-//! game, so a fuzzed game replays. A swap the engine rejects is simply not
-//! taken.
+//! modes, cards, names, types, lessons, scry piles, divisions, trigger order,
+//! mulligans), a random subset of its attack or block declaration. A sweep
+//! tool: the tuned bots build the same boards over and over, and a panic or
+//! invariant that only an odd line of play reaches is still a panic
+//! self-play can hit. Seeded per game, so a fuzzed game replays. A swap the
+//! engine rejects is simply not taken.
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
@@ -129,6 +129,20 @@ impl FuzzBot {
                     split[i].1 += 1;
                 }
                 DecisionAnswer::CombatDamageAssignment(split)
+            }
+            Decision::ChooseCreatureType { suggestions, .. } => {
+                DecisionAnswer::CreatureType(suggestions[pick(&mut self.rng, suggestions.len())?])
+            }
+            Decision::NameCard { suggestions, .. } => {
+                DecisionAnswer::NamedCard(suggestions[pick(&mut self.rng, suggestions.len())?].clone())
+            }
+            Decision::Learn { lessons, hand, .. } => {
+                let i = self.rng.random_range(0..lessons.len() + hand.len() + 1);
+                DecisionAnswer::Learn(match (lessons.get(i), hand.get(i.wrapping_sub(lessons.len()))) {
+                    (Some((id, _)), _) => crate::decision::LearnChoice::FetchLesson(*id),
+                    (None, Some((id, _))) => crate::decision::LearnChoice::Rummage { discard: *id },
+                    _ => crate::decision::LearnChoice::Decline,
+                })
             }
             Decision::ChooseLegendToKeep { duplicates, .. } => {
                 DecisionAnswer::KeptLegend(duplicates[pick(&mut self.rng, duplicates.len())?].0)
