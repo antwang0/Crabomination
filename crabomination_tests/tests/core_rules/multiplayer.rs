@@ -9514,3 +9514,40 @@ fn cr_608_2d_the_sacrificing_player_chooses_how_many() {
     assert!(matches!(d.decision, Decision::ChooseAmount { .. }), "{:?}", d.decision);
     assert_eq!(d.acting_player(), 1, "asked of the sacrificing player");
 }
+
+/// CR 608.2 / 506.4 — "put it onto the battlefield attacking" asks which
+/// player or planeswalker; if combat is over by the time the answer comes
+/// back, the pick is moot and spent with the ask (a bot's attack dry run in
+/// a 5-seat audit-build pod, seed 740013 game 9, left it in the log).
+#[test]
+fn cr_506_4_a_join_combat_pick_outlived_by_combat_is_spent() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::effect::{AttackingTokenCleanup, Effect, Selector};
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    let mut g = multi_player_game(3);
+    g.players[0].wants_ui = true;
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let joiner = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(1) });
+    g.attacking.push(Attack { attacker: other, target: AttackTarget::Player(2) });
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Late Charge",
+        card_types: vec![CardType::Instant],
+        effect: Effect::JoinCombatAttackingChosen {
+            what: Selector::ExactObjects(vec![joiner]),
+            cleanup: AttackingTokenCleanup::None,
+        },
+        ..Default::default()
+    });
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(g.pending_decision.is_some(), "which defender is asked");
+    g.attacking.clear();
+    g.submit_decision(DecisionAnswer::Target(crabomination::game::types::Target::Player(2))).expect("answer");
+    assert!(g.pending_decision.is_none() && g.attacking.is_empty(), "moot: nothing joins a finished combat");
+}

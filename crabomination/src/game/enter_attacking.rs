@@ -29,6 +29,9 @@ impl GameState {
         effect: &Effect,
     ) -> Result<(), GameError> {
         if self.attacking.is_empty() {
+            // A re-run after combat ended while the pick waited: moot, and
+            // its logged pick goes with it.
+            self.clear_answer_log();
             return Ok(());
         }
         let movers: Vec<(CardId, usize)> = self
