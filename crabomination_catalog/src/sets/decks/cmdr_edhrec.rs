@@ -2121,3 +2121,44 @@ pub fn stoneskin() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Malcolm, Alluring Scoundrel — {1}{U} 2/1 flash, flying. Its combat
+/// damage to a player adds a chorus counter and loots; with four or more
+/// chorus counters you may cast the discarded card free.
+pub fn malcolm_alluring_scoundrel() -> CardDefinition {
+    use crate::card::{CounterType, Zone};
+    CardDefinition {
+        name: "Malcolm, Alluring Scoundrel",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Siren, CreatureType::Pirate]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Chorus, amount: Value::ONE },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Chorus },
+                        Value::Const(4),
+                    ),
+                    then: Box::new(Effect::CastWithoutPayingImmediate {
+                        what: Selector::DiscardedThisResolution { filter: R::Any },
+                        source_zone: Zone::Graveyard,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

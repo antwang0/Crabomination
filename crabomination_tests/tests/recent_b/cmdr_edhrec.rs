@@ -1270,3 +1270,18 @@ fn stoneskin_adds_ten_toughness() {
     cast(&mut g, aura, Some(Target::Permanent(bear)));
     assert_eq!(g.computed_permanent(bear).unwrap().toughness, 12);
 }
+
+/// Malcolm at three chorus counters: the fourth hit loots, and the
+/// discarded Lightning Bolt is cast free at the defending player.
+#[test]
+fn malcolm_recasts_the_looted_card_at_four_chorus() {
+    let mut g = pod(2);
+    let malcolm = ready(&mut g, 0, catalog::malcolm_alluring_scoundrel());
+    g.battlefield_find_mut(malcolm).unwrap().counters.insert(crabomination::card::CounterType::Chorus, 3);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![bolt]), DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    connect(&mut g, malcolm);
+    assert_eq!(g.battlefield_find(malcolm).unwrap().counter_count(crabomination::card::CounterType::Chorus), 4);
+    assert_eq!(life - g.players[1].life, 2 + 3, "Malcolm's 2 and the free bolt's 3");
+}

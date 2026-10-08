@@ -4640,6 +4640,7 @@ static DECKS: &[Factory] = &[
     super::decks::see_the_truth,
     super::decks::simulacrum_synthesizer,
     super::decks::stoneskin,
+    super::decks::malcolm_alluring_scoundrel,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,
