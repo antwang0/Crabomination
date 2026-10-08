@@ -4125,6 +4125,13 @@ impl GameState {
         // untappers still untap their own permanents.
         let active_skips_untap = if self.players[p].skip_next_untap_step > 0 {
             self.players[p].skip_next_untap_step -= 1;
+            // CR 302.6 — sickness is about control since the turn began, so it
+            // lifts without the untap (as `advance_step`'s skipped-step arm
+            // has it); the untap loop below never visits this seat (a pod's
+            // Kotori stayed sick all turn, seed 818652).
+            for c in self.battlefield.iter_mut().filter(|c| c.controller == p && c.summoning_sick) {
+                c.clear_summoning_sickness();
+            }
             true
         } else {
             false

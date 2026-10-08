@@ -895,3 +895,18 @@ fn cr_702_95e_a_bounced_partner_is_unpaired() {
     resolve(&mut g, a, None, &Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) });
     assert_eq!(g.players[0].hand.iter().find(|c| c.id == a).expect("bounced").soulbond_partner, None);
 }
+
+/// CR 302.6 — summoning sickness is about control since the turn began, so a
+/// skipped untap step lifts it all the same: the skip kept the seat out of
+/// the untap loop that clears it (a pod's Kotori stayed sick all turn, seed
+/// 818652, the CR 302.6 turn-boundary invariant).
+#[test]
+fn cr_302_6_a_skipped_untap_step_still_lifts_sickness() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = true;
+    let src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    resolve(&mut g, src, None, &Effect::SkipPlayerUntapStep { player: PlayerRef::Seat(0) });
+    g.do_untap();
+    assert!(!g.battlefield_find(bear).unwrap().summoning_sick);
+}
