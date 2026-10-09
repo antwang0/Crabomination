@@ -6511,11 +6511,14 @@ pub fn summon_choco_mog() -> CardDefinition {
 /// Summon: Bahamut — {9} Enchantment Creature — Saga Dragon 9/9 with flying.
 /// I, II — destroy up to one target nonland permanent. III — draw two cards.
 /// IV — Mega Flare — deals damage equal to the total mana value of other
-/// permanents you control to each opponent. ("Up to one" is modeled as a
-/// required target, the codebase-wide convention for the printed shape.)
+/// permanents you control to each opponent. ("Up to one" is an optional
+/// target, so a chapter with only your own nonland permanents names none.)
 pub fn summon_bahamut() -> CardDefinition {
-    let destroy_nonland = || Effect::Destroy {
-        what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+    let destroy_nonland = || Effect::OptionalTargets {
+        min: 0,
+        body: Box::new(Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+        }),
     };
     CardDefinition {
         name: "Summon: Bahamut",

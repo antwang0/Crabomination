@@ -468,10 +468,15 @@ pub fn loran_of_the_third_path() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-                ),
+            // "Up to one": optional, so a board of only your own artifacts
+            // is left alone (`declines_own_side_pick`).
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                }),
             },
         }],
         ..Default::default()

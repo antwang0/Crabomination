@@ -397,18 +397,21 @@ pub fn lodestone_needle() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
-                ),
-            },
-            Effect::AddCounter {
-                what: crate::effect::shortcut::target(),
-                kind: CounterType::Stun,
-                amount: Value::Const(2),
-            },
-        ]))],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                    ),
+                },
+                Effect::AddCounter {
+                    what: crate::effect::shortcut::target(),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(2),
+                },
+            ])),
+        })],
         activated_abilities: vec![craft(
             cost(&[generic(2), u()]),
             SelectionRequirement::Artifact,

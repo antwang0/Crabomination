@@ -494,9 +494,9 @@ pub fn broodguard_elite() -> CardDefinition {
     }
 }
 
-/// All-Fates Stalker — {3}{W} Creature — Drix Assassin 2/3. ETB: exile target
-/// creature until this leaves the battlefield. Warp {1}{W}. (The "up to one
-/// non-Assassin" rider is approximated as a plain target creature.)
+/// All-Fates Stalker — {3}{W} Creature — Drix Assassin 2/3. ETB: exile up to
+/// one target non-Assassin creature until this leaves the battlefield. Warp
+/// {1}{W}.
 pub fn all_fates_stalker() -> CardDefinition {
     CardDefinition {
         name: "All-Fates Stalker",
@@ -508,9 +508,12 @@ pub fn all_fates_stalker() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::HasCreatureType(CreatureType::Assassin).negate())),
-            return_to: crate::card::ExileReturnZone::Battlefield,
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::ExileUntilSourceLeaves {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::HasCreatureType(CreatureType::Assassin).negate())),
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            }),
         })],
         alternative_cost: Some(warp(cost(&[generic(1), w()]))),
         ..Default::default()
@@ -6009,8 +6012,11 @@ pub fn syr_vondam_sunstar_exemplar() -> CardDefinition {
                         filter: SelectionRequirement::PowerAtLeast(4),
                     },
                 ),
-                effect: Effect::Destroy {
-                    what: target_filtered(SelectionRequirement::Nonland),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Destroy {
+                        what: target_filtered(SelectionRequirement::Nonland),
+                    }),
                 },
             },
         ],

@@ -1661,6 +1661,24 @@ fn loran_etb_destroys_artifact_and_tap_ability_lets_both_draw() {
     assert_eq!(g.players[1].hand.len(), p1_hand + 1);
 }
 
+/// CR 601.2c / 603.3d — Loran's "destroy up to one target artifact or
+/// enchantment" may name none: with only its controller's own Sol Ring on
+/// the board, the ETB leaves it alone (a required target destroyed it).
+#[test]
+fn loran_etb_spares_your_own_artifact_when_it_is_the_only_one() {
+    let mut g = two_player_game();
+    let my_ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let loran = g.add_card_to_hand(0, catalog::loran_of_the_third_path());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: loran, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Loran castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(my_ring).is_some(), "your own Sol Ring survives");
+}
+
 // ── New cube/Modern additions ─────────────────────────────────────────────────
 
 /// Reanimate puts a creature card from a graveyard onto the battlefield

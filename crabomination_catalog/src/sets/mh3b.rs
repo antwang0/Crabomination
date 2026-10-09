@@ -188,16 +188,19 @@ pub fn petrifying_meddler() -> CardDefinition {
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Devoid, Keyword::Reach],
-        triggered_abilities: vec![on_cast(Effect::Seq(vec![
-            Effect::Tap {
-                what: target_filtered(R::Creature),
-            },
-            Effect::AddCounter {
-                what: target_filtered(R::Creature),
-                kind: CounterType::Stun,
-                amount: Value::ONE,
-            },
-        ]))],
+        triggered_abilities: vec![on_cast(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(R::Creature),
+                },
+                Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::Stun,
+                    amount: Value::ONE,
+                },
+            ])),
+        })],
         ..Default::default()
     }
 }
