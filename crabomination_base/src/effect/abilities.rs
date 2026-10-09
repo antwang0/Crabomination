@@ -1015,6 +1015,12 @@ pub enum StaticEffect {
     /// `static_abilities`; cast via `GameAction::CastSpellSacrificeReduce`
     /// (Awaken the Blood Avatar). No continuous-layer effect.
     SacrificeCostReduction { per: u32 },
+    /// "As an additional cost to cast this spell, you may exile any number of
+    /// [filter] cards from your hand. This spell costs {N} less to cast for
+    /// each card exiled this way." (the Marches). The pitch sibling of
+    /// `SacrificeCostReduction`, cast through the same
+    /// `GameAction::CastSpellSacrificeReduce` with hand cards in `sacrifices`.
+    ExileFromHandCostReduction { per: u32, filter: crate::card::SelectionRequirement },
     /// "This spell costs {amount} less to cast if it's bargained" (CR 702.176 —
     /// Ice Out, Johann's Stopgap). Read by `cast_spell_bargain` when the
     /// Bargain cost is actually paid. No continuous-layer effect.

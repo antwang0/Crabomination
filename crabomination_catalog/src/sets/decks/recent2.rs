@@ -30,13 +30,20 @@ pub fn tangle() -> CardDefinition {
 }
 
 /// March of Otherworldly Light — {X}{W} Instant. Exile target artifact, creature,
-/// or enchantment with mana value X or less. (The "exile white cards from hand
-/// to reduce the cost" additional cost is dropped.)
+/// or enchantment with mana value X or less. As an additional cost you may
+/// exile any number of white cards from your hand, {2} less each.
 pub fn march_of_otherworldly_light() -> CardDefinition {
     CardDefinition {
         name: "March of Otherworldly Light",
         cost: cost(&[x(), w()]),
         card_types: vec![CardType::Instant],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "As an additional cost to cast this spell, you may exile any number of white cards from your hand. This spell costs {2} less to cast for each card exiled this way.",
+            effect: crate::effect::StaticEffect::ExileFromHandCostReduction {
+                per: 2,
+                filter: SelectionRequirement::HasColor(crate::mana::Color::White),
+            },
+        }],
         effect: Effect::Move {
             what: Selector::TargetFiltered {
                 slot: 0,

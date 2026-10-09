@@ -34024,6 +34024,7 @@ fn static_effect_to_effects(
             // additional cost consulted by `cast_spell_sacrifice_reduce`; no
             // continuous-layer effect.
             | StaticEffect::SacrificeCostReduction { .. }
+            | StaticEffect::ExileFromHandCostReduction { .. }
             // BargainCostReduction — read by `cast_spell_bargain` at cast time.
             | StaticEffect::BargainCostReduction { .. }
             // OpponentsCantMakeYouSacrifice (Sigarda/Tamiyo) — consulted in

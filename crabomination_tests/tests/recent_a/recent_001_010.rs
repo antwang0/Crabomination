@@ -7277,6 +7277,31 @@ mod recent2 {
         assert!(g.exile.iter().any(|c| c.id == victim), "creature exiled");
     }
 
+    /// The Marches' optional cost: exile a white card from hand and X = 3
+    /// costs {1}{W} instead of {3}{W}; a nonwhite card can't be pitched.
+    #[test]
+    fn march_of_otherworldly_light_pitches_white_cards_for_two_each() {
+        let mut g = two_player_game();
+        let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // MV 4
+        let id = g.add_card_to_hand(0, catalog::march_of_otherworldly_light());
+        let pitch = g.add_card_to_hand(0, catalog::savannah_lions());
+        let red = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let cast = |g: &mut GameState, pitched: Vec<crabomination::card::CardId>| {
+            g.perform_action(GameAction::CastSpellSacrificeReduce {
+                card_id: id, sacrifices: pitched, target: Some(Target::Permanent(victim)),
+                additional_targets: vec![], mode: None, x_value: Some(4),
+            })
+        };
+        assert!(cast(&mut g, vec![red]).is_err(), "a red card isn't a white card");
+        cast(&mut g, vec![pitch]).expect("X = 4 for {2}{W} plus a pitched white card");
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == victim), "MV 4 exiled");
+        assert!(g.exile.iter().any(|c| c.id == pitch), "the pitched card is exiled");
+        assert!(g.players[0].hand.iter().any(|c| c.id == red));
+    }
+
     /// Disdainful Stroke counters a 4-MV spell but not a cheap one.
     #[test]
     fn disdainful_stroke_counters_expensive_spell() {

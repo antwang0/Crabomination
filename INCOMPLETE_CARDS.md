@@ -442,7 +442,6 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 |---|---|---|
 | Zidane, Tantalus Thief | "whenever an opponent gains control of a permanent from you, create a Treasure" is absent | no control-change event from the loser's side (only `LostControlOfThis` on the permanent) |
 | Clement, the Worrywort | Frogs you control don't gain "{T}: Add {G} or {U}" (creature-spell-only) | no static grant of a restricted mana ability to a filter |
-| March of Wretched Sorrow, March of Otherworldly Light | the optional "exile any number of [color] cards from your hand, {2} less each" additional cost | no pitch-to-reduce cast action (the sacrifice-to-reduce one, `CastSpellSacrificeReduce`, has no bot candidate either) |
 | Kitesail Larcenist | exiles one opponent's nonland permanent for good instead of making up to one artifact/creature per player a Treasure while it stays | `BecomeTreasure`'s granted mana ability and layer effects have no "while the source remains" duration |
 | The Necrobloom | land cards in your graveyard don't have dredge 2 | dredge is read off the card's own definition |
 | Ragost, Deft Gastronaut | artifacts you control aren't Foods and don't gain the Food ability | no type-and-ability grant to a filter |

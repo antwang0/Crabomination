@@ -822,13 +822,20 @@ pub fn vilis_broker_of_blood() -> CardDefinition {
 }
 
 /// March of Wretched Sorrow — {X}{B}: X damage to target creature or
-/// planeswalker and you gain X life. (The optional "exile black cards from
-/// your hand, {2} less each" additional cost is omitted.)
+/// planeswalker and you gain X life. As an additional cost you may exile any
+/// number of black cards from your hand, {2} less each.
 pub fn march_of_wretched_sorrow() -> CardDefinition {
     CardDefinition {
         name: "March of Wretched Sorrow",
         cost: cost(&[x(), b()]),
         card_types: vec![CardType::Instant],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "As an additional cost to cast this spell, you may exile any number of black cards from your hand. This spell costs {2} less to cast for each card exiled this way.",
+            effect: crate::effect::StaticEffect::ExileFromHandCostReduction {
+                per: 2,
+                filter: R::HasColor(crate::mana::Color::Black),
+            },
+        }],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(R::Creature.or(R::HasCardType(CardType::Planeswalker))),

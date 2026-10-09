@@ -7687,17 +7687,46 @@ impl GameState {
         use crate::effect::StaticEffect;
         let p = self.priority.player_with_priority;
         // Validate the card is in hand and carries the optional cost.
-        let per = self.players[p]
+        let (per, pitch) = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| {
-                c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
-                    StaticEffect::SacrificeCostReduction { per } => Some(per),
+                c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                    StaticEffect::SacrificeCostReduction { per } => Some((*per, None)),
+                    StaticEffect::ExileFromHandCostReduction { per, filter } => Some((*per, Some(filter.clone()))),
                     _ => None,
                 })
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // The Marches: exile the chosen [filter] hand cards (not the spell
+        // itself, each once) as the additional cost.
+        if let Some(filter) = pitch {
+            let mut seen: Vec<CardId> = Vec::new();
+            for id in &sacrifices {
+                let ok = *id != card_id
+                    && !seen.contains(id)
+                    && self.players[p]
+                        .hand
+                        .iter()
+                        .find(|c| c.id == *id)
+                        .is_some_and(|c| self.evaluate_requirement_on_card(&filter, c, p));
+                if !ok {
+                    return Err(GameError::InvalidTarget);
+                }
+                seen.push(*id);
+            }
+            let mut events = Vec::new();
+            let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
+            for id in &sacrifices {
+                self.move_card_to(*id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+            }
+            self.extra_cast_reduction = per.saturating_mul(sacrifices.len() as u32);
+            let cast = self.cast_spell(card_id, target, additional_targets, mode, x_value);
+            self.extra_cast_reduction = 0;
+            events.append(&mut cast?);
+            return Ok(events);
+        }
         // Validate every sacrifice is a distinct creature the caster controls.
         for sac in &sacrifices {
             let ok = self

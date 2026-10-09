@@ -7495,6 +7495,15 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
                 _ => 0,
             };
         }
+        if def.static_abilities.iter().any(|sa| {
+            matches!(
+                sa.effect,
+                crate::effect::StaticEffect::SacrificeCostReduction { .. }
+                    | crate::effect::StaticEffect::ExileFromHandCostReduction { .. }
+            )
+        }) {
+            m |= spec::SAC_EXTRA;
+        }
         if def.gift.is_some() {
             m |= spec::GIFT;
         }
@@ -8742,6 +8751,66 @@ pub(super) fn cast_candidates<'a>(
         };
         if GameState::would_accept_on(state, action.clone()) {
             castable.push((action, true));
+        }
+    }
+    // "Sacrifice / exile from hand any number, {N} less each" (Awaken the
+    // Blood Avatar, the Marches): pay it with one or two of the cheapest
+    // cards it accepts — creature tokens, or matching hand cards — and for an
+    // {X} spell take the largest X the reduction then affords.
+    for c in state.players[seat].hand.iter() {
+        let def = &c.definition;
+        // `Some(Some(filter))` pitches matching hand cards, `Some(None)` sacrifices.
+        let Some(pitch_filter) = def.static_abilities.iter().find_map(|sa| match &sa.effect {
+            crate::effect::StaticEffect::SacrificeCostReduction { .. } => Some(None),
+            crate::effect::StaticEffect::ExileFromHandCostReduction { filter, .. } => Some(Some(filter)),
+            _ => None,
+        }) else {
+            continue;
+        };
+        let mut fodder: Vec<(u32, CardId)> = if let Some(filter) = pitch_filter {
+            state.players[seat]
+                .hand
+                .iter()
+                .filter(|h| h.id != c.id && state.evaluate_requirement_on_card(filter, h, seat))
+                .map(|h| (h.definition.cost.cmc(), h.id))
+                .collect()
+        } else {
+            state
+                .battlefield
+                .iter()
+                .filter(|b| b.controller == seat && b.is_token && b.definition.is_creature())
+                .map(|b| (state.computed_permanent(b.id).map_or(0, |cp| cp.power.max(0) as u32), b.id))
+                .collect()
+        };
+        fodder.sort();
+        let effect = &def.effect;
+        for n in 1..=fodder.len().min(2) {
+            let sacrifices: Vec<CardId> = fodder[..n].iter().map(|&(_, id)| id).collect();
+            let xs: Vec<Option<u32>> = if def.cost.has_x() { (1..=12).rev().map(Some).collect() } else { vec![None] };
+            for x_value in xs {
+                let (target, additional_targets) = if effect.requires_target() {
+                    let (t, extras) =
+                        state.auto_targets_for_effect_all_slots_x(effect, seat, None, false, Some(c.id), x_value);
+                    if t.is_none() {
+                        continue;
+                    }
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                let action = GameAction::CastSpellSacrificeReduce {
+                    card_id: c.id,
+                    sacrifices: sacrifices.clone(),
+                    target,
+                    additional_targets,
+                    mode: None,
+                    x_value,
+                };
+                if GameState::would_accept_on(state, action.clone()) {
+                    castable.push((action, true));
+                    break;
+                }
+            }
         }
     }
     });
@@ -25067,6 +25136,24 @@ mod tests {
                 if card_id == fin && t == bolt)
         });
         assert!(offered, "Finale aimed at the Bolt for X = 1");
+    }
+
+    /// The Marches' "exile [color] cards from hand, {2} less each" is offered
+    /// (it had no candidate block, nor had Awaken the Blood Avatar's sacrifice
+    /// twin): March of Wretched Sorrow pitches the cheapest black card and
+    /// takes the X the discount affords.
+    #[test]
+    fn bot_offers_a_march_pitch() {
+        let mut g = two_player_game();
+        let march = g.add_card_to_hand(0, catalog::march_of_wretched_sorrow());
+        let fodder = g.add_card_to_hand(0, catalog::dark_ritual());
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        let offered = cast_candidates(&g, 0, &EvalWeights::default(), None).into_iter().any(|(a, _)| {
+            matches!(a, GameAction::CastSpellSacrificeReduce { card_id, ref sacrifices, x_value: Some(2), .. }
+                if card_id == march && sacrifices == &vec![fodder])
+        });
+        assert!(offered, "{{B}} plus a pitched black card pays X = 2");
     }
 
     /// Entwine (CR 702.42), squad (702.157), fuse (702.102), casualty
