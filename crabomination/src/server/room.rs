@@ -47,7 +47,10 @@ pub(super) fn pick_room_door(state: &GameState, seat: usize) -> Option<GameActio
         if !watch {
             return state.would_accept(a.clone());
         }
-        GameState::accept_on(state, a.clone()).is_some_and(|g| !super::loop_hazard::starts_loop(state, &g, seat))
+        GameState::accept_on(state, a.clone()).is_some_and(|g| {
+            !super::loop_hazard::starts_loop(state, &g, seat)
+                && !super::loop_hazard::resolution_loops(&g, seat, &super::bot::EvalWeights::default())
+        })
     })
 }
 

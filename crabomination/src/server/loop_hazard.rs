@@ -11,7 +11,7 @@ use crate::card::CardInstance;
 use crate::card::TokenDefinition;
 use crate::effect::{Effect, EventKind, EventScope, PlayerRef};
 use crate::game::GameState;
-use crate::game::types::StackItem;
+use crate::game::types::{GameAction, StackItem};
 
 /// The mandatory "a permanent enters → create a token for you" triggers on
 /// `def`, as `(ability index, token)`. A self-ETB, a `may`, a per-turn cap or
@@ -108,13 +108,74 @@ pub(super) fn self_feeding(state: &GameState, seat: usize) -> bool {
     false
 }
 
-/// Per-tick gate for [`starts_loop`]: a Commander seat with a token trigger
-/// in play, in hand or in the command zone. Off, the probe costs nothing.
+/// A token-making trigger that isn't a one-shot self-ETB: the piece every
+/// growing loop needs (Polyraptor's damage copy, an Eerie mint).
+fn makes_tokens_repeatably(def: &crate::card::CardDefinition) -> bool {
+    def.triggered_abilities.iter().any(|t| {
+        let self_etb = t.event.kind == EventKind::EntersBattlefield && t.event.scope == EventScope::SelfSource;
+        !(self_etb || t.event.once_per_turn)
+            && t.effect.any_nested(&|e| matches!(e, Effect::CreateToken { .. } | Effect::CreateTokenCopyOf { .. }))
+    })
+}
+
+/// Per-tick gate for the probes: a Commander seat with a repeatable token
+/// trigger anywhere it could come from (battlefield, hand, graveyard, command
+/// zone). Off, the probes cost nothing.
 pub(super) fn watch(state: &GameState, seat: usize) -> bool {
     let p = &state.players[seat];
     !p.commanders.is_empty()
-        && (has_token_trigger(state, seat)
-            || p.hand.iter().chain(p.command.iter()).any(|c| !token_triggers(&c.definition).is_empty()))
+        && state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .chain(p.hand.iter())
+            .chain(p.graveyard.iter())
+            .chain(p.command.iter())
+            .any(|c| makes_tokens_repeatably(&c.definition))
+}
+
+/// Passes per seat the resolution probe may spend.
+const PROBE_PASSES_PER_SEAT: usize = 48;
+/// Board growth that, with the stack never draining, reads as a loop.
+const PROBE_GROWTH: usize = 16;
+
+/// The dynamic half: resolve `post` (an action's settled state) with every
+/// seat passing and `seat`'s policy answering asks. A CR 104.4b draw, or a
+/// stack that never drains while the board grows by [`PROBE_GROWTH`] within
+/// the budget, is a loop — Polyraptor beside Marauding Raptor, a Room door
+/// that returns Ghostly Dancers under Secret Arcade. A finite cascade drains.
+pub(super) fn resolution_loops(post: &GameState, seat: usize, w: &super::bot::EvalWeights) -> bool {
+    if post.stack.is_empty() {
+        return false;
+    }
+    let mut g = post.clone();
+    let (board0, depth0) = (g.battlefield.len(), g.stack.len());
+    for _ in 0..PROBE_PASSES_PER_SEAT * g.players.len() {
+        if g.is_game_over() {
+            return matches!(g.game_over, Some(None));
+        }
+        if g.stack.is_empty() {
+            return false;
+        }
+        let action = match g.pending_decision.as_ref() {
+            Some(p) if p.acting_player() == seat => GameAction::SubmitDecision(super::bot::decide_pending_policy(
+                &g,
+                seat,
+                w,
+                &p.decision,
+                false,
+            )),
+            Some(p) => {
+                let who = p.acting_player();
+                GameAction::SubmitDecision(super::bot::decide_pending_policy(&g, who, w, &p.decision, false))
+            }
+            None => GameAction::PassPriority,
+        };
+        if g.perform_action_inner(action).is_err() {
+            return false;
+        }
+    }
+    g.stack.len() >= depth0 && g.battlefield.len() >= board0 + PROBE_GROWTH
 }
 
 /// Whether taking the action that settled `pre` into `post` starts (or sets
@@ -187,6 +248,24 @@ mod tests {
         };
         let post = GameState::accept_on(&g, cast).expect("castable");
         assert!(starts_loop(&g, &post, 0));
+    }
+
+    /// CR 104.4b — Polyraptor cast beside Marauding Raptor: each copy enters,
+    /// is dealt 2, and copies itself. Only resolution shows it; the probe
+    /// does, and a plain creature cast is no loop.
+    #[test]
+    fn polyraptor_beside_marauding_raptor_resolves_into_a_loop() {
+        let (mut g, _) = arcade_game();
+        g.add_card_to_battlefield(0, crate::catalog::marauding_raptor());
+        let poly = g.add_card_to_hand(0, crate::catalog::polyraptor());
+        let bear = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 8);
+        let w = crate::server::bot::EvalWeights::default();
+        let cast = |id| GameAction::CastSpell { card_id: id, target: None, additional_targets: Vec::new(), mode: None, x_value: None };
+        let post = GameState::accept_on(&g, cast(poly)).expect("castable");
+        assert!(resolution_loops(&post, 0, &w));
+        let post = GameState::accept_on(&g, cast(bear)).expect("castable");
+        assert!(!resolution_loops(&post, 0, &w));
     }
 
     /// CR 104.4b — unlocking Secret Arcade under a Gremlin Tamer sets the loop
