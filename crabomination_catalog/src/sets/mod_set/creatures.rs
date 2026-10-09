@@ -9630,7 +9630,8 @@ pub fn impassioned_orator() -> CardDefinition {
 
 /// Esper Sentinel — {W} 1/1 Artifact Creature — Human Soldier. An opponent's
 /// first noncreature spell each turn: draw unless they pay {X} = its power
-/// (once-per-turn stands in for "their first … each turn"; exact in 2P).
+/// (counts each caster's own noncreature spells, so every opponent's first
+/// one triggers in multiplayer).
 pub fn esper_sentinel() -> CardDefinition {
     use crate::effect::Predicate;
     CardDefinition {

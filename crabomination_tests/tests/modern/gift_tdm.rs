@@ -867,21 +867,24 @@ fn stormplain_detainment_exiles_until_it_leaves() {
     assert!(g.battlefield_find(victim).is_some(), "creature returns when the enchantment leaves");
 }
 
-/// Strategic Betrayal forces an opponent to lose a creature and exiles their
-/// graveyard.
+/// Strategic Betrayal: the TARGET opponent exiles a creature (it doesn't die:
+/// no dies trigger) and only their graveyard goes — a third seat's stays
+/// (it exiled every opponent's graveyard and was a sacrifice).
 #[test]
-fn strategic_betrayal_edicts_and_exiles_graveyard() {
-    let mut g = two_player_game();
+fn strategic_betrayal_exiles_a_creature_and_the_targets_graveyard() {
+    let mut g = crabomination::game::multi_player_game(3);
     let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let gy_card = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let bystander = g.add_card_to_graveyard(2, catalog::lightning_bolt());
     let spell = g.add_card_to_hand(0, catalog::strategic_betrayal());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     cast_at(&mut g, spell, Target::Player(1));
-    assert!(g.battlefield_find(creature).is_none(), "opponent lost a creature");
+    assert!(g.exile.iter().any(|c| c.id == creature), "the creature was exiled, not sacrificed");
     assert!(g.exile.iter().any(|c| c.id == gy_card), "their graveyard was exiled");
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == bystander), "another opponent's stays");
 }
 
 /// Sonic Shrieker's ETB pings any target for 2 and gains 2 life.
@@ -3068,6 +3071,21 @@ fn heat_shimmer_makes_a_hasty_copy() {
     drain_stack(&mut g);
     let after = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
     assert_eq!(after, before + 1, "minted a copy of the target creature");
+    // CR 603.7 — the copy's "at the beginning of the end step, exile this
+    // token": exiled, not sacrificed (Heat Shimmer's printed text).
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+    let now = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(now, before, "the copy left at the end step");
+    assert!(
+        g.players[0].graveyard.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "exiled, so it never died"
+    );
 }
 
 #[test]

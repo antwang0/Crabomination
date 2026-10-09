@@ -242,9 +242,8 @@ pub fn griselbrand() -> CardDefinition {
 
 /// Psychic Frog — {U}{B} 1/2 Frog (MH3). Combat damage to a player/PW →
 /// draw. "Discard a card: +1/+1 counter." "Exile three cards from your
-/// graveyard: gains flying EOT." The discard / graveyard-exile costs are
-/// modeled as the first step of the resolved effect (gameplay-equivalent —
-/// nothing can respond between cost and resolution).
+/// graveyard: gains flying EOT." The discard and the graveyard exile are
+/// paid as activation costs.
 pub fn psychic_frog() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {

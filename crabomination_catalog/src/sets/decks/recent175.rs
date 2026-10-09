@@ -574,10 +574,10 @@ pub fn lagorin_soul_of_alacria() -> CardDefinition {
     }
 }
 
-/// Riverchurn Monument — {1}{U} Artifact. {1}, {T}: each opponent mills two.
-/// Exhaust — {2}{U}{U}, {T}: each opponent mills cards equal to the number of
-/// cards in their graveyard. ("Any number of target players" is modeled as each
-/// opponent — the standard aggressive line; faithful in 1v1.)
+/// Riverchurn Monument — {1}{U} Artifact. {1}, {T}: any number of target
+/// players each mill two. Exhaust — {2}{U}{U}, {T}: any number of target
+/// players each mill cards equal to the number of cards in their graveyard
+/// (eight slots: a pod has at most eight seats).
 pub fn riverchurn_monument() -> CardDefinition {
     CardDefinition {
         name: "Riverchurn Monument",
@@ -587,9 +587,14 @@ pub fn riverchurn_monument() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::Mill {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(2),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Player,
+                    effect: Box::new(Effect::Mill {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::Const(2),
+                    }),
                 },
                 ..Default::default()
             },
@@ -598,10 +603,13 @@ pub fn riverchurn_monument() -> CardDefinition {
                 exhaust: true,
                 mana_cost: cost(&[generic(2), u(), u()]),
                 // "…each mill cards equal to the number of cards in their graveyard."
-                effect: Effect::ForEachOpponent {
-                    body: Box::new(Effect::Mill {
-                        who: Selector::Player(PlayerRef::Triggerer),
-                        amount: Value::GraveyardSizeOf(PlayerRef::Triggerer),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Player,
+                    effect: Box::new(Effect::Mill {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::GraveyardSizeOf(PlayerRef::Target(0)),
                     }),
                 },
                 ..Default::default()

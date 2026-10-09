@@ -599,23 +599,21 @@ pub fn stormplain_detainment() -> CardDefinition {
 }
 
 /// Strategic Betrayal — {1}{B} Sorcery. Target opponent exiles a creature they
-/// control and their graveyard. (Modeled as a sacrifice edict — the creature
-/// dies, then the graveyard wipe exiles it along with the rest.)
+/// control (their choice — it doesn't die) and their graveyard.
 pub fn strategic_betrayal() -> CardDefinition {
     CardDefinition {
         name: "Strategic Betrayal",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
+        // "Target opponent exiles a creature they control and their
+        // graveyard" — that opponent's own graveyard only.
         effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::Target(0),
+            Effect::PlayerExilesPermanents {
+                who: PlayerRef::Target(0),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature,
             },
-            Effect::ExileAllGraveyards {
-                filter: None,
-                opponents_only: true,
-            },
+            Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0), filter: None },
         ]),
         ..Default::default()
     }

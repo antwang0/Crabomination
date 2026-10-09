@@ -263,7 +263,7 @@ pub fn caustic_bronco() -> CardDefinition {
 
 /// Goblin Recruiter — {1}{R} 1/1 Goblin. When this creature enters, search your
 /// library for any number of Goblin cards, reveal them, then shuffle and put
-/// those cards on top in any order. ("Any number" is modeled as up to 10.)
+/// those cards on top in any order ("any number": no practical cap).
 pub fn goblin_recruiter() -> CardDefinition {
     CardDefinition {
         name: "Goblin Recruiter",
@@ -282,7 +282,7 @@ pub fn goblin_recruiter() -> CardDefinition {
                 who: PlayerRef::You,
                 pos: LibraryPosition::Top,
             },
-            count: Value::Const(10),
+            count: Value::Const(99),
         })],
         ..Default::default()
     }

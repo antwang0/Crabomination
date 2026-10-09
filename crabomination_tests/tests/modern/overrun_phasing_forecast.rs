@@ -722,8 +722,9 @@ fn mox_diamond_discards_on_etb_and_taps_for_any() {
 
 /// With no land to pitch, Mox Diamond goes to the graveyard. It used to
 /// discard *any* card — a creature, a burn spell — and stay either way.
+/// CR 701.21 — "put it into its owner's graveyard" is not a sacrifice.
 #[test]
-fn mox_diamond_is_sacrificed_without_a_land_to_discard() {
+fn mox_diamond_goes_to_the_graveyard_without_a_land_to_discard() {
     let mut g = two_player_game();
     let mox = g.add_card_to_hand(0, catalog::mox_diamond());
     g.add_card_to_hand(0, catalog::grizzly_bears()); // not a land
@@ -732,6 +733,8 @@ fn mox_diamond_is_sacrificed_without_a_land_to_discard() {
     }).expect("cast Mox Diamond for {0}");
     drain_stack(&mut g);
     assert!(g.battlefield_find(mox).is_none(), "no land to discard, so no Mox");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mox), "into its owner's graveyard");
+    assert_eq!(g.players[0].permanents_sacrificed_this_turn, 0, "not sacrificed");
     assert!(
         g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
         "and the bear stayed in hand",
@@ -862,7 +865,8 @@ fn comeuppance_prevents_damage_to_you() {
     assert_eq!(g.players[0].life, life, "damage to you is prevented");
 }
 
-/// Isochron Scepter imprints an instant on ETB, then free-casts it from exile.
+/// CR 707.12 — Isochron Scepter imprints an instant on ETB, then each
+/// activation casts a copy of it for free.
 #[test]
 fn isochron_scepter_imprints_then_free_casts_the_instant() {
     let mut g = two_player_game();
@@ -887,6 +891,17 @@ fn isochron_scepter_imprints_then_free_casts_the_instant() {
     }).expect("free-cast the imprinted Bolt");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 20 - 3, "the imprinted Bolt dealt 3 to the opponent");
+    // "Copy the imprinted card": the card stays imprinted, so the next
+    // activation (next turn's untap) casts another copy.
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the imprint stays in exile");
+    g.battlefield_find_mut(scepter).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scepter, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("cast a second copy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 6, "a second copy dealt 3 more");
 }
 
 // ── Phasing (CR 702.26) ───────────────────────────────────────────────────

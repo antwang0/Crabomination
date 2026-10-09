@@ -9667,6 +9667,38 @@ mod recent5 {
         assert!(g.players[1].hand.iter().any(|c| c.id == target), "permanent returned to owner's hand");
     }
 
+    /// CR 115.1 / 608.2 — Venser's ETB may target a *spell*: flashed in
+    /// response, it returns the opponent's creature spell to its owner's hand
+    /// (off the stack, never resolving).
+    #[test]
+    fn venser_bounces_a_spell_on_the_stack() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+        g.players[1].mana_pool.add(Color::Green, 1);
+        g.players[1].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast the bear");
+        let venser = g.add_card_to_hand(0, catalog::venser_shaper_savant());
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        g.players[0].mana_pool.add_colorless(2);
+        g.priority.player_with_priority = 0;
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Mode(1),
+            DecisionAnswer::Target(Target::Permanent(bear)),
+        ]));
+        g.perform_action(GameAction::CastSpell {
+            card_id: venser, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("flash in Venser");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(venser).is_some(), "Venser resolved");
+        assert!(g.players[1].hand.iter().any(|c| c.id == bear), "the bear spell went back to hand");
+        assert!(g.battlefield_find(bear).is_none(), "and never resolved");
+    }
+
     /// Hullbreaker Horror ships flash + can't-be-countered and bounces a permanent
     /// or an opponent's spell when you cast a spell. CR 700.2a / 608.2b — a
     /// modal trigger's target is the chosen mode's (bug fix: triggers were

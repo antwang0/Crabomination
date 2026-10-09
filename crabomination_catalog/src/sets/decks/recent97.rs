@@ -213,9 +213,8 @@ pub fn moonsnare_prototype() -> CardDefinition {
     }
 }
 
-/// Explosive Entry — {1}{R} Sorcery. Destroy target artifact and put a +1/+1
-/// counter on target creature. (The printed "up to one" on each is modeled as
-/// required targets.)
+/// Explosive Entry — {1}{R} Sorcery. Destroy up to one target artifact. Put a
+/// +1/+1 counter on up to one target creature (both slots optional).
 pub fn explosive_entry() -> CardDefinition {
     CardDefinition {
         name: "Explosive Entry",

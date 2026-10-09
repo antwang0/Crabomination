@@ -1454,7 +1454,10 @@ mod recent114 {
         let mut events = Vec::new();
         g.deal_damage_to_from(EntityRef::Player(0), 4, None, &mut events);
         assert_eq!(g.players[0].life, life, "all damage to the controller prevented");
-        assert!(g.player_has_static_hexproof(0), "controller has hexproof");
+        // CR 702.18a — shroud: nobody may target them, their own spells included.
+        use crabomination::game::types::Target;
+        assert!(g.check_target_legality(&Target::Player(0), 1).is_err(), "an opponent can't target them");
+        assert!(g.check_target_legality(&Target::Player(0), 0).is_err(), "nor can they themselves");
     }
 
     /// Shielded by Faith makes the enchanted creature indestructible.

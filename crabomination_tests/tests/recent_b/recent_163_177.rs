@@ -413,13 +413,14 @@ mod recent166 {
         assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Unblockable), "bear can't be blocked");
     }
 
-    /// Planetarium's scry fires its once-per-turn impulse on the top card.
+    /// CR 701.22 / 601.2 — Planetarium's scry trigger looks at the top card
+    /// and casts it free from the library (nothing is exiled).
     #[test]
-    fn planetarium_impulses_top_on_scry() {
+    fn planetarium_casts_the_top_card_on_scry() {
         let mut g = two_player_game();
         let art = g.add_card_to_battlefield(0, catalog::planetarium_of_wan_shi_tong());
         g.add_card_to_library(0, catalog::grizzly_bears());
-        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(0, catalog::grizzly_bears());
         g.players[0].mana_pool.add_colorless(1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
@@ -428,9 +429,11 @@ mod recent166 {
         .expect("{1},{T}: Scry 2");
         drain_stack(&mut g);
         assert!(
-            g.exile.iter().any(|c| c.controller == 0 && c.may_play_until.is_some()),
-            "scry triggered an impulse of the top card",
+            g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"),
+            "the top card was cast for free",
         );
+        assert_eq!(g.players[0].library.len(), 1, "the other card stayed in the library");
+        assert!(g.exile.is_empty(), "nothing was exiled");
     }
 
     /// Phoenix Fleet Airship copies itself at end step if you sacrificed a permanent.
@@ -2492,12 +2495,17 @@ mod recent175 {
         assert_eq!(g.battlefield_find(veh2).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     }
 
-    /// Riverchurn Monument's base ability mills each opponent two.
+    /// CR 115.1 — Riverchurn Monument's base ability: "any number of target
+    /// players each mill two". Only the named players mill (seat 2 is left
+    /// out in a three-seat game).
     #[test]
-    fn riverchurn_monument_mills_each_opponent() {
-        let mut g = two_player_game();
+    fn riverchurn_monument_mills_each_targeted_player() {
+        use crabomination::game::types::Target;
+        let mut g = multi_player_game(3);
         let mon = g.add_card_to_battlefield(0, catalog::riverchurn_monument());
-        for _ in 0..5 { g.add_card_to_library(1, catalog::forest()); }
+        for seat in [1, 2] {
+            for _ in 0..5 { g.add_card_to_library(seat, catalog::forest()); }
+        }
         let gy_before = g.players[1].graveyard.len();
         g.clear_sickness(mon);
         g.players[0].mana_pool.add_colorless(1);
@@ -2505,11 +2513,12 @@ mod recent175 {
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: mon, ability_index: 0, target: None,
+            card_id: mon, ability_index: 0, target: Some(Target::Player(1)),
             additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("mill ability");
         drain_stack(&mut g);
-        assert_eq!(g.players[1].graveyard.len(), gy_before + 2, "opponent milled two");
+        assert_eq!(g.players[1].graveyard.len(), gy_before + 2, "the target milled two");
+        assert!(g.players[2].graveyard.is_empty(), "the untargeted opponent milled nothing");
     }
 
     /// Flood the Engine taps the enchanted permanent, strips its abilities, and

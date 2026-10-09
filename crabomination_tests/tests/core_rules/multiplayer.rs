@@ -7588,7 +7588,9 @@ fn per_player_values_read_each_player() {
         g.add_card_to_graveyard(2, catalog::island());
     }
     let exhaust = catalog::riverchurn_monument().activated_abilities[1].effect.clone();
-    g.resolve_effect(&exhaust, &EffectContext::for_ability(dragon, 0, None)).unwrap();
+    let mut ctx = EffectContext::for_ability(dragon, 0, None);
+    ctx.targets = vec![Target::Player(1), Target::Player(2)];
+    g.resolve_effect(&exhaust, &ctx).unwrap();
     assert_eq!((g.players[1].graveyard.len(), g.players[2].graveyard.len()), (2, 6), "each mills its own graveyard's size");
 }
 

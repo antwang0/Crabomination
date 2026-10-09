@@ -190,8 +190,8 @@ pub fn flawless_maneuver() -> CardDefinition {
 }
 
 /// Venser, Shaper Savant — {2}{U}{U} 2/2 Wizard, Flash. ETB: return target
-/// permanent to its owner's hand. (Printed "spell or permanent"; modeled as a
-/// permanent, like the engine's other spell-or-permanent bounces.)
+/// spell or permanent to its owner's hand (a mode per kind; a bounced spell
+/// leaves the stack, uncountered).
 pub fn venser_shaper_savant() -> CardDefinition {
     CardDefinition {
         name: "Venser, Shaper Savant",
@@ -205,10 +205,18 @@ pub fn venser_shaper_savant() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(SelectionRequirement::Permanent),
-            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-        })],
+        // One mode per kind, as Hullbreaker Horror: the spell rides
+        // `MoveSpellToZone` (off the stack, not countered).
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Permanent),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            Effect::MoveSpellToZone {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                zone: crate::effect::CounteredSpellZone::OwnerHand,
+            },
+        ]))],
         ..Default::default()
     }
 }

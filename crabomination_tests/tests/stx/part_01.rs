@@ -4759,6 +4759,34 @@ fn divide_by_zero_bounces_permanent_and_cantrips() {
     assert_eq!(g.players[0].library.len(), lib_before - 1);
 }
 
+/// CR 115.1 / 608.2 — Divide by Zero's spell mode returns a spell on the
+/// stack to its owner's hand: it leaves the stack and never resolves.
+#[test]
+fn divide_by_zero_bounces_a_spell_off_the_stack() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the bear");
+    let id = g.add_card_to_hand(0, catalog::divide_by_zero());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("Divide by Zero on the bear spell");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "the bear spell went back to hand");
+    assert!(g.battlefield_find(bear).is_none(), "and never resolved");
+}
+
 // ── Approach of the Second Sun ─────────────────────────────────────────────
 
 /// First cast: gain 7 life (and the card lands in graveyard — the

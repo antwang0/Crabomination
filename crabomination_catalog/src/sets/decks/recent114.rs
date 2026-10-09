@@ -533,9 +533,8 @@ pub fn aura_fracture() -> CardDefinition {
 }
 
 /// Solitary Confinement — {2}{W} Enchantment. Skip your draw step; you have
-/// hexproof; prevent all damage that would be dealt to you. At your upkeep,
-/// sacrifice this unless you discard a card. (Printed "shroud" is modeled as
-/// hexproof — the self-target case is vanishingly rare.)
+/// shroud; prevent all damage that would be dealt to you. At your upkeep,
+/// sacrifice this unless you discard a card.
 pub fn solitary_confinement() -> CardDefinition {
     CardDefinition {
         name: "Solitary Confinement",
@@ -563,8 +562,8 @@ pub fn solitary_confinement() -> CardDefinition {
                 },
             },
             StaticAbility {
-                description: "You have hexproof.",
-                effect: StaticEffect::ControllerHasHexproof,
+                description: "You have shroud.",
+                effect: StaticEffect::ControllerHasShroud,
             },
             StaticAbility {
                 description: "Prevent all damage that would be dealt to you.",

@@ -225,9 +225,10 @@ pub fn secret_tunnel() -> CardDefinition {
 }
 
 /// Planetarium of Wan Shi Tong — {6} Legendary Artifact. `{1}, {T}: Scry 2.`
-/// Whenever you scry or surveil, exile the top card of your library; you may
-/// cast it without paying its mana cost. Do this only once each turn. (Modeled
-/// as an impulse-exile rather than a look-and-leave-on-top.)
+/// Whenever you scry or surveil, look at the top card of your library; you may
+/// cast it without paying its mana cost (from the library — an uncast card
+/// stays on top). Do this only once each turn. Approximation: the once-a-turn
+/// limit is spent by the first trigger, even when that look finds a land.
 pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
     CardDefinition {
         name: "Planetarium of Wan Shi Tong",
@@ -246,19 +247,14 @@ pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl)
                 .once_per_turn(),
-            effect: Effect::Seq(vec![
-                Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false,
-                    max_mana_value: None,
-                    pay_own_cost: false,
-                    uncast_penalty: None,
-                },
-                // "You may CAST": an exiled land can't be played.
-                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
-            ]),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                source_zone: crate::card::Zone::Library,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
         }],
         ..Default::default()
     }

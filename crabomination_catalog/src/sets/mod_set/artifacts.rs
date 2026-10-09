@@ -1558,9 +1558,10 @@ pub fn aetherflux_reservoir() -> CardDefinition {
 }
 
 /// Mox Diamond — {0} Artifact. "If Mox Diamond would enter, you may discard a
-/// land card instead. If you don't, sacrifice it." "{T}: Add one mana of any
-/// color." Modeled as an ETB "discard a card" cost (the land-specific / sac-
-/// fallback replacement is simplified to a plain discard).
+/// land card instead. If you don't, put it into its owner's graveyard." "{T}:
+/// Add one mana of any color." Modeled as an ETB "may discard a land, else
+/// put it into its graveyard" (it briefly enters either way, so ETB watchers
+/// see it).
 pub fn mox_diamond() -> CardDefinition {
     CardDefinition {
         name: "Mox Diamond",
@@ -1579,7 +1580,9 @@ pub fn mox_diamond() -> CardDefinition {
                 count: Value::ONE,
                 filter: SelectionRequirement::Land,
                 then: Box::new(Effect::Noop),
-                else_: Some(Box::new(Effect::SacrificeSource)),
+                // "Put it into its owner's graveyard" — not a sacrifice, so
+                // sacrifice payoffs (Korvold) don't see it.
+                else_: Some(Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Graveyard })),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -1597,10 +1600,9 @@ pub fn mox_diamond() -> CardDefinition {
 /// Isochron Scepter — {2} Artifact. "Imprint — When this enters, you may exile
 /// an instant card with mana value 2 or less from your hand. {2}, {T}: You may
 /// copy the imprinted card, and you may cast the copy without paying its mana
-/// cost." The ETB now genuinely imprints (exiles, tagged) an instant ≤2 MV from
-/// hand, and the activated ability free-casts the imprinted instant from exile
-/// via `CastWithoutPayingImmediate`. Simplification: it casts the imprinted card
-/// itself (one free cast per imprint) rather than a repeatable token copy.
+/// cost." The ETB imprints (exiles, tagged) an instant ≤2 MV from hand; each
+/// activation copies the imprinted card and offers a free cast of the copy
+/// (`CopyCardAndCastFree`), so the imprint stays for the next activation.
 pub fn isochron_scepter() -> CardDefinition {
     CardDefinition {
         name: "Isochron Scepter",
@@ -1626,21 +1628,7 @@ pub fn isochron_scepter() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
-            // Free-cast the imprinted instant from exile. `CardsInZone(Exile,
-            // Instant)` resolves the exiled instant directly (the imprinted card
-            // is the relevant one in practice); no explicit target needed.
-            effect: Effect::CastWithoutPayingImmediate {
-                reduce_generic: 0,
-                                pay_own_cost: false,
-                what: Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Exile,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant),
-                },
-                source_zone: Zone::Exile,
-                exile_after: false,
-                copy: false,
-            },
+            effect: Effect::CopyCardAndCastFree { what: Selector::CardExiledWithSource },
             ..Default::default()
         }],
         ..Default::default()

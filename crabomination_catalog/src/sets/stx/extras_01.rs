@@ -1433,29 +1433,36 @@ pub fn fire_prophecy() -> CardDefinition {
 /// ✅ Real Oracle: "Return target spell or permanent with mana value 1
 /// or greater to its owner's hand. Learn."
 ///
-/// Quandrix's signature bounce + Learn instant. Wired via
-/// `Seq(Move(target → owner's hand), Learn)` with target filter
-/// `(IsSpellOnStack ∨ Permanent) ∧ ManaValueAtLeast(1)` — hits spells
-/// on the stack or any permanent (lands included) whose mana value is
-/// 1+, matching the printed wording.
+/// Quandrix's signature bounce + Learn instant: one mode per kind, as
+/// Venser and Hullbreaker Horror — a permanent rides `Move`, a spell rides
+/// `MoveSpellToZone` (a bare `Move` left a targeted spell on the stack, so
+/// it resolved anyway). Either needs mana value 1+.
 pub fn divide_by_zero() -> CardDefinition {
     CardDefinition {
         name: "Divide by Zero",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::IsSpellOnStack
-                        .or(SelectionRequirement::Permanent)
-                        .and(SelectionRequirement::ManaValueAtLeast(1)),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-            },
-            // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn {
-                who: PlayerRef::You,
-            },
+        // Learn rides each mode: the mode index picks the whole effect.
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtLeast(1)),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                // Learn (CR 701.48) — reveal a Lesson into hand or discard-to-draw.
+                Effect::Learn { who: PlayerRef::You },
+            ]),
+            Effect::Seq(vec![
+                Effect::MoveSpellToZone {
+                    what: target_filtered(
+                        SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::ManaValueAtLeast(1)),
+                    ),
+                    zone: crate::effect::CounteredSpellZone::OwnerHand,
+                },
+                Effect::Learn { who: PlayerRef::You },
+            ]),
         ]),
         ..Default::default()
     }

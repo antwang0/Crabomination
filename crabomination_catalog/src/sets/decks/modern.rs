@@ -18021,8 +18021,8 @@ pub fn undying_evil() -> CardDefinition {
 }
 
 /// Heat Shimmer — {2}{R} Sorcery. Create a token that's a copy of target
-/// creature, except it has haste and is sacrificed at the next end step.
-/// (Printed text exiles the token; modeled as the haste-sac copy primitive.)
+/// creature, except it has haste and is exiled at the beginning of the next
+/// end step (no dies triggers).
 pub fn heat_shimmer() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
@@ -18033,7 +18033,7 @@ pub fn heat_shimmer() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(1),
             source: target_filtered(SelectionRequirement::Creature),
-            exile: false,
+            exile: true,
         },
         ..Default::default()
     }
@@ -48463,7 +48463,8 @@ pub fn flare_of_denial() -> CardDefinition {
 }
 
 /// Nulldrifter — {7} 4/4 Eldrazi Elemental, flying, annihilator 1, draw two
-/// on arrival (cast trigger modeled as ETB), Evoke {2}{U}.
+/// when cast (a cast trigger, so even an evoked or countered one draws),
+/// Evoke {2}{U}.
 pub fn nulldrifter() -> CardDefinition {
     use crate::card::AlternativeCost;
     CardDefinition {
@@ -51945,7 +51946,8 @@ pub fn tashas_hideous_laughter() -> CardDefinition {
 }
 
 /// Court of Cunning — {1}{U}{U} Enchantment. ETB: become the monarch. At your
-/// upkeep, each opponent mills two — or ten while you're the monarch.
+/// upkeep, any number of target players each mill two — or ten while you're
+/// the monarch (eight slots: a pod has at most eight seats).
 pub fn court_of_cunning() -> CardDefinition {
     use crate::effect::shortcut::etb;
     use crate::game::types::TurnStep;
@@ -51962,17 +51964,22 @@ pub fn court_of_cunning() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                effect: Effect::If {
-                    cond: Predicate::IsMonarch {
-                        who: PlayerRef::You,
-                    },
-                    then: Box::new(Effect::Mill {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(10),
-                    }),
-                    else_: Box::new(Effect::Mill {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(2),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Player,
+                    effect: Box::new(Effect::If {
+                        cond: Predicate::IsMonarch {
+                            who: PlayerRef::You,
+                        },
+                        then: Box::new(Effect::Mill {
+                            who: Selector::Player(PlayerRef::Target(0)),
+                            amount: Value::Const(10),
+                        }),
+                        else_: Box::new(Effect::Mill {
+                            who: Selector::Player(PlayerRef::Target(0)),
+                            amount: Value::Const(2),
+                        }),
                     }),
                 },
             },

@@ -571,8 +571,11 @@ pub fn walking_bulwark() -> CardDefinition {
     }
 }
 
-/// Will of the Abzan — each opponent sacrifices their greatest-power creature
-/// and loses 3, or reanimate a creature card; both with a commander.
+/// Will of the Abzan — any number of target opponents each sacrifice their
+/// greatest-power creature and lose 3, or reanimate a creature card from your
+/// graveyard; both with a commander. ("Any number of target opponents" is
+/// modeled as each opponent: a `ChooseModesCast` mode can't yet own a
+/// variable number of target slots.)
 pub fn will_of_the_abzan() -> CardDefinition {
     let modes = || {
         vec![
