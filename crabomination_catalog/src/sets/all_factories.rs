@@ -4648,6 +4648,8 @@ static DECKS: &[Factory] = &[
     super::decks::vantress_gargoyle,
     super::decks::rammas_echor_ancient_shield,
     super::decks::ghalta_the_immovable,
+    super::decks::echoing_deeps,
+    super::decks::blossoming_tortoise,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

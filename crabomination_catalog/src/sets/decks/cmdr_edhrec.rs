@@ -2396,3 +2396,71 @@ pub fn ghalta_the_immovable() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Echoing Deeps — Land — Cave. You may have it enter tapped as a copy of
+/// any land card in a graveyard (the "Cave in addition" rider is not
+/// stamped on the copy). {T}: Add {C}.
+pub fn echoing_deeps() -> CardDefinition {
+    use crate::card::{EntersAsCopy, LandType};
+    CardDefinition {
+        name: "Echoing Deeps",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        activated_abilities: vec![crate::sets::tap_add_colorless()],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Land,
+            from_graveyards: true,
+            tapped: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Blossoming Tortoise — {2}{G}{G} 3/3 Turtle. Entering or attacking, mill
+/// three, then return a land card from your graveyard to the battlefield
+/// tapped. Activated abilities of your lands cost {1} less; land creatures
+/// you control get +1/+1.
+pub fn blossoming_tortoise() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, Zone};
+    use crate::effect::shortcut::{choose_one_then, chosen_one};
+    let dig = || {
+        Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Land },
+                PlayerRef::You,
+                Effect::Move { what: chosen_one(), to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true } },
+            ),
+        ])
+    };
+    CardDefinition {
+        name: "Blossoming Tortoise",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Turtle]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(dig()), on_attack(dig())],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Activated abilities of lands you control cost {1} less to activate.",
+                effect: StaticEffect::MatchingActivatedAbilitiesCostLess { filter: R::Land, amount: 1 },
+            },
+            StaticAbility {
+                description: "Land creatures you control get +1/+1.",
+                effect: StaticEffect::AnthemForFilter {
+                    filter: R::Land.and(R::Creature),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    opponents: false,
+                    all_players: false,
+                    only_your_turn: false,
+                    scale_by_counters_on_self: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

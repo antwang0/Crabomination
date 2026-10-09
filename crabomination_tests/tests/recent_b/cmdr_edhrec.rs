@@ -1417,3 +1417,34 @@ fn rammas_echor_rewards_the_second_spell() {
     }
     assert_eq!(named(&g, "Wall"), 1);
 }
+
+/// Blossoming Tortoise: entering mills three and returns a land tapped.
+#[test]
+fn blossoming_tortoise_recurs_a_land() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let turtle = g.add_card_to_hand(0, catalog::blossoming_tortoise());
+    flood(&mut g);
+    let lands = |g: &GameState| g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let before = lands(&g);
+    cast(&mut g, turtle, None);
+    assert_eq!(lands(&g), before + 1);
+}
+
+/// Echoing Deeps enters tapped as a copy of a graveyard land.
+#[test]
+fn echoing_deeps_copies_a_graveyard_land() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(1, catalog::forest());
+    let deeps = g.add_card_to_hand(0, catalog::echoing_deeps());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(deeps)).expect("land");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(deeps).unwrap();
+    assert_eq!(c.definition.name, "Forest");
+    assert!(c.tapped);
+}
