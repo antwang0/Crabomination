@@ -9622,3 +9622,31 @@ pub const ALEXIOS_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const RAGGADRAGGA_COMMANDERS: &[CardFactory] = &[raggadragga_goreguts_boss];
+
+/// **Raggadragga, Goreguts Boss**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 13 Forests + 7 Mountains = 99.
+/// Raggadragga, Goreguts Boss mana creatures (RG): Elven Chorus, Leyline of Abundance, Radha and Spider Manifestation into Kamahl
+pub const RAGGADRAGGA_MAIN: &[CardFactory] = &[
+    arcane_signet, lifecrafters_bestiary, sol_ring, the_great_henge, cinder_glade, command_tower,
+    dryad_arbor, game_trail, gruul_turf, karplusan_forest, kessig_wolf_run, mossfire_valley,
+    rockfall_vale, rootbound_crag, spire_garden, stomping_ground, wooded_foothills,
+    beast_whisperer, birds_of_paradise, circle_of_dreams_druid, cradle_clearcutter,
+    craterhoof_behemoth, devoted_druid, elvish_archdruid, elvish_mystic, end_raze_forerunners,
+    fanatic_of_rhonas, fyndhorn_elves, heronblade_elite, ilysian_caryatid, kamahl_heart_of_krosa,
+    kami_of_whispered_hopes, llanowar_elves, llanowar_loamspeaker, llanowar_tribe,
+    llanowar_visionary, marwyn_the_nurturer, mona_lisa_science_geek, nightshade_dryad,
+    ornithopter_of_paradise, paradise_druid, poison_dart_frog, priest_of_titania,
+    radha_heir_to_keld, regal_force, ruby_daring_tracker, selvala_heart_of_the_wilds,
+    spider_manifestation, tender_wildguide, topiary_lecturer, viridian_joiner, zhur_taa_druid,
+    elemental_bond, elven_chorus, fires_of_yavimaya, garruks_uprising, guardian_project,
+    leyline_of_abundance, rhythm_of_the_wild, beast_within, chaos_warp, chord_of_calling,
+    comet_storm, heroic_intervention, return_of_the_wildspeaker, tyvars_stand, vitalize,
+    wrap_in_vigor, freyalise_llanowars_fury, awaken_the_woods, blasphemous_act, ezuris_predation,
+    finale_of_devastation, genesis_wave, harmonize, last_march_of_the_ents,
+    preposterous_proportions, rishkars_expertise, shamanic_revelation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

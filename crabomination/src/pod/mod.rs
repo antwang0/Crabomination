@@ -2397,6 +2397,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALEXIOS_COMMANDERS,
             main: decks::ALEXIOS_MAIN,
         },
+        // Seat 330: Raggadragga, Goreguts Boss's EDHREC average deck. `--pod-decks 330`.
+        PodDeck {
+            name: "Raggadragga, Goreguts Boss (GR)",
+            commanders: decks::RAGGADRAGGA_COMMANDERS,
+            main: decks::RAGGADRAGGA_MAIN,
+        },
     ]
 }
 
@@ -4370,6 +4376,7 @@ mod tests {
             ("Kona, Rescue Beastie", [0x0C0A, 327, 9252]),
             ("Marrow-Gnawer", [0x0A12, 328, 9253]),
             ("Alexios, Deimos of Kosmos", [0x0A1E, 329, 9254]),
+            ("Raggadragga, Goreguts Boss", [0x0A6A, 330, 9255]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
