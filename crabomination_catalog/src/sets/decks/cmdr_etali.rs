@@ -1808,8 +1808,6 @@ fn discard_to_tutor(filter: R, what: &str) -> TriggeredAbility {
 /// Pia, Aether Ascetic — {2}{G} Legendary Creature — Human Druid 2/2. When Pia
 /// enters, you may discard a card. If you do, search your library for an
 /// enchantment card, reveal it, put it into your hand, then shuffle.
-/// Approximation: the discarded card is the engine's `MayDiscard` auto-pick
-/// (highest mana value), not a free choice.
 pub fn pia_aether_ascetic() -> CardDefinition {
     CardDefinition {
         name: "Pia, Aether Ascetic",
@@ -1834,8 +1832,6 @@ pub fn pia_aether_ascetic() -> CardDefinition {
 /// enters, you may discard a card. If you do, search your library for a
 /// creature card, reveal it, put it into your hand, then shuffle. {1}, {T}:
 /// Untap another target permanent.
-/// Approximation: the discarded card is the engine's `MayDiscard` auto-pick
-/// (highest mana value), not a free choice.
 pub fn formidable_speaker() -> CardDefinition {
     CardDefinition {
         name: "Formidable Speaker",
