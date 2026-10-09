@@ -2321,7 +2321,12 @@ impl GameState {
                 .map(|seat| {
                     self.battlefield
                         .iter()
-                        .filter(|c| c.controller == seat && c.definition.is_snow())
+                        .filter(|c| {
+                            c.controller == seat
+                                && self.computed_permanent(c.id).map_or(c.definition.is_snow(), |cp| {
+                                    cp.supertypes().contains(&crate::card::Supertype::Snow)
+                                })
+                        })
                         .count() as i32
                 })
                 .unwrap_or(0),
@@ -5786,7 +5791,9 @@ impl GameState {
                     R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::ProducesColorless => card.definition.produces_colorless(),
-                    R::IsSnow => card.definition.is_snow(),
+                    // CR 613.1d — a battlefield permanent's snow is its layered
+                    // supertype (Thermal Flux toggles it).
+                    R::IsSnow => has_stype(&Supertype::Snow),
                     R::IsAttacking => self.is_or_was_attacking(card.id),
                     R::IsAttackingYou => self.creature_is_attacking_seat(card.id, controller),
                     R::IsAttackingYouOrYourPlaneswalker => self.creature_is_attacking_seat_or_its_planeswalker(card.id, controller),

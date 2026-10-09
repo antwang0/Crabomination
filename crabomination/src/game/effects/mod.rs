@@ -19232,6 +19232,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChangeSupertype { what, supertype, gain, duration } => {
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).iter().filter_map(|e| e.as_permanent_id()).collect();
+                self.change_supertype(&ids, ctx.source.unwrap_or(CardId(0)), *supertype, *gain, *duration, ctx.controller);
+                Ok(())
+            }
+
             Effect::BecomeColor { what, colors, duration, additive } => {
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));

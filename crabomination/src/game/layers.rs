@@ -135,6 +135,8 @@ pub enum Modification {
     /// CR 205.4 — grant a supertype (Legendary, etc.). Used by the Ring's
     /// level-1 emblem (CR 701.54c — "your Ring-bearer is legendary").
     AddSupertype(Supertype),
+    /// CR 205.4 — remove a supertype (Thermal Flux's "isn't snow").
+    RemoveSupertype(Supertype),
 
     // ── Layer 5 ──────────────────────────────────────────────────────────────
     AddColor(Color),
@@ -265,6 +267,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         // family the day a gate wants it — and note that the walker closure
         // is where such a gate would go, so the cost model is `(-345)`'s.
         M::AddSupertype(_)
+        | M::RemoveSupertype(_)
         | M::SetArtifactSubtypes(_)
         | M::AddArtifactSubtype(_)
         | M::ChangeController(_) => 0,
@@ -1498,6 +1501,7 @@ fn compute_permanent_pass(
             Modification::AddSupertype(s) => {
                 if !supertypes.contains(s) { supertypes.push(*s); }
             }
+            Modification::RemoveSupertype(s) => supertypes.retain(|x| x != s),
             Modification::AddCreatureType(ct) => {
                 if !subtypes.creature_types.contains(ct) {
                     subtypes.creature_types.push(*ct);

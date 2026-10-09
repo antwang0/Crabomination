@@ -2008,6 +2008,7 @@ impl Effect {
             | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeLegendary { what, .. }
+            | Effect::ChangeSupertype { what, .. }
             | Effect::BecomeCreatureType { what, .. }
             | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
@@ -3205,6 +3206,7 @@ impl Effect {
             | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeLegendary { what, .. }
+            | Effect::ChangeSupertype { what, .. }
             | Effect::BecomeCreatureType { what, .. }
             | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
@@ -5554,6 +5556,7 @@ impl Effect {
                 | Effect::BecomeChosenCreatureType { what, .. }
                 | Effect::BecomeColor { what, .. }
                 | Effect::BecomeLegendary { what, .. }
+            | Effect::ChangeSupertype { what, .. }
                 | Effect::BecomeCreatureType { what, .. }
                 | Effect::SwitchPowerToughness { what, .. }
                 | Effect::AddCreatureTypes { what, .. }

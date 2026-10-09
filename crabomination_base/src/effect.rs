@@ -8385,6 +8385,10 @@ pub enum Effect {
     /// (CR 205.4 / layer-4 `AddSupertype`) — Cacophony Unleashed's "becomes
     /// a legendary 6/6 … until end of turn".
     BecomeLegendary { what: Selector, duration: Duration },
+    /// Each permanent picked by `what` gains (`gain`) or loses `supertype`
+    /// for `duration` (CR 205.4, layer 4) — Thermal Flux's "becomes snow" /
+    /// "isn't snow until end of turn".
+    ChangeSupertype { what: Selector, supertype: crate::card::Supertype, gain: bool, duration: Duration },
     /// Each permanent picked by `what` becomes exactly `colors` (replacing
     /// its colors) for `duration` (CR 105 / layer-5 `SetColors`). The
     /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes
