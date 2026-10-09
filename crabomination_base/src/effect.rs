@@ -8649,10 +8649,17 @@ pub enum Effect {
     /// legal card.
     OpponentRevealsPickToBattlefield { count: Value, max_mv: Value },
     /// Gaea's Will — until end of turn you may play lands and cast spells
-    /// from your graveyard: every card currently there gets a pay-own-cost
-    /// `may_play_until` permission and lands ride the graveyard land-play
-    /// gate. Cards reaching the graveyard later this turn aren't granted.
+    /// from your graveyard: every nonland card there, and every one that
+    /// arrives later this turn, gets a pay-own-cost `may_play_until`
+    /// permission (`CastFromGraveyardsThisTurn`'s registry); lands ride the
+    /// graveyard land-play gate.
     PlayFromGraveyardThisTurn,
+    /// "Until end of turn, you may cast [filter] spells from your graveyard /
+    /// any graveyard" (Urabrask's The Great Work III). A rules permission for
+    /// the turn, not a stamp: a matching card put into a covered graveyard
+    /// later this turn is castable too. Paid at its own cost; `exile_after`
+    /// is "if it would be put into a graveyard, exile it instead".
+    CastFromGraveyardsThisTurn { any_graveyard: bool, filter: SelectionRequirement, exile_after: bool },
     /// Gaea's Will — "If a card would be put into your graveyard from
     /// anywhere this turn, exile it instead" (turn-scoped Rest in Peace,
     /// own cards only).

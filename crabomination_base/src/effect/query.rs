@@ -1499,6 +1499,7 @@ impl Effect {
             Effect::FreeSpellsFromHandThisTurn => false,
             Effect::ChooseCardTypeForSource | Effect::ChooseCardTypeFromForSource { .. } => false,
             Effect::PlayFromGraveyardThisTurn
+            | Effect::CastFromGraveyardsThisTurn { .. }
             | Effect::ExileYourGraveyardBoundThisTurn
             | Effect::GlimpseOfTomorrow
             | Effect::GarthOneEye { .. }

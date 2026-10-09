@@ -6201,27 +6201,17 @@ impl GameState {
             }
 
             Effect::PlayFromGraveyardThisTurn => {
-                use crate::card::{MayPlayDuration, MayPlayPermission};
-                let p = ctx.controller;
-                let turn = self.turn_number;
-                self.players[p].play_from_graveyard_this_turn = true;
-                for card in self.players[p].graveyard.iter_mut() {
-                    if card.definition.is_land() {
-                        continue; // lands ride the land-play gate
-                    }
-                    card.may_play_until = Some(MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
-                        player: p,
-                        granted_turn: turn,
-                        duration: MayPlayDuration::EndOfThisTurn,
-                        exile_after: false,
-                        miracle: false,
-                        pay_life: false,
-                        bottom_after: false,
-                        undaunted: false,
-                    });
-                    // Pay-own-cost cast, not free.
-                    card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
-                }
+                // Lands ride the land-play gate; every other card is a
+                // pay-own-cost cast, including one milled later this turn.
+                self.players[ctx.controller].play_from_graveyard_this_turn = true;
+                self.turn.graveyard_cast_eot.push((ctx.controller, false, SelectionRequirement::Land.negate(), false));
+                self.stamp_graveyard_cast_grants();
+                Ok(())
+            }
+
+            Effect::CastFromGraveyardsThisTurn { any_graveyard, filter, exile_after } => {
+                self.turn.graveyard_cast_eot.push((ctx.controller, *any_graveyard, filter.clone(), *exile_after));
+                self.stamp_graveyard_cast_grants();
                 Ok(())
             }
 

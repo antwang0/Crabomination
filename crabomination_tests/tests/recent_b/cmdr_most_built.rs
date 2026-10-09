@@ -510,6 +510,30 @@ fn urabrask_flips_into_the_great_work() {
     assert_eq!(g.players[1].life, 14);
 }
 
+/// The Great Work III is a permission for the turn, not a stamp: an instant
+/// put into an OPPONENT's graveyard after the chapter resolved is castable
+/// too, and exiled instead of going back to a graveyard.
+#[test]
+fn the_great_work_iii_covers_a_card_milled_later() {
+    let mut g = pod(2);
+    let saga = catalog::urabrask().back_face.clone().unwrap();
+    let iii = saga.saga_chapters.iter().find(|(n, _)| *n == 3).unwrap().1.clone();
+    let host = ready(&mut g, 0, catalog::urabrask());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(host, 0, None);
+    g.resolve_effect(&iii, &ctx).unwrap();
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.check_state_based_actions();
+    let grant = g.players[1].graveyard.iter().find(|c| c.id == bolt).unwrap().may_play_until.clone();
+    assert_eq!(grant.as_ref().map(|m| (m.player, m.exile_after)), Some((0, true)));
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the opponent's Bolt from their graveyard (paying {R})");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 3 - 1, "Bolt, plus Urabrask's ping for the instant");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "exiled instead of a graveyard");
+}
+
 /// Burning Earth burns a nonbasic land's tapper, not a basic's.
 #[test]
 fn burning_earth_burns_nonbasic_taps_only() {

@@ -5592,6 +5592,7 @@ impl GameState {
         clear_turn!(self.spell_damage_to_controller);
         clear_turn!(self.sorcery_damage_this_turn);
         clear_turn!(self.graveyard_unearth_eot);
+        clear_turn!(self.graveyard_cast_eot);
         if self.turn.block_chooser_this_turn.is_some() {
             self.turn.block_chooser_this_turn = None;
         }
@@ -6884,6 +6885,11 @@ impl GameState {
     /// pass a buffer that already holds this action's earlier events.
     pub fn check_state_based_actions_into(&mut self, events: &mut Vec<GameEvent>) {
         self.check_state_based_actions_inner(events, false);
+        // A card put into a covered graveyard since the grant resolved is
+        // castable before anyone gets priority.
+        if !self.turn.graveyard_cast_eot.is_empty() {
+            self.stamp_graveyard_cast_grants();
+        }
         if self.pending_decision.is_some() {
             self.resume_past_departed_asker(events);
         }

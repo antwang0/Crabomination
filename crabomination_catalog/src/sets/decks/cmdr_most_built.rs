@@ -661,21 +661,13 @@ pub fn defiler_of_instinct() -> CardDefinition {
 /// this turn: exile it and return it transformed (sorcery speed). The Saga:
 /// 3 to target opponent and each creature they control; three Treasures;
 /// cast instants and sorceries from any graveyard this turn (exiled after),
-/// then it returns front face up. Chapter III is approximated: the permission
-/// is stamped on the cards in graveyards as it resolves, so one put there
-/// later that turn is not castable.
+/// then it returns front face up (chapter III's permission covers a card put
+/// into a graveyard later that turn too).
 pub fn urabrask() -> CardDefinition {
-    let any_graveyard_spells = Effect::GrantMayPlay {
-        what: Selector::CardsInZone {
-            who: PlayerRef::EachPlayer,
-            zone: crate::card::Zone::Graveyard,
-            filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
-        },
-        duration: MayPlayDuration::EndOfThisTurn,
-        to_owner: false,
+    let any_graveyard_spells = Effect::CastFromGraveyardsThisTurn {
+        any_graveyard: true,
+        filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
         exile_after: true,
-        pay_own_cost: true,
-        any_color: false,
     };
     let saga = CardDefinition {
         name: "The Great Work",

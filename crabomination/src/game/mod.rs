@@ -172,6 +172,7 @@ mod departed_listeners;
 mod attack_apnap;
 mod trigger_batch;
 mod vow;
+mod graveyard_cast;
 mod growth_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
@@ -1472,6 +1473,12 @@ pub struct TurnRegistries {
     /// `GraveyardCardsHaveUnearth` static; cleared at cleanup.
     #[serde(default)]
     pub(crate) graveyard_unearth_eot: Vec<(usize, crate::card::SelectionRequirement, crate::mana::ManaCost)>,
+    /// `(seat, any_graveyard, filter, exile_after)` — "until end of turn, you
+    /// may cast [filter] spells from your / any graveyard" (Gaea's Will, The
+    /// Great Work III). Re-stamped onto new arrivals at each SBA check;
+    /// cleared at cleanup.
+    #[serde(default)]
+    pub(crate) graveyard_cast_eot: Vec<(usize, bool, crate::card::SelectionRequirement, bool)>,
     /// Permanents whose death is replaced by exile for the rest of the
     /// turn — "if that creature would die this turn, exile it instead"
     /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
