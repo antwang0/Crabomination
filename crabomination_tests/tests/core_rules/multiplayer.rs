@@ -9584,3 +9584,20 @@ fn cr_800_4a_a_phased_out_permanent_exiled_with_its_controller_sheds_its_hold() 
     assert_eq!(c.phased_out_by, None);
     assert!(!c.tapped);
 }
+
+/// CR 800.4a — a departed seat's card held in exile "until this leaves" by a
+/// permanent the departure itself exiles leaves the game; it doesn't return.
+/// A stolen Yannik exiled with its controller put the departing seat's Etali
+/// back onto the battlefield (six-seat census pod, seed 440109 game 34).
+#[test]
+fn cr_800_4a_a_departed_seats_card_held_in_exile_does_not_return() {
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let priest = g.add_card_to_hand(1, catalog::banisher_priest());
+    cast_for(&mut g, 1, priest, None);
+    assert!(g.exile.iter().any(|c| c.id == bears), "the Priest exiled the Bears");
+    g.battlefield_find_mut(priest).unwrap().controller = 2;
+    g.concede(2);
+    assert!(g.battlefield_find(bears).is_none(), "no return for a departed owner");
+    assert!(g.battlefield.iter().all(|c| c.owner != 2));
+}

@@ -3462,6 +3462,13 @@ impl GameState {
             let mut card = self.exile.remove(pos);
             let return_to = card.exiled_by.take().map(|l| l.return_to);
             let owner = card.owner;
+            // CR 800.4a — a departed owner's card leaves the game rather than
+            // return: the departure pass exiled a stolen Yannik, whose return
+            // put the departing seat's Etali onto the battlefield before its
+            // exile was cleared (six-seat census pod, seed 440109 game 34).
+            if !self.players.get(owner).is_some_and(|pl| pl.is_alive()) {
+                continue;
+            }
             let dest = match return_to {
                 Some(ExileReturnZone::Hand) => ZoneDest::Hand(PlayerRef::Seat(owner)),
                 Some(ExileReturnZone::Graveyard) => ZoneDest::Graveyard,
@@ -3501,6 +3508,10 @@ impl GameState {
             let mut card = self.exile_remove_at(pos);
             card.exiled_by = None;
             let owner = card.owner;
+            // CR 800.4a — as above.
+            if !self.players.get(owner).is_some_and(|pl| pl.is_alive()) {
+                continue;
+            }
             let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false };
             self.place_card_in_dest(card, owner, &dest, events);
         }
