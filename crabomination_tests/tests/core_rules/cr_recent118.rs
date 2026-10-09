@@ -1410,3 +1410,30 @@ fn cr_122_2_a_spell_carries_no_counters_onto_the_stack() {
     });
     assert_eq!(on_stack, Some(true));
 }
+
+/// CR 400.7 — a kicked spell countered to the bottom of its owner's library
+/// (Spell Crumple) is a new object there: not kicked (audit pod, seed
+/// 4200188 game 6).
+#[test]
+fn cr_400_7_a_spell_countered_into_the_library_forgets_its_kicker() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let thirst = g.add_card_to_hand(0, catalog::bloodchiefs_thirst());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 4);
+    g.perform_action(crabomination::game::types::GameAction::CastSpellKicked {
+        card_id: thirst,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked Thirst");
+    let src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let crumple = Effect::CounterSpellToZone {
+        what: Selector::Target(0),
+        zone: crabomination::effect::CounteredSpellZone::OwnerLibraryBottom,
+    };
+    resolve(&mut g, src, Some(Target::Permanent(thirst)), &crumple);
+    let c = g.players[0].library.iter().find(|c| c.id == thirst).expect("bottomed");
+    assert!(!c.kicked);
+}

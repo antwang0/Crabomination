@@ -23797,13 +23797,19 @@ impl GameState {
                             | CounteredSpellZone::OwnerLibrarySecondFromTop => Some(crate::card::Zone::Library),
                             _ => None,
                         };
-                        let card = match would_be {
+                        let mut card = match would_be {
                             Some(to) => match self.commander_zone_redirect(*card, crate::card::Zone::Stack, to) {
                                 Some(c) => Box::new(c),
                                 None => continue,
                             },
                             None => card,
                         };
+                        // CR 400.7 — a card in a hand or library is a new
+                        // object: no kicker or cast permission rides along
+                        // (Spell Crumple bottoming a kicked spell, seed 4200188).
+                        if would_be.is_some() {
+                            card.forget_spell_choices();
+                        }
                         match zone {
                             // Index 0 is the top (draw = `library.remove(0)`).
                             CounteredSpellZone::OwnerLibraryTop => {
