@@ -2797,6 +2797,13 @@ impl GameState {
         // Dies-with-counters triggers read the `died_card_snapshots` /
         // `leaves_bf_lki` LKI caches, not the new zone's object.
         card.drop_counters_for_zone_change(intended);
+        // CR 400.7 — a hand or library card is a new object: a graveyard
+        // cast permission doesn't follow it (Silas Renn's grant rode a
+        // Filigree Angel Sanctum Gargoyle returned to hand; fuzzed audit
+        // pod, seed 3195549 game 14).
+        if matches!(intended, crate::card::Zone::Hand | crate::card::Zone::Library) {
+            card.forget_spell_choices();
+        }
         // CR 710.4 — a flip card has only its normal characteristics off the
         // battlefield, and keeps no memory of having flipped. (The
         // replacement-redirect path does this in `place_card_at_resolved_zone`;

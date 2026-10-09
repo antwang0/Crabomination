@@ -1368,3 +1368,22 @@ fn cr_708_a_cyberman_that_never_entered_stays_face_up() {
     assert!(!c.face_down);
     assert_eq!(c.definition.name, "Grizzly Bears");
 }
+
+/// CR 400.7 — a graveyard cast permission (Silas Renn's "you may cast that
+/// card this turn") doesn't follow the card back to hand.
+#[test]
+fn cr_400_7_a_graveyard_permission_does_not_follow_a_card_to_hand() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let card = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let perm = crabomination::card::MayPlayPermission {
+        cast_only: true, locks_further_casts: false, one_cast_group: None, player: 0, granted_turn: g.turn_number,
+        duration: crabomination::card::MayPlayDuration::EndOfThisTurn, exile_after: false, miracle: false,
+        pay_life: false, bottom_after: false, undaunted: false,
+    };
+    g.players[0].graveyard.iter_mut().find(|c| c.id == card).unwrap().may_play_until = Some(perm);
+    let back = Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) };
+    resolve(&mut g, src, Some(Target::Permanent(card)), &back);
+    let c = g.players[0].hand.iter().find(|c| c.id == card).expect("in hand");
+    assert!(c.may_play_until.is_none());
+}
