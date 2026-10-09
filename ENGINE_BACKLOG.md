@@ -149,10 +149,10 @@ the handoff.
   ~70 more "up to one target" cards with no optional marker; most are
   friendly or opponent-only filters, but graveyard-card slots (Raven Eagle,
   Ardyn's Starscourge) can still exile your own card.
-- ⚠ **Open (bot): no picker activates a life exchange** — Soul Conduit
-  (cube) is never used; activated abilities go through per-effect pickers
-  and none covers `ExchangeLifeTotals`. A `pick_life_swap` (self + the
-  highest-life opponent, when the gap is worth {6}) is the shape.
+- **Bot: a life exchange is activated** (`server/life_swap.rs`): Soul
+  Conduit was never used — activated abilities go through per-effect
+  pickers and none covered `ExchangeLifeTotals`. Now: self + the
+  highest-life opponent, when the swing is 8 or more.
 
 ## FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw
 

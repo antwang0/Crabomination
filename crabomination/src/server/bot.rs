@@ -10560,6 +10560,11 @@ fn main_phase_action_with(
         return BotStep::plain(action);
     }
 
+    // Two target players exchange life totals (Soul Conduit), when behind.
+    if let Some(action) = super::life_swap::pick_life_swap(state, seat) {
+        return BotStep::plain(action);
+    }
+
     // Pods: a land fetch (Sakura-Tribe Elder, Burnished Hart) the material
     // eval won't price above its body.
     if let Some(action) = super::land_ramp::pick_land_ramp(state, seat) {
@@ -22527,6 +22532,35 @@ mod tests {
         );
     }
 
+
+    /// CR 701.12c — Soul Conduit's two player slots: low on life, the bot
+    /// names itself and the opponent ahead of it (`life_swap.rs`).
+    #[test]
+    fn bot_swaps_life_with_soul_conduit_when_behind() {
+        let mut g = two_player_game();
+        g.set_life(0, 4);
+        g.set_life(1, 28);
+        g.add_card_to_battlefield(0, catalog::soul_conduit());
+        for _ in 0..6 {
+            let land = g.add_card_to_battlefield(0, catalog::wastes());
+            g.clear_sickness(land);
+        }
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let mut bot = HeuristicBot::new();
+        for _ in 0..12 {
+            if g.players[0].life == 28 || g.priority.player_with_priority != 0 {
+                break;
+            }
+            let Some(action) = bot.next_action(&g, 0) else { break };
+            if g.perform_action(action).is_err() {
+                break;
+            }
+            crate::game::drain_stack(&mut g);
+        }
+        assert_eq!((g.players[0].life, g.players[1].life), (28, 4), "the bot swapped with the opponent");
+    }
 
     /// With spare mana and nothing better to do, the bot sinks it into War
     /// Balloon's fire-counter ability to progress toward animating it.

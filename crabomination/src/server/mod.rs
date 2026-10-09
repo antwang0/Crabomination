@@ -122,6 +122,7 @@ mod spell_response;
 mod fight_pick;
 mod loyalty_pick;
 mod life_draw;
+mod life_swap;
 mod transform_sink;
 mod spell_discount;
 mod x_counter_sink;
