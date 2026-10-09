@@ -3814,3 +3814,83 @@ pub fn plague_of_vermin() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Demon's Disciple — {2}{B} 3/1 Human Cleric. ETB: each player sacrifices a
+/// creature or planeswalker of their choice.
+pub fn demons_disciple() -> CardDefinition {
+    CardDefinition {
+        name: "Demon's Disciple",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Cleric]),
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            count: Value::ONE,
+            filter: R::Creature.or(R::Planeswalker),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Force of Despair — {1}{B}{B} Instant. Off your turn, exile a black card
+/// from hand instead of paying. Destroy all creatures that entered this turn.
+pub fn force_of_despair() -> CardDefinition {
+    CardDefinition {
+        name: "Force of Despair",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(R::EnteredThisTurn)) },
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: crate::mana::ManaCost::default(),
+            exile_filter: Some(R::HasColor(Color::Black)),
+            not_your_turn_only: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Vona's Hunger — {2}{B} Instant, ascend. Each opponent sacrifices a
+/// creature; with the city's blessing, half their creatures, rounded up.
+pub fn vonas_hunger() -> CardDefinition {
+    let opps = || Selector::Player(PlayerRef::EachOpponent);
+    CardDefinition {
+        name: "Vona's Hunger",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Ascend { who: PlayerRef::You },
+            Effect::If {
+                cond: Predicate::HasCityBlessing { who: PlayerRef::You },
+                then: Box::new(Effect::SacrificeHalf { who: opps(), filter: R::Creature, rounded_up: true }),
+                else_: Box::new(Effect::Sacrifice { who: opps(), count: Value::ONE, filter: R::Creature }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Patron of the Arts — {2}{R} 3/1 Dragon Noble. Entering or dying makes a
+/// Treasure.
+pub fn patron_of_the_arts() -> CardDefinition {
+    let treasure = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: Arc::new(crabomination_base::tokens::treasure_token()),
+    };
+    CardDefinition {
+        name: "Patron of the Arts",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Dragon, CreatureType::Noble]),
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(treasure()),
+            TriggeredAbility { event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource), effect: treasure() },
+        ],
+        ..Default::default()
+    }
+}

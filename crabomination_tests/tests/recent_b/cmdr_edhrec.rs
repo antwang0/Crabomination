@@ -2145,3 +2145,66 @@ fn plague_of_vermin_life_for_rats() {
         assert_eq!((paid, rats), (want, want), "seat {p}: a Rat per life paid");
     }
 }
+
+/// Demon's Disciple makes every player sacrifice; Patron of the Arts leaves a
+/// Treasure entering and another dying.
+#[test]
+fn demons_disciple_and_patron_of_the_arts() {
+    let mut g = pod(2);
+    let patron = g.add_card_to_hand(0, catalog::patron_of_the_arts());
+    flood(&mut g);
+    cast(&mut g, patron, None);
+    assert_eq!(named(&g, "Treasure"), 1);
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let dd = g.add_card_to_hand(0, catalog::demons_disciple());
+    cast(&mut g, dd, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears").count(), 0, "the opponent sacrificed");
+    let mine = ["Patron of the Arts", "Demon's Disciple"].iter().map(|n| named(&g, n)).sum::<usize>();
+    assert_eq!(mine, 1, "and so did you");
+    if g.battlefield_find(patron).is_none() {
+        assert_eq!(named(&g, "Treasure"), 2, "a sacrificed Patron left a Treasure");
+    }
+}
+
+/// Force of Despair, pitched off a black card on an opponent's turn, destroys
+/// only creatures that entered this turn.
+#[test]
+fn force_of_despair_kills_the_new_arrivals() {
+    let mut g = pod(2);
+    let old = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let fresh = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: fresh, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(old).unwrap().entered_turn = None;
+    let force = g.add_card_to_hand(0, catalog::force_of_despair());
+    let pitch = g.add_card_to_hand(0, catalog::demons_disciple());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative { card_id: force, pitch_card: Some(pitch), target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("pitch");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fresh).is_none());
+    assert!(g.battlefield_find(old).is_some());
+}
+
+/// Vona's Hunger: one sacrifice each, or half rounded up with the city's
+/// blessing (ten permanents as it resolves).
+#[test]
+fn vonas_hunger_halves_with_the_blessing() {
+    for (yours, theirs_left) in [(0usize, 4usize), (10, 2)] {
+        let mut g = pod(2);
+        for _ in 0..yours {
+            ready(&mut g, 0, catalog::forest());
+        }
+        for _ in 0..5 {
+            ready(&mut g, 1, catalog::grizzly_bears());
+        }
+        let hunger = g.add_card_to_hand(0, catalog::vonas_hunger());
+        flood(&mut g);
+        cast(&mut g, hunger, None);
+        assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears").count(), theirs_left);
+    }
+}
