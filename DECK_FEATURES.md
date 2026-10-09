@@ -34,7 +34,7 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-289 / 298 pod decks carry no residual (2026-10-09, Commander routine `01Ug49mf`, later
+293 / 302 pod decks carry no residual (2026-10-09, Commander routine `01Ug49mf`, later
 the same run). The scanner now also reads "modeled as" / "stands in for" /
 "simplified" docs, which had hidden ~30 decks (257/293 on the stricter scan); most
 were fixed the same run (targeted mills, Venser's spell bounce, Isochron Scepter's
@@ -56,7 +56,7 @@ pasted as is:
 | 284 | Golbez, Crystal Collector (BU) | 1: planetarium_of_wan_shi_tong |
 | 298 | Fire Lord Azula (BRU) | 1: firebender_ascension |
 
-289 / 298 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+293 / 302 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
