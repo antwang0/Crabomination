@@ -131,6 +131,30 @@ fn pick_level_up(state: &GameState, seat: usize) -> Option<GameAction> {
     })
 }
 
+/// CR 701.37 — "Monstrosity N" with no X (Stormbreath Dragon, Fleecemane
+/// Lion, Arbor Colossus): idle main-phase mana makes a creature that isn't
+/// monstrous yet monstrous. Eleven pod cards were never activated by any bot
+/// path (6-seat census over all 271 decks, seed 4401).
+pub(super) fn pick_monstrosity(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players[seat].commanders.is_empty() || !state.stack.is_empty() {
+        return None;
+    }
+    state.battlefield.iter().filter(|c| c.controller == seat && !c.monstrous).find_map(|c| {
+        let idx = c.definition.activated_abilities.iter().position(|ab| {
+            matches!(ab.effect, Effect::Monstrosity { .. }) && !ab.mana_cost.has_x() && !ab.sac_cost
+        })?;
+        let action = GameAction::ActivateAbility {
+            card_id: c.id,
+            ability_index: idx,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        };
+        state.would_accept(action.clone()).then_some(action)
+    })
+}
+
 /// "Put a +1/+1 / storage / charge counter on this", with no X in the cost.
 fn grows_self(ab: &crate::card::ActivatedAbility) -> bool {
     matches!(
@@ -342,6 +366,22 @@ pub(super) fn pick_team_counter_spread(state: &GameState, seat: usize) -> Option
 mod tests {
     use super::*;
     use crate::game::types::TurnStep;
+
+    /// CR 701.37 — idle mana makes Fleecemane Lion monstrous, once.
+    #[test]
+    fn fleecemane_lion_becomes_monstrous_with_idle_mana() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let lion = g.add_card_to_battlefield(0, crate::catalog::fleecemane_lion());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 3);
+        g.players[0].mana_pool.add(crate::mana::Color::White, 3);
+        assert!(matches!(pick_monstrosity(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == lion));
+        g.battlefield_find_mut(lion).unwrap().monstrous = true;
+        assert!(pick_monstrosity(&g, 0).is_none(), "already monstrous");
+    }
 
     /// Kindred Boon's divinity counter (indestructible) goes on the biggest
     /// creature of the chosen type without one, and not on one that has it.

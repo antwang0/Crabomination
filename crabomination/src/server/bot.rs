@@ -3487,6 +3487,7 @@ impl HeuristicBot {
                         .or_else(|| super::evasion::pick_evasion_grant(state, seat))
                         .or_else(|| super::evasion::pick_haste_grant(state, seat))
                         .or_else(|| super::counter_sink::pick_counter_sink(state, seat))
+                        .or_else(|| super::counter_sink::pick_monstrosity(state, seat))
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::goad_attach::pick_goad_attach(state, seat))
                         .or_else(|| super::grant_cast::pick_grant_cast(state, seat, &self.weights))
