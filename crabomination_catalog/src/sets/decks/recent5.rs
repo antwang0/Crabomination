@@ -502,8 +502,9 @@ pub fn eldritch_evolution() -> CardDefinition {
 }
 
 /// Skrelv, Defector Mite — {W} 1/1 Phyrexian Mite. Toxic 1; can't block.
-/// `{W/P}, {T}`: another target creature you control gains hexproof until end
-/// of turn. (The toxic / unblockable-by-color grant is simplified to hexproof.)
+/// `{W/P}, {T}`: choose a color; another target creature you control gains
+/// toxic 1 and hexproof from that color until end of turn, and can't be
+/// blocked by creatures of that color this turn.
 pub fn skrelv_defector_mite() -> CardDefinition {
     CardDefinition {
         name: "Skrelv, Defector Mite",
@@ -520,15 +521,18 @@ pub fn skrelv_defector_mite() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: ManaCost::new(vec![phyrexian(Color::White)]),
             tap_cost: true,
-            effect: Effect::GrantKeyword {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-                keyword: Keyword::Hexproof,
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Toxic(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantHexproofAndEvasionFromChosenColor { what: Selector::Target(0), duration: Duration::EndOfTurn },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

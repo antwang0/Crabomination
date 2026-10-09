@@ -9884,7 +9884,8 @@ mod recent5 {
         assert!(g.exile.iter().any(|c| c.id == id), "Eldritch Evolution exiled itself");
     }
 
-    /// Skrelv ships toxic + can't block and grants hexproof to another creature.
+    /// Skrelv ships toxic + can't block and grants toxic 1, hexproof from a
+    /// chosen color and evasion from that color to another creature.
     #[test]
     fn skrelv_grants_hexproof() {
         let s = catalog::skrelv_defector_mite();
@@ -9900,7 +9901,10 @@ mod recent5 {
             card_id: skrelv, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Skrelv");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof), "target gained hexproof");
+        let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
+        assert!(kws.contains(&Keyword::Toxic(1)), "toxic 1");
+        assert!(kws.iter().any(|k| matches!(k, Keyword::HexproofFromColor(_))), "hexproof from a color");
+        assert!(kws.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))), "evasion from that color");
     }
 
     /// Soul's Majesty draws cards equal to a creature's power.
