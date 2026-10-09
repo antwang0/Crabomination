@@ -9210,3 +9210,31 @@ pub const TAYAM_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, forest, forest, forest, plains, plains, plains, swamp, swamp, swamp,
 ];
+
+pub const BRENARD_COMMANDERS: &[CardFactory] = &[brenard_ginger_sculptor];
+
+/// **Brenard, Ginger Sculptor**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 7 Forests + 4 Islands + 6 Plains = 99.
+/// token copies of artifacts
+pub const BRENARD_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, birthing_pod, idol_of_oblivion, lightning_greaves, panharmonicon,
+    sol_ring, witchs_oven, bountiful_promenade, breeding_pool, canopy_vista, command_tower,
+    dreamroot_cascade, exotic_orchard, flooded_strand, glacial_fortress, hallowed_fountain,
+    high_market, hinterland_harbor, prairie_stream, rejuvenating_springs, sea_of_clouds,
+    seaside_citadel, sparas_headquarters, sunpetal_grove, temple_garden, windswept_heath,
+    academy_manufactor, adrix_and_nev_twincasters, birds_of_paradise, blade_splicer,
+    bronze_guardian, darksteel_splicer, foundation_breaker, gilded_goose, ginger_queen_of_sweets,
+    gingerbrute, ich_tekik_salvage_splicer, illustrious_wanderglyph, losheel_clockwork_scholar,
+    malcator_purity_overseer, master_splicer, maul_splicer, meteor_golem, mondrak_glory_dominus,
+    mulldrifter, nesting_dovehawk, oltec_matterweaver, peregrin_took, phyrexian_triniform,
+    sakura_tribe_elder, sandstorm_salvager, selfless_spirit, sensor_splicer, solemn_simulacrum,
+    syr_ginger_the_meal_ender, tough_cookie, triplicate_titan, urza_prince_of_kroog, vital_splicer,
+    wing_splicer, anointed_procession, doubling_season, elemental_bond, growing_ranks,
+    night_of_the_sweets_revenge, parallel_lives, tempered_steel, beast_within, counterspell,
+    heroic_intervention, path_to_exile, rootborn_defenses, second_harvest, sundering_growth,
+    swords_to_plowshares, cultivate, farseek, natures_lore, organic_extinction, rampant_growth,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island, plains,
+    plains, plains, plains, plains, plains,
+];

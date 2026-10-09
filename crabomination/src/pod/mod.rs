@@ -2307,6 +2307,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TAYAM_COMMANDERS,
             main: decks::TAYAM_MAIN,
         },
+        // Seat 315: Brenard, Ginger Sculptor's EDHREC average deck. `--pod-decks 315`.
+        PodDeck {
+            name: "Brenard, Ginger Sculptor (GUW)",
+            commanders: decks::BRENARD_COMMANDERS,
+            main: decks::BRENARD_MAIN,
+        },
     ]
 }
 
@@ -4265,6 +4271,7 @@ mod tests {
             ("Helga, Skittish Seer", [0x4E16, 312, 9237]),
             ("Vihaan, Goldwaker", [0x71AA, 313, 9238]),
             ("Tayam, Luminous Enigma", [0x7A4A, 314, 9239]),
+            ("Brenard, Ginger Sculptor", [0xB2E9, 315, 9240]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
