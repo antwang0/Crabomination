@@ -148,6 +148,15 @@ test:
   seat spent its Replicated Rings on Whirler Rogue every turn and never paid
   Sphere of Safety's tax (339 turns).
 
+A third sweep under `CRAB_POD_FUZZ=2500` (seed 31409, 6,620 games, 8
+undecided: 5 CR 104.4 draws, 3 caps) found two more, both fixed:
+- ✅ **CR 800.4a / 400.7** — a phased-out permanent exiled with its departed
+  controller kept its phasing hold and tap (Birgi); `phase_in_card` now clears
+  the hold on every phase-in path too.
+- ✅ **CR 701.40a** — a card turned face down to be manifested that never
+  entered (Grafdigger's Cage) stayed face down in its graveyard or library
+  (Ghastly Conscription).
+
 Open, not defects: **Gremlin Tamer + Secret Arcade** (seat 271, Marina
 Vendrell) is a real unbounded mandatory loop — every Gremlin is an
 enchantment, so the eerie trigger re-fires — and ends as a board cap; 11 of
