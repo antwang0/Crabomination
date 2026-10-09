@@ -3801,3 +3801,52 @@ fn orvar_copies_the_targeted_permanent() {
     cast(&mut g, twiddle, Some(Target::Permanent(theirs)));
     assert_eq!(named(&g, "Grizzly Bears"), 3, "an opponent's permanent is no copy");
 }
+
+/// Kuja's Wizards: Flameshape's face-down exiles are playable only while you
+/// control a Wizard; Tomik adds 1 to Wizard's Lightning (which costs {R}
+/// beside a Wizard); Vivi's Persistence leaves a pinging Wizard and comes back
+/// when your commander attacks.
+#[test]
+fn kuja_wizards_kit() {
+    let mut g = pod(2);
+    flood(&mut g);
+    let gandalf = g.add_card_to_hand(0, catalog::gandalf_goblins_bane());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventure { card_id: gandalf, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Flameshape");
+    drain_stack(&mut g);
+    let exiled: Vec<CardId> = g
+        .exile
+        .iter()
+        .filter(|c| c.face_down && c.may_play_until.is_some_and(|p| p.player == 0))
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(exiled.len(), 2, "two face down");
+    let cast_exiled = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: exiled[0], target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(cast_exiled(&mut g).is_err(), "no Wizard, no play");
+    ready(&mut g, 0, catalog::tomik_izzet_sparkmage());
+    let bears = named(&g, "Grizzly Bears");
+    cast_exiled(&mut g).expect("a Wizard unlocks it");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Grizzly Bears"), bears + 1);
+
+    let life = g.players[1].life;
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let bolt = g.add_card_to_hand(0, catalog::wizards_lightning());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 4, "{{R}} with a Wizard; Tomik's +1");
+
+    flood(&mut g);
+    let vivi = g.add_card_to_hand(0, catalog::vivis_persistence());
+    cast(&mut g, vivi, None);
+    assert_eq!(named(&g, "Wizard"), 1);
+    let cmdr = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].commanders.push(cmdr);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    connect(&mut g, cmdr);
+    assert!(g.players[0].hand.iter().any(|c| c.id == vivi), "back to hand");
+}

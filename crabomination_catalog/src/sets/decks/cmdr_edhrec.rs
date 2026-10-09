@@ -7690,3 +7690,116 @@ pub fn orvar_the_all_form() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// "Whenever you cast a noncreature spell, …" — the cast trigger shared by
+/// Gandalf and Vivi's Wizard token.
+fn on_noncreature_cast(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellMatches(R::Noncreature)),
+        effect,
+    }
+}
+
+/// Gandalf, Goblins' Bane — {2}{R} Legendary 2/3 Avatar Wizard. Whenever you
+/// cast a noncreature spell, Gandalf gets +1/+1 until end of turn and deals 1
+/// damage to each opponent. Adventure: Flameshape — {1}{R} Sorcery. Look at the
+/// top two cards of your library and exile them face down; for as long as they
+/// remain exiled, you may play them if you control a Wizard.
+pub fn gandalf_goblins_bane() -> CardDefinition {
+    CardDefinition {
+        name: "Gandalf, Goblins' Bane",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Avatar, CreatureType::Wizard]),
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![on_noncreature_cast(Effect::Seq(vec![
+            Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        ]))],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Flameshape",
+            cost: cost(&[generic(1), r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::ExileTopFaceDownPlayIfYouControl { count: Value::Const(2), creature_type: CreatureType::Wizard },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Tomik, Izzet Sparkmage — {1}{R} Legendary 1/2 Human Wizard, prowess. If a
+/// source you control would deal noncombat damage to an opponent or a
+/// permanent an opponent controls, it deals that much damage plus 1 instead.
+pub fn tomik_izzet_sparkmage() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Tomik, Izzet Sparkmage",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        static_abilities: vec![StaticAbility {
+            description: "If a source you control would deal noncombat damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead.",
+            effect: StaticEffect::NoncombatDamageToOpponentsBonus { amount: 1, while_revolt: false, players_only: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vivi's Persistence — {1}{R} Instant. Create a 0/1 black Wizard token with
+/// "Whenever you cast a noncreature spell, this token deals 1 damage to each
+/// opponent." Whenever your commander enters or attacks, you may pay {2}; if
+/// you do, return this card from your graveyard to your hand.
+pub fn vivis_persistence() -> CardDefinition {
+    let wizard = TokenDefinition {
+        name: "Wizard".into(),
+        power: 0,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: creature_types(vec![CreatureType::Wizard]),
+        triggered_abilities: vec![on_noncreature_cast(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    };
+    let come_back = |kind: EventKind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::FromYourGraveyard).with_filter(Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: R::IsCommander.and(R::OwnedByYou),
+        }),
+        effect: Effect::MayPay {
+            description: "Pay {2} to return Vivi's Persistence to your hand?".into(),
+            mana_cost: cost(&[generic(2)]),
+            body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+            else_: None,
+        },
+    };
+    CardDefinition {
+        name: "Vivi's Persistence",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: mint(wizard, Value::ONE),
+        triggered_abilities: vec![come_back(EventKind::EntersBattlefield), come_back(EventKind::Attacks)],
+        ..Default::default()
+    }
+}
+
+/// Wizard's Lightning — {2}{R} Instant. Costs {2} less if you control a
+/// Wizard. 3 damage to any target.
+pub fn wizards_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Wizard's Lightning",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_control: vec![(R::HasCreatureType(CreatureType::Wizard), 2)],
+        effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
