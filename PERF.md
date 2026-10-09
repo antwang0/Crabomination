@@ -3152,6 +3152,27 @@ release pods     320 games (8 groups x 40, 4 seats, seed 25000, strict) over
                  engine never declares), 0 action caps, 0 panics
 suite            24,542 / 1 / 5 strict before the Marina seed change (that
                  seed is the same loop); clippy clean
+### 2026-10-09 (Commander routine, thirteenth — session `01Ug49mf`) — guardrail; landfall reads the ETB multiplier
+
+Hot-path touches: a landfall (`LandPlayed`) trigger now calls
+`etb_trigger_multiplier` (its `has_etb_static` lane read returns 1 on a board
+with no ETB static); `etb_trigger_multiplier` evaluates a doubler's `entering`
+filter only when one is on the board; the cleanup damage sweep reads a
+static list only for a permanent with damage marked. The `fixed` pool plays no
+landfall card, so `--bench` cannot reach the first. No throughput reading: the
+only optimized binary built was the `overflow` audit build (numbers from it are
+not filed); decisions are the invariant.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (overflow + debug-assertions build)
+pod census       all 281 seats, strict answer log: 3-seat x4 (41001+), 4-seat x5
+                 (42001+), 6-seat x6 (43001+) — ~1,010 games, 0 panics,
+                 1 CR 104.4b draw, 1 board cap (43039, fixed: growth-loop rider)
+2-player pools   cube / sos / sealed x seeds 51001-2 x 100 an archetype:
+                 4,200 games, 0 panics, 3 cube draws
+```
+
 ### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls
 
 Hot-path touches: `push_stack` ORs a battlefield-slot mark into spells too

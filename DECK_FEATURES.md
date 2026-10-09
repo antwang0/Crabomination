@@ -34,9 +34,10 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-249 / 273 pod decks carry no residual (2026-10-09, after EDHREC average-deck
-seats 184-273 and this run's residual fixes; `--table` output pasted as is, with
-each deck's residual count); each open one is an INCOMPLETE_CARDS row or a card doc:
+271 / 285 pod decks carry no residual (2026-10-09, Commander routine: ETB doublers
+reach landfall, Battlecrier / Rupture / Chocobo / Masamune / Kefka / Adamantoise and
+others fixed; `--table` output pasted as is); each open one is an INCOMPLETE_CARDS row
+or a card doc:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
@@ -44,28 +45,18 @@ each deck's residual count); each open one is an INCOMPLETE_CARDS row or a card 
 | 188 | Ojer Axonil, Deepest Might (R) | 1: urabrask |
 | 189 | Rowan, Scion of War (BR) | 1: march_of_wretched_sorrow |
 | 190 | Deadpool, Trading Card (BR) | 2: delina_wild_mage, mirage_phalanx |
-| 201 | The Wandering Minstrel (BGRUW) | 3: starting_town, town_greeter, traveling_chocobo |
-| 203 | Zur the Enchanter (BUW) | 2: greater_auramancy, opposition_agent |
+| 203 | Zur the Enchanter (BUW) | 1: opposition_agent |
 | 204 | Etali, Primal Conqueror (GR) | 4: blank_goblin, chandra_flameshaper, hunting_velociraptor, tinder_wall |
 | 206 | Tivit, Seller of Secrets (BUW) | 1: opposition_agent |
-| 207 | Umbris, Fear Manifest (BU) | 1: singularity_rupture |
 | 208 | Prismari, the Inspiration (RU) | 1: sanar_unfinished_genius |
-| 210 | Phenax, God of Deception (BU) | 1: singularity_rupture |
-| 211 | Baylen, the Haymaker (GRW) | 1: dawns_truce |
-| 213 | Ureni of the Unwritten (GRU) | 1: temur_battlecrier |
-| 221 | Finneas, Ace Archer (GW) | 1: dawns_truce |
-| 223 | Vivi Ornitier (RU) | 2: mistrise_village, quicksilver_elemental |
-| 225 | Sephiroth, Fabled SOLDIER (B) | 1: the_masamune |
-| 231 | Alania, Divergent Storm (RU) | 1: lilypad_village |
-| 234 | Noctis, Prince of Lucis (BUW) | 1: mishras_bauble |
-| 237 | Flubs, the Fool (GRU) | 1: mishras_bauble |
-| 241 | Tannuk, Memorial Ensign (GR) | 1: traveling_chocobo |
+| 223 | Vivi Ornitier (RU) | 1: quicksilver_elemental |
 | 244 | Ghyrson Starn, Kelermorph (RU) | 1: urabrask |
 | 261 | Codie, Vociferous Codex (BGRUW) | 2: biomancers_familiar, improvisation_capstone |
 | 264 | Feather, the Redeemed (RW) | 1: mavinda_students_advocate |
-| 269 | Betor, Kin to All (BGW) | 1: ancient_adamantoise |
+| 280 | Thrasios, Triton Hero + Tymna the Weaver (BGUW) | 1: opposition_agent |
+| 282 | Gishath, Sun's Avatar (GRW) | 1: hunting_velociraptor |
 
-249 / 273 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+271 / 285 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 
 169 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.

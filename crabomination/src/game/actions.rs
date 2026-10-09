@@ -9508,7 +9508,7 @@ impl GameState {
                         Keyword::HexproofFromMonocolored => spell_colors.len() == 1,
                         Keyword::HexproofFromMulticolored => spell_colors.len() >= 2,
                         Keyword::HexproofFromItsColors => cp.as_ref().is_some_and(|cp| {
-                            cp.colors.iter().any(|c| spell_colors.contains(&c))
+                            cp.colors.iter().any(|c| spell_colors.contains(c))
                         }),
                         _ => false,
                     })
@@ -15832,7 +15832,7 @@ impl GameState {
                 // CR 702.11f — an exactly-one-color source.
                 Keyword::HexproofFromMonocolored => src.colors.len() == 1,
                 Keyword::HexproofFromMulticolored => src.colors.len() >= 2,
-                Keyword::HexproofFromItsColors => tgt.colors.iter().any(|c| src.colors.contains(&c)),
+                Keyword::HexproofFromItsColors => tgt.colors.iter().any(|c| src.colors.contains(c)),
                 _ => false,
             }) {
                 return true;
