@@ -4145,6 +4145,7 @@ fn buster_sword_pumps_and_draws() {
     g.add_card_to_library(0, catalog::island());
     assert_eq!(g.computed_permanent(bearer).unwrap().power, 5, "2/2 + 3/+2");
     g.clear_sickness(bearer);
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
     let hand0 = g.players[0].hand.len();
     advance_to(&mut g, TurnStep::DeclareAttackers);
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -4152,7 +4153,9 @@ fn buster_sword_pumps_and_draws() {
     }])).expect("attack");
     drain_stack(&mut g);
     advance_to(&mut g, TurnStep::PostCombatMain);
-    assert_eq!(g.players[0].hand.len(), hand0 + 1, "combat damage drew a card");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0, "drew a card, cast the Giant");
+    assert!(g.battlefield_find(giant).is_some(), "a mana value 4 spell off 5 damage, free");
 }
 
 /// Absolute Virtue ships as an 8/8 flyer that can't be countered and grants its

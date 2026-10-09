@@ -1068,8 +1068,8 @@ pub fn ultima_weapon() -> CardDefinition {
 }
 
 /// Cloud, Midgar Mercenary — {W}{W} 2/1 Human Soldier Mercenary. ETB: search
-/// your library for an Equipment card and put it into your hand. (The "Cloud's
-/// triggered abilities trigger an additional time" rider is omitted.)
+/// your library for an Equipment card and put it into your hand. While
+/// equipped, its triggers and its Equipment's trigger an additional time.
 pub fn cloud_midgar_mercenary() -> CardDefinition {
     CardDefinition {
         name: "Cloud, Midgar Mercenary",
@@ -1086,6 +1086,10 @@ pub fn cloud_midgar_mercenary() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "As long as Cloud is equipped, if a triggered ability of Cloud or an Equipment attached to it triggers, that ability triggers an additional time.",
+            effect: crate::card::StaticEffect::EquippedSelfAndEquipmentTriggersTwice,
+        }],
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
@@ -7622,10 +7626,9 @@ pub fn stuck_in_summoners_sanctum() -> CardDefinition {
     }
 }
 
-/// Buster Sword — {3} Equipment. Equipped creature gets +3/+2 and draws a card
-/// when it deals combat damage to a player. Equip {2}.
-/// (The "then cast a spell with mana value ≤ that damage for free" rider is
-/// dropped — no free-cast-from-hand-by-mana-value primitive yet.)
+/// Buster Sword — {3} Equipment. Equipped creature gets +3/+2; its combat
+/// damage to a player draws a card, then you may cast a spell from your hand
+/// with mana value at most that damage free. Equip {2}.
 pub fn buster_sword() -> CardDefinition {
     CardDefinition {
         name: "Buster Sword",
@@ -7641,10 +7644,14 @@ pub fn buster_sword() -> CardDefinition {
             toughness: 2,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::ONE,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::MayCastFromHandFreeMatching {
+                        filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Land)),
+                        max_mv: Value::TriggerEventAmount,
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
             }],
             ..Default::default()
         }),

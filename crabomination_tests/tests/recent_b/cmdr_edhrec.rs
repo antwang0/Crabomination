@@ -2457,3 +2457,20 @@ fn archpriest_of_shadows_reanimates_on_hit() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(dead).is_some());
 }
+
+/// Cloud, Midgar Mercenary: equipped, the Equipment's trigger (Buster Sword's
+/// draw, granted to Cloud) fires twice.
+#[test]
+fn cloud_doubles_equipment_triggers() {
+    let mut g = pod(2);
+    let cloud = ready(&mut g, 0, catalog::cloud_midgar_mercenary());
+    let sword = ready(&mut g, 0, catalog::buster_sword());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(cloud);
+    let library = g.players[0].library.len();
+    attack_into_block(&mut g, cloud, None);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), library - 2, "the draw triggered an additional time");
+}
