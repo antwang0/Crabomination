@@ -1026,6 +1026,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::LivingMetal => "Living metal — during your turn, this Vehicle is also an artifact creature.",
         K::CantAttackIfDefenderHasUntappedLand => "Can't attack if the defending player controls an untapped land.",
         K::CantBlockIfYouHaveUntappedLand => "Can't block if you control an untapped land.",
+        K::CantAttackUnlessDefenderGraveyardAtLeast(_) => "Can't attack unless the defending player has that many or more cards in their graveyard.",
+        K::CantBlockUnlessHandSizeAtLeast(_) => "Can't block unless you have that many or more cards in hand.",
         K::CantAttackOrBlockUnlessDescend(_) => "Descend — can't attack or block unless there are that many or more permanent cards in your graveyard.",
         K::CantAttackOrBlockUnlessCityBlessing => "Can't attack or block unless you have the city's blessing.",
         K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
@@ -1359,6 +1361,12 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         }
         K::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
             format!("Can't attack or block unless you have {n} or fewer cards in hand")
+        }
+        K::CantAttackUnlessDefenderGraveyardAtLeast(n) => {
+            format!("Can't attack unless defending player has {n} or more cards in their graveyard")
+        }
+        K::CantBlockUnlessHandSizeAtLeast(n) => {
+            format!("Can't block unless you have {n} or more cards in hand")
         }
         K::CantAttackOrBlockUnlessDescend(n) => {
             format!("Can't attack or block unless you descended {n}")

@@ -930,6 +930,12 @@ impl GameState {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
                 // CR 508.1a — Monstrous Hound: more lands than the defender.
+                // CR 508.1a — Vantress Gargoyle: a full enough graveyard.
+                Keyword::CantAttackUnlessDefenderGraveyardAtLeast(n)
+                    if defender.is_some_and(|d| (self.players[d].graveyard.len() as u32) < *n) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
                 Keyword::CantAttackUnlessMoreLandsThanDefender
                     if defender.is_some_and(|d| {
                         self.player_tally(p, crate::card::PlayerTally::LandsControlled)
@@ -960,6 +966,7 @@ impl GameState {
                     | Keyword::CantAttackOwner
                     | Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     | Keyword::CantAttackUnlessMoreLandsThanDefender
+                    | Keyword::CantAttackUnlessDefenderGraveyardAtLeast(_)
             )
         })
     }
@@ -6411,6 +6418,8 @@ impl GameState {
                     .battlefield
                     .iter()
                     .any(|c| c.controller == owner && c.definition.is_land() && !c.tapped),
+                // Vantress Gargoyle — a thin hand locks the block.
+                Keyword::CantBlockUnlessHandSizeAtLeast(n) => (self.players[owner].hand.len() as u32) < *n,
                 // Deferred: both need a battlefield walk of their own, and
                 // only one of each can bind.
                 Keyword::CantAttackOrBlockUnlessYouControlCount {

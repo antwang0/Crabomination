@@ -140,6 +140,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantBlockUnlessMoreCreaturesThanAttacker => "NoBlkHorde?",
         // Hazoret-class hellbent gate reads at a glance on the board.
         CantAttackOrBlockUnlessHandSizeAtMost(_) => "Hand?",
+        CantAttackUnlessDefenderGraveyardAtLeast(_) => "Their yard?",
+        CantBlockUnlessHandSizeAtLeast(_) => "Hand? (blk)",
         CantAttackOrBlockUnlessDelirium => "Dlr?",
         // The Oppressive Rays pay gate — the number is the point.
         CantAttackOrBlockUnlessPay(_) => "Pay?",

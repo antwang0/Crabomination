@@ -254,6 +254,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOwner
         | Keyword::CantAttackIfAttackedLastTurn
         | Keyword::CantBlockIfYouHaveUntappedLand
+        | Keyword::CantAttackUnlessDefenderGraveyardAtLeast(_)
+        | Keyword::CantBlockUnlessHandSizeAtLeast(_)
         | Keyword::CantAttackUnlessMoreCreaturesThanDefender
         | Keyword::CantBlockUnlessMoreCreaturesThanAttacker
         | Keyword::DealsNoCombatDamage | Keyword::AssignsCombatDamageByToughness

@@ -2177,6 +2177,12 @@ pub enum Keyword {
     /// CR 509.1b restriction — the blocking half of Branded Brawlers: "can't
     /// block if you control an untapped land."
     CantBlockIfYouHaveUntappedLand,
+    /// CR 508.1a — "can't attack unless defending player has N or more cards
+    /// in their graveyard" (Vantress Gargoyle).
+    CantAttackUnlessDefenderGraveyardAtLeast(u32),
+    /// CR 509.1b — "can't block unless you have N or more cards in hand"
+    /// (Vantress Gargoyle).
+    CantBlockUnlessHandSizeAtLeast(u32),
     /// CR 702.161 — Living metal: "During your turn, this permanent is an
     /// artifact creature in addition to its other types." A Vehicle that
     /// animates itself on its controller's turn, no crew needed.
