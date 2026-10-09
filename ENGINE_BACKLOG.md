@@ -179,6 +179,16 @@ Cyberman ×2, Yedora's Forest) — all five now go through
 `face_down_onto_battlefield`. The miracle reveal window is a legitimate
 hand permission (CR 702.94; exempted by a concurrent session too).
 
+Sweep 8 (seed 31953, 292 decks, 7,020 games) found three more: **CR 115.1**
+— a loose `Move`'s "target creature" accepted a creature card in EXILE (Run
+Away Together bounced a warped Starfield Vocalist out of exile; an exiled
+target now needs a zone-naming filter, and `ExiledWithSource` counts as one);
+**CR 400.7** — a graveyard cast permission followed the card back to hand
+(Silas Renn + Sanctum Gargoyle; `place_card_in_dest` forgets spell choices
+for hand / library); and an invariant gap (a mid-resolution win's departure
+is deferred past a pending ask). The CR 514.2 invariant now honours Ancient
+Adamantoise's kept damage.
+
 A fifth, fuzzed, after the census fixes (seed 31623): 6,660 games, **0 panics,
 0 caps**, 5 CR 104.4 draws. Two-player pools on the same audit build: cube /
 sos / sealed × seeds 7101-7103 (7103 under `CRAB_LADDER_FUZZ=2500`, strict) —
