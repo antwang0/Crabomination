@@ -1539,3 +1539,32 @@ fn a_taxed_room_spell_resolves_after_everyone_passes() {
     assert!(g.stack.is_empty(), "stack: {:?}", g.stack.len());
     assert!(g.battlefield_find(room).is_some());
 }
+
+/// Scorn-Blade Berserker backs up a bear: +1/+1 counter, and the bear can
+/// sacrifice itself to draw this turn.
+#[test]
+fn scorn_blade_berserker_backs_up_with_its_draw() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let blade = g.add_card_to_hand(0, catalog::scorn_blade_berserker());
+    flood(&mut g);
+    cast(&mut g, blade, None);
+    let backed = g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne) == 1;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    // Backing up itself grants nothing (CR 702.164a: only "another creature").
+    assert_eq!(r.is_ok(), backed, "the bear has the sacrifice ability iff it was backed up");
+    if backed {
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(bear).is_none());
+        assert_eq!(g.players[0].hand.len(), hand + 1);
+    }
+}

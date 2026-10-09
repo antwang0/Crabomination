@@ -2659,3 +2659,39 @@ pub fn karn_legacy_reforged() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Scorn-Blade Berserker — {B} 0/1. Backup 1 (CR 702.164): the backed-up
+/// creature, if another, gains "{1}, sacrifice this creature: draw a card"
+/// until end of turn — which it prints itself.
+pub fn scorn_blade_berserker() -> CardDefinition {
+    use crate::card::CounterType;
+    let sac_draw = ActivatedAbility {
+        mana_cost: cost(&[generic(1)]),
+        sac_cost: true,
+        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ..Default::default()
+    };
+    let target = || Selector::TargetFiltered { slot: 0, filter: R::Creature };
+    CardDefinition {
+        name: "Scorn-Blade Berserker",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Berserker]),
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AddCounter { what: target(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::OtherThanSource },
+                then: Box::new(Effect::GainActivatedAbility {
+                    what: target(),
+                    ability: Box::new(sac_draw.clone()),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        activated_abilities: vec![sac_draw],
+        ..Default::default()
+    }
+}
