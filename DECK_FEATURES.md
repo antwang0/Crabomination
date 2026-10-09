@@ -34,9 +34,9 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-239 / 273 pod decks carry no residual (2026-10-09, after EDHREC average-deck
-seats 184-273; `--table` output pasted as is, with each deck's residual count);
-each open one is an INCOMPLETE_CARDS row or a card doc:
+249 / 273 pod decks carry no residual (2026-10-09, after EDHREC average-deck
+seats 184-273 and this run's residual fixes; `--table` output pasted as is, with
+each deck's residual count); each open one is an INCOMPLETE_CARDS row or a card doc:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
@@ -44,8 +44,8 @@ each open one is an INCOMPLETE_CARDS row or a card doc:
 | 188 | Ojer Axonil, Deepest Might (R) | 1: urabrask |
 | 189 | Rowan, Scion of War (BR) | 1: march_of_wretched_sorrow |
 | 190 | Deadpool, Trading Card (BR) | 2: delina_wild_mage, mirage_phalanx |
-| 201 | The Wandering Minstrel (BGRUW) | 4: starting_town, the_necrobloom, town_greeter, traveling_chocobo |
-| 203 | Zur the Enchanter (BUW) | 3: entity_tracker, greater_auramancy, opposition_agent |
+| 201 | The Wandering Minstrel (BGRUW) | 3: starting_town, town_greeter, traveling_chocobo |
+| 203 | Zur the Enchanter (BUW) | 2: greater_auramancy, opposition_agent |
 | 204 | Etali, Primal Conqueror (GR) | 4: blank_goblin, chandra_flameshaper, hunting_velociraptor, tinder_wall |
 | 206 | Tivit, Seller of Secrets (BUW) | 1: opposition_agent |
 | 207 | Umbris, Fear Manifest (BU) | 1: singularity_rupture |
@@ -58,24 +58,14 @@ each open one is an INCOMPLETE_CARDS row or a card doc:
 | 225 | Sephiroth, Fabled SOLDIER (B) | 1: the_masamune |
 | 231 | Alania, Divergent Storm (RU) | 1: lilypad_village |
 | 234 | Noctis, Prince of Lucis (BUW) | 1: mishras_bauble |
-| 236 | Muldrotha, the Gravetide (BGU) | 1: ripples_of_undeath |
 | 237 | Flubs, the Fool (GRU) | 1: mishras_bauble |
 | 241 | Tannuk, Memorial Ensign (GR) | 1: traveling_chocobo |
-| 243 | Animar, Soul of Elements (GRU) | 1: vizier_of_the_menagerie |
 | 244 | Ghyrson Starn, Kelermorph (RU) | 1: urabrask |
-| 248 | Betor, Ancestor's Voice (BGW) | 1: ripples_of_undeath |
-| 252 | Hope Estheim (UW) | 1: guide_of_souls |
-| 255 | Grand Arbiter Augustin IV (UW) | 1: azors_elocutors |
-| 256 | Thalia and The Gitrog Monster (BGW) | 1: the_necrobloom |
-| 259 | The Necrobloom (BGW) | 2: ripples_of_undeath, the_necrobloom |
-| 260 | Atraxa, Grand Unifier (BGUW) | 1: touch_the_spirit_realm |
 | 261 | Codie, Vociferous Codex (BGRUW) | 2: biomancers_familiar, improvisation_capstone |
-| 263 | Fynn, the Fangbearer (G) | 1: questing_beast |
 | 264 | Feather, the Redeemed (RW) | 1: mavinda_students_advocate |
-| 269 | Betor, Kin to All (BGW) | 2: ancient_adamantoise, crystal_barricade |
-| 271 | Marina Vendrell (BGRUW) | 2: entity_tracker, keys_to_the_house |
+| 269 | Betor, Kin to All (BGW) | 1: ancient_adamantoise |
 
-239 / 273 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+249 / 273 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 
 169 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
