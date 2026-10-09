@@ -8223,3 +8223,33 @@ pub const KRAUM_MAIN: &[CardFactory] = &[
     // Basics
     island, swamp,
 ];
+
+pub const THRASIOS_COMMANDERS: &[CardFactory] = &[thrasios_triton_hero, tymna_the_weaver];
+
+/// **Thrasios, Triton Hero + Tymna the Weaver**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 96 nonbasic cards + 1 Island + 1 Forest = 98.
+/// Four-color partners: Thrasios turns spare mana into cards, Tymna draws off
+/// combat damage. EDHREC's list is two short (96 + the pair), so the Island and
+/// Forest are padding, not EDHREC's.
+pub const THRASIOS_MAIN: &[CardFactory] = &[
+    arcane_signet, basalt_monolith, chrome_mox, lotus_petal, mana_vault, mox_amber, mox_diamond,
+    sol_ring, the_one_ring, birds_of_paradise, bloom_tender, deathrite_shaman, delighted_halfling,
+    devoted_druid, elvish_spirit_guide, enduring_vitality, esper_sentinel, eternal_witness,
+    faerie_mastermind, grand_abolisher, hazels_brewmaster, kinnan_bonder_prodigy,
+    lotho_corrupt_shirriff, mockingbird, noble_hierarch, opposition_agent, orcish_bowmasters,
+    ranger_captain_of_eos, seedborn_muse, thassas_oracle, the_cabbage_merchant, valley_floodcaller,
+    voice_of_victory, wan_shi_tong_librarian, gleaming_splendor, mystic_remora, rhystic_study,
+    smothering_tithe, survival_of_the_fittest, swift_reconfiguration, an_offer_you_cant_refuse,
+    borne_upon_a_wind, chord_of_calling, crop_rotation, cyclonic_rift, deadly_rollick,
+    demonic_consultation, enlightened_tutor, fierce_guardianship, flusterstorm, force_of_negation,
+    force_of_will, mental_misstep, mindbreak_trap, pact_of_negation, silence, swan_song,
+    swords_to_plowshares, tainted_pact, vampiric_tutor, veil_of_summer, worldly_tutor,
+    ancient_tomb, bayou, bloodstained_mire, boseiju_who_endures, breeding_pool, city_of_brass,
+    command_tower, emergence_zone, exotic_orchard, flooded_strand, gaeas_cradle, gemstone_caverns,
+    mana_confluence, marsh_flats, misty_rainforest, otawara_soaring_city, polluted_delta, savannah,
+    scalding_tarn, scrubland, tropical_island, tundra, underground_sea, verdant_catacombs,
+    watery_grave, windswept_heath, wooded_foothills, culling_ritual, demonic_tutor,
+    eldritch_evolution, finale_of_devastation, imperial_seal, natures_rhythm, neoform,
+    // Basics
+    island, forest,
+];
