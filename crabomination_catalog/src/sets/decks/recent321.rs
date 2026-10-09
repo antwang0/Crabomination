@@ -122,9 +122,8 @@ pub fn proteus_staff() -> CardDefinition {
 }
 
 /// Quicksilver Elemental — borrows every activated ability on the table, and
-/// blue mana pays the borrowed abilities' colored pips (CR 609.4b). Residual:
-/// an ability granted to it by another permanent (an Equipment) doesn't get
-/// the blue relaxation.
+/// blue mana pays the colored pips of any ability it has, printed, borrowed
+/// or granted (`SpendColorAsAnyForOwnAbilities`, CR 609.4b).
 pub fn quicksilver_elemental() -> CardDefinition {
     CardDefinition {
         name: "Quicksilver Elemental",
@@ -136,13 +135,17 @@ pub fn quicksilver_elemental() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "You may spend blue mana as though it were mana of any color to pay the activation costs of this creature's abilities.",
+            effect: crate::effect::StaticEffect::SpendColorAsAnyForOwnAbilities { color: crate::mana::Color::Blue },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u()]),
             effect: Effect::GainAllActivatedAbilitiesOf {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
                 to: None,
-                spend_as_any: Some(crate::mana::Color::Blue),
+                spend_as_any: None,
             },
             ..Default::default()
         }],

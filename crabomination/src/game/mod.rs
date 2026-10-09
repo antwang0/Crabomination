@@ -33436,6 +33436,8 @@ fn static_effect_to_effects(
             | StaticEffect::KeepsDamageThroughCleanup
             // Read by the may-play exile cast's payment; no layer effect.
             | StaticEffect::ExileCastSpellsHaveConvoke { .. }
+            // Read at activation-cost time; no layer effect.
+            | StaticEffect::SpendColorAsAnyForOwnAbilities { .. }
             | StaticEffect::DoubleControllerAttackTriggers
             // Hama Pashar — read in `Effect::Venture` via
             // `dungeon_room_extra_fires`; no layer effect.

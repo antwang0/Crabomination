@@ -2057,6 +2057,25 @@ fn quicksilver_elemental_pays_borrowed_pips_with_blue() {
     assert_eq!(g.computed_permanent(elem).unwrap().power, 4);
 }
 
+/// Quicksilver Elemental's blue-as-any covers an ability it was GIVEN by
+/// another permanent too ("this creature's abilities"), not only borrowed ones.
+#[test]
+fn quicksilver_elemental_pays_granted_pips_with_blue() {
+    let mut g = main_phase();
+    let elem = g.add_card_to_battlefield(0, catalog::quicksilver_elemental());
+    g.clear_sickness(elem);
+    let firebreathing = catalog::shivan_dragon().activated_abilities[0].clone();
+    g.battlefield_find_mut(elem).unwrap().granted_activated_abilities.push(firebreathing);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elem, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("a granted {R}: +1/+0 paid with {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(elem).unwrap().power, 4);
+}
+
 /// Mindslaver hands the wheel over for its target's next turn.
 #[test]
 fn mindslaver_takes_the_next_turn() {

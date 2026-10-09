@@ -22758,6 +22758,14 @@ impl GameState {
         if let Some(color) = ability.spend_color_as_any {
             effective_mana_cost = effective_mana_cost.colored_payable_by(color);
         }
+        if let Some(color) = self.battlefield_find(card_id).and_then(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::SpendColorAsAnyForOwnAbilities { color } => Some(color),
+                _ => None,
+            })
+        }) {
+            effective_mana_cost = effective_mana_cost.colored_payable_by(color);
+        }
         // Agatha's Soul Cauldron — a creature of yours activates with mana of
         // any color; Chromatic Orrery (and Mycosynth Lattice) — any ability.
         if effective_mana_cost.symbols.iter().any(|s| !matches!(s, crate::mana::ManaSymbol::Generic(_)))

@@ -1867,6 +1867,10 @@ pub enum StaticEffect {
     /// CR 702.51). Read by the may-play cast path only, which taps the
     /// fewest untapped creatures that make the cost payable.
     ExileCastSpellsHaveConvoke { filter: crate::card::SelectionRequirement },
+    /// "You may spend [color] mana as though it were mana of any color to pay
+    /// the activation costs of this creature's abilities" (Quicksilver
+    /// Elemental, CR 609.4b) — every ability it has, printed or gained.
+    SpendColorAsAnyForOwnAbilities { color: crate::mana::Color },
     /// Isshin, Two Heavens as One / Windcrag Siege (Mardu) — "If a creature
     /// attacking causes a triggered ability of a permanent you control to
     /// trigger, that ability triggers an additional time." Read at trigger
