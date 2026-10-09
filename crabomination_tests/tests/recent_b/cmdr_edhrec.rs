@@ -1950,3 +1950,42 @@ fn mechtitan_core_assembles_and_disassembles() {
     }
     assert!(g.exile.iter().any(|c| c.id == core), "the Core stays exiled");
 }
+
+/// Efficient Construction makes a Thopter per artifact spell; Crystal Skull
+/// casts a historic (artifact) card off the library top but not a Bear.
+#[test]
+fn efficient_construction_and_crystal_skull() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::efficient_construction());
+    ready(&mut g, 0, catalog::crystal_skull_isu_spyglass());
+    g.players[0].library.clear();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err(), "a Bear isn't historic");
+    g.players[0].library.clear();
+    let mite = g.add_card_to_library(0, catalog::memnite());
+    cast(&mut g, mite, None);
+    assert!(g.battlefield_find(mite).is_some(), "cast off the top");
+    assert_eq!(named(&g, "Thopter"), 1, "an artifact spell made a Thopter");
+}
+
+/// Mirrodin Besieged, Phyrexian: the end-step loot, then with fifteen artifact
+/// cards in your graveyard the targeted opponent loses — never you.
+#[test]
+fn mirrodin_besieged_phyrexian_wins_off_fifteen_artifacts() {
+    let mut g = pod(3);
+    let mb = g.add_card_to_hand(0, catalog::mirrodin_besieged());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast(&mut g, mb, None);
+    for _ in 0..15 {
+        g.add_card_to_graveyard(0, catalog::memnite());
+    }
+    to_end_step(&mut g);
+    assert!(g.players[0].is_alive(), "the controller is never the target");
+    let def = catalog::mirrodin_besieged();
+    let phyrexian = &def.enter_modes.as_ref().unwrap()[1].triggered_abilities[0].effect;
+    assert_eq!(phyrexian.target_filter_for_slot(0), Some(&crabomination::card::SelectionRequirement::OpponentPlayer));
+    assert_eq!(g.players.iter().filter(|p| !p.is_alive()).count(), 1, "one opponent lost");
+}

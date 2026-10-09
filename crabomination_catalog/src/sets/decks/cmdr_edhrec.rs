@@ -3379,3 +3379,112 @@ pub fn mechtitan_core() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Efficient Construction — {3}{U} Enchantment. Casting an artifact spell
+/// makes a 1/1 flying Thopter.
+pub fn efficient_construction() -> CardDefinition {
+    CardDefinition {
+        name: "Efficient Construction",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition {
+                    name: "Thopter".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: creature_types(vec![CreatureType::Thopter]),
+                    ..Default::default()
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crystal Skull, Isu Spyglass — {2}{U}{U} Legendary Artifact. Look at your
+/// library's top any time; play historic lands and cast historic spells from
+/// there; {T}: {U}.
+pub fn crystal_skull_isu_spyglass() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Crystal Skull, Isu Spyglass",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may play historic lands and cast historic spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::historic() },
+            },
+        ],
+        activated_abilities: vec![crate::sets::tap_add(Color::Blue)],
+        ..Default::default()
+    }
+}
+
+/// Mirrodin Besieged — {2}{U} Enchantment; as it enters, choose Mirran (an
+/// artifact spell makes a 1/1 Myr) or Phyrexian (your end step loots, then
+/// with fifteen or more artifact cards in your graveyard target opponent
+/// loses the game).
+pub fn mirrodin_besieged() -> CardDefinition {
+    use crate::card::EnterMode;
+    let myr = TokenDefinition {
+        name: "Myr".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Myr]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mirrodin Besieged",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        enter_modes: Some(vec![
+            EnterMode {
+                label: "Mirran",
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                        .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+                    effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(myr) },
+                }],
+                ..Default::default()
+            },
+            EnterMode {
+                label: "Phyrexian",
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                    effect: Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        Effect::If {
+                            cond: Predicate::ValueAtLeast(
+                                Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Artifact },
+                                Value::Const(15),
+                            ),
+                            // "Target opponent" — a player slot read through
+                            // `ControllerOf`, as Tariel's.
+                            then: Box::new(Effect::LoseGame {
+                                who: PlayerRef::ControllerOf(Box::new(target_filtered(R::OpponentPlayer))),
+                            }),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ]),
+                }],
+                ..Default::default()
+            },
+        ]),
+        ..Default::default()
+    }
+}
