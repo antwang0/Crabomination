@@ -4739,6 +4739,11 @@ pub enum Effect {
     /// pass leaves the high bid standing. `then` runs for the high bidder.
     /// Pain's Reward (CR 104.3 — a bid above your life total is legal).
     LifeBidding { then: Box<Effect> },
+    /// "Starting with you, each player may pay any amount of life. Repeat
+    /// this process until no one pays life. Each player creates a
+    /// `definition` token for each 1 life they paid this way." Plague of
+    /// Vermin (CR 119.4: no more life than a player has).
+    EachPlayerPaysLifeForTokens { definition: std::sync::Arc<crate::card::TokenDefinition> },
     /// "You may pay {X}. When you do, [body with X]." — the controller
     /// picks X at resolution via `Decision::ChooseAmount` (0 = decline,
     /// the AutoDecider default), capped by their pool plus one per untapped

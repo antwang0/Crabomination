@@ -814,7 +814,8 @@ impl Effect {
             | Effect::PlayerChoosesToDestroy { .. }
             | Effect::CastCommanderWithoutPaying
             | Effect::PutCommandersFromCommandZonesOntoBattlefield
-            | Effect::NextSpellHasAffinityForArtifacts => false,
+            | Effect::NextSpellHasAffinityForArtifacts
+            | Effect::EachPlayerPaysLifeForTokens { .. } => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
             Effect::CoffinExile { what }

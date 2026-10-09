@@ -97,6 +97,7 @@ mod theft;
 mod stack_and_command;
 mod politics;
 mod targeting;
+mod life_rounds;
 /// The target enumerator's call-site census — see
 /// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
 /// census feature only; the module itself stays private.
@@ -16318,6 +16319,10 @@ impl GameState {
                 let r = self.run_effect(then, ctx, events);
                 self.chosen_number_this_resolution = 0;
                 r
+            }
+
+            Effect::EachPlayerPaysLifeForTokens { definition } => {
+                self.pay_life_rounds_for_tokens(definition, ctx, effect, events)
             }
 
             Effect::LifeBidding { then } => {
