@@ -5177,3 +5177,479 @@ pub fn explosive_singularity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Skyclave Pick-Axe — {G} Equipment. ETB: attach to target creature you
+/// control. Landfall: equipped creature gets +2/+2 until end of turn. Equip
+/// {2}{G}.
+pub fn skyclave_pick_axe() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::effect::shortcut::landfall;
+    CardDefinition {
+        name: "Skyclave Pick-Axe",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2), g()]))],
+        triggered_abilities: vec![
+            etb(Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) }),
+            landfall(Effect::PumpPT {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Staff of Titania — {2} Equipment. Equipped creature gets +X/+X, X your
+/// Forests; when it attacks, create a 1/1 green Forest Dryad land creature
+/// token. Equip {3}.
+pub fn staff_of_titania() -> CardDefinition {
+    use crate::card::{EquipBonus, EquipScale, LandType};
+    let dryad = TokenDefinition {
+        name: "Forest Dryad".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Land, CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], land_types: vec![LandType::Forest], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Staff of Titania",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: R::HasLandType(LandType::Forest).and(R::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+                ..Default::default()
+            }),
+            triggered_abilities: vec![on_attack(mint(dryad, Value::ONE))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Scythecat Cub — {1}{G} 2/2 trample Cat. Landfall: a +1/+1 counter on
+/// target creature you control — the second resolution this turn doubles its
+/// +1/+1 counters instead. (Counted to the tenth landfall a turn.)
+pub fn scythecat_cub() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::landfall;
+    let counter = || Effect::AddCounter {
+        what: target_filtered(R::Creature.and(R::ControlledByYou)),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    let mut branches = vec![
+        counter(),
+        Effect::DoubleCountersOnEach {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+        },
+    ];
+    branches.extend((0..8).map(|_| counter()));
+    CardDefinition {
+        name: "Scythecat Cub",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Cat]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![landfall(Effect::NthResolutionThisTurn { branches })],
+        ..Default::default()
+    }
+}
+
+/// Roaring Earth — {1}{G} Enchantment. Landfall: a +1/+1 counter on target
+/// creature or Vehicle you control. Channel — {X}{G}{G}, discard it: X +1/+1
+/// counters on target land you control; it becomes a 0/0 green Spirit
+/// creature with haste that's still a land.
+pub fn roaring_earth() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType};
+    use crate::effect::Duration;
+    use crate::effect::shortcut::landfall;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Roaring Earth",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![landfall(Effect::AddCounter {
+            what: target_filtered(
+                R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)).and(R::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), g(), g()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::Land.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
+                },
+                Effect::BecomeCreature {
+                    what: Selector::Target(0),
+                    power: Value::Const(0),
+                    toughness: Value::Const(0),
+                    creature_types: vec![CreatureType::Spirit],
+                    keywords: vec![Keyword::Haste],
+                    duration: Duration::Permanent,
+                },
+                Effect::BecomeColor {
+                    what: Selector::Target(0),
+                    colors: vec![Color::Green],
+                    duration: Duration::Permanent,
+                    additive: false,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Longshot, Rebel Bowman — {3}{R} 3/3 reach Human Rebel Ally. Noncreature
+/// spells you cast cost {1} less; casting one deals 2 damage to each opponent.
+pub fn longshot_rebel_bowman() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Longshot, Rebel Bowman",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Ally]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Noncreature spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: R::Noncreature, amount: 1 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Noncreature)),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Allied Teamwork — {2}{W} Enchantment. ETB: a 1/1 white Ally. Allies you
+/// control get +1/+1.
+pub fn allied_teamwork() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Allied Teamwork",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(mint(token_1_1("Ally", Color::White, CreatureType::Ally), Value::ONE))],
+        static_abilities: vec![StaticAbility {
+            description: "Allies you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Ally).and(R::ControlledByYou)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sokka's Charge — {3}{W} Enchantment. During your turn, Allies you control
+/// have double strike and lifelink.
+pub fn sokkas_charge() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let grant = |keyword| StaticEffect::WhileYourTurn {
+        inner: Box::new(StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Ally).and(R::ControlledByYou)),
+            keyword,
+        }),
+    };
+    CardDefinition {
+        name: "Sokka's Charge",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility { description: "During your turn, Allies you control have double strike.", effect: grant(Keyword::DoubleStrike) },
+            StaticAbility { description: "During your turn, Allies you control have lifelink.", effect: grant(Keyword::Lifelink) },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Chandra's Pyreling — {1}{R} 1/3 Elemental Lizard. Whenever a source you
+/// control deals noncombat damage to an opponent, +1/+0 and double strike
+/// until end of turn.
+pub fn chandras_pyreling() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Chandra's Pyreling",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elemental, CreatureType::Lizard]),
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDealtNoncombatDamage, EventScope::YourSourceDamagedOpponent),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                Effect::GrantKeywords { what: Selector::This, keywords: vec![Keyword::DoubleStrike], duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hissing Iguanar — {2}{R} 3/1 Lizard. Whenever another creature dies, you
+/// may have it deal 1 damage to target player or planeswalker.
+pub fn hissing_iguanar() -> CardDefinition {
+    CardDefinition {
+        name: "Hissing Iguanar",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Lizard]),
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
+            effect: Effect::MayDo {
+                description: "Deal 1 damage to target player or planeswalker?".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(R::Player.or(R::Planeswalker)),
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Master of Barbs — {1}{R} 2/1 menace Lizard Bard. Whenever one or more
+/// opponents are dealt noncombat damage, creatures you control get +1/+0
+/// until end of turn.
+pub fn master_of_barbs() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Master of Barbs",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Lizard, CreatureType::Bard]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDealtNoncombatDamage, EventScope::OpponentControl).once_per_batch(),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Collective Inferno — {3}{R}{R} Enchantment, convoke. As it enters, choose a
+/// creature type; sources you control of that type deal double damage.
+pub fn collective_inferno() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Collective Inferno",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Convoke],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
+        static_abilities: vec![StaticAbility {
+            description: "Double all damage that sources you control of the chosen type would deal.",
+            effect: StaticEffect::DoubleDamageFromControlledMatching { filter: R::IsSourceChosenCreatureType },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ingenuity Engine — {7} Artifact, cascade. {1}, {T}, sacrifice an artifact:
+/// return target artifact you control to its owner's hand.
+pub fn ingenuity_engine() -> CardDefinition {
+    CardDefinition {
+        name: "Ingenuity Engine",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Cascade],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_other_filter: Some((R::Artifact, 1)),
+            sac_other_may_be_source: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Artifact.and(R::ControlledByYou)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Alena, Kessig Trapper — {4}{R} 4/3 first strike Human Scout, partner. {T}:
+/// add {R} equal to the greatest power among creatures you control that
+/// entered this turn.
+pub fn alena_kessig_trapper() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Alena, Kessig Trapper",
+        cost: cost(&[generic(4), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Scout]),
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Partner],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Red,
+                    Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(R::Creature.and(R::EnteredThisTurn)))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Maelstrom Colossus — {8} 7/7 Golem artifact creature with cascade.
+pub fn maelstrom_colossus() -> CardDefinition {
+    CardDefinition {
+        name: "Maelstrom Colossus",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Golem]),
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Cascade],
+        ..Default::default()
+    }
+}
+
+/// Myojin of Roaring Blades — {5}{R}{R}{R} 7/4 Spirit. Enters with an
+/// indestructible counter if cast from hand; remove one: 7 damage to each of
+/// up to three targets.
+pub fn myojin_of_roaring_blades() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Myojin of Roaring Blades",
+        cost: cost(&[generic(5), r(), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Spirit]),
+        power: 7,
+        toughness: 4,
+        enters_with_counters: Some((
+            CounterType::Indestructible,
+            Value::IfPred { pred: Box::new(Predicate::CastFromHand), then: Box::new(Value::ONE), else_: Box::new(Value::ZERO) },
+        )),
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Indestructible, 1)),
+            effect: Effect::ApplyToTargets {
+                max_targets: 3,
+                min_targets: 0,
+                filter: R::Creature.or(R::Player).or(R::Planeswalker).or(R::HasCardType(CardType::Battle)),
+                effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(7) }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Arbaaz Mir — {R}{W} 2/2 Human Assassin. Whenever it or another nontoken
+/// historic permanent you control enters, 1 damage to each opponent and you
+/// gain 1 life.
+pub fn arbaaz_mir() -> CardDefinition {
+    CardDefinition {
+        name: "Arbaaz Mir",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Assassin]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::Any(vec![
+                Predicate::TriggerSourceIsSelf,
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::historic().and(R::NotToken) },
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gala Greeters — {1}{G} 1/1 Elf Druid. Alliance: whenever another creature
+/// you control enters, choose one not chosen this turn — a +1/+1 counter on
+/// it, a tapped Treasure, or 2 life.
+pub fn gala_greeters() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Gala Greeters",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Druid]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)),
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+            ])),
+            effect: Effect::ChooseUnchosenModeThisTurn {
+                modes: vec![
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    mint(TokenDefinition { tapped: true, ..crabomination_base::tokens::treasure_token() }, Value::ONE),
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Saltskitter — {3}{W} 3/4 Wurm. Whenever another creature enters, exile it;
+/// it returns under its owner's control at the beginning of the next end step.
+pub fn saltskitter() -> CardDefinition {
+    CardDefinition {
+        name: "Saltskitter",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Wurm]),
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
+                Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)),
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+            ])),
+            effect: Effect::ExileReturnToOwnerNextEndStep { what: Selector::This, tapped: false },
+        }],
+        ..Default::default()
+    }
+}

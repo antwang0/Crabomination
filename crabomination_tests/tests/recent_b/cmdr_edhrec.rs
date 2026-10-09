@@ -2909,3 +2909,143 @@ fn explosive_singularity_and_transcendent_message() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
 }
+
+fn landfall_now(g: &mut GameState) {
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.players[0].lands_played_this_turn = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(g);
+}
+
+/// Tifa's landfall kit: Pick-Axe hops on and pumps on landfall; Staff of
+/// Titania counts Forests and makes a Dryad on attack; Scythecat Cub's second
+/// landfall doubles; Roaring Earth's landfall counter.
+#[test]
+fn tifa_landfall_kit() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    let axe = g.add_card_to_hand(0, catalog::skyclave_pick_axe());
+    cast(&mut g, axe, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(bear));
+    ready(&mut g, 0, catalog::scythecat_cub());
+    landfall_now(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2 + 2 + 1, "axe +2, cub's counter");
+    landfall_now(&mut g);
+    let n = g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(n, 2, "the second resolution doubles");
+
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::roaring_earth());
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    let staff = ready(&mut g, 0, catalog::staff_of_titania());
+    g.battlefield_find_mut(staff).unwrap().attached_to = Some(bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "two Forests");
+    landfall_now(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    connect(&mut g, bear);
+    assert_eq!(named(&g, "Forest Dryad"), 1);
+}
+
+/// Sokka's Allies: Longshot shaves noncreature spells and pings on them;
+/// Allied Teamwork's Ally is 2/2; Sokka's Charge gives double strike on your
+/// turn only.
+#[test]
+fn sokka_allies() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::longshot_rebel_bowman());
+    let life = g.players[1].life;
+    let team = g.add_card_to_hand(0, catalog::allied_teamwork());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, team, None);
+    assert_eq!(g.players[1].life, life - 2, "a noncreature spell, a {{1}} cheaper");
+    let ally = g.battlefield.iter().find(|c| c.definition.name == "Ally").map(|c| c.id).unwrap();
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 2);
+    ready(&mut g, 0, catalog::sokkas_charge());
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::DoubleStrike));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::DoubleStrike));
+}
+
+/// Gev's Lizards: Pyreling and Master of Barbs answer a Bolt to an opponent;
+/// Hissing Iguanar pings on a death; Collective Inferno doubles the chosen
+/// type's damage.
+#[test]
+fn gev_lizards() {
+    use crabomination::card::{CreatureType, Keyword};
+    let mut g = pod(2);
+    let pyre = ready(&mut g, 0, catalog::chandras_pyreling());
+    let barbs = ready(&mut g, 0, catalog::master_of_barbs());
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    let cp = g.computed_permanent(pyre).unwrap();
+    assert_eq!(cp.power, 1 + 1 + 1, "Pyreling +1, Barbs +1");
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
+    assert_eq!(g.computed_permanent(barbs).unwrap().power, 3);
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hissing_iguanar());
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g);
+    g.players[0].hostile_player_targets = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(victim)));
+    assert_eq!(g.players[1].life, life - 1);
+
+    let mut g = pod(2);
+    let lizard = ready(&mut g, 0, catalog::hissing_iguanar());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Lizard)]));
+    let inferno = g.add_card_to_hand(0, catalog::collective_inferno());
+    cast(&mut g, inferno, None);
+    let life = g.players[1].life;
+    connect(&mut g, lizard);
+    assert_eq!(g.players[1].life, life - 6, "a 3-power Lizard doubled");
+}
+
+/// Rocco's and Tannuk's tables: Myojin of Roaring Blades, cast, carries an
+/// indestructible counter it spends for 7 to up to three targets; Arbaaz Mir
+/// drains on a historic arrival; Gala Greeters cycles its modes; Saltskitter
+/// blinks to the end step; Alena taps for the biggest newcomer's power.
+#[test]
+fn rocco_and_tannuk_cards() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    flood(&mut g);
+    let myojin = g.add_card_to_hand(0, catalog::myojin_of_roaring_blades());
+    cast(&mut g, myojin, None);
+    assert_eq!(g.battlefield_find(myojin).unwrap().counter_count(CounterType::Indestructible), 1);
+    let life = g.players[1].life;
+    activate(&mut g, myojin, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 7);
+    assert_eq!(g.battlefield_find(myojin).unwrap().counter_count(CounterType::Indestructible), 0);
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::arbaaz_mir());
+    ready(&mut g, 0, catalog::gala_greeters());
+    let salt = ready(&mut g, 0, catalog::saltskitter());
+    flood(&mut g);
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast(&mut g, ring, None);
+    assert_eq!((g.players[0].life, g.players[1].life), (mine + 1, theirs - 1), "Arbaaz on a historic");
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None);
+    assert!(g.battlefield_find(salt).is_none(), "Saltskitter blinked out");
+    let alena = ready(&mut g, 0, catalog::alena_kessig_trapper());
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, alena, None);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "the Bear entered this turn");
+    to_end_step(&mut g);
+    assert!(g.battlefield_find(salt).is_some(), "back at the end step");
+}
