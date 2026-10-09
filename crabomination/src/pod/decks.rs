@@ -8591,3 +8591,32 @@ pub const SYTHIS_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const JIN_SAKAI_COMMANDERS: &[CardFactory] = &[jin_sakai_ghost_of_tsushima];
+
+/// **Jin Sakai, Ghost of Tsushima**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 85 nonbasic cards + 6 Islands + 4 Plains + 4 Swamps = 99.
+/// Esper lone attackers: Jin Sakai grants each solo attacker double strike or unblockability.
+pub const JIN_SAKAI_MAIN: &[CardFactory] = &[
+    arcane_signet, buster_sword, excalibur_sword_of_eden, fellwar_stone, genji_glove,
+    lightning_greaves, shadowspear, sol_ring, swiftfoot_boots, sword_of_feast_and_famine,
+    sword_of_fire_and_ice, sword_of_the_animist, talisman_of_dominance, talisman_of_hierarchy,
+    talisman_of_progress, the_key_to_the_vault, thought_vessel, adarkar_wastes, arcane_sanctum,
+    caves_of_koilos, command_tower, drowned_catacomb, eiganjo_castle, exotic_orchard,
+    flooded_strand, glacial_fortress, godless_shrine, hallowed_fountain, isolated_chapel,
+    marsh_flats, morphic_pool, polluted_delta, raffines_tower, reliquary_tower, rogues_passage,
+    sea_of_clouds, vault_of_champions, watery_grave, archpriest_of_shadows, baleful_strix,
+    cloud_midgar_mercenary, delney_streetwise_lookout, enduring_curiosity, esper_sentinel,
+    fallen_shinobi, grim_hireling, kamiz_obscura_oculus, malcolm_alluring_scoundrel,
+    medomai_the_ageless, mistblade_shinobi, nashi_moon_sages_scion, psychic_frog,
+    puresteel_paladin, rev_tithe_extractor, shredder_shadow_master, silent_hallcreeper,
+    silent_blade_oni, squall_seed_mercenary, stoneforge_mystic, summon_primal_odin,
+    unstoppable_slasher, yuriko_the_tigers_shadow, forge_anew, ghostly_prison, propaganda,
+    rhystic_study, sigardas_aid, smothering_tithe, super_state, an_offer_you_cant_refuse,
+    anguished_unmaking, arcane_denial, counterspell, deadly_rollick, dovins_veto,
+    flawless_maneuver, path_to_exile, swan_song, swords_to_plowshares, teferis_protection,
+    void_rend, damn, open_the_armory, steelshapers_gift, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, plains, plains, plains, plains, swamp, swamp,
+    swamp, swamp,
+];
