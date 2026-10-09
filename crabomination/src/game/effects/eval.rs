@@ -1137,6 +1137,9 @@ impl GameState {
             Value::TurnNumber => self.turn_number as i32,
             // Turn 1 starts without an `advance_turn`, so it is not in the
             // tally: it belongs to `starting_player` (CR 103.5).
+            Value::EquipsActivatedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map_or(0, |p| self.players[p].equips_activated_this_turn as i32),
             Value::TurnsBegunBy(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| (self.players[p].turns_begun + u32::from(p == self.starting_player)) as i32)

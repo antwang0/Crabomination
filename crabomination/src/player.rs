@@ -248,6 +248,10 @@ pub struct PlayerCold {
     pub milled_spell_cast_this_turn: bool,
     #[serde(default)]
     pub milled_land_played_this_turn: bool,
+    /// Equip abilities this player activated this turn (Forge Anew's "the
+    /// first equip ability you activate during each of your turns").
+    #[serde(default)]
+    pub equips_activated_this_turn: u32,
     /// Kagha, Shadow Archdruid's once-a-turn milled play, used this turn.
     #[serde(default)]
     pub milled_once_used_this_turn: bool,

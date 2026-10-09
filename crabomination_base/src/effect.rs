@@ -1010,6 +1010,8 @@ pub enum Value {
     /// The game's current turn number (CR 500 — the first turn is 1). Powers
     /// "the first upkeep" gates (Sentinel Dispatch).
     TurnNumber,
+    /// Equip abilities `who` activated this turn (Forge Anew's first equip).
+    EquipsActivatedThisTurn(PlayerRef),
     /// How many turns `who` has begun this game, the current one included —
     /// "during your first, second, or third turns of the game" (Serra
     /// Avenger) is `TurnsBegunBy(You) <= 3`. Extra turns count; skipped ones

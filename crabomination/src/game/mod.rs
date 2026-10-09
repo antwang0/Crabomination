@@ -22695,10 +22695,15 @@ impl GameState {
     /// activate equip abilities any time you could cast an instant" (Leonin
     /// Shikari), lifting the equip sorcery-speed gate.
     fn controller_equips_at_instant_speed(&self, player: usize) -> bool {
+        // Through `active_static`, so a gated grant counts only while its
+        // gate holds (Forge Anew's "during your turn").
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::ControllerEquipAtInstantSpeed)
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::ControllerEquipAtInstantSpeed)
+                    )
                 })
         })
     }
@@ -23020,6 +23025,7 @@ impl GameState {
             c.once_per_turn_used.push(crate::card::KEYWORD_ACTIVATION_SLOT);
         }
         let old = c.attached_to.replace(target);
+        self.players[p].equips_activated_this_turn = self.players[p].equips_activated_this_turn.saturating_add(1);
         if let Some(host) = old.filter(|&h| h != target) {
             let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
             self.note_unattached(equipment, &def, ctrl, host);
