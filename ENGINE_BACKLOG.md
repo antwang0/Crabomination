@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 38 |
+| Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 63 |
 | Bugs & robustness | [FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls](#fixed-2026-10-09-twelfth-commander-run-01g4zua3--per-slot-6082b-for-spells-four-more-invariants-two-bot-stalls) | 40 |
 | Bugs & robustness | [FIXED 2026-10-08 (tenth Commander run, `01GdFPW9`) — state invariants on the audit build](#fixed-2026-10-08-tenth-commander-run-01gdfpw9--state-invariants-on-the-audit-build) | 113 |
 | Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 80 |
@@ -183,6 +183,31 @@ replaying it (`CRAB_POD_TRACE=0`, the last 60 stack tops):
 - Legit: two CR 104.4a all-lose draws (Abyssal Persecutor's controller died
   last; a Pyrohemia board), one `MAX_STACK` cap (Mizzix's Mastery overload
   under Veyran).
+
+Later sweeps (42001: 317 decks × 4/6/8 × 20 strict; 42002: 3/5 seats fuzzed
++ concessions; 43001: 4/6 × 30; 43002: 3/5/7 fuzzed) found:
+
+- **CR 400.7** — Spell Crumple bottomed a kicked spell still marked kicked
+  (the link invariant aborted an 8-seat pod, seed 4200188):
+  `CounterSpellToZone` / `MoveSpellToZone` now forget spell choices for a
+  hand or library destination.
+- **A primed loop** — Marauding Raptor cast beside Polyraptor starts nothing
+  until Polyraptor's first damage; the probe now fires each repeatable token
+  trigger once on the resolved board (`loop_hazard::sets_up_loop`). Left:
+  Gishath putting Polyraptor in beside the Raptor (a resolution pick).
+- **The frozen control burns itself in pods** — `bot_ladder --commander`
+  pilots the `baseline` profile, whose player-slot walkers name the caster
+  first: Crackle with Power hit its own caster twice (two all-lose draws).
+  Both walkers ask `hostile_player_slot` now, on in every pod.
+- **CR 701.8a** — a may-discard payoff (Pia, Formidable Speaker, every
+  `MayDiscard`) discarded the highest mana values for every seat; a
+  prompting seat names its cards now (`game/discard_pick.rs`).
+- **Giver of Runes** — protection from colorless is a choice
+  (`GrantProtectionFromChosenColorOrColorless`; `stack_threat` /
+  `stack_threat_color` share one walk).
+
+After them: 43001 read 4 undecided in 4,020 (a `MAX_STACK` cap, two
+all-lose draws, the Gishath line) and 43002 1 in 4,340.
 
 Also this run: **CR 702.189a / 605.1b — firebending uses the stack** (2025
 ruling; it was resolved as a mana ability, so Isshin never doubled it and
