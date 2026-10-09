@@ -26031,6 +26031,27 @@ impl GameState {
             .count()
     }
 
+    /// Extra fires for a death-caused trigger of `source`: one per Drivnod
+    /// (`DoubleControllerDeathTriggers`) `controller` controls, plus one per
+    /// The Masamune attached to `source` itself.
+    pub(crate) fn death_trigger_extra_fires(&self, controller: usize, source: CardId) -> usize {
+        use crate::effect::StaticEffect as SE;
+        self.battlefield
+            .iter()
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| match sa.effect {
+                        SE::DoubleControllerDeathTriggers => c.controller == controller,
+                        SE::DoubleEquippedCreatureDeathTriggers => c.attached_to == Some(source),
+                        _ => false,
+                    })
+                    .count()
+            })
+            .sum()
+    }
+
     /// Count active Isshin-style attack-trigger doublers a player controls
     /// (`StaticEffect::DoubleControllerAttackTriggers` — Windcrag Siege's Mardu
     /// mode). Each adds one extra fire to a permanent's attack-caused trigger.
@@ -26232,17 +26253,7 @@ impl GameState {
                 // permanent its controller controls fires an additional time
                 // per Drivnod.
                 let death_extra = if triggered_by_death {
-                    self.battlefield
-                        .iter()
-                        .filter(|c| c.controller == controller)
-                        .flat_map(|c| &c.definition.static_abilities)
-                        .filter(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::DoubleControllerDeathTriggers
-                            )
-                        })
-                        .count()
+                    self.death_trigger_extra_fires(controller, source)
                 } else {
                     0
                 };
@@ -33373,6 +33384,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerPermanentTriggers
             | StaticEffect::DoubleYourInstantSorceryCastTriggers
             | StaticEffect::DoubleControllerDeathTriggers
+            | StaticEffect::DoubleEquippedCreatureDeathTriggers
             | StaticEffect::DoubleControllerAttackTriggers
             // Hama Pashar — read in `Effect::Venture` via
             // `dungeon_room_extra_fires`; no layer effect.

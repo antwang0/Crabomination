@@ -7673,9 +7673,8 @@ pub fn absolute_virtue() -> CardDefinition {
 }
 
 /// The Masamune — {3} Legendary Equipment. While the equipped creature is
-/// attacking it has first strike and must be blocked if able. Equip {2}.
-/// ("While attacking" is modeled as "during your turn"; the death-trigger
-/// doubler rider is dropped.)
+/// attacking it has first strike and must be blocked if able, and a creature
+/// dying makes its triggered abilities trigger an additional time. Equip {2}.
 pub fn the_masamune() -> CardDefinition {
     CardDefinition {
         name: "The Masamune",
@@ -7688,9 +7687,17 @@ pub fn the_masamune() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
-            during_your_turn_keywords: vec![Keyword::FirstStrike, Keyword::MustBeBlocked],
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: SelectionRequirement::IsAttacking,
+                keywords: vec![Keyword::FirstStrike, Keyword::MustBeBlocked],
+                ..Default::default()
+            }],
             ..Default::default()
         }),
+        static_abilities: vec![StaticAbility {
+            description: "Equipped creature's death-caused triggered abilities trigger an additional time.",
+            effect: StaticEffect::DoubleEquippedCreatureDeathTriggers,
+        }],
         ..Default::default()
     }
 }
@@ -8581,11 +8588,10 @@ pub fn louisoixs_sacrifice() -> CardDefinition {
 
 /// Kefka, Court Mage // Kefka, Ruler of Ruin — {2}{U}{B}{R} 4/5 Human Wizard
 /// (transform DFC). When Kefka enters or attacks, each player discards a card,
-/// then you draw a card. {8}: Each opponent sacrifices a permanent, then
-/// transform Kefka (sorcery-speed). Back: 5/7 flying; whenever an opponent
-/// loses life during your turn, you draw that many cards.
-/// (Approximation: the front's "draw a card for each card type among the
-/// discarded cards" is modeled as a flat draw of one.)
+/// then you draw a card for each card type among the discarded cards. {8}: Each
+/// opponent sacrifices a permanent, then transform Kefka (sorcery-speed). Back:
+/// 5/7 flying; whenever an opponent loses life during your turn, you draw that
+/// many cards.
 pub fn kefka_court_mage() -> CardDefinition {
     use crate::card::ActivatedAbility;
     let discard_draw = || {
@@ -8597,7 +8603,9 @@ pub fn kefka_court_mage() -> CardDefinition {
             },
             Effect::Draw {
                 who: Selector::You,
-                amount: Value::ONE,
+                amount: Value::CardTypesAmong(Box::new(Selector::DiscardedThisResolution {
+                    filter: SelectionRequirement::Any,
+                })),
             },
         ])
     };

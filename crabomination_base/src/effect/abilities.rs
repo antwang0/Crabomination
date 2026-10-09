@@ -1844,6 +1844,11 @@ pub enum StaticEffect {
     /// an additional time." Read at trigger dispatch off the
     /// `triggered_by_death` candidate flag.
     DoubleControllerDeathTriggers,
+    /// The Masamune — "Equipped creature has 'If a creature dying causes a
+    /// triggered ability of this creature … to trigger, that ability triggers
+    /// an additional time.'" `DoubleControllerDeathTriggers` scoped to the
+    /// triggers of the permanent this Equipment is attached to.
+    DoubleEquippedCreatureDeathTriggers,
     /// Isshin, Two Heavens as One / Windcrag Siege (Mardu) — "If a creature
     /// attacking causes a triggered ability of a permanent you control to
     /// trigger, that ability triggers an additional time." Read at trigger

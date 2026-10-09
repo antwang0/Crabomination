@@ -9501,17 +9501,7 @@ impl GameState {
             // Drivnod, Carnage Dominus — a creature dying causes this trigger,
             // so it fires an additional time per Drivnod its controller runs.
             let fires = 1 + if dying_creature_controller.is_some() {
-                self.battlefield
-                    .iter()
-                    .filter(|c| c.controller == controller)
-                    .flat_map(|c| &c.definition.static_abilities)
-                    .filter(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::DoubleControllerDeathTriggers
-                        )
-                    })
-                    .count()
+                self.death_trigger_extra_fires(controller, source)
             } else {
                 0
             };

@@ -4154,20 +4154,55 @@ fn absolute_virtue_shape_and_controller_hexproof() {
     assert!(g.player_has_static_hexproof(0), "controller has static hexproof");
 }
 
-/// The Masamune grants first strike + must-be-blocked only during your turn.
+/// The Masamune grants first strike + must-be-blocked only while the equipped
+/// creature attacks (not merely during your turn).
 #[test]
 fn the_masamune_conditional_combat_keywords() {
+    use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
     let bearer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let sword = g.add_card_to_battlefield(0, catalog::the_masamune());
     g.battlefield_find_mut(sword).unwrap().attached_to = Some(bearer);
+    g.clear_sickness(bearer);
     g.active_player_idx = 0;
+    assert!(!g.computed_permanent(bearer).unwrap().keywords().contains(&Keyword::FirstStrike),
+        "not attacking: no first strike, even on your turn");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bearer, target: AttackTarget::Player(1) }]))
+        .expect("attack");
     let cp = g.computed_permanent(bearer).unwrap();
     assert!(cp.keywords().contains(&Keyword::FirstStrike) && cp.keywords().contains(&Keyword::MustBeBlocked),
-        "first strike + lure on your turn");
-    g.active_player_idx = 1;
-    assert!(!g.computed_permanent(bearer).unwrap().keywords().contains(&Keyword::FirstStrike),
-        "no bonus on the opponent's turn");
+        "first strike + lure while attacking");
+}
+
+/// The Masamune: a creature dying makes the EQUIPPED creature's death-caused
+/// trigger fire an additional time — another creature's trigger is untouched.
+#[test]
+fn the_masamune_doubles_the_bearers_death_triggers() {
+    let mut g = two_player_game();
+    let bearer = g.add_card_to_battlefield(0, catalog::zulaport_cutthroat());
+    let sword = g.add_card_to_battlefield(0, catalog::the_masamune());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bearer);
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let life = g.players[1].life;
+    let ctx = crabomination::game::effects::EffectContext::for_ability(fodder, 0, None);
+    let events = g.resolve_effect(&crabomination::effect::Effect::SacrificePermanent {
+        what: crabomination::effect::Selector::This,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "Zulaport's drain fired twice");
+    // Unequipped, it fires once.
+    g.battlefield_find_mut(sword).unwrap().attached_to = None;
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(fodder, 0, None);
+    let events = g.resolve_effect(&crabomination::effect::Effect::SacrificePermanent {
+        what: crabomination::effect::Selector::This,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "once without the Masamune");
 }
 
 /// Dark Knight's Greatsword's Job select mints a Hero and grants +3/+0 Knight.
@@ -4653,6 +4688,21 @@ fn kefka_dfc_stats_and_back_draw() {
     ctx.event_amount = 3;
     g.resolve_effect(&eff, &ctx).unwrap();
     assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew 3 for the 3 life lost");
+}
+
+/// Kefka's enters/attacks trigger draws one card per card type among the
+/// discarded cards: a land and an artifact creature are three types.
+#[test]
+fn kefka_draws_per_card_type_discarded() {
+    let mut g = two_player_game();
+    let kefka = g.add_card_to_battlefield(0, catalog::kefka_court_mage());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(1, catalog::ornithopter());
+    let eff = catalog::kefka_court_mage().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(kefka, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), 3, "Land + Artifact + Creature");
 }
 
 /// Kefka's {8} sorcery-speed ability edicts each opponent and transforms him.
