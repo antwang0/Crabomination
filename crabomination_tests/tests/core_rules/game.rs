@@ -7314,20 +7314,36 @@ fn cr_701_12c_exchange_life_totals_swaps_both_players() {
         "P1 lost life — its life-gained counter is unchanged");
 }
 
+/// CR 701.12c / 115.3 — Soul Conduit: "two target players exchange life
+/// totals". In a three-seat game the two named opponents swap; the
+/// activator is untouched.
 #[test]
 fn soul_conduit_activation_exchanges_life_totals() {
-    let mut g = two_player_game();
+    let mut g = crabomination::game::multi_player_game(3);
     g.set_life(0, 4);
     g.set_life(1, 28);
+    g.set_life(2, 9);
     let conduit = g.add_card_to_battlefield(0, catalog::soul_conduit());
     g.players[0].mana_pool.add_colorless(6);
     g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: conduit, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Soul Conduit activates at sorcery speed for {6}, {T}");
+        card_id: conduit, ability_index: 0, target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Player(1)], x_value: None, mode: None,
+    }).expect("Soul Conduit: you and seat 1");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, 28, "P0 takes the opponent's previous total");
-    assert_eq!(g.players[1].life, 4, "opponent takes P0's previous total");
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (28, 4, 9), "you and seat 1 swapped");
+    // Two opponents may be named instead.
+    g.battlefield_find_mut(conduit).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(6);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: conduit, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(2)], x_value: None, mode: None,
+    }).expect("Soul Conduit: seats 1 and 2");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (28, 9, 4), "seats 1 and 2 swapped");
 }
 
 /// CR 119.7 — exchanging life totals routes through the life funnel, so a

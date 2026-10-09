@@ -317,11 +317,11 @@ pub fn zuran_orb() -> CardDefinition {
     }
 }
 
-/// Soul Conduit — {6} Artifact. "{6}, {T}: Exchange life totals with target
-/// player." (CR 701.12c; the current oracle prints no timing rider — the
-/// sorcery-speed gate it shipped with until 2026-09-07 was an older printing's). Targets the opponent
-/// in heads-up via `Selector::Player(EachOpponent)` rather than a player
-/// prompt.
+/// Soul Conduit — {6} Artifact. "{6}, {T}: Two target players exchange life
+/// totals." (CR 701.12c; the current oracle prints no timing rider — the
+/// sorcery-speed gate it shipped with until 2026-09-07 was an older
+/// printing's.) Two player slots (CR 115.3: two different players); it was
+/// you and "each opponent", which in a pod named no one in particular.
 pub fn soul_conduit() -> CardDefinition {
     use crate::effect::Selector;
     CardDefinition {
@@ -334,8 +334,8 @@ pub fn soul_conduit() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(6)]),
             effect: Effect::ExchangeLifeTotals {
-                a: Selector::You,
-                b: Selector::Player(PlayerRef::EachOpponent),
+                a: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Player },
+                b: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Player },
             },
             ..Default::default()
         }],

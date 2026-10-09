@@ -117,6 +117,31 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED/OPEN 2026-10-09 (thirteenth Commander run, `01Ug49mf`, late) — one search per "up to N", spells a Move can lift, and type-union scans
+
+- **CR 701.19 — an up-to-N search is ONE search** (`game/search_batch.rs`).
+  `SearchUpToN` ran N single searches: Leonin Arbiter charged its {2} per
+  card (an unpaid first pick was asked again on the next) and Ob Nixilis
+  Unshackled fired per card. The first pick is the search; later picks share
+  its gate and event. ⚠ Open: a suspended (UI-asked) pick rebuilds the rest
+  as a fresh `SearchUpToN`, which re-runs the gate.
+- **CR 608.2 — a `Move` whose target is a spell lifts it off the stack**
+  (`game/move_spell.rs`, through `MoveSpellToZone`): Brutal Expulsion's
+  "spell or creature" left the spell to resolve; Venser, Shaper Savant and
+  Divide by Zero now carry a spell mode.
+- **Type-union scans** (`scripts/audit_vehicle_targets.py`, and an ad-hoc
+  "player or planeswalker" pass): creature-only reads of "creature or
+  Vehicle" (Fire Nation Engineer, Gas Guzzler, Agonasaur Rex) and
+  player-only reads of "player or planeswalker" (Lava Spike, Skullcrack —
+  which also locked only its target's life gain — Viashino Pyromancer,
+  Telim'Tor's Darts). Soul Conduit's current text is two target players.
+- **Bot: a symmetric X never kills its caster** (`server/x_self_harm.rs`;
+  Earthquake X = 11 at 11 life drew a won pod).
+- ⚠ **Open (bot): no picker activates a life exchange** — Soul Conduit
+  (cube) is never used; activated abilities go through per-effect pickers
+  and none covers `ExchangeLifeTotals`. A `pick_life_swap` (self + the
+  highest-life opponent, when the gap is worth {6}) is the shape.
+
 ## FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls
 
 Shipped first: **CR 608.2b for a spell's every slot** (the tenth run's NEXT
