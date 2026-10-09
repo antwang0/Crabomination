@@ -207,7 +207,18 @@ Later sweeps (42001: 317 decks × 4/6/8 × 20 strict; 42002: 3/5 seats fuzzed
   `stack_threat_color` share one walk).
 
 After them: 43001 read 4 undecided in 4,020 (a `MAX_STACK` cap, two
-all-lose draws, the Gishath line) and 43002 1 in 4,340.
+all-lose draws, the Gishath line) and 43002 1 in 4,340. Then 44001 (`--a
+dflt`, the production pilot, 4 seats × 4) and 44002 (4/6/8 × 20):
+
+- **CR 508.5** — the attacked-planeswalker defender record was cleared only
+  while attackers remained in combat, so a combat whose attackers all died
+  kept it, and a later attack on the stolen Saheeli named the old controller
+  (the CR 509.1a block invariant aborted a dflt pod, seed 4400396).
+- **CR 603.2** — `fire_step_triggers` ignored `from_opponent`: Fatespinner
+  ("each opponent's upkeep") triggered on its controller's own upkeep and the
+  bot skipped its own draw step for 70 turns (two no-progress draws).
+- **Symmetric X** — `x_self_harm` now reads an X creature's ETB (Exocrine) and
+  halves the cap per X doubler (Unbound Flourishing).
 
 Also this run: **CR 702.189a / 605.1b — firebending uses the stack** (2025
 ruling; it was resolved as a mana ability, so Isshin never doubled it and
