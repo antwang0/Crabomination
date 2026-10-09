@@ -295,12 +295,10 @@ and four other artifact creatures and/or Vehicles you control" is a cost; the
 Core's own exile is (`exile_self_cost`), the four are exiled as the ability
 resolves behind a `condition` that four exist — so a response that removes
 one still mints Mechtitan off three. Needs an exile-other-permanents cost
-beside `sac_other_filter`. · **Firebender Ascension** (Fire Lord Azula's
-EDHREC seat): the Soldier ETB is real, but "whenever a creature you control
-attacking causes a triggered ability of that creature to trigger, put a quest
-counter ... copy that ability" is dropped — it needs an event for an
-attack-caused trigger of the attacker itself that names the queued ability
-(firebending's triggered mana ability included), so the copy can find it.
+beside `sac_other_filter`. · ✅ **Firebender Ascension**'s quest-counter
+copy ships (`Keyword::AttackTriggerQuestCopy`, `game/quest_copy.rs`; firebending
+now uses the stack, CR 605.1b). An equipment-granted attack trigger the attack
+commit sources off the Equipment does not count as the creature's.
 
 ### 7. Whole keyword mechanics unmodeled (each = a cluster)
 - **Learn** → modeled as Draw 1 (Reduce // Rubble, Mascot Interpretation, the Lessons cycle, Quandrix Field Trip).

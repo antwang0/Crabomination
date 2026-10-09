@@ -2703,6 +2703,25 @@ fn fire_lord_azula_court() {
     assert_eq!(g.players[0].experience, 3);
 }
 
+/// Firebender Ascension: an attacker's own attack trigger (Jeong Jeong's
+/// firebending) puts a quest counter on it, and at four the ability is copied —
+/// the copy resolves first (ruling), so the attack makes {R}{R}.
+#[test]
+fn firebender_ascension_copies_an_attack_trigger_at_four_quests() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let asc = g.add_card_to_battlefield(0, catalog::firebender_ascension());
+    g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 3);
+    let jj = ready(&mut g, 0, catalog::jeong_jeong_the_deserter());
+    g.step = TurnStep::DeclareAttackers;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: jj, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 4);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "firebending and its copy");
+}
+
 fn advance_to_turn_of(g: &mut GameState, seat: usize) {
     loop {
         let ev = g.advance_step(Vec::new()).expect("step");

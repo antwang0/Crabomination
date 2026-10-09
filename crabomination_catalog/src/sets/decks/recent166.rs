@@ -306,13 +306,16 @@ pub fn phoenix_fleet_airship() -> CardDefinition {
 }
 
 /// Firebender Ascension — {1}{R} Enchantment. When it enters, create a 2/2 red
-/// Soldier creature token with firebending 1. (The quest-counter copy ability is
-/// dropped — the ETB body is the played piece.)
+/// Soldier creature token with firebending 1. Whenever a creature you control
+/// attacking causes a triggered ability of that creature to trigger, put a
+/// quest counter on it; then at four or more you may copy that ability
+/// (`Keyword::AttackTriggerQuestCopy`).
 pub fn firebender_ascension() -> CardDefinition {
     CardDefinition {
         name: "Firebender Ascension",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::AttackTriggerQuestCopy],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
