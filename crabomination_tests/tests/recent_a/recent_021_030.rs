@@ -1028,6 +1028,27 @@ mod recent23 {
             "granted trample + indestructible");
     }
 
+    /// CR 301.7 — the cycle trigger reads "target creature or Vehicle": a
+    /// non-creature Vehicle you control is a legal target.
+    #[test]
+    fn agonasaur_rex_cycle_counters_a_vehicle() {
+        use crabomination::card::CounterType;
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        let mut g = two_player_game();
+        let ferry = g.add_card_to_battlefield(0, catalog::skybox_ferry());
+        let rex = g.add_card_to_hand(0, catalog::agonasaur_rex());
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ferry))]));
+        g.perform_action(GameAction::Cycle { card_id: rex, x_value: None }).expect("cycle Agonasaur Rex");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(ferry).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+            "the Vehicle took both counters");
+    }
+
     /// Marketwatch Phantom gains flying when another small creature you control
     /// enters.
     #[test]

@@ -527,7 +527,7 @@ pub fn dynamite_diver() -> CardDefinition {
 }
 
 /// Gas Guzzler — {B} 2/1 Vampire Rogue with "Start your engines!". Enters
-/// tapped. Max speed — {B}, Sacrifice another creature: draw a card.
+/// tapped. Max speed — {B}, Sacrifice another creature or Vehicle: draw a card.
 pub fn gas_guzzler() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
@@ -550,7 +550,7 @@ pub fn gas_guzzler() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
             sac_other_filter: Some((
-                SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                SelectionRequirement::Creature.or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)).and(SelectionRequirement::OtherThanSource),
                 1,
             )),
             condition: Some(Predicate::SpeedAtLeast {
@@ -704,8 +704,8 @@ pub fn skittering_surveyor() -> CardDefinition {
 }
 
 /// Agonasaur Rex — {3}{G}{G} 8/8 Dinosaur with trample and Cycling {2}{G}. When
-/// you cycle it, put two +1/+1 counters on up to one target creature; it gains
-/// trample and indestructible until end of turn.
+/// you cycle it, put two +1/+1 counters on up to one target creature or
+/// Vehicle; it gains trample and indestructible until end of turn.
 pub fn agonasaur_rex() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -724,7 +724,7 @@ pub fn agonasaur_rex() -> CardDefinition {
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
-                filter: SelectionRequirement::Creature,
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
                 effect: Box::new(Effect::Seq(vec![
                     Effect::AddCounter {
                         what: Selector::Target(0),
