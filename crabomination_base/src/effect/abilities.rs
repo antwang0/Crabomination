@@ -3258,6 +3258,8 @@ pub enum StaticEffect {
     /// "If you would lose unspent mana, that mana becomes black instead"
     /// (Omnath, Locus of All). Kruphix's twin; read at the same sites.
     UnspentManaBecomesBlack,
+    /// "... becomes red instead" (Ozai, the Phoenix King); the same sites.
+    UnspentManaBecomesRed,
     /// CR 500.4 exception — "Players don't lose unspent mana as steps and
     /// phases end" (Upwelling). Every player's pool survives step/phase ends
     /// with its colors intact (it still empties at end of turn via cleanup's

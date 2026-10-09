@@ -2696,6 +2696,7 @@ fn play_pod_game(
                                     sa.effect,
                                     crate::effect::StaticEffect::UnspentManaBecomesColorless
                                         | crate::effect::StaticEffect::UnspentManaBecomesBlack
+                                        | crate::effect::StaticEffect::UnspentManaBecomesRed
                                         | crate::effect::StaticEffect::ManaPoolsNeverEmpty
                                         | crate::effect::StaticEffect::UnspentColorManaPersists(_)
                                 )

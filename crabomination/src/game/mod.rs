@@ -17793,6 +17793,7 @@ impl GameState {
                 c.definition.static_abilities.iter().filter_map(move |sa| match sa.effect {
                     StaticEffect::UnspentManaBecomesColorless => Some((c.controller, None)),
                     StaticEffect::UnspentManaBecomesBlack => Some((c.controller, Some(crate::mana::Color::Black))),
+                    StaticEffect::UnspentManaBecomesRed => Some((c.controller, Some(crate::mana::Color::Red))),
                     _ => None,
                 })
             })
@@ -34141,6 +34142,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventThisDamageToColor(_)
             | StaticEffect::UnspentManaBecomesColorless
             | StaticEffect::UnspentManaBecomesBlack
+            | StaticEffect::UnspentManaBecomesRed
             // Consulted directly at the step/phase pool-empty sites.
             | StaticEffect::ManaPoolsNeverEmpty
             | StaticEffect::UnspentColorManaPersists(_)
