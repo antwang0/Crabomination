@@ -12581,6 +12581,10 @@ impl GameState {
         // CR 608.2b — remember which targets are battlefield permanents right
         // now; resolution re-checks their legality.
         let mut card = card;
+        // CR 122.2 — counters don't follow a card onto the stack (a void
+        // counter rode Squee, the Immortal cast from exile; fuzzed audit pod,
+        // seed 3206648), save a card that keeps them (Me, the Immortal).
+        card.drop_counters_for_zone_change(crate::card::Zone::Stack);
         card.cast_bf_slots = self.battlefield_target_slots(target.as_ref(), &additional_targets);
         if self.cast_kick_count > 0 {
             card.kicked = true;

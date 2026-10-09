@@ -1387,3 +1387,26 @@ fn cr_400_7_a_graveyard_permission_does_not_follow_a_card_to_hand() {
     let c = g.players[0].hand.iter().find(|c| c.id == card).expect("in hand");
     assert!(c.may_play_until.is_none());
 }
+
+/// CR 122.2 — a card cast with counters on it (a void counter from exile)
+/// is a spell without them; Me, the Immortal-style "keeps its counters" cards
+/// aside. (Squee, the Immortal reached the stack with a void counter;
+/// fuzzed audit pod, seed 3206648.)
+#[test]
+fn cr_122_2_a_spell_carries_no_counters_onto_the_stack() {
+    use crabomination::mana::Color;
+    let mut g = main_phase();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].hand.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(crabomination::card::CounterType::Void, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    let on_stack = g.stack.iter().find_map(|si| match si {
+        crabomination::game::types::StackItem::Spell { card, .. } if card.id == bear => Some(card.counters.is_empty()),
+        _ => None,
+    });
+    assert_eq!(on_stack, Some(true));
+}
