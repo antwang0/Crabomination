@@ -3134,6 +3134,26 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-09 (Commander routine — fifteenth run, session `01TW7nNh`) — guardrail; entry costs
+
+Hot-path touch: every battlefield entry (cast, move, land drop, token copy)
+scans the entering card's `static_abilities` once for `EntersOnlyIfPaid`
+(`game/entry_cost.rs::has_entry_cost`, no clone). Release `bot_ladder` at
+`c5e2258a4`, Xeon @ 2.10 GHz.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split), thread_determinism ok;
+                 peak_rss 29.9 MiB; games_per_s 373.9 (single run, not a reading)
+audit pods       overflow profile + debug-assertions, strict answer log + sweep
+                 probe; seeds 55000/56000/58000, 327 decks x 3/4/6 seats x 10:
+                 2,460 games, 0 panics, 1 undecided (Crackle with Power's
+                 caster-first slot, fixed concurrently in fb67e19f8)
+2-player         release, seed 9301, 300 games an archetype: cube 2,395 / 5
+                 draws, sos 1,500 / 0, sealed 3,599 / 1 draw; 0 panics
+suite            24,691 / 0 / 5 strict; workspace clippy 0
+```
+
 ### 2026-10-09 (Commander routine — fourteenth run, session `01LidV9f`) — guardrail; loop avoidance
 
 Hot-path touches: the attack commit scans the battlefield once for
