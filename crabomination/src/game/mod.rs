@@ -26078,6 +26078,25 @@ impl GameState {
             .sum()
     }
 
+    /// Cloud, Midgar Mercenary — one extra fire for a trigger whose source
+    /// is an equipped Cloud or an Equipment attached to one. Source-first, so
+    /// a trigger from anything else costs one lookup.
+    pub(crate) fn source_trigger_extra_fires(&self, source: CardId) -> usize {
+        use crate::effect::StaticEffect as SE;
+        let Some(s) = self.battlefield_find(source) else { return 0 };
+        let doubles = |c: &crate::card::CardInstance| {
+            c.definition.static_abilities.iter().any(|sa| matches!(sa.effect, SE::EquippedSelfAndEquipmentTriggersTwice))
+        };
+        let host = if doubles(s) {
+            Some(s.id)
+        } else if s.definition.is_equipment() {
+            s.attached_to.filter(|h| self.battlefield_find(*h).is_some_and(doubles))
+        } else {
+            None
+        };
+        host.is_some_and(|h| self.attached_equipment_count(h) > 0) as usize
+    }
+
     /// Count active Isshin-style attack-trigger doublers a player controls
     /// (`StaticEffect::DoubleControllerAttackTriggers` — Windcrag Siege's Mardu
     /// mode). Each adds one extra fire to a permanent's attack-caused trigger.
@@ -26335,7 +26354,8 @@ impl GameState {
                     + attack_extra
                     + land_extra
                     + face_up_extra
-                    + damage_extra;
+                    + damage_extra
+                    + self.source_trigger_extra_fires(source);
                 let fires = if land_suppressed { 0 } else { fires };
                 for effect in std::iter::repeat_n(effect, fires) {
                     queue.push(PendingTriggerPush {
@@ -33411,6 +33431,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleYourInstantSorceryCastTriggers
             | StaticEffect::DoubleControllerDeathTriggers
             | StaticEffect::DoubleEquippedCreatureDeathTriggers
+            | StaticEffect::EquippedSelfAndEquipmentTriggersTwice
             // Read by the CR 514.2 cleanup sweep; no layer effect.
             | StaticEffect::KeepsDamageThroughCleanup
             // Read by the may-play exile cast's payment; no layer effect.

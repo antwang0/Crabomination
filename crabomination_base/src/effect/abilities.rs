@@ -1855,6 +1855,11 @@ pub enum StaticEffect {
     /// an additional time.'" `DoubleControllerDeathTriggers` scoped to the
     /// triggers of the permanent this Equipment is attached to.
     DoubleEquippedCreatureDeathTriggers,
+    /// Cloud, Midgar Mercenary — "As long as this is equipped, if a triggered
+    /// ability of this or an Equipment attached to it triggers, that ability
+    /// triggers an additional time." Read at trigger dispatch from the
+    /// trigger's source (`source_trigger_extra_fires`).
+    EquippedSelfAndEquipmentTriggersTwice,
     /// "Damage isn't removed from this creature during cleanup steps"
     /// (Ancient Adamantoise) — the CR 514.2 sweep skips it.
     KeepsDamageThroughCleanup,

@@ -2725,7 +2725,8 @@ impl GameState {
             // permanent you control fires an additional time per doubler.
             let fires = 1
                 + self.attack_trigger_extra_fires(controller)
-                + crate::game::actions::ally_trigger_extra_fires(self, controller, source);
+                + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+                + self.source_trigger_extra_fires(source);
             // CR 603.3d — a prompting attacker names the targets, each fire
             // on its own.
             if self.trigger_asks_targets(controller, &effect) {
@@ -2865,7 +2866,8 @@ impl GameState {
                 // permanent you control fires an additional time per doubler.
                 let fires = 1
                     + self.attack_trigger_extra_fires(ctrl)
-                    + crate::game::actions::ally_trigger_extra_fires(self, ctrl, src);
+                    + crate::game::actions::ally_trigger_extra_fires(self, ctrl, src)
+                    + self.source_trigger_extra_fires(src);
                 // CR 603.3d — a prompting controller names the targets.
                 if self.trigger_asks_targets(ctrl, &effect) {
                     let mode = self.pick_trigger_mode(&effect, src, ctrl);
@@ -7895,7 +7897,7 @@ impl GameState {
                     .count()
             } else {
                 0
-            };
+            } + self.source_trigger_extra_fires(trig_source);
             // CR 603.3d — a slot the engine picks (not the bound damaged
             // player) is a prompting controller's to name: Sword of Sinew and
             // Steel, Efreet Flamepainter. A batched or merged fire stays
