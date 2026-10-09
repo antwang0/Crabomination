@@ -157,6 +157,14 @@ undecided: 5 CR 104.4 draws, 3 caps) found two more, both fixed:
   entered (Grafdigger's Cage) stayed face down in its graveyard or library
   (Ghastly Conscription).
 
+A 6-seat `--card-census` over all 271 decks (seed 4401, 2,760 games) found
+two more, fixed: **CR 122.2** — a mass graveyard→library move kept a
+Skullbriar's counters (every such move now sheds them in
+`commander_zone_redirect_all`, the funnel they share); **CR 800.4a** — the
+departure pass exiled a stolen Yannik whose "until this leaves" return put the
+departing seat's own Etali onto the battlefield (linked and monarch-guarded
+returns now skip a departed owner's card).
+
 A fourth, fuzzed, on the fixed tree (seed 31517): 6,660 games, **0 panics**,
 3 undecided (one CR 104.4 draw, two Secret Arcade caps).
 
