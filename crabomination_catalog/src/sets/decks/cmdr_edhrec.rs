@@ -2325,3 +2325,74 @@ pub fn vantress_gargoyle() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rammas Echor, Ancient Shield — {3}{W} legendary artifact. Your second
+/// spell each turn draws a card and makes a 0/3 Wall with defender; at the
+/// beginning of combat on your turn, your defenders gain exalted until end
+/// of turn.
+pub fn rammas_echor_ancient_shield() -> CardDefinition {
+    use crate::effect::shortcut::{exalted, flurry};
+    let wall = TokenDefinition {
+        name: "Wall".into(),
+        power: 0,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: creature_types(vec![CreatureType::Wall]),
+        keywords: vec![Keyword::Defender],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rammas Echor, Ancient Shield",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            flurry(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                mint(wall, Value::ONE),
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+                effect: Effect::GrantTriggeredAbility {
+                    what: Selector::EachPermanent(R::Creature.and(R::HasKeyword(Keyword::Defender)).and(R::ControlledByYou)),
+                    trigger: Box::new(exalted()),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ghalta the Immovable — {8}{W} 0/7 Elder Dinosaur. Costs {X} less, X =
+/// the greatest toughness among creatures you control. Your creatures can
+/// attack as though they lacked defender; those with toughness greater than
+/// power assign combat damage equal to their toughness (CR 510.1c).
+pub fn ghalta_the_immovable() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Ghalta the Immovable",
+        cost: cost(&[generic(8), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elder, CreatureType::Dinosaur]),
+        power: 0,
+        toughness: 7,
+        self_cost_reduction_per: Some((Value::ToughnessOf(Box::new(Selector::GreatestToughnessYouControl)), 1)),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control can attack as though they didn't have defender.",
+                effect: StaticEffect::YourCreaturesCanAttackAsThoughNoDefender,
+            },
+            StaticAbility {
+                description: "Each creature you control with toughness greater than its power assigns combat damage equal to its toughness rather than its power.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ToughnessGreaterThanPower).and(R::ControlledByYou)),
+                    keyword: Keyword::AssignsCombatDamageByToughness,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -4646,6 +4646,8 @@ static DECKS: &[Factory] = &[
     super::decks::life_finds_a_way,
     super::decks::terisian_mindbreaker,
     super::decks::vantress_gargoyle,
+    super::decks::rammas_echor_ancient_shield,
+    super::decks::ghalta_the_immovable,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

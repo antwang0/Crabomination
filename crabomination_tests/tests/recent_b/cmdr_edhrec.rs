@@ -1387,3 +1387,33 @@ fn vantress_gargoyle_needs_a_full_graveyard() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: gar, target: AttackTarget::Player(1) }]))
         .expect("seven in the yard");
 }
+
+/// Ghalta the Immovable costs {X} less for your biggest toughness, and a
+/// 0/3 Wall swings for 3 under it.
+#[test]
+fn ghalta_discounts_and_walls_hit_by_toughness() {
+    let mut g = pod(2);
+    let wall = ready(&mut g, 0, catalog::wall_of_omens());
+    let ghalta = g.add_card_to_hand(0, catalog::ghalta_the_immovable());
+    // Wall of Omens is 0/4: {8}{W} - {4} = {4}{W}.
+    g.players[0].mana_pool.add(Color::White, 5);
+    cast(&mut g, ghalta, None);
+    assert!(g.battlefield_find(ghalta).is_some());
+    let life = g.players[1].life;
+    connect(&mut g, wall);
+    assert_eq!(life - g.players[1].life, 4, "the 0/4 Wall assigns 4");
+}
+
+/// Rammas Echor: the second spell in a turn draws and makes a Wall.
+#[test]
+fn rammas_echor_rewards_the_second_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::rammas_echor_ancient_shield());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    for _ in 0..2 {
+        let w = g.add_card_to_hand(0, catalog::cerulean_wisps());
+        cast(&mut g, w, Some(Target::Permanent(bear)));
+    }
+    assert_eq!(named(&g, "Wall"), 1);
+}
