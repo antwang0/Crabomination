@@ -137,6 +137,17 @@ the handoff.
   Telim'Tor's Darts). Soul Conduit's current text is two target players.
 - **Bot: a symmetric X never kills its caster** (`server/x_self_harm.rs`;
   Earthquake X = 11 at 11 life drew a won pod).
+- **"Up to one target" modelled as a required target is self-harm when
+  the slot is hostile**: the auto-pick falls back to its controller's own
+  permanent and `declines_own_side_pick` only spares an *optional* slot.
+  Fixed by `OptionalTargets { min: 0 }`: Loran of the Third Path (destroyed
+  its own Sol Ring), Summon: Bahamut, Syr Vondam, All-Fates Stalker,
+  Lodestone Needle, Petrifying Meddler, Conciliator's Duelist; Tishana's
+  Tidebinder got `Effect::CounterAbilityAndStripSource` (it stripped any
+  nonland permanent with nothing countered). ⚠ Open: an ad-hoc scan finds
+  ~70 more "up to one target" cards with no optional marker; most are
+  friendly or opponent-only filters, but graveyard-card slots (Raven Eagle,
+  Ardyn's Starscourge) can still exile your own card.
 - ⚠ **Open (bot): no picker activates a life exchange** — Soul Conduit
   (cube) is never used; activated abilities go through per-effect pickers
   and none covers `ExchangeLifeTotals`. A `pick_life_swap` (self + the
