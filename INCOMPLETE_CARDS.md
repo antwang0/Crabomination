@@ -892,7 +892,7 @@ and every one was checked against the oracle:
 |---|---|---|
 | ~~Awaken the Honored Dead~~ ✅ | a `{5}{W}{B}` **Sorcery** returning *every* creature card in your graveyard to the battlefield | the printed `{B}{G}{U}` **Enchantment — Saga**: I destroy target nonland permanent, II mill three, III `MayDiscard` → return target creature/land **from your graveyard** to hand. Not a dropped "may" at all — a different card |
 | ~~Myr Battlesphere~~ ✅ | tapped *every* untapped Myr on every attack | `Effect::MayDo` over the whole package (the printed intermediate X has no primitive) |
-| ~~Mox Diamond~~ ✅ | discarded *any* card, unconditionally, and kept the Mox either way | `MayDiscardMatching { filter: Land, then: Noop, else_: SacrificeSource }` — Drekavac's shape |
+| ~~Mox Diamond~~ ✅ | discarded *any* card, unconditionally, and kept the Mox either way | `MayDiscardMatching { filter: Land, then: Noop, else_: Move(This → Graveyard) }` — Drekavac's shape; not a sacrifice since 2026-10-09 (residual: it briefly enters either way) |
 | ~~Cloudpiercer~~ ✅ | mutate trigger discarded and drew unconditionally | `Effect::MayDiscard` |
 | ~~Highway Robbery~~ ✅ | discarded and drew two unconditionally, and would draw two off an empty hand | `Effect::MayDiscard`; the "or sacrifice a land" half of the choice is still not modelled and the doc says so |
 | Voltage Surge ✓ | — | false positive: `kicker_action_cost` is already optional |

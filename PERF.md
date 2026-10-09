@@ -3196,6 +3196,23 @@ pod census (2)   rebuilt audit binary: 5-seat x4 (45001+), 8-seat x4 under
 suite            24,595 / 0 / 5 (CRAB_ANSWER_LOG=strict, CARGO_INCREMENTAL=0)
 ```
 
+Later the same run (`16e5ed7d2`+): `SearchUpToN` swaps a one-byte
+`search_batch` in and out around its picks (`game/search_batch.rs`; a `u8`-sized
+enum, so `game_state_stays_small` holds), and `Effect::Move` scans the stack
+for each moved id (`game/move_spell.rs`; the stack is almost always empty or
+one deep). `release` on a 2.10 GHz Xeon.
+
+```text
+--bench          turns 27.64 / decisions a game 613.0 / 0 stalls — matches;
+                 determinism ok (all pairs split); 150,016 decisions/s;
+                 peak_rss 31.0 MiB
+pod census (3)   audit binary built mid-run: 3-seat x4 (47001+) and 4-seat x4
+                 (46001+) over 293 seats, strict — 688 games, 0 panics,
+                 5 CR 104.4b draws, 0 caps
+suite            24,951 / 0 / 5 after one test fix (the shroud edit had also
+                 rewritten Aegis of the Gods' hexproof assertion); clippy 0
+```
+
 ### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls
 
 Hot-path touches: `push_stack` ORs a battlefield-slot mark into spells too
