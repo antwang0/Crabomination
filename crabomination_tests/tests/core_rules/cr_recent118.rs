@@ -1263,3 +1263,23 @@ fn cr_712_4_a_transformed_permanent_is_exiled_front_face_up() {
     assert!(!c.transformed);
     assert_eq!(c.definition.name, "Voldaren Bloodcaster");
 }
+
+/// CR 701.40a / 708 — a card that was to be manifested but never reached the
+/// battlefield stays where it was, face up: Grafdigger's Cage keeps a Bear in
+/// the graveyard against Ghastly Conscription. It used to stay there face
+/// down (seven-seat fuzzed audit pod, seed 3141188 game 7).
+#[test]
+fn cr_701_40a_a_manifest_that_never_entered_leaves_the_card_face_up() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grafdiggers_cage());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let body = Effect::ManifestFromGraveyard {
+        who: PlayerRef::Seat(1),
+        filter: crabomination::card::SelectionRequirement::Creature,
+    };
+    resolve(&mut g, src, None, &body);
+    let c = g.players[1].graveyard.iter().find(|c| c.id == bear).expect("kept in the graveyard");
+    assert!(!c.face_down);
+    assert_eq!(c.definition.name, "Grizzly Bears");
+}

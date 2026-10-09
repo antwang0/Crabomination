@@ -2228,6 +2228,31 @@ impl GameState {
             tapped: false,
         };
         self.move_card_to(cid, &dest, ctx, events);
+        self.unturn_unmoved_manifest(cid, p);
+    }
+
+    /// CR 701.40a / 708 — a card turned face down to be manifested that did
+    /// not reach the battlefield (a replacement or the board bound kept it)
+    /// is face up again where it stayed: Ghastly Conscription left a card face
+    /// down in a graveyard (seven-seat fuzzed audit pod, seed 3141188 game 7).
+    fn unturn_unmoved_manifest(&mut self, cid: CardId, owner: usize) {
+        let Some(pl) = self.players.get(owner) else { return };
+        let stayed = |z: &[crate::card::CardInstance]| z.iter().any(|c| c.id == cid && c.face_down);
+        let (g, l, h) = (stayed(&pl.graveyard), stayed(&pl.library), stayed(&pl.hand));
+        if !(g || l || h) {
+            return;
+        }
+        let pl = &mut self.players[owner];
+        let zone: &mut [crate::card::CardInstance] = if g {
+            &mut pl.graveyard
+        } else if l {
+            &mut pl.library
+        } else {
+            &mut pl.hand
+        };
+        if let Some(c) = zone.iter_mut().find(|c| c.id == cid) {
+            c.reveal();
+        }
     }
 
     /// [`Self::manifest_card`] out of `owner`'s graveyard, under the resolving
@@ -2244,6 +2269,7 @@ impl GameState {
         }
         let dest = ZoneDest::Battlefield { controller: crate::effect::PlayerRef::Seat(ctx.controller), tapped: false };
         self.move_card_to(cid, &dest, ctx, events);
+        self.unturn_unmoved_manifest(cid, owner);
     }
 
     /// Exile `anchor_id` and every same-named card in its owner's graveyard,
