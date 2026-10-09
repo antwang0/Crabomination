@@ -3737,8 +3737,8 @@ pub fn borderland_ranger() -> CardDefinition {
     }
 }
 
-/// Viashino Pyromancer — {1}{R} 2/1 Lizard. ETB: deal 2 damage to target
-/// player.
+/// Viashino Pyromancer — {1}{R} 2/1 Lizard. ETB: deal 2 damage to target player or
+/// planeswalker.
 pub fn viashino_pyromancer() -> CardDefinition {
     CardDefinition {
         name: "Viashino Pyromancer",
@@ -3751,7 +3751,7 @@ pub fn viashino_pyromancer() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Player),
+            to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
             amount: Value::Const(2),
         })],
         ..Default::default()

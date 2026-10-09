@@ -1324,6 +1324,34 @@ fn cr_119_7_lifegain_lock_blocks_subsequent_drain_target() {
         "CR 119.7: locked player can't gain life from subsequent effects");
 }
 
+/// CR 119.7 / 120.3c — Skullcrack's "players can't gain life this turn"
+/// locks every player (not just its target), and its 3 damage may go to a
+/// planeswalker, removing that much loyalty.
+#[test]
+fn skullcrack_locks_every_player_and_can_hit_a_planeswalker() {
+    use crabomination::game::types::TurnStep;
+    let mut g = crabomination::game::multi_player_game(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let walker = g.add_card_to_battlefield(1, catalog::chandra_torch_of_defiance());
+    let loyalty = g.battlefield_find(walker).unwrap().counter_count(CounterType::Loyalty);
+    let crack = g.add_card_to_hand(0, catalog::skullcrack());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: crack, target: Some(Target::Permanent(walker)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skullcrack the planeswalker");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(walker).unwrap().counter_count(CounterType::Loyalty),
+        loyalty - 3,
+        "three loyalty removed"
+    );
+    assert!((0..3).all(|p| g.players[p].cannot_gain_life_this_turn), "every player is locked");
+}
+
 // ── Batch 153 unique tests ──────────────────────────────────────────────────
 
 #[test]

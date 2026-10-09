@@ -207,7 +207,7 @@ fn skullcrack_deals_three_damage_to_player() {
 }
 
 #[test]
-fn skullcrack_locks_target_player_lifegain_for_the_turn() {
+fn skullcrack_locks_every_players_lifegain_for_the_turn() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::skullcrack());
     g.players[0].mana_pool.add_colorless(1);
@@ -228,9 +228,12 @@ fn skullcrack_locks_target_player_lifegain_for_the_turn() {
     g.adjust_life(1, 5);
     assert_eq!(g.players[1].life, life_after_bolt,
         "CR 119.7 — locked player can't gain life");
-    // Caster (seat 0) is not locked.
+    // "Players can't gain life this turn" — the caster too (it read as
+    // the target only).
+    let caster_life = g.players[0].life;
     g.adjust_life(0, 5);
-    assert!(!g.players[0].cannot_gain_life_this_turn);
+    assert!(g.players[0].cannot_gain_life_this_turn);
+    assert_eq!(g.players[0].life, caster_life, "the caster can't gain life either");
 }
 
 #[test]

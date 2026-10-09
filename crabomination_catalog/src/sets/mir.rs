@@ -1250,7 +1250,7 @@ pub fn mana_prism() -> CardDefinition {
     }
 }
 
-/// Telim'Tor's Darts — {2} artifact that plinks a player each turn.
+/// Telim'Tor's Darts — {2} artifact that deals 1 to target player or planeswalker ({2}, {T}).
 pub fn telimtors_darts() -> CardDefinition {
     CardDefinition {
         name: "Telim'Tor's Darts",
@@ -1260,7 +1260,7 @@ pub fn telimtors_darts() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::Target(0)),
+                to: target_filtered(R::Player.or(R::Planeswalker)),
                 amount: Value::ONE,
             },
             ..Default::default()

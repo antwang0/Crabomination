@@ -235,7 +235,7 @@ pub fn duress() -> CardDefinition {
 
 // ── Burn / damage ────────────────────────────────────────────────────────────
 
-/// Lava Spike — {R} Sorcery. Lava Spike deals 3 damage to target player.
+/// Lava Spike — {R} Sorcery. Lava Spike deals 3 damage to target player or planeswalker.
 pub fn lava_spike() -> CardDefinition {
     CardDefinition {
         name: "Lava Spike",
@@ -246,7 +246,7 @@ pub fn lava_spike() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Player),
+            to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -10249,11 +10249,12 @@ pub fn skullcrack() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DamageCantBePreventedThisTurn,
+            // "Players can't gain life this turn" — every player, not the target.
             Effect::LifeGainLockThisTurn {
-                who: target_filtered(SelectionRequirement::Player),
+                who: Selector::Player(PlayerRef::EachPlayer),
             },
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Player),
+                to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
                 amount: Value::Const(3),
             },
         ]),
