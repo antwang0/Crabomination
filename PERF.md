@@ -3148,10 +3148,16 @@ scans the entering card's `static_abilities` once for `EntersOnlyIfPaid`
 audit pods       overflow profile + debug-assertions, strict answer log + sweep
                  probe; seeds 55000/56000/58000, 327 decks x 3/4/6 seats x 10:
                  2,460 games, 0 panics, 1 undecided (Crackle with Power's
-                 caster-first slot, fixed concurrently in fb67e19f8)
+                 caster-first slot, fixed concurrently in fb67e19f8); at
+                 `3b801a161` seeds 61000/62000 (330 decks x 5/8 seats x 10)
+                 and 63000 (4 seats x 10, CRAB_POD_FUZZ 2500 + CONCEDE 20):
+                 1,910 games, 0 panics, 0 undecided
 2-player         release, seed 9301, 300 games an archetype: cube 2,395 / 5
                  draws, sos 1,500 / 0, sealed 3,599 / 1 draw; 0 panics
 suite            24,691 / 0 / 5 strict; workspace clippy 0
+after holes      `--bench` re-run at `395e1a9d9` (CR 601.2c mode holes, bot
+                 mode-pick assembler): 196,176 / 27.64 / 613.0, byte-identical;
+                 cube / sos / sealed seed 9301 identical counts
 ```
 
 ### 2026-10-09 (Commander routine — fourteenth run, session `01LidV9f`) — guardrail; loop avoidance
