@@ -173,6 +173,8 @@ mod attack_apnap;
 mod trigger_batch;
 mod vow;
 mod graveyard_cast;
+pub(crate) mod search_batch;
+mod move_spell;
 mod growth_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
@@ -3504,6 +3506,11 @@ pub struct GameState {
     pub acted_on_own_turn_mask: u64,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
+    /// CR 701.19 — "search for up to N cards" is one search: the picks
+    /// `SearchUpToN` runs share its prohibitions, tax and event. See
+    /// `game/search_batch.rs`.
+    #[serde(skip)]
+    pub(crate) search_batch: crate::game::search_batch::SearchBatch,
     /// CR 701.38 — the seat whose vote the running `VoteTally::PerVote` body
     /// belongs to; read by `PlayerRef::CurrentVoter` (Expropriate).
     #[serde(default, skip)]
@@ -4460,6 +4467,7 @@ impl Clone for GameState {
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
+            search_batch: self.search_batch,
             current_voter: self.current_voter,
             graveyard_play_pooled_for: self.graveyard_play_pooled_for,
             next_replacement_id: self.next_replacement_id,
@@ -4683,6 +4691,7 @@ impl GameState {
             damaged_creatures_die_this_turn: false,
             creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
+            search_batch: Default::default(),
             current_voter: None,
             graveyard_play_pooled_for: None,
             controlled_by: Vec::new(),

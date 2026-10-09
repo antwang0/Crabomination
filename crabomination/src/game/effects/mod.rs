@@ -127,6 +127,7 @@ use crate::effect::{
 };
 use crate::decision::{AmountKind, OptionalKind, PayFor, PickValue};
 use crate::game::layers::EffectDuration;
+use crate::game::search_batch::SearchBatch;
 use crate::mana::Color;
 
 /// What `bind_scratch` displaced, for `restore_scratch` to put back. Not a
@@ -25298,6 +25299,10 @@ impl GameState {
                     if aura == Some(None) {
                         continue;
                     }
+                    // CR 608.2 — a targeted spell leaves the stack (`game/move_spell.rs`).
+                    if self.move_stack_spell(cid, to, ctx, events) {
+                        continue;
+                    }
                     self.move_card_to(cid, to, ctx, events);
                     if let Some(Some(host)) = aura {
                         self.attach_moved_aura(cid, host, events);
@@ -26101,8 +26106,15 @@ impl GameState {
                 // test thread's stack.
                 let one =
                     Effect::Search { who: who.clone(), filter: filter.clone(), to: to.clone() };
+                // CR 701.19 — the N picks are one search (`game/search_batch.rs`):
+                // a nested batch (a pick's own trigger) restores the outer one.
+                let outer = std::mem::replace(&mut self.search_batch, SearchBatch::First);
                 for done in 0..n {
-                    self.run_effect(&one, ctx, events)?;
+                    let step = self.run_effect(&one, ctx, events);
+                    if step.is_err() {
+                        self.search_batch = outer;
+                    }
+                    step?;
                     // A `wants_ui` pick suspends: splice the outstanding picks
                     // in after the suspend's own continuation and hand back.
                     if let Some((d, p, tail)) = self.suspend_signal.take().map(|b| *b) {
@@ -26113,9 +26125,11 @@ impl GameState {
                             count: crate::effect::Value::Const(n - done - 1),
                         };
                         self.suspend_signal = Some(Box::new((d, p, Effect::Seq(vec![tail, rest]))));
+                        self.search_batch = outer;
                         return Ok(());
                     }
                 }
+                self.search_batch = outer;
                 Ok(())
             }
 
@@ -26161,20 +26175,24 @@ impl GameState {
                 // The library-search prohibitions only bite when a library is
                 // actually being searched; a hand/graveyard-only search
                 // (Dark Supplicant with an empty library clause) goes ahead.
-                if include_library {
+                // CR 701.19 — a later pick of one "up to N" search shares the
+                // first pick's gate (`game/search_batch.rs`).
+                if include_library && let Some(go) = self.search_batch.skip_gate() {
+                    if !go {
+                        return Ok(());
+                    }
+                } else if include_library {
                     // Shadow of Doubt — no player may search a library this turn,
                     // so the search simply doesn't happen (CR 701.19 "can't search").
-                    if self.no_search_this_turn {
-                        return Ok(());
-                    }
                     // Ashiok, Dream Render — an opponent's `OpponentsCantSearchLibraries`
                     // static stops `p` from searching their own library.
-                    if self.player_search_locked_by_opponent(p) {
-                        return Ok(());
-                    }
                     // Leonin Arbiter — an unpayable search tax means the search
                     // happens but finds nothing (CR 701.19d).
-                    if !self.pay_search_tax(p) {
+                    let ok = !self.no_search_this_turn
+                        && !self.player_search_locked_by_opponent(p)
+                        && self.pay_search_tax(p);
+                    self.search_batch = self.search_batch.settle(ok);
+                    if !ok {
                         return Ok(());
                     }
                     // CR 701.19 — `p` searched their library this turn (Archive

@@ -715,6 +715,33 @@ fn leonin_arbiter_taxes_searches() {
     assert_eq!(g.players[0].mana_pool.total(), 0, "tax consumed the floating mana");
 }
 
+/// CR 701.19 — "search for up to two basic lands" is one search: Leonin
+/// Arbiter's {2} is paid once (not again per card) and Ob Nixilis
+/// Unshackled's "whenever an opponent searches their library" fires once.
+#[test]
+fn up_to_n_search_is_one_search_for_taxes_and_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::leonin_arbiter());
+    g.add_card_to_battlefield(1, catalog::ob_nixilis_unshackled());
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let lands: Vec<_> = (0..2).map(|_| g.add_card_to_library(0, catalog::forest())).collect();
+    let spell = g.add_card_to_hand(0, catalog::nissas_expedition());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4 + 2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Nissa's Expedition");
+    drain_stack(&mut g);
+    assert!(lands.iter().all(|&l| g.battlefield_find(l).is_some()), "one {{2}} tax covers both picks");
+    assert_eq!(g.players[0].life, life - 10, "Ob Nixilis saw one search");
+}
+
 /// Sanctifier en-Vec sweeps black/red graveyard cards on ETB and exiles
 /// later black/red cards bound for any graveyard (others still land there).
 #[test]

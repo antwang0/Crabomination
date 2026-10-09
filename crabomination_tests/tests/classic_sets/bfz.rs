@@ -729,3 +729,33 @@ fn grave_birthing_exiles_from_the_graveyard_only() {
     assert!(g.exile.iter().any(|c| c.id == in_gy));
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Eldrazi Scion"));
 }
+
+/// CR 115.1 / 608.2 — Brutal Expulsion's "return target spell or creature":
+/// a spell target leaves the stack for its owner's hand (a `Move` used to
+/// leave it there, so it resolved anyway).
+#[test]
+fn brutal_expulsion_returns_a_spell_to_its_owners_hand() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the bear");
+    let spell = g.add_card_to_hand(0, catalog::brutal_expulsion());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("Brutal Expulsion on the bear spell");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "the bear spell went back to hand");
+    assert!(g.battlefield_find(bear).is_none(), "and never resolved");
+}
