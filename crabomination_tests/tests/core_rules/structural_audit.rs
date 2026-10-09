@@ -603,6 +603,9 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
         "Grab the Prize",
         "Path of the Pyromancer",
         "Inkling Tutor (b179)",
+        // "Sacrifice X lands. For each land sacrificed this way, draw a
+        // card" — the sacrifice is the effect.
+        "Nahiri's Lithoforming",
         "Peer Past the Veil",
         "Planar Engineering",
         "Prismari Iteration",
