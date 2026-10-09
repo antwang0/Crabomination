@@ -1076,15 +1076,19 @@ pub fn doomskar_titan() -> CardDefinition {
 
 // ── Removal & combat tricks ──────────────────────────────────────────────────
 
-/// Ulcerate — {B} Instant. Destroy target creature; you lose 3 life.
+/// Ulcerate — {B} Instant. Target creature gets -3/-3 until end of turn; you
+/// lose 3 life.
 pub fn ulcerate() -> CardDefinition {
     CardDefinition {
         name: "Ulcerate",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy {
+            Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
             },
             Effect::LoseLife {
                 who: Selector::You,
@@ -11272,27 +11276,16 @@ pub fn cremate() -> CardDefinition {
 // ── modern_decks-15: 12 new cube cards ────────────────────────────────────────
 
 /// Strangle — {R} Sorcery. Strangle deals 3 damage to target creature or
-/// planeswalker. Surveil 1.
-///
-/// Single-target burn-plus-surveil instant — Drown in Ichor's red mirror.
-/// `Seq([DealDamage(target Creature, 3), Surveil 1])`.
+/// planeswalker.
 pub fn strangle() -> CardDefinition {
     CardDefinition {
         name: "Strangle",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(3),
-            },
-            Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker)),
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }

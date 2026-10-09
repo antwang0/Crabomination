@@ -310,16 +310,22 @@ fn vampire_lacerator_drain_turns_off_at_low_life() {
 
 // ── Removal & combat tricks ──────────────────────────────────────────────────
 
-/// Ulcerate destroys a creature and costs you 3 life.
+/// Ulcerate gives -3/-3 (it shipped as "destroy") and costs you 3 life: a
+/// 2/2 dies, an indestructible creature does too, a 4/4 survives as a 1/1.
 #[test]
-fn ulcerate_destroys_and_costs_life() {
+fn ulcerate_shrinks_and_costs_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::ulcerate());
     g.players[0].mana_pool.add(Color::Black, 1);
     cast_at(&mut g, id, Target::Permanent(bear));
-    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert!(g.battlefield_find(bear).is_none(), "the 2/2 died");
     assert_eq!(g.players[0].life, 17, "lost 3 life");
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::ulcerate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, id, Target::Permanent(angel));
+    assert_eq!(g.battlefield_find(angel).map(|c| c.toughness()), Some(1), "a 4/4 lives as 1/1");
 }
 
 /// Might of Old Krosa pumps a creature +4/+4.

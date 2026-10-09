@@ -4244,8 +4244,11 @@ pub fn torrential_gearhulk() -> CardDefinition {
 
 // ── Kitesail Larcenist ─────────────────────────────────────────────────────
 
-/// Kitesail Larcenist — {2}{U}, 2/3 Human Pirate with Flying. ETB: exile
-/// target nonland permanent an opponent controls. No LTB return clause.
+/// Kitesail Larcenist — {2}{U}, 2/3 Human Pirate with Flying, ward {1}.
+/// Residual: Oracle turns up to one other target artifact or creature per
+/// player into a Treasure for as long as this stays on the battlefield; this
+/// exiles one opponent's nonland permanent for good (`BecomeTreasure` has no
+/// source-scoped duration for its granted mana ability yet).
 pub fn kitesail_larcenist() -> CardDefinition {
     CardDefinition {
         name: "Kitesail Larcenist",
@@ -7053,8 +7056,8 @@ pub fn beast_whisperer() -> CardDefinition {
     }
 }
 
-/// Lotus Cobra — {1}{G} Creature — Snake 2/1. "Landfall — Whenever a land
-/// enters the battlefield under your control, create a Treasure token." (ZEN)
+/// Lotus Cobra — {1}{G} Creature — Snake 2/1. Landfall — whenever a land you
+/// control enters, add one mana of any color. (It shipped minting a Treasure.)
 pub fn lotus_cobra() -> CardDefinition {
     CardDefinition {
         name: "Lotus Cobra",
@@ -7068,10 +7071,9 @@ pub fn lotus_cobra() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::CreateToken {
+            effect: Effect::AddMana {
                 who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
+                pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
             },
         }],
         ..Default::default()

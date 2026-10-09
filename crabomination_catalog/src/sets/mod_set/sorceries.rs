@@ -194,27 +194,13 @@ pub fn natures_lore() -> CardDefinition {
     }
 }
 
-/// Fell — {1}{B} Sorcery. Destroy target tapped creature, then surveil 2.
-///
-/// The "tapped" predicate uses `SelectionRequirement::Tapped`; the surveil
-/// half rides on the existing primitive (interactive when `wants_ui`,
-/// otherwise auto-decided to keep cards on top).
+/// Fell — {1}{B} Sorcery. Destroy target creature.
 pub fn fell() -> CardDefinition {
     CardDefinition {
         name: "Fell",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
-                ),
-            },
-            Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
         ..Default::default()
     }
 }

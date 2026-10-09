@@ -229,11 +229,11 @@ fn blasphemous_edict_costs_b_with_thirteen_creatures() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
 }
 
+/// Fell destroys any creature — it shipped "tapped only, then surveil 2".
 #[test]
-fn fell_destroys_tapped_creature() {
+fn fell_destroys_an_untapped_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::forest());
     let fell = g.add_card_to_hand(0, catalog::fell());

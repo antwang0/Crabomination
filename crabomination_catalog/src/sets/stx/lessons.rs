@@ -64,29 +64,14 @@ pub fn square_up() -> CardDefinition {
 
 /// Brilliant Plan — {4}{U} Sorcery. NOT a Lesson: the printed card is the
 /// Portal Second Age sorcery, which prints no subtype, and the `Lesson` tag it
-/// carried made it fetchable by `Effect::Learn`.
-///
-/// "Scry 3, then draw three cards."
-///
-/// Pure card velocity. Wired as `Seq(Scry(3) → Draw(3))` so the
-/// Scry resolves first, letting the controller filter the next three
-/// draws. No target needed; the Scry uses `PlayerRef::You` and the Draw
-/// uses `Selector::You`.
+/// carried made it fetchable by `Effect::Learn`. "Draw three cards." (It
+/// shipped with an invented scry 3.)
 pub fn brilliant_plan() -> CardDefinition {
     CardDefinition {
         name: "Brilliant Plan",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(3),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        ]),
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
         ..Default::default()
     }
 }

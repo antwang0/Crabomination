@@ -942,8 +942,10 @@ fn beast_whisperer_draws_on_creature_cast() {
     assert_eq!(g.players[0].hand.len(), hand_before, "Beast Whisperer drew on the creature cast");
 }
 
+/// Lotus Cobra's landfall adds one mana of any color (it shipped minting a
+/// Treasure).
 #[test]
-fn lotus_cobra_makes_treasure_on_landfall() {
+fn lotus_cobra_adds_mana_on_landfall() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::lotus_cobra());
     let land = g.add_card_to_hand(0, catalog::forest());
@@ -952,9 +954,8 @@ fn lotus_cobra_makes_treasure_on_landfall() {
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::PlayLand(land)).expect("play a land");
     drain_stack(&mut g);
-    assert_eq!(
-        g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Treasure").count(),
-        1, "landfall minted a Treasure");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "landfall added a mana");
+    assert!(!g.battlefield.iter().any(|c| c.is_token), "no Treasure");
 }
 
 #[test]

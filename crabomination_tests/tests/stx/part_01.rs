@@ -2039,11 +2039,10 @@ fn illuminate_history_loots_then_makes_a_spirit_when_graveyard_full() {
     assert_eq!(spirits[0].toughness(), 2);
 }
 
-/// Brilliant Plan: a {3}{U}{U} Sorcery — Lesson. Scry 3 + Draw 3.
+/// Brilliant Plan: {4}{U} Sorcery, "Draw three cards." (no scry).
 #[test]
-fn brilliant_plan_scrys_three_and_draws_three() {
+fn brilliant_plan_draws_three() {
     let mut g = two_player_game();
-    // Seed library with 6 cards (Scry 3 + Draw 3 = touches 6 cards).
     for _ in 0..6 {
         g.add_card_to_library(0, catalog::island());
     }
@@ -2060,8 +2059,6 @@ fn brilliant_plan_scrys_three_and_draws_three() {
 
     // Hand: -1 (cast) +3 (draw) = +2 net.
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
-    // Library: -3 (drew 3). Scry may keep cards on top, so library size
-    // reduces by 3 net.
     assert_eq!(g.players[0].library.len(), lib_before - 3);
 }
 

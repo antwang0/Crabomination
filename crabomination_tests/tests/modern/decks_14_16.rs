@@ -1181,7 +1181,7 @@ fn geier_reach_sanitarium_wheel_ability_each_player_loots() {
 // ── modern_decks-15: 12 new cube cards ───────────────────────────────────────
 
 #[test]
-fn strangle_deals_three_damage_and_surveils() {
+fn strangle_deals_three_damage() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.add_card_to_library(0, catalog::island());
@@ -1199,11 +1199,7 @@ fn strangle_deals_three_damage_and_surveils() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Grizzly Bears (2-toughness) dies to 3 damage");
-    // Surveil 1 inspected the top card of the library, putting it either
-    // back on top or in the graveyard. Either outcome reduces or holds
-    // the library size; we just verify the cast didn't fail at surveil.
-    assert!(g.players[0].library.len() <= lib_before,
-        "Surveil 1 either kept or graveyarded the top card");
+    assert_eq!(g.players[0].library.len(), lib_before, "no surveil (Oracle has none)");
 }
 
 #[test]

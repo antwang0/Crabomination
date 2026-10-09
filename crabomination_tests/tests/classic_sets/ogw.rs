@@ -423,9 +423,10 @@ fn slaughter_drone_gains_deathtouch() {
     assert!(g.computed_permanent(id).unwrap().keywords().contains(&crabomination::card::Keyword::Deathtouch));
 }
 
-/// Witness the End makes the opponent discard two and lose 2 life.
+/// Witness the End makes the opponent EXILE two cards from hand (a madness
+/// card is not discarded) and lose 2 life.
 #[test]
-fn witness_the_end_discard_two_lose_two() {
+fn witness_the_end_exiles_two_lose_two() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
     let hand_before = g.players[1].hand.len();
@@ -434,7 +435,9 @@ fn witness_the_end_discard_two_lose_two() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     crabomination::game::cast_at(&mut g, id, Target::Player(1));
-    assert_eq!(g.players[1].hand.len(), hand_before - 2, "opponent discards two");
+    assert_eq!(g.players[1].hand.len(), hand_before - 2, "two cards left the hand");
+    assert!(g.players[1].graveyard.is_empty(), "exiled, not discarded");
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 1).count(), 2);
     assert_eq!(g.players[1].life, life_before - 2, "opponent loses 2 life");
 }
 
