@@ -3400,6 +3400,10 @@ pub enum SelectionRequirement {
     /// the evaluating source — one slot, filled with it (Bill Potts' "activate
     /// an ability that targets only Bill Potts").
     ActivatedAbilityTargetsOnlySource,
+    /// The permanent's latest activated ability on the stack has a target
+    /// matching the inner filter (Ertha Jo, Frontier Mentor's "an ability that
+    /// targets a creature or player").
+    ActivatedAbilityTargetsMatching(Box<SelectionRequirement>),
     /// CR 115.7 — a stack spell with exactly one target ("target spell with a
     /// single target" — Ricochet Trap, Deflection).
     SpellWithSingleTarget,

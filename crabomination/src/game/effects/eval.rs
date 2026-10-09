@@ -5982,6 +5982,21 @@ impl GameState {
                             _ => None,
                         }) == Some(true)
                     }),
+                    R::ActivatedAbilityTargetsMatching(inner) => self
+                        .stack
+                        .iter()
+                        .rev()
+                        .find_map(|si| match si {
+                            StackItem::Trigger { source: s, activated: true, target, additional_targets, .. }
+                                if *s == card.id =>
+                            {
+                                Some(target.iter().chain(additional_targets.iter()).any(|t| {
+                                    self.evaluate_requirement_static(inner, t, controller, source)
+                                }))
+                            }
+                            _ => None,
+                        })
+                        == Some(true),
                     R::SpellTargetsOnlySource => source.is_some_and(|src| {
                         self.stack.iter().any(|si| {
                             let StackItem::Spell { card: c, target, additional_targets, .. } = si
@@ -7337,6 +7352,7 @@ impl GameState {
             | R::CastSorceryThisTurn
             | R::SpellTargetsOnlySource
             | R::ActivatedAbilityTargetsOnlySource
+            | R::ActivatedAbilityTargetsMatching(_)
             | R::SpellWithSingleTarget
             | R::DealtDamageToControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
