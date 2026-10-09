@@ -8253,3 +8253,34 @@ pub const THRASIOS_MAIN: &[CardFactory] = &[
     // Basics
     island, forest,
 ];
+
+pub const GUIDELINE_COMMANDERS: &[CardFactory] = &[infinite_guideline_station];
+
+/// **Infinite Guideline Station**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 87 nonbasic cards + 4 Forests + 2 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Five-color Spacecraft: the Station's arrival makes Robots per multicolored permanent, and it draws on attack.
+pub const GUIDELINE_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, dawnsire_sunstar_dreadnought, exploration_broodship,
+    extinguisher_battleship, fellwar_stone, inspirit_flagship_vessel, lumen_class_frigate,
+    sledge_class_seedship, sol_ring, solar_array, the_eternity_elevator, the_seriema,
+    uthros_research_craft, warmaker_gunship, adagia_windswept_bastion, breeding_pool,
+    cascading_cataracts, command_bridge, command_tower, evendo_waking_haven, evolving_wilds,
+    exotic_orchard, godless_shrine, hallowed_fountain, indatha_triome, ketria_triome,
+    overgrown_tomb, path_of_ancestry, reflecting_pool, reliquary_tower, sacred_foundry,
+    sparas_headquarters, steam_vents, stomping_ground, temple_garden, the_world_tree,
+    uthros_titanic_godcore, watery_grave, windswept_heath, abuelo_ancestral_echo,
+    adrix_and_nev_twincasters, alibou_ancient_witness, aragorn_the_uniter, baleful_strix,
+    birds_of_paradise, bloom_tender, coiling_oracle, enthusiastic_mechanaut, faeburrow_elder,
+    fallaji_wayfarer, general_ferrous_rokiric, gold_forged_thopteryx, inga_and_esika,
+    jenson_carthalion_druid_exile, jhoira_weatherlight_captain, kilo_apogee_mind,
+    knight_of_new_alara, lotho_corrupt_shirriff, mendicant_core_guidelight, mmmenon_uthros_exile,
+    pinnacle_emissary, rienne_angel_of_rebirth, sami_ships_engineer, sami_wildcat_captain,
+    surge_conductor, tam_mindful_first_year, annie_joins_up, leyline_of_the_guildpact,
+    loading_zone, maelstrom_nexus, mana_cannons, miraris_wake, anguished_unmaking,
+    assassins_trophy, counterspell, drill_too_deep, heroic_intervention, path_to_exile,
+    swords_to_plowshares, jared_carthalion, cultivate, farseek, natures_lore, organic_extinction,
+    rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp,
+    swamp,
+];

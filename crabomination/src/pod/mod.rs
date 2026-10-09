@@ -2103,6 +2103,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THRASIOS_COMMANDERS,
             main: decks::THRASIOS_MAIN,
         },
+        // Seat 281: Infinite Guideline Station's EDHREC average deck. `--pod-decks 281`.
+        PodDeck {
+            name: "Infinite Guideline Station (BGRUW)",
+            commanders: decks::GUIDELINE_COMMANDERS,
+            main: decks::GUIDELINE_MAIN,
+        },
     ]
 }
 
@@ -3963,6 +3969,7 @@ mod tests {
             ("Hashaton, Scarab's Fist", [0x4A54, 278, 9203]),
             ("Kraum, Ludevic's Opus", [0x7A4B, 279, 9204]),
             ("Thrasios, Triton Hero", [0x7A51, 280, 9205]),
+            ("Infinite Guideline Station", [0x16E5, 281, 9206]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
