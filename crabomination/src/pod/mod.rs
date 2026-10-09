@@ -2127,6 +2127,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GOLBEZ_COMMANDERS,
             main: decks::GOLBEZ_MAIN,
         },
+        // Seat 285: Urza, Lord High Artificer's EDHREC average deck. `--pod-decks 285`.
+        PodDeck {
+            name: "Urza, Lord High Artificer (U)",
+            commanders: decks::URZA_LHA_COMMANDERS,
+            main: decks::URZA_LHA_MAIN,
+        },
     ]
 }
 
@@ -4025,6 +4031,7 @@ mod tests {
             ("Gishath, Sun's Avatar", [0x615A, 282, 9207]),
             ("Shorikai, Genesis Engine", [0x5401, 283, 9208]),
             ("Golbez, Crystal Collector", [0x601B, 284, 9209]),
+            ("Urza, Lord High Artificer", [0x0F2A, 285, 9210]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

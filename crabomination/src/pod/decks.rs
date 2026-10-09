@@ -8369,3 +8369,30 @@ pub const GOLBEZ_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const URZA_LHA_COMMANDERS: &[CardFactory] = &[urza_lord_high_artificer];
+
+/// **Urza, Lord High Artificer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 20 Islands = 99.
+/// Mono-blue artifacts: Urza's Construct grows with them, its artifacts tap for {U}, and {5} shuffles into a free spell.
+pub const URZA_LHA_MAIN: &[CardFactory] = &[
+    aether_spellbomb, arcane_signet, basalt_monolith, chrome_mox, everflowing_chalice,
+    howling_mine, isochron_scepter, lotus_petal, mana_vault, manifold_key, mishras_bauble,
+    mox_opal, mystic_forge, rings_of_brighthearth, sapphire_medallion, senseis_divining_top,
+    sol_ring, static_orb, the_one_ring, thought_vessel, tormods_crypt, unwinding_clock,
+    voltaic_key, welding_jar, winter_orb, academy_ruins, ancient_tomb, buried_ruin,
+    darksteel_citadel, inventors_fair, mystic_sanctuary, otawara_soaring_city, reliquary_tower,
+    seat_of_the_synod, urzas_saga, uthros_titanic_godcore, displacer_kitten,
+    emry_lurker_of_the_loch, etherium_sculptor, forensic_gadgeteer, foundry_inspector,
+    hullbreaker_horror, ornithopter, padeem_consul_of_innovation, phyrexian_metamorph,
+    sai_master_thopterist, shimmer_myr, spellskite, the_reality_chip, thought_monitor,
+    trinket_mage, vedalken_archmage, walking_ballista, efficient_construction, mystic_remora,
+    rhystic_study, thopter_spy_network, an_offer_you_cant_refuse, brainstorm, counterspell,
+    cyclonic_rift, dramatic_reversal, fierce_guardianship, force_of_negation, force_of_will,
+    mana_drain, muddle_the_mixture, mystical_tutor, pact_of_negation, pongify, swan_song,
+    whir_of_invention, narset_parter_of_veils, tezzeret_the_seeker, fabricate, ponder, reshape,
+    thoughtcast, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
