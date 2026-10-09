@@ -2969,7 +2969,12 @@ fn play_pod_game(
         // CR 725.4 / 726.4 — the monarch and the initiative pass on when their
         // holder leaves; neither stays with a seat that has left. Debug-only.
         #[cfg(debug_assertions)]
-        if !g.is_game_over() {
+        // As for the ownership check below: a departure deferred past a
+        // pending ask hands the monarchy on once it runs (a win drawn off an
+        // empty library under Chulane, fuzzed audit pod, seed 3206512 game 19).
+        if !g.is_game_over()
+            && (g.pending_decision.is_none() || !g.players.iter().any(|p| p.eliminated && !p.left_game))
+        {
             for (what, holder) in [("monarch", g.monarch), ("initiative", g.initiative)] {
                 if let Some(p) = holder.filter(|&p| !g.players.get(p).is_some_and(|q| q.is_alive())) {
                     panic!("seed {seed}: p{p} left holding the {what} (turn {}, after {actions} actions)", g.turn_number);
