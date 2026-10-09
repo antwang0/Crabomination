@@ -3175,3 +3175,147 @@ pub fn tam_mindful_first_year() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Skullspore Nexus — {6}{G}{G} Legendary Artifact; costs {X} less, X the
+/// greatest power among your creatures. One or more of your nontoken
+/// creatures dying makes a green Fungus Dinosaur whose base P/T is their total
+/// power; {2}, {T}: double target creature's power until end of turn.
+pub fn the_skullspore_nexus() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let fungus = TokenDefinition {
+        name: "Fungus Dinosaur".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: creature_types(vec![CreatureType::Fungus, CreatureType::Dinosaur]),
+        ..Default::default()
+    };
+    let total = || Value::PowerOf(Box::new(Selector::BoundTriggerBatch));
+    CardDefinition {
+        name: "The Skullspore Nexus",
+        cost: cost(&[generic(6), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is the greatest power among creatures you control.",
+            effect: StaticEffect::SelfCostReducedByGreatestPower,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Not(Box::new(R::IsToken)) })
+                .once_per_batch(),
+            effect: Effect::WithTriggerBatch {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(fungus) },
+                    Effect::SetBasePT { what: Selector::LastCreatedToken, power: total(), toughness: total(), duration: Duration::Permanent },
+                ])),
+                ids: vec![],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::PowerOf(Box::new(Selector::Target(0))),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Welcome to . . . // Jurassic Park — {1}{G}{G} Saga. I: for each opponent,
+/// up to one target noncreature artifact of theirs becomes a 0/4 defender
+/// Wall artifact creature while this Saga remains (a control change of the
+/// Saga isn't watched); II: a 3/3 trample Dinosaur with haste this turn; III:
+/// destroy all Walls, then exile and return transformed. Jurassic Park
+/// (Legendary Land): your graveyard's Dinosaur cards have escape (mana cost
+/// plus exiling three others); {T}: {G} per Dinosaur you control.
+pub fn welcome_to() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility, StaticEffect};
+    use crate::effect::ManaPayload;
+    let dino = TokenDefinition {
+        name: "Dinosaur".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: creature_types(vec![CreatureType::Dinosaur]),
+        ..Default::default()
+    };
+    let park = CardDefinition {
+        name: "Jurassic Park",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "Each Dinosaur card in your graveyard has escape: its mana cost plus exile three other cards from your graveyard.",
+            effect: StaticEffect::GraveyardCardsHaveEscapeMatching {
+                filter: R::HasCreatureType(CreatureType::Dinosaur),
+                exile_count: 3,
+                your_turn_only: false,
+                once_per_turn: false,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Green,
+                    Value::CountOf(Box::new(Selector::EachPermanent(
+                        R::Creature.and(R::HasCreatureType(CreatureType::Dinosaur)).and(R::ControlledByYou),
+                    ))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Welcome to . . .",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::ForEachOpponentTarget {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ControlledByOpponent),
+                        effect: Box::new(Effect::BecomeCreature {
+                            what: Selector::Target(0),
+                            power: Value::Const(0),
+                            toughness: Value::Const(4),
+                            creature_types: vec![CreatureType::Wall],
+                            keywords: vec![Keyword::Defender],
+                            duration: Duration::WhileSourceOnBattlefield,
+                        }),
+                    }),
+                },
+            ),
+            (
+                2,
+                Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(dino) },
+                    Effect::GrantKeyword { what: Selector::LastCreatedToken, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ]),
+            ),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::Destroy { what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Wall)) },
+                    Effect::ExileSelfReturnTransformed,
+                ]),
+            ),
+        ],
+        back_face: Some(Box::new(park)),
+        ..Default::default()
+    }
+}

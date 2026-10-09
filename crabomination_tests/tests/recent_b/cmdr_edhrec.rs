@@ -1882,3 +1882,51 @@ fn inga_and_esika_draws_off_creature_mana() {
     assert!(g.battlefield_find(giant).is_some());
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew off three creature mana");
 }
+
+/// The Skullspore Nexus: two nontoken bears dying together make one Fungus
+/// Dinosaur with their total power; {2}, {T} doubles a creature's power.
+#[test]
+fn skullspore_nexus_mints_a_fungus_of_their_total_power() {
+    let mut g = pod(2);
+    let nexus = ready(&mut g, 0, catalog::the_skullspore_nexus());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    flood(&mut g);
+    cast(&mut g, wrath, None);
+    let fungi: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Fungus Dinosaur").map(|c| c.id).collect();
+    assert_eq!(fungi.len(), 1, "one per batch");
+    let cp = g.computed_permanent(fungi[0]).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: nexus, ability_index: 0, target: Some(Target::Permanent(fungi[0])), additional_targets: vec![], x_value: None, mode: None })
+        .expect("double");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(fungi[0]).unwrap().power, 8);
+}
+
+/// Welcome to . . .: I walls up an opponent's noncreature artifact, II makes
+/// a hasty trample Dinosaur, III destroys the Walls and flips to Jurassic
+/// Park, which taps for {G} per Dinosaur.
+#[test]
+fn welcome_to_walls_then_becomes_jurassic_park() {
+    let mut g = pod(2);
+    let vault = ready(&mut g, 1, catalog::memorial_vault());
+    let saga = g.add_card_to_hand(0, catalog::welcome_to());
+    flood(&mut g);
+    cast(&mut g, saga, None);
+    let cp = g.computed_permanent(vault).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "a Wall now");
+    assert_eq!((cp.power, cp.toughness), (0, 4));
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Dinosaur"), 1);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vault).is_none(), "the Wall was destroyed");
+    let park = g.battlefield_find(saga).expect("returned transformed");
+    assert_eq!(park.definition.name, "Jurassic Park");
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, saga, None);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "one Dinosaur, one {{G}}");
+}
