@@ -3261,3 +3261,66 @@ fn ziatora_helga_vihaan_cards() {
     connect(&mut g, smaug);
     assert_eq!(g.players[1].life, life - 2 - 4, "two Treasures, then combat");
 }
+
+/// Tayam's untappers: Icatian Moneychanger banks credits and cashes them in at
+/// upkeep; Shang-Chi lets a summoning-sick creature tap; White Plume
+/// Adventurer takes the initiative and untaps a creature on an opponent's
+/// upkeep; Nature's Chosen untaps its white host, then taps it to untap a
+/// land.
+#[test]
+fn tayam_untappers() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    flood(&mut g);
+    let banker = g.add_card_to_hand(0, catalog::icatian_moneychanger());
+    let life = g.players[0].life;
+    cast(&mut g, banker, None);
+    assert_eq!(g.players[0].life, life - 3);
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(banker).unwrap().counter_count(CounterType::Credit), 4);
+    activate(&mut g, banker, None);
+    assert_eq!(g.players[0].life, life - 3 + 4);
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::shang_chi_master_of_kung_fu());
+    let elves = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: elves, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("a sick Elf taps under Shang-Chi");
+
+    let mut g = pod(2);
+    flood(&mut g);
+    let plume = g.add_card_to_hand(0, catalog::white_plume_adventurer());
+    cast(&mut g, plume, None);
+    assert_eq!(g.initiative, Some(0));
+    g.battlefield_find_mut(plume).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(plume).unwrap().tapped);
+
+    let mut g = pod(2);
+    let knight = ready(&mut g, 0, catalog::elite_vanguard());
+    let land = ready(&mut g, 0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    let chosen = ready(&mut g, 0, catalog::natures_chosen());
+    g.battlefield_find_mut(chosen).unwrap().attached_to = Some(knight);
+    g.battlefield_find_mut(knight).unwrap().tapped = true;
+    activate(&mut g, chosen, None);
+    assert!(!g.battlefield_find(knight).unwrap().tapped, "{{0}}: untap the host");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: chosen,
+        ability_index: 1,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap the host");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(knight).unwrap().tapped);
+    assert!(!g.battlefield_find(land).unwrap().tapped);
+}

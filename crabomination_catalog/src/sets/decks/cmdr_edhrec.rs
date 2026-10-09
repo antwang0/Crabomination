@@ -6221,3 +6221,132 @@ pub fn smaug_the_magnificent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Icatian Moneychanger — {W} 0/2 Human. Enters with three credit counters;
+/// ETB: 3 damage to you. Your upkeep: a credit counter. Sacrifice it during
+/// your upkeep: gain 1 life per credit counter.
+pub fn icatian_moneychanger() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Icatian Moneychanger",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human]),
+        power: 0,
+        toughness: 2,
+        enters_with_counters: Some((CounterType::Credit, Value::Const(3))),
+        triggered_abilities: vec![
+            etb(Effect::DealDamage { to: Selector::Player(PlayerRef::You), amount: Value::Const(3) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Credit, amount: Value::ONE },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Credit },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shang-Chi, Master of Kung Fu — {1}{G} 2/2 Human Warrior Hero. Your
+/// creatures' abilities may be activated as though they had haste. {T}: two
+/// mana of any one color, spent only on abilities of creature sources.
+pub fn shang_chi_master_of_kung_fu() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::ManaPayload;
+    use crate::mana::SpendRestriction;
+    CardDefinition {
+        name: "Shang-Chi, Master of Kung Fu",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Hero]),
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "You may activate abilities of creatures you control as though those creatures had haste.",
+            effect: StaticEffect::ControllerCreatureAbilitiesAsThoughHaste,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyOneColor(Value::Const(2))),
+                    SpendRestriction::CreatureAbilitiesOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// White Plume Adventurer — {2}{W} 3/3 Orc Cleric. ETB: you take the
+/// initiative. At the beginning of each opponent's upkeep, untap a creature
+/// you control — all of them if you've completed a dungeon.
+pub fn white_plume_adventurer() -> CardDefinition {
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::Tapped));
+    CardDefinition {
+        name: "White Plume Adventurer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Orc, CreatureType::Cleric]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::TakeInitiative { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::OpponentControl),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::DungeonsCompleted, Value::ONE),
+                    then: Box::new(Effect::Untap { what: yours(), up_to: None }),
+                    else_: Box::new(Effect::Untap { what: yours(), up_to: Some(Value::ONE) }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nature's Chosen — {G} Aura (creature you control). {0}: untap enchanted
+/// creature, on your turn, once a turn. Tap enchanted creature: untap target
+/// artifact, creature, or land — only while it's white and untapped, once a
+/// turn.
+pub fn natures_chosen() -> CardDefinition {
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                once_per_turn: true,
+                condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+                effect: Effect::Untap { what: host(), up_to: None },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                once_per_turn: true,
+                tap_others_cost: Some((R::IsHostOfSource, 1)),
+                condition: Some(Predicate::EntityMatches {
+                    what: host(),
+                    filter: R::HasColor(Color::White).and(R::Untapped),
+                }),
+                effect: Effect::Untap {
+                    what: target_filtered(R::Artifact.or(R::Creature).or(R::Land)),
+                    up_to: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..aura_card("Nature's Chosen", cost(&[g()]), R::Creature.and(R::ControlledByYou), false)
+    }
+}
