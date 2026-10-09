@@ -2075,8 +2075,9 @@ fn tablet_of_the_guilds_gains_life_on_chosen_color() {
 }
 
 /// Azor's Elocutors accrues a filibuster counter each upkeep and wins at five;
-/// combat damage to its controller removes *all* of them (regression: the
-/// reset previously removed only one).
+/// damage to its controller removes ONE (oracle: "remove a filibuster
+/// counter"; an earlier "regression fix" here had it remove all of them, and
+/// noncombat damage removed none).
 #[test]
 fn azors_elocutors_accrues_and_resets() {
     use crabomination::card::CounterType;
@@ -2090,7 +2091,7 @@ fn azors_elocutors_accrues_and_resets() {
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(azor).unwrap().counter_count(CounterType::Filibuster), 2, "one per upkeep");
-    // Opponent connects with a creature → all filibuster counters fall off.
+    // Opponent connects with a creature → one filibuster counter falls off.
     let atk = g.add_card_to_battlefield(1, catalog::hill_giant());
     g.clear_sickness(atk);
     g.active_player_idx = 1;
@@ -2104,7 +2105,15 @@ fn azors_elocutors_accrues_and_resets() {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(azor).unwrap().counter_count(CounterType::Filibuster), 0, "combat damage cleared all counters");
+    assert_eq!(g.battlefield_find(azor).unwrap().counter_count(CounterType::Filibuster), 1, "combat damage removed one counter");
+    // Noncombat damage counts too.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(crabomination::game::types::Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(azor).unwrap().counter_count(CounterType::Filibuster), 0, "a bolt removed the last");
 }
 
 // ── RTR gap wave 14 (gaps13.rs) ──────────────────────────────────────────────

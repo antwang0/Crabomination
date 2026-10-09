@@ -99,8 +99,8 @@ pub fn angel_of_serenity() -> CardDefinition {
 }
 
 /// Azor's Elocutors — {3}{W/U}{W/U} 3/5 Human Advisor. At your upkeep add a
-/// filibuster counter, then win if it has five or more; a source dealing (combat)
-/// damage to you removes one. (Noncombat damage doesn't remove — approximated.)
+/// filibuster counter, then win if it has five or more; any source dealing
+/// damage to you (combat or not) removes one.
 pub fn azors_elocutors() -> CardDefinition {
     let wu = || hybrid(Color::White, Color::Blue);
     CardDefinition {
@@ -140,21 +140,14 @@ pub fn azors_elocutors() -> CardDefinition {
                     },
                 ]),
             },
-            // "Whenever a source deals damage to you, remove all filibuster
-            // counters." Modeled on combat damage to the controller (the common
-            // reset); noncombat damage is an approximation gap.
+            // "Whenever a source deals damage to you, remove a filibuster
+            // counter" — any damage event to the controller.
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::ControllerDealtCombatDamage,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourControl),
                 effect: Effect::RemoveCounter {
                     what: Selector::This,
                     kind: CounterType::Filibuster,
-                    amount: Value::CountersOn {
-                        what: Box::new(Selector::This),
-                        kind: CounterType::Filibuster,
-                    },
+                    amount: Value::ONE,
                 },
             },
         ],
