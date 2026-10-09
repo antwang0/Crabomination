@@ -23,11 +23,13 @@
 //! - "Put there from their library this turn" (The Weaver King, Captain
 //!   N'ghathrod) counts mills; a surveil isn't recorded.
 //! - Arvinox exiles face up (the look/face-down part is informational only).
-//! - Opposition Agent: the hijack reaches the `Search` / `SearchUpToN` /
-//!   `SearchPickedBy` / `SearchZones` / `SearchAnyNumber` /
-//!   `SearchEachBasicLandType` resolvers, not the one-card bespoke searches
-//!   (`SearchSameNameAs`, `SearchAndCastFree`, `SearchAuraAttachToSource`,
-//!   `SearchSplitWithOpponent`, `SearchExileLinked`, … about 24 cards).
+//! - Opposition Agent: the hijack reaches every search resolver a pod deck
+//!   uses, but not these bespoke ones (no pod card): `SearchSameNameAs`,
+//!   `SearchAuraAttachToSource`, `SearchSameNameToBattlefield`,
+//!   `SearchSplitWithOpponent`, `SearchExileLinked`, `SearchTheCityReturn`,
+//!   `SearchExileThenTokensPerCard`, `SearchForOtherChosenName`,
+//!   `SearchLibraryCreaturesUpToTotalManaValue`,
+//!   `SearchOpponentLibraryForSameName`, `SearchRevealPunishSameNameCasters`.
 //! - Toxrill's -1/-1 per slime counter is stacked per counter up to 15.
 //! - Opponent-chosen picks the engine auto-resolves (Yarok's Fenlurker exiles
 //!   by hand order, Blot Out / Szat's Will break ties by board order, Braids'
@@ -1894,8 +1896,10 @@ pub fn startled_awake() -> CardDefinition {
 /// pick to this permanent's controller and exile each library find with a
 /// `WhileExiled` may-play grant for them, cast cost = mana value as generic.
 /// The rest of the searching effect (shuffle, a fetch land's life and
-/// sacrifice) still happens. See the module Residuals for the search effects
-/// the hijack doesn't reach.
+/// sacrifice) still happens. Every library search a pod deck can make is
+/// hijacked (Sunforger, Gifts Ungiven and Intuition since 2026-10-09); the
+/// module notes list the bespoke one-card searches outside the pods that
+/// aren't yet.
 pub fn opposition_agent() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {

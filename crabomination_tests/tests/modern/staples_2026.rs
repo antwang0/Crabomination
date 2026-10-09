@@ -837,6 +837,45 @@ fn gifts_ungiven_distinct_names_enforced() {
     assert!(g.players[0].library.iter().any(|x| x.id == b), "duplicate stayed");
 }
 
+/// CR 800.4 — in a pod the TARGETED opponent's own seat splits the Gifts
+/// pile (it rode the shared decider), and under Opposition Agent the finds
+/// are exiled for the Agent's controller: nothing is left to split.
+#[test]
+fn gifts_ungiven_split_is_the_targeted_seats_and_agent_hijacks_it() {
+    let cast_gifts = |g: &mut GameState| {
+        let gifts = g.add_card_to_hand(0, catalog::gifts_ungiven());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: gifts, target: Some(Target::Player(2)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).unwrap();
+        for _ in 0..6 {
+            if g.pending_decision.is_some() || g.stack.is_empty() {
+                break;
+            }
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+    };
+    let mut g = crabomination::game::multi_player_game(3);
+    let a = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[2].wants_ui = true;
+    cast_gifts(&mut g);
+    assert_eq!(g.pending_decision.as_ref().map(|d| d.acting_player()), Some(2), "seat 2 splits");
+
+    let mut g = crabomination::game::multi_player_game(3);
+    let b = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_battlefield(1, catalog::opposition_agent());
+    cast_gifts(&mut g);
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == b).expect("the find was exiled");
+    assert_eq!(exiled.may_play_until.as_ref().map(|m| m.player), Some(1), "for the Agent's controller");
+    let _ = a;
+}
+
 /// Open the Armory tutors an Aura or Equipment to hand.
 #[test]
 fn open_the_armory_tutors() {

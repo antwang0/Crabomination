@@ -21565,14 +21565,35 @@ impl GameState {
                         .map(|c| c.id)
                 };
                 let from_hand = include_hand.then(|| best(&self.players[p].hand)).flatten();
-                let mut pick = from_hand.or_else(|| best(&self.players[p].library));
+                // A library search is a search (CR 701.19): the locks, Aven
+                // Mindcensor's top-N window and Opposition Agent's hijack apply.
+                let mut hijacked_by = None;
+                let mut pick = from_hand;
+                if from_hand.is_none() {
+                    if self.no_search_this_turn || self.player_search_locked_by_opponent(p) {
+                        return Ok(());
+                    }
+                    self.players[p].searched_library_this_turn = true;
+                    events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                    hijacked_by = self.search_hijacker(p);
+                    let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
+                    pick = self.players[p]
+                        .library
+                        .iter()
+                        .take(limit)
+                        .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                }
                 // A library-only search (Sunforger) is the searcher's pick
                 // among the matches, and may find nothing (CR 701.19b); the
                 // highest mana value is the headless default.
                 if from_hand.is_none() && let Some(auto) = pick {
+                    let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
                     let matches: Vec<(CardId, String)> = self.players[p]
                         .library
                         .iter()
+                        .take(limit)
                         .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
@@ -21580,7 +21601,7 @@ impl GameState {
                         let mut cursor = 0;
                         let Some(picked) = self.ask_seat_cards_logged(
                             &mut cursor,
-                            p,
+                            hijacked_by.unwrap_or(p),
                             "Search your library for a card to cast without paying its mana cost".into(),
                             ctx.source.unwrap_or(CardId(0)),
                             matches,
@@ -21601,6 +21622,15 @@ impl GameState {
                 } else {
                     crate::card::Zone::Library
                 };
+                // Opposition Agent: the find is exiled for the hijacker, so
+                // there is nothing left to cast.
+                if let (Some(h), Some(cid)) = (hijacked_by, pick)
+                    && let Some(i) = self.players[p].library.iter().position(|c| c.id == cid)
+                {
+                    let card = self.players[p].library.remove(i);
+                    self.exile_found_for_hijacker(card, h, events);
+                    pick = None;
+                }
                 if let Some(cid) = pick {
                     self.run_effect(
                         &Effect::CastWithoutPayingImmediate {
@@ -26715,7 +26745,6 @@ impl GameState {
             Effect::SearchSplitOpponentChooses {
                 opponent, count, opponent_picks, chosen_to, rest_to,
             } => {
-                use crate::decision::Decision;
                 let p = ctx.controller;
                 let opp = self
                     .resolve_selector(opponent, ctx)
@@ -26727,10 +26756,18 @@ impl GameState {
                     .or_else(|| self.choose_opponent_at_once(p, ctx.source.unwrap_or(CardId(0)), "Choose the opponent who picks"));
                 let Some(opp) = opp else { return Ok(()) };
                 // CR 701.19 — the searcher picks up to `count` cards with
-                // different names.
+                // different names; the search locks, Aven Mindcensor's window
+                // and Opposition Agent's hijack apply.
+                if self.no_search_this_turn || self.player_search_locked_by_opponent(p) {
+                    return Ok(());
+                }
+                events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                let hijacked_by = self.search_hijacker(p);
+                let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
                 let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()
+                    .take(limit)
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 // Auto default: the first `count` distinct-named cards (the
@@ -26752,11 +26789,14 @@ impl GameState {
                         .map(|(id, _)| *id)
                         .collect()
                 };
-                let Some(answer_ids) = self.choose_up_to_cards(
-                    p,
+                let mut cursor = 0;
+                let Some(answer_ids) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    hijacked_by.unwrap_or(p),
                     format!("Search for up to {count} cards with different names"),
                     ctx.source.unwrap_or(CardId(0)),
                     candidates.clone(),
+                    0,
                     *count,
                     PickValue::Gain,
                     effect,
@@ -26780,8 +26820,18 @@ impl GameState {
                     }
                 }
                 self.players[p].searched_library_this_turn = true;
+                // Opposition Agent: every find is exiled for the hijacker, so
+                // nothing is left to split.
+                if let Some(h) = hijacked_by {
+                    for id in std::mem::take(&mut picked) {
+                        if let Some(i) = self.players[p].library.iter().position(|c| c.id == id) {
+                            let card = self.players[p].library.remove(i);
+                            self.exile_found_for_hijacker(card, h, events);
+                        }
+                    }
+                }
                 if picked.is_empty() {
-                    
+                    self.clear_answer_log();
                     self.shuffle_library(p, events);
                     return Ok(());
                 }
@@ -26793,24 +26843,25 @@ impl GameState {
                         candidates.iter().find(|(c, _)| c == id).map(|(_, n)| (*id, n.clone()))
                     })
                     .collect();
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: format!("Opponent: choose {n_chosen} to put into the graveyard"),
-                    candidates: revealed,
-                    min: n_chosen as u32,
-                    max: n_chosen as u32,
-                    eligible: None,
-                    value: PickValue::Cost,
-                });
-                let mut chosen: Vec<crate::card::CardId> = match answer {
-                    crate::decision::DecisionAnswer::Cards(ids) => ids
-                        .into_iter()
-                        .filter(|id| picked.contains(id))
-                        .take(n_chosen)
-                        .collect(),
-                    _ => Vec::new(),
+                // CR 800.4 — the chosen opponent's own seat makes the split.
+                let auto_split: Vec<crate::card::CardId> = picked.iter().copied().take(n_chosen).collect();
+                let Some(answer) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    opp,
+                    format!("Choose {n_chosen} to put into the graveyard"),
+                    ctx.source.unwrap_or(CardId(0)),
+                    revealed,
+                    n_chosen as u32,
+                    n_chosen as u32,
+                    PickValue::Cost,
+                    effect,
+                    auto_split,
+                ) else {
+                    return Ok(());
                 };
-                let _ = opp; // opponent's choice rides the shared decider
+                self.clear_answer_log();
+                let mut chosen: Vec<crate::card::CardId> =
+                    answer.into_iter().filter(|id| picked.contains(id)).take(n_chosen).collect();
                 while chosen.len() < n_chosen {
                     let next = picked.iter().find(|id| !chosen.contains(id)).copied();
                     match next {

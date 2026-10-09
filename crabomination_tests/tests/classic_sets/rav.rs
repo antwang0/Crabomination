@@ -3114,6 +3114,30 @@ fn sunforger_unattaches_to_cast_an_instant() {
     assert_eq!(g.players[1].life, 17);
 }
 
+/// Sunforger's library search is a search: under an opponent's Opposition
+/// Agent the instant it finds is exiled for the Agent's controller, uncast.
+#[test]
+fn sunforger_search_is_hijacked_by_opposition_agent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let forge = g.add_card_to_battlefield(0, catalog::sunforger());
+    g.battlefield_find_mut(forge).unwrap().attached_to = Some(bear);
+    g.add_card_to_battlefield(1, catalog::opposition_agent());
+    g.players[0].library.clear();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forge, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("unattach and fetch");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "nothing was cast");
+    let exiled = g.exile.iter().find(|c| c.id == bolt).expect("exiled");
+    assert_eq!(exiled.may_play_until.as_ref().map(|m| m.player), Some(1));
+}
+
 /// Sunforger's search is the searcher's pick (CR 701.19): with a Bolt and a
 /// Lightning Helix in the library it always took the higher mana value;
 /// asked, it casts the Bolt.
