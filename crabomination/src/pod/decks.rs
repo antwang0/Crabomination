@@ -7997,3 +7997,32 @@ pub const MARINA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, island, mountain, mountain, plains, plains,
     plains, swamp, swamp,
 ];
+
+pub const ALOY_COMMANDERS: &[CardFactory] = &[aloy_savior_of_meridian];
+
+/// **Aloy, Savior of Meridian**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 81 nonbasic cards + 9 Forests + 9 Islands = 99.
+/// Simic artifact creatures whose attacks discover by the biggest attacker's power.
+pub const ALOY_MAIN: &[CardFactory] = &[
+    arcane_signet, chimil_the_inner_sun, lightning_greaves, mystic_forge, simic_signet,
+    simulacrum_synthesizer, sol_ring, swiftfoot_boots, talisman_of_curiosity, tarrians_soulcleaver,
+    the_great_henge, thought_vessel, unwinding_clock, uthros_research_craft, academy_ruins,
+    archway_of_innovation, breeding_pool, buried_ruin, command_tower, darksteel_citadel,
+    dreamroot_cascade, flooded_grove, hinterland_harbor, inventors_fair, rejuvenating_springs,
+    reliquary_tower, seat_of_the_synod, tanglepool_bridge, tree_of_tales, uthros_titanic_godcore,
+    willowrush_verge, yavimaya_coast, blightsteel_colossus, cityscape_leveler, cyberdrive_awakener,
+    cybermen_squadron, darksteel_colossus, darksteel_juggernaut, diamond_weapon, emissary_escort,
+    emry_lurker_of_the_loch, etherium_sculptor, foundry_inspector, iron_spider_stark_upgrade,
+    kappa_cannoneer, karn_legacy_reforged, krang_utrom_warlord, master_transmuter,
+    master_of_etherium, metalwork_colossus, meteor_golem, omega_heartless_evolution,
+    ornithopter_of_paradise, oviya_automech_artisan, padeem_consul_of_innovation,
+    phyrexian_metamorph, solemn_simulacrum, steel_overseer, thought_monitor,
+    traxos_scourge_of_kroog, urza_lord_high_artificer, wurmcoil_engine, garruks_uprising,
+    monstrous_vortex, thopter_spy_network, an_offer_you_cant_refuse, arcane_denial, beast_within,
+    counterspell, desynchronization, growth_spiral, heroic_intervention, pongify,
+    rapid_hybridization, tezzeret_cruel_captain, cultivate, fabricate, farseek, kodamas_reach,
+    natures_lore, thoughtcast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, island, island, island,
+];

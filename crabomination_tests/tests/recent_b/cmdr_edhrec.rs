@@ -1517,3 +1517,25 @@ fn karn_legacy_reforged_keeps_upkeep_mana() {
     }
     assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "two artifacts → {{C}}{{C}} kept into main");
 }
+
+/// Spelltithe Enforcer's tax paid on a Room spell at a four-seat table: the
+/// Room still resolves once every seat passes (CR 117.4).
+#[test]
+fn a_taxed_room_spell_resolves_after_everyone_passes() {
+    let mut g = pod(4);
+    ready(&mut g, 1, catalog::spelltithe_enforcer());
+    let room = g.add_card_to_hand(0, catalog::secret_arcade_dusty_parlor());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: room, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the Room");
+    for _ in 0..40 {
+        if g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.stack.is_empty(), "stack: {:?}", g.stack.len());
+    assert!(g.battlefield_find(room).is_some());
+}
