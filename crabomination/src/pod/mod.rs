@@ -2121,6 +2121,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHORIKAI_COMMANDERS,
             main: decks::SHORIKAI_MAIN,
         },
+        // Seat 284: Golbez, Crystal Collector's EDHREC average deck. `--pod-decks 284`.
+        PodDeck {
+            name: "Golbez, Crystal Collector (BU)",
+            commanders: decks::GOLBEZ_COMMANDERS,
+            main: decks::GOLBEZ_MAIN,
+        },
     ]
 }
 
@@ -4018,6 +4024,7 @@ mod tests {
             ("Infinite Guideline Station", [0x16E5, 281, 9206]),
             ("Gishath, Sun's Avatar", [0x615A, 282, 9207]),
             ("Shorikai, Genesis Engine", [0x5401, 283, 9208]),
+            ("Golbez, Crystal Collector", [0x601B, 284, 9209]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

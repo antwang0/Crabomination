@@ -8340,3 +8340,32 @@ pub const SHORIKAI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const GOLBEZ_COMMANDERS: &[CardFactory] = &[golbez_crystal_collector];
+
+/// **Golbez, Crystal Collector**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 83 nonbasic cards + 9 Islands + 7 Swamps = 99.
+/// Dimir artifacts: Golbez surveils off artifacts entering and recurs creatures at end step.
+pub const GOLBEZ_MAIN: &[CardFactory] = &[
+    arcane_signet, cloud_key, collectors_vault, crystal_skull_isu_spyglass, dimir_signet,
+    fellwar_stone, lightning_greaves, liquimetal_torque, mind_stone, mystic_forge,
+    planetarium_of_wan_shi_tong, senseis_divining_top, simulacrum_synthesizer, sol_ring,
+    swiftfoot_boots, talisman_of_dominance, thought_vessel, uthros_research_craft, academy_ruins,
+    archway_of_innovation, command_tower, darksteel_citadel, darkwater_catacombs, drowned_catacomb,
+    mistvault_bridge, morphic_pool, polluted_delta, seat_of_the_synod, shipwreck_marsh,
+    sunken_hollow, tainted_isle, treasure_vault, undercity_sewers, underground_river,
+    vault_of_whispers, watery_grave, ancient_stone_idol, armix_filigree_thrasher, baleful_strix,
+    broodstar, cyberdrive_awakener, darksteel_juggernaut, deaths_shadow, emry_lurker_of_the_loch,
+    etherium_sculptor, filigree_attendant, forensic_gadgeteer, foundry_inspector,
+    imotekh_the_stormlord, kappa_cannoneer, master_of_etherium, matoya_archon_elder,
+    metalwork_colossus, noxious_gearhulk, ornithopter_of_paradise, phyrexian_metamorph,
+    riddlesmith, rook_turret, sai_master_thopterist, silver_myr, solemn_simulacrum,
+    thought_monitor, urza_lord_high_artificer, yshtola_rhul, efficient_construction,
+    enhanced_surveillance, mirrodin_besieged, thopter_spy_network, an_offer_you_cant_refuse,
+    arcane_denial, counterspell, deadly_dispute, desynchronization, frantic_search, negate,
+    thirst_for_knowledge, withering_torment, tezzeret_master_of_the_bridge, buried_alive,
+    feed_the_swarm, reanimate, their_name_is_death, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
