@@ -7907,3 +7907,32 @@ pub const ATLA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
     mountain, plains, plains, plains, plains, plains,
 ];
+
+pub const BETOR_KIN_COMMANDERS: &[CardFactory] = &[betor_kin_to_all];
+
+/// **Betor, Kin to All**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 7 Forests + 6 Plains + 4 Swamps = 99.
+/// Abzan toughness matters: walls and high-toughness bodies fuel Betor's end-step tiers.
+pub const BETOR_KIN_MAIN: &[CardFactory] = &[
+    arcane_signet, colfenors_urn, lightning_greaves, rammas_echor_ancient_shield, sol_ring,
+    swiftfoot_boots, bojuka_bog, bountiful_promenade, canopy_vista, command_tower,
+    deceptive_landscape, evolving_wilds, exotic_orchard, godless_shrine, indatha_triome,
+    isolated_chapel, overgrown_farmland, overgrown_tomb, sandsteppe_citadel, sunpetal_grove,
+    temple_garden, twilight_mire, undergrowth_stadium, windswept_heath, woodland_cemetery,
+    ancient_adamantoise, ancient_lumberknot, arbor_adherent, axebane_guardian,
+    baldin_century_herdmaster, bedrock_tortoise, birds_of_paradise, bloodletter_of_aclazotz,
+    canopy_gargantuan, crashing_drawbridge, crystal_barricade, doran_besieged_by_time,
+    doran_the_siege_tower, dragonlord_dromoka, faeburrow_elder, fecund_greenshell,
+    felothar_the_steadfast, ghalta_the_immovable, ikra_shidiqi_the_usurper, indomitable_ancients,
+    overgrown_battlement, rampart_architect, sylvan_caryatid, walls_of_ba_sing_se, towering_titan,
+    tree_of_perdition, tree_of_redemption, trostani_selesnyas_voice, unhallowed_phalanx,
+    wall_of_blossoms, wall_of_omens, weathered_sentinels, welcoming_vampire, assault_formation,
+    behind_the_scenes, guardian_project, jaws_of_defeat, stoneskin, unnatural_growth,
+    wound_reflection, anguished_unmaking, assassins_trophy, beast_within, despark,
+    heroic_intervention, path_to_exile, swords_to_plowshares, tower_defense, huatli_the_suns_heart,
+    cultivate, farseek, kodamas_reach, last_march_of_the_ents, natures_lore, rampant_growth,
+    reunion_of_the_house, slaughter_the_strong,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp,
+];

@@ -2031,6 +2031,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ATLA_COMMANDERS,
             main: decks::ATLA_MAIN,
         },
+        // Seat 269: Betor, Kin to All's EDHREC average deck. `--pod-decks 269`.
+        PodDeck {
+            name: "Betor, Kin to All (BGW)",
+            commanders: decks::BETOR_KIN_COMMANDERS,
+            main: decks::BETOR_KIN_MAIN,
+        },
     ]
 }
 
@@ -3814,6 +3820,7 @@ mod tests {
             ("Raffine, Scheming Seer", [0x4AFF, 266, 9190]),
             ("The Mindskinner", [0x3155, 267, 9191]),
             ("Atla Palani, Nest Tender", [0xA71A, 268, 9192]),
+            ("Betor, Kin to All", [0xBE71, 269, 9193]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
