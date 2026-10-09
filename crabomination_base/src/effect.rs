@@ -790,6 +790,10 @@ pub enum Value {
     /// Nemesis −9.
     HighestLifeTotal,
     HandSizeOf(PlayerRef),
+    /// The unspent mana in a player's pool (Ozai, the Phoenix King's "as long
+    /// as you have six or more unspent mana"); the largest for a multi-seat
+    /// ref.
+    UnspentManaOf(PlayerRef),
     /// The number of the source controller's opponents who have `n` or fewer
     /// cards in hand. Powers "draw an additional card for each opponent who
     /// has one or fewer cards in hand" (Bandit's Talent, level 3).

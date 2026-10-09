@@ -6202,6 +6202,7 @@ fn value_has_target(v: &Value) -> bool {
         Value::CountersOn { what, .. } => sel_has_target(what),
         Value::LifeOf(p)
         | Value::HandSizeOf(p)
+        | Value::UnspentManaOf(p)
         | Value::GraveyardSizeOf(p)
         | Value::LibrarySizeOf(p)
         | Value::PlayerSpeed(p)

@@ -675,6 +675,12 @@ impl GameState {
                 .map(|&p| self.players[p].hand.len() as i32)
                 .max()
                 .unwrap_or(0),
+            Value::UnspentManaOf(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].mana_pool.total() as i32)
+                .max()
+                .unwrap_or(0),
             Value::OpponentsWithHandSizeAtLeast(n) => self
                 .opponents_of(ctx.controller)
                 .into_iter()
