@@ -2815,6 +2815,13 @@ impl GameState {
                     _ => false,
                 }
             }
+            Predicate::AbilityOnStackTargetsOnlySource => {
+                // Asked as the targeting object is announced: it is the top of
+                // the stack, so a spell aimed at the source doesn't qualify.
+                ctx.source.is_some_and(|src| {
+                    self.ability_targeting_only(src).is_some_and(|i| i + 1 == self.stack.len())
+                })
+            }
             Predicate::SourceAttackedThisTurn => ctx
                 .source
                 .and_then(|cid| self.battlefield.find_by_id(cid))

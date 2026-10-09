@@ -2047,6 +2047,11 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
+    /// The top of the stack is an activated or triggered ability that targets
+    /// only the effect's source — one slot, filled with it (Agrus Kos,
+    /// Eternal Soldier's "becomes the target of an ability that targets only
+    /// it", asked as that ability is announced).
+    AbilityOnStackTargetsOnlySource,
     /// CR 500.7 — the current turn is an extra turn. Backed by
     /// `GameState.current_turn_is_extra`. Medomai the Ageless's
     /// "can't attack during extra turns".
@@ -7801,6 +7806,11 @@ pub enum Effect {
     /// The copy may choose new targets in every declared slot; the original
     /// is offered first, so a conservative decider keeps it.
     CopyActivatedAbilityMayChooseTargets,
+    /// Agrus Kos, Eternal Soldier — copy the newest ability on the stack that
+    /// targets only the source once for each other creature its controller
+    /// controls that the ability could target, each copy aimed at a
+    /// different one. The copies are the controller's (CR 707.10).
+    CopyAbilityTargetingSourceForEachOtherCreature,
     /// Exile each resolved permanent, then return it to the battlefield under
     /// its owner's control at the beginning of the next end step, entering with
     /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).

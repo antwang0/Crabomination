@@ -1846,6 +1846,15 @@ impl GameState {
         }
     }
 
+    /// The newest activated or triggered ability on the stack whose one
+    /// target is `src` (Agrus Kos, Eternal Soldier).
+    pub(crate) fn ability_targeting_only(&self, src: CardId) -> Option<usize> {
+        self.stack.iter().rposition(|si| {
+            matches!(si, StackItem::Trigger { target: Some(Target::Permanent(t)), additional_targets, .. }
+                if *t == src && additional_targets.is_empty())
+        })
+    }
+
     /// CR 603.7 — put a "when you do" payoff on the stack as its own trigger:
     /// targets are picked now (603.7d), the gating event's scratch carried
     /// (603.7c). `subject` / `event_amount` are what the payoff's "it" and
@@ -6138,6 +6147,37 @@ impl GameState {
                 }
                 revealed.shuffle(&mut self.rng.draw());
                 self.players[p].library.extend(revealed);
+                Ok(())
+            }
+
+            Effect::CopyAbilityTargetingSourceForEachOtherCreature => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(idx) = self.ability_targeting_only(src) else { return Ok(()) };
+                let StackItem::Trigger { source: ability_source, effect: eff, .. } = &self.stack[idx] else {
+                    return Ok(());
+                };
+                let (ability_source, eff) = (*ability_source, (**eff).clone());
+                let me = ctx.controller;
+                let legal = self.enumerate_legal_targets_with_source(&eff, me, Some(ability_source));
+                let others: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == me
+                            && c.id != src
+                            && self.computed_is_creature(c)
+                            && legal.contains(&Target::Permanent(c.id))
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                for other in others {
+                    let mut copy = self.stack[idx].clone();
+                    if let StackItem::Trigger { controller, target, .. } = &mut copy {
+                        *controller = me;
+                        *target = Some(Target::Permanent(other));
+                    }
+                    self.push_stack(copy);
+                }
                 Ok(())
             }
 

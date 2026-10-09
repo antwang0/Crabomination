@@ -954,6 +954,7 @@ impl Effect {
             | Effect::EachPlayerExilesChosenUntilSourceLeaves { .. }
             | Effect::RevealUntilCreatureDoubleBasePt
             | Effect::CopyActivatedAbilityMayChooseTargets
+            | Effect::CopyAbilityTargetingSourceForEachOtherCreature
             | Effect::AdvanceClassLevel
             | Effect::SignalTheClans
             | Effect::NivMizzetReveal
