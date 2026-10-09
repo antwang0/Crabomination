@@ -7176,6 +7176,15 @@ pub enum Effect {
     /// "Add that much mana of any one color. Until end of turn, you don't lose
     /// this mana as steps and phases end" (Photon, Mighty Marvel).
     AddManaKeptThisTurnAnyOneColor { who: PlayerRef, amount: Value },
+    /// `amount` {C}, kept through step and phase ends this turn, optionally
+    /// spend-restricted (Karn, Legacy Reforged — `ArtifactOnly` stands in for
+    /// "can't be spent to cast nonartifact spells").
+    AddColorlessKeptThisTurn {
+        who: PlayerRef,
+        amount: Value,
+        #[serde(default)]
+        restriction: Option<crate::mana::SpendRestriction>,
+    },
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },

@@ -13305,6 +13305,9 @@ impl GameState {
             Effect::AddManaKeptThisTurnAnyOneColor { who, amount } => {
                 self.add_mana_kept_this_turn_any_one_color(who, amount, ctx, events)
             }
+            Effect::AddColorlessKeptThisTurn { who, amount, restriction } => {
+                self.add_colorless_kept_this_turn(who, amount, *restriction, ctx, events)
+            }
             Effect::ExileTypeSpreadReturnPermanent { min_types } => {
                 self.exile_type_spread_return_permanent(*min_types, ctx, events, effect)
             }

@@ -2204,6 +2204,13 @@ impl ManaPool {
                 out.add_restricted(c, k, r);
             }
         }
+        for &(n, r) in &self.restricted_colorless {
+            let have: u32 = pool.restricted_colorless.iter().filter(|(_, pr)| *pr == r).map(|(m, _)| *m).sum();
+            let k = n.min(have);
+            if k > 0 {
+                out.add_restricted_colorless(k, r);
+            }
+        }
         out
     }
 
@@ -2224,6 +2231,15 @@ impl ManaPool {
             }
         }
         self.restricted.retain(|(_, n, _)| *n > 0);
+        for &(n, r) in &part.restricted_colorless {
+            let mut left = n;
+            for entry in self.restricted_colorless.iter_mut().filter(|(_, pr)| *pr == r) {
+                let k = entry.0.min(left);
+                entry.0 -= k;
+                left -= k;
+            }
+        }
+        self.restricted_colorless.retain(|(n, _)| *n > 0);
     }
 
     pub fn absorb(&mut self, other: &ManaPool) {

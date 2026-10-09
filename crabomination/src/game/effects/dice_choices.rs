@@ -176,4 +176,33 @@ impl GameState {
         }
         Ok(())
     }
+
+    pub(super) fn add_colorless_kept_this_turn(
+        &mut self,
+        who: &PlayerRef,
+        amount: &Value,
+        restriction: Option<crate::mana::SpendRestriction>,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+        let n = (self.evaluate_value(amount, ctx).max(0) as u32) * self.mana_production_multiplier.max(1);
+        if n == 0 {
+            return Ok(());
+        }
+        match restriction {
+            Some(r) => {
+                self.players[p].mana_pool.add_restricted_colorless(n, r);
+                self.players[p].kept_mana_this_turn.add_restricted_colorless(n, r);
+            }
+            None => {
+                self.players[p].mana_pool.add_colorless(n);
+                self.players[p].kept_mana_this_turn.add_colorless(n);
+            }
+        }
+        for _ in 0..n {
+            events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
+        }
+        Ok(())
+    }
 }
