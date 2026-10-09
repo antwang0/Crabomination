@@ -2820,7 +2820,7 @@ fn play_pod_game(
                     // CR 708.9 / 712.8 — face up and front face up off the
                     // battlefield (exile keeps foretold / hidden cards down).
                     || (z != Off::Exile && c.face_down)
-                    || (z != Off::Exile && c.transformed)
+                    || c.transformed
                     // CR 710.4 / 709.5c / 716 / MKM — flip, Room, Class and
                     // Case designations are battlefield-only; so are a soulbond
                     // pair, a phasing link and this turn's loyalty activations
@@ -2912,6 +2912,20 @@ fn play_pod_game(
                     zone_label(&g, c.id),
                     g.turn_number,
                     g.step,
+                );
+            }
+            // CR 800.4a — a departed player's spells and abilities on the
+            // stack cease to exist with them.
+            let orphan = g.stack.iter().find_map(|si| match si {
+                crate::game::types::StackItem::Spell { card, caster, .. } => Some((card.definition.name, *caster)),
+                crate::game::types::StackItem::Trigger { source, controller, .. } => {
+                    Some((g.find_card_anywhere(*source).map_or("?", |c| c.definition.name), *controller))
+                }
+            }.filter(|&(_, p)| !g.players.get(p).is_some_and(|q| q.is_alive())));
+            if let Some((name, p)) = orphan {
+                panic!(
+                    "seed {seed}: {name} on the stack is controlled by departed p{p} (turn {}, {:?}, after {actions} actions)",
+                    g.turn_number, g.step,
                 );
             }
             // CR 400.7 — a spell is a new object too: it carries no
