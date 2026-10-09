@@ -2109,6 +2109,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GUIDELINE_COMMANDERS,
             main: decks::GUIDELINE_MAIN,
         },
+        // Seat 282: Gishath, Sun's Avatar's EDHREC average deck. `--pod-decks 282`.
+        PodDeck {
+            name: "Gishath, Sun's Avatar (GRW)",
+            commanders: decks::GISHATH_COMMANDERS,
+            main: decks::GISHATH_MAIN,
+        },
     ]
 }
 
@@ -3970,6 +3976,7 @@ mod tests {
             ("Kraum, Ludevic's Opus", [0x7A4B, 279, 9204]),
             ("Thrasios, Triton Hero", [0x7A51, 280, 9205]),
             ("Infinite Guideline Station", [0x16E5, 281, 9206]),
+            ("Gishath, Sun's Avatar", [0x615A, 282, 9207]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

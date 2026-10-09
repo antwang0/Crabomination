@@ -8284,3 +8284,31 @@ pub const GUIDELINE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp,
     swamp,
 ];
+
+pub const GISHATH_COMMANDERS: &[CardFactory] = &[gishath_suns_avatar];
+
+/// **Gishath, Sun's Avatar**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 8 Forests + 5 Mountains + 4 Plains = 99.
+/// Naya Dinosaurs: Gishath's combat damage reveals and puts Dinosaurs straight onto the battlefield.
+pub const GISHATH_MAIN: &[CardFactory] = &[
+    arcane_signet, heralds_horn, sol_ring, the_great_henge, the_skullspore_nexus, urzas_incubator,
+    canopy_vista, cavern_of_souls, cinder_glade, clifftop_retreat, command_tower, evolving_wilds,
+    exotic_orchard, jetmirs_garden, jungle_shrine, mosswort_bridge, path_of_ancestry,
+    rogues_passage, rootbound_crag, sacred_foundry, secluded_courtyard, stomping_ground,
+    sunpetal_grove, temple_garden, unclaimed_territory, apex_altisaur, atzocan_seer,
+    bonehoard_dracosaur, curious_altisaur, earthshaker_dreadmaw, etali_primal_conqueror,
+    etali_primal_storm, ghalta_and_mavren, ghalta_primal_hunger, ghalta_stampede_tyrant,
+    goring_ceratops, hulking_raptor, hunting_velociraptor, kinjallis_caller, kinjallis_sunwing,
+    marauding_raptor, otepec_huntmaster, pantlaza_sun_favored, polyraptor, quartzwood_crasher,
+    ranging_raptors, regal_behemoth, regisaur_alpha, ripjaw_raptor, runic_armasaur,
+    sunfrill_imitator, temple_altisaur, thrashing_brontodon, topiary_stomper, verdant_suns_avatar,
+    wakening_suns_avatar, wayward_swordtooth, wrathful_raptors, zacama_primal_calamity,
+    zetalpa_primal_dawn, descendants_path, elemental_bond, garruks_uprising, miraris_wake,
+    rhythm_of_the_wild, welcome_to, akromas_will, beast_within, boros_charm, heroic_intervention,
+    path_to_exile, return_of_the_wildspeaker, swords_to_plowshares, blasphemous_act, cultivate,
+    farseek, kodamas_reach, natures_lore, rampant_growth, skyshroud_claim, three_visits,
+    thunderherd_migration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains,
+];
