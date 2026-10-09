@@ -4,7 +4,7 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
+    Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Selector, Value};
@@ -36,8 +36,8 @@ pub fn growing_dread() -> CardDefinition {
 }
 
 /// Entity Tracker — {2}{U} 2/3 Human Scout with Flash. Eerie — whenever an
-/// enchantment you control enters, draw a card. (The "fully unlock a Room" half
-/// is approximated — Rooms aren't wired to the Eerie trigger.)
+/// enchantment you control enters and whenever you fully unlock a Room, draw
+/// a card (`shortcut::eerie`).
 pub fn entity_tracker() -> CardDefinition {
     CardDefinition {
         name: "Entity Tracker",
@@ -50,17 +50,10 @@ pub fn entity_tracker() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Enchantment,
-                }),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::ONE,
-            },
-        }],
+        triggered_abilities: crate::effect::shortcut::eerie(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        }),
         ..Default::default()
     }
 }

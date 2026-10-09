@@ -1599,3 +1599,18 @@ fn the_necrobloom_lands_dredge() {
     assert!(g.players[0].hand.iter().any(|c| c.id == land), "dredged back");
     assert_eq!(g.players[0].library.len(), lib - 2);
 }
+
+/// Entity Tracker's Eerie half for Rooms: fully unlocking one draws a card.
+#[test]
+fn entity_tracker_draws_on_a_fully_unlocked_room() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::entity_tracker());
+    let room = g.add_card_to_hand(0, catalog::secret_arcade_dusty_parlor());
+    flood(&mut g);
+    cast(&mut g, room, None);
+    let hand = g.players[0].hand.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::UnlockRoomDoor { card_id: room, right: true }).expect("unlock the other door");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
