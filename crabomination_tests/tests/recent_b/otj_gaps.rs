@@ -642,12 +642,25 @@ fn archmages_newt_grants_flashback_on_combat_damage() {
     assert_eq!(g.players[1].life, 20 - 2 - 3);
 }
 
-/// Ertha Jo brings a Mercenary along.
+/// Ertha Jo brings a Mercenary along, and its targeted pump is copied.
 #[test]
 fn ertha_jo_makes_a_mercenary() {
     let mut g = main_phase();
     etb(&mut g, catalog::ertha_jo_frontier_mentor());
-    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Mercenary").count(), 1);
+    let merc = g.battlefield.iter().find(|c| c.definition.name == "Mercenary").map(|c| c.id).expect("a Mercenary");
+    g.clear_sickness(merc);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: merc,
+        ability_index: 0,
+        target: Some(Target::Permanent(merc)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(merc).unwrap().power, 3, "the pump and its copy");
 }
 
 // ── Batch 2: planeswalkers, graveyard theft, the Desert ─────────────────────

@@ -539,18 +539,29 @@ pub fn selvala_eager_trailblazer() -> CardDefinition {
 }
 
 /// Ertha Jo, Frontier Mentor — {2}{R}{W} 2/4 Kor Advisor. ETB: create a
-/// Mercenary. (The activated-ability copier is dropped — the engine has no
-/// ability-copy primitive.)
+/// Mercenary. Whenever you activate an ability that targets a creature or
+/// player, copy it; you may choose new targets for the copy.
 pub fn ertha_jo_frontier_mentor() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: std::sync::Arc::new(mercenary_token()),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(mercenary_token()),
+                },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::ActivatedAbilityTargetsMatching(Box::new(R::Creature.or(R::Player))),
+                    },
+                ),
+                effect: Effect::CopyActivatedAbilityMayChooseTargets,
+            },
+        ],
         ..legend(
             "Ertha Jo, Frontier Mentor",
             cost(&[generic(2), r(), w()]),

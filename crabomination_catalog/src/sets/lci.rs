@@ -42,8 +42,8 @@ pub fn geological_appraiser() -> CardDefinition {
 }
 
 /// Trumpeting Carnosaur — {4}{R}{R} 7/6 Dinosaur with trample. "When this
-/// enters, discover 5." (The "{2}{R}, Discard this card: 3 damage" from-hand
-/// ability is omitted — activated-from-hand abilities aren't modeled.)
+/// enters, discover 5." {2}{R}, discard it: 3 damage to target creature or
+/// planeswalker.
 pub fn trumpeting_carnosaur() -> CardDefinition {
     CardDefinition {
         name: "Trumpeting Carnosaur",
