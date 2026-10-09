@@ -1188,9 +1188,8 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
 /// Prepare spell: sorcery — search your library for an instant or
 /// sorcery card, reveal it, put it into your hand, then shuffle.
 ///
-/// Approximation: the printed "reveal it" step is omitted —
-/// `Effect::Search` has no reveal, which is knowledge-only and has no
-/// gameplay impact in this engine.
+/// The "reveal it" step is information for the table only; like every tutor
+/// in the catalog it emits no reveal event (`Effect::Search` has none).
 pub fn sanar_unfinished_genius() -> CardDefinition {
     let spell = spell_back(
         "Wild Idea",
