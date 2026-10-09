@@ -3134,6 +3134,27 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls
+
+Hot-path touches: `push_stack` ORs a battlefield-slot mark into spells too
+(one walk of ≤ 8 targets per push); `hostile_opponent_score` reads
+`player_cant_lose_game` (reached only with two or more opponents);
+`pick_evasion_grant` reads `attack_tax_possible` (Commander only). `release`
+at `b584a9cde`+1, 4-core Xeon @ 2.80 GHz; no A/B (no change on a measured
+hot path beyond the push mark).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; 261.6 games/s; peak_rss 30.0 MiB
+audit sweeps     overflow + debug-assertions, all 271 seats in shuffled 3..8-seat
+                 groups x 20, strict, sweep probe, odd seeds concede 20; seeds
+                 31207 / 31301: 6,520 + 6,640 games, 5 finds fixed, undecided
+                 0.06 % / 0.24 % (all caps: Secret Arcade loops, one Scute
+                 Swarm board, two bot stalls now fixed)
+suite            24,536 / 1 / 5 strict before the Marina seed change (the one
+                 a real Ghostly Dancers + Secret Arcade loop); clippy 0
+```
+
 ### 2026-10-08 (Commander routine, eleventh — session `01F4sBdR`) — guardrail; EDHREC seats 184-191 and Omnath 235, auto-tap guard
 
 Hot-path touches: the auto-tap reentrancy guard (`ColdState::mana_sources_paying`,
