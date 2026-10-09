@@ -2019,6 +2019,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAFFINE_COMMANDERS,
             main: decks::RAFFINE_MAIN,
         },
+        // Seat 267: The Mindskinner's EDHREC average deck. `--pod-decks 267`.
+        PodDeck {
+            name: "The Mindskinner (U)",
+            commanders: decks::MINDSKINNER_COMMANDERS,
+            main: decks::MINDSKINNER_MAIN,
+        },
+        // Seat 268: Atla Palani, Nest Tender's EDHREC average deck. `--pod-decks 268`.
+        PodDeck {
+            name: "Atla Palani, Nest Tender (GRW)",
+            commanders: decks::ATLA_COMMANDERS,
+            main: decks::ATLA_MAIN,
+        },
     ]
 }
 
@@ -3800,6 +3812,8 @@ mod tests {
             ("Feather, the Redeemed", [0xFEA7, 264, 9188]),
             ("Narset, Enlightened Exile", [0x4A25, 265, 9189]),
             ("Raffine, Scheming Seer", [0x4AFF, 266, 9190]),
+            ("The Mindskinner", [0x3155, 267, 9191]),
+            ("Atla Palani, Nest Tender", [0xA71A, 268, 9192]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

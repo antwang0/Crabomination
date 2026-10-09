@@ -7854,3 +7854,56 @@ pub const RAFFINE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, plains, plains, plains, swamp, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const MINDSKINNER_COMMANDERS: &[CardFactory] = &[the_mindskinner];
+
+/// **The Mindskinner**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Mono-blue mill: every point of damage becomes cards milled from each opponent.
+pub const MINDSKINNER_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, bonehoard, commanders_plate, fireshrieker, leyline_axe,
+    lightning_greaves, mesmeric_orb, mindcrank, riverchurn_monument, sapphire_medallion,
+    sky_diamond, sol_ring, swiftfoot_boots, sword_of_the_animist, the_water_crystal,
+    thought_vessel, jidoor_aristocratic_capital, myriad_landscape, mystic_sanctuary,
+    reliquary_tower, scavenger_grounds, auton_soldier, bruvac_the_grandiloquent,
+    eluge_the_shoreless_sea, esior_wardwing_familiar, fleet_swallower, giggling_skitterspike,
+    hedron_crab, jaces_phantasm, mirelurk_queen, riddlekeeper, ruin_crab, silent_hallcreeper,
+    soulless_jailer, spark_double, terisian_mindbreaker, undead_alchemist, vantress_gargoyle,
+    zellix_sanity_flayer, court_of_cunning, fraying_sanity, memory_erosion, propaganda,
+    psychic_corrosion, rhystic_study, sphinxs_tutelage, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, archive_trap, counterspell, didnt_say_please, drown_in_dreams, high_tide,
+    negate, pongify, rapid_hybridization, slip_out_the_back, thought_collapse, visions_of_beyond,
+    jace_the_perfected_mind, cut_your_losses, fractured_sanity, irenicuss_vile_duplication,
+    maddening_cacophony, tashas_hideous_laughter, traumatize, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const ATLA_COMMANDERS: &[CardFactory] = &[atla_palani_nest_tender];
+
+/// **Atla Palani, Nest Tender**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 7 Forests + 5 Mountains + 5 Plains = 99.
+/// Naya Eggs: defenders that die into the next creature off the top.
+pub const ATLA_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, gruul_signet, lightning_greaves, maskwood_nexus, phyrexian_altar,
+    skullclamp, sol_ring, swiftfoot_boots, thornbite_staff, bountiful_promenade, canopy_vista,
+    cinder_glade, clifftop_retreat, command_tower, evolving_wilds, exotic_orchard, high_market,
+    jetmirs_garden, jungle_shrine, rockfall_vale, rootbound_crag, sacred_foundry, spire_garden,
+    stomping_ground, sunpetal_grove, temple_garden, windswept_heath, wooded_foothills,
+    apex_altisaur, avacyn_angel_of_hope, dinosaur_egg, earthshaker_dreadmaw,
+    etali_primal_conqueror, etali_primal_storm, ghalta_and_mavren, ghalta_primal_hunger,
+    ghalta_stampede_tyrant, gisela_blade_of_goldnight, gishath_suns_avatar, goring_ceratops,
+    harmonic_prodigy, marauding_raptor, mirror_entity, nesting_dragon, palanis_hatcher,
+    pantlaza_sun_favored, polyraptor, quartzwood_crasher, regisaur_alpha, seedborn_muse,
+    temple_altisaur, vaultborn_tyrant, verdant_suns_avatar, worldspine_wurm,
+    zacama_primal_calamity, zetalpa_primal_dawn, annie_joins_up, elemental_bond,
+    fanatical_devotion, garruks_uprising, goblin_bombardment, life_finds_a_way, rhythm_of_the_wild,
+    warstorm_surge, beast_within, boros_charm, chaos_warp, generous_gift, heroic_intervention,
+    path_to_exile, rootborn_defenses, sundering_growth, swords_to_plowshares, austere_command,
+    blasphemous_act, cultivate, farseek, kodamas_reach, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains,
+];
