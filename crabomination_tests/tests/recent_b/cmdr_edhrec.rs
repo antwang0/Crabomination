@@ -2363,3 +2363,44 @@ fn malignus_halves_the_healthiest_opponent() {
     let cp = g.computed_permanent(m).unwrap();
     assert_eq!((cp.power, cp.toughness), (20, 20), "39 halves up to 20; your own 80 isn't read");
 }
+
+/// Hallowed Haunting makes a Spirit Cleric per enchantment spell; Weaver of
+/// Harmony copies that trigger (an enchantment source's) for a second Cleric;
+/// seven enchantments give your creatures flying.
+#[test]
+fn hallowed_haunting_weaver_copies_the_trigger() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hallowed_haunting());
+    let haunting = g.battlefield.iter().find(|c| c.definition.name == "Hallowed Haunting").unwrap().id;
+    let weaver = ready(&mut g, 0, catalog::weaver_of_harmony());
+    flood(&mut g);
+    let ench = g.add_card_to_hand(0, catalog::efficient_construction());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: ench, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    // The Haunting's trigger is on the stack above the spell: copy it.
+    g.priority.player_with_priority = 0;
+    let trigger = g.top_ability_of(haunting).expect("the Haunting's trigger, as an object (CR 115.1)");
+    g.perform_action(GameAction::ActivateAbility { card_id: weaver, ability_index: 0, target: Some(Target::Permanent(trigger)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("copy");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Spirit Cleric"), 2, "the trigger and its copy");
+    let cleric = g.battlefield.iter().find(|c| c.definition.name == "Spirit Cleric").unwrap().id;
+    assert_eq!(g.computed_permanent(cleric).unwrap().power, 2, "two Spirits");
+    assert!(!g.computed_permanent(weaver).unwrap().keywords().contains(&Keyword::Flying));
+    for _ in 0..5 {
+        ready(&mut g, 0, catalog::efficient_construction());
+    }
+    assert!(g.computed_permanent(weaver).unwrap().keywords().contains(&Keyword::Flying), "seven enchantments");
+}
+
+/// Yenna copies a lone enchantment as a nonlegendary token.
+#[test]
+fn yenna_copies_an_enchantment() {
+    let mut g = pod(2);
+    let yenna = ready(&mut g, 0, catalog::yenna_redtooth_regent());
+    let ench = ready(&mut g, 0, catalog::efficient_construction());
+    flood(&mut g);
+    activate(&mut g, yenna, Some(Target::Permanent(ench)));
+    assert_eq!(named(&g, "Efficient Construction"), 2);
+}

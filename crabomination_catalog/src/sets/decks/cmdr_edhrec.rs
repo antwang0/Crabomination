@@ -4124,3 +4124,134 @@ pub fn yargle_and_multani() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Weaver of Harmony — {1}{G} 2/2 Enchantment Creature — Snake Druid. Other
+/// enchantment creatures you control get +1/+1; {G}, {T}: copy target ability
+/// you control from an enchantment source (new targets allowed).
+pub fn weaver_of_harmony() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Weaver of Harmony",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Snake, CreatureType::Druid]),
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other enchantment creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Enchantment.and(R::Creature).and(R::ControlledByYou).and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            effect: Effect::CopyAbility {
+                what: target_filtered(R::HasAbilityOnStack.and(R::ControlledByYou).and(R::Enchantment)),
+                times: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Yenna, Redtooth Regent — {2}{G}{W} 4/4 Elf Noble. {2}, {T} (sorcery speed):
+/// a nonlegendary token copy of target enchantment you control with no
+/// same-named other permanent; an Aura copy untaps Yenna and scries 2.
+pub fn yenna_redtooth_regent() -> CardDefinition {
+    CardDefinition {
+        name: "Yenna, Redtooth Regent",
+        cost: cost(&[generic(2), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Noble]),
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(
+                        R::Enchantment.and(R::ControlledByYou).and(R::Not(Box::new(R::SharesNameWithAnotherPermanent))),
+                    ),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: true,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Aura) },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Untap { what: Selector::This, up_to: None },
+                        Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hallowed Haunting — {2}{W}{W} Enchantment. With seven or more enchantments,
+/// your creatures have flying and vigilance; casting an enchantment spell
+/// makes a white Spirit Cleric with P/T equal to your Spirits.
+pub fn hallowed_haunting() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let seven = || Predicate::ValueAtLeast(
+        Value::CountOf(Box::new(Selector::EachPermanent(R::Enchantment.and(R::ControlledByYou)))),
+        Value::Const(7),
+    );
+    let grant = |kw: Keyword| StaticEffect::WhileCondition {
+        condition: seven(),
+        inner: Box::new(StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            keyword: kw,
+        }),
+    };
+    let spirit = TokenDefinition {
+        name: "Spirit Cleric".into(),
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: creature_types(vec![CreatureType::Spirit, CreatureType::Cleric]),
+        static_abilities: vec![StaticAbility {
+            description: "This token's power and toughness are each equal to the number of Spirits you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: R::HasCreatureType(CreatureType::Spirit),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Hallowed Haunting",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility { description: "As long as you control seven or more enchantments, creatures you control have flying.", effect: grant(Keyword::Flying) },
+            StaticAbility { description: "As long as you control seven or more enchantments, creatures you control have vigilance.", effect: grant(Keyword::Vigilance) },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Enchantment }),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(spirit) },
+        }],
+        ..Default::default()
+    }
+}
