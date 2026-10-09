@@ -3345,3 +3345,47 @@ fn aven_interrupter_taxes_graveyard_casts() {
     flashback(&mut g).expect("{2}{U} + {2}");
     drain_stack(&mut g);
 }
+
+/// Brenard's artifacts: Ich-Tekik's Golem and the counters an artifact's death
+/// brings; Oltec Matterweaver's Gnome on a creature spell; Urza's +2/+2 and his
+/// 1/1 Soldier copy; Night of the Sweets' Revenge's Food taps for {G}.
+#[test]
+fn brenard_artifacts() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    flood(&mut g);
+    let ich = g.add_card_to_hand(0, catalog::ich_tekik_salvage_splicer());
+    cast(&mut g, ich, None);
+    let golem = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Golem").map(|c| c.id).expect("a Golem");
+    let mite = ready(&mut g, 1, catalog::ornithopter());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(mite)));
+    assert_eq!(g.battlefield_find(ich).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(golem).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::oltec_matterweaver());
+    let urza = ready(&mut g, 0, catalog::urza_prince_of_kroog());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None);
+    let gnome = g.battlefield.iter().find(|c| c.definition.name == "Gnome").map(|c| c.id).expect("a Gnome");
+    assert_eq!(g.computed_permanent(gnome).unwrap().power, 3, "Urza's +2/+2");
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    activate(&mut g, urza, Some(Target::Permanent(ring)));
+    let soldiers = g.battlefield.iter().filter(|c| c.definition.name == "Sol Ring" && c.is_token).count();
+    assert_eq!(soldiers, 1);
+
+    let mut g = pod(2);
+    flood(&mut g);
+    let night = g.add_card_to_hand(0, catalog::night_of_the_sweets_revenge());
+    cast(&mut g, night, None);
+    let food = g.battlefield.iter().find(|c| c.definition.name == "Food").map(|c| c.id).expect("a Food");
+    g.players[0].mana_pool = Default::default();
+    let idx = g.battlefield_find(food).unwrap().definition.activated_abilities.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: food, ability_index: idx, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("the granted {T}: Add {G}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}

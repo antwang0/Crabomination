@@ -6350,3 +6350,176 @@ pub fn natures_chosen() -> CardDefinition {
         ..aura_card("Nature's Chosen", cost(&[g()]), R::Creature.and(R::ControlledByYou), false)
     }
 }
+
+/// Ich-Tekik, Salvage Splicer — {4}{G} 1/1 Phyrexian Human Artificer, partner.
+/// ETB: a 3/3 Phyrexian Golem artifact creature. Whenever an artifact goes to
+/// a graveyard from the battlefield, a +1/+1 counter on it and on each Golem
+/// you control.
+pub fn ich_tekik_salvage_splicer() -> CardDefinition {
+    use crate::card::CounterType;
+    let golem = TokenDefinition {
+        name: "Phyrexian Golem".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Golem]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Ich-Tekik, Salvage Splicer",
+        cost: cost(&[generic(4), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Artificer]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Partner],
+        triggered_abilities: vec![
+            etb(mint(golem, Value::ONE)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Golem).and(R::ControlledByYou)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Oltec Matterweaver — {2}{W} 2/4 Human Artificer. Whenever you cast a
+/// creature spell, choose one — a 1/1 Gnome artifact creature; or a token
+/// copy of target artifact token you control.
+pub fn oltec_matterweaver() -> CardDefinition {
+    let gnome = TokenDefinition {
+        name: "Gnome".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Gnome]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Oltec Matterweaver",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Artificer]),
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Creature)),
+            effect: Effect::ChooseMode(vec![
+                mint(gnome, Value::ONE),
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(R::Artifact.and(R::IsToken).and(R::ControlledByYou)),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Urza, Prince of Kroog — {2}{W}{U} 2/3 Human Artificer. Artifact creatures
+/// you control get +2/+2. {6}: a token copy of target artifact you control,
+/// except it's a 1/1 Soldier creature in addition to its other types.
+pub fn urza_prince_of_kroog() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Urza, Prince of Kroog",
+        cost: cost(&[generic(2), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Artificer]),
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Artifact creatures you control get +2/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Artifact.and(R::Creature).and(R::ControlledByYou)),
+                power: 2,
+                toughness: 2,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(R::Artifact.and(R::ControlledByYou)),
+                extra_creature_types: vec![CreatureType::Soldier],
+                extra_card_types: vec![CardType::Creature],
+                override_pt: Some((1, 1)),
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: false,
+                legendary: false,
+                extra_keywords: vec![],
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: vec![],
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Night of the Sweets' Revenge — {3}{G} Enchantment. ETB: a Food. Foods you
+/// control have "{T}: Add {G}." {5}{G}{G}, sacrifice it: creatures you control
+/// get +X/+X until end of turn, X your Foods (sorcery speed).
+pub fn night_of_the_sweets_revenge() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, StaticAbility, StaticEffect};
+    use crate::effect::{Duration, ManaPayload};
+    let foods = || Selector::EachPermanent(R::HasArtifactSubtype(ArtifactSubtype::Food).and(R::ControlledByYou));
+    CardDefinition {
+        name: "Night of the Sweets' Revenge",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(mint(crabomination_base::tokens::food_token(), Value::ONE))],
+        static_abilities: vec![StaticAbility {
+            description: "Foods you control have \"{T}: Add {G}.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: foods(),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Green]) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), g(), g()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::count(foods()),
+                toughness: Value::count(foods()),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
