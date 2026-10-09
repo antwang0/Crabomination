@@ -176,6 +176,7 @@ mod graveyard_cast;
 pub(crate) mod search_batch;
 mod move_spell;
 mod quest_copy;
+mod discard_pick;
 mod growth_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;

@@ -8630,8 +8630,8 @@ impl GameState {
 
             Effect::MayDiscard { description, count, then, else_ } => {
                 // Reflexive discard cost: ask yes/no (only when the controller
-                // holds enough cards and can be made to discard), discard the
-                // highest-MV cards (least castable), then run `then`.
+                // holds enough cards and can be made to discard), then which
+                // cards (`pick_discards`), then run `then`.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0
                     || self.players[ctx.controller].hand.len() < n
@@ -8654,30 +8654,31 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
-                self.clear_answer_log();
                 if yes {
-                    let mut hand: Vec<(CardId, u32)> = self.players[ctx.controller]
-                        .hand
-                        .iter()
-                        .map(|c| (c.id, c.definition.cost.cmc()))
-                        .collect();
-                    hand.sort_by_key(|(_, cmc)| std::cmp::Reverse(*cmc));
-                    for (id, _) in hand.into_iter().take(n) {
+                    let hand: Vec<CardId> = self.players[ctx.controller].hand.iter().map(|c| c.id).collect();
+                    let Some(picks) = self.pick_discards(&mut cursor, ctx.controller, source, hand, n, effect) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    for id in picks {
                         self.discard_card(ctx.controller, id, events);
                     }
                     self.run_effect(then, ctx, events)?;
-                } else if let Some(e) = else_ {
-                    self.run_effect(e, ctx, events)?;
+                } else {
+                    self.clear_answer_log();
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
                 }
                 Ok(())
             }
 
             Effect::MayDiscardMatching { description, count, filter, then, else_ } => {
                 // Filtered reflexive discard: offer the choice only when the
-                // controller holds `n` cards matching `filter`; discard the
-                // highest-MV matches, then run `then` (else `else_`).
+                // controller holds `n` cards matching `filter`; the seat picks
+                // which matches (`pick_discards`), then `then` (else `else_`).
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                let mut matches: Vec<(CardId, u32)> = self.players[ctx.controller]
+                let matches: Vec<(CardId, u32)> = self.players[ctx.controller]
                     .hand
                     .iter()
                     .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
@@ -8704,15 +8705,21 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
-                self.clear_answer_log();
                 if yes {
-                    matches.sort_by_key(|(_, cmc)| std::cmp::Reverse(*cmc));
-                    for (id, _) in matches.into_iter().take(n) {
+                    let ids: Vec<CardId> = matches.into_iter().map(|(id, _)| id).collect();
+                    let Some(picks) = self.pick_discards(&mut cursor, ctx.controller, source, ids, n, effect) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    for id in picks {
                         self.discard_card(ctx.controller, id, events);
                     }
                     self.run_effect(then, ctx, events)?;
-                } else if let Some(e) = else_ {
-                    self.run_effect(e, ctx, events)?;
+                } else {
+                    self.clear_answer_log();
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
                 }
                 Ok(())
             }

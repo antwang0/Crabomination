@@ -1437,3 +1437,22 @@ fn cr_400_7_a_spell_countered_into_the_library_forgets_its_kicker() {
     let c = g.players[0].library.iter().find(|c| c.id == thirst).expect("bottomed");
     assert!(!c.kicked);
 }
+
+/// CR 701.8a — "you may discard a card. If you do, …" (Pia, Aether Ascetic):
+/// the discarding player picks the card, not the engine's highest-mana-value
+/// default.
+#[test]
+fn cr_701_8a_a_may_discard_payoff_discards_the_chosen_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    let big = g.add_card_to_hand(0, catalog::serra_angel());
+    g.add_card_to_library(0, catalog::glorious_anthem());
+    let pia = g.add_card_to_hand(0, catalog::pia_aether_ascetic());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![ring])]));
+    cast(&mut g, pia);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == ring), "the chosen card was discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == big), "the default pick stayed in hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Glorious Anthem"), "the tutor ran");
+}
