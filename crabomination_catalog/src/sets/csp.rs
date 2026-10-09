@@ -394,10 +394,7 @@ pub fn balduvian_rage() -> CardDefinition {
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
-            Effect::DelayUntil {
-                kind: crate::effect::DelayedTriggerKind::YourNextUpkeep,
-                body: Box::new(draw(1)),
-            },
+            Effect::AtNextTurnsUpkeep { body: Box::new(draw(1)) },
         ]),
     )
 }

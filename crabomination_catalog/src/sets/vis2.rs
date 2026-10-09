@@ -887,8 +887,7 @@ pub fn foreshadow() -> CardDefinition {
                 then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::DelayUntil {
-                kind: DelayedTriggerKind::YourNextUpkeep,
+            Effect::AtNextTurnsUpkeep {
                 body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
             },
         ]),

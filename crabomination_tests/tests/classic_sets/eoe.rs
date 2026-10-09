@@ -3647,3 +3647,36 @@ fn dyadrine_trades_two_counters_for_a_card_and_a_robot() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Robot").count(), 1);
 }
+
+/// Singularity Rupture: "any number of TARGET players" — in a four-seat pod
+/// the caster picks which seats mill half (here itself and one opponent,
+/// skipping the other two), after every creature is destroyed.
+#[test]
+fn singularity_rupture_mills_only_the_targeted_players() {
+    use crabomination::game::types::Target;
+    let mut g = crabomination::game::multi_player_game(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for seat in 0..4 {
+        for _ in 0..10 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::singularity_rupture());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Player(2)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creatures destroyed");
+    let libs: Vec<usize> = g.players.iter().map(|p| p.library.len()).collect();
+    assert_eq!(libs, vec![5, 10, 5, 10], "only the two targeted players milled half");
+}

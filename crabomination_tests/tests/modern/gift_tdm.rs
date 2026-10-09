@@ -223,6 +223,7 @@ fn gift_dawns_truce_promised_grants_indestructible() {
     let b = g.computed_permanent(bear).unwrap();
     assert!(b.keywords().contains(&Keyword::Hexproof), "granted hexproof");
     assert!(b.keywords().contains(&Keyword::Indestructible), "gift added indestructible");
+    assert!(g.players[0].hexproof_this_turn, "\"You and permanents you control\": the caster too");
 }
 
 /// Wildfire Howl's gift adds a 1-damage ping to any target.

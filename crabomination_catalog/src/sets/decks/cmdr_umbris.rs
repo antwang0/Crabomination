@@ -1341,8 +1341,7 @@ pub fn stone_of_erech() -> CardDefinition {
 
 /// Panharmonicon — {4} Artifact. "If an artifact or creature entering causes
 /// a triggered ability of a permanent you control to trigger, that ability
-/// triggers an additional time." (Doubles triggers caused by any permanent
-/// entering — the Yarok static.)
+/// triggers an additional time." A land entering is not doubled.
 pub fn panharmonicon() -> CardDefinition {
     CardDefinition {
         name: "Panharmonicon",
@@ -1350,7 +1349,9 @@ pub fn panharmonicon() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
-            effect: StaticEffect::DoubleControllerEtbTriggers,
+            effect: StaticEffect::DoubleControllerEtbTriggers {
+                entering: R::Artifact.or(R::Creature),
+            },
         }],
         ..Default::default()
     }

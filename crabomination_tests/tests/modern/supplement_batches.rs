@@ -366,27 +366,28 @@ fn tormods_crypt_exiles_opponent_graveyard() {
         "Exiled cards should land in exile");
 }
 
-/// Mishra's Bauble: tap and sac to register a delayed cantrip on next upkeep.
+/// Mishra's Bauble: tap and sac targeting a player; the draw comes at the
+/// beginning of the NEXT TURN's upkeep — the opponent's, when cracked on your
+/// own turn — not at your next upkeep (CR 603.7a; Oracle "the next turn's").
 #[test]
-fn mishras_bauble_sacs_and_registers_delayed_draw() {
+fn mishras_bauble_draws_at_the_next_turns_upkeep() {
     let mut g = two_player_game();
-    // Library has a card so the LookAtTop has an input.
     g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(1, catalog::island());
     let bauble = g.add_card_to_battlefield(0, catalog::mishras_bauble());
     g.clear_sickness(bauble);
-
-    let delayed_before = g.delayed_triggers.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bauble, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("Mishra's Bauble activates");
+        card_id: bauble, ability_index: 0, target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: Vec::new(), x_value: None, mode: None})
+    .expect("Mishra's Bauble activates targeting a player");
     drain_stack(&mut g);
-
-    // Bauble sacrificed.
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == bauble),
-        "Bauble should be sacrificed");
-    // A delayed trigger should be queued for the next upkeep.
-    assert_eq!(g.delayed_triggers.len(), delayed_before + 1,
-        "Bauble should have registered a delayed-draw trigger");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bauble), "sacrificed");
+    let hand = g.players[0].hand.len();
+    g.active_player_idx = 1;
+    g.turn_number += 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew at the opponent's upkeep");
 }
 
 /// Stoneforge Mystic ETB tutors an Equipment.

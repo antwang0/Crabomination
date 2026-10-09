@@ -5245,8 +5245,8 @@ pub fn call_the_mountain_chocobo() -> CardDefinition {
 }
 
 /// Traveling Chocobo — {2}{G} 3/2 Bird. You may play lands and cast Bird spells
-/// from the top of your library. (The extra-trigger "additional time" rider is
-/// omitted.)
+/// from the top of your library. A land or Bird you control entering makes
+/// your permanents' triggered abilities it causes trigger an additional time.
 pub fn traveling_chocobo() -> CardDefinition {
     CardDefinition {
         name: "Traveling Chocobo",
@@ -5263,6 +5263,13 @@ pub fn traveling_chocobo() -> CardDefinition {
             effect: StaticEffect::PlayFromLibraryTop {
                 filter: SelectionRequirement::Land
                     .or(SelectionRequirement::HasCreatureType(CreatureType::Bird)),
+            },
+        }, StaticAbility {
+            description: "If a land or Bird you control entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+            effect: StaticEffect::DoubleControllerEtbTriggers {
+                entering: SelectionRequirement::Land
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Bird))
+                    .and(SelectionRequirement::ControlledByYou),
             },
         }],
         ..Default::default()
@@ -5375,8 +5382,8 @@ pub fn quistis_trepe() -> CardDefinition {
 }
 
 /// Town Greeter — {1}{G} 1/1 Citizen. When it enters, mill four cards, then you
-/// may put a land card from among them into your hand. (The "if it's a Town,
-/// gain 2 life" rider is omitted.)
+/// may put a land card from among them into your hand; if it's a Town, you gain
+/// 2 life.
 pub fn town_greeter() -> CardDefinition {
     CardDefinition {
         name: "Town Greeter",

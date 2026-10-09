@@ -6696,10 +6696,13 @@ pub fn gurmag_drowner() -> CardDefinition {
     }
 }
 
-/// Temur Battlecrier — {G}{U}{R} 4/3 Orc Ranger. Spells you cast cost {1} less
-/// for each creature you control with power 4 or greater. (The "during your
-/// turn" gate is approximated as always-on.)
+/// Temur Battlecrier — {G}{U}{R} 4/3 Orc Ranger. During your turn, spells you
+/// cast cost {1} less for each creature you control with power 4 or greater.
 pub fn temur_battlecrier() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let big = SelectionRequirement::Creature
+        .and(SelectionRequirement::PowerAtLeast(4))
+        .and(SelectionRequirement::ControlledByYou);
     CardDefinition {
         name: "Temur Battlecrier",
         cost: cost(&[g(), u(), r()]),
@@ -6710,11 +6713,15 @@ pub fn temur_battlecrier() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        affinity_filter: Some(
-            SelectionRequirement::Creature
-                .and(SelectionRequirement::PowerAtMost(3).negate())
-                .and(SelectionRequirement::ControlledByYou),
-        ),
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, spells you cast cost {1} less for each creature you control with power 4 or greater.",
+            effect: StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::CostReductionByValue {
+                    filter: SelectionRequirement::Any,
+                    amount: Value::CountOf(Box::new(Selector::EachPermanent(big))),
+                }),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -7348,8 +7355,8 @@ pub fn cori_mountain_monastery() -> CardDefinition {
 }
 
 /// Mistrise Village — Land. Enters tapped unless you control a Mountain or a
-/// Forest. {T}: Add {U}. {U}, {T}: your spells can't be countered this turn.
-/// (The printed "next spell" scope is approximated as all your spells.)
+/// Forest. {T}: Add {U}. {U}, {T}: the next spell you cast this turn can't be
+/// countered.
 pub fn mistrise_village() -> CardDefinition {
     use crate::card::{ActivatedAbility, LandType};
     use crate::effect::ManaPayload;
@@ -7373,7 +7380,7 @@ pub fn mistrise_village() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[u()]),
                 tap_cost: true,
-                effect: Effect::GrantSpellsUncounterableThisTurn { who: Selector::You },
+                effect: Effect::NextSpellCantBeCountered { filter: SelectionRequirement::Any },
                 ..Default::default()
             },
         ],

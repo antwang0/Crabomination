@@ -26255,10 +26255,21 @@ impl GameState {
                 };
                 // Ancient Greenwarden: a landfall trigger (`LandPlayed`) of a
                 // permanent you control fires an additional time per doubler.
-                let land_extra = if triggered_by_land_entry {
-                    self.land_entry_trigger_extra_fires(controller)
+                // A land entering is a permanent entering, so the ETB doublers
+                // (Yarok, Traveling Chocobo) add fires and an opponent's Elesh
+                // Norn suppresses it (CR 603.2, 614.12 doublers / suppressors).
+                let (land_extra, land_suppressed) = if triggered_by_land_entry {
+                    let etb_mult = crate::game::actions::etb_trigger_multiplier(
+                        self,
+                        controller,
+                        subject.as_ref().and_then(|s| s.as_permanent_id()),
+                    );
+                    (
+                        self.land_entry_trigger_extra_fires(controller) + etb_mult.saturating_sub(1),
+                        etb_mult == 0,
+                    )
                 } else {
-                    0
+                    (0, false)
                 };
                 // Panoptic Projektor: a turned-face-up trigger fires an
                 // additional time per doubler.
@@ -26288,6 +26299,7 @@ impl GameState {
                     + land_extra
                     + face_up_extra
                     + damage_extra;
+                let fires = if land_suppressed { 0 } else { fires };
                 for effect in std::iter::repeat_n(effect, fires) {
                     queue.push(PendingTriggerPush {
                         actor,
@@ -33345,7 +33357,7 @@ fn static_effect_to_effects(
             // EtbTriggerSpotlight / DoubleControllerEtbTriggers — read at ETB
             // trigger dispatch via `etb_trigger_multiplier`; no layer effect.
             | StaticEffect::EtbTriggerSpotlight
-            | StaticEffect::DoubleControllerEtbTriggers
+            | StaticEffect::DoubleControllerEtbTriggers { .. }
             // Aboleth Spawn — read at the ETB-trigger push sites via
             // `entering_trigger_copiers`; no layer effect.
             | StaticEffect::CopyOpponentsEnteringCreatureTriggers

@@ -270,20 +270,32 @@ pub fn privileged_position() -> CardDefinition {
 }
 
 /// Greater Auramancy — {1}{W} Enchantment. Other enchantments you control have
-/// shroud. (The "enchanted creatures you control have shroud" clause is
-/// approximated to the enchantment-only grant.)
+/// shroud. Enchanted creatures you control have shroud.
 pub fn greater_auramancy() -> CardDefinition {
     CardDefinition {
         name: "Greater Auramancy",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        static_abilities: vec![StaticAbility {
-            description: "Other enchantments you control have shroud.",
-            effect: StaticEffect::GrantKeyword {
-                applies_to: yours_other(Some(SelectionRequirement::Enchantment)),
-                keyword: Keyword::Shroud,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other enchantments you control have shroud.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: yours_other(Some(SelectionRequirement::Enchantment)),
+                    keyword: Keyword::Shroud,
+                },
             },
-        }],
+            StaticAbility {
+                description: "Enchanted creatures you control have shroud.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::IsEnchanted)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Shroud,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

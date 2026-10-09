@@ -41,9 +41,15 @@ fn urzas_bauble_draws_at_next_upkeep() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bauble).is_none(), "bauble sacrificed");
     let hand_before = g.players[0].hand.len();
+    // "The next turn's upkeep" — the opponent's, not this turn's or yours.
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "delayed draw fired");
+    assert_eq!(g.players[0].hand.len(), hand_before, "not this turn's upkeep");
+    g.active_player_idx = 1;
+    g.turn_number += 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "delayed draw fired on the next turn");
 }
 
 /// Codex Shredder: {T} mills target player; the sac ability returns a card

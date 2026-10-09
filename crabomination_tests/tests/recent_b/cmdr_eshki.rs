@@ -361,3 +361,21 @@ fn zenith_festival_exiles_x_to_play() {
     assert_eq!(perm.player, 0);
     assert!(matches!(perm.duration, crabomination::card::MayPlayDuration::EndOfControllersNextTurn));
 }
+
+/// Temur Battlecrier discounts every spell you cast, per power-4 creature
+/// you control — but only during your turn (Oracle's "During your turn").
+#[test]
+fn temur_battlecrier_discounts_only_on_your_turn() {
+    use crabomination::game::actions::cost_reduction_for_spell;
+    let mut g = main_phase(3);
+    g.add_card_to_battlefield(0, catalog::temur_battlecrier()); // 4/3
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // too small
+    g.add_card_to_battlefield(1, catalog::serra_angel()); // not yours
+    let id = g.next_id();
+    let opt = crabomination::card::CardInstance::new(id, catalog::opt(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &opt, None), 2, "two power-4 creatures");
+    assert_eq!(cost_reduction_for_spell(&g, 1, &opt, None), 0, "not the opponent's spells");
+    g.active_player_idx = 2;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &opt, None), 0, "off on an opponent's turn");
+}

@@ -3844,7 +3844,9 @@ fn cr_115_1_spell_target_slots_carry_a_filter() {
 /// path bounds implicitly. Soltari Guerrillas, Soul Sculptor and Excavator
 /// carried a filter the per-slot walker never read. 55 on 2026-10-05: The
 /// Warring Triad's "target player adds" joins Spectral Searchlight and
-/// Radiant Lotus (an `AddMana` player slot, which has no filter field).
+/// Radiant Lotus (an `AddMana` player slot, which has no filter field). 56 on
+/// 2026-10-09: Mishra's Bauble's "target player's library" peek is a real
+/// player target now (it looked at its controller's own library).
 #[test]
 fn cr_115_1_ability_target_slots_carry_a_filter() {
     let mut bare: Vec<String> = Vec::new();
@@ -3860,7 +3862,7 @@ fn cr_115_1_ability_target_slots_carry_a_filter() {
     }
     bare.sort();
     bare.dedup();
-    assert!(bare.len() <= 55, "{} abilities target through a bare slot: {bare:?}", bare.len());
+    assert!(bare.len() <= 56, "{} abilities target through a bare slot: {bare:?}", bare.len());
 }
 
 /// CR 700.2 — a `ChooseN`'s default picks name real, distinct modes. Rankle's

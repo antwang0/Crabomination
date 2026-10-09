@@ -3950,6 +3950,34 @@ fn elesh_norn_suppresses_opponent_etb_triggers() {
     assert!(!g.exile.iter().any(|c| c.id == p0_creature));
 }
 
+/// A land entering is a permanent entering: Yarok makes your landfall trigger
+/// an additional time, and an opponent's Elesh Norn stops it triggering at all
+/// (CR 603.2; landfall is the `LandPlayed` event, not `PermanentEntered`).
+#[test]
+fn etb_doublers_and_suppressors_reach_landfall() {
+    use crabomination::card::CounterType;
+    let landfall_counters = |doubler_seat: Option<usize>, norn_seat: Option<usize>| {
+        let mut g = two_player_game();
+        if let Some(s) = doubler_seat {
+            g.add_card_to_battlefield(s, catalog::yarok_the_desecrated());
+        }
+        if let Some(s) = norn_seat {
+            g.add_card_to_battlefield(s, catalog::elesh_norn_mother_of_machines());
+        }
+        let bird = g.add_card_to_battlefield(0, catalog::sazhs_chocobo());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let land = g.add_card_to_hand(0, catalog::forest());
+        g.perform_action(GameAction::PlayLand(land)).expect("play land");
+        drain_stack(&mut g);
+        g.battlefield_find(bird).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(landfall_counters(None, None), 1);
+    assert_eq!(landfall_counters(Some(0), None), 2, "your Yarok doubles your landfall");
+    assert_eq!(landfall_counters(Some(1), None), 1, "an opponent's Yarok doesn't");
+    assert_eq!(landfall_counters(None, Some(1)), 0, "an opponent's Norn suppresses it");
+}
+
 /// CR 614.12a — Cavern's "as this enters, choose a creature type" is a
 /// REPLACEMENT applied inside the land drop, and a `wants_ui` seat is still
 /// asked: the drop parks the ask on `ResumeContext::LandEntry` (it cannot be

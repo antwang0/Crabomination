@@ -3178,6 +3178,8 @@ pub fn etb_trigger_multiplier(
     // Yarok/Panharmonicon-style doublers add fires for the controller's own
     // ETB triggers without suppressing opponents'.
     let mut your_doublers = 0usize;
+    let entrant = entering.and_then(|id| state.battlefield.find_by_id(id));
+    let gates = crate::game::effects::PrintedGates::default();
     for c in &state.battlefield {
         let count_spotlight = c
             .definition
@@ -3189,7 +3191,12 @@ pub fn etb_trigger_multiplier(
             .definition
             .static_abilities
             .iter()
-            .filter(|sa| matches!(sa.effect, StaticEffect::DoubleControllerEtbTriggers))
+            .filter(|sa| match &sa.effect {
+                StaticEffect::DoubleControllerEtbTriggers { entering: crate::card::SelectionRequirement::Any } => true,
+                StaticEffect::DoubleControllerEtbTriggers { entering: filter } => entrant
+                    .is_some_and(|e| state.requirement_on_permanent(filter, e, c.controller, None, &gates)),
+                _ => false,
+            })
             .count();
         if c.controller == etb_controller {
             your_norns += count_spotlight;

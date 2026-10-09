@@ -215,8 +215,8 @@ pub fn long_rivers_pull() -> CardDefinition {
 }
 
 /// Dawn's Truce — {1}{W} Instant. Gift a card. Permanents you control gain
-/// hexproof; if the gift was promised, they also gain indestructible. (The
-/// "you" also gaining hexproof is omitted.)
+/// hexproof, and so do you; if the gift was promised, they also gain
+/// indestructible.
 pub fn dawns_truce() -> CardDefinition {
     let your_perms = || Selector::ControlledBy {
         who: PlayerRef::You,
@@ -227,15 +227,17 @@ pub fn dawns_truce() -> CardDefinition {
         keyword: kw,
         duration: Duration::EndOfTurn,
     };
+    let you_hexproof = || Effect::PlayerHexproofThisTurn { who: Selector::You };
     CardDefinition {
         name: "Dawn's Truce",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        effect: grant(Keyword::Hexproof),
+        effect: Effect::Seq(vec![you_hexproof(), grant(Keyword::Hexproof)]),
         gift: Some(Box::new(Gift {
             label: "a card",
             gifted_effect: Effect::Seq(vec![
                 opponent_draws_one(),
+                you_hexproof(),
                 grant(Keyword::Hexproof),
                 grant(Keyword::Indestructible),
             ]),

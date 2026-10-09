@@ -674,8 +674,8 @@ mod recent239 {
         }
     }
 
-    /// Lilypad Village's surveil ability is gated on controlling a kindred creature
-    /// that entered this turn.
+    /// Lilypad Village's surveil ability is gated on a kindred creature having
+    /// entered under your control this turn — one that has since left counts.
     #[test]
     fn lilypad_village_surveil_gate() {
         use crabomination::effect::Effect;
@@ -688,10 +688,12 @@ mod recent239 {
         g.turn_number = 3;
         let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 0, None);
         assert!(!g.evaluate_predicate(ab.condition.as_ref().unwrap(), &ctx), "no kindred → gate closed");
-        // With a Frog that entered this turn, the gate opens.
-        let frog = g.add_card_to_battlefield(0, catalog::spore_frog());
-        g.battlefield_find_mut(frog).unwrap().entered_turn = Some(3);
-        assert!(g.evaluate_predicate(ab.condition.as_ref().unwrap(), &ctx), "kindred present → gate open");
+        // A Frog entered this turn, then left: the gate is open.
+        let frog = g.move_card_to_battlefield_for_test(0, catalog::spore_frog());
+        let ctl = g.battlefield_find(frog).unwrap().controller;
+        g.remove_from_battlefield_to_graveyard_raw(frog);
+        assert_eq!(ctl, 0);
+        assert!(g.evaluate_predicate(ab.condition.as_ref().unwrap(), &ctx), "entered this turn → gate open");
     }
 
     /// Rockface Village's sorcery-speed ability pumps and hastes a kindred creature.

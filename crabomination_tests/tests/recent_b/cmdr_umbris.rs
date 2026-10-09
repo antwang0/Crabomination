@@ -1110,6 +1110,22 @@ fn cmdr_umbris_panharmonicon_doubles_etb() {
     assert!(g.players[1].hand.is_empty(), "the ETB fired twice");
 }
 
+/// Panharmonicon reads "an artifact or creature entering": a land's landfall
+/// trigger fires once, not twice.
+#[test]
+fn cmdr_umbris_panharmonicon_skips_a_land_entering() {
+    let mut g = game(2);
+    g.add_card_to_battlefield(0, catalog::panharmonicon());
+    let bird = g.add_card_to_battlefield(0, catalog::sazhs_chocobo());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bird).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// Shape check: Startled Awake carries its Nightmare back face.
 #[test]
 fn cmdr_umbris_card_shapes() {

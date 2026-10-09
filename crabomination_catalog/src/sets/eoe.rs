@@ -870,9 +870,8 @@ pub fn beyond_the_quiet() -> CardDefinition {
     }
 }
 
-/// Singularity Rupture — {3}{U}{B}{B} Sorcery. Destroy all creatures, then each
-/// opponent mills half their library, rounded down. ("Any number of target
-/// players" is approximated as each opponent.)
+/// Singularity Rupture — {3}{U}{B}{B} Sorcery. Destroy all creatures, then any
+/// number of target players each mill half their library, rounded down.
 pub fn singularity_rupture() -> CardDefinition {
     CardDefinition {
         name: "Singularity Rupture",
@@ -885,9 +884,15 @@ pub fn singularity_rupture() -> CardDefinition {
                     what: Selector::TriggerSource,
                 }),
             },
-            Effect::MillHalf {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                rounded_up: false,
+            // "Any number of target players": eight slots, a pod's most seats.
+            Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: SelectionRequirement::Player,
+                effect: Box::new(Effect::MillHalf {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    rounded_up: false,
+                }),
             },
         ]),
         ..Default::default()
@@ -7103,7 +7108,7 @@ pub fn starfield_vocalist() -> CardDefinition {
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "Your permanent-ETB triggered abilities trigger an additional time.",
-            effect: StaticEffect::DoubleControllerEtbTriggers,
+            effect: StaticEffect::DoubleControllerEtbTriggers { entering: crate::card::SelectionRequirement::Any },
         }],
         alternative_cost: Some(warp(cost(&[generic(1), u()]))),
         ..Default::default()

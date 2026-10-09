@@ -1228,7 +1228,8 @@ mod recent114 {
         );
     }
 
-    /// Greater Auramancy grants shroud to your other enchantments only.
+    /// Greater Auramancy grants shroud to your other enchantments and to your
+    /// enchanted creatures — not to an unenchanted one.
     #[test]
     fn greater_auramancy_grants_shroud_to_enchantments() {
         let mut g = two_player_game();
@@ -1239,7 +1240,10 @@ mod recent114 {
             cp.keywords().iter().any(|k| matches!(k, crabomination::card::Keyword::Shroud))
         };
         assert!(has_shroud(&g.computed_permanent(other_ench).unwrap()), "other enchantment has shroud");
-        assert!(!has_shroud(&g.computed_permanent(bear).unwrap()), "non-enchantment is unaffected");
+        assert!(!has_shroud(&g.computed_permanent(bear).unwrap()), "unenchanted creature is unaffected");
+        let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+        g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+        assert!(has_shroud(&g.computed_permanent(bear).unwrap()), "an enchanted creature you control has shroud");
     }
 
     /// Nevermore stops a named spell from being cast.

@@ -1521,7 +1521,7 @@ pub fn virtue_of_knowledge() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If a permanent entering causes a triggered ability of a permanent you \
                           control to trigger, that ability triggers an additional time.",
-            effect: StaticEffect::DoubleControllerEtbTriggers,
+            effect: StaticEffect::DoubleControllerEtbTriggers { entering: crate::card::SelectionRequirement::Any },
         }],
         ..enchantment("Virtue of Knowledge", cost(&[generic(4), u()]))
     }

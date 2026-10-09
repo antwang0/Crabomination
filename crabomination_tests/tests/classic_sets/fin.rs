@@ -4728,6 +4728,41 @@ fn starting_town_taps_for_any_color_for_life() {
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
 }
 
+/// Traveling Chocobo: a land you control entering makes your landfall trigger
+/// an additional time; an opponent's land entering does not.
+#[test]
+fn traveling_chocobo_doubles_your_landfall() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::traveling_chocobo());
+    let bird = g.add_card_to_battlefield(0, catalog::sazhs_chocobo());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    let counters = |g: &GameState| g.battlefield_find(bird).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters(&g), 2, "landfall triggered an additional time");
+}
+
+/// Starting Town enters untapped on your first three turns of the game only —
+/// tapped on your fourth, and tapped on an opponent's turn.
+#[test]
+fn starting_town_enters_untapped_on_your_first_three_turns() {
+    let tapped_on = |turns_begun: u32, active: usize| {
+        let mut g = two_player_game();
+        g.starting_player = 0;
+        g.players[0].turns_begun = turns_begun;
+        g.active_player_idx = active;
+        g.step = TurnStep::PreCombatMain;
+        let land = g.move_card_to_battlefield_for_test(0, catalog::starting_town());
+        g.battlefield_find(land).unwrap().tapped
+    };
+    assert!(!tapped_on(0, 0), "first turn: untapped");
+    assert!(!tapped_on(2, 0), "third turn: untapped");
+    assert!(tapped_on(3, 0), "fourth turn: tapped");
+    assert!(tapped_on(0, 1), "an opponent's turn: tapped");
+}
+
 /// CR 712.9 / 122.2 — transforming a permanent is the same object staying in
 /// place, so counters ride along. Cecil flips with a +1/+1 counter and the back
 /// face (4/4) computes 5/5.

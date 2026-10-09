@@ -1581,10 +1581,11 @@ fn foreshadow_draws_on_a_named_hit() {
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
     // The named card is auto-picked; either way the delayed draw is pending.
     assert!(g.players[0].hand.len() >= before - 1);
-    g.active_player_idx = 0;
+    g.active_player_idx = 1;
+    g.turn_number += 1;
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert!(g.players[0].hand.len() >= before, "the next-upkeep draw landed");
+    assert!(g.players[0].hand.len() >= before, "the next turn's upkeep draw landed");
 }
 
 /// Three Wishes exiles three cards you can play until your next turn.

@@ -1811,8 +1811,10 @@ pub enum StaticEffect {
     /// ability triggers an additional time." Yarok / Panharmonicon. Unlike
     /// `EtbTriggerSpotlight` this only *adds* fires for the controller's own
     /// ETB triggers — it never suppresses opponents'. Read at ETB-trigger
-    /// dispatch via `etb_trigger_multiplier`.
-    DoubleControllerEtbTriggers,
+    /// dispatch via `etb_trigger_multiplier`. `entering` narrows which
+    /// entering permanents count, read from this static's controller's view
+    /// (`Any` for Yarok; Panharmonicon's artifact-or-creature).
+    DoubleControllerEtbTriggers { entering: crate::card::SelectionRequirement },
     /// Aboleth Spawn's Probing Telepathy — "Whenever a creature entering
     /// under an opponent's control causes a triggered ability of that creature
     /// to trigger, you may copy that ability. You may choose new targets for

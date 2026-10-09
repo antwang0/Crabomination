@@ -757,7 +757,7 @@ fn card_has_etb_static(c: &CardInstance) -> bool {
             sa.effect,
             S::SuppressCreatureEtbTriggers { .. }
                 | S::EtbTriggerSpotlight
-                | S::DoubleControllerEtbTriggers
+                | S::DoubleControllerEtbTriggers { .. }
                 | S::CopyOpponentsEnteringCreatureTriggers
                 | S::EntersTapped { .. }
                 | S::LandsEnterUntapped

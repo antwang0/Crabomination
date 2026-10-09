@@ -2029,15 +2029,10 @@ pub fn tormods_crypt() -> CardDefinition {
 /// of target player's library. Draw a card at the beginning of the next
 /// turn's upkeep.
 ///
-/// Approximated as `LookAtTop(You) + DelayUntil(YourNextUpkeep, Draw 1)` —
-/// the "look at *target* player's" peek collapses to the controller's own
-/// library (the engine has no public-information primitive that exposes an
-/// opponent's library to the human UI). The delayed cantrip is the
-/// gameplay-critical half — Bauble's role in Modern is as a free cantrip,
-/// not an information tool.
+/// The draw waits for the next turn's upkeep, whoever's turn that is — not
+/// the controller's own (CR 603.7a).
 pub fn mishras_bauble() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    use crate::effect::DelayedTriggerKind;
     CardDefinition {
         name: "Mishra's Bauble",
         card_types: vec![CardType::Artifact],
@@ -2048,11 +2043,10 @@ pub fn mishras_bauble() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
                 Effect::LookAtTop {
-                    who: PlayerRef::You,
+                    who: PlayerRef::Target(0),
                     amount: Value::Const(1),
                 },
-                Effect::DelayUntil {
-                    kind: DelayedTriggerKind::YourNextUpkeep,
+                Effect::AtNextTurnsUpkeep {
                     body: Box::new(Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(1),
@@ -8714,7 +8708,7 @@ pub fn yarok_the_desecrated() -> CardDefinition {
             description: "If a permanent entering causes a triggered ability \
                           of a permanent you control to trigger, that ability \
                           triggers an additional time.",
-            effect: StaticEffect::DoubleControllerEtbTriggers,
+            effect: StaticEffect::DoubleControllerEtbTriggers { entering: crate::card::SelectionRequirement::Any },
         }],
         ..Default::default()
     }
@@ -53205,7 +53199,6 @@ pub fn undying_malice() -> CardDefinition {
 /// target player's hand (information-only — not modeled); draw a card at
 /// the beginning of the next turn's upkeep.
 pub fn urzas_bauble() -> CardDefinition {
-    use crate::effect::DelayedTriggerKind;
     CardDefinition {
         name: "Urza's Bauble",
         cost: cost(&[generic(0)]),
@@ -53213,8 +53206,7 @@ pub fn urzas_bauble() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::DelayUntil {
-                kind: DelayedTriggerKind::YourNextUpkeep,
+            effect: Effect::AtNextTurnsUpkeep {
                 body: Box::new(Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),

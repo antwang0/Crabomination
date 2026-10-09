@@ -629,9 +629,8 @@ pub fn lupinflower_village() -> CardDefinition {
 }
 
 /// Lilypad Village — Land. {T}: Add {C}. {T}: Add {U}, creature-spells only.
-/// {U}, {T}: Surveil 2. Activate only if a Bird/Frog/Otter/Rat you control
-/// entered this turn. (The "entered this turn" gate reads a kindred creature you
-/// currently control — one that entered and then left is approximated away.)
+/// {U}, {T}: Surveil 2. Activate only if a Bird/Frog/Otter/Rat entered under
+/// your control this turn (one that has since left still counts).
 pub fn lilypad_village() -> CardDefinition {
     let kindred = R::HasCreatureType(CreatureType::Bird)
         .or(R::HasCreatureType(CreatureType::Frog))
@@ -663,11 +662,9 @@ pub fn lilypad_village() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[u()]),
-                condition: Some(Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        kindred.and(R::ControlledByYou).and(R::EnteredThisTurn),
-                    ),
-                    n: Value::ONE,
+                condition: Some(Predicate::CreatureEnteredThisTurnMatching {
+                    who: PlayerRef::You,
+                    filter: kindred,
                 }),
                 effect: Effect::Surveil {
                     who: PlayerRef::You,

@@ -2327,6 +2327,14 @@ mod recent {
         let v2 = g.move_card_to_battlefield_for_test(0, catalog::mistrise_village());
         drain_stack(&mut g);
         assert!(!g.battlefield_find(v2).unwrap().tapped, "enters untapped with a Mountain out");
+        // {U}, {T}: only the NEXT spell this turn is uncounterable — one charge.
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: v2, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+        }).expect("activate");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].next_spell_uncounterable.len(), 1, "one next-spell charge armed");
+        assert!(!g.players[0].spells_uncounterable_this_turn, "not every spell this turn");
     }
 
     /// Cori Mountain Monastery impulse-exiles the top card for later play.
