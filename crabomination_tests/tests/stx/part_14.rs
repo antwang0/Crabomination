@@ -642,49 +642,36 @@ fn velomachus_attack_casts_a_spell_from_the_top_seven() {
 }
 
 #[test]
-fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
-    // Mavinda's printed {0} activation: target IS card in your gy moves
-    // to exile with may_play_until + exile_after + pay-own-cost stamped,
-    // plus the {8}-unless-targets-your-creature surcharge rider.
-    // Once-per-turn gate enforced.
+fn mavinda_activation_grants_a_graveyard_cast_with_its_surcharge() {
+    // Mavinda's {0}: the targeted IS card is cast FROM THE GRAVEYARD (it
+    // was exiled first, which a "cast from your graveyard" payoff misses),
+    // paying its own cost, {8} more unless it targets a creature you
+    // control, and exiled afterwards. Once per turn.
     let mut g = two_player_game();
     let mavinda = g.add_card_to_battlefield(0, catalog::mavinda_students_advocate());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mavinda) {
-        c.summoning_sick = false; c.tapped = false;
-    }
-    // Printed cost is {0} — no mana floated.
-    // Seed a Lightning Bolt in P0's graveyard.
-    let mut bolt = crabomination::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
-    bolt.controller = 0;
-    let bolt_id = bolt.id;
-    g.players[0].graveyard.push(bolt);
-
-    g.perform_action(GameAction::ActivateAbility {
+    g.clear_sickness(mavinda);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let activate = |g: &mut GameState, t| g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("Mavinda activation (printed {0})");
+        target: Some(crabomination::game::types::Target::Permanent(t)), additional_targets: Vec::new(), x_value: None, mode: None});
+    activate(&mut g, bolt).expect("Mavinda activation (printed {0})");
     drain_stack(&mut g);
-
-    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
-        .expect("Bolt moved to exile by Mavinda");
-    let perm = exiled.may_play_until.expect("may_play stamped");
-    assert!(perm.exile_after, "Mavinda's permission has exile_after=true");
-    assert_eq!(perm.player, 0, "permission goes to Mavinda's controller");
-    // Pay-own-cost: the may-play cast isn't free — Bolt's own {R} is stamped.
-    assert_eq!(exiled.granted_alt_cast_cost_eot.as_ref().map(|c| c.cmc()), Some(1),
-        "cast-this-way pays the spell's own cost");
-    assert!(exiled.granted_cast_surcharge_eot.is_some(),
-        "the {{8}}-unless-targets-your-creature surcharge is stamped");
-
+    let card = g.players[0].graveyard.iter().find(|c| c.id == bolt).expect("still in the graveyard");
+    let perm = card.may_play_until.clone().expect("may_play stamped");
+    assert!(perm.exile_after && perm.player == 0);
+    assert!(card.granted_cast_surcharge_eot.is_some(), "the {{8}} rider is stamped");
+    // {R} alone can't pay for a Bolt at the opponent ({8} more) …
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let at = |t| GameAction::CastFromZoneWithoutPaying { card_id: bolt, target: Some(t), additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(at(crabomination::game::types::Target::Player(1))).is_err(), "{{8}} more off a creature of yours");
+    // … but pays for one at your own creature.
+    g.perform_action(at(crabomination::game::types::Target::Permanent(bear))).expect("{R} at your creature");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "exiled instead of the graveyard");
     // Second activation in the same turn → rejected (once-per-turn).
-    let mut bolt2 = crabomination::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
-    bolt2.controller = 0;
-    let bolt2_id = bolt2.id;
-    g.players[0].graveyard.push(bolt2);
-    let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: mavinda, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(bolt2_id)), additional_targets: Vec::new(), x_value: None , mode: None});
-    assert!(result.is_err(),
-        "Second Mavinda activation in same turn should be rejected (once-per-turn)");
+    let bolt2 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    assert!(activate(&mut g, bolt2).is_err(), "once each turn");
 }
 
 #[test]

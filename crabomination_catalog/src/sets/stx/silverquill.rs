@@ -328,13 +328,11 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 /// put into your graveyard, exile it instead. Activate only once each
 /// turn."
 ///
-/// Approximation: the printed ability is {0} with a conditional {8}
-/// surcharge on the granted cast when it doesn't target your creature.
-/// Fully wired: the printed {0} activation, once per turn, exiles the
-/// graveyard IS card and grants a pay-own-cost, exile-after may-play;
-/// `Effect::StampMayPlaySurcharge` adds the "{8} more unless the spell
-/// targets a creature you control" rider, evaluated against the chosen
-/// targets when the granted cast happens.
+/// The {0} activation, once per turn, grants the targeted graveyard card a
+/// pay-own-cost, exile-after may-play where it lies (cast from the
+/// graveyard); `Effect::StampMayPlaySurcharge` adds the "{8} more unless the
+/// spell targets a creature you control" rider, read against the targets
+/// chosen when the granted cast happens.
 pub fn mavinda_students_advocate() -> CardDefinition {
     let target_is_in_your_gy = crate::effect::shortcut::target_filtered(
         SelectionRequirement::HasCardType(CardType::Instant)
@@ -360,12 +358,8 @@ pub fn mavinda_students_advocate() -> CardDefinition {
             // Printed {0} — the cost lives in the conditional surcharge.
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_is_in_your_gy,
-                    to: ZoneDest::Exile,
-                },
                 Effect::GrantMayPlay {
-                    what: Selector::LastMoved,
+                    what: target_is_in_your_gy,
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: true,
@@ -375,7 +369,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
                 // "If that spell doesn't target a creature you control, it
                 // costs {8} more to cast this way."
                 Effect::StampMayPlaySurcharge {
-                    what: Selector::LastMoved,
+                    what: Selector::Target(0),
                     cost: ManaCost::new(vec![generic(8)]),
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou),
