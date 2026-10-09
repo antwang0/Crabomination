@@ -3337,8 +3337,14 @@ fn play_pod_game(
         }
         // CR 800.4a — a player who left took every object they owned, and
         // control they held over another player's object ended. Debug-only.
+        // A loss marked mid-resolution runs its departure pass once the
+        // action settles, so a pending ask defers the check (a win drawn off
+        // an empty library while a stolen Chulane's ask was open, fuzzed
+        // audit pod, seed 3195569 game 17).
         #[cfg(debug_assertions)]
-        if !g.is_game_over() {
+        if !g.is_game_over()
+            && !(g.pending_decision.is_some() && g.players.iter().any(|p| p.eliminated && !p.left_game))
+        {
             let gone = |p: usize| g.players.get(p).is_none_or(|pl| !pl.is_alive());
             if let Some(c) = g.battlefield.iter().find(|c| gone(c.owner) || gone(c.controller)) {
                 panic!(
