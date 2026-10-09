@@ -658,7 +658,7 @@ fn mavinda_activation_grants_a_graveyard_cast_with_its_surcharge() {
     activate(&mut g, bolt).expect("Mavinda activation (printed {0})");
     drain_stack(&mut g);
     let card = g.players[0].graveyard.iter().find(|c| c.id == bolt).expect("still in the graveyard");
-    let perm = card.may_play_until.clone().expect("may_play stamped");
+    let perm = card.may_play_until.expect("may_play stamped");
     assert!(perm.exile_after && perm.player == 0);
     assert!(card.granted_cast_surcharge_eot.is_some(), "the {{8}} rider is stamped");
     // {R} alone can't pay for a Bolt at the opponent ({8} more) …

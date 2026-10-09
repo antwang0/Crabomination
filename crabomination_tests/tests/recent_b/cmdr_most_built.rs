@@ -523,7 +523,7 @@ fn the_great_work_iii_covers_a_card_milled_later() {
     g.resolve_effect(&iii, &ctx).unwrap();
     let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
     g.check_state_based_actions();
-    let grant = g.players[1].graveyard.iter().find(|c| c.id == bolt).unwrap().may_play_until.clone();
+    let grant = g.players[1].graveyard.iter().find(|c| c.id == bolt).unwrap().may_play_until;
     assert_eq!(grant.as_ref().map(|m| (m.player, m.exile_after)), Some((0, true)));
     g.players[0].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 0;
