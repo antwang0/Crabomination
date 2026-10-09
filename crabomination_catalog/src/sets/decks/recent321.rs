@@ -121,9 +121,10 @@ pub fn proteus_staff() -> CardDefinition {
     }
 }
 
-/// Quicksilver Elemental — borrows every activated ability on the table. (The
-/// "spend blue as any colour for its own abilities" rider is dropped: the
-/// engine's colour-relaxation static is table-wide.)
+/// Quicksilver Elemental — borrows every activated ability on the table, and
+/// blue mana pays the borrowed abilities' colored pips (CR 609.4b). Residual:
+/// an ability granted to it by another permanent (an Equipment) doesn't get
+/// the blue relaxation.
 pub fn quicksilver_elemental() -> CardDefinition {
     CardDefinition {
         name: "Quicksilver Elemental",
@@ -141,7 +142,7 @@ pub fn quicksilver_elemental() -> CardDefinition {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
                 to: None,
-                spend_as_any: None,
+                spend_as_any: Some(crate::mana::Color::Blue),
             },
             ..Default::default()
         }],

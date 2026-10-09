@@ -33385,6 +33385,8 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleYourInstantSorceryCastTriggers
             | StaticEffect::DoubleControllerDeathTriggers
             | StaticEffect::DoubleEquippedCreatureDeathTriggers
+            // Read by the CR 514.2 cleanup sweep; no layer effect.
+            | StaticEffect::KeepsDamageThroughCleanup
             | StaticEffect::DoubleControllerAttackTriggers
             // Hama Pashar — read in `Effect::Venture` via
             // `dungeon_room_extra_fires`; no layer effect.

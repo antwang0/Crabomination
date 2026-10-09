@@ -2033,6 +2033,30 @@ fn quicksilver_elemental_borrows_activated_abilities() {
     .expect_err("Tower isn't a creature");
 }
 
+/// Quicksilver Elemental: blue mana pays a borrowed ability's red pip ("as
+/// though it were mana of any color", CR 609.4b).
+#[test]
+fn quicksilver_elemental_pays_borrowed_pips_with_blue() {
+    let mut g = main_phase();
+    let elem = g.add_card_to_battlefield(0, catalog::quicksilver_elemental());
+    let donor = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+    g.clear_sickness(elem);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elem, ability_index: 0, target: Some(Target::Permanent(donor)),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("borrow");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elem, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("{R}: +1/+0 paid with {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(elem).unwrap().power, 4);
+}
+
 /// Mindslaver hands the wheel over for its target's next turn.
 #[test]
 fn mindslaver_takes_the_next_turn() {

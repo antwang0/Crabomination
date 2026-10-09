@@ -1849,6 +1849,9 @@ pub enum StaticEffect {
     /// an additional time.'" `DoubleControllerDeathTriggers` scoped to the
     /// triggers of the permanent this Equipment is attached to.
     DoubleEquippedCreatureDeathTriggers,
+    /// "Damage isn't removed from this creature during cleanup steps"
+    /// (Ancient Adamantoise) — the CR 514.2 sweep skips it.
+    KeepsDamageThroughCleanup,
     /// Isshin, Two Heavens as One / Windcrag Siege (Mardu) — "If a creature
     /// attacking causes a triggered ability of a permanent you control to
     /// trigger, that ability triggers an additional time." Read at trigger

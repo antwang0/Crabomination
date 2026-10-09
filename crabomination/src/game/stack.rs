@@ -5474,8 +5474,14 @@ impl GameState {
         // write deep-copies a `CardData` that already held 0, and most turns
         // end with nothing marked anywhere.
         if self.battlefield.iter().chain(self.phased_out.iter()).any(|c| c.damage != 0) {
+            let keeps = |c: &CardInstance| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::KeepsDamageThroughCleanup))
+            };
             for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
-                if card.damage != 0 {
+                if card.damage != 0 && !keeps(card) {
                     card.damage = 0;
                 }
             }

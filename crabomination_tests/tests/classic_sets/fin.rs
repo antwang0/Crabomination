@@ -2658,6 +2658,20 @@ fn ancient_adamantoise_dies_to_ten_treasures() {
     assert_eq!(treasures, 10, "ten Treasure tokens");
 }
 
+/// Ancient Adamantoise keeps its marked damage through cleanup (CR 514.2's
+/// sweep skips it); a plain creature's damage is removed.
+#[test]
+fn ancient_adamantoise_keeps_damage_through_cleanup() {
+    let mut g = two_player_game();
+    let toise = g.add_card_to_battlefield(0, catalog::ancient_adamantoise());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(toise).unwrap().damage = 7;
+    g.battlefield_find_mut(bear).unwrap().damage = 1;
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(g.battlefield_find(toise).unwrap().damage, 7);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0);
+}
+
 /// Poison the Waters' first mode gives all creatures -1/-1.
 #[test]
 fn poison_the_waters_mode0_shrinks_all() {

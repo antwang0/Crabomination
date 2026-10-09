@@ -4839,8 +4839,8 @@ pub fn the_fire_crystal() -> CardDefinition {
 
 /// Ancient Adamantoise — {5}{G}{G}{G} 8/20 Turtle. Vigilance, ward {3}. All
 /// damage that would be dealt to you and other permanents you control is dealt
-/// to it instead. When it dies, exile it and create ten Treasure tokens.
-/// (The cleanup-damage-retention rider is omitted.)
+/// to it instead. Damage isn't removed from it during cleanup. When it dies,
+/// exile it and create ten tapped Treasure tokens.
 pub fn ancient_adamantoise() -> CardDefinition {
     CardDefinition {
         name: "Ancient Adamantoise",
@@ -4853,10 +4853,16 @@ pub fn ancient_adamantoise() -> CardDefinition {
         power: 8,
         toughness: 20,
         keywords: vec![Keyword::Vigilance, Keyword::Ward(WardCost::generic(3))],
-        static_abilities: vec![StaticAbility {
-            description: "All damage that would be dealt to you and other permanents you control is dealt to this creature instead.",
-            effect: StaticEffect::RedirectDamageToSelf,
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Damage isn't removed from this creature during cleanup steps.",
+                effect: StaticEffect::KeepsDamageThroughCleanup,
+            },
+            StaticAbility {
+                description: "All damage that would be dealt to you and other permanents you control is dealt to this creature instead.",
+                effect: StaticEffect::RedirectDamageToSelf,
+            },
+        ],
         dies_to_exile: true,
         triggered_abilities: vec![crate::effect::shortcut::on_dies(crate::effect::shortcut::mint_tapped_treasures(10))],
         ..Default::default()
