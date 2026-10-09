@@ -2081,13 +2081,8 @@ pub fn mishras_bauble() -> CardDefinition {
 /// search your library for an Equipment card, reveal it, and put it into
 /// your hand. Then shuffle.
 ///
-/// Wired as a self-source ETB `Search(filter: HasArtifactSubtype(Equipment),
-/// to: Hand)`. The engine's `do_search` already supports declining the
-/// search (decider answers `Search(None)`), which models the "may" rider.
-/// The `{1}{W}, {T}` half is wired too, as the `Move` below — the note that
-/// said it was "omitted (no equipment-attach activation primitive yet)"
-/// outlived the ability by however long, which is what a stale approximation
-/// note costs: it reads as a known gap and nobody re-checks it.
+/// The ETB is a declinable `Search` (the "may"); `{1}{W}, {T}` puts an
+/// Equipment card from your hand onto the battlefield.
 pub fn stoneforge_mystic() -> CardDefinition {
     use crate::card::ArtifactSubtype;
     CardDefinition {
