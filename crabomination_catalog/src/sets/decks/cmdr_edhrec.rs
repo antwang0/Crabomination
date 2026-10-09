@@ -4066,3 +4066,61 @@ pub fn the_battle_of_bywater() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kagha, Shadow Archdruid — {2}{B}{G} 1/4 Elf Druid. Attacking, it gains
+/// deathtouch until end of turn and you mill two; once during each of your
+/// turns, play a land or cast a permanent spell from among cards milled into
+/// your graveyard this turn.
+pub fn kagha_shadow_archdruid() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Kagha, Shadow Archdruid",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Druid]),
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "Once during each of your turns, you may play a land or cast a permanent spell from among cards in your graveyard that were put there from your library this turn.",
+            effect: StaticEffect::MayPlayOwnMilledPermanentOncePerTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Malignus — {3}{R}{R} */* Elemental Spirit; P/T each half the highest life
+/// total among your opponents, rounded up; its damage can't be prevented.
+pub fn malignus() -> CardDefinition {
+    use crate::card::{DynamicPt, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Malignus",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elemental, CreatureType::Spirit]),
+        dynamic_pt: Some(DynamicPt::HalfHighestOpponentLife),
+        static_abilities: vec![StaticAbility {
+            description: "Damage that would be dealt by this creature can't be prevented.",
+            effect: StaticEffect::SourceDamageCantBePrevented,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Yargle and Multani — {3}{B}{B}{G} 18/6 Legendary Frog Spirit Elemental.
+pub fn yargle_and_multani() -> CardDefinition {
+    CardDefinition {
+        name: "Yargle and Multani",
+        cost: cost(&[generic(3), b(), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Frog, CreatureType::Spirit, CreatureType::Elemental]),
+        power: 18,
+        toughness: 6,
+        ..Default::default()
+    }
+}

@@ -2322,3 +2322,44 @@ fn the_battle_of_bywater_feeds_the_small() {
     assert!(g.battlefield_find(giant).is_none());
     assert_eq!(named(&g, "Food"), 2);
 }
+
+/// Kagha: attacking mills two; one milled permanent card may be cast that
+/// turn, then the once-a-turn budget is spent. Beside Coram, Kagha's play is
+/// its own budget.
+#[test]
+fn kagha_plays_one_milled_permanent() {
+    let mut g = pod(2);
+    let kagha = ready(&mut g, 0, catalog::kagha_shadow_archdruid());
+    g.players[0].library.clear();
+    let a = g.add_card_to_library(0, catalog::grizzly_bears());
+    let b = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: kagha, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(kagha).unwrap().keywords().contains(&crabomination::card::Keyword::Deathtouch));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == a) && g.players[0].graveyard.iter().any(|c| c.id == b));
+    g.step = TurnStep::PostCombatMain;
+    flood(&mut g);
+    cast(&mut g, a, None);
+    assert!(g.battlefield_find(a).is_some(), "the first milled Bear");
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell { card_id: b, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err(), "once a turn");
+    // With Coram too, Coram's spell is a second play.
+    ready(&mut g, 0, catalog::coram_the_undertaker());
+    cast(&mut g, b, None);
+    assert!(g.battlefield_find(b).is_some(), "Coram's budget");
+}
+
+/// Malignus is half the highest opponent life, rounded up.
+#[test]
+fn malignus_halves_the_healthiest_opponent() {
+    let mut g = pod(3);
+    let m = ready(&mut g, 0, catalog::malignus());
+    g.players[1].life = 39;
+    g.players[2].life = 12;
+    g.players[0].life = 80;
+    let cp = g.computed_permanent(m).unwrap();
+    assert_eq!((cp.power, cp.toughness), (20, 20), "39 halves up to 20; your own 80 isn't read");
+}
