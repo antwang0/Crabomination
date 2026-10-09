@@ -11404,6 +11404,7 @@ impl GameState {
                     StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
                         kind.creature && c.chosen_number == Some(kind.mana_value)
                     }
+                    StaticEffect::MaySpendManaAsAnyColorForCreatureSpells => kind.creature,
                     _ => false,
                 })
         };
@@ -11424,6 +11425,7 @@ impl GameState {
                 StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
                     mine && kind.creature && c.chosen_number == Some(kind.mana_value)
                 }
+                StaticEffect::MaySpendManaAsAnyColorForCreatureSpells => mine && kind.creature,
                 _ => false,
             })
         });
@@ -11468,7 +11470,8 @@ impl GameState {
             StaticEffect::PlayersMaySpendManaAsAnyColor => true,
             StaticEffect::YouMaySpendManaAsAnyColor
             | StaticEffect::MaySpendManaAsAnyColorForNamedSpells
-            | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => mine,
+            | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv
+            | StaticEffect::MaySpendManaAsAnyColorForCreatureSpells => mine,
             _ => false,
         })
     }
@@ -33151,6 +33154,7 @@ fn static_effect_to_effects(
             | StaticEffect::YouMaySpendManaAsAnyColor
             | StaticEffect::MaySpendManaAsAnyColorForNamedSpells
             | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv
+            | StaticEffect::MaySpendManaAsAnyColorForCreatureSpells
             | StaticEffect::GrantsAllNonlegendaryCreatureNames
             | StaticEffect::StartingHandSizeReduced(_)
             | StaticEffect::StartingDeckCantHaveBasicLands

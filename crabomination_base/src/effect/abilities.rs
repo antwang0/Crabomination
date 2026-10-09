@@ -1384,6 +1384,9 @@ pub enum StaticEffect {
     /// spells with mana value equal to the chosen number" — Emissary's Ploy.
     /// Reads the source's `chosen_number`.
     MaySpendManaAsAnyColorForCreaturesWithChosenMv,
+    /// "You may spend mana as though it were mana of any type to cast
+    /// creature spells" (Vizier of the Menagerie) — read as any color.
+    MaySpendManaAsAnyColorForCreatureSpells,
     /// CR 100.2 — "Your minimum deck size is reduced by N" (Advantageous
     /// Proclamation). Read by `format::validate_full_deck`, not the game loop.
     ReduceMinimumDeckSize(u32),

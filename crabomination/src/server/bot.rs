@@ -17452,7 +17452,8 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
                 StaticEffect::PlayersMaySpendManaAsAnyColor => true,
                 StaticEffect::YouMaySpendManaAsAnyColor => mine,
                 StaticEffect::MaySpendManaAsAnyColorForNamedSpells
-                | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
+                | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv
+                | StaticEffect::MaySpendManaAsAnyColorForCreatureSpells => {
                     mine && !p.face_down
                 }
                 StaticEffect::ManaProductionDoubled

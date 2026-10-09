@@ -814,6 +814,7 @@ fn card_has_any_color_static(c: &CardInstance) -> bool {
                 | S::YouMaySpendManaAsAnyColor
                 | S::MaySpendManaAsAnyColorForNamedSpells
                 | S::MaySpendManaAsAnyColorForCreaturesWithChosenMv
+                | S::MaySpendManaAsAnyColorForCreatureSpells
         )
     })
 }
