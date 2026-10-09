@@ -2838,3 +2838,60 @@ pub fn rabble_rousing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tinybones, Bauble Burglar — {1}{B} 1/3. An opponent's discarded card is
+/// exiled with a stash counter. During your turn you may play stashed cards
+/// you don't own, spending mana as though of any type: each of your upkeeps
+/// grants this turn's play on all of them, and a card stashed on your turn is
+/// granted at once (a grant outlives Tinybones leaving mid-turn). {3}{B},
+/// {T} (sorcery speed): each opponent discards a card.
+pub fn tinybones_bauble_burglar() -> CardDefinition {
+    use crate::card::{CounterType, MayPlayDuration};
+    use crate::effect::ZoneRef;
+    let grant = |what: Selector| Effect::GrantMayPlay {
+        what,
+        duration: MayPlayDuration::EndOfThisTurn,
+        to_owner: false,
+        exile_after: false,
+        pay_own_cost: true,
+        any_color: true,
+    };
+    CardDefinition {
+        name: "Tinybones, Bauble Burglar",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Skeleton, CreatureType::Rogue]),
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl),
+                effect: Effect::Seq(vec![
+                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Stash, amount: Value::ONE },
+                    Effect::If {
+                        cond: Predicate::IsTurnOf(PlayerRef::You),
+                        then: Box::new(grant(Selector::LastMoved)),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: grant(Selector::EachMatching {
+                    zone: ZoneRef::Exile,
+                    filter: R::WithCounter(CounterType::Stash).and(R::Not(Box::new(R::OwnedByYou))),
+                }),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE, random: false },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

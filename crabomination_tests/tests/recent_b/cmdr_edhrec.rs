@@ -1714,3 +1714,28 @@ fn rabble_rousing_makes_citizens_per_attacker() {
     drain_stack(&mut g);
     assert_eq!(named(&g, "Citizen"), 2);
 }
+
+/// Tinybones: its activation makes an opponent discard; the card is stashed
+/// in exile, and on your turn you may cast it with mana of any type.
+#[test]
+fn tinybones_stashes_and_plays_a_discard() {
+    let mut g = pod(2);
+    let bones = ready(&mut g, 0, catalog::tinybones_bauble_burglar());
+    g.players[1].hand.clear();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g);
+    activate(&mut g, bones, None);
+    let c = g.exile.iter().find(|c| c.id == bolt).expect("stashed in exile");
+    assert_eq!(c.counter_count(crabomination::card::CounterType::Stash), 1);
+    assert!(c.may_play_until.is_some_and(|m| m.player == 0), "playable on your turn");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("cast the stashed bolt from exile");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "cast with blue mana");
+}
