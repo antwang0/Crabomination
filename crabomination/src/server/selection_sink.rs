@@ -25,11 +25,20 @@ fn is_selection(e: &Effect) -> bool {
         Effect::Scry { who: PlayerRef::You, .. }
         | Effect::Surveil { who: PlayerRef::You, .. }
         | Effect::RearrangeTop { who: PlayerRef::You, .. } => true,
+        // A plain "draw a card" for yourself (Mikokoro's "each player draws"
+        // helps the table and stays out). A twelfth-run census (seed 4401)
+        // never saw one activated.
+        Effect::Draw { who: Selector::You, .. } => true,
         Effect::Seq(v) => {
+            let counters_on_this = |rest: &[Effect]| rest.iter().all(|e| matches!(e, Effect::AddCounter { what: Selector::This, .. }));
             matches!(
                 v.as_slice(),
                 [Effect::Draw { who: Selector::You, .. }, Effect::Discard { who: Selector::You, .. }, rest @ ..]
-                    if rest.iter().all(|e| matches!(e, Effect::AddCounter { what: Selector::This, .. }))
+                    if counters_on_this(rest)
+            ) || matches!(
+                // Sphinx of Magosi: draw, then a +1/+1 counter on itself.
+                v.as_slice(),
+                [Effect::Draw { who: Selector::You, .. }, rest @ ..] if !rest.is_empty() && counters_on_this(rest)
             ) || matches!(v.first(), Some(Effect::Scry { who: PlayerRef::You, .. }))
         }
         _ => false,
@@ -59,7 +68,9 @@ pub(super) fn pick_selection_sink(state: &GameState, seat: usize) -> Option<Game
                     && (ab.life_cost == 0 || state.players[seat].life - ab.life_cost as i32 >= LIFE_FLOOR)
                     && ab.life_cost_value.is_none()
                     && ab.energy_cost == 0
-                    && ab.remove_counter_x.is_none();
+                    && ab.remove_counter_x.is_none()
+                    // A free, untapped one would be taken every priority.
+                    && (ab.tap_cost || ab.mana_cost.cmc() > 0 || ab.life_cost > 0);
                 // An untapped rearrange (Sensei's Divining Top) would repeat
                 // for every spare mana: once a turn, read off the seat's
                 // "activated an artifact's ability this turn".
@@ -141,6 +152,20 @@ mod tests {
         assert!(pick_selection_sink(&g, 0).is_none(), "outside Commander");
         g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
         assert!(matches!(pick_selection_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == castle));
+    }
+
+    /// Sphinx of Magosi's "draw, then a +1/+1 counter on it" is taken with
+    /// leftover mana at an opponent's end step.
+    #[test]
+    fn sphinx_of_magosi_draws_with_leftover_mana() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let sphinx = g.add_card_to_battlefield(0, crate::catalog::sphinx_of_magosi());
+        g.players[0].mana_pool.add(Color::Blue, 3);
+        assert!(matches!(pick_selection_sink(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == sphinx));
     }
 
     /// Doom Whisperer's "pay 2 life: surveil 2" is spent while life stays
