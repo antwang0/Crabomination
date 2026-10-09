@@ -2644,3 +2644,71 @@ fn kenrith_agatha_gluntch_and_the_theorist() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "bounced");
 }
+
+/// Fire Lord Azula's court: Azula, Cunning Usurper takes an opponent's
+/// creature and graveyard card, castable on your turn only, at instant speed,
+/// with mana of any type; Ozai keeps lost mana as red and flies on six
+/// floating; Zuko firebends for his experience and gains it from combat
+/// spells.
+#[test]
+fn fire_lord_azula_court() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    flood(&mut g);
+    let azula = g.add_card_to_hand(0, catalog::azula_cunning_usurper());
+    cast(&mut g, azula, Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == bear && c.exiled_with == Some(azula)));
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.exiled_with == Some(azula)));
+    // Not on an opponent's turn.
+    advance_to_turn_of(&mut g, 1);
+    let cast_bear = |g: &mut GameState| {
+        g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    g.priority.player_with_priority = 0;
+    assert!(cast_bear(&mut g).is_err(), "not on an opponent's turn");
+    // Our turn, in combat, with blue mana only: flash and any type.
+    advance_to_turn_of(&mut g, 0);
+    g.step = TurnStep::BeginCombat;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast_bear(&mut g).expect("cast the stolen Bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.controller == 0));
+
+    let mut g = pod(2);
+    let ozai = ready(&mut g, 0, catalog::ozai_the_phoenix_king());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    assert!(g.computed_permanent(ozai).unwrap().keywords().contains(&Keyword::Flying));
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 6, "lost mana turns red");
+    g.players[0].mana_pool = Default::default();
+    assert!(!g.computed_permanent(ozai).unwrap().keywords().contains(&Keyword::Flying));
+
+    let mut g = pod(2);
+    let zuko = ready(&mut g, 0, catalog::zuko_firebending_master());
+    g.players[0].experience = 2;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: zuko, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].experience, 3);
+}
+
+fn advance_to_turn_of(g: &mut GameState, seat: usize) {
+    loop {
+        let ev = g.advance_step(Vec::new()).expect("step");
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(g);
+        if g.active_player_idx == seat && g.step == TurnStep::PreCombatMain {
+            break;
+        }
+    }
+}

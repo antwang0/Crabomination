@@ -4757,3 +4757,112 @@ pub fn the_theorist_jace_beleren() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Azula, Cunning Usurper — {2}{U}{B}{B} 4/4 Human Noble Rogue, firebending 2.
+/// ETB: target opponent exiles a nontoken creature they control, then a
+/// nonland card from their graveyard. During your turn you may cast the cards
+/// exiled with Azula, as though they had flash, with mana of any type.
+pub fn azula_cunning_usurper() -> CardDefinition {
+    use crate::card::{CardId, MayPlayDuration, Zone};
+    let opp = || PlayerRef::ControllerOf(Box::new(target_filtered(R::OpponentPlayer)));
+    let exile_pick = |what: Selector| Effect::ChooseOneAmong {
+        what,
+        chooser: opp(),
+        chosen: Box::new(Effect::ExileLinkedTo { what: Selector::SeparatedPile { chosen: true }, link: Selector::This }),
+        other: Box::new(Effect::Noop),
+    };
+    CardDefinition {
+        name: "Azula, Cunning Usurper",
+        cost: cost(&[generic(2), u(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Noble, CreatureType::Rogue]),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Firebending(2)],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            exile_pick(Selector::ControlledBy { who: opp(), filter: R::Creature.and(R::NotToken) }),
+            exile_pick(Selector::CardsInZone { who: opp(), zone: Zone::Graveyard, filter: R::Nonland }),
+            Effect::GrantMayPlay {
+                what: Selector::CardExiledWithSource,
+                duration: MayPlayDuration::HolderTurnsWithFlashWhileSource { holder: 0, source: CardId(0) },
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: true,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Ozai, the Phoenix King — {2}{B}{B}{R}{R} 7/7 Human Noble; trample,
+/// firebending 4, haste. Mana you'd lose becomes red instead; flying and
+/// indestructible while you have six or more unspent mana.
+pub fn ozai_the_phoenix_king() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let six = || Predicate::ValueAtLeast(Value::UnspentManaOf(PlayerRef::You), Value::Const(6));
+    let grant = |keyword| StaticEffect::WhileCondition {
+        condition: six(),
+        inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword }),
+    };
+    CardDefinition {
+        name: "Ozai, the Phoenix King",
+        cost: cost(&[generic(2), b(), b(), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Noble]),
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Trample, Keyword::Firebending(4), Keyword::Haste],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If you would lose unspent mana, that mana becomes red instead.",
+                effect: StaticEffect::UnspentManaBecomesRed,
+            },
+            StaticAbility {
+                description: "Ozai has flying as long as you have six or more unspent mana.",
+                effect: grant(Keyword::Flying),
+            },
+            StaticAbility {
+                description: "Ozai has indestructible as long as you have six or more unspent mana.",
+                effect: grant(Keyword::Indestructible),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Zuko, Firebending Master — {1}{R} 2/2 Human Noble Ally; first strike,
+/// firebending X (your experience counters). A spell you cast during combat
+/// gets you an experience counter.
+pub fn zuko_firebending_master() -> CardDefinition {
+    let combat = Predicate::Any(
+        [
+            TurnStep::BeginCombat,
+            TurnStep::DeclareAttackers,
+            TurnStep::DeclareBlockers,
+            TurnStep::FirstStrikeDamage,
+            TurnStep::CombatDamage,
+            TurnStep::EndCombat,
+        ]
+        .into_iter()
+        .map(Predicate::CurrentStepIs)
+        .collect(),
+    );
+    CardDefinition {
+        name: "Zuko, Firebending Master",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Noble, CreatureType::Ally]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::FirebendingExperience],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(combat),
+            effect: Effect::AddExperience(Value::ONE),
+        }],
+        ..Default::default()
+    }
+}
