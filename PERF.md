@@ -3151,7 +3151,9 @@ audit pods       overflow profile + debug-assertions, strict answer log + sweep
                  caster-first slot, fixed concurrently in fb67e19f8); at
                  `3b801a161` seeds 61000/62000 (330 decks x 5/8 seats x 10)
                  and 63000 (4 seats x 10, CRAB_POD_FUZZ 2500 + CONCEDE 20):
-                 1,910 games, 0 panics, 0 undecided
+                 1,910 games, 0 panics, 0 undecided; `--a dflt` (the
+                 production pilot) seeds 67000/69000/70000, 3/5/6 seats x 6:
+                 1,386 games, 0 panics, 0 undecided
 2-player         release, seed 9301, 300 games an archetype: cube 2,395 / 5
                  draws, sos 1,500 / 0, sealed 3,599 / 1 draw; 0 panics
 suite            24,691 / 0 / 5 strict; workspace clippy 0
