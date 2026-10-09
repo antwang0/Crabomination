@@ -5551,6 +5551,13 @@ impl GameState {
                         .and_then(|s| self.battlefield_find(s))
                         .and_then(|s| s.attached_to)
                         .is_some_and(|host| self.block_map.get(&card.id).is_some_and(|atk| atk.contains(&host))),
+                    R::BlockingOrBlockedByHostOfSource => source
+                        .and_then(|s| self.battlefield_find(s))
+                        .and_then(|s| s.attached_to)
+                        .is_some_and(|host| {
+                            self.block_map.get(&card.id).is_some_and(|atk| atk.contains(&host))
+                                || self.block_map.get(&host).is_some_and(|atk| atk.contains(&card.id))
+                        }),
                     // The game-level pair log (PERF `(-285)`: the blocker's
                     // own list was a `CardData` write per blocker declared,
                     // and the log holds the same pairs), still gated on the
@@ -7308,6 +7315,7 @@ impl GameState {
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::BlockingOrBlockedBySource
             | R::BlockingHostOfSource
+            | R::BlockingOrBlockedByHostOfSource
             | R::BlockedBySourceThisTurn
             | R::BlockedSourceThisTurn
             | R::PlayerDamagedBySourceThisTurn | R::ControllerCombatDamagedBySourceThisTurn
