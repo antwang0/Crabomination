@@ -2898,8 +2898,8 @@ pub fn blood_petal_celebrant() -> CardDefinition {
 
 /// Questing Beast — {2}{G}{G} 4/4 Legendary Beast. Vigilance, deathtouch,
 /// haste; can't be blocked by creatures with power 2 or less; combat damage
-/// dealt by creatures you control can't be prevented. (The planeswalker-redirect
-/// rider is omitted — planeswalkers aren't attack targets yet.)
+/// dealt by creatures you control can't be prevented; its combat damage to an
+/// opponent is dealt again to target planeswalker that player controls.
 pub fn questing_beast() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
