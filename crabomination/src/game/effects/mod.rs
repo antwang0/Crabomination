@@ -19414,6 +19414,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantHexproofAndEvasionFromChosenColor { what, duration } => {
+                // Skrelv — the same pick as Mother of Runes' protection.
+                let source = ctx.source.unwrap_or(CardId(0));
+                let ids: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                let color = match self.stack_threat_color(ctx.controller, &ids) {
+                    Some(threat) => self.chosen_color_or(Some(source), &Color::ALL, threat),
+                    None => self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true),
+                };
+                let kws = [
+                    Keyword::HexproofFromColor(color),
+                    Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::HasColor(color))),
+                ];
+                for cid in ids {
+                    for kw in &kws {
+                        self.grant_keyword_for(cid, kw.clone(), *duration, ctx);
+                    }
+                }
+                Ok(())
+            }
+
             // CR 701.63 — endure N: controller of `target` either grows it
             // with N +1/+1 counters or mints an N/N white Spirit. AutoDecider
             // (Bool(false)) keeps the counters; Bool(true) takes the token.

@@ -2013,6 +2013,7 @@ impl Effect {
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
+            | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
@@ -2894,6 +2895,7 @@ impl Effect {
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
+            | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. } => sel_filter(what),
             Effect::Move { what, .. } | Effect::BottomInRandomOrder { what } => sel_filter(what),
@@ -5441,6 +5443,7 @@ impl Effect {
                 | Effect::GrantKeywordThroughControllersNextCombat { what, .. }
                 | Effect::GrantKeywords { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. }
+                | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
                 | Effect::GainProtectionFromPlayer { what, .. }
                 | Effect::CantBeBlockedByPlayer { what, .. }
                 // `primary_target_filter` read these three and this walker did

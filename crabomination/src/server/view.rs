@@ -3154,6 +3154,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::ReturnSelfTransformedTappedToOwner => "Return transformed",
         Effect::LookPickToHand { .. } => "Look and take a card",
         Effect::GrantProtectionFromChosenColor { .. }
+        | Effect::GrantHexproofAndEvasionFromChosenColor { .. }
         | Effect::GrantProtectionFromColorsOf { .. } => "Grant protection",
         Effect::BecomeChosenCreatureType { .. } => "Change creature type",
         Effect::BecomeChosenColor { .. } | Effect::BecomeColor { .. } => "Change colour",

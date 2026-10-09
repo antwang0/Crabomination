@@ -8439,6 +8439,12 @@ pub enum Effect {
     /// `Keyword::Protection(color)`). Mother of Runes, Giver of Runes, Gods
     /// Willing, Apostle's Blessing.
     GrantProtectionFromChosenColor { what: Selector, duration: Duration },
+    /// "Choose a color. [Target] gains hexproof from that color until end of
+    /// turn. It can't be blocked by creatures of that color this turn"
+    /// (Skrelv, Defector Mite). The color is picked as for
+    /// `GrantProtectionFromChosenColor` — the threat's, else the densest
+    /// among opponents.
+    GrantHexproofAndEvasionFromChosenColor { what: Selector, duration: Duration },
     /// CR 702.16 — each permanent and player `what` picks gains protection
     /// from the player `from` resolves to, for `duration` (`EndOfTurn` or
     /// `UntilNextTurn`): a permanent gets `ProtectionFromMatching(
