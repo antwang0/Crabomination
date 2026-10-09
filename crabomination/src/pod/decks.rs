@@ -8312,3 +8312,31 @@ pub const GISHATH_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
     mountain, mountain, plains, plains, plains, plains,
 ];
+
+pub const SHORIKAI_COMMANDERS: &[CardFactory] = &[shorikai_genesis_engine];
+
+/// **Shorikai, Genesis Engine**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 9 Islands + 8 Plains = 99.
+/// Azorius Vehicles: Shorikai loots into Pilot tokens that crew a fleet, up to Mechtitan.
+pub const SHORIKAI_MAIN: &[CardFactory] = &[
+    aerial_surveyor, arcane_signet, azorius_signet, cultivators_caravan, fellwar_stone,
+    imposter_mech, manifold_key, mechtitan_core, mobilizer_mech, parhelion_ii,
+    peacewalker_colossus, prodigys_prototype, salvation_engine, skullclamp,
+    skysovereign_consul_flagship, smugglers_copter, sol_ring, surgehacker_mech,
+    talisman_of_progress, thought_vessel, unwinding_clock, voltaic_key, weatherlight,
+    adarkar_wastes, ancient_den, command_tower, exotic_orchard, flooded_strand, glacial_fortress,
+    hallowed_fountain, mech_hangar, port_town, prairie_stream, razortide_bridge, reliquary_tower,
+    sea_of_clouds, seat_of_the_synod, skycloud_expanse, spire_of_industry, temple_of_enlightenment,
+    cosima_god_of_the_voyage, cyberdrive_awakener, drumbellower, emry_lurker_of_the_loch,
+    esper_sentinel, etherium_sculptor, foundry_inspector, gold_myr, kappa_cannoneer,
+    katsumasa_the_animator, kotori_pilot_prodigy, padeem_consul_of_innovation,
+    sai_master_thopterist, shimmer_myr, silver_myr, solemn_simulacrum, sram_senior_edificer,
+    vedalken_engineer, intruder_alarm, rhystic_study, smothering_tithe, swift_reconfiguration,
+    thopter_spy_network, an_offer_you_cant_refuse, counterspell, cyclonic_rift, dispatch,
+    dovins_veto, dramatic_reversal, enlightened_tutor, generous_gift, path_to_exile, reality_shift,
+    swan_song, swords_to_plowshares, tezzeret_betrayer_of_flesh, brilliant_restoration,
+    dance_of_the_manse, fabricate, organic_extinction, supreme_verdict, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
