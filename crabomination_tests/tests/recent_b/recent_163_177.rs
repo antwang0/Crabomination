@@ -436,6 +436,40 @@ mod recent166 {
         assert!(g.exile.is_empty(), "nothing was exiled");
     }
 
+    /// Planetarium's "do this only once each turn" is spent by the cast (its
+    /// ruling: "once you choose to cast the top card … won't trigger again
+    /// that turn") — a look that finds only lands leaves it for later.
+    #[test]
+    fn planetarium_once_each_turn_is_spent_by_the_cast_not_the_look() {
+        let mut g = two_player_game();
+        let art = g.add_card_to_battlefield(0, catalog::planetarium_of_wan_shi_tong());
+        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(0, catalog::forest());
+        let scry = |g: &mut GameState| {
+            if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == art) {
+                c.tapped = false;
+            }
+            g.players[0].mana_pool.add_colorless(1);
+            g.priority.player_with_priority = 0;
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: art, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+            })
+            .expect("{1},{T}: Scry 2");
+            drain_stack(g);
+        };
+        let bears = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+        scry(&mut g);
+        assert_eq!(bears(&g), 0, "only lands on top: nothing cast");
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+        scry(&mut g);
+        assert_eq!(bears(&g), 1, "the use was still there: the Bears were cast");
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+        scry(&mut g);
+        assert_eq!(bears(&g), 1, "a cast spent the turn's use");
+    }
+
     /// Phoenix Fleet Airship copies itself at end step if you sacrificed a permanent.
     #[test]
     fn phoenix_fleet_airship_copies_after_sacrifice() {

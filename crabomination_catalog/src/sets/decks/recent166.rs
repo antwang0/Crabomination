@@ -226,8 +226,8 @@ pub fn secret_tunnel() -> CardDefinition {
 /// Planetarium of Wan Shi Tong — {6} Legendary Artifact. `{1}, {T}: Scry 2.`
 /// Whenever you scry or surveil, look at the top card of your library; you may
 /// cast it without paying its mana cost (from the library — an uncast card
-/// stays on top). Do this only once each turn. Approximation: the once-a-turn
-/// limit is spent by the first trigger, even when that look finds a land.
+/// stays on top). Do this only once each turn — spent by the cast (the
+/// ruling), so a look that finds a land or is declined leaves it.
 pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
     CardDefinition {
         name: "Planetarium of Wan Shi Tong",
@@ -245,14 +245,32 @@ pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::ScriedOrSurveiled, EventScope::YourControl)
-                .once_per_turn(),
-            effect: Effect::CastWithoutPayingImmediate {
-                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
-                source_zone: crate::card::Zone::Library,
-                exile_after: false,
-                copy: false,
-                reduce_generic: 0,
-                pay_own_cost: false,
+                .with_filter(Predicate::Not(Box::new(Predicate::SourceDoneThisTurn))),
+            // X snapshots your spell count; a cast raises it and spends the turn's use.
+            effect: Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SourceDoneThisTurn)),
+                then: Box::new(Effect::WithX {
+                    x: Value::SpellsCastThisTurn(PlayerRef::You),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::CastWithoutPayingImmediate {
+                            what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                            source_zone: crate::card::Zone::Library,
+                            exile_after: false,
+                            copy: false,
+                            reduce_generic: 0,
+                            pay_own_cost: false,
+                        },
+                        Effect::If {
+                            cond: Predicate::ValueAtLeast(
+                                Value::SpellsCastThisTurn(PlayerRef::You),
+                                Value::Sum(vec![Value::XFromCost, Value::ONE]),
+                            ),
+                            then: Box::new(Effect::MarkDoneThisTurn),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         }],
         ..Default::default()
