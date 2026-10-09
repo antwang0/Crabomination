@@ -5692,10 +5692,18 @@ impl GameState {
                                 <= *n
                     }
                     R::PowerLessThanSource => {
-                        source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
-                            self.computed_is_creature(card)
-                                && self.effective_power(card) < self.effective_power(src)
-                        })
+                        // A source sacrificed to pay for the ability (Lena,
+                        // Selfless Champion) is read by last known
+                        // information (CR 608.2h).
+                        let src_power = source.and_then(|s| match self.battlefield_find(s) {
+                            Some(src) => Some(self.effective_power(src)),
+                            None => self
+                                .died_card_snapshots
+                                .get(&s)
+                                .or_else(|| self.leaves_bf_lki.get(&s))
+                                .map(|c| c.power()),
+                        });
+                        src_power.is_some_and(|sp| self.computed_is_creature(card) && self.effective_power(card) < sp)
                     }
                     R::GreaterPowerOrToughnessThanSource => {
                         source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
