@@ -22571,13 +22571,28 @@ impl GameState {
         use crate::decision::{Decision, DecisionAnswer};
         // First dredge card in the graveyard whose count the library can
         // satisfy (CR 702.52a — you can't dredge with fewer than N cards).
-        let cand = self.players[p].graveyard.iter().find_map(|c| {
+        let printed = self.players[p].graveyard.iter().find_map(|c| {
             c.definition.keywords.iter().find_map(|kw| match kw {
                 Keyword::Dredge(n) if self.players[p].library.len() >= *n as usize => {
                     Some((c.id, *n))
                 }
                 _ => None,
             })
+        });
+        // The Necrobloom — land cards in the graveyard have dredge N. The
+        // battlefield is walked only when a land card is there to dredge.
+        let cand = printed.or_else(|| {
+            let land = self.players[p].graveyard.iter().find(|c| c.definition.is_land())?.id;
+            let n = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| &c.definition.static_abilities)
+                .find_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::YourGraveyardLandsHaveDredge(n) => Some(n),
+                    _ => None,
+                })?;
+            (self.players[p].library.len() >= n as usize).then_some((land, n))
         });
         let Some((card_id, n)) = cand else { return false; };
         // AutoDecider's blanket "no" made Dredge fully inert (this ask sits
@@ -33587,6 +33602,7 @@ fn static_effect_to_effects(
             | StaticEffect::OwnedCardsOffBattlefieldHaveCardType { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::GraveyardCardsHaveRetrace { .. }
+            | StaticEffect::YourGraveyardLandsHaveDredge(_)
             | StaticEffect::CollectsLeaverCounters
             | StaticEffect::OpponentsCantActivateArtifactAbilities
             // AnnihilatorPerPlusOneCounter — needs a live counter count,
