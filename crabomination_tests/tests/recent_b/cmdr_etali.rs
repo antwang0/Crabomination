@@ -269,6 +269,8 @@ fn mirage_phalanx_pairs_and_copies_both_at_combat() {
     let spare = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     g.step = TurnStep::BeginCombat;
     g.fire_step_triggers(TurnStep::BeginCombat);
+    // Each of the pair has its own trigger: two on the stack, not one folded.
+    assert_eq!(g.stack.len(), 2, "two separate triggers");
     drain_stack(&mut g);
     let copies: Vec<_> = a_tokens_named(&g, "Mirage Phalanx")
         .into_iter()

@@ -365,15 +365,8 @@ pub fn flamerush_rider() -> CardDefinition {
 /// Mirage Phalanx — {4}{R}{R} 4/4 Human Soldier. Soulbond. While paired, each
 /// of the pair has "At the beginning of combat on your turn, create a token
 /// that's a copy of this creature, except it has haste and loses soulbond.
-/// Exile it at end of combat."
-///
-/// The two granted triggers are folded into one printed on Mirage Phalanx:
-/// while it is paired (`Selector::SoulbondPartner` is non-empty), your
-/// beginning of combat makes a hasty copy of it and one of its partner, each
-/// exiled at end of combat.
-/// The copies lose soulbond (`remove_keywords`), so neither pairs as it
-/// enters. Approximation: one trigger instead of two (a response between the
-/// two copies isn't possible).
+/// Exile it at end of combat." — printed here and granted to the partner
+/// (`GrantTriggeredAbility` over `PairedWithSource`), two triggers.
 pub fn mirage_phalanx() -> CardDefinition {
     let temp_copy = |source: Selector| {
         [
@@ -399,24 +392,26 @@ pub fn mirage_phalanx() -> CardDefinition {
             },
         ]
     };
-    CardDefinition {
-        keywords: vec![Keyword::Soulbond],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::BeginCombat),
-                EventScope::YourControl,
-            )
+    // "Each of the pair has '…a copy of this creature…'": the trigger is
+    // printed here and granted to the partner, so each copies itself.
+    let paired_copy = TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl)
             .with_filter(Predicate::ValueAtLeast(
                 Value::CountOf(Box::new(Selector::SoulbondPartner)),
                 Value::ONE,
             )),
-            effect: Effect::Seq(
-                temp_copy(Selector::This)
-                    .into_iter()
-                    .chain(temp_copy(Selector::SoulbondPartner))
-                    .collect(),
-            ),
+        effect: Effect::Seq(temp_copy(Selector::This).into_iter().collect()),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Soulbond],
+        static_abilities: vec![StaticAbility {
+            description: "As long as Mirage Phalanx is paired with another creature, that creature has the copy trigger too.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::PairedWithSource,
+                ability: Box::new(paired_copy.clone()),
+            },
         }],
+        triggered_abilities: vec![paired_copy],
         ..a_creature(
             "Mirage Phalanx",
             cost(&[generic(4), r(), r()]),
