@@ -3053,3 +3053,40 @@ pub fn rona_herald_of_invasion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mech Hangar — Land. {T}: {C}; {T}: one mana of any color, spent only on a
+/// Pilot or Vehicle spell; {3}, {T}: target Vehicle becomes an artifact
+/// creature until end of turn.
+pub fn mech_hangar() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    use crate::effect::ManaPayload;
+    use crate::mana::SpendRestriction;
+    CardDefinition {
+        name: "Mech Hangar",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                        SpendRestriction::PilotOrVehicleSpells,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                effect: Effect::AnimateAsCreature {
+                    what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

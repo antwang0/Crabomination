@@ -1814,3 +1814,28 @@ fn rona_transforms_and_steals_on_damage() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear && c.controller == 0), "cast the stolen bear");
 }
+
+/// Mech Hangar: its colored mana funds a Vehicle spell but not a Bear; {3},
+/// {T} turns a Vehicle into an artifact creature.
+#[test]
+fn mech_hangar_funds_vehicles_and_animates_one() {
+    let mut g = pod(2);
+    let hangar = ready(&mut g, 0, catalog::mech_hangar());
+    let act = |g: &mut GameState, idx: usize, target: Option<Target>| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility { card_id: hangar, ability_index: idx, target, additional_targets: vec![], x_value: None, mode: None })
+    };
+    act(&mut g, 1, None).expect("restricted mana");
+    g.players[0].mana_pool.add_colorless(1);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err());
+    let copter = g.add_card_to_hand(0, catalog::smugglers_copter());
+    cast(&mut g, copter, None);
+    assert!(g.battlefield_find(copter).is_some(), "a Vehicle spell");
+    g.battlefield_find_mut(hangar).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(3);
+    act(&mut g, 2, Some(Target::Permanent(copter))).expect("animate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(copter).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+}
