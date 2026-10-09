@@ -2785,3 +2785,87 @@ fn agrus_kos_copies_an_ability_onto_each_other_creature() {
     activate(&mut g, tool, Some(Target::Permanent(a)));
     assert_eq!((n(&g, agrus), n(&g, a), n(&g, b)), (1, 2, 1), "not aimed at Agrus");
 }
+
+/// Eriette's Auras: Light-Paws answers a cast Aura with a differently named
+/// one no costlier, attached to itself; Trespasser's Curse drains per
+/// creature; Clawing Torment shrinks, grounds and bleeds its host's
+/// controller; Vampiric Link gains what its host deals.
+#[test]
+fn eriette_auras() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let paws = ready(&mut g, 0, catalog::light_paws_emperors_voice());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::vampiric_link());
+    let torment = g.add_card_to_library(0, catalog::clawing_torment());
+    g.add_card_to_library(0, catalog::trespassers_curse());
+    flood(&mut g);
+    let link = g.add_card_to_hand(0, catalog::vampiric_link());
+    cast(&mut g, link, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(link).unwrap().attached_to, Some(bear));
+    assert_eq!(g.battlefield_find(torment).and_then(|c| c.attached_to), Some(paws), "the other name, MV 1");
+    let cp = g.computed_permanent(paws).unwrap();
+    assert_eq!(cp.power, 1);
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "the Torment's upkeep");
+
+    let mut g = pod(2);
+    flood(&mut g);
+    let curse = g.add_card_to_hand(0, catalog::trespassers_curse());
+    cast(&mut g, curse, Some(Target::Player(1)));
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("their Bear");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (mine + 1, theirs - 1));
+}
+
+/// Alela's Faeries: Harbinger stacks a Faerie on top, Tome-Skimmer draws for a
+/// spell cast on an opponent's turn, Harmonized Crescendo counts the chosen
+/// type, Unwind counters a noncreature spell and untaps lands.
+#[test]
+fn alela_faeries() {
+    let mut g = pod(2);
+    flood(&mut g);
+    let faerie = g.add_card_to_library(0, catalog::voracious_tome_skimmer());
+    let harbinger = g.add_card_to_hand(0, catalog::faerie_harbinger());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, harbinger, None);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(faerie));
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::voracious_tome_skimmer());
+    ready(&mut g, 0, catalog::faerie_harbinger());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    let unwind = g.add_card_to_hand(0, catalog::unwind());
+    for _ in 0..3 {
+        let land = ready(&mut g, 0, catalog::island());
+        g.battlefield_find_mut(land).unwrap().tapped = true;
+    }
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    cast(&mut g, unwind, Some(Target::Permanent(bolt)));
+    assert_eq!(g.players[0].life, life - 1, "Tome-Skimmer's 1 life; the Bolt was countered");
+    assert_eq!(g.players[0].hand.len(), hand, "Unwind left, a card came in");
+    assert!(g.battlefield.iter().filter(|c| c.definition.name == "Island").all(|c| !c.tapped));
+    let crescendo = g.add_card_to_hand(0, catalog::harmonized_crescendo());
+    g.active_player_idx = 0;
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(crabomination::card::CreatureType::Faerie)]));
+    cast(&mut g, crescendo, None);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "two Faeries");
+}

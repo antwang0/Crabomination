@@ -4967,3 +4967,186 @@ pub fn agrus_kos_eternal_soldier() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn aura_card(name: &'static str, mana: crate::mana::ManaCost, enchant: R, curse: bool) -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    let mut subs = vec![EnchantmentSubtype::Aura];
+    if curse {
+        subs.push(EnchantmentSubtype::Curse);
+    }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: subs, ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(enchant) },
+        ..Default::default()
+    }
+}
+
+/// Light-Paws, Emperor's Voice — {1}{W} 2/2 Fox Advisor. Whenever an Aura you
+/// control enters, if you cast it, you may search for an Aura with mana value
+/// at most that Aura's and a name no Aura you control has, and put it onto the
+/// battlefield attached to Light-Paws.
+pub fn light_paws_emperors_voice() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Light-Paws, Emperor's Voice",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Fox, CreatureType::Advisor]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+                },
+                Predicate::TriggerSourceWasCast,
+            ])),
+            effect: Effect::SearchAuraAttachToSourceCappedBy { cap: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Clawing Torment — {B} Aura (artifact or creature). A creature it enchants
+/// gets -1/-1 and can't block; the enchanted permanent's controller loses 1
+/// life at their upkeep.
+pub fn clawing_torment() -> CardDefinition {
+    use crate::card::{ConditionalEquipBonus, EquipBonus};
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus {
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: R::Creature,
+                power: -1,
+                toughness: -1,
+                keywords: vec![Keyword::CantBlock],
+                ..Default::default()
+            }],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            }],
+            ..Default::default()
+        }),
+        ..aura_card("Clawing Torment", cost(&[b()]), R::Artifact.or(R::Creature), false)
+    }
+}
+
+/// Trespasser's Curse — {1}{B} Aura Curse (player). Whenever a creature the
+/// enchanted player controls enters, they lose 1 life and you gain 1.
+pub fn trespassers_curse() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::SamePlayer(PlayerRef::Triggerer, PlayerRef::EnchantedPlayer),
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EnchantedPlayer), amount: Value::ONE },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..aura_card("Trespasser's Curse", cost(&[generic(1), b()]), R::Player, true)
+    }
+}
+
+/// Vampiric Link — {B} Aura. Whenever enchanted creature deals damage, you
+/// gain that much life.
+pub fn vampiric_link() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::EnchantedBySource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        ..aura_card("Vampiric Link", cost(&[b()]), R::Creature, false)
+    }
+}
+
+/// Faerie Harbinger — {3}{U} 2/2 flash, flying Faerie Wizard. ETB: you may
+/// search for a Faerie card and put it on top of your library.
+pub fn faerie_harbinger() -> CardDefinition {
+    CardDefinition {
+        name: "Faerie Harbinger",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Faerie, CreatureType::Wizard]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for a Faerie card to put on top?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Faerie),
+                to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Voracious Tome-Skimmer — {U/B}{U/B}{U/B} 2/3 flying Faerie Rogue. A spell
+/// you cast during an opponent's turn lets you pay 1 life to draw.
+pub fn voracious_tome_skimmer() -> CardDefinition {
+    CardDefinition {
+        name: "Voracious Tome-Skimmer",
+        cost: cost(&[hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Faerie, CreatureType::Rogue]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::PlayerIsOpponent { who: PlayerRef::ActivePlayer }),
+            effect: Effect::MayPayLife {
+                description: "Pay 1 life to draw a card?".into(),
+                amount: Value::ONE,
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Harmonized Crescendo — {4}{U}{U} Instant, convoke. Choose a creature type;
+/// draw a card for each permanent you control of that type.
+pub fn harmonized_crescendo() -> CardDefinition {
+    CardDefinition {
+        name: "Harmonized Crescendo",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::ChooseCreatureTypeThen {
+            who: PlayerRef::You,
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(R::ControlledByYou.and(R::IsSourceChosenCreatureType))),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Unwind — {2}{U} Instant. Counter target noncreature spell; untap up to
+/// three lands.
+pub fn unwind() -> CardDefinition {
+    CardDefinition {
+        name: "Unwind",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(R::Noncreature) },
+            Effect::Untap {
+                what: Selector::EachPermanent(R::Land.and(R::ControlledByYou).and(R::Tapped)),
+                up_to: Some(Value::Const(3)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
