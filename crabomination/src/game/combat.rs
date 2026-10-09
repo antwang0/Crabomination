@@ -3849,9 +3849,13 @@ impl GameState {
         }
         if !self.attacking.is_empty() {
             self.attacking.clear();
-            if !self.attacked_permanent_defenders.is_empty() {
-                self.attacked_permanent_defenders.clear();
-            }
+        }
+        // CR 508.5 — the record outlives its attackers only to the end of
+        // combat: a combat whose attackers all died before it ended left it
+        // standing, and a later attack on the same planeswalker kept the old
+        // defender (a stolen Saheeli, 4-seat dflt pod seed 4400396).
+        if !self.attacked_permanent_defenders.is_empty() {
+            self.attacked_permanent_defenders.clear();
         }
         // Dropped, not cleared — a cleared `HashMap` keeps its table and
         // every later `GameState::clone` re-allocates it (see `resolve_effect`'s
@@ -8118,5 +8122,29 @@ pub(crate) fn damage_to_counters_split(
         (How::Instead, _) | (_, false) => (amount, 0),
         (How::PreventAndPut, true) => (amount, amount),
         (How::PreventPerPoint, true) => (0, amount),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::game::types::{Attack, AttackTarget};
+
+    /// CR 508.5 / 511.3 — the attacked planeswalker's recorded defender ends
+    /// with combat even when every attacker left combat first; a stale record
+    /// named the old controller as a later attack's defender (seed 4400396).
+    #[test]
+    fn cr_508_5_the_defender_record_ends_with_combat_after_its_attackers() {
+        let mut g = crate::game::multi_player_game(3);
+        let pw = g.add_card_to_battlefield(1, crate::catalog::jace_the_mind_sculptor());
+        let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.attacking.push(Attack { attacker: bear, target: AttackTarget::Planeswalker(pw) });
+        g.note_attack_defender(AttackTarget::Planeswalker(pw));
+        g.attacking.clear();
+        g.remove_all_from_combat();
+        if let Some(c) = g.battlefield_find_mut(pw) {
+            c.controller = 2;
+        }
+        g.note_attack_defender(AttackTarget::Planeswalker(pw));
+        assert_eq!(g.recorded_attack_defender(pw), Some(2), "the new attack's defender is the new controller");
     }
 }
