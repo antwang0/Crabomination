@@ -2187,6 +2187,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SONIC_COMMANDERS,
             main: decks::SONIC_MAIN,
         },
+        // Seat 295: Arcades, the Strategist's EDHREC average deck. `--pod-decks 295`.
+        PodDeck {
+            name: "Arcades, the Strategist (GUW)",
+            commanders: decks::ARCADES_COMMANDERS,
+            main: decks::ARCADES_MAIN,
+        },
     ]
 }
 
@@ -4113,6 +4119,7 @@ mod tests {
             ("Sythis, Harvest's Hand", [0x5717, 292, 9217]),
             ("Jin Sakai, Ghost of Tsushima", [0x715A, 293, 9218]),
             ("Sonic the Hedgehog", [0x5021, 294, 9219]),
+            ("Arcades, the Strategist", [0xA4CA, 295, 9220]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

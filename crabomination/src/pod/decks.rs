@@ -8648,3 +8648,31 @@ pub const SONIC_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     mountain, plains, plains, plains, plains, plains,
 ];
+
+pub const ARCADES_COMMANDERS: &[CardFactory] = &[arcades_the_strategist];
+
+/// **Arcades, the Strategist**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 5 Forests + 5 Islands + 7 Plains = 99.
+/// Bant defenders: Arcades draws per wall and lets them attack using toughness.
+pub const ARCADES_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, meekstone, rammas_echor_ancient_shield, sol_ring,
+    swiftfoot_boots, access_tunnel, bountiful_promenade, breeding_pool, canopy_vista,
+    command_tower, evolving_wilds, exotic_orchard, glacial_fortress, hallowed_fountain,
+    hinterland_harbor, prairie_stream, rejuvenating_springs, reliquary_tower, sea_of_clouds,
+    seaside_citadel, sparas_headquarters, sunpetal_grove, temple_garden, angelic_wall,
+    axebane_guardian, carven_caryatid, corrupted_shapeshifter, crashing_drawbridge,
+    crystal_barricade, hover_barrier, jeskai_barricade, overgrown_battlement, perimeter_captain,
+    shield_sphere, shield_wall_sentinel, stalwart_shield_bearers, sunscape_familiar,
+    sylvan_caryatid, tetsuko_umezawa_fugitive, the_pride_of_hull_clade, walls_of_ba_sing_se,
+    tree_of_redemption, vine_trellis, walking_bulwark, wall_of_blossoms, wall_of_denial,
+    wall_of_frost, wall_of_glare, wall_of_junk, wall_of_omens, wall_of_roots, wall_of_runes,
+    wall_of_stolen_identity, wall_of_tanglecord, weathered_sentinels, wingmantle_chaplain,
+    angelic_chorus, assault_formation, aura_shards, brave_the_sands, high_alert, stoneskin,
+    unnatural_growth, akromas_will, bar_the_door, beast_within, counterspell, eerie_interlude,
+    heroic_intervention, negate, path_to_exile, swords_to_plowshares, tower_defense,
+    huatli_the_suns_heart, cultivate, dusk_dawn, expel_the_interlopers, farseek, fell_the_mighty,
+    rampant_growth, slaughter_the_strong,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island, plains, plains,
+    plains, plains, plains, plains, plains,
+];
