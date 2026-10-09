@@ -7803,3 +7803,226 @@ pub fn wizards_lightning() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn myr() -> R {
+    R::HasCreatureType(CreatureType::Myr)
+}
+
+/// Myr Reservoir — {3} Artifact. {T}: Add {C}{C}; spend it only to cast Myr
+/// spells or activate abilities of Myr. {3}, {T}: Return target Myr card from
+/// your graveyard to your hand.
+pub fn myr_reservoir() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    use crate::mana::SpendRestriction;
+    CardDefinition {
+        name: "Myr Reservoir",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                // Every Myr spell is a creature spell (no Kindred Myr exists),
+                // so the creature-type restriction is the printed one.
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colorless(Value::Const(2))),
+                        SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Myr),
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::Move {
+                    what: target_filtered(myr().and(R::OwnedByYou)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+fn myr_body(name: &'static str, mana: u32, power: i32, toughness: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(mana)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Myr]),
+        power,
+        toughness,
+        ..Default::default()
+    }
+}
+
+/// Darksteel Myr — {3} 0/1 Myr artifact creature, indestructible.
+pub fn darksteel_myr() -> CardDefinition {
+    CardDefinition { keywords: vec![Keyword::Indestructible], ..myr_body("Darksteel Myr", 3, 0, 1) }
+}
+
+/// Myr Galvanizer — {3} 2/2 Myr. Other Myr creatures you control get +1/+1.
+/// {1}, {T}: Untap each other Myr you control.
+pub fn myr_galvanizer() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let other_myr = || myr().and(R::ControlledByYou).and(R::OtherThanSource);
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other Myr creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(other_myr())),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Untap { what: Selector::EachPermanent(other_myr()), up_to: None },
+            ..Default::default()
+        }],
+        ..myr_body("Myr Galvanizer", 3, 2, 2)
+    }
+}
+
+/// Myr Propagator — {3} 1/1 Myr. {3}, {T}: Create a token that's a copy of
+/// this creature.
+pub fn myr_propagator() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: Selector::This,
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: false,
+                legendary: false,
+                extra_keywords: vec![],
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: vec![],
+            },
+            ..Default::default()
+        }],
+        ..myr_body("Myr Propagator", 3, 1, 1)
+    }
+}
+
+/// Perilous Myr — {2} 1/1 Phyrexian Myr. When it dies, it deals 2 damage to
+/// any target.
+pub fn perilous_myr() -> CardDefinition {
+    CardDefinition {
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Myr]),
+        triggered_abilities: vec![crate::effect::shortcut::dies_ping_any(2)],
+        ..myr_body("Perilous Myr", 2, 1, 1)
+    }
+}
+
+/// Citanul Stalwart — {G} 1/1 Elf Druid Soldier. {T}, Tap an untapped
+/// artifact or creature you control: Add one mana of any color.
+pub fn citanul_stalwart() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Citanul Stalwart",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Druid, CreatureType::Soldier]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_others_cost: Some((R::Artifact.or(R::Creature).and(R::ControlledByYou), 1)),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Loam Dryad — {G} 1/2 Dryad Horror. {T}, Tap an untapped creature you
+/// control: Add one mana of any color.
+pub fn loam_dryad() -> CardDefinition {
+    CardDefinition {
+        name: "Loam Dryad",
+        subtypes: creature_types(vec![CreatureType::Dryad, CreatureType::Horror]),
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_others_cost: Some((R::Creature.and(R::ControlledByYou), 1)),
+            ..citanul_stalwart().activated_abilities.remove(0)
+        }],
+        ..citanul_stalwart()
+    }
+}
+
+/// Dawnglade Regent — {5}{G}{G} 8/8 Elk. When it enters, you become the
+/// monarch. As long as you're the monarch, permanents you control have
+/// hexproof.
+pub fn dawnglade_regent() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Dawnglade Regent",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elk]),
+        power: 8,
+        toughness: 8,
+        triggered_abilities: vec![etb(Effect::BecomeMonarch { who: PlayerRef::You })],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you're the monarch, permanents you control have hexproof.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::IsMonarch { who: PlayerRef::You },
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Permanent.and(R::ControlledByYou)),
+                    keyword: Keyword::Hexproof,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Giant Ankheg — {6}{G}{G} 8/8 Insect, trample, ward {2}. Other creatures
+/// you control have trample and ward {2}.
+pub fn giant_ankheg() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, WardCost};
+    let grant = |keyword: Keyword| StaticAbility {
+        description: "Other creatures you control have trample and ward {2}.",
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            keyword,
+        },
+    };
+    CardDefinition {
+        name: "Giant Ankheg",
+        cost: cost(&[generic(6), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Insect]),
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Trample, Keyword::Ward(WardCost::generic(2))],
+        static_abilities: vec![grant(Keyword::Trample), grant(Keyword::Ward(WardCost::generic(2)))],
+        ..Default::default()
+    }
+}
+
+/// Impervious Greatwurm — {7}{G}{G}{G} 16/16 Wurm, convoke, indestructible.
+pub fn impervious_greatwurm() -> CardDefinition {
+    CardDefinition {
+        name: "Impervious Greatwurm",
+        cost: cost(&[generic(7), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Wurm]),
+        power: 16,
+        toughness: 16,
+        keywords: vec![Keyword::Convoke, Keyword::Indestructible],
+        ..Default::default()
+    }
+}

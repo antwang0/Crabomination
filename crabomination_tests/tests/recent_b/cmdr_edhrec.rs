@@ -3850,3 +3850,81 @@ fn kuja_wizards_kit() {
     connect(&mut g, cmdr);
     assert!(g.players[0].hand.iter().any(|c| c.id == vivi), "back to hand");
 }
+
+/// Urtet's Myr: Galvanizer pumps and untaps the others; Propagator copies
+/// itself; the Reservoir's mana casts a Myr and it buys one back; Perilous Myr
+/// shoots on the way out.
+#[test]
+fn urtet_myr_kit() {
+    let mut g = pod(2);
+    let galvanizer = ready(&mut g, 0, catalog::myr_galvanizer());
+    let darksteel = ready(&mut g, 0, catalog::darksteel_myr());
+    let cp = g.computed_permanent(darksteel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 2), "Galvanizer's +1/+1");
+    g.battlefield_find_mut(darksteel).unwrap().tapped = true;
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, galvanizer, None);
+    assert!(!g.battlefield_find(darksteel).unwrap().tapped, "untapped");
+
+    let reservoir = ready(&mut g, 0, catalog::myr_reservoir());
+    let propagator = g.add_card_to_hand(0, catalog::myr_propagator());
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, reservoir, None);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, propagator, None);
+    assert_eq!(named(&g, "Myr Propagator"), 1, "cast off the Reservoir's Myr mana");
+    g.clear_sickness(propagator);
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, propagator, None);
+    assert_eq!(named(&g, "Myr Propagator"), 2, "a token copy");
+
+    let life = g.players[1].life;
+    g.players[0].hostile_player_targets = true;
+    let perilous = ready(&mut g, 0, catalog::perilous_myr());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(perilous)));
+    assert_eq!(g.players[1].life, life - 2, "2 damage on death");
+    let in_yard = g.players[0].graveyard.iter().any(|c| c.id == perilous);
+    assert!(in_yard);
+    g.battlefield_find_mut(reservoir).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: reservoir, ability_index: 1, target: Some(Target::Permanent(perilous)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("buy back");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == perilous), "a Myr back to hand");
+}
+
+/// Kona's green: the Stalwart and Loam Dryad tap a second body for any color;
+/// Dawnglade Regent's monarchy hexproofs your permanents; Giant Ankheg lends
+/// trample and ward {2}; Impervious Greatwurm is indestructible.
+#[test]
+fn kona_green_kit() {
+    use crabomination::card::{Keyword, WardCost};
+    let mut g = pod(2);
+    let stalwart = ready(&mut g, 0, catalog::citanul_stalwart());
+    let dryad = ready(&mut g, 0, catalog::loam_dryad());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::sol_ring());
+    for src in [stalwart, dryad] {
+        let before = g.players[0].mana_pool.total();
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility { card_id: src, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .expect("mana");
+        assert_eq!(g.players[0].mana_pool.total(), before + 1);
+    }
+    assert!(g.battlefield_find(bear).unwrap().tapped || g.battlefield.iter().any(|c| c.definition.name == "Sol Ring" && c.tapped));
+
+    flood(&mut g);
+    let regent = g.add_card_to_hand(0, catalog::dawnglade_regent());
+    cast(&mut g, regent, None);
+    assert_eq!(g.monarch, Some(0));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof));
+
+    ready(&mut g, 0, catalog::giant_ankheg());
+    let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
+    assert!(kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Ward(WardCost::generic(2))));
+    let wurm = ready(&mut g, 0, catalog::impervious_greatwurm());
+    assert!(g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::Indestructible));
+}
