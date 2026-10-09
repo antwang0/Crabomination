@@ -764,6 +764,7 @@ impl Effect {
             | Effect::ChooseModeAtRandom(_)
             | Effect::EachOpponentReturnsFromYourGraveyard { .. }
             | Effect::GrantCastSpellRiders { .. }
+            | Effect::GrantReboundToSpell { .. }
             | Effect::CastExiledFreeOwnersLoseLife { .. }
             | Effect::CastExiledFree { .. }
             | Effect::DestroyOnePerOpponent { .. }

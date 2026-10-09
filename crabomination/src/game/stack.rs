@@ -4969,6 +4969,9 @@ impl GameState {
         if !self.convoke_granted_spells.is_empty() {
             self.convoke_granted_spells.clear();
         }
+        if !self.rebound_granted_spells.is_empty() {
+            self.rebound_granted_spells.clear();
+        }
         if !self.convoked_by.is_empty() {
             self.convoked_by.clear();
         }

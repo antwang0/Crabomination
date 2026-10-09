@@ -9915,6 +9915,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantReboundToSpell { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    let on_stack = self.stack.iter().any(|item| matches!(item, crate::game::types::StackItem::Spell { card, .. } if card.id == cid));
+                    if on_stack && !self.rebound_granted_spells.contains(&cid) {
+                        self.rebound_granted_spells.push(cid);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MakeSpellUncounterable { what } => {
                 use crate::game::types::StackItem;
                 for ent in self.resolve_selector(what, ctx) {

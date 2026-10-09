@@ -1728,6 +1728,11 @@ pub struct ColdState {
     /// convoke" grant, so `R::HasConvoke` sees them. Cleared at cleanup.
     #[serde(default)]
     pub(crate) convoke_granted_spells: Vec<CardId>,
+    /// CR 702.88 — spells cast this turn that gained rebound (Ojer
+    /// Pakpatiq's "it gains rebound"), read by the rebound resolution path.
+    /// Cleared at the turn boundary.
+    #[serde(default)]
+    pub(crate) rebound_granted_spells: Vec<CardId>,
     /// CR 702.51 — the creatures that convoked each spell cast this turn
     /// (Venerated Loxodon's "each creature that convoked it"). Cleared at
     /// cleanup.
@@ -30516,7 +30521,8 @@ impl GameState {
         // schedule a delayed trigger at the caster's next upkeep that
         // re-runs the spell's effect with a fresh auto-target.
         if card.cast_from_hand
-            && card.definition.keywords.has_kw(&crate::card::Keyword::Rebound)
+            && (card.definition.keywords.has_kw(&crate::card::Keyword::Rebound)
+                || self.rebound_granted_spells.contains(&card.id))
         {
             use crate::game::types::{DelayedKind, DelayedTrigger};
             let source = card.id;

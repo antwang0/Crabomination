@@ -5761,6 +5761,10 @@ pub enum Effect {
     /// resolve — the rider on a free cast (Strago and Relm). Run after the
     /// cast.
     GrantCastSpellRiders { what: Selector, haste: bool, sacrifice_eot: bool },
+    /// CR 702.88 — the spell(s) `what` names, on the stack, gain rebound
+    /// (Ojer Pakpatiq, Deepest Epoch: "whenever you cast an instant spell
+    /// from your hand, it gains rebound").
+    GrantReboundToSpell { what: Selector },
     /// "You may cast any number of spells from among [what] without paying
     /// their mana costs. Then each player who owns a spell you cast this way
     /// loses life equal to its mana value" (Kefka, Dancing Mad).
