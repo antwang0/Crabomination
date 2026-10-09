@@ -9500,6 +9500,9 @@ impl GameState {
                         // CR 702.11f — exactly one color on the spell.
                         Keyword::HexproofFromMonocolored => spell_colors.len() == 1,
                         Keyword::HexproofFromMulticolored => spell_colors.len() >= 2,
+                        Keyword::HexproofFromItsColors => cp.as_ref().is_some_and(|cp| {
+                            cp.colors.iter().any(|c| spell_colors.contains(&c))
+                        }),
                         _ => false,
                     })
                 }),
@@ -15692,6 +15695,7 @@ impl GameState {
                     | Keyword::HexproofFromColor(_)
                     | Keyword::HexproofFromMonocolored
                     | Keyword::HexproofFromMulticolored
+                    | Keyword::HexproofFromItsColors
                     | Keyword::HexproofExceptColors(_)
                     | Keyword::Protection(_)
                     | Keyword::ProtectionFromCreatures
@@ -15770,6 +15774,7 @@ impl GameState {
                 Keyword::HexproofFromColor(_)
                     | Keyword::HexproofFromMonocolored
                     | Keyword::HexproofFromMulticolored
+                    | Keyword::HexproofFromItsColors
             )
         });
         let turn_hexproof_color = !self.players[tgt_controller]
@@ -15820,6 +15825,7 @@ impl GameState {
                 // CR 702.11f — an exactly-one-color source.
                 Keyword::HexproofFromMonocolored => src.colors.len() == 1,
                 Keyword::HexproofFromMulticolored => src.colors.len() >= 2,
+                Keyword::HexproofFromItsColors => tgt.colors.iter().any(|c| src.colors.contains(&c)),
                 _ => false,
             }) {
                 return true;

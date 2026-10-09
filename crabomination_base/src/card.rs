@@ -1727,6 +1727,10 @@ pub enum Keyword {
     /// two-or-more-color spells or abilities opponents control (Niv-Mizzet,
     /// Guildpact).
     HexproofFromMulticolored,
+    /// "Hexproof from each of its colors" (Tam, Mindful First-Year's grant):
+    /// opponents' spells and abilities sharing a color with this permanent's
+    /// current colors can't target it.
+    HexproofFromItsColors,
     /// "Can't be the target of nongreen spells opponents control or abilities
     /// from nongreen sources opponents control" and its siblings (Thrun,
     /// Breaker of Silence). Blocks an opponent's spell/ability whose source
@@ -2637,6 +2641,7 @@ impl Keyword {
                 | K::HexproofFromColor(_)
                 | K::HexproofFromMonocolored
                 | K::HexproofFromMulticolored
+                | K::HexproofFromItsColors
                 | K::HexproofExceptColors(_)
                 | K::HexproofFromAbilities => 3,
                 _ => 0,
