@@ -6213,6 +6213,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Adapt { amount } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let has = self.battlefield_find(src).is_some_and(|c| c.counter_count(CounterType::PlusOnePlusOne) > 0);
+                let waiver = self.turn.adapt_waivers.iter().position(|&id| id == src);
+                if has && waiver.is_none() {
+                    return Ok(());
+                }
+                if let Some(i) = waiver {
+                    self.turn.adapt_waivers.remove(i);
+                }
+                self.run_effect(
+                    &Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: amount.clone() },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::AdaptAsThoughNoCounters { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(id) = ent.as_permanent_id() {
+                        self.turn.adapt_waivers.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CastFromGraveyardsThisTurn { any_graveyard, filter, exile_after } => {
                 self.turn.graveyard_cast_eot.push((ctx.controller, *any_graveyard, filter.clone(), *exile_after));
                 self.stamp_graveyard_cast_grants();

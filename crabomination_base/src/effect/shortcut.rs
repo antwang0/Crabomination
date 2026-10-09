@@ -2457,25 +2457,11 @@ pub fn soulshift(n: u32) -> TriggeredAbility {
     })
 }
 
-/// Adapt N (CR 702.108) — the *effect* of an Adapt activated ability:
-/// "If this creature has no +1/+1 counters on it, put N +1/+1 counters
-/// on it." Built from existing primitives (`If` + `EntityMatches` +
-/// `AddCounter`); pair it with an `ActivatedAbility` carrying the
-/// adapt mana cost. Used by Pteramander, Incubation Druid-style cards.
+/// Adapt N (CR 701.46) — the *effect* of an Adapt activated ability: "If
+/// this creature has no +1/+1 counters on it, put N +1/+1 counters on it."
+/// Pair it with an `ActivatedAbility` carrying the adapt mana cost.
 pub fn adapt(n: i32) -> Effect {
-    use crate::card::CounterType;
-    Effect::If {
-        cond: Predicate::Not(Box::new(Predicate::EntityMatches {
-            what: Selector::This,
-            filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
-        })),
-        then: Box::new(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(n),
-        }),
-        else_: Box::new(Effect::Noop),
-    }
+    Effect::Adapt { amount: Value::Const(n) }
 }
 
 /// Renown N (CR 702.111) — a combat trigger: "Whenever this creature

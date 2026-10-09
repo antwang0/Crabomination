@@ -2509,6 +2509,33 @@ fn biomancers_familiar_discounts_creature_abilities() {
     assert_eq!(g.battlefield_find(eel).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "adapted 2");
 }
 
+/// Biomancer's Familiar's {T}: the targeted Eel's NEXT adapt ignores the
+/// counters it has (CR 701.46a), once — the adapt after that does nothing.
+#[test]
+fn biomancers_familiar_resets_one_adapt() {
+    let mut g = two_player_game();
+    let fam = g.add_card_to_battlefield(0, catalog::biomancers_familiar());
+    g.clear_sickness(fam);
+    let eel = g.add_card_to_battlefield(0, catalog::skitter_eel());
+    g.battlefield_find_mut(eel).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let adapt = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .expect("adapt");
+        drain_stack(g);
+        g.battlefield_find(eel).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(adapt(&mut g), 2, "it has counters: adapt does nothing");
+    g.perform_action(GameAction::ActivateAbility { card_id: fam, ability_index: 0, target: Some(Target::Permanent(eel)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("{T}: the waiver");
+    drain_stack(&mut g);
+    assert_eq!(adapt(&mut g), 4, "adapts as though it had none");
+    assert_eq!(adapt(&mut g), 4, "the waiver was spent");
+}
+
 /// Kaya, Orzhov Usurper's −5 burns the target for the cards they own in exile
 /// and gains you that much.
 #[test]

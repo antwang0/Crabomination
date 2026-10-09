@@ -1479,6 +1479,10 @@ pub struct TurnRegistries {
     /// cleared at cleanup.
     #[serde(default)]
     pub(crate) graveyard_cast_eot: Vec<(usize, bool, crate::card::SelectionRequirement, bool)>,
+    /// Creatures whose next adapt this turn ignores their +1/+1 counters
+    /// (Biomancer's Familiar); one entry per waiver, cleared at cleanup.
+    #[serde(default)]
+    pub(crate) adapt_waivers: Vec<CardId>,
     /// Permanents whose death is replaced by exile for the rest of the
     /// turn — "if that creature would die this turn, exile it instead"
     /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`

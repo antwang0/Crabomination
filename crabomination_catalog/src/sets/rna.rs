@@ -4931,13 +4931,20 @@ pub fn kaya_orzhov_usurper() -> CardDefinition {
 }
 
 /// Biomancer's Familiar — {G}{U} 2/2 Mutant. Activated abilities of creatures
-/// you control cost {2} less (never below one mana). (Its {T} adapt-reset rider
-/// is omitted — no "adapt as though it had no counters" primitive yet.)
+/// you control cost {2} less (never below one mana). {T}: the next time target
+/// creature adapts this turn, it adapts as though it had no +1/+1 counters.
 pub fn biomancers_familiar() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Activated abilities of creatures you control cost {2} less to activate.",
             effect: StaticEffect::YourCreatureActivatedAbilitiesCostLess { amount: 2 },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AdaptAsThoughNoCounters {
+                what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
+            },
+            ..Default::default()
         }],
         ..body(
             "Biomancer's Familiar",

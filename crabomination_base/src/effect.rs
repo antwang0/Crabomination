@@ -8663,6 +8663,14 @@ pub enum Effect {
     /// permission (`CastFromGraveyardsThisTurn`'s registry); lands ride the
     /// graveyard land-play gate.
     PlayFromGraveyardThisTurn,
+    /// CR 701.46a — Adapt N: "if this permanent has no +1/+1 counters on it,
+    /// put N +1/+1 counters on it" — or, once, as though it had none when an
+    /// `AdaptAsThoughNoCounters` waiver names it this turn.
+    Adapt { amount: Value },
+    /// "The next time target creature adapts this turn, it adapts as though
+    /// it had no +1/+1 counters on it" (Biomancer's Familiar). One waiver per
+    /// resolution; the next `Adapt` by that creature consumes it.
+    AdaptAsThoughNoCounters { what: Selector },
     /// "Until end of turn, you may cast [filter] spells from your graveyard /
     /// any graveyard" (Urabrask's The Great Work III). A rules permission for
     /// the turn, not a stamp: a matching card put into a covered graveyard

@@ -5597,6 +5597,7 @@ impl GameState {
         clear_turn!(self.sorcery_damage_this_turn);
         clear_turn!(self.graveyard_unearth_eot);
         clear_turn!(self.graveyard_cast_eot);
+        clear_turn!(self.adapt_waivers);
         if self.turn.block_chooser_this_turn.is_some() {
             self.turn.block_chooser_this_turn = None;
         }

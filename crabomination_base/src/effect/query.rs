@@ -291,6 +291,7 @@ impl Effect {
     pub fn is_adapt(&self) -> bool {
         use crate::card::{CounterType, SelectionRequirement};
         match self {
+            Effect::Adapt { .. } => true,
             Effect::If { cond, then, .. } => {
                 let counter_check = matches!(
                     cond,
@@ -1500,6 +1501,7 @@ impl Effect {
             Effect::FreeSpellsFromHandThisTurn => false,
             Effect::ChooseCardTypeForSource | Effect::ChooseCardTypeFromForSource { .. } => false,
             Effect::PlayFromGraveyardThisTurn
+            | Effect::Adapt { .. }
             | Effect::CastFromGraveyardsThisTurn { .. }
             | Effect::ExileYourGraveyardBoundThisTurn
             | Effect::GlimpseOfTomorrow
@@ -1872,6 +1874,7 @@ impl Effect {
             | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::AdaptAsThoughNoCounters { what }
             | Effect::RegenerateThenGainControl { what }
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
@@ -2709,6 +2712,7 @@ impl Effect {
             | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::AdaptAsThoughNoCounters { what }
             | Effect::RegenerateThenGainControl { what }
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
@@ -5488,6 +5492,7 @@ impl Effect {
                 // `requires_target` / `primary_target_filter` — the
                 // `targeted_effects_carry_slot_filters` test guards this set.
                 Effect::Regenerate { what }
+                | Effect::AdaptAsThoughNoCounters { what }
                 | Effect::RegenerateThenGainControl { what }
                 | Effect::CantBeRegeneratedThisTurn { what }
                 | Effect::ExileWithSource { what }
