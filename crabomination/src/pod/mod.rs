@@ -2079,6 +2079,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KEFKA_COMMANDERS,
             main: decks::KEFKA_MAIN,
         },
+        // Seat 277: Glarb, Calamity's Augur's EDHREC average deck. `--pod-decks 277`.
+        PodDeck {
+            name: "Glarb, Calamity's Augur (BGU)",
+            commanders: decks::GLARB_COMMANDERS,
+            main: decks::GLARB_MAIN,
+        },
+        // Seat 278: Hashaton, Scarab's Fist's EDHREC average deck. `--pod-decks 278`.
+        PodDeck {
+            name: "Hashaton, Scarab's Fist (BUW)",
+            commanders: decks::HASHATON_COMMANDERS,
+            main: decks::HASHATON_MAIN,
+        },
     ]
 }
 
@@ -3935,6 +3947,8 @@ mod tests {
             ("Brago, King Eternal", [0xB4A6, 274, 9199]),
             ("Jetmir, Nexus of Revels", [0x7E71, 275, 9200]),
             ("Kefka, Court Mage", [0xEFCA, 276, 9201]),
+            ("Glarb, Calamity's Augur", [0x61A8, 277, 9202]),
+            ("Hashaton, Scarab's Fist", [0x4A54, 278, 9203]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

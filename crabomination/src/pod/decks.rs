@@ -8137,3 +8137,59 @@ pub const KEFKA_MAIN: &[CardFactory] = &[
     island, island, island, island, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
     swamp,
 ];
+
+pub const GLARB_COMMANDERS: &[CardFactory] = &[glarb_calamitys_augur];
+
+/// **Glarb, Calamity's Augur**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 86 nonbasic cards + 5 Forests + 4 Islands + 4 Swamps = 99.
+/// Sultai top-deck: Glarb plays lands and big spells off the library top and surveils to set them up.
+pub const GLARB_MAIN: &[CardFactory] = &[
+    arcane_signet, conduit_of_worlds, hedge_shredder, lotus_petal, senseis_divining_top, sol_ring,
+    the_one_ring, bayou, boseiju_who_endures, breeding_pool, command_tower, exotic_orchard,
+    flooded_strand, hedge_maze, hinterland_harbor, misty_rainforest, opulent_palace,
+    otawara_soaring_city, overgrown_tomb, polluted_delta, rejuvenating_springs, shifting_woodland,
+    undercity_sewers, underground_mortuary, undergrowth_stadium, verdant_catacombs, watery_grave,
+    woodland_cemetery, zagoth_triome, aesi_tyrant_of_gyre_strait, azusa_lost_but_seeking,
+    birds_of_paradise, bloom_tender, colossal_grave_reaver, deathrite_shaman, delighted_halfling,
+    dryad_of_the_ilysian_grove, elves_of_deep_shadow, eternal_witness, grolnok_the_omnivore,
+    high_fae_trickster, icetill_explorer, loot_exuberant_explorer, lumra_bellow_of_the_woods,
+    muldrotha_the_gravetide, poison_dart_frog, pollywog_prodigy, ramunap_excavator, seedborn_muse,
+    six, spore_frog, tatyova_benthic_druid, thassas_oracle, the_gitrog_monster, valley_floodcaller,
+    animate_dead, counterbalance, enhanced_surveillance, exploration, mystic_remora, rhystic_study,
+    an_offer_you_cant_refuse, assassins_trophy, counterspell, dark_ritual, deadly_rollick,
+    fierce_guardianship, force_of_vigor, force_of_will, mindbreak_trap, mystical_tutor,
+    noxious_revival, swan_song, vampiric_tutor, worldly_tutor, jace_wielder_of_mysteries,
+    culling_ritual, cultivate, demonic_tutor, dread_return, farseek, natures_lore, rampant_growth,
+    reanimate, three_visits, toxic_deluge,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const HASHATON_COMMANDERS: &[CardFactory] = &[hashaton_scarabs_fist];
+
+/// **Hashaton, Scarab's Fist**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 87 nonbasic cards + 5 Islands + 3 Plains + 4 Swamps = 99.
+/// Esper discard: Hashaton copies every discarded creature as a 4/4 Zombie token.
+pub const HASHATON_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, monument_to_endurance, orzhov_signet, sol_ring,
+    talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress, the_underworld_cookbook,
+    accursed_duneyard, adarkar_wastes, arcane_sanctum, caves_of_koilos, command_tower,
+    drowned_catacomb, exotic_orchard, flooded_strand, glacial_fortress, godless_shrine,
+    hallowed_fountain, isolated_chapel, marsh_flats, morphic_pool, polluted_delta, prairie_stream,
+    raffines_tower, sea_of_clouds, sunken_hollow, underground_river, vault_of_champions,
+    watery_grave, angel_of_the_ruins, archfiend_of_ifnir, archon_of_cruelty, avacyn_angel_of_hope,
+    consecrated_sphinx, cryptbreaker, elesh_norn_grand_cenobite, esper_sentinel, ghostly_pilferer,
+    gleaming_overseer, hullbreaker_horror, jin_gitaxias_core_augur, kitsa_otterball_elite,
+    ledger_shredder, likeness_looter, lotho_corrupt_shirriff, massacre_wurm, nezahal_primal_tide,
+    peregrine_drake, psychic_frog, putrid_imp, raffine_scheming_seer, rhet_tomb_mystic,
+    rona_herald_of_invasion, sheoldred_whispering_one, skirge_familiar, temmet_naktamuns_will,
+    the_scarab_god, tireless_tribe, valgavoth_terror_eater, vohar_vodalian_desecrator,
+    animate_dead, mystic_remora, renewed_solidarity, rhystic_study, smothering_tithe,
+    tortured_existence, an_offer_you_cant_refuse, bitter_triumph, counterspell, cyclonic_rift,
+    dark_ritual, deadly_rollick, fierce_guardianship, frantic_search, path_to_exile, swan_song,
+    swords_to_plowshares, vampiric_tutor, careful_study, damn, demonic_tutor, reanimate, victimize,
+    windfall,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, swamp, swamp, swamp, swamp,
+];
