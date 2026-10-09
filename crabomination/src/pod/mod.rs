@@ -2329,7 +2329,16 @@ fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
             g.find_card_anywhere(id).map_or_else(|| format!("{n}=?"), |c| format!("{n}={}", c.definition.name))
         })
         .collect();
-    if names.is_empty() { dbg } else { format!("{dbg} [{}]", names.join(", ")) }
+    let dbg = if names.is_empty() { dbg } else { format!("{dbg} [{}]", names.join(", ")) };
+    // Name the stack's top object, so a trigger loop names its trigger.
+    match g.stack.last() {
+        Some(crate::game::StackItem::Trigger { source, .. }) => {
+            let name = g.find_card_anywhere(*source).map_or("?", |c| c.definition.name);
+            format!("{dbg} {{top: trigger of {name}}}")
+        }
+        Some(crate::game::StackItem::Spell { card, .. }) => format!("{dbg} {{top: {}}}", card.definition.name),
+        None => dbg,
+    }
 }
 
 /// The nontoken cards each seat owns, across every zone a card can be in (a
