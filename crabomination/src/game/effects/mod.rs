@@ -4109,6 +4109,16 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        // Vorinclex, Monstrous Raider scales counters by who places them.
+        if matches!(
+            effect,
+            Effect::AddCounter { .. } | Effect::Proliferate | Effect::AddPoison { .. } | Effect::DoubleCountersOnEach { .. }
+        ) {
+            let prev = self.counter_placer.replace(ctx.controller);
+            let r = self.run_effect_body(effect, ctx, events);
+            self.counter_placer = prev;
+            return r;
+        }
         // CR 603.2c — one damage event per damage-dealing sentence.
         if damage_batch::is_damage_sentence(effect)
             && let Some(mark) = self.open_noncombat_damage_batch()

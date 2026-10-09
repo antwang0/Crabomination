@@ -1499,6 +1499,12 @@ pub enum StaticEffect {
     /// multiplicatively with `DoubleTokens` for cards that print both halves
     /// (Doubling Season itself ships both static abilities).
     DoubleCounters,
+    /// Vorinclex, Monstrous Raider: counters this permanent's controller puts
+    /// on a permanent or player are doubled; counters an opponent of theirs
+    /// puts are halved, rounded down. Keyed on who places them (the resolving
+    /// effect's controller where an effect places them, else the receiving
+    /// permanent's controller or player), read in the CR 614.16 chain.
+    CountersByPlacerDoubledOpponentsHalved,
     /// The filtered sibling — "if one or more counters would be put on
     /// [filter] you control, twice that many … instead" (Loading Zone's
     /// "creature, Spacecraft, or Planet"). Read against the receiving

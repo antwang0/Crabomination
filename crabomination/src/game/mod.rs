@@ -3635,6 +3635,12 @@ pub struct GameState {
     /// the replacement's extra mints aren't re-replaced (CR 614.5). Transient.
     #[serde(skip)]
     pub(crate) in_token_replacement: bool,
+    /// The seat whose resolving effect is putting counters on something —
+    /// set around `AddCounter` / `Proliferate` / `AddPoison` for Vorinclex,
+    /// Monstrous Raider's placer-keyed scaling; `None` elsewhere, where the
+    /// recipient's controller is the placer. Transient.
+    #[serde(skip)]
+    pub(crate) counter_placer: Option<usize>,
     /// CR 725 — the monarch (if any). The monarch draws a card at the
     /// beginning of their end step, and a creature dealing combat damage to
     /// the monarch makes its controller the new monarch. `#[serde(default)]`
@@ -4485,6 +4491,7 @@ impl Clone for GameState {
             in_chains_replacement: self.in_chains_replacement,
             exile_resolving_spell_with_countdown: self.exile_resolving_spell_with_countdown,
             in_token_replacement: self.in_token_replacement,
+            counter_placer: self.counter_placer,
             monarch: self.monarch,
             initiative: self.initiative,
             day_night: self.day_night,
@@ -4712,6 +4719,7 @@ impl GameState {
             in_chains_replacement: false,
             exile_resolving_spell_with_countdown: false,
             in_token_replacement: false,
+            counter_placer: None,
             monarch: None,
             initiative: None,
             day_night: None,
@@ -7926,6 +7934,38 @@ impl GameState {
         for _ in 0..self.counter_doublers_for(ctrl) {
             n = n.saturating_mul(2);
         }
+        self.placer_scaled_counters(ctrl, n)
+    }
+
+    /// Vorinclex, Monstrous Raider — each one controlled by the placer
+    /// doubles `n`, then each one an opponent of the placer controls halves
+    /// it, rounded down. `recipient` (the receiving permanent's controller,
+    /// or the receiving player) is the placer where no effect named one.
+    pub(crate) fn placer_scaled_counters(&self, recipient: usize, n: u32) -> u32 {
+        use crate::effect::StaticEffect;
+        if n == 0 {
+            return 0;
+        }
+        let placer = self.counter_placer.unwrap_or(recipient);
+        let (mut doubles, mut halves) = (0u32, 0u32);
+        for c in self.battlefield.iter() {
+            for sa in &c.definition.static_abilities {
+                if matches!(self.active_static(&sa.effect, c), Some(StaticEffect::CountersByPlacerDoubledOpponentsHalved)) {
+                    if c.controller == placer {
+                        doubles += 1;
+                    } else if !self.same_team(c.controller, placer) {
+                        halves += 1;
+                    }
+                }
+            }
+        }
+        let mut n = n;
+        for _ in 0..doubles {
+            n = n.saturating_mul(2);
+        }
+        for _ in 0..halves {
+            n /= 2;
+        }
         n
     }
 
@@ -8027,7 +8067,7 @@ impl GameState {
         for _ in 0..self.counter_doublers_for(seat) {
             n = n.saturating_mul(2);
         }
-        n
+        self.placer_scaled_counters(seat, n)
     }
 
     /// Central poison-placement funnel (CR 122 / 614.16): scales `base` by
@@ -33284,6 +33324,7 @@ fn static_effect_to_effects(
             // DoubleCounters / ExtraPlusOneCounters — read at counter-add
             // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters
+            | StaticEffect::CountersByPlacerDoubledOpponentsHalved
             | StaticEffect::DoubleCountersMatching { .. }
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
