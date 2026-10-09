@@ -15332,17 +15332,22 @@ impl GameState {
         if self.battlefield.find_by_id(*cid).is_some() || !effect.requires_target() {
             return false;
         }
-        let offboard = self.exile.iter().any(|c| c.id == *cid)
-            || self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == *cid));
+        let exiled = self.exile.iter().any(|c| c.id == *cid);
+        let offboard = exiled || self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == *cid));
         // An ability on the stack is named by its source's id, and a
         // sacrificed source is in a graveyard (Voidslime, Trickbind).
         let names_an_ability = || {
             self.stack.iter().any(|si| matches!(si, StackItem::Trigger { source, .. } if *source == *cid))
         };
+        let zoned = filter.is_some_and(|f| f.mentions_offboard_zone());
+        // A loose `Move` may reach a graveyard card ("return target creature
+        // card"), never an exiled one unless its filter names the zone: Run
+        // Away Together's "target creature" bounced a warped Starfield
+        // Vocalist out of exile (fuzzed audit pod, seed 3195392 game 7).
         offboard
             && !names_an_ability()
-            && !effect.may_target_offboard_card()
-            && !filter.is_some_and(|f| f.mentions_offboard_zone())
+            && !zoned
+            && (exiled || !effect.may_target_offboard_card())
     }
 
     /// Validate that a target is legally targetable by the given controller.

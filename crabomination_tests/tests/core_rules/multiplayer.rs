@@ -9601,3 +9601,32 @@ fn cr_800_4a_a_departed_seats_card_held_in_exile_does_not_return() {
     assert!(g.battlefield_find(bears).is_none(), "no return for a departed owner");
     assert!(g.battlefield.iter().all(|c| c.owner != 2));
 }
+
+/// CR 115.1 / 400.7 — "target creature" names a creature on the battlefield:
+/// Run Away Together can't be aimed at a creature card in exile. It bounced a
+/// warped Starfield Vocalist out of exile, permission and all (fuzzed audit
+/// pod, seed 3195392 game 7).
+#[test]
+fn cr_115_1_a_creature_card_in_exile_is_not_a_target_creature() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let exiled = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let card = g.battlefield.iter().find(|c| c.id == exiled).unwrap().clone();
+    g.battlefield.retain(|c| c.id != exiled);
+    g.exile.push(card);
+    let spell = g.add_card_to_hand(0, catalog::run_away_together());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(exiled)],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err(), "an exiled card is no target creature");
+    assert!(g.exile.iter().any(|c| c.id == exiled));
+}
