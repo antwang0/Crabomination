@@ -1614,3 +1614,22 @@ fn entity_tracker_draws_on_a_fully_unlocked_room() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// Crystal Barricade prevents a bolt to another of your creatures, not to
+/// itself (CR 615).
+#[test]
+fn crystal_barricade_shields_other_creatures() {
+    let mut g = pod(2);
+    let wall = ready(&mut g, 0, catalog::crystal_barricade());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    for t in [bear, wall] {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(t)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("bolt");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(bear).is_some(), "the bear was shielded");
+    assert_eq!(g.battlefield_find(wall).unwrap().damage, 3, "the wall itself is not");
+}

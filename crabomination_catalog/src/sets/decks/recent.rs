@@ -3385,8 +3385,8 @@ pub fn marauding_brinefang() -> CardDefinition {
     }
 }
 
-/// Crystal Barricade — {1}{W} 0/4 Wall. Defender; you have hexproof. (The
-/// prevent-noncombat-damage-to-your-other-creatures rider is omitted.)
+/// Crystal Barricade — {1}{W} 0/4 Wall. Defender; you have hexproof; noncombat
+/// damage to your other creatures is prevented (CR 615).
 pub fn crystal_barricade() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -3400,10 +3400,20 @@ pub fn crystal_barricade() -> CardDefinition {
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
-        static_abilities: vec![StaticAbility {
-            description: "You have hexproof.",
-            effect: StaticEffect::ControllerHasHexproof,
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You have hexproof.",
+                effect: StaticEffect::ControllerHasHexproof,
+            },
+            StaticAbility {
+                description: "Prevent all noncombat damage that would be dealt to other creatures you control.",
+                effect: StaticEffect::PreventNoncombatDamageToMatching {
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
