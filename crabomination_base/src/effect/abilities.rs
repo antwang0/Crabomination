@@ -2171,6 +2171,9 @@ pub enum StaticEffect {
     /// Biomancer's Familiar / Training Grounds-style (generic-only). Applies
     /// when the ability's source is a creature the static's controller controls.
     YourCreatureActivatedAbilitiesCostLess { amount: u32 },
+    /// The same, by the static's source's power: "cost {X} less to activate,
+    /// where X is [this]'s power" (Agatha of the Vile Cauldron).
+    YourCreatureActivatedAbilitiesCostLessBySourcePower,
     /// "Activated abilities of [filter] you control cost {N} less to
     /// activate" (Sam, Loyal Attendant's Foods). Generic only, no floor.
     MatchingActivatedAbilitiesCostLess { filter: SelectionRequirement, amount: u32 },

@@ -33640,6 +33640,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardPlayOncePerTurnWithRider { .. }
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
+            | StaticEffect::YourCreatureActivatedAbilitiesCostLessBySourcePower
             | StaticEffect::MatchingActivatedAbilitiesCostLess { .. }
             | StaticEffect::MatchingActivatedAbilitiesCostLessFloored { .. }
             | StaticEffect::GraveyardActivatedAbilitiesCostLess { .. }

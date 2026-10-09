@@ -22541,9 +22541,12 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
-                .flat_map(|c| c.definition.static_abilities.iter())
-                .map(|sa| match sa.effect {
+                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
+                .map(|(id, sa)| match sa.effect {
                     crate::effect::StaticEffect::YourCreatureActivatedAbilitiesCostLess { amount } => amount,
+                    crate::effect::StaticEffect::YourCreatureActivatedAbilitiesCostLessBySourcePower => {
+                        self.computed_permanent(id).map_or(0, |cp| cp.power.max(0) as u32)
+                    }
                     _ => 0,
                 })
                 .sum();
