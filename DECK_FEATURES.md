@@ -34,29 +34,20 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-293 / 302 pod decks carry no residual (2026-10-09, Commander routine `01Ug49mf`, later
-the same run). The scanner now also reads "modeled as" / "stands in for" /
-"simplified" docs, which had hidden ~30 decks (257/293 on the stricter scan); most
-were fixed the same run (targeted mills, Venser's spell bounce, Isochron Scepter's
-copies, Heat Shimmer's exile, Planetarium's library cast, stale notes). Left: Mox
-Diamond enters briefly before its discard choice (ETB watchers see it), Will of
-the Abzan's each-opponent mode, Planetarium's once-a-turn limit spent by a land,
-the stand-in sticker collection, Firebender Ascension's copy. `--table` output
+326 / 329 pod decks carry no residual (2026-10-09, fifteenth Commander run `01TW7nNh`). Mox Diamond
+now pays its entry cost before it enters (`StaticEffect::EntersOnlyIfPaid`, CR 614.1c — six decks),
+Planetarium's once-a-turn use is spent by the cast, and a concurrent session fixed Giver of Runes and
+the may-discard choice. Left: Will of the Abzan's "any number of target opponents" (a `ChooseModesCast`
+mode with a variable slot count), the stand-in sticker collection, Kona's "you may". `--table` output
 pasted as is:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 149 | Felothar the Steadfast (WBG) | 1: will_of_the_abzan |
-| 199 | Kinnan, Bonder Prodigy (GU) | 1: mox_diamond |
-| 204 | Etali, Primal Conqueror (GR) | 2: blank_goblin, mox_diamond |
-| 234 | Noctis, Prince of Lucis (BUW) | 1: mox_diamond |
-| 270 | Lumra, Bellow of the Woods (G) | 1: mox_diamond |
-| 279 | Kraum, Ludevic's Opus + Tymna the Weaver (BRUW) | 1: mox_diamond |
-| 280 | Thrasios, Triton Hero + Tymna the Weaver (BGUW) | 1: mox_diamond |
-| 284 | Golbez, Crystal Collector (BU) | 1: planetarium_of_wan_shi_tong |
-| 298 | Fire Lord Azula (BRU) | 1: firebender_ascension |
+| 204 | Etali, Primal Conqueror (GR) | 1: blank_goblin |
+| 327 | Kona, Rescue Beastie (G) | 1: kona_rescue_beastie |
 
-293 / 302 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+326 / 329 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
