@@ -9347,3 +9347,32 @@ pub const LIGHTNING_ARMY_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ISSHIN_COMMANDERS: &[CardFactory] = &[isshin_two_heavens_as_one];
+
+/// **Isshin, Two Heavens as One**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 83 nonbasic cards + 6 Mountains + 6 Plains + 4 Swamps = 99.
+/// doubled attack triggers
+pub const ISSHIN_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, dolmen_gate, lightning_greaves, orzhov_signet, skullclamp,
+    sol_ring, swiftfoot_boots, sword_of_the_animist, talisman_of_conviction, talisman_of_hierarchy,
+    talisman_of_indulgence, arid_mesa, battlefield_forge, blood_crypt, caves_of_koilos,
+    clifftop_retreat, command_tower, dragonskull_summit, exotic_orchard, godless_shrine,
+    isolated_chapel, luxury_suite, nomad_outpost, path_of_ancestry, sacred_foundry, savai_triome,
+    shattered_sanctum, smoldering_marsh, spectator_seating, sundown_pass, vault_of_champions,
+    adeline_resplendent_cathar, ainok_strike_leader, alesha_who_laughs_at_fate,
+    anim_pakal_thousandth_moon, audacious_thief, aurelia_the_law_above, aurelia_the_warleader,
+    breena_the_demagogue, brutal_hordechief, caesar_legions_emperor, captain_lannery_storm,
+    commissar_severina_raine, etali_primal_storm, goldspan_dragon, hanweir_garrison,
+    hero_of_bladehold, iroas_god_of_victory, karlach_fury_of_avernus, kellogg_dangerous_mind,
+    krenko_tin_street_kingpin, mardu_siegebreaker, mishra_claimed_by_gix, myrel_shield_of_argive,
+    otharri_suns_glory, skyknight_vanguard, sun_titan, tectonic_giant, voice_of_victory,
+    zurgo_stormrender, curse_of_opulence, fervent_charge, firebender_ascension, mardu_ascendancy,
+    reconnaissance, rising_of_the_day, windcrag_siege, within_range, akromas_will,
+    anguished_unmaking, boros_charm, chaos_warp, despark, flawless_maneuver, generous_gift,
+    path_to_exile, swords_to_plowshares, blasphemous_act, damn, farewell, ruinous_ultimatum,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp,
+];
