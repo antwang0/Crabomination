@@ -43282,7 +43282,7 @@ pub fn goblin_war_strike() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Player),
+            to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
             amount: Value::CountOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::HasCreatureType(CreatureType::Goblin)
                     .and(SelectionRequirement::ControlledByYou),

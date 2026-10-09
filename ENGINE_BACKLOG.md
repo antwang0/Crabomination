@@ -129,7 +129,7 @@ the handoff.
   (`game/move_spell.rs`, through `MoveSpellToZone`): Brutal Expulsion's
   "spell or creature" left the spell to resolve; Venser, Shaper Savant and
   Divide by Zero now carry a spell mode.
-- **Type-union scans** (`scripts/audit_vehicle_targets.py`, and an ad-hoc
+- **Type-union scans** (`scripts/audit_type_unions.py`, and an ad-hoc
   "player or planeswalker" pass): creature-only reads of "creature or
   Vehicle" (Fire Nation Engineer, Gas Guzzler, Agonasaur Rex) and
   player-only reads of "player or planeswalker" (Lava Spike, Skullcrack —
