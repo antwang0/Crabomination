@@ -9515,3 +9515,58 @@ pub const KUJA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const URTET_COMMANDERS: &[CardFactory] = &[urtet_remnant_of_memnarch];
+
+/// **Urtet, Remnant of Memnarch**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 89 nonbasic cards + 2 Forests + 2 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Urtet, Remnant of Memnarch Myr (WUBRG artifacts): Galvanizer, Propagator, Reservoir and Perilous Myr around the Myr swarm
+pub const URTET_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, clock_of_omens, darksteel_forge, forsaken_monument,
+    genesis_chamber, lux_artillery, myr_matrix, myr_reservoir, myr_turbine, mystic_forge,
+    skullclamp, sol_ring, unwinding_clock, urzas_incubator, vanquishers_banner, ancient_den,
+    buried_ruin, command_tower, darkmoss_bridge, darksteel_citadel, drossforge_bridge,
+    exotic_orchard, goldmire_bridge, great_furnace, inventors_fair, mistvault_bridge,
+    path_of_ancestry, razortide_bridge, reliquary_tower, rustvale_bridge, seat_of_the_synod,
+    silverbluff_bridge, slagwoods_bridge, spire_of_industry, tanglepool_bridge, thornglint_bridge,
+    tree_of_tales, vault_of_whispers, alibou_ancient_witness, alloy_myr,
+    brudiclad_telchor_engineer, copper_myr, darksteel_myr, etherium_sculptor, foundry_inspector,
+    frogmyr_enforcer, gold_myr, hovermyr, ichorclaw_myr, iron_myr, jhoira_weatherlight_captain,
+    knighted_myr, leaden_myr, lodestone_myr, myr_battlesphere, myr_convert, myr_enforcer,
+    myr_galvanizer, myr_kinsmith, myr_propagator, myr_retriever, myr_sire, myr_superion,
+    myr_welder, myrsmith, palladium_myr, perilous_myr, plague_myr, shimmer_myr, silver_myr,
+    steel_overseer, cryptolith_rite, kindred_discovery, mechanized_production, mirrodin_besieged,
+    tempered_steel, counterspell, dispatch, heroic_intervention, masters_call, path_to_exile,
+    swords_to_plowshares, tezzeret_master_of_the_bridge, all_is_dust, distant_melody,
+    organic_extinction, thoughtcast, wake_the_past,
+    // Basics
+    forest, forest, island, island, mountain, mountain, plains, plains, swamp, swamp,
+];
+
+pub const KONA_COMMANDERS: &[CardFactory] = &[kona_rescue_beastie];
+
+/// **Kona, Rescue Beastie**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 74 nonbasic cards + 25 Forests = 99.
+/// Kona, Rescue Beastie big green (G): Dawnglade Regent, Giant Ankheg and Impervious Greatwurm cheated out of hand, Loam Dryad and Citanul Stalwart ramp
+pub const KONA_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lightning_greaves, portal_to_phyrexia, relic_of_legends,
+    sledge_class_seedship, smugglers_copter, sol_ring, springleaf_drum, swiftfoot_boots,
+    the_great_henge, evendo_waking_haven, holdout_settlement, mosswort_bridge,
+    nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, scene_of_the_crime,
+    survivors_encampment, apex_altisaur, archetype_of_endurance, citanul_stalwart,
+    dawnglade_regent, disciple_of_freyalise, elvish_mystic, enduring_vitality, eternal_witness,
+    fanatic_of_rhonas, fierce_empath, ghalta_primal_hunger, ghalta_stampede_tyrant, giant_ankheg,
+    impervious_greatwurm, jaspera_sentinel, kodama_of_the_east_tree, kogla_the_titan_ape,
+    llanowar_elves, loam_dryad, nyxbloom_ancient, regal_force, saruli_caretaker,
+    selvala_heart_of_the_wilds, soul_of_the_harvest, stonehoof_chieftain, terastodon,
+    titan_of_industry, tyvar_the_pummeler, vaultborn_tyrant, vorinclex_voice_of_hunger,
+    worldspine_wurm, zopandrel_hunger_dominus, cryptolith_rite, garruks_uprising, guardian_project,
+    lurking_predators, sandwurm_convergence, unnatural_growth, utopia_sprawl, wild_growth,
+    archdruids_charm, beast_within, fog, heroic_intervention, return_of_the_wildspeaker,
+    tamiyos_safekeeping, worldly_tutor, garruk_primal_hunter, cultivate, kodamas_reach,
+    last_march_of_the_ents, natures_lore, rampant_growth, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest,
+];

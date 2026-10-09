@@ -2373,6 +2373,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KUJA_COMMANDERS,
             main: decks::KUJA_MAIN,
         },
+        // Seat 326: Urtet, Remnant of Memnarch's EDHREC average deck. `--pod-decks 326`.
+        PodDeck {
+            name: "Urtet, Remnant of Memnarch (BGRUW)",
+            commanders: decks::URTET_COMMANDERS,
+            main: decks::URTET_MAIN,
+        },
+        // Seat 327: Kona, Rescue Beastie's EDHREC average deck. `--pod-decks 327`.
+        PodDeck {
+            name: "Kona, Rescue Beastie (G)",
+            commanders: decks::KONA_COMMANDERS,
+            main: decks::KONA_MAIN,
+        },
     ]
 }
 
@@ -4342,6 +4354,8 @@ mod tests {
             ("Orvar, the All-Form", [0x0A7F, 323, 9248]),
             ("Sisay, Weatherlight Captain", [0x515A, 324, 9249]),
             ("Kuja, Genome Sorcerer", [0x0C1A, 325, 9250]),
+            ("Urtet, Remnant of Memnarch", [0x0B7E, 326, 9251]),
+            ("Kona, Rescue Beastie", [0x0C0A, 327, 9252]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
