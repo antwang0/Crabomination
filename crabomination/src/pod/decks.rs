@@ -8109,3 +8109,31 @@ pub const JETMIR_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const KEFKA_COMMANDERS: &[CardFactory] = &[kefka_court_mage];
+
+/// **Kefka, Court Mage**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 87 nonbasic cards + 4 Islands + 4 Mountains + 4 Swamps = 99.
+/// Grixis discard: Kefka's attacks make each player discard, and he flips into the Ruler of Ruin.
+pub const KEFKA_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, geths_grimoire, lightning_greaves, lotus_petal,
+    monument_to_endurance, sol_ring, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, thought_vessel, blood_crypt, bloodstained_mire, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard, luxury_suite,
+    morphic_pool, otawara_soaring_city, polluted_delta, reliquary_tower, scalding_tarn,
+    shivan_reef, steam_vents, sulfur_falls, sulfurous_springs, sunken_hollow, training_center,
+    underground_river, watery_grave, xanders_lounge, anger, black_waltz_no_3, bone_miser,
+    dauthi_voidwalker, displacer_kitten, harmonic_prodigy, hexing_squelcher, kefka_dancing_mad,
+    kuja_genome_sorcerer, nightscape_familiar, niv_mizzet_parun, orcish_bowmasters,
+    psychosis_crawler, ragavan_nimble_pilferer, sheoldred_the_apocalypse, simian_spirit_guide,
+    tergrid_god_of_fright, thassas_oracle, tinybones_bauble_burglar, vivi_ornitier, animate_dead,
+    lilianas_caress, mystic_remora, rhystic_study, underworld_breach, waste_not,
+    an_offer_you_cant_refuse, arcane_denial, cabal_ritual, chaos_warp, counterspell, cyclonic_rift,
+    dark_ritual, deadly_rollick, deflecting_swat, essence_flux, fierce_guardianship, force_of_will,
+    ghostly_flicker, mystical_tutor, saw_in_half, swan_song, vampiric_tutor, blasphemous_act,
+    demonic_tutor, faithless_looting, feed_the_swarm, gamble, reanimate, rise_of_the_dark_realms,
+    toxic_deluge, vandalblast, windfall,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp,
+];

@@ -2073,6 +2073,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JETMIR_COMMANDERS,
             main: decks::JETMIR_MAIN,
         },
+        // Seat 276: Kefka, Court Mage's EDHREC average deck. `--pod-decks 276`.
+        PodDeck {
+            name: "Kefka, Court Mage (BRU)",
+            commanders: decks::KEFKA_COMMANDERS,
+            main: decks::KEFKA_MAIN,
+        },
     ]
 }
 
@@ -3928,6 +3934,7 @@ mod tests {
             ("Marchesa, the Black Rose", [0x3A4C, 273, 9197]),
             ("Brago, King Eternal", [0xB4A6, 274, 9199]),
             ("Jetmir, Nexus of Revels", [0x7E71, 275, 9200]),
+            ("Kefka, Court Mage", [0xEFCA, 276, 9201]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
