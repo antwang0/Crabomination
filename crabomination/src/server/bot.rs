@@ -18391,6 +18391,11 @@ pub fn max_affordable_x_for_def(
         .count()
         .max(1) as u32;
     let affordable = affordable / x_pips;
+    // Never kill yourself with a symmetric X (Earthquake): `x_self_harm.rs`.
+    let affordable = match super::x_self_harm::self_harm_x_cap(state, seat, def) {
+        Some(cap) => affordable.min(cap),
+        None => affordable,
+    };
     // Don't overkill: an `{X}: deal X damage to target creature` spell
     // (creature-only target — can't go to the face) never needs more X
     // than the toughest opposing creature's toughness. Capping here frees
@@ -29379,6 +29384,22 @@ mod stack_response_tests {
         g.players[0].mana_pool.add_colorless(6);
         assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 2,
             "X capped at the 2/2's toughness, not the full {{6}} pool");
+    }
+
+    /// CR 104.4a — Earthquake deals X to each player, its caster included: at
+    /// 11 life with twelve mana the bot declared X = 11 and drew a pod it
+    /// would have won at X = 10. A symmetric X stops at life − 1.
+    #[test]
+    fn max_affordable_x_never_kills_its_own_caster() {
+        let mut g = crate::game::multi_player_game(3);
+        let id = g.add_card_to_hand(0, catalog::earthquake());
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+        g.players[0].life = 11;
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(11);
+        assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 10, "X stops one short of the caster's life");
+        assert!(super::super::x_self_harm::x_hits_caster(&catalog::fault_line()));
+        assert!(!super::super::x_self_harm::x_hits_caster(&catalog::banefire()), "single-target burn is not symmetric");
     }
 
     /// Player-targetable burn (Banefire) is not capped — the bot still dumps

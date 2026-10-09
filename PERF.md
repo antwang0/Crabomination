@@ -3213,6 +3213,11 @@ suite            24,951 / 0 / 5 after one test fix (the shroud edit had also
                  rewritten Aegis of the Gods' hexproof assertion); clippy 0
 ```
 
+Then `server/x_self_harm.rs`: `max_affordable_x` caps an X whose damage or
+life loss reaches the caster at its life − 1 (one `any_nested` walk of the X
+spell's tree per sizing). `--bench` **196,176 / 27.64 / 613.0 byte-identical**,
+determinism ok, 164,244 decisions/s (noise); golden + pod tests 104 / 0.
+
 ### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls
 
 Hot-path touches: `push_stack` ORs a battlefield-slot mark into spells too
