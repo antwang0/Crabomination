@@ -143,8 +143,8 @@ pub fn shrewd_storyteller() -> CardDefinition {
     )
 }
 
-/// Kona, Rescue Beastie — {3}{G} 4/3 legendary. Survival: put a permanent card
-/// from your hand onto the battlefield. (The "you may" is modeled as the put.)
+/// Kona, Rescue Beastie — {3}{G} 4/3 legendary. Survival: you may put a
+/// permanent card from your hand onto the battlefield (the pick is up to one).
 pub fn kona_rescue_beastie() -> CardDefinition {
     CardDefinition {
         name: "Kona, Rescue Beastie",
