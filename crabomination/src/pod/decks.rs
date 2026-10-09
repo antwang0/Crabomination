@@ -9292,3 +9292,30 @@ pub const ELUGE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const ROXANNE_COMMANDERS: &[CardFactory] = &[roxanne_starfall_savant];
+
+/// **Roxanne, Starfall Savant**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 9 Forests + 11 Mountains = 99.
+/// Meteorite artifacts
+pub const ROXANNE_MAIN: &[CardFactory] = &[
+    amulet_of_vigor, arcane_signet, blade_of_selves, bootleggers_stash, conjurers_closet,
+    helm_of_the_host, idol_of_oblivion, lightning_greaves, panharmonicon, skyclave_relic, sol_ring,
+    swiftfoot_boots, cinder_glade, command_tower, exotic_orchard, game_trail, gruul_turf,
+    karplusan_forest, kessig_wolf_run, rockfall_vale, rogues_passage, rootbound_crag, spire_garden,
+    stomping_ground, thornspire_verge, treasure_vault, wooded_foothills, academy_manufactor,
+    aerid_konstrari, birds_of_paradise, displaced_dinosaurs, eternal_witness, goblin_anarchomancer,
+    goldspan_dragon, goldvein_hydra, hellkite_tyrant, ingenious_artillerist,
+    jolene_plundering_pugilist, jolene_the_plunder_queen, llanowar_elves, magda_the_hoardmaster,
+    old_gnawbone, orthion_hero_of_lavabrink, professional_face_breaker, reckless_fireweaver,
+    sarinth_steelseeker, svella_ice_shaper, tireless_provisioner, weftstalker_ardent,
+    wulfgar_of_icewind_dale, xorn, aggravated_assault, city_of_death, city_on_fire,
+    doubling_season, fiery_emancipation, garruks_uprising, parallel_lives, rhythm_of_the_wild,
+    beast_within, big_score, chaos_warp, comet_storm, deflecting_swat, demand_answers,
+    heroic_intervention, second_harvest, unexpected_windfall, blasphemous_act, crackle_with_power,
+    cultivate, devastating_onslaught, farseek, for_the_common_good, hell_to_pay, kodamas_reach,
+    natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

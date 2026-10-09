@@ -2325,6 +2325,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELUGE_COMMANDERS,
             main: decks::ELUGE_MAIN,
         },
+        // Seat 318: Roxanne, Starfall Savant's EDHREC average deck. `--pod-decks 318`.
+        PodDeck {
+            name: "Roxanne, Starfall Savant (GR)",
+            commanders: decks::ROXANNE_COMMANDERS,
+            main: decks::ROXANNE_MAIN,
+        },
     ]
 }
 
@@ -4286,6 +4292,7 @@ mod tests {
             ("Brenard, Ginger Sculptor", [0xB2E9, 315, 9240]),
             ("Hazezon, Shaper of Sand", [0x4A2E, 316, 9241]),
             ("Eluge, the Shoreless Sea", [0xE106, 317, 9242]),
+            ("Roxanne, Starfall Savant", [0x20A2, 318, 9243]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
