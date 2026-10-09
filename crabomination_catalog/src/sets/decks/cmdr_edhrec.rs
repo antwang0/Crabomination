@@ -8239,3 +8239,157 @@ pub fn thrumming_stone() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kamahl, Heart of Krosa — {6}{G}{G} Legendary 5/5 Human Druid, partner. At
+/// the beginning of combat on your turn, creatures you control get +3/+3 and
+/// gain trample until end of turn. {1}{G}: Until end of turn, target land you
+/// control becomes a 1/1 Elemental creature with vigilance, indestructible,
+/// and haste. It's still a land.
+pub fn kamahl_heart_of_krosa() -> CardDefinition {
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Kamahl, Heart of Krosa",
+        cost: cost(&[generic(6), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Druid]),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Partner],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: yours(), power: Value::Const(3), toughness: Value::Const(3), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: yours(), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::BecomeCreature {
+                what: target_filtered(R::Land.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                creature_types: vec![CreatureType::Elemental],
+                keywords: vec![Keyword::Vigilance, Keyword::Indestructible, Keyword::Haste],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Radha, Heir to Keld — {R}{G} Legendary 2/2 Elf Warrior. Whenever Radha
+/// attacks, you may add {R}{R}. {T}: Add {G}.
+pub fn radha_heir_to_keld() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Radha, Heir to Keld",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Warrior]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::MayDo {
+            description: "Add {R}{R}?".into(),
+            body: Box::new(Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red, Color::Red]) }),
+        })],
+        activated_abilities: vec![crate::sets::tap_add(Color::Green)],
+        ..Default::default()
+    }
+}
+
+/// Spider Manifestation — {1}{R/G} 2/2 Spider Avatar, reach. {T}: Add {R} or
+/// {G}. Whenever you cast a spell with mana value 4 or greater, untap it.
+pub fn spider_manifestation() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Spider Manifestation",
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Spider, CreatureType::Avatar]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::ONE) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::ManaValueAtLeast(4))),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elven Chorus — {3}{G} Enchantment. You may look at the top card of your
+/// library any time. You may cast creature spells from the top of your
+/// library. Creatures you control have "{T}: Add one mana of any color."
+pub fn elven_chorus() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Elven Chorus",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
+            },
+            StaticAbility {
+                // "Cast creature spells": a land creature (Dryad Arbor) is
+                // played, not cast, so the filter leaves lands out.
+                description: "You may cast creature spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature.and(R::Nonland) },
+            },
+            StaticAbility {
+                description: "Creatures you control have \"{T}: Add one mana of any color.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                        ..Default::default()
+                    },
+                    condition: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Leyline of Abundance — {2}{G}{G} Enchantment. If it's in your opening hand,
+/// you may begin the game with it on the battlefield. Whenever you tap a
+/// creature for mana, add an additional {G}. {6}{G}{G}: Put a +1/+1 counter on
+/// each creature you control.
+pub fn leyline_of_abundance() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::{ManaPayload, OpeningHandEffect};
+    CardDefinition {
+        name: "Leyline of Abundance",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TappedForMana, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Green]) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), g(), g()]),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

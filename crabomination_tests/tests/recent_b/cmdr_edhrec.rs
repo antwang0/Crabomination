@@ -4000,3 +4000,55 @@ fn alexios_equipment_kit() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(other).unwrap().power, 4, "doubled");
 }
+
+/// Raggadragga's green: Elven Chorus's granted mana ability plus Leyline of
+/// Abundance's extra {G}; a creature cast from the library top; Spider
+/// Manifestation untaps on a four-drop; Radha adds {R}{R} attacking; Kamahl's
+/// beginning-of-combat +3/+3 and trample, and a land animated.
+#[test]
+fn raggadragga_green_kit() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::elven_chorus());
+    ready(&mut g, 0, catalog::leyline_of_abundance());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("granted mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "any color plus the Leyline's {{G}}");
+
+    flood(&mut g);
+    let spider = ready(&mut g, 0, catalog::spider_manifestation());
+    g.battlefield_find_mut(spider).unwrap().tapped = true;
+    let chorus = g.add_card_to_hand(0, catalog::elven_chorus());
+    cast(&mut g, chorus, None);
+    assert!(!g.battlefield_find(spider).unwrap().tapped, "a four-drop untaps it");
+
+    g.players[0].library.clear();
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    let bears = named(&g, "Grizzly Bears");
+    cast(&mut g, top, None);
+    assert_eq!(named(&g, "Grizzly Bears"), bears + 1, "cast off the top");
+
+    let kamahl = ready(&mut g, 0, catalog::kamahl_heart_of_krosa());
+    let forest = ready(&mut g, 0, catalog::forest());
+    activate(&mut g, kamahl, Some(Target::Permanent(forest)));
+    assert!(g.computed_permanent(forest).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+    let radha = ready(&mut g, 0, catalog::radha_heir_to_keld());
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 5);
+    assert!(cp.keywords().contains(&Keyword::Trample));
+    g.players[0].mana_pool = Default::default();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: radha, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
+}
