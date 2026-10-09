@@ -167,6 +167,18 @@ returns now skip a departed owner's card).
 
 A fourth, fuzzed, on the fixed tree (seed 31517): 6,660 games, **0 panics**,
 3 undecided (one CR 104.4 draw, two Secret Arcade caps).
+A new CR 400.7 **link invariant** (an "until" exile link outside exile, a
+non-miracle may-play permission in a hand or command zone, a kicked flag
+off the battlefield) fired on 60+ cards in its first minutes (seed 31731) —
+one CLASS, fixed by `CardInstance::forget_spell_choices` on the graveyard,
+draw, battlefield-leave and command-zone funnels: a kicked card recast from
+hand read as kicked (Into the Roil drew again), a drawn card kept a "play
+the top card" permission, commanders kept one into the command zone. Its
+next sweep (31841) found the face-down CLASS's last three sites (Missy's
+Cyberman ×2, Yedora's Forest) — all five now go through
+`face_down_onto_battlefield`. The miracle reveal window is a legitimate
+hand permission (CR 702.94; exempted by a concurrent session too).
+
 A fifth, fuzzed, after the census fixes (seed 31623): 6,660 games, **0 panics,
 0 caps**, 5 CR 104.4 draws. Two-player pools on the same audit build: cube /
 sos / sealed × seeds 7101-7103 (7103 under `CRAB_LADDER_FUZZ=2500`, strict) —
