@@ -22720,7 +22720,10 @@ impl GameState {
             events.push(GameEvent::CardMilled { player: p, card_id: cid });
         }
         // Return the dredge card from the graveyard to its owner's hand.
-        if let Some(card) = Self::take_card(&mut self.players[p].graveyard, card_id) {
+        if let Some(mut card) = Self::take_card(&mut self.players[p].graveyard, card_id) {
+            // CR 400.7 — a graveyard cast permission stays behind (Life from
+            // the Loam dredged back with one; fuzzed audit pod, seed 3206523).
+            card.forget_spell_choices();
             self.players[p].hand.push(card);
             self.players[p].cards_left_graveyard_this_turn = self.players[p]
                 .cards_left_graveyard_this_turn

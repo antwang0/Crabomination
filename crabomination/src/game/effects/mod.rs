@@ -29699,7 +29699,8 @@ impl GameState {
                     chosen
                 };
                 for id in targeted.iter().filter(|id| !leave.contains(id)) {
-                    if let Some(card) = Self::take_card(&mut self.players[p].graveyard, *id) {
+                    if let Some(mut card) = Self::take_card(&mut self.players[p].graveyard, *id) {
+                        card.forget_spell_choices(); // CR 400.7
                         self.players[p].hand.push(card);
                         self.note_returned_to_hand_from_graveyard(p, *id, events);
                     }
