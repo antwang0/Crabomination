@@ -2211,6 +2211,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FIRE_LORD_AZULA_COMMANDERS,
             main: decks::FIRE_LORD_AZULA_MAIN,
         },
+        // Seat 299: Minsc & Boo, Timeless Heroes's EDHREC average deck. `--pod-decks 299`.
+        PodDeck {
+            name: "Minsc & Boo, Timeless Heroes (GR)",
+            commanders: decks::MINSC_BOO_COMMANDERS,
+            main: decks::MINSC_BOO_MAIN,
+        },
     ]
 }
 
@@ -4148,6 +4154,7 @@ mod tests {
             ("Queen Marchesa", [0x4A2C, 296, 9221]),
             ("Kenrith, the Returned King", [0x4E7A, 297, 9222]),
             ("Fire Lord Azula", [0xA2A1, 298, 9223]),
+            ("Minsc & Boo, Timeless Heroes", [0xB00B, 299, 9224]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -8761,3 +8761,31 @@ pub const FIRE_LORD_AZULA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     mountain, swamp, swamp, swamp, swamp,
 ];
+
+pub const MINSC_BOO_COMMANDERS: &[CardFactory] = &[minsc_boo_timeless_heroes];
+
+/// **Minsc & Boo, Timeless Heroes**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 77 nonbasic cards + 13 Forests + 9 Mountains = 99.
+/// counters and a hamster
+pub const MINSC_BOO_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, ozolith_the_shattered_spire, sol_ring, swiftfoot_boots,
+    the_earth_crystal, the_ozolith, thought_vessel, cinder_glade, command_tower, game_trail,
+    gruul_turf, karplusan_forest, kessig_wolf_run, mossfire_valley, reliquary_tower, rockfall_vale,
+    rogues_passage, rootbound_crag, spire_garden, stomping_ground, wooded_foothills,
+    birds_of_paradise, bristly_bill_spine_sower, champion_of_lambholt, defiler_of_vigor,
+    delighted_halfling, elvish_mystic, eternal_witness, evolution_sage, fanatic_of_rhonas,
+    forgotten_ancient, fyndhorn_elves, ghalta_primal_hunger, goblin_anarchomancer,
+    grumgully_the_generous, halana_and_alena, kalonian_hydra, kami_of_whispered_hopes,
+    kodama_of_the_west_tree, llanowar_elves, managorger_hydra, ruby_daring_tracker,
+    sakura_tribe_elder, taurean_mauler, vorinclex_monstrous_raider, xenagos_god_of_revels,
+    all_will_be_one, branching_evolution, garruks_uprising, hardened_scales, innkeepers_talent,
+    rhythm_of_the_wild, terrasymbiosis, unnatural_growth, beast_within, bulk_up, chaos_warp, fling,
+    heroic_intervention, inspiring_call, invigorating_surge, kazuuls_fury, ram_through,
+    return_of_the_wildspeaker, unleash_fury, domri_anarch_of_bolas, blasphemous_act,
+    chandras_ignition, cultivate, fangs_of_kalonia, farseek, kodamas_reach, natures_lore,
+    rampant_growth, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
