@@ -8535,3 +8535,31 @@ pub const ARABELLA_MAIN: &[CardFactory] = &[
     mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const CORAM_COMMANDERS: &[CardFactory] = &[coram_the_undertaker];
+
+/// **Coram, the Undertaker**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 86 nonbasic cards + 5 Forests + 3 Mountains + 5 Swamps = 99.
+/// Jund mill: Coram plays a land and a spell from what was milled into any graveyard this turn.
+pub const CORAM_MAIN: &[CardFactory] = &[
+    arcane_signet, hedge_shredder, lightning_greaves, mesmeric_orb, sol_ring, swiftfoot_boots,
+    talisman_of_resilience, the_reaver_cleaver, blood_crypt, bloodstained_mire, cinder_glade,
+    command_tower, dakmor_salvage, dragonskull_summit, exotic_orchard, kessig_wolf_run,
+    overgrown_tomb, rogues_passage, rootbound_crag, savage_lands, shifting_woodland,
+    smoldering_marsh, stomping_ground, twisted_landscape, underground_mortuary, verdant_catacombs,
+    wooded_foothills, woodland_cemetery, ziatoras_proving_ground, aftermath_analyst, anger,
+    barrowgoyf, birds_of_paradise, brawn, chainer_nightmare_adept, eternal_witness,
+    ghalta_primal_hunger, golgari_grave_troll, gravebreaker_lamia, honest_rutstein,
+    icetill_explorer, ignoble_hierarch, jarad_golgari_lich_lord, kagha_shadow_archdruid,
+    lord_of_extinction, malignus, mortivore, nyx_weaver, old_stickfingers, sakura_tribe_elder,
+    selvala_heart_of_the_wilds, six, skull_prophet, splinterfright, stitchers_supplier,
+    syr_konrad_the_grim, titanoth_rex, world_shaper, yargle_and_multani, animate_dead,
+    cemetery_tampering, garruks_uprising, greater_good, ripples_of_undeath, assassins_trophy,
+    beast_within, chaos_warp, entomb, fling, grapple_with_the_past, grisly_salvage,
+    heroic_intervention, terminate, grist_the_hunger_tide, blasphemous_act, breach_the_multiverse,
+    buried_alive, chandras_ignition, cultivate, faithless_looting, farseek, life_from_the_loam,
+    natures_lore, rampant_growth, reanimate, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp,
+];

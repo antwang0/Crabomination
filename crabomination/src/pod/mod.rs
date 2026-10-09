@@ -2163,6 +2163,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARABELLA_COMMANDERS,
             main: decks::ARABELLA_MAIN,
         },
+        // Seat 291: Coram, the Undertaker's EDHREC average deck. `--pod-decks 291`.
+        PodDeck {
+            name: "Coram, the Undertaker (BGR)",
+            commanders: decks::CORAM_COMMANDERS,
+            main: decks::CORAM_MAIN,
+        },
     ]
 }
 
@@ -4070,6 +4076,7 @@ mod tests {
             ("Vren, the Relentless", [0x7E0E, 288, 9213]),
             ("Krenko, Mob Boss", [0x4E7B, 289, 9214]),
             ("Arabella, Abandoned Doll", [0xA4AB, 290, 9215]),
+            ("Coram, the Undertaker", [0xC0A4, 291, 9216]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
