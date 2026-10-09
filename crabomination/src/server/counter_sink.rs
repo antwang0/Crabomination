@@ -132,7 +132,8 @@ fn pick_level_up(state: &GameState, seat: usize) -> Option<GameAction> {
 }
 
 /// CR 701.37 — "Monstrosity N" with no X (Stormbreath Dragon, Fleecemane
-/// Lion, Arbor Colossus): idle main-phase mana makes a creature that isn't
+/// Lion, Arbor Colossus): idle mana — a main phase's, or an opponent's end
+/// step's, since monstrosity is instant speed — makes a creature that isn't
 /// monstrous yet monstrous. Eleven pod cards were never activated by any bot
 /// path (6-seat census over all 271 decks, seed 4401).
 pub(super) fn pick_monstrosity(state: &GameState, seat: usize) -> Option<GameAction> {

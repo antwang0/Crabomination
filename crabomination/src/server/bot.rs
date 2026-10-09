@@ -3516,6 +3516,7 @@ impl HeuristicBot {
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::selection_sink::pick_selection_sink(state, seat))
                         .or_else(|| super::counter_sink::pick_self_counter_sink(state, seat))
+                        .or_else(|| super::counter_sink::pick_monstrosity(state, seat))
                         .or_else(|| super::counter_sink::pick_discard_charge(state, seat))
                         .or_else(|| super::counter_sink::pick_fate_sink(state, seat, &self.weights))
                         .or_else(|| super::selection_sink::pick_cash_in(state, seat))
