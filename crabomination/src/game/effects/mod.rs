@@ -41408,7 +41408,7 @@ impl GameState {
                 self.reveal_top_may_cast_one_free(count, max_mv, filter.as_ref(), ctx, effect, events)
             }
 
-            Effect::Ripple { n } => {
+            Effect::Ripple { n, of_trigger_spell } => {
                 // CR 702.20: reveal the top N cards; cast any with the same
                 // name as the rippling spell for free (from exile, like
                 // Cascade); bottom the rest. A rippled copy re-fires its own
@@ -41416,7 +41416,8 @@ impl GameState {
                 use crate::card::Zone;
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let p = ctx.controller;
-                let Some(src) = ctx.source else { return Ok(()) };
+                let src = if *of_trigger_spell { ctx.trigger_source.and_then(|e| e.as_card_id()) } else { ctx.source };
+                let Some(src) = src else { return Ok(()) };
                 let Some(name) = self.find_card_anywhere(src).map(|c| c.definition.name) else {
                     return Ok(());
                 };

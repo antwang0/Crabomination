@@ -10167,7 +10167,15 @@ pub enum Effect {
     /// for free; put the rest on the bottom. Cast-from-library recursion (a
     /// rippled copy ripples again) falls out of the cast path naturally — the
     /// shortcut [`ripple`] wires the SpellCast/SelfSource trigger.
-    Ripple { n: Value },
+    ///
+    /// `of_trigger_spell`: the rippling spell is the trigger's source rather
+    /// than the ability's — "Spells you cast have ripple 4" (Thrumming
+    /// Stone) rides a `SpellCast` trigger on the Stone.
+    Ripple {
+        n: Value,
+        #[serde(default)]
+        of_trigger_spell: bool,
+    },
     /// "Reveal the top `count` cards of your library. You may cast a spell
     /// with mana value `max_mv` or less from among them without paying its
     /// mana cost. Put the rest on the bottom." (Sunbird's Invocation, CR

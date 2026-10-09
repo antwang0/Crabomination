@@ -980,7 +980,7 @@ pub fn cascade(mv: u32) -> TriggeredAbility {
 pub fn ripple(n: u32) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
-        effect: Effect::Ripple { n: Value::Const(n as i32) },
+        effect: Effect::Ripple { n: Value::Const(n as i32), of_trigger_spell: false },
     }
 }
 
