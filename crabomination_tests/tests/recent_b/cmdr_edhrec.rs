@@ -2208,3 +2208,117 @@ fn vonas_hunger_halves_with_the_blessing() {
         assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears").count(), theirs_left);
     }
 }
+
+/// Attack 0 → 1 with `attacker`; seat 1 blocks with `blocker`. Leaves the game
+/// at declare-blockers with the block in the map.
+fn attack_into_block(g: &mut GameState, attacker: CardId, blocker: Option<CardId>) {
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.priority.player_with_priority = 1;
+    let _ = g.perform_action(GameAction::DeclareBlockers(blocker.map(|b| vec![(b, attacker)]).unwrap_or_default()));
+    drain_stack(g);
+}
+
+/// Sting: +1/+1 and haste, and first strike only when the bearer is blocked
+/// by a Goblin.
+#[test]
+fn sting_first_strikes_against_goblins() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let sting = ready(&mut g, 0, catalog::sting_the_glinting_dagger());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: sting, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords().contains(&Keyword::Haste) && !cp.keywords().contains(&Keyword::FirstStrike));
+    let goblin = ready(&mut g, 1, catalog::goblin_guide());
+    attack_into_block(&mut g, bear, Some(goblin));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike), "blocked by a Goblin");
+}
+
+/// Hobgoblin Bandit Lord pings for the Goblins that entered this turn; Muxus
+/// puts the revealed cheap Goblins onto the battlefield.
+#[test]
+fn hobgoblin_bandit_lord_and_muxus() {
+    let mut g = pod(2);
+    let lord = ready(&mut g, 0, catalog::hobgoblin_bandit_lord());
+    g.players[0].library.clear();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::goblin_guide());
+    }
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let muxus = g.add_card_to_hand(0, catalog::muxus_goblin_grandee());
+    flood(&mut g);
+    cast(&mut g, muxus, None);
+    assert_eq!(named(&g, "Goblin Guide"), 2, "both revealed Goblins entered");
+    assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"), "the rest to the bottom");
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: lord, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "Muxus and two Guides entered");
+}
+
+/// Dolmen Gate keeps an attacker alive through a bigger blocker.
+#[test]
+fn dolmen_gate_shields_attackers() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::dolmen_gate());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    attack_into_block(&mut g, bear, Some(giant));
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.damage == 0));
+}
+
+/// Subira: {1} makes a small creature unblockable; the discard-hand ability
+/// draws when a small creature connects this turn.
+#[test]
+fn subira_draws_off_small_hits() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let subira = ready(&mut g, 0, catalog::subira_tulzidi_caravanner());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    activate(&mut g, subira, Some(Target::Permanent(bear)));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: subira, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("discard the hand");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty());
+    g.add_card_to_library(0, catalog::island());
+    attack_into_block(&mut g, bear, None);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "drew off the bear's hit");
+}
+
+/// The Battle of Bywater kills the big ones and feeds the survivors.
+#[test]
+fn the_battle_of_bywater_feeds_the_small() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let battle = g.add_card_to_hand(0, catalog::the_battle_of_bywater());
+    flood(&mut g);
+    cast(&mut g, battle, None);
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(named(&g, "Food"), 2);
+}

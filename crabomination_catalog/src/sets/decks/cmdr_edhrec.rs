@@ -3894,3 +3894,175 @@ pub fn patron_of_the_arts() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sting, the Glinting Dagger — {2} Legendary Equipment. Equipped creature
+/// gets +1/+1 and haste; each combat untaps it; it has first strike while
+/// blocking or blocked by a Goblin or Orc. Equip {2}.
+pub fn sting_the_glinting_dagger() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, StaticAbility, StaticEffect};
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Sting, the Glinting Dagger",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Haste], ..Default::default() }),
+        static_abilities: vec![StaticAbility {
+            description: "Equipped creature has first strike as long as it's blocking or blocked by a Goblin or Orc.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Goblin)
+                        .or(R::HasCreatureType(CreatureType::Orc))
+                        .and(R::BlockingOrBlockedByHostOfSource),
+                )),
+                inner: Box::new(StaticEffect::GrantKeyword { applies_to: host(), keyword: Keyword::FirstStrike }),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
+            effect: Effect::Untap { what: host(), up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hobgoblin Bandit Lord — {1}{R}{R} 2/3 Goblin Rogue. Other Goblins you
+/// control get +1/+1; {R}, {T}: damage to any target equal to the Goblins
+/// that entered under your control this turn (ones still found).
+pub fn hobgoblin_bandit_lord() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Hobgoblin Bandit Lord",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Goblin, CreatureType::Rogue]),
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Goblins you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Goblin).and(R::ControlledByYou).and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Any),
+                amount: Value::OtherCreaturesOfTypeEnteredThisTurn(CreatureType::Goblin),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Muxus, Goblin Grandee — {4}{R}{R} 4/4 Goblin Noble. ETB: reveal six, every
+/// Goblin creature card with mana value 5 or less enters, the rest go to the
+/// bottom; attacking, +1/+1 for each other Goblin you control.
+pub fn muxus_goblin_grandee() -> CardDefinition {
+    let others = || Value::CountOf(Box::new(Selector::EachPermanent(
+        R::HasCreatureType(CreatureType::Goblin).and(R::ControlledByYou).and(R::OtherThanSource),
+    )));
+    CardDefinition {
+        name: "Muxus, Goblin Grandee",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Goblin, CreatureType::Noble]),
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::RevealTopNPutMatchingToBattlefield {
+                who: PlayerRef::You,
+                count: Value::Const(6),
+                filter: R::Creature.and(R::HasCreatureType(CreatureType::Goblin)).and(R::ManaValueAtMost(5)),
+            }),
+            on_attack(Effect::PumpPT { what: Selector::This, power: others(), toughness: others(), duration: Duration::EndOfTurn }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dolmen Gate — {2} Artifact. Prevent all combat damage that would be dealt
+/// to attacking creatures you control.
+pub fn dolmen_gate() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Dolmen Gate",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all combat damage that would be dealt to attacking creatures you control.",
+            effect: StaticEffect::PreventAllCombatDamageToMatching {
+                filter: R::Creature.and(R::IsAttacking).and(R::ControlledByYou),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Subira, Tulzidi Caravanner — {2}{R} 2/3, haste. {1}: another creature with
+/// power 2 or less can't be blocked this turn. {1}{R}, {T}, discard your hand:
+/// this turn, a creature you control with power 2 or less dealing combat
+/// damage to a player draws a card.
+pub fn subira_tulzidi_caravanner() -> CardDefinition {
+    CardDefinition {
+        name: "Subira, Tulzidi Caravanner",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Shaman]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature.and(R::PowerAtMost(2)).and(R::OtherThanSource)),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                tap_cost: true,
+                discard_hand_cost: true,
+                effect: Effect::CreaturesYouControlDealingCombatDamageThisTurn {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::PowerAtMost(2) },
+                        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Battle of Bywater — {1}{W}{W} Sorcery. Destroy all creatures with power
+/// 3 or greater, then a Food for each creature you control.
+pub fn the_battle_of_bywater() -> CardDefinition {
+    CardDefinition {
+        name: "The Battle of Bywater",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(R::PowerAtLeast(3))) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)))),
+                definition: Arc::new(crabomination_base::tokens::food_token()),
+            },
+        ]),
+        ..Default::default()
+    }
+}
