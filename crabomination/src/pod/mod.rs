@@ -2193,6 +2193,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARCADES_COMMANDERS,
             main: decks::ARCADES_MAIN,
         },
+        // Seat 296: Queen Marchesa's EDHREC average deck. `--pod-decks 296`.
+        PodDeck {
+            name: "Queen Marchesa (BRW)",
+            commanders: decks::QUEEN_MARCHESA_COMMANDERS,
+            main: decks::QUEEN_MARCHESA_MAIN,
+        },
     ]
 }
 
@@ -4120,6 +4126,7 @@ mod tests {
             ("Jin Sakai, Ghost of Tsushima", [0x715A, 293, 9218]),
             ("Sonic the Hedgehog", [0x5021, 294, 9219]),
             ("Arcades, the Strategist", [0xA4CA, 295, 9220]),
+            ("Queen Marchesa", [0x4A2C, 296, 9221]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

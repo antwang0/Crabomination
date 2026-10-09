@@ -8676,3 +8676,32 @@ pub const ARCADES_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, island, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const QUEEN_MARCHESA_COMMANDERS: &[CardFactory] = &[queen_marchesa];
+
+/// **Queen Marchesa**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 84 nonbasic cards + 4 Mountains + 6 Plains + 5 Swamps = 99.
+/// the monarch
+pub const QUEEN_MARCHESA_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, fellwar_stone, orzhov_signet, rakdos_signet, skullclamp, sol_ring,
+    talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, arid_mesa,
+    battlefield_forge, blood_crypt, bloodstained_mire, bojuka_bog, caves_of_koilos,
+    clifftop_retreat, command_tower, dragonskull_summit, exotic_orchard, godless_shrine,
+    isolated_chapel, luxury_suite, marsh_flats, nomad_outpost, path_of_ancestry, reliquary_tower,
+    sacred_foundry, savai_triome, spectator_seating, vault_of_champions, alexios_deimos_of_kosmos,
+    archon_of_coronation, brash_taunter, breena_the_demagogue, champions_of_minas_tirith,
+    emberwilde_captain, esper_sentinel, gisela_blade_of_goldnight, kambal_consul_of_allocation,
+    karazikar_the_eye_tyrant, kardur_doomscourge, kazuul_tyrant_of_the_cliffs,
+    loran_of_the_third_path, mangara_the_diplomat, michiko_konda_truth_seeker,
+    nelly_borca_impulsive_accuser, royal_assassin, selfless_squire, skyline_despot,
+    teysa_envoy_of_ghosts, windborn_muse, xantcha_sleeper_agent, blind_obedience,
+    court_of_ambition, court_of_embereth, court_of_grace, court_of_ire, curse_of_opulence,
+    duelists_heritage, ghostly_prison, marchesas_decree, smothering_tithe, anguished_unmaking,
+    boros_charm, chaos_warp, comeuppance, crackling_doom, deflecting_palm, generous_gift,
+    inkshield, path_to_exile, rakdos_charm, swords_to_plowshares, take_the_bait,
+    teferis_protection, elspeth_suns_champion, blasphemous_act, cut_a_deal, damn, disrupt_decorum,
+    promise_of_loyalty, ruinous_ultimatum, taunt_from_the_rampart,
+    // Basics
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, swamp,
+    swamp, swamp, swamp, swamp,
+];
