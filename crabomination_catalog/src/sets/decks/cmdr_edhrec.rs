@@ -3656,3 +3656,161 @@ pub fn thousand_moons_smithy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Raid Bombardment — {2}{R} Enchantment. A creature you control with power 2
+/// or less attacking deals 1 to the player or planeswalker it attacks (from
+/// this enchantment).
+pub fn raid_bombardment() -> CardDefinition {
+    CardDefinition {
+        name: "Raid Bombardment",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::PowerAtMost(2) }),
+            effect: Effect::DealDamage { to: Selector::AttackedByTriggerSource, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Patriar's Seal — {3} Artifact. {T}: any color; {1}, {T}: untap target
+/// legendary creature you control.
+pub fn patriars_seal() -> CardDefinition {
+    CardDefinition {
+        name: "Patriar's Seal",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            crate::sets::tap_add_any_color(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::Untap {
+                    what: target_filtered(R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou)),
+                    up_to: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ashcoat of the Shadow Swarm — {3}{B} 3/4 Rat Warlock. Attacking or
+/// blocking, other Rats you control get +X/+X (X = your Rats); your end step
+/// may mill four to return up to two Rat creature cards to hand.
+pub fn ashcoat_of_the_shadow_swarm() -> CardDefinition {
+    let rats = || R::HasCreatureType(CreatureType::Rat).and(R::ControlledByYou);
+    let x = || Value::CountOf(Box::new(Selector::EachPermanent(rats())));
+    let pump = || Effect::PumpPT {
+        what: Selector::EachPermanent(rats().and(R::OtherThanSource)),
+        power: x(),
+        toughness: x(),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Ashcoat of the Shadow Swarm",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Rat, CreatureType::Warlock]),
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: pump() },
+            TriggeredAbility { event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource), effect: pump() },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                effect: Effect::MayDo {
+                    description: "Mill four and return up to two Rat creature cards?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+                        Effect::Move {
+                            what: Selector::Take {
+                                inner: Box::new(Selector::EachMatching {
+                                    zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Rat)),
+                                }),
+                                count: Box::new(Value::Const(2)),
+                            },
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        },
+                    ])),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rat King, Verminister — {1}{B} 1/1 Rat Avatar. Disappear — your end step,
+/// if a permanent left the battlefield under your control this turn: a 1/1
+/// Rat and a +1/+1 counter. {T}, sacrifice three Rats: return target creature
+/// card and every other card with its name from your graveyard, tapped.
+pub fn rat_king_verminister() -> CardDefinition {
+    use crate::card::CounterType;
+    let rat = TokenDefinition {
+        name: "Rat".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: creature_types(vec![CreatureType::Rat]),
+        ..Default::default()
+    };
+    let tapped = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true };
+    CardDefinition {
+        name: "Rat King, Verminister",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Rat, CreatureType::Avatar]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::RevoltActive { who: PlayerRef::You }),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(rat) },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::HasCreatureType(CreatureType::Rat), 3)),
+            sac_other_may_be_source: true,
+            // The target and every card sharing its name, in its owner's
+            // (your) graveyard.
+            effect: Effect::Move {
+                what: Selector::SharingNameWith(Box::new(target_filtered(R::Creature.and(R::InYourGraveyard)))),
+                to: tapped(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Plague of Vermin — {6}{B} Sorcery. Starting with you, each player may pay
+/// any amount of life, repeating until no one pays; each makes a 1/1 Rat per
+/// life paid (`Effect::EachPlayerPaysLifeForTokens`).
+pub fn plague_of_vermin() -> CardDefinition {
+    CardDefinition {
+        name: "Plague of Vermin",
+        cost: cost(&[generic(6), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::EachPlayerPaysLifeForTokens {
+            definition: Arc::new(TokenDefinition {
+                name: "Rat".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Black],
+                subtypes: creature_types(vec![CreatureType::Rat]),
+                ..Default::default()
+            }),
+        },
+        ..Default::default()
+    }
+}

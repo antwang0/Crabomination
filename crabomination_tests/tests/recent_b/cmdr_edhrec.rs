@@ -2068,3 +2068,80 @@ fn thousand_moons_smithy_flips_into_barracks() {
     cast(&mut g, lions2, None);
     assert_eq!(named(&g, "Gnome Soldier"), 2, "other mana doesn't");
 }
+
+/// Raid Bombardment pings the attacked player for a small attacker; Patriar's
+/// Seal untaps a legendary creature.
+#[test]
+fn raid_bombardment_and_patriars_seal() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::raid_bombardment());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "pinged on the attack");
+    let mut g = pod(2);
+    let seal = ready(&mut g, 0, catalog::patriars_seal());
+    let legend = ready(&mut g, 0, catalog::rat_king_verminister());
+    g.battlefield_find_mut(legend).unwrap().tapped = true;
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: seal, ability_index: 1, target: Some(Target::Permanent(legend)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("untap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(legend).unwrap().tapped);
+}
+
+/// Ashcoat attacking pumps the other Rats by the Rat count.
+#[test]
+fn ashcoat_pumps_the_swarm() {
+    let mut g = pod(2);
+    let ash = ready(&mut g, 0, catalog::ashcoat_of_the_shadow_swarm());
+    let king = ready(&mut g, 0, catalog::rat_king_verminister());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ash, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(king).unwrap().power, 3, "1 + two Rats");
+    assert_eq!(g.computed_permanent(ash).unwrap().power, 3, "not itself");
+}
+
+/// Rat King: three Rats sacrificed return a creature card and every other
+/// card sharing its name from your graveyard, tapped.
+#[test]
+fn rat_king_returns_a_name_from_the_graveyard() {
+    let mut g = pod(2);
+    let king = ready(&mut g, 0, catalog::rat_king_verminister());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::ashcoat_of_the_shadow_swarm());
+    }
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: king, ability_index: 0, target: Some(Target::Permanent(a)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("activate");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        assert!(g.battlefield_find(id).is_some_and(|c| c.tapped), "back, tapped");
+    }
+}
+
+/// Plague of Vermin: each seat's life paid becomes that many Rats.
+#[test]
+fn plague_of_vermin_life_for_rats() {
+    let mut g = pod(3);
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    let plague = g.add_card_to_hand(0, catalog::plague_of_vermin());
+    flood(&mut g);
+    // Round one: 3, 2, 0; round two: 1, 0, 0; round three: nobody pays.
+    let bids = [3, 2, 0, 1, 0, 0, 0, 0, 0].map(DecisionAnswer::Amount);
+    g.decider = Box::new(ScriptedDecider::new(bids));
+    cast(&mut g, plague, None);
+    for (p, want) in [(0usize, 4), (1, 2), (2, 0)] {
+        let paid = lives[p] - g.players[p].life;
+        let rats = g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Rat").count() as i32;
+        assert_eq!((paid, rats), (want, want), "seat {p}: a Rat per life paid");
+    }
+}
