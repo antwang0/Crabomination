@@ -7480,7 +7480,7 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
         for kw in &def.keywords {
             m |= match kw {
                 Keyword::Delve => spec::DELVE,
-                Keyword::Convoke | Keyword::Improvise => spec::CONVOKE,
+                Keyword::Convoke | Keyword::Improvise | Keyword::TapCreaturesForGeneric => spec::CONVOKE,
                 Keyword::Conspire => spec::CONSPIRE,
                 Keyword::Kicker(_) | Keyword::Offspring(_) => spec::KICKER,
                 Keyword::Multikicker(_) => spec::MULTIKICKER,
@@ -8043,7 +8043,8 @@ pub(super) fn cast_candidates<'a>(
         let improvise = c.definition.keywords.has_kw(&crate::card::Keyword::Improvise)
             || state.players[seat].next_spell_improvise_this_turn
             || (facts.grants_convoke && state.spell_granted_improvise(seat, c));
-        if !convoke && !improvise {
+        let tap_creatures = c.definition.keywords.has_kw(&crate::card::Keyword::TapCreaturesForGeneric);
+        if !convoke && !improvise && !tap_creatures {
             continue;
         }
         // CR 702.51 — convoke pays colored pips too, so the cap is the whole
@@ -8057,7 +8058,7 @@ pub(super) fn cast_candidates<'a>(
             .filter(|h| {
                 h.controller == seat
                     && !h.tapped
-                    && ((convoke && h.definition.is_creature())
+                    && (((convoke || tap_creatures) && h.definition.is_creature())
                         || (improvise && h.definition.is_artifact()))
             })
             .map(|h| (!h.summoning_sick, h.power(), h.id))

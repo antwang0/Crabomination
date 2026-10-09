@@ -1848,6 +1848,13 @@ pub enum Keyword {
     /// (`CastSpellConvoke`), accepting untapped artifacts instead of
     /// creatures.
     Improvise,
+    /// "As an additional cost to cast this spell, you may tap any number of
+    /// untapped creatures you control. This spell costs {1} less to cast for
+    /// each creature tapped this way" (Explosive Singularity): Improvise with
+    /// creatures — each helper pays {1} of the generic part, never a colored
+    /// pip, and the spell isn't convoked. Rides the same `CastSpellConvoke`
+    /// path.
+    TapCreaturesForGeneric,
     Delve,
     Cascade,
     /// CR 702.50 — Epic. On resolution: the controller can't cast spells

@@ -1354,7 +1354,8 @@ impl GameState {
         let improvise = card.definition.keywords.contains(&Keyword::Improvise)
             || self.spell_granted_improvise(seat, card);
         let waterbend = card.definition.waterbend.is_some();
-        if !convoke && !improvise && !waterbend {
+        let tap_creatures = card.definition.keywords.contains(&Keyword::TapCreaturesForGeneric);
+        if !convoke && !improvise && !waterbend && !tap_creatures {
             return Vec::new();
         }
         self.battlefield
@@ -1362,7 +1363,7 @@ impl GameState {
             .filter(|c| {
                 c.controller == seat
                     && !c.tapped
-                    && ((convoke || waterbend) && self.computed_is_creature(c)
+                    && ((convoke || waterbend || tap_creatures) && self.computed_is_creature(c)
                         || (improvise || waterbend) && self.computed_has_card_type(c, crate::card::CardType::Artifact))
             })
             .map(|c| c.id)
@@ -1381,6 +1382,7 @@ impl GameState {
             .filter(|c| {
                 c.definition.keywords.contains(&Keyword::Convoke)
                     || c.definition.keywords.contains(&Keyword::Improvise)
+                    || c.definition.keywords.contains(&Keyword::TapCreaturesForGeneric)
                     || self.spell_granted_convoke(caster, c)
                     || self.spell_granted_improvise(caster, c)
             })

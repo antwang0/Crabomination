@@ -945,6 +945,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Entwine(_) => "Choose both modes if you pay the entwine cost.",
         K::Epic => "Copy this spell at the start of each of your upkeeps; you can't cast other spells.",
         K::Improvise => "You may tap untapped artifacts to help pay this spell's cost.",
+        K::TapCreaturesForGeneric => "You may tap untapped creatures; it costs {1} less for each.",
         K::JumpStart => "You may cast it from your graveyard by also discarding a card, then exile it.",
         K::Replicate(_) => "As you cast it, pay its replicate cost any number of times to copy it that many times.",
         K::ReplicateEnergy(_) => "As you cast it, pay its energy replicate cost any number of times to copy it that many times.",
@@ -1418,6 +1419,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // Ability words / static keywords with no payload.
         K::Conspire => "Conspire".into(),
         K::Improvise => "Improvise".into(),
+        K::TapCreaturesForGeneric => "Tap creatures to reduce".into(),
         K::Gravestorm => "Gravestorm".into(),
         K::Epic => "Epic".into(),
         K::JumpStart => "Jump-start".into(),

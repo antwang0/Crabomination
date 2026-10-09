@@ -74,6 +74,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Epic => "Epic",
         Keyword::Convoke => "Convoke",
         Keyword::Improvise => "Improvise",
+        Keyword::TapCreaturesForGeneric => "Tap creatures for {1} each",
         Keyword::Delve => "Delve",
         Keyword::Storm => "Storm",
         Keyword::SplitSecond => "Split second",

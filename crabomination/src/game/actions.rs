@@ -10375,11 +10375,18 @@ impl GameState {
             || self.players[p].next_spell_improvise_this_turn
             || (cost_statics & cast_static::GRANT_CONVOKE != 0
                 && self.spell_granted_improvise(p, &card));
+        let taps_creatures_for_generic =
+            card.definition.keywords.has_kw(&crate::card::Keyword::TapCreaturesForGeneric);
         // CR 701.67 — waterbend helpers ride the same `convoke_creatures` slot;
         // any untapped artifact or creature you control may tap to pay {1} of
         // the waterbend sub-cost. Count is clamped to the waterbend amount below.
         let has_waterbend = waterbend.is_some();
-        if !convoke_creatures.is_empty() && !has_convoke && !has_improvise && !has_waterbend {
+        if !convoke_creatures.is_empty()
+            && !has_convoke
+            && !has_improvise
+            && !has_waterbend
+            && !taps_creatures_for_generic
+        {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly); // reuse: spell can't tap helpers
@@ -10396,7 +10403,7 @@ impl GameState {
                 c.id == *cid
                     && c.controller == p
                     && !c.tapped
-                    && ((has_convoke && self.computed_is_creature(c))
+                    && (((has_convoke || taps_creatures_for_generic) && self.computed_is_creature(c))
                         || (has_improvise && self.computed_has_card_type(c, crate::card::CardType::Artifact))
                         || (has_waterbend
                             && (self.computed_is_creature(c) || self.computed_has_card_type(c, crate::card::CardType::Artifact))))
@@ -11135,10 +11142,13 @@ impl GameState {
         // white creature pays a {W} the cost wants — falling back to {1}.
         // Improvise / waterbend helpers (colorless artifacts) always pay {1}.
         for cid in convoke_creatures {
-            let colors: Vec<crate::mana::Color> = self
-                .computed_permanent(*cid)
-                .map(|cp| cp.colors.to_vec())
-                .unwrap_or_default();
+            // Only a convoking creature may pay a colored pip; every other
+            // helper pays {1}.
+            let colors: Vec<crate::mana::Color> = if has_convoke {
+                self.computed_permanent(*cid).map(|cp| cp.colors.to_vec()).unwrap_or_default()
+            } else {
+                Vec::new()
+            };
             if let Some(c) = self.battlefield.find_by_id_mut(*cid) {
                 c.tapped = true;
             }
