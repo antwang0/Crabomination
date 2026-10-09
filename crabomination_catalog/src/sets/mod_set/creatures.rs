@@ -77,9 +77,9 @@ pub fn dark_confidant() -> CardDefinition {
                         count: Value::Const(1),
                     })),
                 },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                Effect::Move {
+                    what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                    to: ZoneDest::Hand(PlayerRef::You),
                 },
             ]),
         }],

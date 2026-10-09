@@ -528,6 +528,26 @@ fn dark_confidant_loses_life_equal_to_revealed_card_cmc() {
         "Life lost equals Serra Angel's mana value (CMC 5), not the old flat 2");
 }
 
+/// Dark Confidant PUTS the top card into your hand — it does not draw: with an
+/// empty library nothing happens (a draw would lose the game at the next SBA,
+/// CR 704.5b), and a "whenever you draw" payoff doesn't see it.
+#[test]
+fn dark_confidant_reveals_rather_than_draws() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let dc = g.add_card_to_battlefield(0, catalog::dark_confidant());
+    g.clear_sickness(dc);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(!g.is_game_over(), "no draw from an empty library");
+    assert_eq!(g.players[0].cards_drawn_this_turn, 0, "nothing was drawn");
+}
+
 #[test]
 fn dark_confidant_loses_zero_life_for_zero_cmc_card_on_top() {
     // Zero-CMC card (Black Lotus is the canonical {0} cost) → no life loss.

@@ -39,9 +39,9 @@ pub fn darkstar_augur() -> CardDefinition {
                         count: Value::ONE,
                     })),
                 },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::ONE,
+                Effect::Move {
+                    what: crate::effect::Selector::TopOfLibrary { who: crate::effect::PlayerRef::You, count: Value::ONE },
+                    to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::You),
                 },
             ]),
         }],

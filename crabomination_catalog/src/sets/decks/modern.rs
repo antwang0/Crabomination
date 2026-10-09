@@ -22680,8 +22680,8 @@ pub fn lovestruck_beast() -> CardDefinition {
 }
 
 /// Slickshot Show-Off — {1}{R} Creature — Bird Wizard 1/2, Flying, Haste.
-/// Whenever you cast a noncreature spell, it gets +2/+0 until end of turn and
-/// you draw a card. Plot {R} (CR 702.170).
+/// Whenever you cast a noncreature spell, it gets +2/+0 until end of turn.
+/// Plot {1}{R} (CR 702.170).
 pub fn slickshot_show_off() -> CardDefinition {
     use crate::effect::shortcut::cast_is_noncreature;
     CardDefinition {
@@ -22698,20 +22698,14 @@ pub fn slickshot_show_off() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_noncreature()),
-            effect: Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: Selector::This,
-                    power: Value::Const(2),
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
         }],
-        plot_cost: Some(cost(&[r()])),
+        plot_cost: Some(cost(&[generic(1), r()])),
         ..Default::default()
     }
 }

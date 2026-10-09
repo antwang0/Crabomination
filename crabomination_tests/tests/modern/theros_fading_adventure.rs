@@ -777,10 +777,11 @@ fn adventure_lovestruck_beast_hearts_desire() {
         && c.definition.name == "Human").count(), 1, "made a Human token");
 }
 
-/// Slickshot Show-Off pumps +2/+0 and draws when you cast a noncreature spell;
-/// it can also be plotted for {R}.
+/// Slickshot Show-Off pumps +2/+0 when you cast a noncreature spell — and
+/// draws nothing (it shipped with an invented draw and plot {R}; Oracle's
+/// plot is {1}{R}).
 #[test]
-fn slickshot_show_off_pumps_and_draws_on_noncreature() {
+fn slickshot_show_off_pumps_on_noncreature() {
     let mut g = two_player_game();
     let slick = g.add_card_to_battlefield(0, catalog::slickshot_show_off());
     g.add_card_to_library(0, catalog::mountain());
@@ -790,8 +791,8 @@ fn slickshot_show_off_pumps_and_draws_on_noncreature() {
     cast_at(&mut g, bolt, Target::Player(1));
     let s = g.battlefield_find(slick).expect("slickshot");
     assert_eq!(s.power(), 3, "+2/+0 from the noncreature cast");
-    // -1 (Bolt leaves) +1 (draw) = same hand size.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "drew a card");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "no draw");
+    assert_eq!(catalog::slickshot_show_off().plot_cost.map(|c| c.cmc()), Some(2));
 }
 
 /// Outcaster Trailblazer: its ETB adds one mana of any color, and another

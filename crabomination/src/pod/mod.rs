@@ -3000,7 +3000,7 @@ fn play_pod_game(
             // CR 400.7 — links and spell choices a new object doesn't carry:
             // an "until this leaves" exile link outside exile, a may-play
             // permission on a card in a hand or command zone ("that card"
-            // stops naming it once it moves), a kicked flag off the
+            // stops naming it once it moves; a miracle window excepted), a kicked flag off the
             // battlefield, stack and exile.
             let linked = g
                 .players
@@ -3014,8 +3014,11 @@ fn play_pod_game(
                         .chain(p.command.iter().map(|c| (c, Off::Command)))
                 })
                 .find(|(c, z)| {
+                    // CR 702.94 — a miracle reveal's permission IS a hand
+                    // permission, live for the step it was drawn in.
                     c.exiled_by.is_some()
-                        || (matches!(z, Off::Hand | Off::Command) && c.may_play_until.is_some())
+                        || (matches!(z, Off::Hand | Off::Command)
+                            && c.may_play_until.as_ref().is_some_and(|m| !m.miracle))
                         || c.kicked
                 });
             if let Some((c, _)) = linked.filter(|_| g.pending_decision.is_none()) {

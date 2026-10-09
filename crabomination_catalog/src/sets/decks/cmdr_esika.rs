@@ -1108,7 +1108,10 @@ pub fn nissa_vastwood_seer() -> CardDefinition {
                         what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     }),
-                    else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: Box::new(Effect::Move {
+                        what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
                 },
             ),
             loyalty(
