@@ -336,6 +336,8 @@ fn rediscover_the_way_chapter_three_grants_double_strike_per_noncreature_spell()
     let mut g = two_player_game();
     let saga = g.add_card_to_battlefield(0, catalog::rediscover_the_way());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // "Target creature you control": an opponent's creature never gets it.
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
     // Jump straight to chapter III.
     g.battlefield_find_mut(saga).unwrap().add_counters(crabomination::card::CounterType::Lore, 2);
     g.saga_advance(saga);
@@ -353,6 +355,7 @@ fn rediscover_the_way_chapter_three_grants_double_strike_per_noncreature_spell()
     let computed = g.computed_permanent(bear).unwrap();
     assert!(computed.keywords().contains(&crabomination::card::Keyword::DoubleStrike),
         "noncreature cast after chapter III grants double strike");
+    assert!(!g.computed_permanent(theirs).unwrap().keywords().contains(&crabomination::card::Keyword::DoubleStrike));
 }
 
 

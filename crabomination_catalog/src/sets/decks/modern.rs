@@ -45676,7 +45676,7 @@ pub fn mutated_cultist() -> CardDefinition {
 
 /// Rediscover the Way — {U}{R}{W} Saga. I, II: look at the top three, one
 /// to hand, rest to the bottom. III: whenever you cast a noncreature
-/// spell this turn, a creature you control gains double strike EOT.
+/// spell this turn, target creature you control gains double strike EOT.
 pub fn rediscover_the_way() -> CardDefinition {
     use crate::effect::{Duration, Predicate};
     fn dig() -> Effect {
@@ -45706,7 +45706,9 @@ pub fn rediscover_the_way() -> CardDefinition {
                             filter: SelectionRequirement::Creature,
                         })),
                         then: Box::new(Effect::GrantKeyword {
-                            what: Selector::GreatestPowerYouControl,
+                            what: crate::effect::shortcut::target_filtered(
+                                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                            ),
                             keyword: Keyword::DoubleStrike,
                             duration: Duration::EndOfTurn,
                         }),
