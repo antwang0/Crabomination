@@ -2519,3 +2519,28 @@ fn errant_and_giada_and_tails() {
     cast(&mut g, core, None);
     assert!(g.computed_permanent(core).unwrap().keywords().contains(&Keyword::Flying), "a flying counter");
 }
+
+/// Arcades' walls: Shield-Bearers pump other defenders, Tanglecord buys
+/// reach, Bar the Door adds +0/+4, Jeskai Barricade bounces another creature.
+#[test]
+fn arcades_walls() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::stalwart_shield_bearers());
+    let wall = ready(&mut g, 0, catalog::wall_of_tanglecord());
+    assert_eq!(g.computed_permanent(wall).unwrap().toughness, 8);
+    flood(&mut g);
+    activate(&mut g, wall, None);
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Reach));
+    let bar = g.add_card_to_hand(0, catalog::bar_the_door());
+    cast(&mut g, bar, None);
+    assert_eq!(g.computed_permanent(wall).unwrap().toughness, 12);
+    // Barricade's ETB is the trigger's own (optional) target; alone with a
+    // Bear, the auto-target names it.
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let barricade = g.add_card_to_hand(0, catalog::jeskai_barricade());
+    flood(&mut g);
+    cast(&mut g, barricade, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bounced");
+}

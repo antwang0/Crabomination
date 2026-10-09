@@ -4451,3 +4451,87 @@ pub fn miles_tails_prower() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Jeskai Barricade — {1}{W} 0/4 Wall, flash, defender. ETB: you may return
+/// another target creature you control to its owner's hand.
+pub fn jeskai_barricade() -> CardDefinition {
+    CardDefinition {
+        name: "Jeskai Barricade",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Wall]),
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Flash, Keyword::Defender],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stalwart Shield-Bearers — {1}{W} 0/3 Human Soldier, defender. Your other
+/// creatures with defender get +0/+2.
+pub fn stalwart_shield_bearers() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Stalwart Shield-Bearers",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control with defender get +0/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::HasKeyword(Keyword::Defender)).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 0,
+                toughness: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wall of Tanglecord — {2} 0/6 Artifact Creature — Wall, defender. {G}: it
+/// gains reach until end of turn.
+pub fn wall_of_tanglecord() -> CardDefinition {
+    CardDefinition {
+        name: "Wall of Tanglecord",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Wall]),
+        power: 0,
+        toughness: 6,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Reach, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bar the Door — {2}{W} Instant. Creatures you control get +0/+4 this turn.
+pub fn bar_the_door() -> CardDefinition {
+    CardDefinition {
+        name: "Bar the Door",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            power: Value::Const(0),
+            toughness: Value::Const(4),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
