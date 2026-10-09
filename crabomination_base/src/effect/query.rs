@@ -907,6 +907,7 @@ impl Effect {
             | Effect::SearchExileThenTokensPerCard { .. }
             | Effect::SearchAuraAttachToSource
             | Effect::SearchAuraAttachToSourceCappedBy { .. }
+            | Effect::SetSourceChosenNumber(_)
             | Effect::PutOntoBattlefieldAttached { .. }
             | Effect::RevealTopPutAttached { .. }
             | Effect::RevealUntilPutAttachedElseHand { .. }
@@ -2445,7 +2446,7 @@ impl Effect {
             | Effect::GrantCreatureSpellsUncounterableThisTurn { who } => sel_has_target(who),
             Effect::GrantHexproofFromColorThisTurn { who, .. } => sel_has_target(who),
             Effect::GainHexproofUntilYourNextTurn { who } => player_has_target(who),
-            Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
+            Effect::CantCastNoncreatureThisTurn { who } | Effect::CantCastNoncreatureUntilYourNextTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { who, count, max_mana_value, .. } => {
                 player_has_target(who)
                     || value_has_target(count)
@@ -5603,7 +5604,8 @@ impl Effect {
                 | Effect::GrantSpellsUncounterableThisTurn { who }
                 | Effect::GrantCreatureSpellsUncounterableThisTurn { who }
                 | Effect::GrantHexproofFromColorThisTurn { who, .. }
-                | Effect::CantCastNoncreatureThisTurn { who } => sel_find(who, slot),
+                | Effect::CantCastNoncreatureThisTurn { who }
+                | Effect::CantCastNoncreatureUntilYourNextTurn { who } => sel_find(who, slot),
                 Effect::ExchangeLifeTotals { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }

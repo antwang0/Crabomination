@@ -359,6 +359,12 @@ pub struct PlayerCold {
     /// player's own untap clears it.
     #[serde(default)]
     pub silenced_until_their_turn: bool,
+    /// "Until your next turn, [this player] can't cast noncreature spells"
+    /// (Hope of Ghirapur): a bit per locking seat, each cleared as that
+    /// seat's turn begins; while any is set, every turn boundary re-arms
+    /// `cant_cast_noncreature_this_turn`.
+    #[serde(default)]
+    pub noncreature_locked_by: u64,
     /// CR 702.131b — a permanent with ascend has entered under this player's
     /// control, so permanent entries check for the city's blessing.
     #[serde(default)]

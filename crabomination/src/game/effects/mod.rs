@@ -9940,6 +9940,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantCastNoncreatureUntilYourNextTurn { who } => {
+                let me = ctx.controller;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].cant_cast_noncreature_this_turn = true;
+                        self.players[p].noncreature_locked_by |= 1u64 << me;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Drain { from, to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }
@@ -36755,6 +36766,13 @@ impl GameState {
                 let answer = self.decider.decide(&decision);
                 let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
                 events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::SetSourceChosenNumber(n) => {
+                if let Some(c) = ctx.source.and_then(|s| self.battlefield_find_mut(s)) {
+                    c.chosen_number = Some(*n);
+                }
                 Ok(())
             }
 

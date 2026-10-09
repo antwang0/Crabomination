@@ -5275,6 +5275,11 @@ pub enum Effect {
     /// "those players can't cast noncreature spells this turn"
     /// (Ranger-Captain of Eos). Cleared at the next untap.
     CantCastNoncreatureThisTurn { who: Selector },
+    /// "Until your next turn, [those players] can't cast noncreature spells"
+    /// (Hope of Ghirapur): `CantCastNoncreatureThisTurn` that the turn
+    /// boundaries re-arm until the controller's next turn begins
+    /// (`Player.noncreature_locked_by`).
+    CantCastNoncreatureUntilYourNextTurn { who: Selector },
     /// "Each player names a card" — one `NameCard` decision per resolved seat
     /// in APNAP order, stashed in `GameState.scratch.names_this_resolution` for a
     /// later step in the same resolution to read (Conundrum Sphinx).
@@ -11760,6 +11765,11 @@ pub enum Effect {
     /// "As [this] enters, choose a number." Stores the chosen number on the
     /// source permanent's `chosen_number` field (Sanctum Prelate — read by the
     /// chosen-MV noncreature lock). `max` bounds the choice.
+    /// Stamp `n` as the source permanent's `chosen_number` — a branch of an
+    /// `AsEntersChooseMode` naming its pick for statics gated on
+    /// `Value::ChosenNumberOfSource` (Greymond, Avacyn's Stalwart's two
+    /// chosen abilities).
+    SetSourceChosenNumber(u32),
     ChooseNumberForSource {
         max: u32,
         /// The number is life the chooser pays (Phyrexian Processor), so the

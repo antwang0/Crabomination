@@ -5031,7 +5031,11 @@ impl GameState {
             if !pl.statics_ignored_this_turn.is_empty() {
                 pl.statics_ignored_this_turn.clear();
             }
-            pl.cant_cast_noncreature_this_turn = false;
+            // Hope of Ghirapur's lock lasts until the locker's next turn.
+            if pl.noncreature_locked_by != 0 {
+                pl.noncreature_locked_by &= !(1u64 << p);
+            }
+            pl.cant_cast_noncreature_this_turn = pl.noncreature_locked_by != 0;
             pl.free_spells_from_hand_this_turn = false;
             pl.play_from_graveyard_this_turn = false;
             if pl.used_graveyard_this_turn {
