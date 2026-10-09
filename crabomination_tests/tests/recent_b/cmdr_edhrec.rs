@@ -3476,3 +3476,26 @@ fn eluge_islands() {
     cast(&mut g, flow, None);
     assert_eq!(g.players[0].hand.len(), hand + 2 - 2, "two Islands drawn, two discarded");
 }
+
+/// Roxanne's artifacts: Aerid Konstrari's Heartwood taps for red or green;
+/// Ingenious Artillerist burns for each artifact in the batch; Sarinth
+/// Steelseeker digs a land; Svella makes an Icy Manalith.
+#[test]
+fn roxanne_artifacts() {
+    let mut g = pod(2);
+    flood(&mut g);
+    ready(&mut g, 0, catalog::ingenious_artillerist());
+    ready(&mut g, 0, catalog::sarinth_steelseeker());
+    g.players[0].library.clear();
+    let land = g.add_card_to_library(0, catalog::forest());
+    let life = g.players[1].life;
+    let aerid = g.add_card_to_hand(0, catalog::aerid_konstrari());
+    cast(&mut g, aerid, None);
+    assert_eq!(named(&g, "Heartwood"), 1);
+    assert_eq!(g.players[1].life, life - 1, "one artifact entered");
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "Sarinth dug the Forest");
+    let svella = ready(&mut g, 0, catalog::svella_ice_shaper());
+    activate(&mut g, svella, None);
+    assert_eq!(named(&g, "Icy Manalith"), 1);
+    assert_eq!(g.players[1].life, life - 2);
+}

@@ -6733,3 +6733,132 @@ pub fn aquitects_will() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn heartwood() -> TokenDefinition {
+    use crate::effect::ManaPayload;
+    TokenDefinition {
+        name: "Heartwood".into(),
+        card_types: vec![CardType::Artifact],
+        colors: vec![Color::Red, Color::Green],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aerid Konstrari — {1}{R}{G}{G} 5/4 flying Elder Sphinx. Entering or dying,
+/// a Heartwood token ({T}: {R} or {G}). {6}: a Heartwood, then +X/+0 until end
+/// of turn, X your artifacts.
+pub fn aerid_konstrari() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Aerid Konstrari",
+        cost: cost(&[generic(1), r(), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elder, CreatureType::Sphinx]),
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(mint(heartwood(), Value::ONE)),
+            crate::effect::shortcut::on_dies(mint(heartwood(), Value::ONE)),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            effect: Effect::Seq(vec![
+                mint(heartwood(), Value::ONE),
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::count(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou))),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ingenious Artillerist — {2}{R} 3/1 Human Artificer. Whenever one or more
+/// artifacts you control enter, it deals that much damage to each opponent.
+pub fn ingenious_artillerist() -> CardDefinition {
+    CardDefinition {
+        name: "Ingenious Artillerist",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Artificer]),
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact })
+                .once_per_batch(),
+            effect: Effect::WithTriggerBatch {
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::count(Selector::BoundTriggerBatch),
+                }),
+                ids: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sarinth Steelseeker — {1}{G} 1/2 Human Artificer Scout. Whenever an
+/// artifact you control enters, look at the top card: a land goes to your
+/// hand, anything else to your graveyard (both "may"s taken).
+pub fn sarinth_steelseeker() -> CardDefinition {
+    CardDefinition {
+        name: "Sarinth Steelseeker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Scout]),
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+            effect: Effect::LookTopLandToHandElseBin { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Svella, Ice Shaper — {1}{R}{G} 2/4 legendary snow Troll Warrior. {3}, {T}:
+/// an Icy Manalith (snow artifact, {T}: one mana of any color). {6}{R}{G},
+/// {T}: look at the top four; you may cast a spell from among them free; the
+/// rest go to the bottom.
+pub fn svella_ice_shaper() -> CardDefinition {
+    let manalith = TokenDefinition {
+        name: "Icy Manalith".into(),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Snow],
+        activated_abilities: vec![crate::sets::tap_add_any_color()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Svella, Ice Shaper",
+        cost: cost(&[generic(1), r(), g()]),
+        supertypes: vec![Supertype::Legendary, Supertype::Snow],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Troll, CreatureType::Warrior]),
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![
+            ActivatedAbility { mana_cost: cost(&[generic(3)]), tap_cost: true, effect: mint(manalith, Value::ONE), ..Default::default() },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(6), r(), g()]),
+                tap_cost: true,
+                effect: Effect::RevealTopMayCastOneFree { count: Value::Const(4), max_mv: Value::Const(99), filter: None },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
