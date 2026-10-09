@@ -2544,3 +2544,53 @@ fn arcades_walls() {
     cast(&mut g, barricade, None);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bounced");
 }
+
+/// Queen Marchesa's courts: each crowns its caster; at your upkeep Ambition
+/// drains an opponent with no cards to discard six as the monarch, and
+/// Embereth makes a Knight, then deals one damage per creature you control.
+#[test]
+fn courts_of_ambition_and_embereth() {
+    let mut g = pod(2);
+    flood(&mut g);
+    let court = g.add_card_to_hand(0, catalog::court_of_ambition());
+    cast(&mut g, court, None);
+    assert_eq!(g.monarch, Some(0));
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6, "nothing to discard");
+
+    let mut g = pod(2);
+    flood(&mut g);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let court = g.add_card_to_hand(0, catalog::court_of_embereth());
+    cast(&mut g, court, None);
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Knight"), 1);
+    assert_eq!(g.players[1].life, life - 2, "the Bear and the new Knight");
+}
+
+/// Emberwilde Captain: an opponent attacking its monarch controller takes
+/// damage equal to their hand size.
+#[test]
+fn emberwilde_captain_punishes_attacks_on_the_monarch() {
+    let mut g = pod(2);
+    flood(&mut g);
+    let captain = g.add_card_to_hand(0, catalog::emberwilde_captain());
+    cast(&mut g, captain, None);
+    assert_eq!(g.monarch, Some(0));
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+}

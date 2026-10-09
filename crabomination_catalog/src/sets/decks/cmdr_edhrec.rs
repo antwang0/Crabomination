@@ -4535,3 +4535,98 @@ pub fn bar_the_door() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Emberwilde Captain — {3}{R} 4/2 Djinn Pirate. ETB: you become the monarch.
+/// An opponent attacking you while you're the monarch takes damage equal to
+/// the cards in their hand.
+pub fn emberwilde_captain() -> CardDefinition {
+    let attacker = || PlayerRef::Target(0);
+    CardDefinition {
+        name: "Emberwilde Captain",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Djinn, CreatureType::Pirate]),
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent)
+                    .with_filter(Predicate::IsMonarch { who: PlayerRef::You })
+                    .once_per_batch(),
+                effect: Effect::DealDamage { to: Selector::Player(attacker()), amount: Value::HandSizeOf(attacker()) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Court of Ambition — {2}{B}{B} Enchantment. ETB: you become the monarch.
+/// Your upkeep: each opponent loses 3 life unless they discard a card — 6
+/// unless two while you're the monarch.
+pub fn court_of_ambition() -> CardDefinition {
+    use crate::card::WardCost;
+    let squeeze = |life: i32, cards: u32| Effect::ForEachOpponent {
+        body: Box::new(Effect::UnlessPlayerPays {
+            who: PlayerRef::Triggerer,
+            cost: WardCost::Discard(cards),
+            then: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(life) }),
+            if_paid: None,
+        }),
+    };
+    CardDefinition {
+        name: "Court of Ambition",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::IsMonarch { who: PlayerRef::You },
+                    then: Box::new(squeeze(6, 2)),
+                    else_: Box::new(squeeze(3, 1)),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Court of Embereth — {2}{R}{R} Enchantment. ETB: you become the monarch.
+/// Your upkeep: a 3/1 red Knight, then, as the monarch, X damage to each
+/// opponent, X your creatures.
+pub fn court_of_embereth() -> CardDefinition {
+    let knight = TokenDefinition {
+        name: "Knight".into(),
+        power: 3,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: creature_types(vec![CreatureType::Knight]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Court of Embereth",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(knight) },
+                    Effect::If {
+                        cond: Predicate::IsMonarch { who: PlayerRef::You },
+                        then: Box::new(Effect::DealDamage {
+                            to: Selector::Player(PlayerRef::EachOpponent),
+                            amount: Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)))),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
