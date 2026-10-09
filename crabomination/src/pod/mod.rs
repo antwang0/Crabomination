@@ -2819,7 +2819,7 @@ fn play_pod_game(
                     || c.echo_paid
                     // CR 708.9 / 712.8 — face up and front face up off the
                     // battlefield (exile keeps foretold / hidden cards down).
-                    || (z != Off::Exile && z != Off::Library && c.face_down)
+                    || (z != Off::Exile && c.face_down)
                     || (z != Off::Exile && c.transformed)
                     // CR 710.4 / 709.5c / 716 / MKM — flip, Room, Class and
                     // Case designations are battlefield-only; so are a soulbond
@@ -2912,6 +2912,52 @@ fn play_pod_game(
                     zone_label(&g, c.id),
                     g.turn_number,
                     g.step,
+                );
+            }
+            // CR 400.7 — a spell is a new object too: it carries no
+            // battlefield state onto the stack (a face-down or transformed
+            // cast is the spell's own characteristics, so those may stand).
+            let spell = g.stack.iter().find_map(|si| match si {
+                crate::game::types::StackItem::Spell { card, .. }
+                    if card.tapped
+                        || card.attached_to.is_some()
+                        || card.attached_to_player.is_some()
+                        || card.perm_power_bonus != 0
+                        || card.perm_toughness_bonus != 0
+                        || card.flipped
+                        || card.class_level != 0
+                        || card.case_solved
+                        || card.soulbond_partner.is_some()
+                        || card.phased_out_by.is_some()
+                        || card.loyalty_uses_this_turn != 0
+                        || card.counters.iter().any(|(k, &n)| match k {
+                            crate::card::CounterType::Loyalty => n != card.definition.base_loyalty,
+                            crate::card::CounterType::Defense => n != card.definition.defense,
+                            _ => n != 0,
+                        }) =>
+                {
+                    Some(card)
+                }
+                _ => None,
+            });
+            if let Some(c) = spell {
+                panic!(
+                    "seed {seed}: spell {} {:?} on the stack kept battlefield state (tapped {}, pump {}/{}, attached {:?}/{:?}, counters {:?}, flipped {} class {} case {} soulbond {:?} phased-by {:?} loyalty uses {}; turn {}, after {actions} actions)",
+                    c.definition.name,
+                    c.id,
+                    c.tapped,
+                    c.perm_power_bonus,
+                    c.perm_toughness_bonus,
+                    c.attached_to,
+                    c.attached_to_player,
+                    c.counters.iter().collect::<Vec<_>>(),
+                    c.flipped,
+                    c.class_level,
+                    c.case_solved,
+                    c.soulbond_partner,
+                    c.phased_out_by,
+                    c.loyalty_uses_this_turn,
+                    g.turn_number,
                 );
             }
         }
