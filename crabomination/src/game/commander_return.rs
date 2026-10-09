@@ -207,13 +207,18 @@ impl GameState {
 
     /// [`commander_zone_redirect`](Self::commander_zone_redirect) over a batch
     /// a mass move lifted (a hand or graveyard shuffled into a library): the
-    /// commanders that go home leave `cards`.
+    /// commanders that go home leave `cards`. Every mass library move funnels
+    /// here, so it also sheds the counters a card keeps elsewhere (CR 122.2:
+    /// Learn from the Past shuffled a Skullbriar in with its +1/+1 counter).
     pub(crate) fn commander_zone_redirect_all(
         &mut self,
         cards: &mut Vec<crate::card::CardInstance>,
         from: Zone,
         to: Zone,
     ) {
+        for c in cards.iter_mut() {
+            c.drop_counters_for_zone_change(to);
+        }
         let is_commander =
             |g: &Self, c: &crate::card::CardInstance| g.players.get(c.owner).is_some_and(|p| p.commanders.contains(&c.id));
         if !cards.iter().any(|c| is_commander(self, c)) {

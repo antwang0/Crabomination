@@ -1283,3 +1283,18 @@ fn cr_701_40a_a_manifest_that_never_entered_leaves_the_card_face_up() {
     assert!(!c.face_down);
     assert_eq!(c.definition.name, "Grizzly Bears");
 }
+
+/// CR 122.2 — a card that keeps its counters (Skullbriar) still loses them
+/// going into a library: Learn from the Past shuffled one in with its +1/+1
+/// counter (six-seat census pod, seed 440117 game 13).
+#[test]
+fn cr_122_2_a_graveyard_shuffled_into_a_library_sheds_kept_counters() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sb = g.add_card_to_graveyard(1, catalog::skullbriar_the_walking_grave());
+    g.players[1].graveyard.iter_mut().find(|c| c.id == sb).unwrap()
+        .add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    resolve(&mut g, src, None, &Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::Seat(1) });
+    let c = g.players[1].library.iter().find(|c| c.id == sb).expect("in the library");
+    assert!(c.counters.is_empty());
+}
