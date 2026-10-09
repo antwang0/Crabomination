@@ -699,6 +699,11 @@ pub enum SpendRestriction {
     LandAbilitiesOnly,
     /// "Spend this mana only to cast a creature spell." (Ancient Ziggurat.)
     CreatureOnly,
+    /// A rider that marks the spell it funds — "whenever you cast [a spell]
+    /// using mana produced by [this]" (Barracks of the Thousand). Freely
+    /// spendable; read by `Predicate::CastWithMarkedMana`. One source per
+    /// deck prints it, so the mark doesn't name its source.
+    MarksCast,
     /// `CreatureOnly` made by a creature (Inga and Esika's granted ability):
     /// restricted mana skips the pool's creature provenance, so a payment's
     /// spent count of this one is added to the creature-mana tally instead.
@@ -937,7 +942,8 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
-            | SpendRestriction::SpellOrAbilityCopy => {
+            | SpendRestriction::SpellOrAbilityCopy
+            | SpendRestriction::MarksCast => {
                 return None;
             }
         })
@@ -1084,7 +1090,8 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
-            | SpendRestriction::SpellOrAbilityCopy => {
+            | SpendRestriction::SpellOrAbilityCopy
+            | SpendRestriction::MarksCast => {
                 debug_assert!(self.is_rider(), "rider arm reached through the match");
                 true
             }

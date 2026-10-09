@@ -9663,6 +9663,9 @@ pub struct CardData {
     /// Treasure provenance fell during its payment). Read by
     /// `Predicate::CastWithTreasureMana`. Not serialized.
     pub cast_with_treasure_mana: bool,
+    /// `SpendRestriction::MarksCast` mana funded this spell. Read by
+    /// `Predicate::CastWithMarkedMana`. Not serialized.
+    pub cast_with_marked_mana: bool,
     /// Mana from artifact sources spent to cast this spell, capped at 255.
     /// Read by `Value::ArtifactManaSpentToCastSource` (Coin of Mastery). Not
     /// serialized.
@@ -10696,6 +10699,7 @@ impl CardInstance {
             bottom_on_leave_stack: false,
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,
+            cast_with_marked_mana: false,
             cast_artifact_mana: 0,
             cast_desert_mana: 0,
             cast_creature_mana: 0,

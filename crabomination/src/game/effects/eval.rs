@@ -2651,6 +2651,11 @@ impl GameState {
                         .any(|c| c.controller == p && self.is_own_commander_object(p, c.id))
                 })
             }
+            Predicate::CastWithMarkedMana { what } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_card_id())
+                .any(|id| self.find_card_anywhere(id).is_some_and(|c| c.cast_with_marked_mana)),
             Predicate::CastWithTreasureMana { what } => self
                 .resolve_selector(what, ctx)
                 .into_iter()

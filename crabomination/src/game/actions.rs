@@ -3744,6 +3744,9 @@ impl crate::game::GameState {
         if receipt.pool_before.treasure_amount() > self.players[p].mana_pool.treasure_amount() {
             self.players[p].cast_paid_with_treasure = true;
         }
+        if receipt.side_effects.spent(SpendRestriction::MarksCast) {
+            self.players[p].cast_paid_marked = true;
+        }
         // Coin of Mastery — how much artifact mana this payment spent.
         let spent = self.players[p].mana_pool.settle_artifact_spent(&receipt.pool_before);
         if spent > 0 {
@@ -12400,6 +12403,10 @@ impl GameState {
         if self.players[p].cast_paid_with_treasure {
             self.players[p].cast_paid_with_treasure = false;
             card.cast_with_treasure_mana = true;
+        }
+        if self.players[p].cast_paid_marked {
+            self.players[p].cast_paid_marked = false;
+            card.cast_with_marked_mana = true;
         }
         if self.players[p].cast_paid_artifact_mana > 0 {
             card.cast_artifact_mana = std::mem::take(&mut self.players[p].cast_paid_artifact_mana).min(255) as u8;
