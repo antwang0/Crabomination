@@ -287,6 +287,12 @@ impl GameState {
             Effect::PutFromHandOntoBattlefield { who: crate::effect::PlayerRef::You, filter, .. } => {
                 !self.players[controller].hand.iter().any(|c| self.evaluate_requirement_on_card(filter, c, controller))
             }
+            // An untargeted pick over nothing (Ghostly Dancers' "return an
+            // enchantment card from your graveyard" beside its Room unlock).
+            Effect::Move { what, .. } | Effect::UnlockRoomDoor { what } if !m.requires_target() => {
+                let ctx = crate::game::effects::EffectContext::for_trigger(source, controller, None, 0);
+                self.resolve_selector(what, &ctx).is_empty()
+            }
             _ => false,
         };
         if !fruitless(&modes[idx]) {
