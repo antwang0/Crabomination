@@ -3566,3 +3566,27 @@ fn isshin_and_lightning_attackers() {
     assert!(g.battlefield_find(bear).unwrap().tapped);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
 }
+
+/// Mishra, Claimed by Gix drains per attacker and, attacking beside a
+/// Phyrexian Dragon Engine, melds with it into a tapped, attacking Mishra,
+/// Lost to Phyrexia.
+#[test]
+fn mishra_melds_mid_attack() {
+    let mut g = pod(2);
+    let mishra = ready(&mut g, 0, catalog::mishra_claimed_by_gix());
+    let engine = ready(&mut g, 0, catalog::phyrexian_dragon_engine());
+    g.players[0].hostile_player_targets = true;
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: mishra, target: AttackTarget::Player(1) },
+        Attack { attacker: engine, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let lost = g.battlefield.iter().find(|c| c.definition.name == "Mishra, Lost to Phyrexia").map(|c| c.id).expect("melded");
+    assert!(g.battlefield_find(lost).unwrap().tapped);
+    assert!(g.attacking.iter().any(|a| a.attacker == lost), "attacking");
+    assert!(g.players[1].life <= life - 2, "drained for two attackers");
+}

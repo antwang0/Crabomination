@@ -7064,3 +7064,106 @@ pub fn fighter_class() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mishra, Claimed by Gix — {2}{B}{R} 3/5 Phyrexian Human Artificer. Whenever
+/// you attack, each opponent loses X life and you gain X, X the attacking
+/// creatures; if Mishra and a Phyrexian Dragon Engine you own and control are
+/// attacking, they meld into Mishra, Lost to Phyrexia, tapped and attacking.
+pub fn mishra_claimed_by_gix() -> CardDefinition {
+    let attackers = || Value::count(Selector::EachPermanent(R::Creature.and(R::IsAttacking).and(R::ControlledByYou)));
+    CardDefinition {
+        name: "Mishra, Claimed by Gix",
+        cost: cost(&[generic(2), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Artificer]),
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: attackers() },
+                Effect::GainLife { who: Selector::You, amount: attackers() },
+                Effect::Meld {
+                    partner: "Phyrexian Dragon Engine".into(),
+                    into: "Mishra, Lost to Phyrexia".into(),
+                    attacking: true,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Dragon Engine — {3} 2/2 double strike Phyrexian Dragon artifact
+/// creature. When it enters from your graveyard, you may discard your hand and
+/// draw three. Unearth {3}{R}{R}. Melds with Mishra, Claimed by Gix.
+pub fn phyrexian_dragon_engine() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Dragon Engine",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Dragon]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::TriggerSourceEnteredFromGraveyard),
+            effect: Effect::MayDo {
+                description: "Discard your hand and draw three?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You), random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ])),
+            },
+        }],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(3), r(), r()]))],
+        ..Default::default()
+    }
+}
+
+/// Mishra, Lost to Phyrexia — melded 9/9 legendary Phyrexian Artificer
+/// artifact creature. Entering or attacking, choose three — target opponent
+/// discards two; 3 damage to any target; destroy target artifact or
+/// planeswalker; your creatures gain menace and trample; theirs get -1/-1;
+/// two tapped Powerstones. (Default picks: damage, evasion, Powerstones.)
+pub fn mishra_lost_to_phyrexia() -> CardDefinition {
+    use crate::effect::Duration;
+    let modes = || {
+        Effect::ChooseN {
+            picks: vec![1, 3, 5],
+            modes: vec![
+                Effect::Discard { who: target_filtered(R::OpponentPlayer), amount: Value::Const(2), random: false },
+                Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+                Effect::Destroy {
+                    what: target_filtered(R::Artifact.or(R::Planeswalker)),
+                },
+                Effect::GrantKeywords {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keywords: vec![Keyword::Menace, Keyword::Trample],
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                mint(TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() }, Value::Const(2)),
+            ],
+        }
+    };
+    CardDefinition {
+        name: "Mishra, Lost to Phyrexia",
+        no_mana_cost: true,
+        color_indicator: vec![Color::Black, Color::Red],
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Artificer]),
+        power: 9,
+        toughness: 9,
+        triggered_abilities: vec![etb(modes()), on_attack(modes())],
+        ..Default::default()
+    }
+}
