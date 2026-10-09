@@ -57,3 +57,21 @@ pub(crate) fn chosen_mode_first_slot(effect: &Effect, chosen: &[u8], slot: u8) -
     }
     0
 }
+
+/// Is `slot` of a multi-mode cast choosing `chosen` an optional one ("any
+/// number of target opponents")? `None` when `effect` isn't a cast-time modal
+/// spell or no chosen mode owns the slot.
+pub(crate) fn chosen_mode_slot_optional(effect: &Effect, chosen: &[u8], slot: u8) -> Option<bool> {
+    let (Effect::ChooseModesCast { modes, .. } | Effect::ChooseModesByPoints { modes, .. }) = effect else {
+        return None;
+    };
+    let mut first = 0usize;
+    for m in chosen.iter().filter_map(|&i| modes.get(i as usize)).filter(|m| m.requires_target()) {
+        let k = crate::game::effects::mode_slot_count(m);
+        if (slot as usize) < first + k {
+            return Some(m.target_slot_optional((slot as usize - first) as u8, None));
+        }
+        first += k;
+    }
+    None
+}

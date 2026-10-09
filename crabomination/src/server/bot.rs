@@ -8178,10 +8178,18 @@ pub(super) fn cast_candidates<'a>(
                         // an earlier one would shift the next mode's slots.
                         let short_ok = Some(n) == last_targeted
                             && eff.min_targets_in_mode(None).is_some_and(|m| usize::from(m) <= extra.len() + 1);
-                        if extra.len() + 1 < k && !short_ok {
+                        // An earlier mode's unfilled optional slots hold their
+                        // places as holes (Will of the Abzan's seven "any
+                        // number of target opponents" ahead of its reanimate).
+                        let filled = extra.len() + 1;
+                        let holes_ok = filled < k && (filled..k).all(|j| eff.target_slot_optional(j as u8, None));
+                        if filled < k && !short_ok && !holes_ok {
                             return None;
                         }
                         slots.extend(extra.into_iter().take(k - 1));
+                        if !short_ok && holes_ok {
+                            slots.extend(std::iter::repeat_n(crate::game::target_hole::TARGET_HOLE, k - filled));
+                        }
                     }
                 }
             }
@@ -29430,6 +29438,37 @@ mod stack_response_tests {
     /// CR 104.4a — Earthquake deals X to each player, its caster included: at
     /// 11 life with twelve mana the bot declared X = 11 and drew a pod it
     /// would have won at X = 10. A symmetric X stops at life − 1.
+    /// CR 601.2c / 700.2 — Will of the Abzan with a commander: the both-modes
+    /// pick names the opponents, holds the rest of the first mode's seven
+    /// slots as holes, and the reanimate target lands in its own slot. The
+    /// combination used to be dropped because the first mode came up short.
+    #[test]
+    fn will_of_the_abzan_both_modes_is_a_castable_candidate() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = crate::game::types::TurnStep::PreCombatMain;
+        let cmd = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.players[0].commanders.push(cmd);
+        g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.add_card_to_battlefield(2, catalog::hill_giant());
+        let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+        let w = g.add_card_to_hand(0, catalog::will_of_the_abzan());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        let both = cast_candidates(&g, 0, &EvalWeights::default(), None).into_iter().find_map(|(a, _)| match &a {
+            GameAction::CastSpellSpree { card_id, spree_modes, .. } if *card_id == w && spree_modes == &vec![0, 1] => Some(a),
+            _ => None,
+        });
+        let Some(GameAction::CastSpellSpree { target, additional_targets, .. }) = both.clone() else {
+            panic!("both modes offered");
+        };
+        assert!(matches!(target, Some(crate::game::types::Target::Player(1 | 2))), "an opponent first");
+        assert_eq!(additional_targets.len(), 7, "seven punish slots, then the reanimate one");
+        assert_eq!(additional_targets[6], crate::game::types::Target::Permanent(angel));
+        assert!(g.would_accept(both.unwrap()), "and the engine takes it");
+    }
+
     #[test]
     fn max_affordable_x_never_kills_its_own_caster() {
         let mut g = crate::game::multi_player_game(3);

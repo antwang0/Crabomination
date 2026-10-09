@@ -10750,6 +10750,13 @@ impl GameState {
             }
             .unwrap_or(&card.definition.effect);
             let slot_bad = |slot: u8, tgt: &Target| {
+                // CR 601.2c — an optional slot left empty ahead of a filled one
+                // holds its place as a hole (a mode owning seven "any number of
+                // target opponents" slots, then the next mode's target).
+                if crate::game::target_hole::is_hole(tgt) {
+                    return !crate::game::spree_targets::chosen_mode_slot_optional(target_effect, &card.spree_modes, slot)
+                        .unwrap_or_else(|| target_effect.target_slot_optional(slot, mode));
+                }
                 let filter = crate::game::spree_targets::chosen_mode_slot_filter(
                     target_effect,
                     &card.spree_modes,
