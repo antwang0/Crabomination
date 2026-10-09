@@ -3134,6 +3134,24 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-09 (Commander routine — session `01SYwcUg`) — guardrail; EDHREC seats 248-273
+
+Hot-path touches: the counter-event pass tallies own +1/+1 placements
+(one compare on a `CounterAdded` it already walked); `noncombat_damage_bonus_for`
+gained one static arm; the dredge draw replacement walks the battlefield only
+when no printed dredge card exists AND a land card is in the graveyard; the
+any-color spend checks gained one static arm (behind the any-color lane).
+`release-fast` at `8cbd616cc`, 4-core Xeon @ 2.80 GHz. No paired A/B this run.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 to the eleventh; determinism ok; peak_rss 34.3 MiB
+release pods     320 games (8 groups x 40, 4 seats, seed 25000, strict) over
+                 seats 248-273: 319 decided, 1 board cap (Marina's Secret
+                 Arcade + Eerie mandatory token loop — CR 104.4b, a draw the
+                 engine never declares), 0 action caps, 0 panics
+suite            24,542 / 1 / 5 strict before the Marina seed change (that
+                 seed is the same loop); clippy clean
 ### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls
 
 Hot-path touches: `push_stack` ORs a battlefield-slot mark into spells too
