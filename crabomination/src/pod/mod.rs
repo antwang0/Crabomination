@@ -2061,6 +2061,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MARCHESA_BR_COMMANDERS,
             main: decks::MARCHESA_BR_MAIN,
         },
+        // Seat 274: Brago, King Eternal's EDHREC average deck. `--pod-decks 274`.
+        PodDeck {
+            name: "Brago, King Eternal (UW)",
+            commanders: decks::BRAGO_COMMANDERS,
+            main: decks::BRAGO_MAIN,
+        },
     ]
 }
 
@@ -3914,6 +3920,7 @@ mod tests {
             ("Marina Vendrell", [0x3A41, 271, 9196]),
             ("Aloy, Savior of Meridian", [0xA109, 272, 9196]),
             ("Marchesa, the Black Rose", [0x3A4C, 273, 9197]),
+            ("Brago, King Eternal", [0xB4A6, 274, 9199]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

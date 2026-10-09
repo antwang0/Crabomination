@@ -8054,3 +8054,30 @@ pub const MARCHESA_BR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BRAGO_COMMANDERS: &[CardFactory] = &[brago_king_eternal];
+
+/// **Brago, King Eternal**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 10 Islands + 10 Plains = 99.
+/// Azorius blink: Brago's hits re-trigger ETB value permanents.
+pub const BRAGO_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, basalt_monolith, cryogen_relic, fellwar_stone,
+    lightning_greaves, mind_stone, panharmonicon, sol_ring, strionic_resonator, swiftfoot_boots,
+    talisman_of_progress, thought_vessel, adarkar_wastes, azorius_chancery, command_tower,
+    deserted_beach, flooded_strand, glacial_fortress, hallowed_fountain, port_town, prairie_stream,
+    reliquary_tower, rogues_passage, sea_of_clouds, skycloud_expanse, temple_of_enlightenment,
+    aether_channeler, agent_of_treachery, archaeomancer, charming_prince, cloud_of_faeries,
+    cloudblazer, deadeye_navigator, displacer_kitten, dour_port_mage,
+    elesh_norn_mother_of_machines, felidar_guardian, flickerwisp, lavinia_of_the_tenth,
+    loran_of_the_third_path, mulldrifter, peregrine_drake, reflector_mage, restoration_angel,
+    solemn_simulacrum, soulherder, spirited_companion, starfield_vocalist, stonehorn_dignitary,
+    sun_titan, tribute_mage, venser_shaper_savant, wall_of_omens, whirler_rogue, yorion_sky_nomad,
+    ghostly_prison, mystic_remora, omen_of_the_sea, reality_acid, rhystic_study,
+    teleportation_circle, unquestioned_authority, an_offer_you_cant_refuse, cloudshift,
+    counterspell, dovins_veto, eerie_interlude, ephemerate, ghostly_flicker, momentary_blink,
+    negate, path_to_exile, swan_song, swords_to_plowshares, venser_the_sojourner, farewell,
+    supreme_verdict, time_wipe,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
