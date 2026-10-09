@@ -2914,6 +2914,14 @@ fn play_pod_game(
                                 g.step,
                             );
                         }
+                        // CR 511.3 / 508.5 — and its end of combat removed the
+                        // attacked permanents' defender record with the attackers.
+                        if let Some((pw, d)) = g.attacked_permanent_defenders.first() {
+                            panic!(
+                                "seed {seed}: {pw:?}'s attack record (defender p{d}) outlived turn {turn} (after {actions} actions, now {:?})",
+                                g.step,
+                            );
+                        }
                     }
                     last_turn =
                         Some((g.turn_number, g.active_player_idx, g.effective_max_hand_size(g.active_player_idx)));
