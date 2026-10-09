@@ -41,7 +41,14 @@ pub(super) fn pick_room_door(state: &GameState, seat: usize) -> Option<GameActio
     }
     // Stable sort: equal-cost doors keep battlefield/hand order, left first.
     options.sort_by_key(|(cmc, _)| std::cmp::Reverse(*cmc));
-    options.into_iter().map(|(_, a)| a).find(|a| state.would_accept(a.clone()))
+    // CR 104.4b — never the door that sets up a mandatory token loop.
+    let watch = super::loop_hazard::watch(state, seat);
+    options.into_iter().map(|(_, a)| a).find(|a| {
+        if !watch {
+            return state.would_accept(a.clone());
+        }
+        GameState::accept_on(state, a.clone()).is_some_and(|g| !super::loop_hazard::starts_loop(state, &g, seat))
+    })
 }
 
 #[cfg(test)]

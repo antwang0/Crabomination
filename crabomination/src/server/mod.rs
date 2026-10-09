@@ -92,6 +92,7 @@ mod combat_only;
 mod suspend;
 mod foretell;
 mod room;
+mod loop_hazard;
 mod mutate;
 mod fog;
 mod trigger_copy;

@@ -10254,6 +10254,9 @@ fn main_phase_action_with(
             let mut cut: Vec<(i32, GameAction)> = Vec::new();
             const CUT_MAX: usize = 5;
             let pool_len = ranked.len();
+            // Pods: a cast whose resolution starts a mandatory token loop
+            // (CR 104.4b) is dropped — `server/loop_hazard.rs`.
+            let loop_watch = super::loop_hazard::watch(state, seat);
             for (s, a, ok) in ranked {
                 if finalists.len() >= eval_top
                     || (has_magecraft && w.magecraft_cut && !finalists.is_empty() && !is_is_spell(&a))
@@ -10264,9 +10267,13 @@ fn main_phase_action_with(
                     }
                     break;
                 }
+                let settled = if !ok || loop_watch { GameState::accept_on(state, a.clone()) } else { None };
+                if loop_watch && settled.as_ref().is_some_and(|g| super::loop_hazard::starts_loop(state, g, seat)) {
+                    continue;
+                }
                 if ok {
                     finalists.push(Finalist { score: s, action: a, settled: None });
-                } else if let Some(g) = GameState::accept_on(state, a.clone()) {
+                } else if let Some(g) = settled {
                     finalists.push(Finalist {
                         score: s,
                         action: a,
