@@ -19206,6 +19206,11 @@ fn eval_material_inner(
         return match over {
             Some(winner) if winner == seat => 100_000 * w.unit,
             Some(_) => -100_000 * w.unit,
+            // CR 104.4a — in a pod nobody wins a draw: worse than any live
+            // board, better only than losing. At 0 a seat behind on material
+            // took everyone down with it (Flame Rift / Crackle with Power /
+            // Exocrine all-lose pods, audit sweeps 43001-45002).
+            None if state.players.len() > 2 => -50_000 * w.unit,
             None => 0,
         };
     }
@@ -27131,6 +27136,31 @@ mod tests {
         assert_eq!(extra, vec![Target::Player(1)], "slot 1's damage crosses");
         let (_, extra) = slots(&catalog::together_as_one(), false);
         assert_eq!(extra, vec![Target::Player(0)], "the control burned the caster");
+    }
+
+    /// CR 104.4a — a pod draw is worse than any live board: at 3 life with
+    /// both opponents at 4 and a bigger board against it, the bot does not
+    /// Flame Rift the whole table (an all-lose draw) — audit sweep 45002.
+    #[test]
+    fn a_pod_seat_does_not_draw_the_table_with_flame_rift() {
+        let mut g = crate::game::multi_player_game(3);
+        let rift = g.add_card_to_hand(0, catalog::flame_rift());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+        g.players[0].life = 3;
+        for seat in [1, 2] {
+            g.players[seat].life = 4;
+            for _ in 0..3 {
+                g.add_card_to_battlefield(seat, catalog::serra_angel());
+            }
+        }
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = main_phase_action_with(&g, 0, true, &EvalWeights::default()).action;
+        assert!(
+            !matches!(action, GameAction::CastSpell { card_id, .. } if card_id == rift),
+            "the bot drew the table: {action:?}"
+        );
     }
 
     /// `player_target_arms`: the other player is offered as a sibling cast,
