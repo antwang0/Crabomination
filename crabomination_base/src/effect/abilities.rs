@@ -2147,6 +2147,9 @@ pub enum StaticEffect {
     /// "Activated abilities of [filter] you control cost {N} less to
     /// activate" (Sam, Loyal Attendant's Foods). Generic only, no floor.
     MatchingActivatedAbilitiesCostLess { filter: SelectionRequirement, amount: u32 },
+    /// The floored sibling — "… can't reduce the mana in that cost to less
+    /// than one mana" (Forensic Gadgeteer's artifacts).
+    MatchingActivatedAbilitiesCostLessFloored { filter: SelectionRequirement, amount: u32 },
     /// "Activated abilities of cards in your graveyard cost {N} less to
     /// activate. This effect can't reduce the mana in that ability's
     /// activation cost to less than one mana" (Convergence of Dominion; its

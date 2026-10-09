@@ -22453,23 +22453,27 @@ impl GameState {
             }
         }
         // Sam, Loyal Attendant — activated abilities of [filter] you control
-        // cost {N} less (generic only, no floor).
+        // cost {N} less (generic only, no floor); Forensic Gadgeteer's
+        // floored at one mana.
         if !effective_mana_cost.symbols.is_empty()
             && let Some(src) = self.battlefield_find(card_id).filter(|c| c.controller == p)
         {
-            let total: u32 = self
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == p)
-                .flat_map(|c| c.definition.static_abilities.iter())
-                .map(|sa| match &sa.effect {
+            let (mut total, mut floored) = (0u32, 0u32);
+            for sa in self.battlefield.iter().filter(|c| c.controller == p).flat_map(|c| c.definition.static_abilities.iter()) {
+                match &sa.effect {
                     crate::effect::StaticEffect::MatchingActivatedAbilitiesCostLess { filter, amount }
-                        if self.evaluate_requirement_on_card(filter, src, p) => *amount,
-                    _ => 0,
-                })
-                .sum();
+                        if self.evaluate_requirement_on_card(filter, src, p) => total += *amount,
+                    crate::effect::StaticEffect::MatchingActivatedAbilitiesCostLessFloored { filter, amount }
+                        if self.evaluate_requirement_on_card(filter, src, p) => floored += *amount,
+                    _ => {}
+                }
+            }
             if total > 0 {
                 effective_mana_cost.reduce_generic(total);
+            }
+            if floored > 0 {
+                let max_cut = effective_mana_cost.cmc().saturating_sub(1);
+                effective_mana_cost.reduce_generic(floored.min(max_cut));
             }
         }
         // Convergence of Dominion — abilities that function from your

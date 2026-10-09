@@ -33575,6 +33575,7 @@ fn static_effect_to_effects(
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }
             | StaticEffect::MatchingActivatedAbilitiesCostLess { .. }
+            | StaticEffect::MatchingActivatedAbilitiesCostLessFloored { .. }
             | StaticEffect::GraveyardActivatedAbilitiesCostLess { .. }
             | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
             | StaticEffect::FirstOwnCreatureTargetingAbilityCostsLess { .. }
