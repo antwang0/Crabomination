@@ -18812,7 +18812,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Meld { partner, into } => {
+            Effect::Meld { partner, into, attacking } => {
                 // CR 701.37 — meld the source with the named partner. Both
                 // must be owned AND controlled by the resolving player
                 // (701.37b: otherwise nothing happens — the source stays).
@@ -18831,6 +18831,14 @@ impl GameState {
                     .find(|c| c.definition.name == partner.as_str() && owns_and_controls(c))
                     .map(|c| c.id);
                 let (Some(partner_id), true) = (partner_id, src_ok) else { return Ok(()) };
+                if *attacking
+                    && ![source, partner_id].iter().all(|id| self.attacking.iter().any(|a| a.attacker == *id))
+                {
+                    return Ok(());
+                }
+                // The source's defender, read before the halves leave combat:
+                // the melded permanent attacks it (CR 508.4).
+                let defender = self.attacking.iter().find(|a| a.attacker == source).map(|a| a.target);
                 let Some(melded_def) = crate::card_registry::lookup_by_name(into) else {
                     return Ok(());
                 };
@@ -18869,9 +18877,13 @@ impl GameState {
                 self.place_card_in_dest(
                     melded,
                     p,
-                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: *attacking },
                     events,
                 );
+                if *attacking && let Some(target) = defender {
+                    // CR 508.4 — it enters tapped and attacking.
+                    self.put_into_combat_attacking(id, target);
+                }
                 self.check_state_based_actions_mid_resolution(events);
                 Ok(())
             }

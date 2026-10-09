@@ -7472,7 +7472,15 @@ pub enum Effect {
     /// `CardInstance.meld_parts`, so the melded permanent leaves the
     /// battlefield as both cards (CR 712.16/712.17). No-op otherwise
     /// (701.37b).
-    Meld { partner: String, into: String },
+    Meld {
+        partner: String,
+        into: String,
+        /// "If [this] and [partner] are attacking … meld them … It enters
+        /// tapped and attacking" (Mishra, Claimed by Gix): both halves must be
+        /// attacking, and the melded permanent joins combat (CR 508.4).
+        #[serde(default)]
+        attacking: bool,
+    },
     /// "[Filter] spells you cast this turn cost {amount} less to cast" —
     /// turn-scoped generic cost reduction (Urza, Planeswalker's +2).
     /// Pushed onto `Player.turn_spell_discounts`, consulted by

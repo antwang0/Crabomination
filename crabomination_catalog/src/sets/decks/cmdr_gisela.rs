@@ -266,6 +266,7 @@ pub fn gisela_the_broken_blade() -> CardDefinition {
         triggered_abilities: vec![at_your_end_step(Effect::Meld {
             partner: "Bruna, the Fading Light".into(),
             into: "Brisela, Voice of Nightmares".into(),
+            attacking: false,
         })],
         ..creature(
             "Gisela, the Broken Blade",

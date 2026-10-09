@@ -818,6 +818,7 @@ pub fn vanille_cheerful_lcie() -> CardDefinition {
                     body: Box::new(Effect::Meld {
                         partner: "Fang, Fearless l'Cie".into(),
                         into: "Ragnarok, Divine Deliverance".into(),
+                        attacking: false,
                     }),
                     else_: None,
                 },

@@ -20233,6 +20233,7 @@ pub fn urza_lord_protector() -> CardDefinition {
             effect: Effect::Meld {
                 partner: "The Mightstone and Weakstone".to_string(),
                 into: "Urza, Planeswalker".to_string(),
+                attacking: false,
             },
             ..Default::default()
         }],
