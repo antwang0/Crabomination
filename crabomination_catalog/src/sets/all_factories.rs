@@ -4654,6 +4654,7 @@ static DECKS: &[Factory] = &[
     super::decks::vohar_vodalian_desecrator,
     super::decks::iron_spider_stark_upgrade,
     super::decks::zur_eternal_schemer,
+    super::decks::karn_legacy_reforged,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

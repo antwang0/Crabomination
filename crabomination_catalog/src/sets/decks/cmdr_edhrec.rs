@@ -2623,3 +2623,39 @@ pub fn zur_eternal_schemer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Karn, Legacy Reforged — {5} */* legendary artifact Golem, P/T = the
+/// greatest mana value among artifacts you control. Your upkeep adds {C}
+/// per artifact you control, kept through the turn's steps and phases and
+/// spendable on artifacts (`ArtifactOnly` — the card also allows other
+/// abilities; it only forbids nonartifact spells).
+pub fn karn_legacy_reforged() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::mana::SpendRestriction;
+    let greatest_mv = Value::ManaValueOf(Box::new(Selector::GreatestManaValueControlledMatching {
+        who: PlayerRef::You,
+        filter: R::Artifact,
+    }));
+    CardDefinition {
+        name: "Karn, Legacy Reforged",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Golem]),
+        power: 0,
+        toughness: 0,
+        static_abilities: vec![StaticAbility {
+            description: "Karn's power and toughness are each equal to the greatest mana value among artifacts you control.",
+            effect: StaticEffect::PumpSelfByValue { amount: greatest_mv, per_power: 1, per_toughness: 1 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::AddColorlessKeptThisTurn {
+                who: PlayerRef::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)))),
+                restriction: Some(SpendRestriction::ArtifactOnly),
+            },
+        }],
+        ..Default::default()
+    }
+}

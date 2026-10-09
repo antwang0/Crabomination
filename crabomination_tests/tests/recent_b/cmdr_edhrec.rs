@@ -1500,3 +1500,20 @@ fn zur_animates_an_enchantment() {
     assert_eq!((cp.power, cp.toughness), (2, 2));
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Deathtouch));
 }
+
+/// Karn, Legacy Reforged: a 5/5 as the biggest artifact, and its upkeep {C}
+/// survives into the main phase (CR 500.4 exception).
+#[test]
+fn karn_legacy_reforged_keeps_upkeep_mana() {
+    let mut g = pod(2);
+    let karn = ready(&mut g, 0, catalog::karn_legacy_reforged());
+    ready(&mut g, 0, catalog::ornithopter());
+    assert_eq!(g.computed_permanent(karn).unwrap().power, 5);
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "two artifacts → {{C}}{{C}} kept into main");
+}
