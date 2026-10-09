@@ -4171,6 +4171,8 @@ impl SelectionRequirement {
             | Self::InYourGraveyard
             | Self::InOpponentGraveyard
             | Self::InExile
+            // "a card exiled with this" is in exile by definition.
+            | Self::ExiledWithSource
             | Self::OnTopOfLibrary => true,
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_offboard_zone() || b.mentions_offboard_zone()
