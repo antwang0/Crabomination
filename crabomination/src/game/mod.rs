@@ -172,6 +172,7 @@ mod departed_listeners;
 mod attack_apnap;
 mod trigger_batch;
 mod vow;
+mod growth_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;
 mod stack_ability;
@@ -2698,6 +2699,8 @@ pub struct GameState {
     /// `MANDATORY_LOOP_MAX_PERIOD` keeps revisiting the anchor; the game is
     /// drawn once `repeats` crosses `MANDATORY_LOOP_DRAW_REPEATS`. A chain
     /// that stays away longer re-anchors; a spell / player action resets it.
+    /// The high 16 bits of `.1` / `.2` carry the growing-loop watch's chain
+    /// count / floor (`growth_loop.rs`); `repeats` and `since` use the low 16.
     #[serde(default)]
     pub mandatory_loop_watch: (u64, u32, u32),
     /// PERF `(-344)` — [`GameState::fingerprint_head`]'s value at the moment

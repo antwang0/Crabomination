@@ -2267,11 +2267,19 @@ impl GameState {
                 .is_some_and(|c| c.definition.activated_abilities.iter().any(|a| a.is_free())),
             _ => false,
         };
+        let (depth_before, board_before) = (self.stack.len(), self.battlefield.len());
         let mut events = self.resolve_top_of_stack_inner()?;
         if !self.scratch.prompt_trigger_backlog.is_empty() && self.pending_decision.is_none() {
             let queue = std::mem::take(&mut self.scratch.prompt_trigger_backlog);
             self.drain_trigger_queue(queue);
         }
+        // The growing-loop watch rides in the high halves of the exact watch's
+        // two counters (`GameState` has no room for a field of its own).
+        let (w1, w2) = (self.mandatory_loop_watch.1, self.mandatory_loop_watch.2);
+        self.mandatory_loop_watch.1 = w1 & 0xFFFF;
+        self.mandatory_loop_watch.2 = w2 & 0xFFFF;
+        let grew = self.battlefield.len() > board_before;
+        let grow = self.note_growth_loop(was_trigger, depth_before, grew, (w2 >> 16, w1 >> 16), &mut events);
         if was_trigger && self.game_over.is_none() {
             // The watch holds an *anchor* fingerprint and counts the trigger
             // resolutions that return the game to it. Comparing each
@@ -2322,6 +2330,8 @@ impl GameState {
         } else {
             self.mandatory_loop_watch = (0, 0, 0);
         }
+        self.mandatory_loop_watch.1 |= grow.1 << 16;
+        self.mandatory_loop_watch.2 |= grow.0 << 16;
         Ok(events)
     }
 
