@@ -2199,6 +2199,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::QUEEN_MARCHESA_COMMANDERS,
             main: decks::QUEEN_MARCHESA_MAIN,
         },
+        // Seat 297: Kenrith, the Returned King's EDHREC average deck. `--pod-decks 297`.
+        PodDeck {
+            name: "Kenrith, the Returned King (BGRUW)",
+            commanders: decks::KENRITH_COMMANDERS,
+            main: decks::KENRITH_MAIN,
+        },
     ]
 }
 
@@ -4127,6 +4133,7 @@ mod tests {
             ("Sonic the Hedgehog", [0x5021, 294, 9219]),
             ("Arcades, the Strategist", [0xA4CA, 295, 9220]),
             ("Queen Marchesa", [0x4A2C, 296, 9221]),
+            ("Kenrith, the Returned King", [0x4E7A, 297, 9222]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

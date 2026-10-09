@@ -8705,3 +8705,31 @@ pub const QUEEN_MARCHESA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const KENRITH_COMMANDERS: &[CardFactory] = &[kenrith_the_returned_king];
+
+/// **Kenrith, the Returned King**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 88 nonbasic cards + 2 Forests + 2 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// five colours of activations
+pub const KENRITH_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, commanders_sphere, fellwar_stone, lightning_greaves,
+    lotus_petal, mana_vault, sol_ring, swiftfoot_boots, the_one_ring, bloodstained_mire,
+    breeding_pool, city_of_brass, command_tower, exotic_orchard, flooded_strand, godless_shrine,
+    hallowed_fountain, mana_confluence, marsh_flats, misty_rainforest, overgrown_tomb,
+    path_of_ancestry, polluted_delta, reliquary_tower, sacred_foundry, scalding_tarn, steam_vents,
+    stomping_ground, temple_garden, verdant_catacombs, watery_grave, windswept_heath,
+    wooded_foothills, agatha_of_the_vile_cauldron, biomancers_familiar, birds_of_paradise,
+    bloom_tender, deathrite_shaman, delighted_halfling, dryad_of_the_ilysian_grove, esper_sentinel,
+    eternal_witness, faeburrow_elder, gluntch_the_bestower, grand_abolisher, humble_defector,
+    ignoble_hierarch, kinnan_bonder_prodigy, lotho_corrupt_shirriff, master_of_ceremonies,
+    noble_hierarch, orcish_bowmasters, queen_marchesa, sakura_tribe_elder, seedborn_muse,
+    selvala_explorer_returned, spore_frog, thassas_oracle, zirda_the_dawnwaker, ghostly_prison,
+    gleaming_splendor, mystic_remora, propaganda, rhystic_study, smothering_tithe,
+    training_grounds, wilderness_reclamation, an_offer_you_cant_refuse, beast_within, counterspell,
+    cyclonic_rift, enlightened_tutor, heroic_intervention, path_to_exile, swan_song,
+    swords_to_plowshares, vampiric_tutor, the_theorist_jace_beleren, blasphemous_act, cultivate,
+    demonic_tutor, farseek, kodamas_reach, natures_lore, rampant_growth, tempt_with_discovery,
+    three_visits,
+    // Basics
+    forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp, swamp,
+];
