@@ -808,6 +808,9 @@ pub enum CounterType {
     /// Stash counter — Tinybones, Bauble Burglar stamps exiled discarded cards;
     /// their owner isn't you, but you may play them from exile.
     Stash,
+    /// Croak counter — Grolnok, the Omnivore exiles milled permanent cards
+    /// with one; you may play them while Grolnok remains.
+    Croak,
     /// Rev counter — Chainsaw gains one whenever creatures die and pumps the
     /// equipped creature by that many.
     Rev,
