@@ -839,6 +839,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast Mount or Vehicle spells." (Intrepid
     /// Stablemaster.) Spells only; a changeling spell is a Mount.
     MountOrVehicleSpells,
+    /// "Spend this mana only to cast a Pilot or Vehicle spell." (Mech
+    /// Hangar.) Spells only; a changeling spell is a Pilot.
+    PilotOrVehicleSpells,
     /// "If this mana is spent to cast a creature spell, that creature enters
     /// with an additional +1/+1 counter on it." (Biophagus.) Unrestricted
     /// spend; one counter per funding pip rides the cast card's
@@ -894,6 +897,7 @@ impl SpendRestriction {
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
             SpendRestriction::MountOrVehicleSpells => "only Mount and Vehicle spells",
+            SpendRestriction::PilotOrVehicleSpells => "only Pilot and Vehicle spells",
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(..) => {
                 "only spells and abilities of the two listed creature types"
             }
@@ -1018,6 +1022,12 @@ impl SpendRestriction {
                     && (kind.vehicle
                         || kind.changeling
                         || kind.creature_types.contains(&crate::card::CreatureType::Mount))
+            }
+            SpendRestriction::PilotOrVehicleSpells => {
+                !kind.activating_ability
+                    && (kind.vehicle
+                        || kind.changeling
+                        || kind.creature_types.contains(&crate::card::CreatureType::Pilot))
             }
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(a, b) => {
                 kind.changeling || kind.creature_types.contains(&a) || kind.creature_types.contains(&b)
