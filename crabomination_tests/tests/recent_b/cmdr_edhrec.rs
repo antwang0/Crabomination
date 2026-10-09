@@ -1989,3 +1989,51 @@ fn mirrodin_besieged_phyrexian_wins_off_fifteen_artifacts() {
     assert_eq!(phyrexian.target_filter_for_slot(0), Some(&crabomination::card::SelectionRequirement::OpponentPlayer));
     assert_eq!(g.players.iter().filter(|p| !p.is_alive()).count(), 1, "one opponent lost");
 }
+
+/// Rings of Brighthearth: paying {2} copies a pinger's activation.
+#[test]
+fn rings_of_brighthearth_copies_an_activation() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::rings_of_brighthearth());
+    let pinger = ready(&mut g, 0, catalog::prodigal_pyromancer());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    activate(&mut g, pinger, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 2, "the copy pinged too");
+}
+
+/// The Reality Chip: only while attached may the top card be cast.
+#[test]
+fn the_reality_chip_plays_from_top_while_attached() {
+    let mut g = pod(2);
+    let chip = ready(&mut g, 0, catalog::the_reality_chip());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell { card_id: top, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).is_err(), "unattached");
+    g.perform_action(GameAction::Reconfigure { equipment: chip, target: Some(bear) }).expect("reconfigure");
+    drain_stack(&mut g);
+    cast(&mut g, top, Some(Target::Player(1)));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "cast off the top");
+}
+
+/// Illustrious Wanderglyph: ten permanents give the city's blessing and the
+/// other artifact creatures +2/+2; each upkeep makes a Gnome.
+#[test]
+fn illustrious_wanderglyph_ascends() {
+    let mut g = pod(2);
+    let glyph = ready(&mut g, 0, catalog::illustrious_wanderglyph());
+    let mite = ready(&mut g, 0, catalog::memnite());
+    assert_eq!(g.computed_permanent(mite).unwrap().power, 1, "no blessing yet");
+    for _ in 0..8 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    assert_eq!(g.computed_permanent(mite).unwrap().power, 3, "blessed");
+    assert_eq!(g.computed_permanent(glyph).unwrap().power, 2, "not itself");
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Gnome"), 1);
+}

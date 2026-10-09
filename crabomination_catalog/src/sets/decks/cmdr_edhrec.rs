@@ -3488,3 +3488,102 @@ pub fn mirrodin_besieged() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rings of Brighthearth — {3} Artifact. Whenever you activate a nonmana
+/// ability, you may pay {2} to copy it (new targets allowed).
+pub fn rings_of_brighthearth() -> CardDefinition {
+    CardDefinition {
+        name: "Rings of Brighthearth",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {2} to copy that ability?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::CopyActivatedAbilityMayChooseTargets),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Reality Chip — {1}{U} Legendary Artifact Creature — Equipment Jellyfish
+/// 0/4. Look at your library's top any time; while attached to a creature, play
+/// lands and cast spells from there. Reconfigure {2}{U}.
+pub fn the_reality_chip() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "The Reality Chip",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            creature_types: vec![CreatureType::Jellyfish],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Reconfigure(cost(&[generic(2), u()]))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "As long as The Reality Chip is attached to a creature, you may play lands and cast spells from the top of your library.",
+                effect: StaticEffect::WhileCondition {
+                    condition: Predicate::EntityMatches { what: Selector::This, filter: R::AttachedToCreature },
+                    inner: Box::new(StaticEffect::PlayFromLibraryTop { filter: R::Any }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Illustrious Wanderglyph — {4}{W} 2/2 Golem, ascend. Other artifact
+/// creatures you control get +2/+2 with the city's blessing; each upkeep makes
+/// a 1/1 Gnome artifact creature.
+pub fn illustrious_wanderglyph() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let gnome = TokenDefinition {
+        name: "Gnome".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Gnome]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Illustrious Wanderglyph",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Golem]),
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility { description: "Ascend", effect: StaticEffect::Ascend },
+            StaticAbility {
+                description: "Other artifact creatures you control get +2/+2 as long as you have the city's blessing.",
+                effect: StaticEffect::WhileCondition {
+                    condition: Predicate::HasCityBlessing { who: PlayerRef::You },
+                    inner: Box::new(StaticEffect::PumpPT {
+                        applies_to: Selector::EachPermanent(
+                            R::Artifact.and(R::Creature).and(R::ControlledByYou).and(R::OtherThanSource),
+                        ),
+                        power: 2,
+                        toughness: 2,
+                    }),
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(gnome) },
+        }],
+        ..Default::default()
+    }
+}
