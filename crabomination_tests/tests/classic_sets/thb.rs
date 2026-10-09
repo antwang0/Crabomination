@@ -1859,7 +1859,7 @@ fn dreadful_apathy_exiles_enchanted() {
 }
 
 /// Sea God's Scorn returns up to three target creatures to their owners' hands
-/// (ApplyToTargets multi-bounce), and the enchantment affinity reduces cost.
+/// (ApplyToTargets multi-bounce).
 #[test]
 fn sea_gods_scorn_bounces_up_to_three() {
     let mut g = two_player_game();
@@ -1884,27 +1884,28 @@ fn sea_gods_scorn_bounces_up_to_three() {
     assert_eq!(g.players[1].hand.len(), 3, "all three back in owner's hand");
 }
 
-/// Sea God's Scorn affinity: each enchantment you control shaves {1} generic.
+/// Sea God's Scorn reaches enchantments too ("creatures and/or enchantments"),
+/// and has no cost reduction (it shipped with an invented enchantment affinity).
 #[test]
-fn sea_gods_scorn_affinity_reduces_cost() {
+fn sea_gods_scorn_bounces_an_enchantment() {
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::dreadful_apathy());
-    g.add_card_to_battlefield(0, catalog::dreadful_apathy());
-    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(1, catalog::dreadful_apathy());
     let spell = g.add_card_to_hand(0, catalog::sea_gods_scorn());
-    // Two enchantments → {4} becomes {2}; pay {2}{U}{U}.
+    g.add_card_to_battlefield(0, catalog::dreadful_apathy());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
+    let cast = |g: &mut GameState| g.perform_action(GameAction::CastSpell {
         card_id: spell,
-        target: Some(Target::Permanent(c1)),
+        target: Some(Target::Permanent(ench)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    })
-    .expect("cast at the reduced {2}{U}{U}");
+    });
+    assert!(cast(&mut g).is_err(), "{{2}}{{U}}{{U}} isn't enough: no affinity");
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g).expect("cast at {4}{U}{U}");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(c1).is_none(), "creature returned");
+    assert!(g.battlefield_find(ench).is_none(), "enchantment returned");
 }
 
 /// Wrap in Flames deals 1 to each of up to three creatures and they can't block.

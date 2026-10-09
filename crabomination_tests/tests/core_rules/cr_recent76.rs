@@ -313,6 +313,34 @@ fn cr_104_4b_a_growing_mandatory_loop_is_a_draw() {
     assert!(g.battlefield.len() < 1_024, "before the simulators' board bound");
 }
 
+/// CR 104.4b — the same growing loop with a non-growing rider in each cycle
+/// (Doomwake Giant's constellation shrinks the opponents' creatures) is still
+/// a loop: the rider is carried, not a break (pod seed 43039, 6 seats).
+#[test]
+fn cr_104_4b_a_growing_loop_with_a_rider_is_a_draw() {
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let tamer = g.add_card_to_battlefield(0, catalog::gremlin_tamer());
+    g.clear_sickness(tamer);
+    g.add_card_to_battlefield(0, catalog::doomwake_giant());
+    let arcade = g.add_card_to_hand(0, catalog::secret_arcade_dusty_parlor());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 5);
+    }
+    g.perform_action(GameAction::CastSpell { card_id: arcade, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Secret Arcade");
+    for _ in 0..40_000 {
+        if g.is_game_over() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.game_over, Some(None), "a draw: no winner");
+    assert!(g.battlefield.len() < 1_024, "before the simulators' board bound");
+}
+
 /// The growing-loop watch must not draw a finite cascade: creatures dying at
 /// once push all their triggers together, and the stack drains from there.
 #[test]

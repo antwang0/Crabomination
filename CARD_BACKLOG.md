@@ -3322,8 +3322,6 @@ plays its headline pattern):
   primitive; unbuilt for now.
 - **Karakyk Guardian** — conditional "hexproof while it hasn't dealt damage"
   omitted (no lifetime damage-dealt tracking); ships flying/vig/trample.
-- **Temur Battlecrier** — the "during your turn" gate on its power≥4 Affinity
-  reduction is approximated as always-on (`affinity_filter`).
 - **Sarkhan, Soul Aflame** — the become-a-copy trigger keeps the copied Dragon's
   name; the "name stays Sarkhan, legendary in addition" override is approximated.
 - **Take the Fall** — the outlaw check uses a controlled-outlaw selector count.
@@ -3465,10 +3463,6 @@ gaps. Follow-ups that came out of it:
   Opposition Agent's "control while searching" is routed per decision
   instead (`GameState::search_hijacker`): the search pick goes to the Agent's
   controller, nothing else about the searcher's seat changes hands.
-- **Quicksilver Elemental drops its colour-relaxation rider.** "Spend blue as
-  though it were any colour to pay this creature's activation costs" needs a
-  source-scoped payment relaxation; the engine only has the table-wide
-  `PlayersMaySpendManaAsAnyColor` (Mycosynth Lattice).
 - **`Effect::SearchExileThenTokensPerCard` auto-takes every match** (Myr
   Incubator). Correct for a rational player, but a `wants_ui` seat gets no
   pick.

@@ -796,6 +796,27 @@ fn pestilent_haze_kills_two_toughness_creatures() {
     assert!(still_alive || dead, "lava runner state observed");
 }
 
+/// Pestilent Haze's second mode removes two loyalty counters from EACH
+/// planeswalker (it shipped as a second creature-shrink mode).
+#[test]
+fn pestilent_haze_mode_two_drains_loyalty() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let jace = g.add_card_to_battlefield(1, catalog::jace_the_mind_sculptor());
+    let have = g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty);
+    g.battlefield_find_mut(jace).unwrap().add_counters(CounterType::Loyalty, 5 - have);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pestilent_haze());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 3);
+    assert!(g.battlefield_find(bear).is_some(), "creatures untouched");
+}
+
 #[test]
 fn vanquish_the_horde_destroys_each_creature() {
     let mut g = two_player_game();

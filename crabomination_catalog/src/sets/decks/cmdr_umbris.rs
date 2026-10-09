@@ -22,10 +22,12 @@
 //! Residuals (approximations, each also on the card's doc comment):
 //! - "Put there from their library this turn" (The Weaver King, Captain
 //!   N'ghathrod) counts mills; a surveil isn't recorded.
-//! - Grell Philosopher: the blue-mana-as-any-colour rider is omitted.
 //! - Arvinox exiles face up (the look/face-down part is informational only).
-//! - Panharmonicon doubles ETB-caused triggers from any permanent entering,
-//!   not just artifacts and creatures.
+//! - Opposition Agent: the hijack reaches the `Search` / `SearchUpToN` /
+//!   `SearchPickedBy` / `SearchZones` / `SearchAnyNumber` /
+//!   `SearchEachBasicLandType` resolvers, not the one-card bespoke searches
+//!   (`SearchSameNameAs`, `SearchAndCastFree`, `SearchAuraAttachToSource`,
+//!   `SearchSplitWithOpponent`, `SearchExileLinked`, … about 24 cards).
 //! - Toxrill's -1/-1 per slime counter is stacked per counter up to 15.
 //! - Opponent-chosen picks the engine auto-resolves (Yarok's Fenlurker exiles
 //!   by hand order, Blot Out / Szat's Will break ties by board order, Braids'

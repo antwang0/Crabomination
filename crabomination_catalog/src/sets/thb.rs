@@ -3064,20 +3064,17 @@ pub fn dreadful_apathy() -> CardDefinition {
     }
 }
 
-/// Sea God's Scorn — {4}{U}{U} Instant. Costs {1} less for each enchantment you
-/// control. Return up to three target creatures to their owners' hands.
+/// Sea God's Scorn — {4}{U}{U} Sorcery. Return up to three target creatures
+/// and/or enchantments to their owners' hands.
 pub fn sea_gods_scorn() -> CardDefinition {
     CardDefinition {
         name: "Sea God's Scorn",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        affinity_filter: Some(
-            SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
-        ),
         effect: Effect::ApplyToTargets {
             max_targets: 3,
             min_targets: 0,
-            filter: SelectionRequirement::Creature,
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),

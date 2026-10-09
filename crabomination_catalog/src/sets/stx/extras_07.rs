@@ -1930,43 +1930,27 @@ pub fn prismari_glitterbomb() -> CardDefinition {
     }
 }
 
-// ── Pestilent Haze (real STX 2021) ──────────────────────────────────────────
+// ── Pestilent Haze (ROE) ────────────────────────────────────────────────────
 
-/// Pestilent Haze — {1}{B}{B} Sorcery.
-///
-/// Printed Oracle: "Choose one. If you've cast another spell this
-/// turn, you may choose both. / • All creatures get -1/-1 until end of
-/// turn. / • All creatures get -2/-2 until end of turn."
-///
-/// Wired via `Effect::ChooseN { picks: [0, 1], modes: [-1/-1, -2/-2] }`
-/// — the predicate gating on `SpellsCastThisTurnAtLeast(2)` unlocks
-/// the second mode pick (giving cumulative -3/-3 mass wrath). The
-/// AutoDecider picks mode 1 (-2/-2 EOT) by default since it's strictly
-/// more powerful; ScriptedDecider can switch to mode 0 (-1/-1 EOT) for
-/// surgical kills on 1-toughness creatures.
+/// Pestilent Haze — {1}{B}{B} Sorcery. Choose one — all creatures get -2/-2
+/// until end of turn; or remove two loyalty counters from each planeswalker.
 pub fn pestilent_haze() -> CardDefinition {
     let creature_each = Selector::EachPermanent(SelectionRequirement::Creature);
     CardDefinition {
         name: "Pestilent Haze",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        // ChooseMode with -2/-2 (mode 0) and -1/-1 (mode 1). The auto-
-        // decider picks mode 0 by default for maximum kill potential.
-        // The "if you've cast another spell this turn, you may choose
-        // both" rider is approximated by always applying mode 0 — the
-        // strictly-stronger choice when not stacking modes.
         effect: Effect::ChooseMode(vec![
             Effect::PumpPT {
-                what: creature_each.clone(),
+                what: creature_each,
                 power: Value::Const(-2),
                 toughness: Value::Const(-2),
                 duration: Duration::EndOfTurn,
             },
-            Effect::PumpPT {
-                what: creature_each,
-                power: Value::Const(-1),
-                toughness: Value::Const(-1),
-                duration: Duration::EndOfTurn,
+            Effect::RemoveCounter {
+                what: Selector::EachPermanent(SelectionRequirement::Planeswalker),
+                kind: CounterType::Loyalty,
+                amount: Value::Const(2),
             },
         ]),
         ..Default::default()

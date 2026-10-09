@@ -41807,8 +41807,8 @@ pub fn sojourners_companion() -> CardDefinition {
     }
 }
 
-/// Carapace Forger — {1}{G} 2/2 Artifact Creature — Insect. Affinity for
-/// artifacts. As long as you control three or more artifacts, this gets +2/+2.
+/// Carapace Forger — {1}{G} 2/2 Creature — Elf Artificer. Metalcraft — as long
+/// as you control three or more artifacts, this gets +2/+2.
 pub fn carapace_forger() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::{Predicate, StaticEffect};
@@ -41822,7 +41822,6 @@ pub fn carapace_forger() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        affinity_filter: Some(SelectionRequirement::Artifact),
         static_abilities: vec![StaticAbility {
             description: "As long as you control three or more artifacts, this gets +2/+2.",
             effect: StaticEffect::PumpSelfIf {
