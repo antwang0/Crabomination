@@ -1493,6 +1493,11 @@ pub enum StaticEffect {
     /// multiplicatively with `DoubleTokens` for cards that print both halves
     /// (Doubling Season itself ships both static abilities).
     DoubleCounters,
+    /// The filtered sibling — "if one or more counters would be put on
+    /// [filter] you control, twice that many … instead" (Loading Zone's
+    /// "creature, Spacecraft, or Planet"). Read against the receiving
+    /// permanent in `scaled_counter_count_on`.
+    DoubleCountersMatching { filter: crate::card::SelectionRequirement },
     /// CR 614.16 additive variant — "If one or more +1/+1 counters would be
     /// put on a creature you control, that many *plus one* are put on it
     /// instead." Hardened Scales / Conclave Mentor / Kalonian Hydra-class.

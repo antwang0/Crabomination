@@ -7959,7 +7959,20 @@ impl GameState {
                 base = base.saturating_add(adders);
             }
         }
-        self.scaled_counter_count(ctrl, kind, base, is_creature)
+        let mut n = self.scaled_counter_count(ctrl, kind, base, is_creature);
+        // Loading Zone — a doubler scoped to the receiving permanent.
+        if n > 0 {
+            for src in self.battlefield.iter().filter(|s| s.controller == ctrl) {
+                for sa in &src.definition.static_abilities {
+                    if let StaticEffect::DoubleCountersMatching { filter } = &sa.effect
+                        && self.evaluate_requirement_static(filter, &crate::game::Target::Permanent(cid), ctrl, Some(src.id))
+                    {
+                        n = n.saturating_mul(2);
+                    }
+                }
+            }
+        }
+        n
     }
 
     /// Put `base` `kind` counters on battlefield permanent `cid` through the
@@ -33192,6 +33205,7 @@ fn static_effect_to_effects(
             // DoubleCounters / ExtraPlusOneCounters — read at counter-add
             // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters
+            | StaticEffect::DoubleCountersMatching { .. }
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
             | StaticEffect::ExtraPlusOneCountersMatching { .. }
