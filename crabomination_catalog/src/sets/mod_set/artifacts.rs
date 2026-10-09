@@ -1567,7 +1567,7 @@ pub fn mox_diamond() -> CardDefinition {
         cost: cost(&[generic(0)]),
         card_types: vec![CardType::Artifact],
         static_abilities: vec![crate::effect::StaticAbility {
-            description: "If this would enter, you may discard a land card instead.".into(),
+            description: "If this would enter, you may discard a land card instead.",
             effect: crate::effect::StaticEffect::EntersOnlyIfPaid {
                 cost: crate::card::WardCost::DiscardMatching(Box::new(SelectionRequirement::Land), 1),
                 optional: true,
