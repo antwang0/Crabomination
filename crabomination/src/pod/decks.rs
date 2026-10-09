@@ -8396,3 +8396,32 @@ pub const URZA_LHA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const MENDICANT_COMMANDERS: &[CardFactory] = &[mendicant_core_guidelight];
+
+/// **Mendicant Core, Guidelight**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 83 nonbasic cards + 9 Islands + 7 Plains = 99.
+/// Azorius artifacts: Mendicant Core grows with artifacts and, at max speed, copies artifact spells for {1}.
+pub const MENDICANT_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, cloud_key, guidelight_pathmaker, lightning_greaves, mind_stone,
+    mystic_forge, racers_scoreboard, repurposing_bay, salvation_engine, sculpting_steel,
+    simulacrum_synthesizer, sol_ring, swiftfoot_boots, talisman_of_progress, thought_vessel,
+    thousand_moons_smithy, thran_dynamo, unwinding_clock, uthros_research_craft, academy_ruins,
+    adarkar_wastes, amonkhet_raceway, ancient_den, archway_of_innovation, command_tower,
+    darksteel_citadel, deserted_beach, floodfarm_verge, glacial_fortress, hallowed_fountain,
+    inventors_fair, muraganda_raceway, prairie_stream, razortide_bridge, sea_of_clouds,
+    seat_of_the_synod, uthros_titanic_godcore, bronze_guardian, cyberdrive_awakener,
+    emry_lurker_of_the_loch, esper_sentinel, etherium_sculptor, foundry_inspector, gingerbrute,
+    gold_forged_thopteryx, illustrious_wanderglyph, k_9_mark_i, kappa_cannoneer,
+    losheel_clockwork_scholar, master_of_etherium, nesting_bot, ornithopter_of_paradise,
+    padeem_consul_of_innovation, phyrexian_metamorph, research_thief, riptide_gearhulk,
+    sai_master_thopterist, silver_myr, solemn_simulacrum, steel_overseer, thought_monitor,
+    urza_lord_high_artificer, vnwxt_verbose_host, voyager_quickwelder, efficient_construction,
+    mechanized_production, smothering_tithe, thopter_spy_network, an_offer_you_cant_refuse,
+    counterspell, desynchronization, dispatch, dovins_veto, generous_gift, path_to_exile,
+    swords_to_plowshares, tezzeret_cruel_captain, dance_of_the_manse, fabricate,
+    organic_extinction, thoughtcast, voyage_home,
+    // Basics
+    island, island, island, island, island, island, island, island, island, plains, plains, plains,
+    plains, plains, plains, plains,
+];

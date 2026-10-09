@@ -2133,6 +2133,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::URZA_LHA_COMMANDERS,
             main: decks::URZA_LHA_MAIN,
         },
+        // Seat 286: Mendicant Core, Guidelight's EDHREC average deck. `--pod-decks 286`.
+        PodDeck {
+            name: "Mendicant Core, Guidelight (UW)",
+            commanders: decks::MENDICANT_COMMANDERS,
+            main: decks::MENDICANT_MAIN,
+        },
     ]
 }
 
@@ -4032,6 +4038,7 @@ mod tests {
             ("Shorikai, Genesis Engine", [0x5401, 283, 9208]),
             ("Golbez, Crystal Collector", [0x601B, 284, 9209]),
             ("Urza, Lord High Artificer", [0x0F2A, 285, 9210]),
+            ("Mendicant Core, Guidelight", [0x3E4D, 286, 9211]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
