@@ -40952,6 +40952,15 @@ impl GameState {
                         crate::card::MayPlayDuration::WhileHolderControlsFetchPlayer { .. } => {
                             (self.fetch_grant_seat(recipient), duration.bound_to(recipient))
                         }
+                        // Azula's: live only on the holder's own turns.
+                        crate::card::MayPlayDuration::HolderTurnsWithFlashWhileSource { .. } => {
+                            let seat = if self.active_player_idx == recipient {
+                                recipient
+                            } else {
+                                crate::card::MAY_PLAY_DORMANT
+                            };
+                            (seat, duration.bound_to(recipient).bound_to_source(ctx.source))
+                        }
                         d => (recipient, d.bound_to_source(ctx.source)),
                     };
                     if let Some(card) = self.find_card_anywhere_mut(cid) {

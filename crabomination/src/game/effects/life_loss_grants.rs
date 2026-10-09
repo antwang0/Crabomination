@@ -113,7 +113,8 @@ impl GameState {
             perm.duration,
             MayPlayDuration::WhileSourceOnBattlefield { source: s, .. }
                 | MayPlayDuration::HolderTurnsAfterNontokenSacrifice { source: s, .. }
-                | MayPlayDuration::HolderTurnsAfterOpponentLostLife { source: s, .. } if s == source
+                | MayPlayDuration::HolderTurnsAfterOpponentLostLife { source: s, .. }
+                | MayPlayDuration::HolderTurnsWithFlashWhileSource { source: s, .. } if s == source
         )
     }
 

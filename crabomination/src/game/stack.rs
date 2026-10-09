@@ -5742,6 +5742,7 @@ impl GameState {
         // expire at the cleanup of the holder's first turn strictly after
         // the grant.
         let turn_number = self.turn_number;
+        let next_active = self.active_player_idx;
         let sweep = |c: &mut crate::card::CardInstance| {
             if let Some(perm) = c.may_play_until {
                 let elapsed = turn_number.saturating_sub(perm.granted_turn);
@@ -5769,6 +5770,14 @@ impl GameState {
                                 player: crate::card::MAY_PLAY_DORMANT,
                                 ..perm
                             });
+                        }
+                        false
+                    }
+                    // Azula's: woken for the holder's turn, parked otherwise.
+                    crate::card::MayPlayDuration::HolderTurnsWithFlashWhileSource { holder, .. } => {
+                        let seat = if holder == next_active { holder } else { crate::card::MAY_PLAY_DORMANT };
+                        if perm.player != seat {
+                            c.may_play_until = Some(crate::card::MayPlayPermission { player: seat, ..perm });
                         }
                         false
                     }

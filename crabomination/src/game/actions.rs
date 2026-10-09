@@ -14251,7 +14251,9 @@ impl GameState {
                 // mana one (Inside Information), which bills the same toll.
                 valgavoth_toll =
                     permission.pay_life.then(|| card_ref.definition.cost.cmc());
-                miracle_window = permission.miracle;
+                // Azula's grant casts "as though they had flash".
+                miracle_window = permission.miracle
+                    || matches!(permission.duration, crate::card::MayPlayDuration::HolderTurnsWithFlashWhileSource { .. });
                 permission.exile_after
             }
             None => {
