@@ -1826,15 +1826,22 @@ pub fn heart_of_bogardan() -> CardDefinition {
     }
 }
 
+/// CR 614.1c — "If this land would enter, [cost] instead. If you do, put this
+/// land onto the battlefield. If you don't, put it into its owner's graveyard."
+fn entry_cost(cost: WardCost) -> StaticAbility {
+    StaticAbility {
+        description: "If this would enter, pay its entry cost instead.".into(),
+        effect: StaticEffect::EntersOnlyIfPaid { cost, optional: false },
+    }
+}
+
 /// Lotus Vale — a land that costs two untapped lands and pays three mana back.
 pub fn lotus_vale() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessCost {
-            cost: WardCost::SacrificeMatchingN(
-                Box::new(R::Land.and(R::Untapped).and(R::OtherThanSource)),
-                2,
-            ),
-        })],
+        static_abilities: vec![entry_cost(WardCost::SacrificeMatchingN(
+            Box::new(R::Land.and(R::Untapped).and(R::OtherThanSource)),
+            2,
+        ))],
         ..land(
             "Lotus Vale",
             vec![ActivatedAbility {
@@ -1849,12 +1856,10 @@ pub fn lotus_vale() -> CardDefinition {
 /// Scorched Ruins — Lotus Vale's colorless twin: two lands in, {C}{C}{C}{C} out.
 pub fn scorched_ruins() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessCost {
-            cost: WardCost::SacrificeMatchingN(
-                Box::new(R::Land.and(R::Untapped).and(R::OtherThanSource)),
-                2,
-            ),
-        })],
+        static_abilities: vec![entry_cost(WardCost::SacrificeMatchingN(
+            Box::new(R::Land.and(R::Untapped).and(R::OtherThanSource)),
+            2,
+        ))],
         ..land(
             "Scorched Ruins",
             vec![ActivatedAbility {

@@ -836,3 +836,81 @@ fn cr_614_12_choose_an_opponent_with_one_opponent_asks_nothing() {
     assert!(ballots(&g).is_empty());
     assert_eq!(g.battlefield_find(id).unwrap().chosen_player, Some(1));
 }
+
+// ── Entry costs: "if this would enter, [cost] instead" (CR 614.1c) ──────────
+
+fn cast_free(g: &mut GameState, id: crabomination::card::CardId) {
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("a {0} spell is castable");
+    drain_stack(g);
+}
+
+/// CR 614.1c / Mox Diamond's ruling — "If you don't discard a land card, Mox
+/// Diamond never enters. It won't trigger abilities that look for something
+/// entering." Declined, it goes from the stack to the graveyard, and the land
+/// stays in hand.
+#[test]
+fn cr_614_1c_a_declined_entry_cost_means_the_permanent_never_enters() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_hand(0, catalog::mox_diamond());
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(false)]));
+    cast_free(&mut g, mox);
+    assert!(g.battlefield_find(mox).is_none(), "declined: never on the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mox), "into its owner's graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "and the land stayed in hand");
+    assert_eq!(g.players[0].artifacts_entered_this_turn, 0, "no artifact entered");
+}
+
+/// CR 614.1c — the replacement applies to every entry, not only a cast: a Mox
+/// Diamond put onto the battlefield from a graveyard asks too. Paid, the land
+/// is discarded and the Mox enters.
+#[test]
+fn cr_614_1c_an_entry_cost_applies_to_a_put_onto_the_battlefield() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let mox = g.move_card_to_battlefield_for_test(0, catalog::mox_diamond());
+    assert!(g.battlefield_find(mox).is_some(), "paid: the Mox entered");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == forest), "by discarding the land");
+}
+
+/// CR 614.1c — with no land in hand there is nothing to ask: a reanimated Mox
+/// Diamond stays in the graveyard and nothing entered.
+#[test]
+fn cr_614_1c_an_unpayable_entry_cost_returns_it_to_the_graveyard() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let mox = g.move_card_to_battlefield_for_test(0, catalog::mox_diamond());
+    assert!(g.battlefield_find(mox).is_none(), "unpayable: it never entered");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mox), "it is in its owner's graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears), "a nonland card can't pay it");
+}
+
+/// CR 614.1c / CR 305.2 — Lotus Vale on the land drop: "sacrifice two
+/// untapped lands instead" with only one to give, so it goes to the graveyard
+/// and the land drop is still spent (it was played; it just never entered).
+#[test]
+fn cr_614_1c_lotus_vale_without_two_untapped_lands_is_a_spent_land_drop() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let vale = g.add_card_to_hand(0, catalog::lotus_vale());
+    g.perform_action(GameAction::PlayLand(vale)).expect("the land drop is legal");
+    assert!(g.battlefield_find(vale).is_none(), "it never entered");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == vale), "into the graveyard");
+    assert!(g.battlefield_find(land).is_some(), "nothing was sacrificed");
+    assert_eq!(g.players[0].lands_played_this_turn, 1, "the drop is spent");
+}
+
+/// CR 614.1c — with two untapped lands Lotus Vale's cost is paid (it is not a
+/// "may"): both are sacrificed and the Vale enters, untapped.
+#[test]
+fn cr_614_1c_lotus_vale_sacrifices_two_untapped_lands_to_enter() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::forest());
+    let b = g.add_card_to_battlefield(0, catalog::island());
+    let vale = g.add_card_to_hand(0, catalog::lotus_vale());
+    g.perform_action(GameAction::PlayLand(vale)).expect("the land drop is legal");
+    assert!(g.battlefield_find(vale).is_some_and(|c| !c.tapped), "the Vale entered");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both lands were sacrificed");
+}

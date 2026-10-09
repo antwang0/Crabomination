@@ -1557,32 +1557,20 @@ pub fn aetherflux_reservoir() -> CardDefinition {
     }
 }
 
-/// Mox Diamond — {0} Artifact. "If Mox Diamond would enter, you may discard a
-/// land card instead. If you don't, put it into its owner's graveyard." "{T}:
-/// Add one mana of any color." Modeled as an ETB "may discard a land, else
-/// put it into its graveyard" (it briefly enters either way, so ETB watchers
-/// see it).
+/// Mox Diamond — {0} Artifact. "If this artifact would enter, you may discard
+/// a land card instead. If you do, put this artifact onto the battlefield. If
+/// you don't, put it into its owner's graveyard." "{T}: Add one mana of any
+/// color."
 pub fn mox_diamond() -> CardDefinition {
     CardDefinition {
         name: "Mox Diamond",
         cost: cost(&[generic(0)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            // "If this artifact would enter, you **may** discard a **land**
-            // card instead. If you do, put it onto the battlefield. If you
-            // don't, put it into its owner's graveyard." Modelled as
-            // Drekavac's enter-then-keep-or-sacrifice shape, which is the
-            // engine's idiom for this text: it discarded *any* card,
-            // unconditionally, and kept the Mox either way.
-            effect: Effect::MayDiscardMatching {
-                description: "Discard a land card to keep Mox Diamond?".into(),
-                count: Value::ONE,
-                filter: SelectionRequirement::Land,
-                then: Box::new(Effect::Noop),
-                // "Put it into its owner's graveyard" — not a sacrifice, so
-                // sacrifice payoffs (Korvold) don't see it.
-                else_: Some(Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Graveyard })),
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "If this would enter, you may discard a land card instead.".into(),
+            effect: crate::effect::StaticEffect::EntersOnlyIfPaid {
+                cost: crate::card::WardCost::DiscardMatching(Box::new(SelectionRequirement::Land), 1),
+                optional: true,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
