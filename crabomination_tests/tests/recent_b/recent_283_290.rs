@@ -691,6 +691,32 @@ mod recent286 {
         g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
         assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
     }
+
+    /// Barbarian Class L2's roll trigger pumps target creature YOU control —
+    /// with only an opponent's creature out it has no target (it shipped
+    /// targeting any creature).
+    #[test]
+    fn barbarian_class_level_two_targets_your_creature_only() {
+        use crabomination::effect::{Effect, Value};
+        use crabomination::game::effects::EffectContext;
+        let mut g = two_player_game();
+        let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::barbarian_class());
+        g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
+        let theirs = g.add_card_to_battlefield(1, crabomination::catalog::grizzly_bears());
+        let roll = Effect::RollDie {
+            sides: 6, count: Value::ONE, modifier: Value::ZERO, reroll_at_most: 0,
+            results: vec![], ignore_lowest: 0, on_doubles: None,
+        };
+        let events = g.resolve_effect(&roll, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(theirs).unwrap().power, 2, "an opponent's creature isn't a target");
+        let mine = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+        let events = g.resolve_effect(&roll, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(mine).unwrap().power, 4, "+2/+0 on your own");
+    }
 }
 
 mod recent287 {

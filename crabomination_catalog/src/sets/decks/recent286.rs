@@ -819,13 +819,13 @@ pub fn barbarian_class() -> CardDefinition {
                 .with_filter(Predicate::SourceClassLevelAtLeast(2)),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
-                    what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
+                    what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature.and(crate::card::SelectionRequirement::ControlledByYou)),
                     power: Value::Const(2),
                     toughness: Value::ZERO,
                     duration: Duration::EndOfTurn,
                 },
                 Effect::GrantKeyword {
-                    what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature),
+                    what: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Creature.and(crate::card::SelectionRequirement::ControlledByYou)),
                     keyword: Keyword::Menace,
                     duration: Duration::EndOfTurn,
                 },
