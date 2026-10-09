@@ -171,8 +171,8 @@ pub fn make_your_own_luck() -> CardDefinition {
 }
 
 /// Aven Interrupter — {1}{W}{W} 2/2 Bird Rogue with flash and flying. ETB:
-/// exile target spell; it becomes plotted. (The opponents'-spells-from-
-/// graveyards-and-exile tax is dropped — no cast-origin spell filter yet.)
+/// exile target spell; it becomes plotted. Spells your opponents cast from
+/// graveyards or from exile cost {2} more.
 pub fn aven_interrupter() -> CardDefinition {
     CardDefinition {
         supertypes: vec![],
@@ -182,6 +182,10 @@ pub fn aven_interrupter() -> CardDefinition {
                 what: target_filtered(R::IsSpellOnStack),
                 zone: CounteredSpellZone::ExilePlotted,
             },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Spells your opponents cast from graveyards or from exile cost {2} more to cast.",
+            effect: StaticEffect::OpponentSpellsFromGraveyardOrExileCostMore { amount: 2 },
         }],
         ..legend(
             "Aven Interrupter",

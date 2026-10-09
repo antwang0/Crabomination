@@ -3324,3 +3324,24 @@ fn tayam_untappers() {
     assert!(g.battlefield_find(knight).unwrap().tapped);
     assert!(!g.battlefield_find(land).unwrap().tapped);
 }
+
+/// Aven Interrupter taxes an opponent's flashback by {2}; its controller's own
+/// graveyard casts aren't taxed.
+#[test]
+fn aven_interrupter_taxes_graveyard_casts() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::aven_interrupter());
+    let twice = g.add_card_to_graveyard(0, catalog::think_twice());
+    let flashback = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFlashback { card_id: twice, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(flashback(&mut g).is_err(), "{{2}}{{U}} isn't enough under the tax");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    flashback(&mut g).expect("{2}{U} + {2}");
+    drain_stack(&mut g);
+}
