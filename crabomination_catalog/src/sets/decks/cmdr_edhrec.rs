@@ -2279,3 +2279,49 @@ pub fn life_finds_a_way() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Terisian Mindbreaker — {7} 6/4 artifact Juggernaut. Attacking, the
+/// defending player mills half their library, rounded up. Unearth
+/// {1}{U}{U}{U}.
+pub fn terisian_mindbreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Terisian Mindbreaker",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Juggernaut]),
+        power: 6,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::MillHalf {
+            who: Selector::Player(PlayerRef::DefendingPlayer),
+            rounded_up: true,
+        })],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(1), u(), u(), u()]))],
+        ..Default::default()
+    }
+}
+
+/// Vantress Gargoyle — {1}{U} 5/4 flying artifact Gargoyle. Can't attack
+/// unless defending player has seven or more cards in their graveyard; can't
+/// block unless you have four or more cards in hand. {T}: each player mills
+/// a card.
+pub fn vantress_gargoyle() -> CardDefinition {
+    CardDefinition {
+        name: "Vantress Gargoyle",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Gargoyle]),
+        power: 5,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::CantAttackUnlessDefenderGraveyardAtLeast(7),
+            Keyword::CantBlockUnlessHandSizeAtLeast(4),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

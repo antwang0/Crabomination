@@ -1353,3 +1353,37 @@ fn thornbite_staff_pings_and_untaps() {
     assert!(g.battlefield_find(elf).is_none());
     assert!(!g.battlefield_find(bear).unwrap().tapped, "the elf's death untapped it");
 }
+
+/// Terisian Mindbreaker's attack mills half the defender's library, rounded
+/// up (CR 701.13).
+#[test]
+fn terisian_mindbreaker_mills_half() {
+    let mut g = pod(2);
+    let jug = ready(&mut g, 0, catalog::terisian_mindbreaker());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let lib = g.players[1].library.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: jug, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - lib.div_ceil(2));
+}
+
+/// Vantress Gargoyle can't attack into a thin graveyard (CR 508.1a), and
+/// can once the defender has seven cards there.
+#[test]
+fn vantress_gargoyle_needs_a_full_graveyard() {
+    let mut g = pod(2);
+    let gar = ready(&mut g, 0, catalog::vantress_gargoyle());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(g
+        .perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: gar, target: AttackTarget::Player(1) }]))
+        .is_err());
+    for _ in 0..7 {
+        g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: gar, target: AttackTarget::Player(1) }]))
+        .expect("seven in the yard");
+}
