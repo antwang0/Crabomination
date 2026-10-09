@@ -45622,10 +45622,16 @@ pub fn agathas_soul_cauldron() -> CardDefinition {
                         what: Selector::Target(0),
                         filter: SelectionRequirement::Creature,
                     },
-                    then: Box::new(Effect::AddCounter {
-                        what: Selector::LeastToughnessYouControl,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
+                    // CR 603.7 — "when a creature card is exiled this way" is
+                    // a reflexive trigger that targets as it's put on the stack.
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::AddCounter {
+                            what: crate::effect::shortcut::target_filtered(
+                                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                            ),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },

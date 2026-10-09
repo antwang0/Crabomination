@@ -261,6 +261,8 @@ fn agathas_cauldron_exiles_and_grants_abilities() {
     // mana + return-self — use Llanowar Elves: {T}: Add {G}).
     let elves = g.add_card_to_graveyard(1, catalog::llanowar_elves());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // The counter is a reflexive trigger targeting a creature YOU control.
+    let theirs = g.add_card_to_battlefield(1, catalog::eager_cadet());
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: cauldron, ability_index: 0, target: Some(Target::Permanent(elves)), additional_targets: Vec::new(), x_value: None, mode: None,
@@ -274,6 +276,7 @@ fn agathas_cauldron_exiles_and_grants_abilities() {
         bear_inst.counter_count(crabomination::card::CounterType::PlusOnePlusOne),
         1, "creature-card exile adds a +1/+1 counter",
     );
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0);
     // The countered Bear now has the exiled Elves' mana ability.
     let granted = g.granted_abilities_for(bear);
     assert!(!granted.is_empty(), "Bear borrows the exiled creature's activated ability");
