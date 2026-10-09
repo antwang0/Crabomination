@@ -172,29 +172,21 @@ fn a_temp_attacking_copy(source: Selector, non_legendary: bool) -> Effect {
     ])
 }
 
-/// Delina's d20: 1–14 makes one attacking copy; 15–20 makes one and you may
-/// roll again. `depth` bounds the re-roll chain (a finite stand-in for an
-/// unbounded "you may").
-fn a_delina_roll(depth: u8) -> Effect {
-    let copy = || {
-        a_temp_attacking_copy(target_filtered(R::Creature.and(R::ControlledByYou)), true)
-    };
-    let high = if depth == 0 {
-        copy()
-    } else {
-        Effect::Seq(vec![
-            copy(),
-            Effect::MayDo { description: "Roll again?".into(), body: Box::new(a_delina_roll(depth - 1)) },
-        ])
-    };
-    Effect::RollDie {
-        sides: 20,
-        count: Value::ONE,
-        modifier: Value::Const(0),
-        reroll_at_most: 0,
-        results: vec![(1, 14, copy()), (15, 20, high)],
-        ignore_lowest: 0,
-        on_doubles: None,
+/// Delina's d20: each roll makes one attacking copy; on 15–20 you may roll
+/// again, without bound (`RepeatWhileMay` over `LastDieRoll`).
+fn a_delina_roll() -> Effect {
+    Effect::RepeatWhileMay {
+        body: Box::new(Effect::RollDie {
+            sides: 20,
+            count: Value::ONE,
+            modifier: Value::Const(0),
+            reroll_at_most: 0,
+            results: vec![(1, 20, a_temp_attacking_copy(target_filtered(R::Creature.and(R::ControlledByYou)), true))],
+            ignore_lowest: 0,
+            on_doubles: None,
+        }),
+        again: Predicate::ValueAtLeast(Value::LastDieRoll, Value::Const(15)),
+        description: "Roll again?".into(),
     }
 }
 
@@ -323,14 +315,12 @@ pub fn orthion_hero_of_lavabrink() -> CardDefinition {
 /// attacks, choose target creature you control, then roll a d20. 1–14: create a
 /// tapped and attacking non-legendary token copy of it that's exiled at end of
 /// combat. 15–20: create one of those tokens; you may roll again.
-/// "You may roll again" is asked (`MayDo`). Approximation: the chain is
-/// bounded at five extra rolls. The token's own "At end of combat,
-/// exile this token" is a delayed end-of-combat exile bound to it — a copy of
-/// the token would not inherit it. Under a token doubler only the last minted
-/// token of each roll is bound to the exile.
+/// "You may roll again" is asked each time, without bound (`RepeatWhileMay`).
+/// Residual: the token's own "At end of combat, exile this token" is a
+/// delayed exile bound to it, so a copy of the token would not inherit it.
 pub fn delina_wild_mage() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_attack(a_delina_roll(5))],
+        triggered_abilities: vec![on_attack(a_delina_roll())],
         ..a_legend(
             "Delina, Wild Mage",
             cost(&[generic(3), r()]),

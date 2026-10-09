@@ -423,6 +423,7 @@ impl Effect {
             | Effect::WatchCombatDamageUntilYourNextTurn { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::RepeatWhileClashWon { body }
+            | Effect::RepeatWhileMay { body, .. }
             | Effect::EachPlayerDoes { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::MayDoBy { body, .. }
@@ -1438,6 +1439,7 @@ impl Effect {
             Effect::ReturnSelfTransformedAttachedTo { host } => sel_has_target(host),
             Effect::RemoveCountersFromAmongDrawAndLoseLife => false,
             Effect::RepeatWhileClashWon { body } => body.requires_target(),
+            Effect::RepeatWhileMay { body, .. } => body.requires_target(),
             Effect::TokenCopyTappedAttacking { source } => sel_has_target(source),
             Effect::OwnerShufflesInExilesTopPlaysOrCasts { what } => sel_has_target(what),
             Effect::DoubleXOfSpell { .. } => false,

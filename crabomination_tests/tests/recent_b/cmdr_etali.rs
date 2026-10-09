@@ -168,6 +168,27 @@ fn delina_wild_mage_high_roll_rolls_again() {
     assert!(!g.battlefield.iter().any(|c| c.is_token), "exiled at end of combat");
 }
 
+/// Delina's re-roll has no bound: seven high rolls in a row make seven copies
+/// and an eighth, low roll one more (the chain stopped at six before).
+#[test]
+fn delina_wild_mage_rerolls_without_bound() {
+    let mut g = a_main_phase();
+    let delina = g.add_card_to_battlefield(0, catalog::delina_wild_mage());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(delina);
+    let mut answers = Vec::new();
+    for _ in 0..7 {
+        answers.push(DecisionAnswer::DieRoll(20));
+        answers.push(DecisionAnswer::Bool(true));
+    }
+    answers.push(DecisionAnswer::DieRoll(3));
+    g.decider = Box::new(ScriptedDecider::new(answers));
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: delina, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 8);
+}
+
 /// Delina's re-roll is a "may": declining after a high roll stops at one copy.
 #[test]
 fn delina_wild_mage_may_decline_the_reroll() {

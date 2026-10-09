@@ -8259,6 +8259,10 @@ pub enum Effect {
     /// this process" (Hoarder's Greed). Each win re-enters this effect, so a
     /// suspended clash resumes without re-running an earlier `body`.
     RepeatWhileClashWon { body: Box<Effect> },
+    /// "[body]. If [again], you may repeat this process" with no bound
+    /// (Delina, Wild Mage's "15-20: … and you may roll again"). Each yes
+    /// re-enters this effect, like `RepeatWhileClashWon`.
+    RepeatWhileMay { body: Box<Effect>, again: Predicate, description: String },
     /// "Remove any number of counters from among permanents on the
     /// battlefield. You draw cards and lose life equal to the number of
     /// counters removed this way" (Eventide's Shadow). The controller picks

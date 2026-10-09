@@ -34558,6 +34558,31 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RepeatWhileMay { body, again, description } => {
+                // A loop, not a re-entry: a headless seat's long chain would
+                // otherwise nest a `run_effect` frame per repeat. A prompting
+                // seat's "again?" goes through `MayDo` re-entering this
+                // effect, so its suspend resumes at the right repeat.
+                loop {
+                    self.run_effect(body, ctx, events)?;
+                    if self.suspend_signal.is_some() || self.game_over.is_some() || !self.evaluate_predicate(again, ctx) {
+                        return Ok(());
+                    }
+                    if self.seat_prompts(ctx.controller) {
+                        let ask = Effect::MayDo { description: description.clone(), body: Box::new(effect.clone()) };
+                        return self.run_effect(&ask, ctx, events);
+                    }
+                    let decision = crate::decision::Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        description: description.clone(),
+                        kind: OptionalKind::MayBody,
+                    };
+                    if !matches!(self.decider.decide(&decision), crate::decision::DecisionAnswer::Bool(true)) {
+                        return Ok(());
+                    }
+                }
+            }
+
             Effect::RepeatWhileClashWon { body } => {
                 // Each win re-enters this effect as the clash's payoff, so a
                 // clash that suspends resumes at that clash, not at `body`.
