@@ -7225,6 +7225,11 @@ pub enum Effect {
         #[serde(default)]
         restriction: Option<crate::mana::SpendRestriction>,
     },
+    /// CR 702.189a — firebending's resolution: add `amount` {R} to the
+    /// controller's pool, kept as steps and phases end until end of combat.
+    /// A triggered ability that uses the stack (CR 605.1b: it triggers on an
+    /// attack, not on mana), so it can be copied or countered.
+    Firebend { amount: Value },
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },

@@ -14695,6 +14695,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Firebend { amount } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 && self.players.get(p).is_some_and(|pl| pl.is_alive()) {
+                    self.players[p].mana_pool.add(crate::mana::Color::Red, n);
+                    self.players[p].firebending_kept_red = self.players[p].firebending_kept_red.saturating_add(n);
+                    for _ in 0..n {
+                        events.push(GameEvent::ManaAdded { player: p, color: crate::mana::Color::Red, source: ctx.source });
+                    }
+                }
+                Ok(())
+            }
             Effect::AddManaKeptThisTurnCount { who, color, amount } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;

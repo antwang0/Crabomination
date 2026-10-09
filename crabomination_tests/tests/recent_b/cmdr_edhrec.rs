@@ -2693,6 +2693,7 @@ fn fire_lord_azula_court() {
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: zuko, target: AttackTarget::Player(1) }]))
         .expect("attack");
+    drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.priority.player_with_priority = 0;

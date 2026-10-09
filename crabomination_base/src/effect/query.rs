@@ -1834,7 +1834,7 @@ impl Effect {
             | Effect::AddColorlessKeptThisTurn { who, .. }
             | Effect::CommanderToHand { who }
             | Effect::PutCommanderOntoBattlefield { who, .. } => player_has_target(who),
-            Effect::AddManaEqualToPermanentCost { .. } => false,
+            Effect::AddManaEqualToPermanentCost { .. } | Effect::Firebend { .. } => false,
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
                     ManaPayload::Colorless(v)

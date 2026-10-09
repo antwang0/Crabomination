@@ -207,10 +207,8 @@ fn block_reject(line: u32, e: GameError) -> GameError {
 }
 
 /// CR 702.189a — which Firebending keyword an attacker carries, without the
-/// amount. The amount for the two derived arms reads board state that the
-/// commit loop *changes* between the fold and the payment (CR 702.121 Melee
-/// pumps the attacker), so the kind is folded with the rest of the keywords
-/// and the value is still computed where it was. See [`AttackerDeclFacts`].
+/// amount: the trigger's `Effect::Firebend` reads the amount as it resolves
+/// (after a Melee pump, CR 702.121). See [`AttackerDeclFacts`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum FirebendKind {
     /// `Firebending(n)`.
@@ -2309,32 +2307,22 @@ impl GameState {
                 };
                 triggers.push((id, sac_effect, p, None, None));
             }
-            // Firebending N — CR 702.189a: a triggered mana ability (resolves
-            // without the stack, CR 605.3b). Add N {R} now; the mana survives
-            // step/phase emptying until end of combat (`firebending_kept_red`).
-            // The KIND came off the fold above; the amount is still read
-            // here, because the two derived arms read board state the Melee
-            // pump a few lines up has already changed.
-            let firebend_n = dfacts.firebending.map(|k| match k {
-                FirebendKind::N(n) => n,
-                // Firebending X = this creature's power (clamped at 0).
-                FirebendKind::Power => self
-                    .computed_permanent(id)
-                    .map(|c| c.power.max(0) as u32)
-                    .unwrap_or(0),
-                FirebendKind::CreaturesYouControl => self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == p && self.computed_is_creature(c))
-                    .count() as u32,
-                FirebendKind::Experience => self.players[p].experience,
-            });
-            if let Some(n) = firebend_n
-                && n > 0
-            {
-                self.players[p].mana_pool.add(crate::mana::Color::Red, n);
-                self.players[p].firebending_kept_red =
-                    self.players[p].firebending_kept_red.saturating_add(n);
+            // Firebending N — CR 702.189a: "whenever this creature attacks,
+            // add N {R}" — a triggered ability that uses the stack (CR 605.1b:
+            // it triggers on the attack, not on mana; the 2025 ruling). The
+            // amount is read as it resolves; the mana survives step/phase
+            // emptying until end of combat (`firebending_kept_red`).
+            if let Some(k) = dfacts.firebending {
+                let amount = match k {
+                    FirebendKind::N(n) => Value::Const(n as i32),
+                    FirebendKind::Power => Value::PowerOf(Box::new(Selector::This)),
+                    FirebendKind::CreaturesYouControl => Value::CountOf(Box::new(Selector::EachPermanent(
+                        crate::card::SelectionRequirement::Creature
+                            .and(crate::card::SelectionRequirement::ControlledByYou),
+                    ))),
+                    FirebendKind::Experience => Value::ControllerExperience,
+                };
+                triggers.push((id, Effect::Firebend { amount }, p, None, None));
             }
             // ControllerAttackedByOpponent (CR 508.1g listeners): permanents
             // the defending player controls that fire "when a creature an

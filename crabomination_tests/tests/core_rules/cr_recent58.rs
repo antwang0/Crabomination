@@ -134,3 +134,23 @@ fn turn_scoped_rules_changes_are_surfaced_to_the_client() {
     assert!(notes[0].contains("nonbasic land"), "{notes:?}");
     assert!(notes[0].contains("colorless"), "{notes:?}");
 }
+
+/// CR 702.189a / 605.1b — firebending triggers on the attack, not on mana, so
+/// it is not a mana ability: it waits on the stack (2025 ruling: "they use the
+/// stack and can be responded to") and an attack-trigger doubler (Isshin)
+/// doubles it.
+#[test]
+fn cr_702_189a_firebending_uses_the_stack() {
+    let mut g = two_player_game();
+    let jj = g.add_card_to_battlefield(0, catalog::jeong_jeong_the_deserter());
+    g.add_card_to_battlefield(0, catalog::isshin_two_heavens_as_one());
+    g.clear_sickness(jj);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: jj, target: AttackTarget::Player(1) }]).expect("attack");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0, "no mana before it resolves");
+    assert_eq!(g.stack.len(), 2, "firebending 1, twice under Isshin");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
+}
