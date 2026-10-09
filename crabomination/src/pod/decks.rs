@@ -9181,3 +9181,32 @@ pub const VIHAAN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const TAYAM_COMMANDERS: &[CardFactory] = &[tayam_luminous_enigma];
+
+/// **Tayam, Luminous Enigma**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 88 nonbasic cards + 5 Forests + 3 Plains + 3 Swamps = 99.
+/// counters and untaps
+pub const TAYAM_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, arcane_signet, ashnods_altar, lions_eye_diamond, sol_ring,
+    thousand_year_elixir, bayou, boseiju_who_endures, caves_of_koilos, centaur_garden,
+    city_of_brass, command_tower, exotic_orchard, gaeas_cradle, gavony_township, godless_shrine,
+    llanowar_wastes, mana_confluence, marsh_flats, misty_rainforest, overgrown_tomb,
+    phyrexian_tower, savannah, scrubland, temple_garden, verdant_catacombs, windswept_heath,
+    wooded_foothills, yavimaya_cradle_of_growth, archon_of_emeria, avacyns_pilgrim,
+    aven_interrupter, badgermole_cub, bartolome_del_presidio, basking_broodscale,
+    birds_of_paradise, bloom_tender, carrion_feeder, deathrite_shaman, delighted_halfling,
+    devoted_druid, drannith_magistrate, eidolon_of_rhetoric, elves_of_deep_shadow, elvish_mystic,
+    enduring_vitality, eternal_witness, faeburrow_elder, formidable_speaker, icatian_moneychanger,
+    incubation_druid, llanowar_elves, marvin_murderous_mimic, moonshadow, opposition_agent,
+    orcish_bowmasters, patrolling_peacemaker, ranger_captain_of_eos, recruiter_of_the_guard,
+    rishkar_peema_renegade, shang_chi_master_of_kung_fu, skyclave_apparition, strangleroot_geist,
+    sylvan_safekeeper, the_queen_of_dale, wall_of_roots, warden_of_the_grove,
+    white_plume_adventurer, young_wolf, abzan_ascendancy, carpet_of_flowers, cryptolith_rite,
+    deafening_silence, earthcraft, insidious_roots, natures_chosen, promise_of_bunrei,
+    touch_the_spirit_realm, assassins_trophy, chord_of_calling, crop_rotation,
+    swords_to_plowshares, vampiric_tutor, tyvar_jubilant_brawler, demonic_tutor, farseek,
+    green_suns_zenith, natures_rhythm,
+    // Basics
+    forest, forest, forest, forest, forest, plains, plains, plains, swamp, swamp, swamp,
+];

@@ -2301,6 +2301,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VIHAAN_COMMANDERS,
             main: decks::VIHAAN_MAIN,
         },
+        // Seat 314: Tayam, Luminous Enigma's EDHREC average deck. `--pod-decks 314`.
+        PodDeck {
+            name: "Tayam, Luminous Enigma (BGW)",
+            commanders: decks::TAYAM_COMMANDERS,
+            main: decks::TAYAM_MAIN,
+        },
     ]
 }
 
@@ -4258,6 +4264,7 @@ mod tests {
             ("Ziatora, the Incinerator", [0x21A7, 311, 9236]),
             ("Helga, Skittish Seer", [0x4E16, 312, 9237]),
             ("Vihaan, Goldwaker", [0x71AA, 313, 9238]),
+            ("Tayam, Luminous Enigma", [0x7A4A, 314, 9239]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
