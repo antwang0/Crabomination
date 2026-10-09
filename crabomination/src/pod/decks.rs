@@ -8620,3 +8620,31 @@ pub const JIN_SAKAI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, plains, plains, plains, plains, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const SONIC_COMMANDERS: &[CardFactory] = &[sonic_the_hedgehog];
+
+/// **Sonic the Hedgehog**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 83 nonbasic cards + 5 Islands + 6 Mountains + 5 Plains = 99.
+/// Jeskai haste and flash: Sonic's attacks grow every fast creature, and their damage mints Treasure.
+pub const SONIC_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, caltrops, fellwar_stone, hammer_of_nazahn, lightning_greaves,
+    sol_ring, swiftfoot_boots, talisman_of_conviction, talisman_of_creativity,
+    talisman_of_progress, the_reaver_cleaver, adarkar_wastes, battlefield_forge, clifftop_retreat,
+    command_tower, exotic_orchard, glacial_fortress, hallowed_fountain, mystic_monastery,
+    prairie_stream, raugrin_triome, rogues_passage, sacred_foundry, sea_of_clouds, shivan_reef,
+    spectator_seating, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    academy_manufactor, amy_rose, anger, archivist_of_oghma, arthur_marigold_knight,
+    aurelia_the_law_above, aurelia_the_warleader, captain_lannery_storm, cathar_commando,
+    enduring_curiosity, errant_and_giada, faerie_mastermind, goldspan_dragon, guardian_of_faith,
+    herald_of_secret_streams, hydroelectric_specimen, kilo_apogee_mind, knuckles_the_echidna,
+    laelia_the_blade_reforged, loyal_apprentice, malcolm_alluring_scoundrel, miles_tails_prower,
+    plumecreed_escort, professional_face_breaker, selfless_squire, thundering_raiju,
+    urabrask_the_hidden, winged_hive_tyrant, xorn, frostcliff_siege, pyrohemia, rising_of_the_day,
+    smothering_tithe, super_state, uncivil_unrest, windcrag_siege, akromas_will,
+    an_offer_you_cant_refuse, boros_charm, chaos_warp, counterspell, fire_magic, flawless_maneuver,
+    generous_gift, path_to_exile, swords_to_plowshares, unexpected_windfall, blasphemous_act,
+    damning_verdict, fabricate, open_the_armory, wave_goodbye,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains,
+];

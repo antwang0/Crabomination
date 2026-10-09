@@ -2181,6 +2181,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JIN_SAKAI_COMMANDERS,
             main: decks::JIN_SAKAI_MAIN,
         },
+        // Seat 294: Sonic the Hedgehog's EDHREC average deck. `--pod-decks 294`.
+        PodDeck {
+            name: "Sonic the Hedgehog (RUW)",
+            commanders: decks::SONIC_COMMANDERS,
+            main: decks::SONIC_MAIN,
+        },
     ]
 }
 
@@ -4106,6 +4112,7 @@ mod tests {
             ("Coram, the Undertaker", [0xC0A4, 291, 9216]),
             ("Sythis, Harvest's Hand", [0x5717, 292, 9217]),
             ("Jin Sakai, Ghost of Tsushima", [0x715A, 293, 9218]),
+            ("Sonic the Hedgehog", [0x5021, 294, 9219]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
