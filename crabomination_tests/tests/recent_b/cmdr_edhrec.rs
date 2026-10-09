@@ -3928,3 +3928,75 @@ fn kona_green_kit() {
     let wurm = ready(&mut g, 0, catalog::impervious_greatwurm());
     assert!(g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::Indestructible));
 }
+
+/// Marrow-Gnawer's Rats: Rat Colony grows per other Rat and Swarm of Rats
+/// counts them all; Thrumming Stone ripples a Gruesome Fate into a second one;
+/// Foul-Tongue Shriek drains per attacker.
+#[test]
+fn marrow_gnawer_rats_kit() {
+    let mut g = pod(2);
+    flood(&mut g);
+    let a = ready(&mut g, 0, catalog::rat_colony());
+    ready(&mut g, 0, catalog::rat_colony());
+    let swarm = ready(&mut g, 0, catalog::swarm_of_rats());
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4, "2 + two other Rats");
+    assert_eq!(g.computed_permanent(swarm).unwrap().power, 3);
+
+    ready(&mut g, 0, catalog::thrumming_stone());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::gruesome_fate());
+    let life = g.players[1].life;
+    let fate = g.add_card_to_hand(0, catalog::gruesome_fate());
+    cast(&mut g, fate, None);
+    assert_eq!(g.players[1].life, life - 6, "the rippled copy resolves too: 3 creatures twice");
+
+    let life = (g.players[0].life, g.players[1].life);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: swarm, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let shriek = g.add_card_to_hand(0, catalog::foul_tongue_shriek());
+    cast(&mut g, shriek, Some(Target::Player(1)));
+    assert_eq!((g.players[0].life, g.players[1].life), (life.0 + 2, life.1 - 2));
+}
+
+/// Alexios's equipment: Beatstick's +1/+0 and menace, Thran Power Suit's
+/// +1/+1 per attachment and ward {2}, Sweeping Cleave's double strike, and the
+/// Axe doubling an attacker's power.
+#[test]
+fn alexios_equipment_kit() {
+    use crabomination::card::{Keyword, WardCost};
+    let mut g = pod(2);
+    flood(&mut g);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    for def in [catalog::beamtown_beatstick(), catalog::thran_power_suit()] {
+        let eq = ready(&mut g, 0, def);
+        g.perform_action(GameAction::Equip { equipment: eq, target: bear }).expect("equip");
+        drain_stack(&mut g);
+    }
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4), "2/2 +1/+0 +2/+2");
+    assert!(cp.keywords().contains(&Keyword::Menace) && cp.keywords().contains(&Keyword::Ward(WardCost::generic(2))));
+
+    let axe = g.add_card_to_hand(0, catalog::two_handed_axe());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventure { card_id: axe, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("Sweeping Cleave");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
+
+    let axe = ready(&mut g, 0, catalog::two_handed_axe());
+    let other = ready(&mut g, 0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Equip { equipment: axe, target: other }).expect("equip");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: other, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(other).unwrap().power, 4, "doubled");
+}

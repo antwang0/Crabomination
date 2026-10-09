@@ -8026,3 +8026,216 @@ pub fn impervious_greatwurm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn equipment(name: &'static str, mana: crate::mana::ManaCost, equip: crate::mana::ManaCost, bonus: crate::card::EquipBonus) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+/// Beamtown Beatstick — {R} Equipment. Equipped creature gets +1/+0 and has
+/// menace; whenever it deals combat damage to a player or battle, create a
+/// Treasure. Equip {2}. (The battle half has no trigger — INCOMPLETE_CARDS.)
+pub fn beamtown_beatstick() -> CardDefinition {
+    use crate::card::EquipBonus;
+    equipment(
+        "Beamtown Beatstick",
+        cost(&[r()]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            power: 1,
+            keywords: vec![Keyword::Menace],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: crate::effect::shortcut::mint_treasures(1),
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Infiltration Lens — {1} Equipment. Whenever equipped creature becomes
+/// blocked by a creature, you may draw two cards. Equip {1}.
+pub fn infiltration_lens() -> CardDefinition {
+    use crate::card::EquipBonus;
+    equipment(
+        "Infiltration Lens",
+        cost(&[generic(1)]),
+        cost(&[generic(1)]),
+        EquipBonus {
+            // One `BecomesBlocked` per blocking creature (CR 509.3c).
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Draw two cards?".into(),
+                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                },
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Thran Power Suit — {2} Equipment. Equipped creature gets +1/+1 for each
+/// Aura and Equipment attached to it and has ward {2}. Equip {2}.
+pub fn thran_power_suit() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, EquipScale, WardCost};
+    equipment(
+        "Thran Power Suit",
+        cost(&[generic(2)]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            keywords: vec![Keyword::Ward(WardCost::generic(2))],
+            scale: Some(EquipScale {
+                filter: R::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_host_attachments: Some(
+                    R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                        .or(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment)),
+                ),
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+    )
+}
+
+/// Two-Handed Axe — {2}{R} Equipment. Whenever equipped creature attacks,
+/// double its power until end of turn. Equip {1}{R}. Adventure: Sweeping
+/// Cleave — {1}{R} Instant. Target creature you control gains double strike
+/// until end of turn.
+pub fn two_handed_axe() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Sweeping Cleave",
+            cost: cost(&[generic(1), r()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        })),
+        ..equipment(
+            "Two-Handed Axe",
+            cost(&[generic(2), r()]),
+            cost(&[generic(1), r()]),
+            EquipBonus {
+                triggered_abilities: vec![on_attack(Effect::DoublePower {
+                    what: Selector::This,
+                    times: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                })],
+                ..Default::default()
+            },
+        )
+    }
+}
+
+fn rats_you_control() -> Selector {
+    Selector::EachPermanent(R::HasCreatureType(CreatureType::Rat).and(R::ControlledByYou))
+}
+
+/// Rat Colony — {1}{B} 2/1 Rat. It gets +1/+0 for each other Rat you control.
+/// A deck can have any number of cards named Rat Colony.
+pub fn rat_colony() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Rat Colony",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Rat]),
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "This creature gets +1/+0 for each other Rat you control.",
+                effect: StaticEffect::PumpSelfByControlledPermanents {
+                    filter: R::HasCreatureType(CreatureType::Rat).and(R::OtherThanSource),
+                    per_power: 1,
+                    per_toughness: 0,
+                },
+            },
+            crate::sets::deck_may_have_copies(None),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Swarm of Rats — {1}{B} */1 Rat. Its power is the number of Rats you
+/// control.
+pub fn swarm_of_rats() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Swarm of Rats",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Rat]),
+        power: 0,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Swarm of Rats's power is equal to the number of Rats you control.",
+            effect: StaticEffect::SelfBasePtFromValue {
+                power: Value::CountOf(Box::new(rats_you_control())),
+                toughness: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Foul-Tongue Shriek — {B} Instant. Target opponent loses 1 life for each
+/// attacking creature you control; you gain that much life.
+pub fn foul_tongue_shriek() -> CardDefinition {
+    let attackers = || Value::CountOf(Box::new(Selector::EachPermanent(R::IsAttacking.and(R::ControlledByYou))));
+    CardDefinition {
+        name: "Foul-Tongue Shriek",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife { who: target_filtered(R::OpponentPlayer), amount: attackers() },
+            Effect::GainLife { who: Selector::You, amount: attackers() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gruesome Fate — {2}{B} Sorcery. Each opponent loses 1 life for each
+/// creature you control.
+pub fn gruesome_fate() -> CardDefinition {
+    CardDefinition {
+        name: "Gruesome Fate",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Thrumming Stone — {5} Legendary Artifact. Spells you cast have ripple 4.
+pub fn thrumming_stone() -> CardDefinition {
+    CardDefinition {
+        name: "Thrumming Stone",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        // Each spell's ripple is its own cast trigger (CR 702.20b); a rippled
+        // copy is cast too, so it ripples again.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::Ripple { n: Value::Const(4), of_trigger_spell: true },
+        }],
+        ..Default::default()
+    }
+}
