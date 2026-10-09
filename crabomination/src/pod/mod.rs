@@ -2139,6 +2139,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MENDICANT_COMMANDERS,
             main: decks::MENDICANT_MAIN,
         },
+        // Seat 287: Wick, the Whorled Mind's EDHREC average deck. `--pod-decks 287`.
+        PodDeck {
+            name: "Wick, the Whorled Mind (BRU)",
+            commanders: decks::WICK_COMMANDERS,
+            main: decks::WICK_MAIN,
+        },
     ]
 }
 
@@ -4039,6 +4045,7 @@ mod tests {
             ("Golbez, Crystal Collector", [0x601B, 284, 9209]),
             ("Urza, Lord High Artificer", [0x0F2A, 285, 9210]),
             ("Mendicant Core, Guidelight", [0x3E4D, 286, 9211]),
+            ("Wick, the Whorled Mind", [0x31C4, 287, 9212]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

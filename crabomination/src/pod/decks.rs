@@ -8425,3 +8425,31 @@ pub const MENDICANT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const WICK_COMMANDERS: &[CardFactory] = &[wick_the_whorled_mind];
+
+/// **Wick, the Whorled Mind**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 4 Islands + 4 Mountains + 9 Swamps = 99.
+/// Grixis Rats: each Rat entering grows Wick's Snail, which he sacrifices to drain and draw.
+pub const WICK_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, maskwood_nexus, patchwork_banner, rakdos_signet, skullclamp,
+    sol_ring, talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence,
+    thought_vessel, blood_crypt, bojuka_bog, command_tower, crumbling_necropolis,
+    dragonskull_summit, drowned_catacomb, exotic_orchard, mudflat_village, path_of_ancestry,
+    reliquary_tower, seething_landscape, smoldering_marsh, steam_vents, sulfur_falls,
+    sunken_hollow, swarmyard, three_tree_city, watery_grave, xanders_lounge,
+    ashcoat_of_the_shadow_swarm, azure_beastbinder, bloodline_pretender, burglar_rat,
+    changeling_outcast, chittering_witch, ink_eyes_servant_of_oni, karumonix_the_rat_king,
+    lord_skitters_butcher, lord_skitter_sewer_king, mad_ratter, marrow_gnawer, mindwhisker,
+    nashi_moon_sages_scion, ogre_chitterlord, ogre_slumlord, pack_rat, persistent_marshstalker,
+    piper_of_the_swarm, rat_king_verminister, shoreline_looter, tangled_colony, taurean_mauler,
+    totentanz_swarm_piper, twisted_sewer_witch, typhoid_rats, valley_rotcaller, voracious_vermin,
+    vren_the_relentless, black_market_connections, impact_tremors, kindred_discovery,
+    reflections_of_littjara, shared_animosity, an_offer_you_cant_refuse, bulk_up, chaos_warp,
+    counterspell, dark_ritual, deadly_dispute, gnawing_crescendo, negate, rat_out, terminate,
+    unleash_fury, blasphemous_act, distant_melody, feed_the_swarm, plague_of_vermin,
+    revenge_of_the_rats, song_of_totentanz, swarmyard_massacre,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
