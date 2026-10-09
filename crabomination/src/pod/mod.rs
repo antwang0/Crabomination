@@ -3908,7 +3908,10 @@ mod tests {
             ("Atla Palani, Nest Tender", [0xA71A, 268, 9192]),
             ("Betor, Kin to All", [0xBE71, 269, 9193]),
             ("Lumra, Bellow of the Woods", [0x1B4A, 270, 9194]),
-            ("Marina Vendrell", [0x3A41, 271, 9195]),
+            // 9196, not 9195: once the bot stopped buying evasion under Sphere
+            // of Safety (CR 508.1g), 9195 reached Ghostly Dancers + Secret
+            // Arcade, a true unbounded mandatory loop that ends as a board cap.
+            ("Marina Vendrell", [0x3A41, 271, 9196]),
             ("Aloy, Savior of Meridian", [0xA109, 272, 9196]),
             ("Marchesa, the Black Rose", [0x3A4C, 273, 9197]),
         ];
