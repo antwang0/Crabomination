@@ -2694,6 +2694,15 @@ pub fn play_one_pod_game_censused(
     play_pod_game(template, pilots, max_actions, seed, into, pod_concede_rate())
 }
 
+/// A pod seat aims a hostile player slot at an opponent first, whatever its
+/// profile: `baseline`'s caster-first walk is a two-player ladder control, and
+/// in a pod it pointed Crackle with Power at its own face and drew a won game
+/// (CR 104.4a; seed 56037, decks 259,205,207,161). The uniform pilot stays the
+/// unscored control.
+fn pod_hostile_player_targets(pilot: Pilot) -> bool {
+    !matches!(pilot, Pilot::Uniform)
+}
+
 /// The pod loop; `concede_rate` is [`pod_concede_rate`]'s knob as a value.
 fn play_pod_game(
     template: &GameState,
@@ -2713,11 +2722,7 @@ fn play_pod_game(
             player.smart_tap = w.smart_tap;
             player.converge_rarest = w.converge_rarest;
         }
-        player.hostile_player_targets = match pilot {
-            Pilot::Scored(w) => w.hostile_player_targets,
-            Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
-            Pilot::Uniform => false,
-        };
+        player.hostile_player_targets = pod_hostile_player_targets(*pilot);
         player.library.shuffle(&mut shuffle);
     }
     // A seeded deal implies a seeded game — mulligan reshuffles and every
@@ -3767,6 +3772,23 @@ pub fn run_pod(
 
 #[cfg(test)]
 mod tests {
+    /// CR 104.4a — a pod seat on the `baseline` profile aimed Crackle with
+    /// Power's first slot at its own face and drew a pod it had won. Every
+    /// scored pod seat now names an opponent first; no slot names the caster.
+    #[test]
+    fn a_pod_seat_never_aims_burn_at_itself() {
+        let mut g = crate::game::multi_player_game(4);
+        let pilot = Pilot::Scored(crate::server::bot::EvalWeights::baseline());
+        g.players[1].hostile_player_targets = pod_hostile_player_targets(pilot);
+        g.add_card_to_battlefield(3, crate::catalog::grizzly_bears());
+        let crackle = crate::catalog::crackle_with_power();
+        let (t, extras) = g.auto_targets_for_effect_all_slots_x(&crackle.effect, 1, None, false, None, Some(4));
+        let me = crate::game::types::Target::Player(1);
+        assert!(t.is_some_and(|t| t != me), "slot 0 names an opponent");
+        assert!(!extras.contains(&me), "and no other slot names the caster");
+        assert!(!pod_hostile_player_targets(Pilot::Uniform), "the uniform control is unchanged");
+    }
+
     /// CR 601.2g — a `{1}, {T}` mana source must not pay its own {1}. The
     /// payment snapshot was taken before the {T} cost and the restricted-source
     /// search (Vedalken Engineer's artifact-only mana, allowed on an artifact's
