@@ -2967,6 +2967,40 @@ fn play_pod_game(
                     g.turn_number,
                 );
             }
+            // CR 400.7 — links and spell choices a new object doesn't carry:
+            // an "until this leaves" exile link outside exile, a may-play
+            // permission on a card in a hand or command zone ("that card"
+            // stops naming it once it moves), a kicked flag off the
+            // battlefield, stack and exile.
+            let linked = g
+                .players
+                .iter()
+                .flat_map(|p| {
+                    p.hand
+                        .iter()
+                        .map(|c| (c, Off::Hand))
+                        .chain(p.library.iter().map(|c| (c, Off::Library)))
+                        .chain(p.graveyard.iter().map(|c| (c, Off::Graveyard)))
+                        .chain(p.command.iter().map(|c| (c, Off::Command)))
+                })
+                .find(|(c, z)| {
+                    c.exiled_by.is_some()
+                        || (matches!(z, Off::Hand | Off::Command) && c.may_play_until.is_some())
+                        || c.kicked
+                });
+            if let Some((c, _)) = linked.filter(|_| g.pending_decision.is_none()) {
+                panic!(
+                    "seed {seed}: {} {:?} in {} kept a link (exiled_by {:?}, may_play {}, kicked {}; turn {}, {:?}, after {actions} actions)",
+                    c.definition.name,
+                    c.id,
+                    zone_label(&g, c.id),
+                    c.exiled_by.map(|l| l.source),
+                    c.may_play_until.is_some(),
+                    c.kicked,
+                    g.turn_number,
+                    g.step,
+                );
+            }
             // CR 704.5d / 704.5e — a token or a copy of a card off the
             // battlefield and the stack ceases to exist at the next sweep, so
             // none survives a settled action (one may wait out a paused one).
