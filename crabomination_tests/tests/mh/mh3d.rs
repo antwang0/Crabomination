@@ -417,7 +417,8 @@ fn collective_resistance_grants_protection() {
         "gained hexproof + indestructible");
 }
 
-/// Ripples of Undeath mills three at your first main and lets you take one back.
+/// Ripples of Undeath mills three at your first main; paying {1} and 3 life
+/// takes one of them back.
 #[test]
 fn ripples_of_undeath_mills_and_returns_one() {
     let mut g = two_player_game();
@@ -427,15 +428,38 @@ fn ripples_of_undeath_mills_and_returns_one() {
         milled.push(g.add_card_to_library(0, catalog::grizzly_bears()));
     }
     let hand_before = g.players[0].hand.len();
-    // Take one of the three milled cards back to hand.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![milled[0]])]));
+    let life = g.players[0].life;
+    // Pay, then take one of the three milled cards back to hand.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![milled[0]])]));
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    // Pools empty between steps (CR 500.4): float the {1} here.
+    g.players[0].mana_pool.add_colorless(1);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 2, "milled three, took one back");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one milled card in hand");
+    assert_eq!(g.players[0].life, life - 3, "paid 3 life");
+}
+
+/// Ripples of Undeath without the {1}: the three stay milled.
+#[test]
+fn ripples_of_undeath_without_the_mana_keeps_them_milled() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ripples_of_undeath());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.step = TurnStep::Upkeep;
     while g.step != TurnStep::PreCombatMain {
         g.perform_action(GameAction::PassPriority).expect("advance");
     }
     drain_stack(&mut g);
-    assert_eq!(g.players[0].graveyard.len(), 2, "milled three, took one back");
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one milled card in hand");
+    assert_eq!(g.players[0].graveyard.len(), 3);
+    assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
 /// Genku's activated ability puts a +1/+1 counter on each creature you control.

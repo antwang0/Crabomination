@@ -659,9 +659,10 @@ pub fn collective_resistance() -> CardDefinition {
 }
 
 /// Ripples of Undeath — {1}{B} enchantment. At the beginning of your first main
-/// phase, mill three cards; you may put one of them into your hand. (The
-/// printed "pay {1} and 3 life" cost on the return is omitted.)
+/// phase, mill three cards; then you may pay {1} and 3 life (offered only
+/// with 3+ life, CR 119.4) to put one of them into your hand.
 pub fn ripples_of_undeath() -> CardDefinition {
+    use crate::effect::shortcut::{choose_one_then, chosen_one};
     CardDefinition {
         name: "Ripples of Undeath",
         cost: cost(&[generic(1), b()]),
@@ -671,12 +672,26 @@ pub fn ripples_of_undeath() -> CardDefinition {
                 EventKind::StepBegins(crate::game::types::TurnStep::PreCombatMain),
                 EventScope::YourControl,
             ),
-            effect: Effect::MillThenToHandN {
-                amount: Value::Const(3),
-                filter: R::Any,
-                take: Value::Const(1),
-                otherwise: None,
-            },
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::LifeOf(PlayerRef::You), Value::Const(3)),
+                    then: Box::new(Effect::MayPay {
+                        description: "Pay {1} and 3 life to put a milled card into your hand?".into(),
+                        mana_cost: cost(&[generic(1)]),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                            choose_one_then(
+                                Selector::LastMoved,
+                                PlayerRef::You,
+                                Effect::Move { what: chosen_one(), to: ZoneDest::Hand(PlayerRef::You) },
+                            ),
+                        ])),
+                        else_: None,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
         }],
         ..Default::default()
     }
