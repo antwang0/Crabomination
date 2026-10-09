@@ -19420,7 +19420,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GrantProtectionFromChosenColor { what, duration } => {
+            Effect::GrantProtectionFromChosenColor { what, duration }
+            | Effect::GrantProtectionFromChosenColorOrColorless { what, duration } => {
                 // The controller picks a color; each target gains
                 // protection from it for `duration` (EOT today). Mother of
                 // Runes / Gods Willing.
@@ -19441,11 +19442,17 @@ impl GameState {
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
-                let color = match self.stack_threat_color(ctx.controller, &ids) {
-                    Some(threat) => self.chosen_color_or(Some(source), &Color::ALL, threat),
-                    None => self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true),
+                let or_colorless = matches!(effect, Effect::GrantProtectionFromChosenColorOrColorless { .. });
+                // A colorless threat on top (Walking Ballista, an Eldrazi's
+                // trigger) names colorless where colorless is offered.
+                let kw = if or_colorless && self.stack_threat(ctx.controller, &ids) == Some(None) {
+                    Keyword::ProtectionFromMatching(Box::new(SelectionRequirement::Colorless))
+                } else {
+                    Keyword::Protection(match self.stack_threat_color(ctx.controller, &ids) {
+                        Some(threat) => self.chosen_color_or(Some(source), &Color::ALL, threat),
+                        None => self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true),
+                    })
                 };
-                let kw = Keyword::Protection(color);
                 for cid in ids {
                     self.grant_keyword_for(cid, kw.clone(), *duration, ctx);
                 }

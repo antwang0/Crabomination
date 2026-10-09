@@ -4336,9 +4336,22 @@ impl crate::game::GameState {
     /// illegal and the spell fizzles, CR 608.2b). `None` when nothing hostile
     /// aims at them or the threat is colorless.
     pub(crate) fn stack_threat_color(&self, p: usize, ids: &[CardId]) -> Option<ManaColor> {
+        self.stack_threats(p, ids).find_map(|c| c)
+    }
+
+    /// The newest opposing spell or ability aimed at one of `ids`, as its
+    /// first color — `Some(None)` when it is colorless (Giver of Runes'
+    /// colorless choice).
+    pub(crate) fn stack_threat(&self, p: usize, ids: &[CardId]) -> Option<Option<ManaColor>> {
+        self.stack_threats(p, ids).next()
+    }
+
+    /// Each opposing spell or ability on the stack aimed at one of `ids`,
+    /// newest first, as its first color.
+    fn stack_threats<'a>(&'a self, p: usize, ids: &'a [CardId]) -> impl Iterator<Item = Option<ManaColor>> + 'a {
         use crate::game::types::{StackItem, Target};
-        let hits = |t: &Target| matches!(t, Target::Permanent(id) if ids.contains(id));
-        self.stack.iter().rev().find_map(|item| {
+        let hits = move |t: &Target| matches!(t, Target::Permanent(id) if ids.contains(id));
+        self.stack.iter().rev().filter_map(move |item| {
             let (owner, aimed, colors) = match item {
                 StackItem::Spell { card, caster, target, additional_targets, .. } => (
                     *caster,
@@ -4354,7 +4367,7 @@ impl crate::game::GameState {
             if self.same_team(owner, p) || !aimed {
                 return None;
             }
-            colors.first().copied()
+            Some(colors.first().copied())
         })
     }
 

@@ -115,12 +115,19 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
     // Willing's ability kin): a coloured removal spell or ability aimed at
     // one of ours loses its target (CR 702.16b), and the grant names that
     // colour as it resolves (`stack_threat_color`).
+    // Giver of Runes' colorless choice answers a colorless threat too.
+    let colored = victim.is_some_and(|v| state.stack_threat_color(seat, &[v]).is_some());
+    let colorless = victim.is_some_and(|v| state.stack_threat(seat, &[v]) == Some(None));
     if let Some(v) = victim
-        && state.stack_threat_color(seat, &[v]).is_some()
+        && (colored || colorless)
     {
         for c in state.battlefield.iter().filter(|c| c.controller == seat) {
             for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
-                let Effect::GrantProtectionFromChosenColor { what, .. } = &ab.effect else { continue };
+                let what = match &ab.effect {
+                    Effect::GrantProtectionFromChosenColor { what, .. } if colored => what,
+                    Effect::GrantProtectionFromChosenColorOrColorless { what, .. } => what,
+                    _ => continue,
+                };
                 let aim = match what {
                     Selector::This if v == c.id => None,
                     Selector::Target(_) | Selector::TargetFiltered { .. } => Some(Target::Permanent(v)),

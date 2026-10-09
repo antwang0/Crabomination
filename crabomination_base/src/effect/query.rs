@@ -2017,6 +2017,7 @@ impl Effect {
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
+            | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
             | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. }
@@ -2901,6 +2902,7 @@ impl Effect {
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
+            | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
             | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. } => sel_filter(what),
@@ -5451,6 +5453,7 @@ impl Effect {
                 | Effect::GrantKeywordThroughControllersNextCombat { what, .. }
                 | Effect::GrantKeywords { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. }
+                | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
                 | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
                 | Effect::GainProtectionFromPlayer { what, .. }
                 | Effect::CantBeBlockedByPlayer { what, .. }
