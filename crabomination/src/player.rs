@@ -248,6 +248,9 @@ pub struct PlayerCold {
     pub milled_spell_cast_this_turn: bool,
     #[serde(default)]
     pub milled_land_played_this_turn: bool,
+    /// Kagha, Shadow Archdruid's once-a-turn milled play, used this turn.
+    #[serde(default)]
+    pub milled_once_used_this_turn: bool,
     /// Sources whose once-per-turn graveyard-cast grant was used this turn:
     /// Exploration Broodship's {8+} band
     /// (`StaticEffect::GraveyardCastBySacrificingOncePerTurn`) and Kotis's

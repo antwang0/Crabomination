@@ -7442,7 +7442,8 @@ impl BoardFacts {
                     | SE::GraveyardCastOncePerTurn { .. }
                     | SE::GraveyardPlayOncePerTurnWithRider { .. }
                     | SE::GraveyardCastBySacrificingOncePerTurn { .. }
-                    | SE::MayPlayCardsMilledThisTurn => f.grants_gy_cast = true,
+                    | SE::MayPlayCardsMilledThisTurn
+                    | SE::MayPlayOwnMilledPermanentOncePerTurn => f.grants_gy_cast = true,
                     SE::CastFromGraveyardMatching { .. } => {
                         f.grants_gy_cast = true;
                         f.grants_gy_cast_any_turn = true;

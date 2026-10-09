@@ -33586,6 +33586,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControlledHaveAbilitiesOfExiledWithSource { .. }
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::MayPlayCardsMilledThisTurn
+            | StaticEffect::MayPlayOwnMilledPermanentOncePerTurn
             | StaticEffect::PlayExiledWithSourceForLife
             | StaticEffect::PlayFetchCounteredExiles
             | StaticEffect::CommanderChoosesColorBeforeGame

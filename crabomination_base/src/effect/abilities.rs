@@ -2338,6 +2338,11 @@ pub enum StaticEffect {
     /// turn." (Coram, the Undertaker.) Any graveyard; a one-land, one-spell
     /// budget per turn (`game/milled_play.rs`).
     MayPlayCardsMilledThisTurn,
+    /// Kagha, Shadow Archdruid — "once during each of your turns, you may play
+    /// a land or cast a permanent spell from among cards in your graveyard
+    /// that were put there from your library this turn." Own graveyard, one
+    /// play a turn, its own budget beside Coram's (`game/milled_play.rs`).
+    MayPlayOwnMilledPermanentOncePerTurn,
     /// "During your turn, you may play cards exiled with this. If you cast a
     /// spell this way, pay life equal to its mana value rather than pay its
     /// mana cost." (Valgavoth, Terror Eater.) Read by
