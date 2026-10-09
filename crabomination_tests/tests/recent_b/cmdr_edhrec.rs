@@ -3194,3 +3194,70 @@ fn hope_of_ghirapur_locks_until_your_next_turn() {
     advance_to_turn_of(&mut g, 0);
     assert!(!g.players[1].cant_cast_noncreature_this_turn, "free from our next turn");
 }
+
+/// Ziatora's, Helga's and Vihaan's gaps: Mr. Orfeo doubles an attacker's
+/// power; Riveteers Ascendancy returns a cheaper creature on a sacrifice;
+/// Zimone grows two creatures at combat and doubles their counters; Brokers
+/// Ascendancy grows the team at the end step; Generous Plunderer shares a
+/// Treasure and hits for the defender's artifacts; Jan Jansen turns an
+/// artifact creature into two Treasures; Smaug burns for your Treasures.
+#[test]
+fn ziatora_helga_vihaan_cards() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mr_orfeo_the_boulder());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    g.players[0].hostile_player_targets = true;
+    let life = g.players[1].life;
+    connect(&mut g, giant);
+    assert_eq!(g.players[1].life, life - 6, "3 doubled");
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::riveteers_ascendancy());
+    let elder = ready(&mut g, 0, catalog::sakura_tribe_elder());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let elves = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g);
+    activate(&mut g, elder, None);
+    assert!(g.battlefield_find(bear).is_none(), "the Bear's 2 isn't less than the Elder's 2");
+    assert!(g.battlefield_find(elves).is_some_and(|c| c.tapped), "the Elves' 1 is");
+
+    let mut g = pod(2);
+    let zimone = ready(&mut g, 0, catalog::zimone_paradox_sculptor());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let total = |g: &GameState| -> u32 { g.battlefield.iter().map(|c| c.counter_count(CounterType::PlusOnePlusOne)).sum() };
+    assert_eq!(total(&g), 2);
+    flood(&mut g);
+    activate(&mut g, zimone, Some(Target::Permanent(a)));
+    assert_eq!(total(&g), 3, "one creature's counter doubled");
+    ready(&mut g, 0, catalog::brokers_ascendancy());
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(total(&g), 5);
+
+    let mut g = pod(2);
+    let plunderer = ready(&mut g, 0, catalog::generous_plunderer());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let treasures = |g: &GameState, p: usize| g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Treasure").count();
+    assert_eq!((treasures(&g, 0), treasures(&g, 1)), (1, 1));
+    let life = g.players[1].life;
+    connect(&mut g, plunderer);
+    assert_eq!(g.players[1].life, life - 1 - 2, "one artifact, then combat");
+
+    let mut g = pod(2);
+    let jan = ready(&mut g, 0, catalog::jan_jansen_chaos_crafter());
+    ready(&mut g, 0, catalog::ornithopter());
+    activate(&mut g, jan, None);
+    assert_eq!(treasures(&g, 0), 2);
+    let smaug = ready(&mut g, 0, catalog::smaug_the_magnificent());
+    g.players[0].hostile_player_targets = true;
+    let life = g.players[1].life;
+    connect(&mut g, smaug);
+    assert_eq!(g.players[1].life, life - 2 - 4, "two Treasures, then combat");
+}

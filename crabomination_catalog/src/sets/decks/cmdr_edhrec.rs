@@ -5988,3 +5988,236 @@ pub fn phoenix_chick() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mr. Orfeo, the Boulder — {1}{B}{R}{G} 2/4 Rhino Warrior. Whenever you
+/// attack, double target creature's power until end of turn.
+pub fn mr_orfeo_the_boulder() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Mr. Orfeo, the Boulder",
+        cost: cost(&[generic(1), b(), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Rhino, CreatureType::Warrior]),
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::DoublePower { what: target_filtered(R::Creature), times: Value::ONE, duration: Duration::EndOfTurn },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Riveteers Ascendancy — {B}{R}{G} Enchantment. Whenever you sacrifice a
+/// creature, you may return target creature card with lesser mana value from
+/// your graveyard to the battlefield tapped. Once each turn.
+pub fn riveteers_ascendancy() -> CardDefinition {
+    CardDefinition {
+        name: "Riveteers Ascendancy",
+        cost: cost(&[b(), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl).once_per_turn(),
+            effect: Effect::MayDo {
+                description: "Return a creature card with lesser mana value tapped?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueLessThanEventAmount)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chakram Retriever — {4}{U} 2/4 Elemental Dog, partner with Chakram
+/// Slinger. Whenever you cast a spell during your turn, untap target creature.
+pub fn chakram_retriever() -> CardDefinition {
+    CardDefinition {
+        name: "Chakram Retriever",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elemental, CreatureType::Dog]),
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::PartnerWith("Chakram Slinger".into())],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zimone, Paradox Sculptor — {2}{G}{U} 1/4 Human Wizard. At the beginning of
+/// combat on your turn, a +1/+1 counter on each of up to two target creatures
+/// you control. {G}{U}, {T}: double each kind of counter on up to two target
+/// creatures and/or artifacts you control.
+pub fn zimone_paradox_sculptor() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Zimone, Paradox Sculptor",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+                effect: Box::new(Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g(), u()]),
+            tap_cost: true,
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),
+                effect: Box::new(Effect::DoubleAllCountersOn { what: Selector::Target(0) }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brokers Ascendancy — {G}{W}{U} Enchantment. At the beginning of your end
+/// step, a +1/+1 counter on each creature you control and a loyalty counter on
+/// each planeswalker you control.
+pub fn brokers_ascendancy() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Brokers Ascendancy",
+        cost: cost(&[g(), w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::AddCounter {
+                    what: Selector::EachPermanent(R::Planeswalker.and(R::ControlledByYou)),
+                    kind: CounterType::Loyalty,
+                    amount: Value::ONE,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Generous Plunderer — {1}{R} 2/2 menace Human Rogue. At your upkeep you may
+/// make a Treasure; when you do, target opponent makes a tapped Treasure.
+/// Attacking, it deals damage to the defending player equal to the artifacts
+/// they control.
+pub fn generous_plunderer() -> CardDefinition {
+    let treasure = crabomination_base::tokens::treasure_token;
+    CardDefinition {
+        name: "Generous Plunderer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Rogue]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::MayDo {
+                    description: "Create a Treasure (an opponent gets a tapped one)?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        mint(treasure(), Value::ONE),
+                        Effect::ReflexiveTrigger {
+                            body: Box::new(Effect::CreateToken {
+                                who: PlayerRef::ControllerOf(Box::new(target_filtered(R::OpponentPlayer))),
+                                count: Value::ONE,
+                                definition: Arc::new(TokenDefinition { tapped: true, ..treasure() }),
+                            }),
+                        },
+                    ])),
+                },
+            },
+            on_attack(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::DefendingPlayer),
+                amount: Value::count(Selector::EachPermanent(R::Artifact.and(R::ControlledByDefendingPlayer))),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Jan Jansen, Chaos Crafter — {R}{W}{B} 3/3 haste Gnome Artificer. {T},
+/// sacrifice an artifact creature: two Treasures. {T}, sacrifice a noncreature
+/// artifact: two 1/1 Construct artifact creatures.
+pub fn jan_jansen_chaos_crafter() -> CardDefinition {
+    let construct = TokenDefinition {
+        name: "Construct".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Construct]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Jan Jansen, Chaos Crafter",
+        cost: cost(&[r(), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Gnome, CreatureType::Artificer]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_other_filter: Some((R::Artifact.and(R::Creature), 1)),
+                effect: mint(crabomination_base::tokens::treasure_token(), Value::Const(2)),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_other_filter: Some((R::Artifact.and(R::Noncreature), 1)),
+                effect: mint(construct, Value::Const(2)),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Smaug the Magnificent — {2}{R}{R} 4/3 flying, haste Dragon. Attacking, he
+/// deals damage equal to your Treasures to any target. Your upkeep: a
+/// Treasure.
+pub fn smaug_the_magnificent() -> CardDefinition {
+    CardDefinition {
+        name: "Smaug the Magnificent",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Dragon]),
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![
+            on_attack(Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::count(Selector::EachPermanent(R::ControlledByYou.and(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure)))),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: mint(crabomination_base::tokens::treasure_token(), Value::ONE),
+            },
+        ],
+        ..Default::default()
+    }
+}
