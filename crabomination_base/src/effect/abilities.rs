@@ -3230,6 +3230,11 @@ pub enum StaticEffect {
     /// (player) and their noncreature permanents. The Wanderer. Consulted at
     /// the noncombat funnel for both player and permanent targets.
     PreventNoncombatDamageToYouAndYourPermanents,
+    /// CR 615 — "Prevent all noncombat damage that would be dealt to you"
+    /// (Blessed Sanctuary's player half; its creature half is
+    /// `PreventNoncombatDamageToYourCreatures`). The player-only sibling of
+    /// `PreventNoncombatDamageToYouAndYourPermanents`, read at the same check.
+    PreventNoncombatDamageToYou,
     /// CR 615 — "Prevent all damage that would be dealt to creature tokens you
     /// control" (Emmara Tandris). Consulted on both the combat and noncombat
     /// damage paths for token creatures controlled by this static's controller.

@@ -18069,17 +18069,20 @@ impl GameState {
         {
             return false;
         }
-        let seat = match victim {
-            EntityRef::Player(p) => p,
+        let (seat, player) = match victim {
+            EntityRef::Player(p) => (p, true),
             EntityRef::Permanent(id) | EntityRef::Card(id) => {
                 let Some(c) = self.battlefield_find(id) else { return false };
-                c.controller
+                (c.controller, false)
             }
         };
         self.battlefield.iter().any(|c| {
             c.controller == seat
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::PreventNoncombatDamageToYouAndYourPermanents)
+                && c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                    crate::effect::StaticEffect::PreventNoncombatDamageToYouAndYourPermanents => true,
+                    // Blessed Sanctuary — the player half only.
+                    crate::effect::StaticEffect::PreventNoncombatDamageToYou => player,
+                    _ => false,
                 })
         })
     }
@@ -32392,6 +32395,7 @@ fn static_effect_shields_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::PreventNoncombatDamageToYourCreatures
         | SE::PreventNoncombatDamageToMatching { .. }
         | SE::PreventNoncombatDamageToYouAndYourPermanents
+        | SE::PreventNoncombatDamageToYou
         | SE::PreventAllDamageToYourCreatureTokens
         | SE::PreventAllDamageToYourCreatures
         | SE::PreventAllDamageToCreatures
@@ -34183,6 +34187,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventNoncombatDamageToYourCreatures
             | StaticEffect::PreventNoncombatDamageToMatching { .. }
             | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
+            | StaticEffect::PreventNoncombatDamageToYou
             | StaticEffect::PreventAllDamageToYourCreatureTokens
             | StaticEffect::PreventAllDamageToYourCreatures
             | StaticEffect::PreventAllDamageToCreatures
