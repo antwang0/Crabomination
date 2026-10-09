@@ -7224,17 +7224,21 @@ pub fn survey_mechan() -> CardDefinition {
     }
 }
 
-/// Loading Zone — {3}{G} Enchantment. Counters put on permanents you control are
-/// doubled. Warp {G}. (Restriction to creatures/Spacecraft/Planets approximated
-/// to all your counters.)
+/// Loading Zone — {3}{G} Enchantment. Counters put on a creature, Spacecraft,
+/// or Planet you control are doubled. Warp {G}.
 pub fn loading_zone() -> CardDefinition {
     CardDefinition {
         name: "Loading Zone",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "If counters would be put on a permanent you control, double them.",
-            effect: StaticEffect::DoubleCounters,
+            description: "If one or more counters would be put on a creature, Spacecraft, or Planet you control, twice that many of each of those kinds of counters are put on it instead.",
+            effect: StaticEffect::DoubleCountersMatching {
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft))
+                    .or(SelectionRequirement::HasLandType(crate::card::LandType::Planet))
+                    .and(SelectionRequirement::ControlledByYou),
+            },
         }],
         alternative_cost: Some(warp(cost(&[g()]))),
         ..Default::default()
@@ -7242,8 +7246,7 @@ pub fn loading_zone() -> CardDefinition {
 }
 
 /// Sami, Wildcat Captain — {4}{R}{W} 4/4 Human Artificer Rogue with double strike
-/// and vigilance. Your instant/sorcery spells have affinity for artifacts. (The
-/// "all spells" breadth is approximated to instants and sorceries.)
+/// and vigilance. Spells you cast have affinity for artifacts.
 pub fn sami_wildcat_captain() -> CardDefinition {
     CardDefinition {
         name: "Sami, Wildcat Captain",
@@ -7262,8 +7265,9 @@ pub fn sami_wildcat_captain() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::DoubleStrike, Keyword::Vigilance],
         static_abilities: vec![StaticAbility {
-            description: "Instant and sorcery spells you cast have affinity for artifacts.",
-            effect: StaticEffect::GrantAffinityToISSpells {
+            description: "Spells you cast have affinity for artifacts.",
+            effect: StaticEffect::GrantAffinityToSpells {
+                spell_filter: SelectionRequirement::Any,
                 permanent_filter: SelectionRequirement::Artifact
                     .and(SelectionRequirement::ControlledByYou),
             },
@@ -7350,9 +7354,8 @@ fn eoe_robot_token(tapped: bool) -> TokenDefinition {
 
 /// Dawnsire, Sunstar Dreadnought — {5} Legendary Artifact — Spacecraft.
 /// Station; 10+ | whenever you attack, deal 100 damage to up to one target
-/// creature or planeswalker. 20+ | flying, and it's a 20/20 artifact creature.
-/// (The "whenever you attack" rider fires per attacker — the codebase's
-/// established YourControl approximation.)
+/// creature or planeswalker (once per attack declaration). 20+ | flying, and
+/// it's a 20/20 artifact creature.
 pub fn dawnsire_sunstar_dreadnought() -> CardDefinition {
     CardDefinition {
         name: "Dawnsire, Sunstar Dreadnought",
@@ -7485,14 +7488,17 @@ pub fn infinite_guideline_station() -> CardDefinition {
     }
 }
 
-/// Command Bridge — Land. Enters tapped, taps for any color. (The "sacrifice it
-/// unless you tap an untapped permanent" ETB cost is dropped.)
+/// Command Bridge — Land. Enters tapped; when it enters, sacrifice it unless
+/// you tap an untapped permanent you control. Taps for any color.
 pub fn command_bridge() -> CardDefinition {
     CardDefinition {
         name: "Command Bridge",
         card_types: vec![CardType::Land],
         activated_abilities: vec![super::tap_add_any_color()],
         static_abilities: vec![super::enters_tapped()],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::SacrificeSourceUnlessTapMatching {
+            filter: SelectionRequirement::Permanent,
+        })],
         ..Default::default()
     }
 }

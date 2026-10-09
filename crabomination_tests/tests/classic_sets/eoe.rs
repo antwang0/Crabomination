@@ -2745,9 +2745,13 @@ fn loading_zone_doubles_counters() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(blade).unwrap().counter_count(CounterType::PlusOnePlusOne), 4,
         "2 counters doubled to 4");
+    // Only creatures, Spacecraft and Planets: a noncreature artifact isn't.
+    let vault = g.add_card_to_battlefield(0, catalog::memorial_vault());
+    assert_eq!(g.scaled_counter_count_on(vault, CounterType::Charge, 1), 1, "an artifact isn't doubled");
+    assert_eq!(g.scaled_counter_count_on(blade, CounterType::Charge, 1), 2, "a creature is");
 }
 
-/// Sami grants your instant/sorcery spells affinity for artifacts.
+/// Sami grants every spell you cast affinity for artifacts.
 #[test]
 fn sami_grants_affinity_for_artifacts() {
     use crabomination::game::actions::cost_reduction_for_spell;
@@ -2758,6 +2762,8 @@ fn sami_grants_affinity_for_artifacts() {
     g.add_card_to_battlefield(0, catalog::memorial_vault());
     g.add_card_to_battlefield(0, catalog::memorial_vault());
     assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, None), 2, "{{2}} off for two artifacts");
+    let giant = crabomination::card::CardInstance::new(g.next_id(), catalog::hill_giant(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &giant, None), 2, "a creature spell too");
 }
 
 /// Annul counters an artifact spell on the stack.
@@ -3159,14 +3165,22 @@ fn secluded_starforge_taps_x_artifacts_for_power() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
 }
 
-/// Command Bridge enters tapped and taps for any color.
+/// Command Bridge enters tapped and is sacrificed unless you tap an untapped
+/// permanent you control.
 #[test]
 fn command_bridge_enters_tapped() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::command_bridge());
     g.perform_action(GameAction::PlayLand(id)).expect("play Command Bridge");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(id).unwrap().tapped, "enters tapped");
+    assert!(g.battlefield_find(id).is_none(), "nothing to tap: sacrificed");
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::command_bridge());
+    g.perform_action(GameAction::PlayLand(id)).expect("play Command Bridge");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "enters tapped and stays");
+    assert!(g.battlefield_find(forest).unwrap().tapped, "the Forest paid the toll");
 }
 
 /// The Eternity Elevator's base ability taps for {C}{C}{C}.

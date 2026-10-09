@@ -26446,7 +26446,7 @@ pub fn mightform_harmonizer() -> CardDefinition {
 
 /// Pinnacle Emissary — {1}{U}{R} 3/3. Whenever you cast an artifact spell,
 /// create a 1/1 colorless Drone artifact creature token with flying that can
-/// block only creatures with flying. (Warp is dropped.)
+/// block only creatures with flying. Warp {U/R}.
 pub fn pinnacle_emissary() -> CardDefinition {
     use crate::card::TokenDefinition;
     CardDefinition {
