@@ -3691,3 +3691,45 @@ fn ygra_food_kit() {
     assert_eq!((bears_of(&g, 0), bears_of(&g, 1), bears_of(&g, 2)), (1, 1, 0));
     assert_eq!(g.players[0].hand.len(), hand + 1, "the Revel saw the opponent's Sol Ring die");
 }
+
+/// Orvar's targeting kit: Twiddle on your own creature makes Vesuvan
+/// Duplimancy copy it (nonlegendary); Enervate's draw waits for the next
+/// turn's upkeep; Thermal Flux makes a permanent snow, or one not snow, until
+/// end of turn (CR 205.4, layer 4).
+#[test]
+fn orvar_targeting_kit() {
+    use crabomination::card::Supertype;
+    let mut g = pod(2);
+    flood(&mut g);
+    ready(&mut g, 0, catalog::vesuvan_duplimancy());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let twiddle = g.add_card_to_hand(0, catalog::twiddle());
+    cast(&mut g, twiddle, Some(Target::Permanent(bear)));
+    assert_eq!(named(&g, "Grizzly Bears"), 2, "a token copy");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Twiddle tapped it");
+
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let enervate = g.add_card_to_hand(0, catalog::enervate());
+    cast(&mut g, enervate, Some(Target::Permanent(theirs)));
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+    assert_eq!(named(&g, "Grizzly Bears"), 3, "an opponent's target makes no copy");
+
+    let flux = g.add_card_to_hand(0, catalog::thermal_flux());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: flux, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(0), x_value: None })
+        .expect("flux");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().supertypes().contains(&Supertype::Snow), "snow until end of turn");
+    let snow = ready(&mut g, 0, catalog::snow_covered_forest());
+    let flux = g.add_card_to_hand(0, catalog::thermal_flux());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: flux, target: Some(Target::Permanent(snow)), additional_targets: vec![], mode: Some(1), x_value: None })
+        .expect("flux");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(snow).unwrap().supertypes().contains(&Supertype::Snow), "no longer snow");
+
+    let hand = g.players[0].hand.len();
+    advance_to_turn_of(&mut g, 1);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "Enervate's and both Fluxes' draws at the next upkeep");
+    assert!(!g.computed_permanent(bear).unwrap().supertypes().contains(&Supertype::Snow), "the snow wore off");
+}

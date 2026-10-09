@@ -7412,3 +7412,93 @@ pub fn fade_from_history() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// "Draw a card at the beginning of the next turn's upkeep" — whoever's turn
+/// that is (CR 603.7a).
+fn draw_next_upkeep() -> Effect {
+    Effect::AtNextTurnsUpkeep { body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }) }
+}
+
+/// Enervate — {1}{U} Instant. Tap target artifact, creature, or land. Draw a
+/// card at the beginning of the next turn's upkeep.
+pub fn enervate() -> CardDefinition {
+    CardDefinition {
+        name: "Enervate",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Artifact.or(R::Creature).or(R::Land)) },
+            draw_next_upkeep(),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Thermal Flux — {U} Instant. Choose one — target nonsnow permanent becomes
+/// snow until end of turn; or target snow permanent isn't snow until end of
+/// turn. Draw a card at the beginning of the next turn's upkeep.
+pub fn thermal_flux() -> CardDefinition {
+    let mode = |filter: R, gain: bool| {
+        Effect::Seq(vec![
+            Effect::ChangeSupertype {
+                what: target_filtered(R::Permanent.and(filter)),
+                supertype: Supertype::Snow,
+                gain,
+                duration: Duration::EndOfTurn,
+            },
+            draw_next_upkeep(),
+        ])
+    };
+    CardDefinition {
+        name: "Thermal Flux",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![mode(R::IsSnow.negate(), true), mode(R::IsSnow, false)]),
+        ..Default::default()
+    }
+}
+
+/// Twiddle — {U} Instant. You may tap or untap target artifact, creature, or
+/// land.
+pub fn twiddle() -> CardDefinition {
+    CardDefinition {
+        name: "Twiddle",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::TapOrUntap { what: target_filtered(R::Artifact.or(R::Creature).or(R::Land)) },
+        ..Default::default()
+    }
+}
+
+/// Vesuvan Duplimancy — {3}{U} Enchantment. Whenever you cast a spell that
+/// targets only a single artifact or creature you control, create a token
+/// that's a copy of that artifact or creature, except it's not legendary.
+pub fn vesuvan_duplimancy() -> CardDefinition {
+    CardDefinition {
+        name: "Vesuvan Duplimancy",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellTargetsOnlyOneMatching(R::Artifact.or(R::Creature).and(R::ControlledByYou)),
+            ),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: Selector::CastSpellTarget(0),
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: true,
+                legendary: false,
+                extra_keywords: vec![],
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
