@@ -3389,3 +3389,59 @@ fn brenard_artifacts() {
         .expect("the granted {T}: Add {G}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
 }
+
+/// Hazezon's Deserts: Grasping Dunes shrinks a creature; Survivors'
+/// Encampment taps a creature for colored mana; Realms Uncharted splits four
+/// lands two and two; Nahiri's Lithoforming trades lands for cards and makes
+/// the next land enter tapped.
+#[test]
+fn hazezon_deserts() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let dunes = ready(&mut g, 0, catalog::grasping_dunes());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: dunes, ability_index: 1, target: Some(Target::Permanent(theirs)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("dunes");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+
+    let camp = ready(&mut g, 0, catalog::survivors_encampment());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::ActivateAbility { card_id: camp, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("encampment");
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for land in [catalog::forest(), catalog::island(), catalog::swamp(), catalog::mountain(), catalog::plains()] {
+        g.add_card_to_library(0, land);
+    }
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    let gy = g.players[0].graveyard.len();
+    let realms = g.add_card_to_hand(0, catalog::realms_uncharted());
+    cast(&mut g, realms, None);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    assert_eq!(g.players[0].graveyard.len(), gy + 2 + 1, "two lands and the spell");
+
+    let mut g = pod(2);
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    let litho = g.add_card_to_hand(0, catalog::nahiris_lithoforming());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: litho, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("X = 2");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Forest"), 0);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    let land = g.add_card_to_hand(0, catalog::island());
+    g.perform_action(GameAction::PlayLand(land)).expect("a land");
+    assert!(g.battlefield_find(land).unwrap().tapped);
+}

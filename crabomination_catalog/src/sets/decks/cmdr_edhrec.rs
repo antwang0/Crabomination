@@ -6523,3 +6523,93 @@ pub fn night_of_the_sweets_revenge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn desert(name: &'static str, extra: ActivatedAbility) -> CardDefinition {
+    use crate::card::LandType;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Desert], ..Default::default() },
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                ..Default::default()
+            },
+            extra,
+        ],
+        ..Default::default()
+    }
+}
+
+/// Grasping Dunes — Land — Desert. {T}: {C}. {1}, {T}, sacrifice it: a -1/-1
+/// counter on target creature (sorcery speed).
+pub fn grasping_dunes() -> CardDefinition {
+    use crate::card::CounterType;
+    desert(
+        "Grasping Dunes",
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::MinusOneMinusOne, amount: Value::ONE },
+            ..Default::default()
+        },
+    )
+}
+
+/// Survivors' Encampment — Land — Desert. {T}: {C}. {T}, tap an untapped
+/// creature you control: one mana of any color.
+pub fn survivors_encampment() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    desert(
+        "Survivors' Encampment",
+        ActivatedAbility {
+            tap_cost: true,
+            tap_others_cost: Some((R::Creature.and(R::ControlledByYou), 1)),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        },
+    )
+}
+
+/// Realms Uncharted — {2}{G} Instant. Search for up to four land cards with
+/// different names and reveal them; an opponent chooses two for your
+/// graveyard, the rest go to your hand; shuffle.
+pub fn realms_uncharted() -> CardDefinition {
+    CardDefinition {
+        name: "Realms Uncharted",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SearchSplitOpponentChooses {
+            opponent: Selector::None,
+            count: 4,
+            opponent_picks: 2,
+            chosen_to: ZoneDest::Graveyard,
+            rest_to: ZoneDest::Hand(PlayerRef::You),
+            filter: Some(R::Land),
+        },
+        ..Default::default()
+    }
+}
+
+/// Nahiri's Lithoforming — {X}{R}{R} Sorcery. Sacrifice X lands, drawing a
+/// card for each; you may play X additional lands this turn; lands you control
+/// enter tapped this turn.
+pub fn nahiris_lithoforming() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Nahiri's Lithoforming",
+        cost: cost(&[x(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice { who: Selector::You, count: Value::XFromCost, filter: R::Land },
+            Effect::Draw { who: Selector::You, amount: Value::SacrificedCount },
+            Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::XFromCost },
+            Effect::YourLandsEnterTappedThisTurn,
+        ]),
+        ..Default::default()
+    }
+}
