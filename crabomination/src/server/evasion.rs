@@ -70,7 +70,15 @@ pub(super) fn pick_evasion_grant(state: &GameState, seat: usize) -> Option<GameA
     if grants.is_empty() {
         return None;
     }
-    let caps = state.attack_power_caps(crate::game::combat::attack_static_scan(state));
+    let statics = crate::game::combat::attack_static_scan(state);
+    // CR 508.1g — under an attack tax (Sphere of Safety, Ghostly Prison) the
+    // mana is the attack's budget: a Ranar seat spent 112 Replicated Rings on
+    // Whirler Rogue every turn, then declared no attack, for 200 turns (audit
+    // pod, seed 3130282 game 9).
+    if state.attack_tax_possible(statics) {
+        return None;
+    }
+    let caps = state.attack_power_caps(statics);
     let mut ready: Vec<(i32, crate::card::CardId)> = state
         .battlefield
         .iter()
@@ -233,6 +241,27 @@ mod tests {
             Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
                 if card_id == rogue && t == wurm
         ));
+    }
+
+    /// CR 508.1g — under an opponent's Sphere of Safety the artifacts are the
+    /// attack tax's budget, so no evasion is bought with them (audit pod, seed
+    /// 3130282 game 9: 200 turns of unblockable creatures that never attacked).
+    #[test]
+    fn no_evasion_is_bought_under_an_attack_tax() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let rogue = g.add_card_to_battlefield(0, crate::catalog::whirler_rogue());
+        let wurm = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+        for id in [rogue, wurm] {
+            g.clear_sickness(id);
+        }
+        g.add_card_to_battlefield(0, crate::catalog::mind_stone());
+        g.add_card_to_battlefield(0, crate::catalog::mind_stone());
+        g.add_card_to_battlefield(1, crate::catalog::sphere_of_safety());
+        assert!(pick_evasion_grant(&g, 0).is_none());
     }
 
     /// Rogue's Passage makes the biggest ready attacker unblockable in the
