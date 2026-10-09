@@ -2474,3 +2474,48 @@ fn cloud_doubles_equipment_triggers() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), library - 2, "the draw triggered an additional time");
 }
+
+/// Amy Rose: attacking, she picks up an Equipment and pumps another attacker
+/// by her power.
+#[test]
+fn amy_rose_equips_and_pumps() {
+    let mut g = pod(2);
+    let amy = ready(&mut g, 0, catalog::amy_rose());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sting = ready(&mut g, 0, catalog::sting_the_glinting_dagger());
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: amy, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sting).unwrap().attached_to, Some(amy));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2 + 4, "Amy is 4 with Sting");
+}
+
+/// Errant and Giada cast a flier off the top, not a Bear; Tails draws for a
+/// flying Vehicle and gives a grounded one a flying counter.
+#[test]
+fn errant_and_giada_and_tails() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::errant_and_giada());
+    ready(&mut g, 0, catalog::miles_tails_prower());
+    g.players[0].library.clear();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err());
+    g.players[0].library.clear();
+    let copter = g.add_card_to_library(0, catalog::smugglers_copter());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, copter, None);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a flying Vehicle draws");
+    let core = g.add_card_to_hand(0, catalog::mechtitan_core());
+    cast(&mut g, core, None);
+    assert!(g.computed_permanent(core).unwrap().keywords().contains(&Keyword::Flying), "a flying counter");
+}

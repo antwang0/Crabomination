@@ -4356,3 +4356,98 @@ pub fn forge_anew() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Amy Rose — {2}{R}{W} 3/3 Hedgehog Warrior, haste. Attacking, attach up to
+/// one target Equipment you control to her, then up to one other target
+/// attacking creature gets +X/+0 this turn, X her power.
+pub fn amy_rose() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Amy Rose",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Hedgehog, CreatureType::Warrior]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![on_attack(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Attach {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
+                    },
+                    to: Selector::This,
+                },
+                Effect::PumpPT {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::IsAttacking).and(R::OtherThanSource),
+                    },
+                    power: Value::PowerOf(Box::new(Selector::This)),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Errant and Giada — {1}{W}{U} 2/3 Human Angel, flash, flying. Look at your
+/// library's top any time; cast spells with flash or flying from there.
+pub fn errant_and_giada() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Errant and Giada",
+        cost: cost(&[generic(1), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Angel]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility { description: "You may look at the top card of your library any time.", effect: StaticEffect::TopOfLibraryRevealed },
+            StaticAbility {
+                description: "You may cast spells with flash or flying from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: R::Not(Box::new(R::Land))
+                        .and(R::HasKeyword(Keyword::Flash).or(R::HasKeyword(Keyword::Flying))),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Miles "Tails" Prower — {1}{W}{U} 3/1 Fox Artificer, flash, flying. A
+/// Vehicle entering under your control draws a card if it has flying, else
+/// gets a flying counter.
+pub fn miles_tails_prower() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Miles \"Tails\" Prower",
+        cost: cost(&[generic(1), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Fox, CreatureType::Artificer]),
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+            }),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasKeyword(Keyword::Flying) },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::AddKeywordCounter { what: Selector::TriggerSource, keyword: Keyword::Flying, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
