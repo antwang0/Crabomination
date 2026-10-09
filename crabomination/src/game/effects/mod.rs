@@ -4124,10 +4124,8 @@ impl GameState {
             effect,
             Effect::AddCounter { .. } | Effect::Proliferate | Effect::AddPoison { .. } | Effect::DoubleCountersOnEach { .. }
         ) {
-            let prev = self.counter_placer.replace(ctx.controller);
-            let r = self.run_effect_body(effect, ctx, events);
-            self.counter_placer = prev;
-            return r;
+            let _placer = crate::game::CounterPlacerGuard::set(ctx.controller);
+            return self.run_effect_body(effect, ctx, events);
         }
         // CR 603.2c — one damage event per damage-dealing sentence.
         if damage_batch::is_damage_sentence(effect)

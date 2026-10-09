@@ -3635,12 +3635,6 @@ pub struct GameState {
     /// the replacement's extra mints aren't re-replaced (CR 614.5). Transient.
     #[serde(skip)]
     pub(crate) in_token_replacement: bool,
-    /// The seat whose resolving effect is putting counters on something —
-    /// set around `AddCounter` / `Proliferate` / `AddPoison` for Vorinclex,
-    /// Monstrous Raider's placer-keyed scaling; `None` elsewhere, where the
-    /// recipient's controller is the placer. Transient.
-    #[serde(skip)]
-    pub(crate) counter_placer: Option<usize>,
     /// CR 725 — the monarch (if any). The monarch draws a card at the
     /// beginning of their end step, and a creature dealing combat damage to
     /// the monarch makes its controller the new monarch. `#[serde(default)]`
@@ -4491,7 +4485,6 @@ impl Clone for GameState {
             in_chains_replacement: self.in_chains_replacement,
             exile_resolving_spell_with_countdown: self.exile_resolving_spell_with_countdown,
             in_token_replacement: self.in_token_replacement,
-            counter_placer: self.counter_placer,
             monarch: self.monarch,
             initiative: self.initiative,
             day_night: self.day_night,
@@ -4719,7 +4712,6 @@ impl GameState {
             in_chains_replacement: false,
             exile_resolving_spell_with_countdown: false,
             in_token_replacement: false,
-            counter_placer: None,
             monarch: None,
             initiative: None,
             day_night: None,
@@ -7946,7 +7938,7 @@ impl GameState {
         if n == 0 {
             return 0;
         }
-        let placer = self.counter_placer.unwrap_or(recipient);
+        let placer = COUNTER_PLACER.with(|c| c.get()).unwrap_or(recipient);
         let (mut doubles, mut halves) = (0u32, 0u32);
         for c in self.battlefield.iter() {
             for sa in &c.definition.static_abilities {
@@ -35347,4 +35339,30 @@ fn all_slots_zoned_card_targets(
             && resolving_slot_filter(effect, spree_modes, i as u8, mode, kicked)
                 .is_some_and(|f| f.mentions_offboard_zone())
     })
+}
+
+thread_local! {
+    /// The seat whose resolving effect is putting counters on something —
+    /// set around `AddCounter` / `Proliferate` / `AddPoison` /
+    /// `DoubleCountersOnEach` for Vorinclex, Monstrous Raider's placer-keyed
+    /// scaling; `None` elsewhere, where the recipient's controller is the
+    /// placer. A thread-local rather than a `GameState` field: it lives for one
+    /// synchronous effect call, and a field crossed `game_state_stays_small`.
+    static COUNTER_PLACER: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
+}
+
+/// Names `seat` as the counter placer until dropped, restoring the previous
+/// placer (nested effects, an unwinding panic).
+pub(crate) struct CounterPlacerGuard(Option<usize>);
+
+impl CounterPlacerGuard {
+    pub(crate) fn set(seat: usize) -> Self {
+        Self(COUNTER_PLACER.with(|c| c.replace(Some(seat))))
+    }
+}
+
+impl Drop for CounterPlacerGuard {
+    fn drop(&mut self) {
+        COUNTER_PLACER.with(|c| c.set(self.0));
+    }
 }
