@@ -4939,3 +4939,31 @@ pub fn invigorating_surge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Agrus Kos, Eternal Soldier — {3}{W} 3/4 vigilance Spirit Soldier. When it
+/// becomes the target of an ability that targets only it, you may pay
+/// {1}{R/W} to copy that ability for each other creature you control it could
+/// target, each copy aimed at a different one.
+pub fn agrus_kos_eternal_soldier() -> CardDefinition {
+    CardDefinition {
+        name: "Agrus Kos, Eternal Soldier",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Spirit, CreatureType::Soldier]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+                .with_filter(Predicate::AbilityOnStackTargetsOnlySource),
+            effect: Effect::MayPay {
+                description: "Pay {1}{R/W} to copy that ability for each other creature you control?".into(),
+                mana_cost: cost(&[generic(1), hybrid(Color::Red, Color::White)]),
+                body: Box::new(Effect::CopyAbilityTargetingSourceForEachOtherCreature),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -4720,6 +4720,7 @@ static DECKS: &[Factory] = &[
     super::decks::vorinclex_monstrous_raider,
     super::decks::defiler_of_vigor,
     super::decks::invigorating_surge,
+    super::decks::agrus_kos_eternal_soldier,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

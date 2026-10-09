@@ -2749,3 +2749,39 @@ fn vorinclex_scales_counters_by_who_places_them() {
     cast(&mut g, bear, None);
     assert_eq!(g.battlefield_find(defiler).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Agrus Kos: an ability aimed only at it is copied, for {1}{R/W}, onto each
+/// other creature its controller controls; one aimed elsewhere isn't.
+#[test]
+fn agrus_kos_copies_an_ability_onto_each_other_creature() {
+    use crabomination::card::{ActivatedAbility, CardDefinition, CardType, CounterType, SelectionRequirement as R};
+    use crabomination::effect::{Effect, Value, shortcut::target_filtered};
+    let pumper = || CardDefinition {
+        name: "Test Pumper",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut g = pod(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let agrus = ready(&mut g, 0, catalog::agrus_kos_eternal_soldier());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let tool = ready(&mut g, 0, pumper());
+    flood(&mut g);
+    activate(&mut g, tool, Some(Target::Permanent(agrus)));
+    let n = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((n(&g, agrus), n(&g, a), n(&g, b), n(&g, theirs)), (1, 1, 1, 0));
+    g.battlefield_find_mut(tool).unwrap().tapped = false;
+    activate(&mut g, tool, Some(Target::Permanent(a)));
+    assert_eq!((n(&g, agrus), n(&g, a), n(&g, b)), (1, 2, 1), "not aimed at Agrus");
+}
