@@ -2298,9 +2298,9 @@ pub fn strionic_resonator() -> CardDefinition {
 /// Hunting Velociraptor — {2}{R} Creature — Dinosaur 3/2. First strike.
 /// Dinosaur spells you cast have prowl {2}{R} (`StaticEffect::
 /// GrantProwlToSpells`, read by `effective_alternative_cost`; the prowl gate
-/// uses the spell's own creature types).
-/// Approximation: a Dinosaur with a printed alternative cost keeps that one
-/// instead (a card carries one alternative cost).
+/// uses the spell's own creature types). A Dinosaur with its own alternative
+/// cost takes the granted prowl through `CastSpellGrantedAlternative`
+/// (CR 118.9a, the caster picks one).
 pub fn hunting_velociraptor() -> CardDefinition {
     CardDefinition {
         name: "Hunting Velociraptor",
