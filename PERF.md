@@ -3134,6 +3134,24 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-09 (Commander routine — session `01SYwcUg`, third checkpoint) — guardrail; seats 296-309
+
+Hot-path touches: every `run_effect` asks one `matches!` for the four
+counter-placing effects (Vorinclex's placer guard, a thread-local — the
+`GameState` field it replaced crossed `game_state_stays_small`'s 1,680-byte
+cap); `placer_scaled_counters` walks the battlefield's statics once per
+counter placement; the end-of-turn may-play sweep gained one arm. Release
+`bot_ladder` at `a57e03d80`.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak_rss 29.2 MiB
+release pods     330 games, strict answer log, seats 294-309: 4 shuffled
+                 4-seat groups x 30 x seeds 28000/28001 + 3 six-seat groups
+                 x 30 (seed 28100) — 330/330 decided, 0 caps, 0 panics
+suite            24,642 / 0 / 5 (before seats 306-309); workspace clippy 0
+```
+
 ### 2026-10-09 (Commander routine — session `01SYwcUg`, second checkpoint) — guardrail; seats 274-293
 
 Hot-path touches: every trigger push asks `source_trigger_extra_fires` (one
