@@ -3241,7 +3241,11 @@ The rest of the run's card / engine fixes (type unions, Soul Conduit, the
 re-run after each batch, **196,176 / 27.64 / 613.0 byte-identical** every
 time; full suite on the tip after Conciliator's Duelist (before the
 up-to-one batch, which ran its own targeted tests + golden traces)
-**24,984 / 0 / 5**; clippy 0.
+**24,984 / 0 / 5**; clippy 0. Final full suite at the life-swap tip:
+25,000 run, **2 failed** — both audits my Tidebinder change tripped (a
+printed `is_artifact()` read over the structural cap; the strip audit's
+needle list) — fixed in the next commit and re-run green with the
+structural / catalog audits (35 / 0).
 
 ### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls
 
