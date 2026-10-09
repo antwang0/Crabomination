@@ -521,6 +521,8 @@ pub enum PlaneswalkerSubtype {
     Jeska, Szat,
     // Commander Legends: Battle for Baldur's Gate planeswalker commanders.
     Sivitri, Elminster, Tasha,
+    // Venser, the Sojourner (Brago's EDHREC deck).
+    Venser,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
