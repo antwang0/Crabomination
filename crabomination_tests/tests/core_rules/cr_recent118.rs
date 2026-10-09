@@ -1349,3 +1349,22 @@ fn cr_400_7_a_drawn_card_loses_its_play_permission() {
     let c = g.players[0].hand.iter().find(|c| c.id == top).expect("drawn");
     assert!(c.may_play_until.is_none());
 }
+
+/// CR 708 — Missy's "put it onto the battlefield face down as a Cyberman"
+/// that never entered (Grafdigger's Cage) leaves the card face up in the
+/// graveyard; it sat there face down (fuzzed audit pod, seed 3184380 game 7).
+#[test]
+fn cr_708_a_cyberman_that_never_entered_stays_face_up() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grafdiggers_cage());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let body = Effect::PutFaceDownAsCyberman { what: Selector::CardsInZone {
+        who: PlayerRef::Seat(1), zone: crabomination::card::Zone::Graveyard,
+        filter: crabomination::card::SelectionRequirement::Creature,
+    }, tapped: false };
+    resolve(&mut g, src, None, &body);
+    let c = g.players[1].graveyard.iter().find(|c| c.id == bear).expect("kept in the graveyard");
+    assert!(!c.face_down);
+    assert_eq!(c.definition.name, "Grizzly Bears");
+}

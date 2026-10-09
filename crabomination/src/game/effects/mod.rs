@@ -4777,14 +4777,17 @@ impl GameState {
                     else {
                         continue;
                     };
-                    if let Some(c) = self.players[owner].graveyard.iter_mut().find(|c| c.id == cid) {
-                        c.turn_face_down_as_forest();
-                    }
                     let dest = ZoneDest::Battlefield {
                         controller: crate::effect::PlayerRef::Seat(owner),
                         tapped: false,
                     };
-                    self.move_card_to(cid, &dest, ctx, events);
+                    self.face_down_onto_battlefield(
+                        cid,
+                        crate::card::CardInstance::turn_face_down_as_forest,
+                        &dest,
+                        ctx,
+                        events,
+                    );
                 }
                 Ok(())
             }

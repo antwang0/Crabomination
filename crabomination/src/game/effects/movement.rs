@@ -2214,43 +2214,37 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) {
-        let pl = &mut self.players[p];
-        // Library first, then hand — two passes rather than a `chain`, which
-        // would need both zones borrowed mutably at once (`Player` is a CoW
-        // handle, so a field `&mut` borrows the whole seat).
-        let in_library = pl.library.iter().any(|c| c.id == cid);
-        let zone = if in_library { &mut pl.library } else { &mut pl.hand };
-        if let Some(c) = zone.iter_mut().find(|c| c.id == cid) {
-            c.turn_face_down();
-        }
         let dest = ZoneDest::Battlefield {
             controller: crate::effect::PlayerRef::Seat(p),
             tapped: false,
         };
-        self.move_card_to(cid, &dest, ctx, events);
-        self.unturn_unmoved_manifest(cid, p);
+        self.face_down_onto_battlefield(cid, crate::card::CardInstance::turn_face_down, &dest, ctx, events);
     }
 
-    /// CR 701.40a / 708 — a card turned face down to be manifested that did
-    /// not reach the battlefield (a replacement or the board bound kept it)
-    /// is face up again where it stayed: Ghastly Conscription left a card face
-    /// down in a graveyard (seven-seat fuzzed audit pod, seed 3141188 game 7).
-    fn unturn_unmoved_manifest(&mut self, cid: CardId, owner: usize) {
-        let Some(pl) = self.players.get(owner) else { return };
-        let stayed = |z: &[crate::card::CardInstance]| z.iter().any(|c| c.id == cid && c.face_down);
-        let (g, l, h) = (stayed(&pl.graveyard), stayed(&pl.library), stayed(&pl.hand));
-        if !(g || l || h) {
-            return;
+    /// CR 701.40a / 708 — turn `cid` face down with `turn`, then move it to
+    /// `dest`. A card that did not reach the battlefield (a replacement,
+    /// Grafdigger's Cage, the board bound) is face up again where it stayed
+    /// — unless it was face down before (a foretold card). Ghastly
+    /// Conscription and Missy's Cyberman left cards face down in graveyards
+    /// (fuzzed audit pods, seeds 3141188 game 7 and 3184380 game 7).
+    pub(crate) fn face_down_onto_battlefield(
+        &mut self,
+        cid: CardId,
+        turn: fn(&mut crate::card::CardInstance),
+        dest: &ZoneDest,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let was_down = self.find_card_anywhere(cid).is_none_or(|c| c.face_down);
+        if let Some(c) = self.find_card_anywhere_mut(cid) {
+            turn(c);
         }
-        let pl = &mut self.players[owner];
-        let zone: &mut [crate::card::CardInstance] = if g {
-            &mut pl.graveyard
-        } else if l {
-            &mut pl.library
-        } else {
-            &mut pl.hand
-        };
-        if let Some(c) = zone.iter_mut().find(|c| c.id == cid) {
+        self.move_card_to(cid, dest, ctx, events);
+        if !was_down
+            && self.battlefield_find(cid).is_none()
+            && let Some(c) = self.find_card_anywhere_mut(cid)
+            && c.face_down
+        {
             c.reveal();
         }
     }
@@ -2260,16 +2254,12 @@ impl GameState {
     pub(crate) fn manifest_from_graveyard(
         &mut self,
         cid: CardId,
-        owner: usize,
+        _owner: usize,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) {
-        if let Some(c) = self.players[owner].graveyard.iter_mut().find(|c| c.id == cid) {
-            c.turn_face_down();
-        }
         let dest = ZoneDest::Battlefield { controller: crate::effect::PlayerRef::Seat(ctx.controller), tapped: false };
-        self.move_card_to(cid, &dest, ctx, events);
-        self.unturn_unmoved_manifest(cid, owner);
+        self.face_down_onto_battlefield(cid, crate::card::CardInstance::turn_face_down, &dest, ctx, events);
     }
 
     /// Exile `anchor_id` and every same-named card in its owner's graveyard,

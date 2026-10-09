@@ -38,23 +38,29 @@ impl GameState {
                 EntityRef::Permanent(id) => {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.turn_face_down_as_cyberman();
-                    } else if reachable(self, id)
-                        && let Some(c) = self.find_card_anywhere_mut(id)
-                    {
+                    } else if reachable(self, id) {
                         // A selector can name an off-battlefield card as a
                         // permanent id (`Target(0)` of a graveyard slot).
-                        c.turn_face_down_as_cyberman();
-                        self.move_card_to(id, &dest, ctx, events);
+                        self.face_down_onto_battlefield(
+                            id,
+                            crate::card::CardInstance::turn_face_down_as_cyberman,
+                            &dest,
+                            ctx,
+                            events,
+                        );
                     }
                 }
                 EntityRef::Card(id) => {
                     if !reachable(self, id) {
                         continue;
                     }
-                    if let Some(c) = self.find_card_anywhere_mut(id) {
-                        c.turn_face_down_as_cyberman();
-                    }
-                    self.move_card_to(id, &dest, ctx, events);
+                    self.face_down_onto_battlefield(
+                        id,
+                        crate::card::CardInstance::turn_face_down_as_cyberman,
+                        &dest,
+                        ctx,
+                        events,
+                    );
                 }
                 EntityRef::Player(_) => {}
             }
