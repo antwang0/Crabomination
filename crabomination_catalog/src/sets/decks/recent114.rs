@@ -412,8 +412,9 @@ pub fn sigil_of_the_new_dawn() -> CardDefinition {
 }
 
 /// Calix, Guided by Fate — {1}{G}{W} 2/2 legendary Human Druid. Constellation:
-/// put a +1/+1 counter on target creature. (The combat-copy ability is dropped
-/// — the constellation payoff is modeled.)
+/// put a +1/+1 counter on target creature. Once each turn, Calix or an
+/// enchanted creature of yours dealing combat damage to a player may copy a
+/// nonlegendary enchantment you control.
 pub fn calix_guided_by_fate() -> CardDefinition {
     CardDefinition {
         name: "Calix, Guided by Fate",
