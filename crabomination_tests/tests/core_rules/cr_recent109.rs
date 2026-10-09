@@ -676,7 +676,7 @@ fn a_granted_changeling_gets_sliver_grants() {
 /// CR 608.2b / 702.16b — a COPY of a spell re-checks its target too: Murder,
 /// Reverberate copying it, and Mother of Runes giving the Bear protection
 /// from black in answer to the copy — the copy fizzles, then the Murder.
-/// (The copy inherits the original's `cast_target_was_battlefield`, so it
+/// (The copy inherits the original's `cast_bf_slots`, so it
 /// takes the same re-check as the cast spell.)
 #[test]
 fn a_spell_copy_fizzles_on_protection_gained_in_response() {

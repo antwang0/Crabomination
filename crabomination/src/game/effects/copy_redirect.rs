@@ -77,6 +77,7 @@ impl GameState {
         {
             *t = Some(Target::Permanent(aim));
         }
+        self.remark_stack_targets(self.stack.len().saturating_sub(1));
         Ok(())
     }
 
@@ -152,6 +153,7 @@ impl GameState {
             {
                 *t = Some(Target::Permanent(aim));
             }
+            self.remark_stack_targets(self.stack.len().saturating_sub(1));
         }
         Ok(())
     }

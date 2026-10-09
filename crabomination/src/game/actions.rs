@@ -12463,13 +12463,10 @@ impl GameState {
                     .then(|| (card.definition.arc(), x_value))
             });
 
-        // CR 608.2b — remember whether the primary target is a battlefield
-        // permanent right now; resolution re-checks its legality.
+        // CR 608.2b — remember which targets are battlefield permanents right
+        // now; resolution re-checks their legality.
         let mut card = card;
-        card.cast_target_was_battlefield = matches!(
-            &target,
-            Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
-        );
+        card.cast_bf_slots = self.battlefield_target_slots(target.as_ref(), &additional_targets);
         if self.cast_kick_count > 0 {
             card.kicked = true;
             card.kick_count = self.cast_kick_count;
@@ -12515,10 +12512,7 @@ impl GameState {
                 let new_id = self.next_id();
                 let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), p);
                 copy_inst.is_token = true;
-                copy_inst.cast_target_was_battlefield = matches!(
-                    &copy_target,
-                    Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
-                );
+                copy_inst.cast_bf_slots = self.battlefield_target_slots(copy_target.as_ref(), &additional_targets);
                 if let Some(c) = &storm_choices {
                     c.apply(&mut copy_inst);
                 }
@@ -12903,6 +12897,7 @@ impl GameState {
             }
             None => {}
         }
+        self.remark_stack_targets(self.stack.len().saturating_sub(1));
     }
 
     pub(crate) fn push_on_cast_triggers_x(

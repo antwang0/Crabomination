@@ -1113,3 +1113,93 @@ fn cr_506_4_a_god_that_loses_devotion_leaves_combat_while_an_ask_is_pending() {
     assert!(g.battlefield_find(tusker).is_none());
     assert!(!g.attacking.iter().any(|a| a.attacker == klothys), "Klothys left combat");
 }
+
+/// A free sorcery around a two-slot body, cast at `target` / `rest`, with
+/// `meanwhile` run while it is on the stack.
+fn cast_then_resolve(
+    g: &mut GameState,
+    body: Effect,
+    target: Target,
+    rest: Vec<Target>,
+    meanwhile: impl FnOnce(&mut GameState),
+) {
+    use crabomination::card::{CardDefinition, CardType};
+    let spell = g.add_card_to_hand(
+        0,
+        CardDefinition { name: "Two-Slot Sorcery", card_types: vec![CardType::Sorcery], effect: body, ..Default::default() },
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(target),
+        additional_targets: rest,
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    meanwhile(g);
+    drain_stack(g);
+}
+
+/// CR 608.2b — a SPELL's later slot that left the battlefield is illegal and
+/// the spell does nothing to it, while its legal land slot resolves: the
+/// dead creature's card stays in the graveyard (the exile used to find it
+/// there — only slot 0 carried a "was on the battlefield" mark).
+#[test]
+fn cr_608_2b_a_later_spell_slot_that_left_its_zone_is_illegal() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast_then_resolve(&mut g, mark_land_exile_creature(), Target::Permanent(land), vec![Target::Permanent(bear)], |g| {
+        g.destroy_permanent(bear, false, &mut Vec::new());
+    });
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "not exiled from the graveyard");
+}
+
+/// CR 608.2b — the mark is per slot, so a spell whose FIRST target is a
+/// player still re-checks its creature slot: the player loses the life, the
+/// creature that died in response is not exiled from the graveyard.
+#[test]
+fn cr_608_2b_a_spell_aimed_at_a_player_first_rechecks_its_creature_slot() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let body = Effect::Seq(vec![
+        Effect::LoseLife { who: Selector::Target(0), amount: crabomination::effect::Value::Const(1) },
+        Effect::Move {
+            what: Selector::TargetFiltered { slot: 1, filter: crabomination::card::SelectionRequirement::Creature },
+            to: ZoneDest::Exile,
+        },
+    ]);
+    let life = g.players[1].life;
+    cast_then_resolve(&mut g, body, Target::Player(1), vec![Target::Permanent(bear)], |g| {
+        g.destroy_permanent(bear, false, &mut Vec::new());
+    });
+    assert_eq!(g.players[1].life, life - 1, "the legal player slot resolves");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "not exiled from the graveyard");
+}
+
+/// CR 608.2b — and when every target is illegal the spell doesn't resolve:
+/// the player left the game (CR 800.4a) and the creature died.
+#[test]
+fn cr_608_2b_a_spell_whose_player_and_creature_targets_are_both_gone_fizzles() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let body = Effect::Seq(vec![
+        Effect::LoseLife { who: Selector::Target(0), amount: crabomination::effect::Value::Const(1) },
+        Effect::Move {
+            what: Selector::TargetFiltered { slot: 1, filter: crabomination::card::SelectionRequirement::Creature },
+            to: ZoneDest::Exile,
+        },
+        Effect::GainLife { who: Selector::You, amount: crabomination::effect::Value::Const(5) },
+    ]);
+    let life = g.players[0].life;
+    cast_then_resolve(&mut g, body, Target::Player(2), vec![Target::Permanent(bear)], |g| {
+        g.concede(2);
+        g.destroy_permanent(bear, false, &mut Vec::new());
+    });
+    assert_eq!(g.players[0].life, life, "the spell did not resolve");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+}

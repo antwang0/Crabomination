@@ -6609,6 +6609,7 @@ impl GameState {
                     {
                         *target = Some(pick.clone());
                     }
+                    self.remark_stack_targets(idx);
                 }
                 Ok(())
             }
@@ -21245,6 +21246,7 @@ impl GameState {
                         additional_targets[slot] = pick;
                     }
                 }
+                self.remark_stack_targets(pos);
                 Ok(())
             }
 
@@ -21336,6 +21338,7 @@ impl GameState {
                 {
                     *t = Some(Target::Permanent(aim));
                 }
+                self.remark_stack_targets(self.stack.len().saturating_sub(1));
                 Ok(())
             }
             Effect::CopySpellForEachOtherLegalCreature { what, casters_creatures } => {
@@ -21419,6 +21422,7 @@ impl GameState {
                     if let StackItem::Spell { target: t, .. } = &mut self.stack[slot] {
                         *t = Some(Target::Permanent(target));
                     }
+                    self.remark_stack_targets(slot);
                 }
                 Ok(())
             }
@@ -26527,6 +26531,7 @@ impl GameState {
                         {
                             *target = Some(Target::Permanent(src));
                         }
+                        self.remark_stack_targets(tidx);
                     }
                     return Ok(());
                 };
@@ -26565,6 +26570,7 @@ impl GameState {
                 {
                     *target = Some(Target::Permanent(src));
                 }
+                self.remark_stack_targets(idx);
                 Ok(())
             }
 
@@ -35928,6 +35934,7 @@ impl GameState {
                         });
                     }
                 }
+                self.remark_stack_targets(idx);
                 Ok(())
             }
 
@@ -36208,6 +36215,7 @@ impl GameState {
                         *additional_targets = new_extra;
                     }
                 }
+                self.remark_stack_targets(idx);
                 Ok(())
             }
 
@@ -36278,6 +36286,7 @@ impl GameState {
                         *target = new_target;
                         *additional_targets = new_extra;
                     }
+                    self.remark_stack_targets(idx);
                 }
                 Ok(())
             }

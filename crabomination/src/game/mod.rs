@@ -29892,8 +29892,8 @@ impl GameState {
         &mut self,
         card: CardInstance,
         caster: usize,
-        target: Option<Target>,
-        additional_targets: Vec<Target>,
+        mut target: Option<Target>,
+        mut additional_targets: Vec<Target>,
         mode: usize,
         x_value: u32,
         converged_value: u32,
@@ -29977,7 +29977,7 @@ impl GameState {
                         !g.evaluate_requirement_static(&f, t, caster, Some(card.id))
                     })
             };
-            let fizzled = if card.cast_target_was_battlefield
+            let fizzled = if card.cast_bf_slots & 1 != 0
                 && let Target::Permanent(tid) = t
             {
                 self.battlefield_find(*tid).is_none()
@@ -30038,17 +30038,18 @@ impl GameState {
         } else if is_initial_pass
             && !is_spree
             && let Some(t0) = &target
-            && (card.cast_target_was_battlefield
+            && (card.cast_bf_slots != 0
                 || all_slots_zoned_card_targets(effect, &card.spree_modes, mode, card.kicked, t0, &additional_targets))
         {
             // CR 608.2b — a multi-target spell fizzles only if EVERY target
-            // is illegal on resolution; effects already skip individual
-            // missing targets. Scoped to battlefield-aimed casts (slot 0 was
-            // a battlefield permanent at cast time) so zone-loose multi-
-            // target spells (graveyard returns) are unaffected.
+            // is illegal on resolution. Scoped to casts with a battlefield
+            // target (`cast_bf_slots`) so zone-loose multi-target spells
+            // (graveyard returns) are unaffected.
+            let bf_slots = card.cast_bf_slots;
             let slot_illegal = |g: &Self, slot: u8, t: &Target| {
                 // A graveyard card target's zone is the filter's to check.
-                let gone = card.cast_target_was_battlefield
+                let gone = slot < 8
+                    && bf_slots & (1 << slot) != 0
                     && matches!(t, Target::Permanent(tid) if g.battlefield_find(*tid).is_none());
                 let filter_fail = resolving_slot_filter(effect, &card.spree_modes, slot, mode, card.kicked)
                     .is_some_and(|f| {
@@ -30070,11 +30071,38 @@ impl GameState {
                                 .iter()
                                 .any(|ty| card.definition.card_types.contains(ty))))
             };
+            // CR 608.2b — "the spell doesn't perform any actions on" an
+            // illegal target: a battlefield slot (or a player) that is now
+            // illegal holds its place as a hole, so an effect that finds a
+            // card anywhere can't reach the creature card in the graveyard.
+            // A bare `Target(n)` with no slot filter isn't a declared target.
+            let hole_if_illegal = |g: &Self, slot: u8, t: &Target| {
+                !crate::game::target_hole::is_hole(t)
+                    && (matches!(t, Target::Player(_)) || (slot < 8 && bf_slots & (1 << slot) != 0))
+                    && resolving_slot_filter(effect, &card.spree_modes, slot, mode, card.kicked).is_some()
+                    && slot_illegal(g, slot, t)
+            };
+            let holes: u64 = std::iter::once(t0)
+                .chain(&additional_targets)
+                .take(64)
+                .enumerate()
+                .filter(|&(i, t)| hole_if_illegal(self, i as u8, t))
+                .fold(0, |m, (i, _)| m | (1 << i));
             let all_illegal = slot_illegal(self, 0, t0)
                 && additional_targets
                     .iter()
                     .enumerate()
                     .all(|(i, t)| slot_illegal(self, i as u8 + 1, t));
+            if !all_illegal && holes != 0 {
+                if holes & 1 != 0 {
+                    target = Some(crate::game::target_hole::TARGET_HOLE);
+                }
+                for (i, t) in additional_targets.iter_mut().enumerate().take(63) {
+                    if holes & (1 << (i + 1)) != 0 {
+                        *t = crate::game::target_hole::TARGET_HOLE;
+                    }
+                }
+            }
             if all_illegal {
                 let mut events = Vec::new();
                 if !card.is_token {

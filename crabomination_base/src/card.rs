@@ -9614,10 +9614,10 @@ pub struct CardData {
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
     /// (rebound does **not** chain).
     pub cast_from_hand: bool,
-    /// True if this spell's primary target was a battlefield permanent at
-    /// cast time. Drives the CR 608.2b resolution-time legality re-check
-    /// (a zone-loose filter targeting a graveyard card never fizzles).
-    pub cast_target_was_battlefield: bool,
+    /// CR 608.2b — bit `i` set when this spell's target slot `i` was a
+    /// battlefield permanent at cast time (slots past 7 unchecked), so
+    /// resolution can tell "left the battlefield" from a graveyard-card slot.
+    pub cast_bf_slots: u8,
     /// True if this permanent's current battlefield entry was caused by
     /// resolving the spell you cast (not a token, reanimation, or blink).
     /// Set when a permanent spell resolves; cleared at the CR 400.7 new-object
@@ -10674,7 +10674,7 @@ impl CardInstance {
             cast_converted: false,
             impending_counters: 0,
             cast_from_hand: false,
-            cast_target_was_battlefield: false,
+            cast_bf_slots: 0,
             entered_by_cast: false,
             cast_via_flashback: false,
             feather_exile_return: false,
@@ -11957,10 +11957,9 @@ struct CardInstanceWire {
     /// for back-compat.
     #[serde(default)]
     encoded_on: Option<CardId>,
-    /// CR 608.2b fizzle bookkeeping — primary target was a battlefield
-    /// permanent at cast time. `#[serde(default)]` for back-compat.
+    /// CR 608.2b fizzle bookkeeping — `CardInstance::cast_bf_slots`.
     #[serde(default)]
-    cast_target_was_battlefield: bool,
+    cast_bf_slots: u8,
     /// `Effect::GainActivatedAbility` grants (Urza's Saga). `#[serde(default)]`
     /// for back-compat.
     #[serde(default)]
@@ -12304,7 +12303,7 @@ impl serde::Serialize for CardInstance {
             spliced_effects: self.spliced_effects.clone(),
             spliced_names: self.spliced_names.clone(),
             encoded_on: self.encoded_on,
-            cast_target_was_battlefield: self.cast_target_was_battlefield,
+            cast_bf_slots: self.cast_bf_slots,
             granted_activated_abilities: self.granted_activated_abilities.clone(),
             granted_statics: self.granted_statics.clone(),
             granted_activated_eot: self.granted_activated_eot.clone(),
@@ -12445,7 +12444,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.spliced_effects = wire.spliced_effects.clone();
         c.spliced_names = wire.spliced_names.clone();
         c.encoded_on = wire.encoded_on;
-        c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
+        c.cast_bf_slots = wire.cast_bf_slots;
         c.granted_activated_abilities = wire.granted_activated_abilities;
         c.granted_statics = wire.granted_statics;
         c.granted_activated_eot = wire.granted_activated_eot;

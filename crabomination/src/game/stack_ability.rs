@@ -15,14 +15,41 @@ impl GameState {
     /// is a new object (CR 707.10), so a cloned item is restamped too.
     pub fn push_stack(&mut self, mut item: StackItem) {
         self.stamp_ability_id(&mut item);
-        if let StackItem::Trigger { target, additional_targets, bf_slots, .. } = &mut item {
-            *bf_slots = self.battlefield_target_slots(target.as_ref(), additional_targets);
-        }
+        self.mark_battlefield_targets(&mut item);
         self.stack.push(item);
     }
 
+    /// CR 608.2b — OR into `item`'s battlefield-slot mark the slots that name a
+    /// permanent on the battlefield now. Run as it goes on the stack and after
+    /// any retarget (CR 115.7): a slot keeps a mark it already had, so a copy
+    /// (CR 707.10) or an unchanged slot whose permanent left stays illegal.
+    pub(crate) fn mark_battlefield_targets(&self, item: &mut StackItem) {
+        let now = self.stack_item_bf_slots(item);
+        match item {
+            StackItem::Trigger { bf_slots, .. } => *bf_slots |= now,
+            StackItem::Spell { card, .. } => card.cast_bf_slots |= now,
+        }
+    }
+
+    /// [`Self::mark_battlefield_targets`] for the stack item at `idx`.
+    pub(crate) fn remark_stack_targets(&mut self, idx: usize) {
+        let Some(now) = self.stack.get(idx).map(|item| self.stack_item_bf_slots(item)) else { return };
+        match &mut self.stack[idx] {
+            StackItem::Trigger { bf_slots, .. } => *bf_slots |= now,
+            StackItem::Spell { card, .. } => card.cast_bf_slots |= now,
+        }
+    }
+
+    fn stack_item_bf_slots(&self, item: &StackItem) -> u8 {
+        match item {
+            StackItem::Trigger { target, additional_targets, .. } | StackItem::Spell { target, additional_targets, .. } => {
+                self.battlefield_target_slots(target.as_ref(), additional_targets)
+            }
+        }
+    }
+
     /// CR 608.2b — which of slots 0..8 name a permanent on the battlefield
-    /// right now (`StackItem::Trigger::bf_slots`).
+    /// right now (`StackItem::Trigger::bf_slots`, `CardInstance::cast_bf_slots`).
     pub(crate) fn battlefield_target_slots(&self, target: Option<&Target>, rest: &[Target]) -> u8 {
         target
             .into_iter()
@@ -218,5 +245,6 @@ impl GameState {
             *target = first;
             *additional_targets = new_extra;
         }
+        self.remark_stack_targets(pos);
     }
 }
