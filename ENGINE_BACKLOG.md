@@ -220,6 +220,15 @@ dflt`, the production pilot, 4 seats × 4) and 44002 (4/6/8 × 20):
 - **Symmetric X** — `x_self_harm` now reads an X creature's ETB (Exocrine) and
   halves the cap per X doubler (Unbound Flourishing).
 
+Then 45001 (`--a dflt`, 3/5 seats × 4: 704 games, 0 bad), 45002 (4/6 × 30:
+4,140 games, 2 undecided — Polyraptor via Atla Palani's Egg reveal, a Flame
+Rift all-lose) and 45003 (3/8 fuzzed + concessions: 3,040 games, 0 bad). One
+block **hung for hours**: Dina, Soul Steeper beside Exquisite Blood against a
+seat that can't lose pushed 9,000 triggers with only passes between them,
+which the play budget never counts — `recommend::MAX_STACK_ITEMS` (8,192)
+now ends such a game as a `BoardCap`. The pod also asserts no attacked-
+permanent defender record outlives a turn (CR 511.3 / 508.5).
+
 Also this run: **CR 702.189a / 605.1b — firebending uses the stack** (2025
 ruling; it was resolved as a mana ability, so Isshin never doubled it and
 nothing could copy it), and **Firebender Ascension**'s quest-counter copy

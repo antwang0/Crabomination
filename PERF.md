@@ -3183,6 +3183,11 @@ audit pods       sweep 41001 (302 decks x 4/3/6 seats x 30, strict): 6,840
                  strict: 15,000 games, 0 panics, 1 draw (the baseline
                  control's caster-first Prismari Charm — not the default bot)
 suite            24,660 / 0 / 5 strict; workspace clippy 0
+closing tip      --bench 196,176 / 27.64 / 613.0 byte-identical again at
+                 07dadb23c (determinism + thread_determinism ok, rss 29.4);
+                 sweeps 44001-45003 ~12,000 more audit pod games (one hang,
+                 fixed by MAX_STACK_ITEMS); suite 24,695 / 0 / 5 strict;
+                 workspace clippy 0
 ```
 
 ### 2026-10-09 (Commander routine — session `01SYwcUg`, fourth checkpoint) — guardrail; seats 310-329
