@@ -121,6 +121,11 @@ pub enum AmountKind {
     Cost { free: u32 },
     /// A life payment — pay only out of a healthy buffer.
     Life,
+    /// A life payment whose `max` is the life left after this resolution's
+    /// earlier payments, which are applied only once every ask is answered
+    /// (Plague of Vermin's rounds): the buffer is kept against `max`, not the
+    /// life total, which hasn't moved yet.
+    LifeOfRemaining,
     /// A mana payment out of the floating pool (`MayPayX`), which is not the
     /// same as the ask's `max`: that is a bound over untapped sources too.
     Mana,

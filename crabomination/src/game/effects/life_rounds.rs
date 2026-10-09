@@ -45,7 +45,7 @@ impl GameState {
                     "Pay how much life for Rats? (0 to pass)".to_string(),
                     src,
                     max,
-                    AmountKind::Life,
+                    AmountKind::LifeOfRemaining,
                     effect,
                 ) else {
                     return Ok(());

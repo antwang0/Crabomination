@@ -3789,6 +3789,7 @@ fn decide_pending_policy_inner(
                     let spare = (state.effective_life(seat) - 10).max(0) as u32;
                     spare.min(*max).min(3)
                 }
+                AmountKind::LifeOfRemaining => max.saturating_sub(10).min(3),
                 AmountKind::Mana => {
                     // A `MayPayX` mana prompt: the engine's `max` is the pool
                     // plus every untapped source, and a greedy `max` would tap
@@ -27377,6 +27378,10 @@ mod tests {
         );
         // 20 life, so the buffer rule pays at most 3.
         assert_eq!(amount(ask(AmountKind::Life, 9)), 3, "life payments keep a buffer");
+        // Plague of Vermin: the buffer is against the life left after earlier
+        // bids (`max`), which the life total doesn't show yet.
+        assert_eq!(amount(ask(AmountKind::LifeOfRemaining, 12)), 2, "down to ten of what's left");
+        assert_eq!(amount(ask(AmountKind::LifeOfRemaining, 8)), 0, "never below the buffer");
         // Empty pool, so a MayPayX spends nothing rather than tapping out.
         assert_eq!(amount(ask(AmountKind::Mana, 5)), 0, "MayPayX spends what floats");
         // A Commander seat floats nothing, so it pays what its sources reach.
