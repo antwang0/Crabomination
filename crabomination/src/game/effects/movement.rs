@@ -2921,6 +2921,7 @@ impl GameState {
                 let owner = card.owner;
                 card.exiled_with = None;
                 card.controller = owner;
+                card.revert_transform(); // CR 712.4
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
             }

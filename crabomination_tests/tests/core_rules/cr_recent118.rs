@@ -1203,3 +1203,23 @@ fn cr_608_2b_a_spell_whose_player_and_creature_targets_are_both_gone_fizzles() {
     assert_eq!(g.players[0].life, life, "the spell did not resolve");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
+
+/// CR 712.4 / 903.9a — a transformed commander that went to exile goes home
+/// front face up: Sephiroth, One-Winged Angel reached the command zone still
+/// transformed after a mass exile (eight-seat pod, seed 3121014 game 3).
+#[test]
+fn cr_712_4_a_transformed_commander_goes_home_front_face_up() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::sephiroth_fabled_soldier()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let mut card = g.players[0].command.remove(pos);
+    let back = card.definition.back_face.clone().expect("a back face");
+    card.front_face = Some(card.definition.arc());
+    card.set_definition(std::sync::Arc::new((*back).clone()));
+    card.transformed = true;
+    g.exile.push(card);
+    g.check_state_based_actions();
+    let home = g.players[0].command.iter().find(|c| c.id == cmd).expect("home");
+    assert!(!home.transformed);
+    assert_eq!(home.definition.name, "Sephiroth, Fabled SOLDIER");
+}

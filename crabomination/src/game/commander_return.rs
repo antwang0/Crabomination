@@ -164,6 +164,8 @@ impl GameState {
         card.exiled_with = None;
         card.controller = owner;
         card.reveal();
+        // CR 712.4 — front face up off the battlefield and the stack.
+        card.revert_transform();
         self.players[owner].command.push(card);
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);
@@ -195,6 +197,8 @@ impl GameState {
         card.exiled_with = None;
         card.controller = owner;
         card.reveal();
+        // CR 712.4 — front face up off the battlefield and the stack.
+        card.revert_transform();
         self.players[owner].command.push(card);
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);
