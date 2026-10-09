@@ -2930,11 +2930,13 @@ fn play_pod_game(
                         || card.soulbond_partner.is_some()
                         || card.phased_out_by.is_some()
                         || card.loyalty_uses_this_turn != 0
-                        || card.counters.iter().any(|(k, &n)| match k {
+                        // CR 122.2 — a card that keeps its counters (Me, the Immortal).
+                        || (!card.definition.keeps_counters_off_battlefield
+                            && card.counters.iter().any(|(k, &n)| match k {
                             crate::card::CounterType::Loyalty => n != card.definition.base_loyalty,
                             crate::card::CounterType::Defense => n != card.definition.defense,
                             _ => n != 0,
-                        }) =>
+                        })) =>
                 {
                     Some(card)
                 }
