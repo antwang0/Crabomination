@@ -2137,11 +2137,9 @@ pub fn elemental_bond() -> CardDefinition {
 /// trample or haste. −2: Sacrifice a creature. When you do, Minsc & Boo deals
 /// X damage to any target, where X is that creature's power. If the
 /// sacrificed creature was a Hamster, draw X cards. Minsc & Boo, Timeless
-/// Heroes can be your commander.
-/// Approximation: the −2's damage target is chosen on activation rather than
-/// by the reflexive "when you do" trigger, and the Hamster draw resolves
-/// before the damage (so the sacrificed token is still readable). With no
-/// creature to sacrifice X is 0.
+/// Heroes can be your commander. The −2's "when you do" is a reflexive
+/// trigger (CR 603.7) carrying the sacrificed power; whether it was a Hamster
+/// is read as the sacrifice happens.
 /// Omitted: the Minsc planeswalker subtype (`PlaneswalkerSubtype` has no
 /// `Minsc`).
 pub fn minsc_boo_timeless_heroes() -> CardDefinition {
@@ -2211,17 +2209,24 @@ pub fn minsc_boo_timeless_heroes() -> CardDefinition {
                         filter: R::Creature,
                     },
                     Effect::If {
-                        cond: Predicate::EntityMatchesAny {
-                            what: Selector::SacrificedCard,
-                            filter: R::HasCreatureType(CreatureType::Hamster),
-                        },
-                        then: Box::new(Effect::Draw {
-                            who: Selector::You,
-                            amount: Value::SacrificedPower,
+                        cond: Predicate::ValueAtLeast(Value::SacrificedCount, Value::ONE),
+                        then: Box::new(Effect::If {
+                            cond: Predicate::EntityMatchesAny {
+                                what: Selector::SacrificedCard,
+                                filter: R::HasCreatureType(CreatureType::Hamster),
+                            },
+                            then: Box::new(Effect::ReflexiveTrigger {
+                                body: Box::new(Effect::Seq(vec![
+                                    Effect::DealDamage { to: target_any(), amount: Value::SacrificedPower },
+                                    Effect::Draw { who: Selector::You, amount: Value::SacrificedPower },
+                                ])),
+                            }),
+                            else_: Box::new(Effect::ReflexiveTrigger {
+                                body: Box::new(Effect::DealDamage { to: target_any(), amount: Value::SacrificedPower }),
+                            }),
                         }),
                         else_: Box::new(Effect::Noop),
                     },
-                    Effect::DealDamage { to: target_any(), amount: Value::SacrificedPower },
                 ]),
                 ..Default::default()
             },

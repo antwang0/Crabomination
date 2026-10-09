@@ -1825,12 +1825,15 @@ fn minsc_boo_makes_boo_then_flings_him() {
 
     g.battlefield_find_mut(boo).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
     g.battlefield_find_mut(minsc).unwrap().counters.insert(CounterType::Loyalty, 3);
+    // The "when you do" trigger targets as it triggers (CR 603.7d), so the
+    // seat aims it as a bot does.
+    g.players[0].hostile_player_targets = true;
     let life = g.players[1].life;
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: minsc,
         ability_index: 1,
-        target: Some(Target::Player(1)),
+        target: None,
         x_value: None,
     })
     .expect("−2");
