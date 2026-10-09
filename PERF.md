@@ -3239,7 +3239,9 @@ determinism ok, 164,244 decisions/s (noise); golden + pod tests 104 / 0.
 The rest of the run's card / engine fixes (type unions, Soul Conduit, the
 "up to one" self-harm class, `CounterAbilityAndStripSource`): `--bench`
 re-run after each batch, **196,176 / 27.64 / 613.0 byte-identical** every
-time; full suite at `2b2…` tip **24,984 / 0 / 5**; clippy 0.
+time; full suite on the tip after Conciliator's Duelist (before the
+up-to-one batch, which ran its own targeted tests + golden traces)
+**24,984 / 0 / 5**; clippy 0.
 
 ### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls
 
