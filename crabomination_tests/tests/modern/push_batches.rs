@@ -404,28 +404,33 @@ fn toxic_deluge_sweeps_creatures_for_x_two() {
     assert!(g.battlefield.iter().any(|c| c.id == big), "5/5 survives -2/-2");
 }
 
+/// Demonic Consultation as printed: name a card, exile the top six, then
+/// reveal until the named card — it goes to hand, every other card revealed
+/// is exiled (it used to approximate this as mill six and tutor anything).
 #[test]
-fn demonic_consultation_mills_six_and_searches() {
+fn demonic_consultation_digs_for_the_named_card() {
     let mut g = two_player_game();
-    // Seed library so mill 6 has something to chew on, plus the tutor target.
+    g.players[0].library.clear();
     for _ in 0..10 {
         g.add_card_to_library(0, catalog::island());
     }
     let target = g.add_card_to_library(0, catalog::lightning_bolt());
-    // ScriptedDecider picks the bolt at search time.
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target))]));
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let order: Vec<_> = g.players[0].library.iter().map(|c| c.id).collect();
+    let pos = order.iter().position(|&c| c == target).unwrap();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Lightning Bolt".into())]));
     let cons = g.add_card_to_hand(0, catalog::demonic_consultation());
     g.players[0].mana_pool.add(Color::Black, 1);
-    let lib_before = g.players[0].library.len();
     g.perform_action(GameAction::CastSpell {
         card_id: cons, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Consultation castable for {B}");
     drain_stack(&mut g);
-    assert!(g.players[0].library.len() <= lib_before - 7,
-        "Library lost 6 to mill + 1 to search");
-    assert!(g.players[0].hand.iter().any(|c| c.id == target),
-        "Picked card lands in hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == target), "the named card is in hand");
+    assert_eq!(g.players[0].library.len(), order.len() - pos - 1, "everything above it is gone");
+    assert!(g.players[0].graveyard.iter().all(|c| c.definition.name != "Island"), "exiled, not milled");
 }
 
 #[test]

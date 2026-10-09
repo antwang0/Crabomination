@@ -11974,34 +11974,17 @@ pub fn wall_of_roots() -> CardDefinition {
     }
 }
 
-/// Demonic Consultation — {B} Instant. "Name a card. Exile the top six
-/// cards of your library, then reveal cards from the top of your
-/// library until you reveal the named card, exiling each card along the
-/// way. Put that card into your hand and exile all other cards revealed
-/// this way."
-///
-/// Approximation: name-a-card primitive doesn't exist, so we collapse
-/// to "exile top 6, then take any one card." Powerful but flavor-
-/// accurate (the controller still trades 6 cards from their library for
-/// 1 card to hand). Auto-target on the search picks any card. The
-/// printed "exile" destination for the misses is approximated with
-/// `Mill` (cards routed to graveyard) — strictly more recoverable than
-/// printed but preserves the library-thinning cost.
+/// Demonic Consultation — {B} Instant. Name a card, exile the top six of your
+/// library, then reveal until the named card: it goes to hand, the rest are
+/// exiled (`Effect::ExileTopThenRevealUntilNamed`, Divining Witch's text).
 pub fn demonic_consultation() -> CardDefinition {
     CardDefinition {
         name: "Demonic Consultation",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Mill {
-                who: Selector::You,
-                amount: Value::Const(6),
-            },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Any,
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
+            Effect::NameCard { what: Selector::This, restrict_to: None },
+            Effect::ExileTopThenRevealUntilNamed { exile_count: Value::Const(6) },
         ]),
         ..Default::default()
     }
