@@ -7428,7 +7428,8 @@ pub fn bloodletter_of_aclazotz() -> CardDefinition {
 }
 
 /// Touch the Spirit Realm — {2}{W} Enchantment. ETB: exile up to one target
-/// artifact or creature until this leaves. (The Channel discard-mode is omitted.)
+/// artifact or creature until this leaves. Channel — {1}{W}, discard it: exile
+/// target artifact or creature until the next end step.
 pub fn touch_the_spirit_realm() -> CardDefinition {
     use crate::card::{ActivatedAbility, CardType as CT, ExileReturnZone};
     use crate::effect::DelayedTriggerKind;
