@@ -371,6 +371,28 @@ mod recent52 {
         );
     }
 
+    /// Ghostly Dancers' ETB "or unlock a locked door of a Room you control":
+    /// mode 1 opens the Room's other door, and fully unlocking it is Eerie's
+    /// second trigger condition — a Spirit.
+    #[test]
+    fn ghostly_dancers_unlocks_a_door_and_eerie_sees_the_full_unlock() {
+        let mut g = two_player_game();
+        let room = g.add_card_to_battlefield(0, catalog::spiked_corridor_torture_pit());
+        let gd = g.add_card_to_hand(0, catalog::ghostly_dancers());
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.players[0].mana_pool.add(Color::White, 5);
+        g.players[0].mana_pool.add(Color::Red, 4);
+        g.perform_action(GameAction::UnlockRoomDoor { card_id: room, right: false }).expect("unlock");
+        drain_stack(&mut g);
+        g.perform_action(GameAction::CastSpell {
+            card_id: gd, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Ghostly Dancers");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(room).unwrap().unlocked_doors, 0b11, "the other door unlocked");
+        assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "Eerie: a Room fully unlocked");
+    }
+
     #[test]
     fn pirated_copy_enters_as_a_pirate_copy() {
         let mut g = two_player_game();

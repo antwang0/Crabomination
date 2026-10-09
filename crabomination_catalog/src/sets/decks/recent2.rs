@@ -139,8 +139,8 @@ pub fn virtue_of_persistence() -> CardDefinition {
 }
 
 /// Scrabbling Skullcrab — {U} 0/3 Crab Skeleton. Eerie — whenever an enchantment
-/// you control enters, target player mills two cards. (The "fully unlock a Room"
-/// half is dropped — Rooms aren't modeled.)
+/// you control enters and whenever you fully unlock a Room, target player mills
+/// two cards.
 pub fn scrabbling_skullcrab() -> CardDefinition {
     CardDefinition {
         name: "Scrabbling Skullcrab",
@@ -152,17 +152,10 @@ pub fn scrabbling_skullcrab() -> CardDefinition {
         },
         power: 0,
         toughness: 3,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Enchantment,
-                }),
-            effect: Effect::Mill {
-                who: target_filtered(SelectionRequirement::Player),
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: crate::effect::shortcut::eerie(Effect::Mill {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(2),
+        }),
         ..Default::default()
     }
 }

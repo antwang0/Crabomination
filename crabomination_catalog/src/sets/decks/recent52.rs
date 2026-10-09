@@ -414,11 +414,11 @@ pub fn zimone_all_questioning() -> CardDefinition {
     }
 }
 
-/// Ghostly Dancers — {3}{W}{W} 2/5 Spirit. Flying. ETB return an enchantment
-/// card from your graveyard to hand. Eerie — whenever an enchantment you
-/// control enters, create a 3/1 white Spirit with flying.
+/// Ghostly Dancers — {3}{W}{W} 2/5 Spirit. Flying. When it enters, return an
+/// enchantment card from your graveyard to your hand or unlock a locked door of
+/// a Room you control. Eerie — create a 3/1 white Spirit with flying.
 pub fn ghostly_dancers() -> CardDefinition {
-    let spirit_token = || TokenDefinition {
+    let spirit_token = TokenDefinition {
         name: "Spirit".to_string(),
         power: 3,
         toughness: 1,
@@ -431,6 +431,29 @@ pub fn ghostly_dancers() -> CardDefinition {
         },
         ..Default::default()
     };
+    let locked_room = R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Room)
+        .and(R::ControlledByYou)
+        .and(R::Not(Box::new(R::RoomDoorUnlocked(1).and(R::RoomDoorUnlocked(2)))));
+    let mut triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        // Untargeted "or": the controller picks which (CR 700.2 shape).
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: R::Enchantment,
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::UnlockRoomDoor { what: Selector::one_of(Selector::EachPermanent(locked_room)) },
+        ]),
+    }];
+    triggered_abilities.extend(crate::effect::shortcut::eerie(Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: std::sync::Arc::new(spirit_token),
+    }));
     CardDefinition {
         name: "Ghostly Dancers",
         cost: cost(&[generic(3), crate::mana::w(), crate::mana::w()]),
@@ -442,27 +465,7 @@ pub fn ghostly_dancers() -> CardDefinition {
         power: 2,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Move {
-                    what: target_filtered(R::Enchantment.from_your_graveyard()),
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: R::Enchantment,
-                    }),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    definition: std::sync::Arc::new(spirit_token()),
-                },
-            },
-        ],
+        triggered_abilities,
         ..Default::default()
     }
 }
