@@ -8081,3 +8081,31 @@ pub const BRAGO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const JETMIR_COMMANDERS: &[CardFactory] = &[jetmir_nexus_of_revels];
+
+/// **Jetmir, Nexus of Revels**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 83 nonbasic cards + 6 Forests + 4 Mountains + 6 Plains = 99.
+/// Naya go-wide tokens: Jetmir's creature-count tiers grant vigilance, trample and double strike.
+pub const JETMIR_MAIN: &[CardFactory] = &[
+    arcane_signet, halo_fountain, idol_of_oblivion, skullclamp, sol_ring, arid_mesa,
+    bountiful_promenade, brushland, canopy_vista, cinder_glade, clifftop_retreat, command_tower,
+    exotic_orchard, jetmirs_garden, jungle_shrine, overgrown_farmland, rootbound_crag,
+    sacred_foundry, spectator_seating, spire_garden, stomping_ground, sunpetal_grove,
+    temple_garden, windswept_heath, wooded_foothills, adeline_resplendent_cathar,
+    ainok_strike_leader, anim_pakal_thousandth_moon, arasta_of_the_endless_web, avacyns_pilgrim,
+    baylen_the_haymaker, birds_of_paradise, cadira_caller_of_the_small, champion_of_lambholt,
+    craterhoof_behemoth, delighted_halfling, elvish_mystic, enduring_vitality, esper_sentinel,
+    fyndhorn_elves, jacked_rabbit, jinnie_fay_jetmirs_second, krenko_tin_street_kingpin,
+    kutzil_malamet_exemplar, llanowar_elves, mondrak_glory_dominus, myrel_shield_of_argive,
+    ocelot_pride, ohran_frostfang, queen_allenal_of_ruadach, rumor_gatherer, scute_swarm,
+    tendershoot_dryad, toski_bearer_of_secrets, voice_of_victory, welcoming_vampire,
+    anointed_procession, aura_shards, beastmaster_ascension, doubling_season, felidar_retreat,
+    impact_tremors, parallel_lives, rabble_rousing, artifact_mutation, aura_mutation, beast_within,
+    boros_charm, grand_crescendo, heroic_intervention, march_of_the_multitudes, path_to_exile,
+    secure_the_wastes, swords_to_plowshares, elspeth_storm_slayer, cultivate, farseek,
+    kodamas_reach, martial_coup, natures_lore, rampant_growth, shamanic_revelation, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains, plains,
+];
