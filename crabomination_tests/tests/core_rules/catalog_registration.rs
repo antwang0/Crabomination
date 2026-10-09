@@ -1273,15 +1273,17 @@ fn a_land_type_setting_aura_takes_the_lands_abilities() {
 /// the rider was dropped, which is how it stayed dropped. It is half the
 /// card: it takes a blocker's flying, a ward, a death trigger.
 ///
-/// The needles are the four primitives that strip, spelled out rather than
+/// The needles are the primitives that strip, spelled out rather than
 /// inferred, so a fifth has to be added here to count.
 #[test]
 fn a_card_that_prints_losing_all_abilities_strips_them() {
     /// Everything that reaches `Modification::RemoveAllAbilities`.
-    const STRIPPERS: [&str; 7] = [
+    const STRIPPERS: [&str; 8] = [
         "remove_abilities: true",
         "RemoveAllAbilities",
         "LoseAllAbilities",
+        // Tishana's Tidebinder: counters an ability, then strips its source.
+        "CounterAbilityAndStripSource",
         "CreaturesLoseAllAbilities",
         // Titania's Song's own static, which strips the whole artifact class.
         "NoncreatureArtifactsLoseAbilities",

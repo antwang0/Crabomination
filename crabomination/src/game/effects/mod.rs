@@ -24328,7 +24328,10 @@ impl GameState {
                 self.run_effect(&Effect::CounterAbility { what: what.clone() }, ctx, events)?;
                 for cid in sources {
                     let strips = self.battlefield_find(cid).is_some_and(|c| {
-                        c.definition.is_artifact() || self.computed_is_creature(c) || c.definition.is_planeswalker()
+                        use crate::card::CardType;
+                        self.computed_is_creature(c)
+                            || self.computed_has_card_type(c, CardType::Artifact)
+                            || self.computed_has_card_type(c, CardType::Planeswalker)
                     });
                     if strips {
                         let strip = Effect::LoseAllAbilities {
