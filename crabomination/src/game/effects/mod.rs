@@ -11644,10 +11644,13 @@ impl GameState {
                     self.exile.push(card);
                     self.note_exiled_from_library(p, cid, events);
                 }
+                // A resolving spell (Demonic Consultation) is held off-zone, so
+                // its name is the one chosen this resolution.
                 let named = ctx
                     .source
                     .and_then(|s| self.battlefield_find(s))
-                    .and_then(|c| c.named_card.clone());
+                    .and_then(|c| c.named_card.clone())
+                    .or_else(|| self.scratch.named_card_this_resolution.clone());
                 let Some(named) = named else { return Ok(()) };
                 while let Some(top) = self.players[p].library.first() {
                     let (hit, name, is_land) = (
