@@ -3756,3 +3756,25 @@ fn buzzard_wasp_colony_inherits_a_dead_creatures_counters() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(colony).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "a counterless death adds nothing");
 }
+
+/// CR 301.7 — Fire Nation Engineer's raid counter may go on a Vehicle you
+/// control ("another target creature or Vehicle"); a non-creature Vehicle
+/// was not a legal target.
+#[test]
+fn fire_nation_engineer_counters_a_vehicle() {
+    use crabomination::card::CounterType;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].attacked_this_turn = true;
+    g.add_card_to_battlefield(0, catalog::fire_nation_engineer());
+    let ferry = g.add_card_to_battlefield(0, catalog::skybox_ferry());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ferry))]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ferry).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "the Vehicle took the counter"
+    );
+}

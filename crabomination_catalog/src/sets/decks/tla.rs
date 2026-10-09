@@ -558,7 +558,7 @@ pub fn first_time_flyer() -> CardDefinition {
 
 /// Fire Nation Engineer — {2}{B} 2/3 Human Artificer. Raid — At the beginning of
 /// your end step, if you attacked this turn, put a +1/+1 counter on another
-/// target creature you control.
+/// target creature or Vehicle you control.
 pub fn fire_nation_engineer() -> CardDefinition {
     CardDefinition {
         name: "Fire Nation Engineer",
@@ -578,6 +578,7 @@ pub fn fire_nation_engineer() -> CardDefinition {
             effect: Effect::AddCounter {
                 what: target_filtered(
                     SelectionRequirement::Creature
+                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle))
                         .and(SelectionRequirement::ControlledByYou)
                         .and(SelectionRequirement::OtherThanSource),
                 ),
