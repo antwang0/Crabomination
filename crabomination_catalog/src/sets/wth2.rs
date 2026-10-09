@@ -1830,7 +1830,7 @@ pub fn heart_of_bogardan() -> CardDefinition {
 /// land onto the battlefield. If you don't, put it into its owner's graveyard."
 fn entry_cost(cost: WardCost) -> StaticAbility {
     StaticAbility {
-        description: "If this would enter, pay its entry cost instead.".into(),
+        description: "If this would enter, pay its entry cost instead.",
         effect: StaticEffect::EntersOnlyIfPaid { cost, optional: false },
     }
 }
