@@ -2055,6 +2055,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALOY_COMMANDERS,
             main: decks::ALOY_MAIN,
         },
+        // Seat 273: Marchesa, the Black Rose's EDHREC average deck. `--pod-decks 273`.
+        PodDeck {
+            name: "Marchesa, the Black Rose (BRU)",
+            commanders: decks::MARCHESA_BR_COMMANDERS,
+            main: decks::MARCHESA_BR_MAIN,
+        },
     ]
 }
 
@@ -3904,6 +3910,7 @@ mod tests {
             ("Lumra, Bellow of the Woods", [0x1B4A, 270, 9194]),
             ("Marina Vendrell", [0x3A41, 271, 9195]),
             ("Aloy, Savior of Meridian", [0xA109, 272, 9196]),
+            ("Marchesa, the Black Rose", [0x3A4C, 273, 9197]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -8026,3 +8026,31 @@ pub const ALOY_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
     island, island, island, island, island, island,
 ];
+
+pub const MARCHESA_BR_COMMANDERS: &[CardFactory] = &[marchesa_the_black_rose];
+
+/// **Marchesa, the Black Rose**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 83 nonbasic cards + 5 Islands + 5 Mountains + 6 Swamps = 99.
+/// Grixis dethrone counters: creatures with +1/+1 counters come back at the end step.
+pub const MARCHESA_BR_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, dimir_signet, fellwar_stone, lightning_greaves, rakdos_signet,
+    sol_ring, talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence, blood_crypt,
+    bloodstained_mire, command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb,
+    exotic_orchard, forge_of_heroes, luxury_suite, morphic_pool, phyrexian_tower, polluted_delta,
+    shivan_reef, smoldering_marsh, steam_vents, sulfur_falls, sulfurous_springs, sunken_hollow,
+    underground_river, watery_grave, xanders_lounge, alesha_who_laughs_at_fate, baleful_strix,
+    bloodtracker, braids_arisen_nightmare, carrion_feeder, danny_pink, drana_liberator_of_malakir,
+    fain_the_broker, flayer_of_the_hatebound, gev_scaled_scorch, glen_elendra_archmage,
+    gray_merchant_of_asphodel, grim_haruspex, herald_of_secret_streams, iron_apprentice,
+    juri_master_of_the_revue, mahadi_emporium_master, marionette_apprentice,
+    mikaeus_the_unhallowed, puppeteer_clique, river_kelpie, sage_of_fables, satoru_the_infiltrator,
+    scorn_blade_berserker, solemn_simulacrum, spark_double, thundering_raiju, viscera_seer,
+    warren_soultrader, yahenni_undying_partisan, zealous_conscripts, feast_on_the_fallen,
+    goblin_bombardment, sneak_attack, thran_vigil, uncivil_unrest, unspeakable_symbol,
+    an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell, deadly_dispute, negate,
+    terminate, village_rites, blasphemous_act, feed_the_swarm, mark_of_mutiny, mob_rule,
+    toxic_deluge, vandalblast, victimize,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
