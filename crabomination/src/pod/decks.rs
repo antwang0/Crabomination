@@ -9065,3 +9065,32 @@ pub const TIFA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest,
 ];
+
+pub const WINOTA_COMMANDERS: &[CardFactory] = &[winota_joiner_of_forces];
+
+/// **Winota, Joiner of Forces**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 8 Mountains + 9 Plains = 99.
+/// non-Humans calling in Humans
+pub const WINOTA_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, chrome_mox, lotus_petal, sol_ring, talisman_of_conviction,
+    arid_mesa, battlefield_forge, blinkmoth_nexus, cavern_of_souls, clifftop_retreat,
+    command_tower, eiganjo_seat_of_the_empire, exotic_orchard, furycalm_snarl, needleverge_pathway,
+    rugged_prairie, sacred_foundry, sokenzan_crucible_of_defiance, spectator_seating,
+    sunbaked_canyon, alexios_deimos_of_kosmos, alseid_of_lifes_bounty, angraths_marauders,
+    archon_of_emeria, aven_mindcensor, blade_historian, boromir_warden_of_the_tower,
+    cathar_commando, combat_celebrant, drannith_magistrate, eidolon_of_rhetoric, esper_sentinel,
+    ethersworn_canonist, gingerbrute, giver_of_runes, goblin_rabblemaster, goldnight_commander,
+    grand_abolisher, greymond_avacyns_stalwart, hope_of_ghirapur, imperial_recruiter,
+    legion_warboss, lena_selfless_champion, loyal_apprentice, magus_of_the_moon, mother_of_runes,
+    myrel_shield_of_argive, ornithopter, ornithopter_of_paradise, phoenix_chick, phyrexian_walker,
+    professional_face_breaker, ragavan_nimble_pilferer, ranger_captain_of_eos, rionya_fire_dancer,
+    rograkh_son_of_rohgahh, sanctum_prelate, signal_pest, simian_spirit_guide,
+    skrelv_defector_mite, soulless_jailer, spirit_of_the_labyrinth, thalia_guardian_of_thraben,
+    thalia_heretic_cathar, voice_of_victory, witch_enchanter, breath_of_fury, deafening_silence,
+    high_noon, windcrag_siege, abrade, boros_charm, deflecting_swat, flare_of_fortitude,
+    path_to_exile, red_elemental_blast, silence, swords_to_plowshares, blasphemous_act,
+    dragon_fodder, shatterskull_smashing,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];

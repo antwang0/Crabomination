@@ -2277,6 +2277,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TIFA_COMMANDERS,
             main: decks::TIFA_MAIN,
         },
+        // Seat 310: Winota, Joiner of Forces's EDHREC average deck. `--pod-decks 310`.
+        PodDeck {
+            name: "Winota, Joiner of Forces (RW)",
+            commanders: decks::WINOTA_COMMANDERS,
+            main: decks::WINOTA_MAIN,
+        },
     ]
 }
 
@@ -4230,6 +4236,7 @@ mod tests {
             ("Rocco, Cabaretti Caterer", [0x20CC, 307, 9232]),
             ("Sokka, Tenacious Tactician", [0x50CA, 308, 9233]),
             ("Tifa Lockhart", [0x71FA, 309, 9234]),
+            ("Winota, Joiner of Forces", [0x3107, 310, 9235]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
