@@ -290,7 +290,12 @@ gy-exile rider) · Necrotic Fumes ✅ (`ExilePermanent`) · Final Payment ✅
 (`SacrificeOrPayLife`) · Mana Vault ✅ (upkeep may-pay-{4} untap + draw-step
 burn) · Channel ✅ (real life-for-{C} via the payment funnel). Remaining:
 Birthing Pod & Mox Diamond ({G/P} pip on an activation, land-discard) ·
-Vicious Rivalry.
+Vicious Rivalry · **Mechtitan Core** (Shorikai's EDHREC seat): "exile this
+and four other artifact creatures and/or Vehicles you control" is a cost; the
+Core's own exile is (`exile_self_cost`), the four are exiled as the ability
+resolves behind a `condition` that four exist — so a response that removes
+one still mints Mechtitan off three. Needs an exile-other-permanents cost
+beside `sac_other_filter`.
 
 ### 7. Whole keyword mechanics unmodeled (each = a cluster)
 - **Learn** → modeled as Draw 1 (Reduce // Rubble, Mascot Interpretation, the Lessons cycle, Quandrix Field Trip).

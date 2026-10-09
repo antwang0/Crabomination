@@ -1930,3 +1930,23 @@ fn welcome_to_walls_then_becomes_jurassic_park() {
     activate(&mut g, saga, None);
     assert_eq!(g.players[0].mana_pool.total(), 1, "one Dinosaur, one {{G}}");
 }
+
+/// Mechtitan Core: {5} and four other artifact creatures make Mechtitan; when
+/// it leaves, the four come back tapped and the Core stays exiled.
+#[test]
+fn mechtitan_core_assembles_and_disassembles() {
+    let mut g = pod(2);
+    let core = ready(&mut g, 0, catalog::mechtitan_core());
+    let parts: Vec<CardId> = (0..4).map(|_| ready(&mut g, 0, catalog::memnite())).collect();
+    flood(&mut g);
+    activate(&mut g, core, None);
+    let titan = g.battlefield.iter().find(|c| c.definition.name == "Mechtitan").map(|c| c.id).expect("Mechtitan");
+    assert_eq!(g.computed_permanent(titan).unwrap().power, 10);
+    assert!(parts.iter().all(|p| g.battlefield_find(*p).is_none()), "the parts are exiled");
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    cast(&mut g, wrath, None);
+    for p in &parts {
+        assert!(g.battlefield_find(*p).is_some_and(|c| c.tapped), "a part came back tapped");
+    }
+    assert!(g.exile.iter().any(|c| c.id == core), "the Core stays exiled");
+}

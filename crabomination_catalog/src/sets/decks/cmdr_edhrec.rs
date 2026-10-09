@@ -3319,3 +3319,63 @@ pub fn welcome_to() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mechtitan Core — {2} Vehicle 2/4, crew 2. {5}, exile it and four other
+/// artifact creatures and/or Vehicles you control: create Mechtitan, a
+/// legendary all-colors 10/10 Construct with flying, vigilance, trample,
+/// lifelink and haste; when it leaves, the others return tapped under their
+/// owners' control (the Core stays exiled). The four are exiled as the ability
+/// resolves, gated on four being there (INCOMPLETE_CARDS).
+pub fn mechtitan_core() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    let fuel = || R::Artifact.and(R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)))
+        .and(R::ControlledByYou)
+        .and(R::OtherThanSource);
+    let mechtitan = TokenDefinition {
+        name: "Mechtitan".into(),
+        power: 10,
+        toughness: 10,
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Trample, Keyword::Lifelink, Keyword::Haste],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: Color::ALL.to_vec(),
+        subtypes: creature_types(vec![CreatureType::Construct]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mechtitan Core",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Crew(2)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            exile_self_cost: true,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountOf(Box::new(Selector::EachPermanent(fuel()))),
+                Value::Const(4),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::ExileLinked {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::EachPermanent(R::Artifact.and(
+                            R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                        ).and(R::ControlledByYou))),
+                        count: Box::new(Value::Const(4)),
+                    },
+                },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(mechtitan) },
+                Effect::WhenLastCreatedTokenLeaves {
+                    body: Box::new(Effect::Move {
+                        what: Selector::CardExiledWithSource,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

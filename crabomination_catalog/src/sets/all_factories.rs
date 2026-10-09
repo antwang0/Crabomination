@@ -4669,6 +4669,7 @@ static DECKS: &[Factory] = &[
     super::decks::tam_mindful_first_year,
     super::decks::the_skullspore_nexus,
     super::decks::welcome_to,
+    super::decks::mechtitan_core,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,
