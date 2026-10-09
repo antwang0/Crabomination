@@ -3171,6 +3171,10 @@ pod census       all 281 seats, strict answer log: 3-seat x4 (41001+), 4-seat x5
                  1 CR 104.4b draw, 1 board cap (43039, fixed: growth-loop rider)
 2-player pools   cube / sos / sealed x seeds 51001-2 x 100 an archetype:
                  4,200 games, 0 panics, 3 cube draws
+pod census (2)   rebuilt audit binary: 5-seat x4 (45001+), 8-seat x4 under
+                 CRAB_POD_CONCEDE=20 (48001+) — ~376 games; 7 aborts, all the
+                 new CR 400.7 pod invariant on a miracle reveal (fixed), else 0
+suite            24,595 / 0 / 5 (CRAB_ANSWER_LOG=strict, CARGO_INCREMENTAL=0)
 ```
 
 ### 2026-10-09 (Commander routine, twelfth — session `01G4zUa3`) — guardrail; CR 608.2b spell slots, invariants, two bot stalls

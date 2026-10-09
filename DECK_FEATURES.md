@@ -34,29 +34,23 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-271 / 285 pod decks carry no residual (2026-10-09, Commander routine: ETB doublers
-reach landfall, Battlecrier / Rupture / Chocobo / Masamune / Kefka / Adamantoise and
-others fixed; `--table` output pasted as is); each open one is an INCOMPLETE_CARDS row
-or a card doc:
+284 / 292 pod decks carry no residual (2026-10-09, Commander routine `01Ug49mf`: Opposition
+Agent reaches every pod search, Urabrask's permission is a turn-long rule, Mavinda casts
+from the graveyard, Tinder Wall targets what it blocks; `--table` output pasted as is);
+each open one is an INCOMPLETE_CARDS row or a card doc:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 184 | Ob Nixilis, Captive Kingpin (BR) | 1: party_thrasher |
-| 188 | Ojer Axonil, Deepest Might (R) | 1: urabrask |
 | 189 | Rowan, Scion of War (BR) | 1: march_of_wretched_sorrow |
 | 190 | Deadpool, Trading Card (BR) | 2: delina_wild_mage, mirage_phalanx |
-| 203 | Zur the Enchanter (BUW) | 1: opposition_agent |
-| 204 | Etali, Primal Conqueror (GR) | 4: blank_goblin, chandra_flameshaper, hunting_velociraptor, tinder_wall |
-| 206 | Tivit, Seller of Secrets (BUW) | 1: opposition_agent |
+| 204 | Etali, Primal Conqueror (GR) | 3: blank_goblin, chandra_flameshaper, hunting_velociraptor |
 | 208 | Prismari, the Inspiration (RU) | 1: sanar_unfinished_genius |
 | 223 | Vivi Ornitier (RU) | 1: quicksilver_elemental |
-| 244 | Ghyrson Starn, Kelermorph (RU) | 1: urabrask |
 | 261 | Codie, Vociferous Codex (BGRUW) | 2: biomancers_familiar, improvisation_capstone |
-| 264 | Feather, the Redeemed (RW) | 1: mavinda_students_advocate |
-| 280 | Thrasios, Triton Hero + Tymna the Weaver (BGUW) | 1: opposition_agent |
 | 282 | Gishath, Sun's Avatar (GRW) | 1: hunting_velociraptor |
 
-271 / 285 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+284 / 292 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 
 169 / 183 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
