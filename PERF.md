@@ -3134,6 +3134,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-09 (Commander routine — fourteenth run, session `01LidV9f`) — guardrail; loop avoidance
+
+Hot-path touches: the attack commit scans the battlefield once for
+`Keyword::AttackTriggerQuestCopy` when a declaration queued any attack
+trigger; firebending is a queued trigger (pod decks only); the growth-loop
+watch's floor is a `max`; the pod bot's loop probes return at
+`commanders.is_empty()` in a duel. Release `bot_ladder` at `f7757902d`.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split), thread_determinism ok;
+                 peak_rss 29.0 MiB
+audit pods       sweep 41001 (302 decks x 4/3/6 seats x 30, strict): 6,840
+                 games, 0 panics, 16 undecided (classified in ENGINE_BACKLOG);
+                 sweep 42001 (317 decks x 4/6/8 x 20, strict): 1 abort (CR
+                 400.7 link invariant, fixed), 7 undecided; sweep 42002 (3/5
+                 seats x 20, POD_FUZZ 2500 + CONCEDE 20): 0 bad blocks
+2-player audit   cube / sos / sealed x seeds 8811/8812 x 300 an archetype,
+                 strict: 15,000 games, 0 panics, 1 draw (the baseline
+                 control's caster-first Prismari Charm — not the default bot)
+suite            24,660 / 0 / 5 strict; workspace clippy 0
+```
+
 ### 2026-10-09 (Commander routine — session `01SYwcUg`, third checkpoint) — guardrail; seats 296-309
 
 Hot-path touches: every `run_effect` asks one `matches!` for the four
