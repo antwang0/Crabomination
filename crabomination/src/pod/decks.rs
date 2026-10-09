@@ -9434,3 +9434,58 @@ pub const YGRA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ORVAR_COMMANDERS: &[CardFactory] = &[orvar_the_all_form];
+
+/// **Orvar, the All-Form**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Orvar, the All-Form changelings (U): Twiddle, Enervate and Thermal Flux into Vesuvan Duplimancy copies
+pub const ORVAR_MAIN: &[CardFactory] = &[
+    arcane_signet, coveted_jewel, fellwar_stone, gilded_lotus, mind_stone, mirror_box,
+    sapphire_medallion, sol_ring, thought_vessel, wizards_staff, cloudpost, glimmerpost,
+    mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower,
+    riptide_laboratory, swarmyard, aether_channeler, agent_of_treachery, archaeomancer,
+    archmage_emeritus, archmage_of_runes, cloud_of_faeries, hullbreaker_horror, master_of_waves,
+    mulldrifter, peregrine_drake, phyrexian_metamorph, sakashima_of_a_thousand_faces,
+    scourge_of_fleets, shipwreck_dowser, solemn_simulacrum, spark_double, spellseeker,
+    venser_shaper_savant, wavebreak_hippocamp, mystic_remora, propaganda, rhystic_study,
+    vesuvan_duplimancy, an_offer_you_cant_refuse, arcane_denial, cerulean_wisps, clockspinning,
+    counterspell, cyclonic_rift, dive_down, dreams_grip, enervate, essence_flux,
+    fleeting_distraction, ghostly_flicker, gigadrowse, high_tide, leap, mind_games, pongify,
+    shadow_rift, shimmering_mirage, snap, thermal_flux, twiddle, twisted_image, twitch,
+    whim_of_volrath, aquitects_will, energy_tap, hidden_strings, irenicuss_vile_duplication,
+    slip_through_space, solve_the_equation, trait_doctoring,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const SISAY_COMMANDERS: &[CardFactory] = &[sisay_weatherlight_captain];
+
+/// **Sisay, Weatherlight Captain**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 92 nonbasic cards + 2 Forests + 1 Island + 1 Mountain + 2 Plains + 1 Swamp = 99.
+/// Sisay, Weatherlight Captain legends (WUBRG): Ertai, Ioreth, Samut and Cultist of the Absolute in the legend toolbox
+pub const SISAY_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, arcane_signet, chrome_mox, fellwar_stone, lotus_petal, mana_vault,
+    mox_amber, mox_diamond, relic_of_legends, sol_ring, arid_mesa, bayou, boseiju_who_endures,
+    city_of_brass, command_tower, exotic_orchard, flooded_strand, gaeas_cradle, gemstone_caverns,
+    mana_confluence, marsh_flats, misty_rainforest, mount_doom, otawara_soaring_city,
+    polluted_delta, savannah, scalding_tarn, scrubland, taiga, tropical_island, tundra,
+    underground_sea, verdant_catacombs, volcanic_island, windswept_heath, wooded_foothills,
+    birds_of_paradise, bloom_tender, deadpool_trading_card, deathrite_shaman, delighted_halfling,
+    derevi_empyrial_tactician, emiel_the_blessed, enduring_vitality, ertai_resurrected,
+    esika_god_of_the_tree, esper_sentinel, faeburrow_elder, ignoble_hierarch,
+    ioreth_of_the_healing_house, kinnan_bonder_prodigy, kutzil_malamet_exemplar,
+    lavinia_azorius_renegade, lotho_corrupt_shirriff, marvin_murderous_mimic, noble_hierarch,
+    orcish_bowmasters, ragavan_nimble_pilferer, samut_hazorets_champion,
+    selvala_heart_of_the_wilds, shang_chi_master_of_kung_fu, tam_mindful_first_year, tataru_taru,
+    the_cabbage_merchant, cultist_of_the_absolute, gleaming_splendor, mystic_remora,
+    oath_of_teferi, rhystic_study, smothering_tithe, touch_the_spirit_realm, abrupt_decay,
+    deflecting_swat, enlightened_tutor, fierce_guardianship, flusterstorm, force_of_will,
+    mental_misstep, mindbreak_trap, silence, swan_song, swords_to_plowshares, vampiric_tutor,
+    dihada_binder_of_wills, nicol_bolas_dragon_god, teferi_time_raveler, tyvar_jubilant_brawler,
+    cultivate, demonic_tutor, farseek, primevals_glorious_rebirth, urzas_ruinous_blast,
+    // Basics
+    forest, forest, island, mountain, plains, plains, swamp,
+];

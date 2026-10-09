@@ -2355,6 +2355,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YGRA_COMMANDERS,
             main: decks::YGRA_MAIN,
         },
+        // Seat 323: Orvar, the All-Form's EDHREC average deck. `--pod-decks 323`.
+        PodDeck {
+            name: "Orvar, the All-Form (U)",
+            commanders: decks::ORVAR_COMMANDERS,
+            main: decks::ORVAR_MAIN,
+        },
+        // Seat 324: Sisay, Weatherlight Captain's EDHREC average deck. `--pod-decks 324`.
+        PodDeck {
+            name: "Sisay, Weatherlight Captain (BGRUW)",
+            commanders: decks::SISAY_COMMANDERS,
+            main: decks::SISAY_MAIN,
+        },
     ]
 }
 
@@ -4321,6 +4333,8 @@ mod tests {
             ("Isshin, Two Heavens as One", [0x1551, 320, 9245]),
             ("Jodah, the Unifier", [0x10DA, 321, 9246]),
             ("Ygra, Eater of All", [0x1964, 322, 9247]),
+            ("Orvar, the All-Form", [0x0A7F, 323, 9248]),
+            ("Sisay, Weatherlight Captain", [0x515A, 324, 9249]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
