@@ -1568,3 +1568,34 @@ fn scorn_blade_berserker_backs_up_with_its_draw() {
         assert_eq!(g.players[0].hand.len(), hand + 1);
     }
 }
+
+/// The Necrobloom: with seven differently named lands, landfall makes a
+/// Zombie instead of a Plant.
+#[test]
+fn the_necrobloom_makes_zombies_at_seven_names() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_necrobloom());
+    for land in [catalog::plains(), catalog::island(), catalog::swamp(), catalog::mountain(), catalog::command_tower(), catalog::evolving_wilds()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(forest)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Zombie"), 1);
+    assert_eq!(named(&g, "Plant"), 0);
+}
+
+/// The Necrobloom gives graveyard lands dredge 2 (CR 702.52): a draw
+/// returns the land and mills two.
+#[test]
+fn the_necrobloom_lands_dredge() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_necrobloom());
+    let land = g.add_card_to_graveyard(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let lib = g.players[0].library.len();
+    g.draw_one(0, &mut Vec::new());
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "dredged back");
+    assert_eq!(g.players[0].library.len(), lib - 2);
+}

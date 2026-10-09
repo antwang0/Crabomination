@@ -4387,8 +4387,8 @@ pub fn galvanic_relay() -> CardDefinition {
 
 /// The Necrobloom — {1}{W}{B}{G} 2/7 Legendary Plant. Landfall — whenever a
 /// land you control enters, create a 0/1 green Plant token; if you control 7+
-/// lands with different names, a 2/2 Zombie instead. (The "lands in your
-/// graveyard have dredge 2" static is omitted.)
+/// lands with different names, a 2/2 black Zombie instead. Land cards in your
+/// graveyard have dredge 2 (`StaticEffect::YourGraveyardLandsHaveDredge`).
 pub fn the_necrobloom() -> CardDefinition {
     use crate::card::TokenDefinition;
     use crate::mana::Color;
@@ -4400,6 +4400,18 @@ pub fn the_necrobloom() -> CardDefinition {
         colors: vec![Color::Green],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
             ..Default::default()
         },
         ..Default::default()
@@ -4417,11 +4429,28 @@ pub fn the_necrobloom() -> CardDefinition {
         toughness: 7,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(plant),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountOf(Box::new(Selector::OnePerDistinctName(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ))),
+                    Value::Const(7),
+                ),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: std::sync::Arc::new(zombie),
+                }),
+                else_: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: std::sync::Arc::new(plant),
+                }),
             },
+        }],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Land cards in your graveyard have dredge 2.",
+            effect: crate::card::StaticEffect::YourGraveyardLandsHaveDredge(2),
         }],
         ..Default::default()
     }
