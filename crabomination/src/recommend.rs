@@ -1787,9 +1787,10 @@ pub enum StopReason {
     /// `actions >= max_actions`.
     ActionCap,
     /// The battlefield passed [`MAX_BATTLEFIELD`] (or the stack
-    /// [`MAX_STACK`]): a token-doubling board or a copy chain whose next
-    /// action costs more than the last, bounded here so one game cannot
-    /// hold a thread for hours. Counted with the action cap.
+    /// [`MAX_STACK`] spells or [`MAX_STACK_ITEMS`] items): a token-doubling
+    /// board or a copy chain whose next action costs more than the last,
+    /// bounded here so one game cannot hold a thread for hours. Counted with
+    /// the action cap.
     BoardCap,
     /// [`STALE_ROUNDS`] consecutive rounds in which neither bot had an
     /// action accepted.
@@ -1814,6 +1815,13 @@ pub const MAX_BATTLEFIELD: usize = 1_024;
 /// counted: a 771-creature attack puts 771 legitimate triggers there.
 pub const MAX_STACK: usize = 512;
 
+/// The stack's bound on ITEMS of any kind, triggers included: eight times the
+/// board bound, so a whole-board trigger fan-out is far inside it. Dina, Soul
+/// Steeper beside Exquisite Blood against a seat that can't lose pushed 9,000
+/// triggers with only passes between them, which the play budget never counts
+/// (six-seat audit pod, seed 4500524 game 17, ran for hours).
+pub const MAX_STACK_ITEMS: usize = 8 * MAX_BATTLEFIELD;
+
 /// Where the board-bound gates stop a token effect (a held cast, a declined
 /// free cast, a capped copy fan-out): an eighth short of `MAX_BATTLEFIELD`,
 /// so the ordinary tokens a board keeps making (Treasure, a Clue) don't tip a
@@ -1834,7 +1842,7 @@ pub fn stop_reason(
         Some(StopReason::GameOver)
     } else if actions >= max_actions {
         Some(StopReason::ActionCap)
-    } else if g.battlefield.len() > MAX_BATTLEFIELD || g.stack_spells_at_bound() {
+    } else if g.battlefield.len() > MAX_BATTLEFIELD || g.stack.len() >= MAX_STACK_ITEMS || g.stack_spells_at_bound() {
         Some(StopReason::BoardCap)
     } else if stale >= STALE_ROUNDS {
         Some(StopReason::NoLegalMove)
@@ -2743,6 +2751,21 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
 mod tests {
     use super::*;
     use crate::catalog;
+
+    /// A trigger stack past `MAX_STACK_ITEMS` is a `BoardCap`, whatever its
+    /// play count (Dina + Exquisite Blood against a seat that can't lose
+    /// passed for hours, seed 4500524).
+    #[test]
+    fn a_runaway_trigger_stack_is_a_board_cap() {
+        let mut g = crate::game::multi_player_game(4);
+        let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..MAX_STACK_ITEMS - 1 {
+            g.push_stack(crate::game::types::TriggerPush::new(src, 0, crate::effect::Effect::Noop).build());
+        }
+        assert_eq!(stop_reason(&g, 0, 1_000, 0), None);
+        g.push_stack(crate::game::types::TriggerPush::new(src, 0, crate::effect::Effect::Noop).build());
+        assert_eq!(stop_reason(&g, 0, 1_000, 0), Some(StopReason::BoardCap));
+    }
 
     /// Every pair is two games, and only fully decided pairs are scored.
     /// The unpaired totals stay the ground truth for "how many games did
