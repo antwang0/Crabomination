@@ -1456,3 +1456,18 @@ fn cr_701_8a_a_may_discard_payoff_discards_the_chosen_card() {
     assert!(g.players[0].hand.iter().any(|c| c.id == big), "the default pick stayed in hand");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Glorious Anthem"), "the tutor ran");
 }
+
+/// CR 115.1 / 800.4 pods — the slot walker aims a hostile multi-target spell
+/// at opponents first for every pod seat, not only one flagged
+/// `hostile_player_targets`: the frozen two-player control burned its own
+/// face with Crackle with Power at a four-seat table (audit sweep 43001).
+#[test]
+fn a_pod_seats_crackle_with_power_never_names_its_caster() {
+    let mut g = multi_player_game(4);
+    g.players[0].hostile_player_targets = false;
+    let crackle = catalog::crackle_with_power();
+    let (first, rest) = g.auto_targets_for_effect_all_slots_x(&crackle.effect, 0, None, false, None, Some(3));
+    let picks: Vec<Target> = first.into_iter().chain(rest).collect();
+    assert!(!picks.is_empty());
+    assert!(!picks.contains(&Target::Player(0)), "the caster is not a target: {picks:?}");
+}

@@ -1027,8 +1027,7 @@ impl GameState {
                 // time (2026-09-06 deck work): a bot's search never sees the
                 // other player because the candidate list bakes one target.
                 let mut found: Option<Target> = None;
-                let hostile = self.players[controller].hostile_player_targets
-                    && eff.player_slot_is_hostile(slot, mode);
+                let hostile = self.hostile_player_slot(controller, eff, slot, mode);
                 // An optional gift slot (Parnesse's opponent copy) is never
                 // filled with an opponent by the auto-picker; asked lazily,
                 // only on the opponent fallback.
@@ -1348,5 +1347,23 @@ fn doubles_target_counters(eff: &Effect) -> bool {
         Effect::DoubleCountersOnEach { .. } | Effect::DoubleAllCountersOn { .. } => true,
         Effect::Seq(steps) => steps.first().is_some_and(doubles_target_counters),
         _ => false,
+    }
+}
+
+impl GameState {
+    /// Whether the slot walkers aim player slot `slot` of `eff` at an
+    /// opponent first: a hostile slot (damage, discard, life loss, …) for a
+    /// seat with `hostile_player_targets`, and in every pod — the frozen
+    /// two-player control's caster-first pick burned its own face with
+    /// Crackle with Power at a four-seat table (audit sweep 43001).
+    pub(crate) fn hostile_player_slot(
+        &self,
+        controller: usize,
+        eff: &crate::effect::Effect,
+        slot: u8,
+        mode: Option<usize>,
+    ) -> bool {
+        (self.players[controller].hostile_player_targets || self.players.len() > 2)
+            && eff.player_slot_is_hostile(slot, mode)
     }
 }

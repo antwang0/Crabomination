@@ -27348,8 +27348,7 @@ impl GameState {
             // flag is set and the slot's effect is hostile (a discard, damage,
             // life loss, …): then the opponent comes first — see the same rule
             // in `auto_targets_for_effect_all_slots_kicked`.
-            let hostile = self.players[controller].hostile_player_targets
-                && eff.player_slot_is_hostile(slot, None);
+            let hostile = self.hostile_player_slot(controller, eff, slot, None);
             let opp_targets = opps.iter().map(|&q| Target::Player(q));
             let order: Vec<Target> = if hostile {
                 opp_targets.chain(std::iter::once(Target::Player(controller))).collect()
