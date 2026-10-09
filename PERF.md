@@ -3157,6 +3157,25 @@ audit pods       sweep 41001 (302 decks x 4/3/6 seats x 30, strict): 6,840
 suite            24,660 / 0 / 5 strict; workspace clippy 0
 ```
 
+### 2026-10-09 (Commander routine — session `01SYwcUg`, fourth checkpoint) — guardrail; seats 310-329
+
+Hot-path touches: the sacrifice tally reads the death snapshot's artifact
+subtypes once more per `PermanentSacrificed` (Food); the graveyard land-play
+gate and every may-play cast ask `may_play_usable` (a `match` that walks the
+battlefield only for the Flameshape duration); `R::IsSnow` on the battlefield
+reads the computed supertypes. None of them is in the `fixed` pool's cards.
+Release `bot_ladder` at `0c4b68c21` (seats 310-327; 328-329 and Thrumming
+Stone's ripple landed after, trace-checked by the pod tests only).
+
+```text
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak_rss 31.2 MiB
+release pods     300 games, strict answer log, seats 310-327: 4 shuffled
+                 4-seat groups + 1 six-seat group x 30, seeds 29000/29001 —
+                 300/300 decided, every undecided_by column 0, 0 panics
+suite            24,682 / 0 / 5 (at seat 327); workspace clippy 0
+```
+
 ### 2026-10-09 (Commander routine — session `01SYwcUg`, third checkpoint) — guardrail; seats 296-309
 
 Hot-path touches: every `run_effect` asks one `matches!` for the four
