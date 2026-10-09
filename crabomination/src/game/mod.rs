@@ -31158,7 +31158,9 @@ impl GameState {
             // `printed_cmc`, not `cost.cmc()`: this arm is 13,178 calls a
             // six-game `cube` run and the answer is a pure function of the
             // definition (PERF `(-348)`).
-            GameEvent::CreatureDied { card_id } => self
+            // A sacrifice reads the same: "with lesser mana value" than the
+            // sacrificed creature (Riveteers Ascendancy).
+            GameEvent::CreatureDied { card_id } | GameEvent::CreatureSacrificed { card_id, .. } => self
                 .died_card_snapshots
                 .get(card_id)
                 .or_else(|| self.find_card_anywhere(*card_id))
