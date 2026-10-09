@@ -4676,6 +4676,7 @@ static DECKS: &[Factory] = &[
     super::decks::rings_of_brighthearth,
     super::decks::the_reality_chip,
     super::decks::illustrious_wanderglyph,
+    super::decks::thousand_moons_smithy,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

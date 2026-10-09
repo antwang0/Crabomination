@@ -2037,3 +2037,34 @@ fn illustrious_wanderglyph_ascends() {
     drain_stack(&mut g);
     assert_eq!(named(&g, "Gnome"), 1);
 }
+
+/// Thousand Moons Smithy: its Gnome Soldier counts artifacts and creatures;
+/// tapping five at your first main phase flips it, and Barracks mana funding a
+/// creature spell makes another Soldier — unmarked mana doesn't.
+#[test]
+fn thousand_moons_smithy_flips_into_barracks() {
+    let mut g = pod(2);
+    let smithy = g.add_card_to_hand(0, catalog::thousand_moons_smithy());
+    flood(&mut g);
+    cast(&mut g, smithy, None);
+    let soldier = g.battlefield.iter().find(|c| c.definition.name == "Gnome Soldier").unwrap().id;
+    assert_eq!(g.computed_permanent(soldier).unwrap().power, 2, "the Smithy and itself");
+    for _ in 0..4 {
+        ready(&mut g, 0, catalog::memnite());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(smithy).unwrap().definition.name, "Barracks of the Thousand");
+    g.battlefield_find_mut(smithy).unwrap().tapped = false;
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, smithy, None);
+    let lions = g.add_card_to_hand(0, catalog::savannah_lions());
+    cast(&mut g, lions, None);
+    assert_eq!(named(&g, "Gnome Soldier"), 2, "Barracks mana made a Soldier");
+    g.players[0].mana_pool.add(Color::White, 1);
+    let lions2 = g.add_card_to_hand(0, catalog::savannah_lions());
+    cast(&mut g, lions2, None);
+    assert_eq!(named(&g, "Gnome Soldier"), 2, "other mana doesn't");
+}

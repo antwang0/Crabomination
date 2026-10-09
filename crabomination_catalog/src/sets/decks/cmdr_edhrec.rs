@@ -3587,3 +3587,72 @@ pub fn illustrious_wanderglyph() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Gnome Soldier both faces of Thousand Moons Smithy make: P/T each equal
+/// to the artifacts and/or creatures you control.
+fn gnome_soldier() -> TokenDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    TokenDefinition {
+        name: "Gnome Soldier".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: creature_types(vec![CreatureType::Gnome, CreatureType::Soldier]),
+        static_abilities: vec![StaticAbility {
+            description: "This token's power and toughness are each equal to the number of artifacts and/or creatures you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents { filter: R::Artifact.or(R::Creature), per_power: 1, per_toughness: 1 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thousand Moons Smithy // Barracks of the Thousand — {2}{W}{W} Legendary
+/// Artifact. ETB: a Gnome Soldier; at your first main phase you may tap five
+/// untapped artifacts and/or creatures to transform. Barracks (Legendary
+/// Artifact Land): {T}: {W}; an artifact or creature spell cast with its mana
+/// makes a Gnome Soldier (`SpendRestriction::MarksCast`).
+pub fn thousand_moons_smithy() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    use crate::mana::SpendRestriction;
+    let barracks = CardDefinition {
+        name: "Barracks of the Thousand",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(Box::new(ManaPayload::Colors(vec![Color::White])), SpendRestriction::MarksCast),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.or(R::Creature) },
+                Predicate::CastWithMarkedMana { what: Selector::TriggerSource },
+            ])),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(gnome_soldier()) },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Thousand Moons Smithy",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(gnome_soldier()) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+                effect: Effect::MayTap {
+                    description: "Tap five untapped artifacts and/or creatures to transform Thousand Moons Smithy?".into(),
+                    filter: R::Artifact.or(R::Creature).and(R::ControlledByYou),
+                    count: Value::Const(5),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: None,
+                },
+            },
+        ],
+        back_face: Some(Box::new(barracks)),
+        ..Default::default()
+    }
+}
