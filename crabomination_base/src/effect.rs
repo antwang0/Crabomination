@@ -308,6 +308,10 @@ pub enum Selector {
     /// creature is attacking (Mage Slayer's "the player or planeswalker it's
     /// attacking"). Empty when the source isn't attacking.
     AttackedBySource,
+    /// `AttackedBySource` for the trigger's subject — "the player or
+    /// planeswalker that creature is attacking" off an attack trigger watching
+    /// other creatures (Raid Bombardment).
+    AttackedByTriggerSource,
     /// The mirror of `BlockedAttacker`: every creature currently blocking the
     /// source attacker (reverse-lookup of `GameState.block_map`). Used by
     /// "whenever this becomes blocked by a creature, [affect that creature]"

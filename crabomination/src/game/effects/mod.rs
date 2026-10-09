@@ -42655,8 +42655,10 @@ impl GameState {
             //
             // `source` first so no working self-trigger moves; the fallback
             // only fires where the answer was empty.
-            Selector::AttackedBySource => ctx
-                .source
+            Selector::AttackedBySource | Selector::AttackedByTriggerSource => match sel {
+                Selector::AttackedBySource => ctx.source,
+                _ => ctx.trigger_source.and_then(|e| e.as_permanent_id()),
+            }
                 .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
                 .map(|a| match a.target {
                     crate::game::types::AttackTarget::Player(p) => EntityRef::Player(p),
