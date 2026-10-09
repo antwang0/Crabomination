@@ -2895,3 +2895,81 @@ pub fn tinybones_bauble_burglar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Grolnok, the Omnivore — {2}{G}{U} 3/3 Frog. A Frog you control attacking
+/// mills three; a permanent card milled into your graveyard is exiled with a
+/// croak counter, and you may play it while Grolnok remains (the grant is
+/// stamped as it is exiled and bound to this Grolnok).
+pub fn grolnok_the_omnivore() -> CardDefinition {
+    use crate::card::{CounterType, MayPlayDuration};
+    CardDefinition {
+        name: "Grolnok, the Omnivore",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Frog]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Frog)),
+                }),
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardMilled, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::PermanentCard,
+                }),
+                effect: Effect::Seq(vec![
+                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Croak, amount: Value::ONE },
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: MayPlayDuration::WhileSourceOnBattlefield { source: crate::card::CardId(0), one_spell_a_turn: false },
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mnemonic Betrayal — {1}{U}{B} sorcery. Exile all opponents' graveyards;
+/// this turn you may cast spells from among them with mana of any type, and
+/// at the next end step the ones still exiled go back. Exiles itself.
+pub fn mnemonic_betrayal() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    use crate::effect::{DelayedTriggerKind, ZoneRef};
+    CardDefinition {
+        name: "Mnemonic Betrayal",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
+        effect: Effect::Seq(vec![
+            Effect::ExileLinked {
+                what: Selector::EachMatching { zone: ZoneRef::Graveyard(PlayerRef::EachOpponent), filter: R::Any },
+            },
+            // "Cast spells": lands can't be cast, so they get no grant.
+            Effect::GrantMayPlay {
+                what: Selector::ExiledThisResolution { filter: R::Not(Box::new(R::Land)) },
+                duration: MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: true,
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Graveyard }),
+            },
+        ]),
+        ..Default::default()
+    }
+}

@@ -1739,3 +1739,51 @@ fn tinybones_stashes_and_plays_a_discard() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3, "cast with blue mana");
 }
+
+/// Grolnok: a Frog attacking mills three; the milled permanent cards are
+/// exiled with croak counters and playable, the instants stay binned.
+#[test]
+fn grolnok_croaks_milled_permanents() {
+    let mut g = pod(2);
+    let frog = ready(&mut g, 0, catalog::grolnok_the_omnivore());
+    g.players[0].library.clear();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let land = g.add_card_to_library(0, catalog::forest());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: frog, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    for id in [bear, land] {
+        let c = g.exile.iter().find(|c| c.id == id).expect("croaked into exile");
+        assert_eq!(c.counter_count(crabomination::card::CounterType::Croak), 1);
+        assert!(c.may_play_until.is_some_and(|m| m.player == 0));
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "a nonpermanent stays");
+}
+
+/// Mnemonic Betrayal: cast an opponent's binned spell with off-color mana;
+/// the uncast cards go home at the end step and the sorcery exiles itself.
+#[test]
+fn mnemonic_betrayal_borrows_the_graveyard() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let mb = g.add_card_to_hand(0, catalog::mnemonic_betrayal());
+    flood(&mut g);
+    cast(&mut g, mb, None);
+    assert!(g.exile.iter().any(|c| c.id == mb), "exiles itself");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("cast the borrowed bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    to_end_step(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "the bear went home");
+}
