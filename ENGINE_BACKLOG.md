@@ -157,6 +157,9 @@ undecided: 5 CR 104.4 draws, 3 caps) found two more, both fixed:
   entered (Grafdigger's Cage) stayed face down in its graveyard or library
   (Ghastly Conscription).
 
+A fourth, fuzzed, on the fixed tree (seed 31517): 6,660 games, **0 panics**,
+3 undecided (one CR 104.4 draw, two Secret Arcade caps).
+
 Open, not defects: **Gremlin Tamer + Secret Arcade** (seat 271, Marina
 Vendrell) is a real unbounded mandatory loop — every Gremlin is an
 enchantment, so the eerie trigger re-fires — and ends as a board cap; 11 of
