@@ -128,7 +128,7 @@ pub fn ran_and_shaw() -> CardDefinition {
 }
 
 /// Sozin's Comet — {3}{R}{R} Sorcery. Each creature you control gains
-/// firebending 5 until end of turn. (Foretell is dropped.)
+/// firebending 5 until end of turn. Foretell {2}{R}.
 pub fn sozins_comet() -> CardDefinition {
     CardDefinition {
         name: "Sozin's Comet",
