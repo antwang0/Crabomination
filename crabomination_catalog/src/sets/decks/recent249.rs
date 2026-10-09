@@ -51,8 +51,8 @@ pub fn clandestine_meddler() -> CardDefinition {
 }
 
 /// Forensic Gadgeteer — {2}{U} Creature — Vedalken Artificer Detective 2/3.
-/// Whenever you cast an artifact spell, investigate. (The "activated abilities of
-/// artifacts you control cost {1} less" static is not modeled.)
+/// Whenever you cast an artifact spell, investigate; activated abilities of
+/// artifacts you control cost {1} less (never below one mana).
 pub fn forensic_gadgeteer() -> CardDefinition {
     CardDefinition {
         name: "Forensic Gadgeteer",
@@ -76,6 +76,10 @@ pub fn forensic_gadgeteer() -> CardDefinition {
                 },
             ),
             effect: investigate(1),
+        }],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Activated abilities of artifacts you control cost {1} less to activate. This effect can't reduce the mana in that cost to less than one mana.",
+            effect: crate::card::StaticEffect::MatchingActivatedAbilitiesCostLessFloored { filter: R::Artifact, amount: 1 },
         }],
         ..Default::default()
     }

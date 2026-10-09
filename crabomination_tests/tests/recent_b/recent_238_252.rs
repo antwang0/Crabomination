@@ -2741,6 +2741,15 @@ mod recent249 {
         .expect("cast an artifact spell");
         drain_stack(&mut g);
         assert_eq!(clues(&g, 0), 1, "casting an artifact investigated");
+        // Its discount: the Clue's {2} crack costs {1}, and no less.
+        let clue = g.battlefield.iter().find(|c| c.definition.name == "Clue").unwrap().id;
+        let hand = g.players[0].hand.len();
+        g.add_card_to_library(0, catalog::island());
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility { card_id: clue, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .expect("crack the Clue for {1}");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + 1);
     }
 
     /// Pompous Gadabout has hexproof only during its controller's turn.
