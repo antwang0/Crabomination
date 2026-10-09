@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 38 |
 | Bugs & robustness | [FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls](#fixed-2026-10-09-twelfth-commander-run-01g4zua3--per-slot-6082b-for-spells-four-more-invariants-two-bot-stalls) | 40 |
 | Bugs & robustness | [FIXED 2026-10-08 (tenth Commander run, `01GdFPW9`) — state invariants on the audit build](#fixed-2026-10-08-tenth-commander-run-01gdfpw9--state-invariants-on-the-audit-build) | 113 |
 | Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 80 |
@@ -152,6 +153,41 @@ the handoff.
   (cube) is never used; activated abilities go through per-effect pickers
   and none covers `ExchangeLifeTotals`. A `pick_life_swap` (self + the
   highest-life opponent, when the gap is worth {6}) is the shape.
+
+## FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw
+
+The thirteenth run's top stall cause was the bot walking into its own
+mandatory loop. A strict audit sweep (seed 41001, 302 decks × 4/3/6 seats ×
+30 = 6,840 games, 0 panics) read 16 undecided, every one classified by
+replaying it (`CRAB_POD_TRACE=0`, the last 60 stack tops):
+
+- **Ghostly Dancers / Gremlin Tamer under Secret Arcade (4)** —
+  `server/loop_hazard.rs`: a pod finalist whose settled state leaves a token
+  trigger re-triggered by its own token is dropped (static probe: mint the
+  token on a clone, match it with the engine's trigger matcher; a Room spell
+  is minted with its cast door unlocked, CR 709.5d). A **resolution probe**
+  catches what only the stack shows (Awakening Hall returning Dancers under
+  the Arcade): the finalist is resolved with every seat passing; a CR 104.4b
+  draw, or a stack that never drains while the board grows by 16, drops it.
+  Gated on a Commander seat holding a repeatable token trigger anywhere.
+- **Polyraptor + Marauding Raptor (3)** — the same resolution probe.
+- **Scute Swarm (3) — a FALSE draw.** The growth watch's floor was the
+  chain's first depth, so a Lumra land drop under 160 Swarms (400 growing
+  resolutions draining from depth 161) read as a loop. The floor now ratchets
+  to each growing resolution's depth (`growth_loop.rs`).
+- **Ghostly Dancers' own text** — it dropped "or unlock a locked door of a
+  Room you control" and Eerie's "whenever you fully unlock a Room" half, and
+  invented a graveyard target; Scrabbling Skullcrab's doc still said Rooms
+  weren't modeled. The Auto trigger-mode pick now skips an untargeted
+  Move / Room unlock over nothing (`stack.rs::skip_fruitless_auto_mode`).
+- Legit: two CR 104.4a all-lose draws (Abyssal Persecutor's controller died
+  last; a Pyrohemia board), one `MAX_STACK` cap (Mizzix's Mastery overload
+  under Veyran).
+
+Also this run: **CR 702.189a / 605.1b — firebending uses the stack** (2025
+ruling; it was resolved as a mana ability, so Isshin never doubled it and
+nothing could copy it), and **Firebender Ascension**'s quest-counter copy
+(`Keyword::AttackTriggerQuestCopy`, `game/quest_copy.rs`).
 
 ## FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls
 
