@@ -2037,6 +2037,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BETOR_KIN_COMMANDERS,
             main: decks::BETOR_KIN_MAIN,
         },
+        // Seat 270: Lumra, Bellow of the Woods's EDHREC average deck. `--pod-decks 270`.
+        PodDeck {
+            name: "Lumra, Bellow of the Woods (G)",
+            commanders: decks::LUMRA_COMMANDERS,
+            main: decks::LUMRA_MAIN,
+        },
     ]
 }
 
@@ -3821,6 +3827,7 @@ mod tests {
             ("The Mindskinner", [0x3155, 267, 9191]),
             ("Atla Palani, Nest Tender", [0xA71A, 268, 9192]),
             ("Betor, Kin to All", [0xBE71, 269, 9193]),
+            ("Lumra, Bellow of the Woods", [0x1B4A, 270, 9194]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

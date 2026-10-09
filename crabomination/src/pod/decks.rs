@@ -7936,3 +7936,31 @@ pub const BETOR_KIN_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
     plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const LUMRA_COMMANDERS: &[CardFactory] = &[lumra_bellow_of_the_woods];
+
+/// **Lumra, Bellow of the Woods**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 84 nonbasic cards + 15 Forests = 99.
+/// Mono-green lands: self-mill and recursion return every land to the battlefield.
+pub const LUMRA_MAIN: &[CardFactory] = &[
+    amulet_of_vigor, lotus_petal, mana_vault, mox_diamond, sol_ring, vexing_bauble, zuran_orb,
+    arid_archway, boseiju_who_endures, castle_garenbrig, cavern_of_souls, command_beacon,
+    crystal_vein, echoing_deeps, emergence_zone, fabled_passage, field_of_the_dead, ghost_quarter,
+    havenwood_battleground, hickory_woodlot, lotus_field, mirrorpool, misty_rainforest,
+    shifting_woodland, snow_covered_forest, snow_covered_forest, snow_covered_forest,
+    snow_covered_forest, strip_mine, sunscorched_desert, talon_gates_of_madara, urzas_cave,
+    urzas_saga, verdant_catacombs, vesuva, wasteland, windswept_heath, wooded_foothills,
+    yavimaya_cradle_of_growth, aftermath_analyst, ashaya_soul_of_the_wild, avenger_of_zendikar,
+    azusa_lost_but_seeking, blossoming_tortoise, delighted_halfling, elvish_reclaimer,
+    elvish_spirit_guide, endurance, famished_worldsire, horizon_explorer, icetill_explorer,
+    lotus_cobra, nissa_resurgent_animist, rampaging_baloths, scute_swarm, six, sowing_mycospawn,
+    springheart_nantuko, sylvan_safekeeper, tiller_engine, timeless_witness, tireless_provisioner,
+    burgeoning, exploration, food_chain, garruks_uprising, spelunking, sylvan_library,
+    archdruids_charm, beast_within, chord_of_calling, crop_rotation, entish_restoration, harrow,
+    heroic_intervention, tezzeret_cruel_captain, cultivate, eldritch_evolution,
+    finale_of_devastation, green_suns_zenith, natural_order, natures_lore, natures_rhythm,
+    scapeshift,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];
