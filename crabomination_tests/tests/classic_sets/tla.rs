@@ -2133,23 +2133,37 @@ fn appa_loyal_grants_flying() {
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
-/// Fire Lord Azula copies a spell cast while she's attacking.
+/// Fire Lord Azula copies a spell cast while she's attacking — not one cast
+/// after combat, though she attacked that turn.
 #[test]
 fn fire_lord_azula_copies_while_attacking() {
     let mut g = two_player_game();
     let azula = g.add_card_to_battlefield(0, catalog::fire_lord_azula());
-    g.battlefield_find_mut(azula).unwrap().attacked_this_turn = true;
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.step = TurnStep::PreCombatMain;
+    g.clear_sickness(azula);
+    g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
-    let life0 = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast bolt");
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: azula,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life0 - 6, "original + copy each deal 3");
+    let bolt = |g: &mut GameState| {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+        let life0 = g.players[1].life;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast bolt");
+        drain_stack(g);
+        life0 - g.players[1].life
+    };
+    assert_eq!(bolt(&mut g), 6, "original + copy each deal 3");
+    g.attacking.clear();
+    g.step = TurnStep::PostCombatMain;
+    assert_eq!(bolt(&mut g), 3, "no longer attacking");
 }
 
 /// Rockalanche earthbends for the number of Forests you control.

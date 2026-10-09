@@ -3836,7 +3836,7 @@ pub fn appa_loyal_sky_bison() -> CardDefinition {
 
 /// Fire Lord Azula — {1}{U}{B}{R} 4/4 legendary Human Noble. Firebending 2.
 /// Whenever you cast a spell while Azula is attacking, copy that spell (you may
-/// choose new targets). (Modeled as "while Azula attacked this turn".)
+/// choose new targets).
 pub fn fire_lord_azula() -> CardDefinition {
     CardDefinition {
         name: "Fire Lord Azula",
@@ -3852,7 +3852,7 @@ pub fn fire_lord_azula() -> CardDefinition {
         keywords: vec![Keyword::Firebending(2)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::SourceAttackedThisTurn),
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: SelectionRequirement::IsAttacking }),
             effect: Effect::CopySpellMayChooseTargets {
                 what: Selector::TriggerSource,
                 count: Value::ONE,
