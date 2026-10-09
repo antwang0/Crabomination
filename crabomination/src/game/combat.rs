@@ -219,6 +219,8 @@ enum FirebendKind {
     Power,
     /// Firebending = creatures you control.
     CreaturesYouControl,
+    /// Firebending = your experience counters.
+    Experience,
 }
 
 /// What [`GameState::declare_attackers_banded`]'s commit loop asks of one
@@ -276,6 +278,9 @@ fn attacker_decl_facts(kws: &[Keyword]) -> AttackerDeclFacts {
             }
             Keyword::FirebendingCreaturesYouControl if f.firebending.is_none() => {
                 f.firebending = Some(FirebendKind::CreaturesYouControl)
+            }
+            Keyword::FirebendingExperience if f.firebending.is_none() => {
+                f.firebending = Some(FirebendKind::Experience)
             }
             _ => {}
         }
@@ -2322,6 +2327,7 @@ impl GameState {
                     .iter()
                     .filter(|c| c.controller == p && self.computed_is_creature(c))
                     .count() as u32,
+                FirebendKind::Experience => self.players[p].experience,
             });
             if let Some(n) = firebend_n
                 && n > 0

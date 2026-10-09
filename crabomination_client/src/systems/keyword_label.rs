@@ -198,7 +198,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // so an opponent should weigh whether an attacker punches through.
         Absorb(_) => "Abs",
         // Firebending — attack-triggered red mana worth flagging on the board.
-        Firebending(_) | FirebendingPower | FirebendingCreaturesYouControl => "FB",
+        Firebending(_) | FirebendingPower | FirebendingCreaturesYouControl | FirebendingExperience => "FB",
         // "Assigns combat damage equal to its toughness" (Doran) — changes how
         // its combat math reads at a glance.
         AssignsCombatDamageByToughness => "T-dmg",

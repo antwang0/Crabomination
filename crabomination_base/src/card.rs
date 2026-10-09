@@ -1950,6 +1950,9 @@ pub enum Keyword {
     /// controller controls at attack time (Sun Warriors). Sibling of
     /// `FirebendingPower`; both resolve the same attack-triggered red mana.
     FirebendingCreaturesYouControl,
+    /// Firebending X, where X is the number of experience counters the
+    /// attacker's controller has (Zuko, Firebending Master).
+    FirebendingExperience,
     /// CR 702.190 — Sneak [cost]. A spell-static alt cast: during your declare
     /// blockers step you may cast this by paying [cost] and returning an
     /// unblocked creature you control to its owner's hand. Carried for display;
