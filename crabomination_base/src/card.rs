@@ -1231,6 +1231,11 @@ pub enum MayPlayDuration {
     /// the turn sweep, ended as `source` leaves (CR 611.3a). The cast skips
     /// the sorcery-speed gate. Printed with holder 0 and `CardId(0)`.
     HolderTurnsWithFlashWhileSource { holder: usize, source: CardId },
+    /// "For as long as they remain exiled, you may play them if you control a
+    /// [type]" (Gandalf, Goblins' Bane's Flameshape): `WhileExiled`, usable
+    /// only while the holder controls a creature of `creature_type` —
+    /// checked as the card is played (`GameState::may_play_usable`).
+    WhileExiledIfHolderControls { creature_type: CreatureType },
 }
 
 impl MayPlayDuration {

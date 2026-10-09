@@ -4768,7 +4768,28 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| c.may_play_until)
-            .is_some_and(|perm| perm.player == p && !perm.cast_only)
+            .is_some_and(|perm| perm.player == p && !perm.cast_only && self.may_play_usable(&perm))
+    }
+
+    /// Whether a may-play permission's own condition holds right now:
+    /// `WhileExiledIfHolderControls` wants its holder to control a creature
+    /// of the named type (Flameshape's Wizard); every other duration is
+    /// usable for as long as it lasts.
+    pub(crate) fn may_play_usable(&self, perm: &crate::card::MayPlayPermission) -> bool {
+        match perm.duration {
+            crate::card::MayPlayDuration::WhileExiledIfHolderControls { creature_type } => {
+                self.battlefield.iter().any(|c| {
+                    c.controller == perm.player
+                        && self.computed_is_creature(c)
+                        && self.evaluate_requirement_on_card(
+                            &crate::card::SelectionRequirement::HasCreatureType(creature_type),
+                            c,
+                            perm.player,
+                        )
+                })
+            }
+            _ => true,
+        }
     }
 
     pub(crate) fn play_land(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
@@ -14293,7 +14314,7 @@ impl GameState {
         let mut evidence_toll = None;
         let exile_after = match card_ref.may_play_until {
             Some(permission) => {
-                if permission.player != p {
+                if permission.player != p || !self.may_play_usable(&permission) {
                     return Err(GameError::CardNotInHand(card_id));
                 }
                 // A real may-play grant drives this cast; don't also bill the

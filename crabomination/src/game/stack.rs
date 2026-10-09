@@ -5771,6 +5771,7 @@ impl GameState {
                         ended_active == perm.player && ended_turn > perm.granted_turn
                     }
                     crate::card::MayPlayDuration::WhileExiled
+                    | crate::card::MayPlayDuration::WhileExiledIfHolderControls { .. }
                     | crate::card::MayPlayDuration::UntilSourceExilesAnother => false,
                     // Ends with its source; re-armed below.
                     crate::card::MayPlayDuration::WhileSourceOnBattlefield { .. } => false,

@@ -10244,6 +10244,11 @@ pub enum Effect {
     /// same equivalence Gonti, Lord of Luxury uses. `spend` narrows it: a
     /// card printing neither clause pays its own cost (Mindleecher), "as
     /// though it were mana of any color" keeps {C} pips (Rogue Class).
+    /// "Look at the top `count` cards of your library and exile them face
+    /// down. For as long as they remain exiled, you may play them if you
+    /// control a [creature_type]" (Gandalf, Goblins' Bane's Flameshape). Each
+    /// is paid at its own cost.
+    ExileTopFaceDownPlayIfYouControl { count: Value, creature_type: crate::card::CreatureType },
     ExileTopFaceDownGrantPlay {
         library: PlayerRef,
         grantee: PlayerRef,

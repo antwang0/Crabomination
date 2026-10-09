@@ -24,6 +24,7 @@ mod seat_mode;
 mod commander;
 mod attach_choice;
 mod aura_search;
+mod face_down_exile;
 mod party;
 mod stack_sweep;
 mod token_riders;
@@ -40188,43 +40189,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopFaceDownPlayIfYouControl { count, creature_type } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                let duration = crate::card::MayPlayDuration::WhileExiledIfHolderControls { creature_type: *creature_type };
+                for _ in 0..n {
+                    self.exile_top_face_down_granting(
+                        ctx.controller,
+                        ctx.controller,
+                        crate::effect::ExiledPlaySpend::Own,
+                        false,
+                        duration,
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::ExileTopFaceDownGrantPlay { library, grantee, spend, cast_only } => {
                 // Gonti, Night Minister — the library and the player who gets
                 // to play the card are different seats (the damaged opponent
                 // and the damaging creature's controller).
                 let Some(lib) = self.resolve_player(library, ctx) else { return Ok(()) };
                 let Some(to) = self.resolve_player(grantee, ctx) else { return Ok(()) };
-                let Some(top_id) = self.players[lib].library.first().map(|c| c.id) else {
-                    return Ok(());
-                };
-                let mut card = Self::take_card(&mut self.players[lib].library, top_id)
-                    .expect("id read off the top of this library just above");
-                card.exiled_with = ctx.source;
-                card.face_down = true;
-                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: *cast_only, locks_further_casts: false, one_cast_group: None,
-                    player: to,
-                    granted_turn: self.turn_number,
-                    duration: crate::card::MayPlayDuration::WhileExiled,
-                    exile_after: false,
-                    miracle: false,
-                    pay_life: false,
-                    bottom_after: false,
-                    undaunted: false,
-                });
-                // CR 609.4b — "mana of any type can be spent": paying the
-                // mana value as generic is the same set of payments; "of any
-                // color" turns only the coloured pips generic.
-                card.granted_alt_cast_cost_eot = match spend {
-                    crate::effect::ExiledPlaySpend::AnyType => Some(crate::mana::ManaCost::new(vec![
-                        crate::mana::generic(card.definition.cost.cmc()),
-                    ])),
-                    crate::effect::ExiledPlaySpend::AnyColor => Some(card.definition.cost.colored_as_generic()),
-                    // Stamped, not left unset: an unset cost is a free cast.
-                    crate::effect::ExiledPlaySpend::Own => Some(card.definition.cost.clone()),
-                };
-                self.exile.push(card);
-                events.push(GameEvent::PermanentExiled { card_id: top_id });
-                self.note_exiled_from_library(lib, top_id, events);
+                self.exile_top_face_down_granting(
+                    lib,
+                    to,
+                    *spend,
+                    *cast_only,
+                    crate::card::MayPlayDuration::WhileExiled,
+                    ctx,
+                    events,
+                );
                 Ok(())
             }
 
