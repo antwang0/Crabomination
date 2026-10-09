@@ -2241,6 +2241,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OVIKA_COMMANDERS,
             main: decks::OVIKA_MAIN,
         },
+        // Seat 304: Tannuk, Steadfast Second's EDHREC average deck. `--pod-decks 304`.
+        PodDeck {
+            name: "Tannuk, Steadfast Second (R)",
+            commanders: decks::TANNUK_STEADFAST_COMMANDERS,
+            main: decks::TANNUK_STEADFAST_MAIN,
+        },
+        // Seat 305: Gev, Scaled Scorch's EDHREC average deck. `--pod-decks 305`.
+        PodDeck {
+            name: "Gev, Scaled Scorch (BR)",
+            commanders: decks::GEV_COMMANDERS,
+            main: decks::GEV_MAIN,
+        },
     ]
 }
 
@@ -4188,6 +4200,8 @@ mod tests {
             ("Eriette of the Charmed Apple", [0xE21E, 301, 9226]),
             ("Alela, Cunning Conqueror", [0xA1E1, 302, 9227]),
             ("Ovika, Enigma Goliath", [0x0F1C, 303, 9228]),
+            ("Tannuk, Steadfast Second", [0x7A23, 304, 9229]),
+            ("Gev, Scaled Scorch", [0x6E55, 305, 9230]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

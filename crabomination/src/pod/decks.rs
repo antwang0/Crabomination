@@ -8899,3 +8899,59 @@ pub const OVIKA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const TANNUK_STEADFAST_COMMANDERS: &[CardFactory] = &[tannuk_steadfast_second];
+
+/// **Tannuk, Steadfast Second**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// warped artifacts and red creatures
+pub const TANNUK_STEADFAST_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, coveted_jewel, cursed_mirror, extinguisher_battleship,
+    fellwar_stone, hazorets_monument, ingenuity_engine, lightning_greaves, mind_stone,
+    portal_to_phyrexia, ruby_medallion, sol_ring, sundial_of_the_infinite, swiftfoot_boots,
+    the_fire_crystal, throne_of_eldraine, myriad_landscape, nykthos_shrine_to_nyx, rogues_passage,
+    spinerock_knoll, valakut_the_molten_pinnacle, war_room, alena_kessig_trapper,
+    ancient_copper_dragon, balefire_dragon, blast_furnace_hellkite, blightsteel_colossus,
+    cavern_hoard_dragon, cityscape_leveler, clive_ifrits_dominant, combustible_gearhulk,
+    dragon_mage, drakuseth_maw_of_flames, etali_primal_storm, hellkite_tyrant,
+    ilharg_the_raze_boar, iron_myr, knollspine_dragon, maelstrom_colossus, meteor_golem,
+    molten_primordial, myojin_of_roaring_blades, myr_battlesphere, neheb_the_eternal,
+    professional_face_breaker, sandstone_oracle, scourge_of_the_throne, skitterbeam_battalion,
+    solemn_simulacrum, terror_of_the_peaks, trumpeting_carnosaur, wild_magic_sorcerer,
+    charred_foyer_warped_space, flameshadow_conjuring, passionate_archaeologist,
+    sunbirds_invocation, abrade, big_score, chaos_warp, deflecting_swat, return_the_favor,
+    seething_song, untimely_malfunction, blasphemous_act, devastating_onslaught, faithless_looting,
+    jeskas_will, mana_geyser, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const GEV_COMMANDERS: &[CardFactory] = &[gev_scaled_scorch];
+
+/// **Gev, Scaled Scorch**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 80 nonbasic cards + 10 Mountains + 9 Swamps = 99.
+/// noncombat burn
+pub const GEV_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, fellwar_stone, patchwork_banner, rakdos_signet,
+    sinister_monolith, sol_ring, talisman_of_indulgence, vanquishers_banner, blood_crypt,
+    bojuka_bog, command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge, jagged_barrens,
+    luxury_suite, mudflat_village, path_of_ancestry, rockface_village, shivan_gorge,
+    smoldering_marsh, sulfurous_springs, tainted_peak, agate_instigator, agate_blade_assassin,
+    chandras_pyreling, cindering_cutthroat, dagger_caster, fireglass_mentor, flamecache_gecko,
+    frilled_sparkshooter, hearthborn_battler, hellspur_posse_boss, hired_claw, hissing_iguanar,
+    immolation_shaman, iridescent_vinelasher, kediss_emberclaw_familiar, kindlespark_duo,
+    laughing_jasper_flint, lizard_blades, magebane_lizard, master_of_barbs, murderous_redcap,
+    party_thrasher, ravine_raider, reptilian_recruiter, scorch_spitter, spitfire_lagac,
+    steampath_charger, stormfist_crusader, thought_stalker_warlock, valley_flamecaller,
+    valley_rotcaller, collective_inferno, goblin_bombardment, impact_tremors, phyrexian_arena,
+    theater_of_horrors, uncivil_unrest, abrade, bedevil, chaos_warp, dark_ritual, deadly_dispute,
+    hazels_nocturne, lightning_bolt, rakdos_charm, scales_of_shale, terminate, blasphemous_act,
+    boltwave, end_the_festivities, faithless_looting, feed_the_swarm, grab_the_prize,
+    sign_in_blood, tectonic_hazard, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
