@@ -4255,3 +4255,104 @@ pub fn hallowed_haunting() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Archpriest of Shadows — {3}{B}{B} 4/4 Human Warlock. Backup 1 (deathtouch
+/// and its combat trigger to the backed-up creature); combat damage to a
+/// player returns target creature card from your graveyard to the battlefield.
+pub fn archpriest_of_shadows() -> CardDefinition {
+    let reanimate = TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::Move {
+            what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    };
+    CardDefinition {
+        name: "Archpriest of Shadows",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Warlock]),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            crate::effect::shortcut::backup_with(1, vec![Keyword::Deathtouch], vec![reanimate.clone()]),
+            reanimate,
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rev, Tithe Extractor — {3}{B} 3/3 Human Rogue. Whenever you attack, target
+/// creature gains deathtouch this turn; your creatures hitting a player make a
+/// Treasure and exile that player's top card face down, castable while exiled.
+pub fn rev_tithe_extractor() -> CardDefinition {
+    CardDefinition {
+        name: "Rev, Tithe Extractor",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Rogue]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_batch(),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Deathtouch,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).once_per_batch(),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: Arc::new(crabomination_base::tokens::treasure_token()),
+                    },
+                    Effect::ExileTopFaceDownGrantPlay {
+                        library: PlayerRef::Target(0),
+                        grantee: PlayerRef::You,
+                        spend: crate::effect::ExiledPlaySpend::Own,
+                        cast_only: true,
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Forge Anew — {2}{W} Enchantment. ETB: return target Equipment card from
+/// your graveyard to the battlefield. During your turn, equip at instant
+/// speed; your first equip each of your turns may cost {0}.
+pub fn forge_anew() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Forge Anew",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::InYourGraveyard)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, you may activate equip abilities any time you could cast an instant.",
+                effect: StaticEffect::WhileYourTurn { inner: Box::new(StaticEffect::ControllerEquipAtInstantSpeed) },
+            },
+            StaticAbility {
+                description: "You may pay {0} rather than pay the equip cost of the first equip ability you activate during each of your turns.",
+                effect: StaticEffect::EquipmentYouControlEquipZeroWhile {
+                    condition: Predicate::All(vec![
+                        Predicate::IsTurnOf(PlayerRef::You),
+                        Predicate::ValueAtMost(Value::EquipsActivatedThisTurn(PlayerRef::You), Value::Const(0)),
+                    ]),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

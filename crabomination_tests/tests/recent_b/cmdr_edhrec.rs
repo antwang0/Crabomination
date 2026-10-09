@@ -2404,3 +2404,56 @@ fn yenna_copies_an_enchantment() {
     activate(&mut g, yenna, Some(Target::Permanent(ench)));
     assert_eq!(named(&g, "Efficient Construction"), 2);
 }
+
+/// Forge Anew: returns an Equipment; the first equip of your turn is free and
+/// may happen at instant speed; the second pays its cost.
+#[test]
+fn forge_anew_free_first_equip() {
+    let mut g = pod(2);
+    let sting = g.add_card_to_graveyard(0, catalog::sting_the_glinting_dagger());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bear2 = ready(&mut g, 0, catalog::grizzly_bears());
+    let forge = g.add_card_to_hand(0, catalog::forge_anew());
+    flood(&mut g);
+    cast(&mut g, forge, Some(Target::Permanent(sting)));
+    assert!(g.battlefield_find(sting).is_some(), "returned");
+    g.players[0].mana_pool = Default::default();
+    g.active_player_idx = 0;
+    g.step = TurnStep::BeginCombat;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: sting, target: bear }).expect("first equip: free, at instant speed");
+    assert!(g.perform_action(GameAction::Equip { equipment: sting, target: bear2 }).is_err(), "the second costs {{2}}");
+}
+
+/// Rev: your creatures connecting make a Treasure and exile the player's top
+/// card face down, castable (not playable as a land).
+#[test]
+fn rev_tithes_a_card_and_a_treasure() {
+    let mut g = pod(2);
+    let rev = ready(&mut g, 0, catalog::rev_tithe_extractor());
+    g.players[1].library.clear();
+    let top = g.add_card_to_library(1, catalog::lightning_bolt());
+    attack_into_block(&mut g, rev, None);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Treasure"), 1);
+    let c = g.exile.iter().find(|c| c.id == top).expect("exiled");
+    assert!(c.face_down && c.may_play_until.is_some_and(|m| m.player == 0 && m.cast_only));
+}
+
+/// Archpriest of Shadows: connecting returns a creature card from your
+/// graveyard.
+#[test]
+fn archpriest_of_shadows_reanimates_on_hit() {
+    let mut g = pod(2);
+    let priest = ready(&mut g, 0, catalog::archpriest_of_shadows());
+    let dead = g.add_card_to_graveyard(0, catalog::hill_giant());
+    attack_into_block(&mut g, priest, None);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some());
+}
