@@ -6,8 +6,8 @@ use crate::effect::{StaticAbility, StaticEffect};
 use crate::mana::{cost, g, generic};
 
 /// Vizier of the Menagerie — {3}{G} 3/4 Snake Cleric. Look at / cast creature
-/// spells from the top of your library. (The "spend mana of any type to cast
-/// creature spells" clause is not modeled.)
+/// spells from the top of your library; mana of any type may be spent to cast
+/// creature spells (CR 609.4b).
 pub fn vizier_of_the_menagerie() -> CardDefinition {
     CardDefinition {
         name: "Vizier of the Menagerie",
@@ -29,6 +29,10 @@ pub fn vizier_of_the_menagerie() -> CardDefinition {
                 effect: StaticEffect::PlayFromLibraryTop {
                     filter: R::Creature,
                 },
+            },
+            StaticAbility {
+                description: "You may spend mana as though it were mana of any type to cast creature spells.",
+                effect: StaticEffect::MaySpendManaAsAnyColorForCreatureSpells,
             },
         ],
         ..Default::default()

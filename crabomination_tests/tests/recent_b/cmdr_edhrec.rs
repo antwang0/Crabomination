@@ -1633,3 +1633,21 @@ fn crystal_barricade_shields_other_creatures() {
     assert!(g.battlefield_find(bear).is_some(), "the bear was shielded");
     assert_eq!(g.battlefield_find(wall).unwrap().damage, 3, "the wall itself is not");
 }
+
+/// Vizier of the Menagerie: red mana casts a green creature (CR 609.4b), but
+/// not a noncreature spell.
+#[test]
+fn vizier_spends_any_type_on_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::vizier_of_the_menagerie());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast(&mut g, bear, None);
+    assert!(g.battlefield_find(bear).is_some());
+    let wisps = g.add_card_to_hand(0, catalog::cerulean_wisps());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    assert!(g
+        .perform_action(GameAction::CastSpell { card_id: wisps, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .is_err());
+}
