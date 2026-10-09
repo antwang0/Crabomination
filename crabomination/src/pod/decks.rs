@@ -8563,3 +8563,31 @@ pub const CORAM_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, mountain, mountain, mountain, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const SYTHIS_COMMANDERS: &[CardFactory] = &[sythis_harvests_hand];
+
+/// **Sythis, Harvest's Hand**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 9 Forests + 11 Plains = 99.
+/// Selesnya enchantress: Sythis gains a life and draws for every enchantment spell.
+pub const SYTHIS_MAIN: &[CardFactory] = &[
+    arcane_signet, sol_ring, thought_vessel, bountiful_promenade, branchloft_pathway, brushland,
+    canopy_vista, command_tower, fortified_village, hall_of_heliods_generosity, overgrown_farmland,
+    reliquary_tower, sungrass_prairie, sunpetal_grove, temple_garden, temple_of_plenty,
+    windswept_heath, ajanis_chosen, alseid_of_lifes_bounty, archon_of_suns_grace,
+    argothian_enchantress, calix_guided_by_fate, composer_of_spring, courser_of_kruphix,
+    destiny_spinner, dryad_of_the_ilysian_grove, eidolon_of_blossoms, heliod_sun_crowned,
+    herald_of_the_pantheon, jukai_naturalist, mesa_enchantress, moon_blessed_cleric,
+    sanctum_weaver, satyr_enchanter, setessan_champion, starfield_mystic, verduran_enchantress,
+    weaver_of_harmony, yenna_redtooth_regent, abundant_growth, all_that_glitters, ancestral_mask,
+    aura_of_silence, authority_of_the_consuls, blind_obedience, darksteel_mutation,
+    enchantresss_presence, ethereal_armor, exploration, fertile_ground, flickering_ward,
+    ghostly_prison, grasp_of_fate, hallowed_haunting, kenriths_transformation, miraris_wake,
+    overgrowth, privileged_position, rancor, seal_of_cleansing, seal_of_primordium,
+    sigil_of_the_empty_throne, smothering_tithe, solitary_confinement, sphere_of_safety,
+    sterling_grove, strength_of_the_harvest, utopia_sprawl, whip_silk, wild_growth, eladamris_call,
+    enlightened_tutor, heroic_intervention, path_to_exile, swords_to_plowshares, austere_command,
+    idyllic_tutor, resurgent_belief, winds_of_rath,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];

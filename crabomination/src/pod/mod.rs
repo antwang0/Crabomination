@@ -2169,6 +2169,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CORAM_COMMANDERS,
             main: decks::CORAM_MAIN,
         },
+        // Seat 292: Sythis, Harvest's Hand's EDHREC average deck. `--pod-decks 292`.
+        PodDeck {
+            name: "Sythis, Harvest's Hand (GW)",
+            commanders: decks::SYTHIS_COMMANDERS,
+            main: decks::SYTHIS_MAIN,
+        },
     ]
 }
 
@@ -4077,6 +4083,7 @@ mod tests {
             ("Krenko, Mob Boss", [0x4E7B, 289, 9214]),
             ("Arabella, Abandoned Doll", [0xA4AB, 290, 9215]),
             ("Coram, the Undertaker", [0xC0A4, 291, 9216]),
+            ("Sythis, Harvest's Hand", [0x5717, 292, 9217]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
