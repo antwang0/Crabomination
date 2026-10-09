@@ -8453,3 +8453,29 @@ pub const WICK_MAIN: &[CardFactory] = &[
     island, island, island, island, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const VREN_COMMANDERS: &[CardFactory] = &[vren_the_relentless];
+
+/// **Vren, the Relentless**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 78 nonbasic cards + 8 Islands + 13 Swamps = 99.
+/// Dimir Rats: Vren exiles opponents' dying creatures and turns each one into a growing Rat at end step.
+pub const VREN_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, jet_medallion, lightning_greaves, mind_stone,
+    patchwork_banner, sol_ring, swiftfoot_boots, talisman_of_dominance, bojuka_bog, choked_estuary,
+    command_tower, darkwater_catacombs, drowned_catacomb, mudflat_village, path_of_ancestry,
+    shipwreck_marsh, sunken_hollow, swarmyard, tainted_isle, three_tree_city, underground_river,
+    watery_grave, accursed_marauder, ashcoat_of_the_shadow_swarm, ayara_first_of_locthwain,
+    azure_beastbinder, braids_arisen_nightmare, crypt_rats, demons_disciple, fleshbag_marauder,
+    karumonix_the_rat_king, lord_skitters_butcher, lord_skitter_sewer_king, marrow_gnawer,
+    merciless_executioner, mindwhisker, ogre_slumlord, pack_rat, persistent_marshstalker,
+    piper_of_the_swarm, plaguecrafter, shoreline_looter, tangled_colony, typhoid_rats,
+    valley_rotcaller, voracious_vermin, cover_of_darkness, dictate_of_erebos, grave_pact,
+    kindred_discovery, phyrexian_arena, rhystic_study, an_offer_you_cant_refuse, arcane_denial,
+    counterspell, dark_ritual, flare_of_malice, force_of_despair, go_for_the_throat,
+    infernal_grasp, lilianas_triumph, negate, pongify, rapid_hybridization, sheoldreds_edict,
+    soul_shatter, vonas_hunger, crippling_fear, distant_melody, feed_the_swarm, fell,
+    innocent_blood, kindred_dominance, season_of_loss, swarmyard_massacre, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

@@ -2145,6 +2145,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WICK_COMMANDERS,
             main: decks::WICK_MAIN,
         },
+        // Seat 288: Vren, the Relentless's EDHREC average deck. `--pod-decks 288`.
+        PodDeck {
+            name: "Vren, the Relentless (BU)",
+            commanders: decks::VREN_COMMANDERS,
+            main: decks::VREN_MAIN,
+        },
     ]
 }
 
@@ -4046,6 +4052,7 @@ mod tests {
             ("Urza, Lord High Artificer", [0x0F2A, 285, 9210]),
             ("Mendicant Core, Guidelight", [0x3E4D, 286, 9211]),
             ("Wick, the Whorled Mind", [0x31C4, 287, 9212]),
+            ("Vren, the Relentless", [0x7E0E, 288, 9213]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
