@@ -2091,6 +2091,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HASHATON_COMMANDERS,
             main: decks::HASHATON_MAIN,
         },
+        // Seat 279: Kraum, Ludevic's Opus + Tymna the Weaver's EDHREC average deck. `--pod-decks 279`.
+        PodDeck {
+            name: "Kraum, Ludevic's Opus + Tymna the Weaver (BRUW)",
+            commanders: decks::KRAUM_COMMANDERS,
+            main: decks::KRAUM_MAIN,
+        },
     ]
 }
 
@@ -3949,6 +3955,7 @@ mod tests {
             ("Kefka, Court Mage", [0xEFCA, 276, 9201]),
             ("Glarb, Calamity's Augur", [0x61A8, 277, 9202]),
             ("Hashaton, Scarab's Fist", [0x4A54, 278, 9203]),
+            ("Kraum, Ludevic's Opus", [0x7A4B, 279, 9204]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

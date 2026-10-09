@@ -8193,3 +8193,33 @@ pub const HASHATON_MAIN: &[CardFactory] = &[
     // Basics
     island, island, island, island, island, plains, plains, plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const KRAUM_COMMANDERS: &[CardFactory] = &[kraum_ludevics_opus, tymna_the_weaver];
+
+/// **Kraum, Ludevic's Opus + Tymna the Weaver**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 96 nonbasic cards + 1 Island + 1 Swamp = 98.
+/// Four-color partners: Kraum punishes second spells, Tymna draws off combat
+/// damage. EDHREC's list is two short (96 + the pair), so the Island and Swamp
+/// are padding, not EDHREC's.
+pub const KRAUM_MAIN: &[CardFactory] = &[
+    arcane_signet, chrome_mox, fellwar_stone, lions_eye_diamond, lotus_petal, mana_vault,
+    mox_amber, mox_diamond, mox_opal, sol_ring, the_one_ring, wishclaw_talisman,
+    birgi_god_of_storytelling, dragons_rage_channeler, esper_sentinel, faerie_mastermind,
+    grand_abolisher, hexing_squelcher, lotho_corrupt_shirriff, mockingbird, orcish_bowmasters,
+    professional_face_breaker, ragavan_nimble_pilferer, ranger_captain_of_eos, simian_spirit_guide,
+    tataru_taru, thassas_oracle, valley_floodcaller, voice_of_victory, mystic_remora, necropotence,
+    rhystic_study, smothering_tithe, underworld_breach, ad_nauseam, an_offer_you_cant_refuse,
+    borne_upon_a_wind, brain_freeze, cabal_ritual, chain_of_vapor, culling_the_weak, dark_ritual,
+    deflecting_swat, demonic_consultation, enlightened_tutor, fierce_guardianship, final_fortune,
+    flusterstorm, force_of_negation, force_of_will, into_the_flood_maw, intuition, mental_misstep,
+    mindbreak_trap, mystical_tutor, pact_of_negation, red_elemental_blast, silence, swan_song,
+    tainted_pact, vampiric_tutor, ancient_tomb, arid_mesa, badlands, bloodstained_mire,
+    cavern_of_souls, city_of_brass, command_tower, exotic_orchard, flooded_strand,
+    gemstone_caverns, hallowed_fountain, mana_confluence, marsh_flats, misty_rainforest,
+    otawara_soaring_city, plateau, polluted_delta, scalding_tarn, scrubland, starting_town, tundra,
+    underground_sea, verdant_catacombs, volcanic_island, watery_grave, windswept_heath,
+    demonic_tutor, diabolic_intent, gamble, imperial_seal, jeskas_will, mnemonic_betrayal,
+    rite_of_flame, sevinnes_reclamation, wheel_of_fortune,
+    // Basics
+    island, swamp,
+];
