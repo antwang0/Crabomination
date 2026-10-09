@@ -1242,3 +1242,24 @@ fn cr_903_9b_a_hand_shuffled_into_a_library_sends_its_commander_home() {
     assert!(g.players[0].library.iter().all(|c| c.id != cmd));
     assert_eq!(g.players[0].hand.len(), hand - 1, "draws the one card shuffled in");
 }
+
+/// CR 712.4 — a transformed permanent exiled "until this leaves" is exiled
+/// front face up; only a defeated battle keeps its back face in exile. Aerial
+/// Extortionist exiled an Abolisher of Bloodlines as its back face (audit pod
+/// seed 3130108 game 5).
+#[test]
+fn cr_712_4_a_transformed_permanent_is_exiled_front_face_up() {
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dfc = g.add_card_to_battlefield(1, catalog::voldaren_bloodcaster());
+    g.transform_permanent(dfc, &mut Vec::new());
+    assert!(g.battlefield_find(dfc).unwrap().transformed);
+    let exile = Effect::Move {
+        what: Selector::TargetFiltered { slot: 0, filter: crabomination::card::SelectionRequirement::Creature },
+        to: ZoneDest::Exile,
+    };
+    resolve(&mut g, src, Some(Target::Permanent(dfc)), &exile);
+    let c = g.exile.iter().find(|c| c.id == dfc).expect("exiled");
+    assert!(!c.transformed);
+    assert_eq!(c.definition.name, "Voldaren Bloodcaster");
+}

@@ -2792,9 +2792,16 @@ impl GameState {
         // CR 712.4 / 702.160c — and a transformed DFC or a prototyped card
         // bound anywhere but exile shows its front / printed face: Evacuation
         // bounced a disturbed Generous Soul into a hand as its back face (pod
-        // seed 818288).
-        if !matches!(intended, crate::card::Zone::Battlefield | crate::card::Zone::Exile) {
+        // seed 818288). In exile only a battle keeps its back face (a
+        // defeated Siege is cast transformed from there); Aerial
+        // Extortionist exiled a transformed Abolisher of Bloodlines as its
+        // back face (audit pod seed 3130108 game 5).
+        let siege = intended == crate::card::Zone::Exile
+            && card.front_face.as_ref().is_some_and(|f| f.card_types.contains(&crate::card::CardType::Battle));
+        if intended != crate::card::Zone::Battlefield && !siege {
             card.revert_transform();
+        }
+        if !matches!(intended, crate::card::Zone::Battlefield | crate::card::Zone::Exile) {
             card.revert_prototype();
         }
         // CR 123.5 — stickers are not retained into a hidden zone (and the
