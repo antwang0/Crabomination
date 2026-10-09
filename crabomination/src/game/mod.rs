@@ -21572,7 +21572,7 @@ impl GameState {
         let mut into_library: Vec<crate::card::CardInstance> =
             std::mem::take(&mut *self.players[p].hand);
         self.commander_zone_redirect_all(&mut into_library, Zone::Hand, Zone::Library);
-        let mut gy: Vec<crate::card::CardInstance> = std::mem::take(&mut *self.players[p].graveyard).into();
+        let mut gy: Vec<crate::card::CardInstance> = std::mem::take(&mut *self.players[p].graveyard);
         self.commander_zone_redirect_all(&mut gy, Zone::Graveyard, Zone::Library);
         into_library.extend(gy);
         // Tokens cease to exist rather than joining the library (CR 111.7).
