@@ -37,8 +37,8 @@ pub fn dont_make_a_sound() -> CardDefinition {
 }
 
 /// Keys to the House — {1} Artifact. {1}, {T}, Sacrifice: search your library for
-/// a basic land card, put it into your hand, then shuffle. (The Room lock/unlock
-/// mode is approximated away.)
+/// a basic land card, put it into your hand, then shuffle. {3}, {T}, Sacrifice
+/// (sorcery speed): lock or unlock a door of target Room you control.
 pub fn keys_to_the_house() -> CardDefinition {
     CardDefinition {
         name: "Keys to the House",
