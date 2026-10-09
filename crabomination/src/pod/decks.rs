@@ -9266,3 +9266,29 @@ pub const HAZEZON_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, forest, forest, forest, mountain, mountain, plains, plains,
 ];
+
+pub const ELUGE_COMMANDERS: &[CardFactory] = &[eluge_the_shoreless_sea];
+
+/// **Eluge, the Shoreless Sea**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Islands and cheap instants
+pub const ELUGE_MAIN: &[CardFactory] = &[
+    arcane_signet, mind_stone, sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots,
+    thought_vessel, wayfarers_bauble, castle_vantress, myriad_landscape, mystic_sanctuary,
+    otawara_soaring_city, reliquary_tower, rogues_passage, terrain_generator, archaeomancer,
+    archmage_emeritus, archmage_of_runes, baral_chief_of_compliance, chasm_skulker,
+    displacer_kitten, haughty_djinn, hullbreaker_horror, murmuring_mystic,
+    ojer_pakpatiq_deepest_epoch, scourge_of_fleets, solemn_simulacrum, talrand_sky_summoner,
+    the_flood_of_mars, wavebreak_hippocamp, mystic_remora, propaganda, rhystic_study,
+    shark_typhoon, aetherize, an_offer_you_cant_refuse, arcane_denial, archmages_charm,
+    blue_suns_zenith, blur, brainstorm, counterspell, cryptic_command, cyclonic_rift, essence_flux,
+    flow_of_knowledge, frantic_search, ghostly_flicker, high_tide, mystic_confluence, negate,
+    planar_incision, pongify, pull_from_tomorrow, rapid_hybridization, rewind, sink_into_stupor,
+    snap, sublime_epiphany, teferis_time_twist, aquitects_will, curse_of_the_swine,
+    finale_of_revelation, flow_of_ideas, irenicuss_vile_duplication, lorien_revealed, ponder,
+    sea_gate_restoration, spectral_deluge, time_stretch,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];

@@ -2319,6 +2319,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HAZEZON_COMMANDERS,
             main: decks::HAZEZON_MAIN,
         },
+        // Seat 317: Eluge, the Shoreless Sea's EDHREC average deck. `--pod-decks 317`.
+        PodDeck {
+            name: "Eluge, the Shoreless Sea (U)",
+            commanders: decks::ELUGE_COMMANDERS,
+            main: decks::ELUGE_MAIN,
+        },
     ]
 }
 
@@ -4279,6 +4285,7 @@ mod tests {
             ("Tayam, Luminous Enigma", [0x7A4A, 314, 9239]),
             ("Brenard, Ginger Sculptor", [0xB2E9, 315, 9240]),
             ("Hazezon, Shaper of Sand", [0x4A2E, 316, 9241]),
+            ("Eluge, the Shoreless Sea", [0xE106, 317, 9242]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
