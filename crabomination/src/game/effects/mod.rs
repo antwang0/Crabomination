@@ -3455,6 +3455,15 @@ impl GameState {
                 .iter()
                 .filter_map(|id| self.battlefield_find(*id))
                 .any(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact));
+            // Queen Allenal — a creature token among them (asked only by
+            // her static, so ordinary mints pay no layer read).
+            let minted_creature = || self
+                .scratch.last_created_tokens
+                .get(tokens_mark..)
+                .unwrap_or(&[])
+                .iter()
+                .filter_map(|id| self.battlefield_find(*id))
+                .any(|c| c.controller == p && self.computed_is_creature(c));
             // Jolene — a Treasure among them.
             let minted_treasure = self
                 .scratch.last_created_tokens
@@ -3481,6 +3490,11 @@ impl GameState {
                     } => Some((definition.clone(), minted_count, false)),
                     crate::effect::StaticEffect::ArtifactTokenCreationAddsToken { definition }
                         if minted_artifact =>
+                    {
+                        Some((definition.clone(), 1, true))
+                    }
+                    crate::effect::StaticEffect::CreatureTokenCreationAddsToken { definition }
+                        if minted_creature() =>
                     {
                         Some((definition.clone(), 1, true))
                     }

@@ -33501,6 +33501,7 @@ fn static_effect_to_effects(
             // TokenCreationAddsToken — consulted in the resolve_effect
             // epilogue (Quina's extra-Frog rider); not a layer effect.
             | StaticEffect::TokenCreationAddsToken { .. }
+            | StaticEffect::CreatureTokenCreationAddsToken { .. }
             | StaticEffect::ArtifactTokenCreationAddsToken { .. }
             | StaticEffect::EnergyAlternativeCostForFilter { .. }
             | StaticEffect::TokensMayBecome { .. }

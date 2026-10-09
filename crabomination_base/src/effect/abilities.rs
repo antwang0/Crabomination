@@ -2966,6 +2966,10 @@ pub enum StaticEffect {
     /// created under your control, those tokens plus a [definition] token are
     /// created instead" (Stridehangar Automaton's Thopter).
     ArtifactTokenCreationAddsToken { definition: crate::card::TokenDefinition },
+    /// The creature-token sibling: "If one or more creature tokens would be
+    /// created under your control, those tokens plus a [definition] token
+    /// are created instead" (Queen Allenal of Ruadach's Soldier).
+    CreatureTokenCreationAddsToken { definition: crate::card::TokenDefinition },
     /// CR 614.1a — "If you would create one or more tokens, you may instead
     /// create that many [one of `options`] tokens" (Jinnie Fay). Applied per
     /// token at mint time by `GameState::token_replacement_for`.
