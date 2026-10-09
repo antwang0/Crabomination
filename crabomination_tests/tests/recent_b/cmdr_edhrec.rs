@@ -2712,3 +2712,40 @@ fn advance_to_turn_of(g: &mut GameState, seat: usize) {
         }
     }
 }
+
+/// Minsc & Boo's counters: Vorinclex doubles what its controller puts (Surge's
+/// 1 then doubling: 2 + 4) and halves what an opponent puts (their Surge's
+/// single counter rounds to nothing); Defiler of Vigor grows the team on a
+/// green permanent spell.
+#[test]
+fn vorinclex_scales_counters_by_who_places_them() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::vorinclex_monstrous_raider());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g);
+    let surge = g.add_card_to_hand(0, catalog::invigorating_surge());
+    cast(&mut g, surge, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 6);
+    let surge = g.add_card_to_hand(1, catalog::invigorating_surge());
+    g.players[1].mana_pool.add(Color::Green, 3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: surge,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("their surge");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+
+    let mut g = pod(2);
+    let defiler = ready(&mut g, 0, catalog::defiler_of_vigor());
+    flood(&mut g);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None);
+    assert_eq!(g.battlefield_find(defiler).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

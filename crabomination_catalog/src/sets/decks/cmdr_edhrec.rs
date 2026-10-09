@@ -4866,3 +4866,76 @@ pub fn zuko_firebending_master() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vorinclex, Monstrous Raider — {4}{G}{G} 6/6 trample, haste. Counters you
+/// put on a permanent or player are doubled; counters an opponent puts are
+/// halved, rounded down.
+pub fn vorinclex_monstrous_raider() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Vorinclex, Monstrous Raider",
+        cost: cost(&[generic(4), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Praetor]),
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Counters you put are doubled; counters an opponent puts are halved, rounded down.",
+            effect: StaticEffect::CountersByPlacerDoubledOpponentsHalved,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Defiler of Vigor — {3}{G}{G} 6/6 trample Phyrexian Wurm. Green permanent
+/// spells may pay 2 life for {G}; casting one puts a +1/+1 counter on each
+/// creature you control.
+pub fn defiler_of_vigor() -> CardDefinition {
+    use crate::card::{CounterType, StaticAbility, StaticEffect};
+    let green_permanent = || R::HasColor(Color::Green).and(R::PermanentCard);
+    CardDefinition {
+        name: "Defiler of Vigor",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Wurm]),
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Green permanent spells may pay 2 life for {G}.",
+            effect: StaticEffect::PhyrexianPipForSpells { filter: green_permanent(), color: Color::Green },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(green_permanent())),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Invigorating Surge — {2}{G} Instant. A +1/+1 counter on target creature
+/// you control, then double the +1/+1 counters on it.
+pub fn invigorating_surge() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Invigorating Surge",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::DoubleCountersOnEach { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne },
+        ]),
+        ..Default::default()
+    }
+}
