@@ -10180,14 +10180,16 @@ impl GameState {
             && let Some(sc) = self.battlefield_find(src)
         {
             let ctrl = sc.controller;
+            // The static's own permanent is the filter's source: Collective
+            // Inferno's "of the chosen type" reads its chosen type.
             d += self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == ctrl)
-                .flat_map(|c| &c.definition.static_abilities)
-                .filter(|sa| match &sa.effect {
+                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
+                .filter(|(host, sa)| match &sa.effect {
                     StaticEffect::DoubleDamageFromControlledMatching { filter } => self
-                        .evaluate_requirement_static(filter, &Target::Permanent(src), ctrl, None),
+                        .evaluate_requirement_static(filter, &Target::Permanent(src), ctrl, Some(*host)),
                     _ => false,
                 })
                 .count() as u32;
