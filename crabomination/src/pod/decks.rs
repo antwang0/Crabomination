@@ -9489,3 +9489,29 @@ pub const SISAY_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, island, mountain, plains, plains, swamp,
 ];
+
+pub const KUJA_COMMANDERS: &[CardFactory] = &[kuja_genome_sorcerer];
+
+/// **Kuja, Genome Sorcerer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 78 nonbasic cards + 12 Mountains + 9 Swamps = 99.
+/// Kuja, Genome Sorcerer Wizards (BR): Gandalf, Tomik, Vivi's Persistence and Wizard's Lightning on the spellslinger Wizard plan
+pub const KUJA_MAIN: &[CardFactory] = &[
+    arcane_signet, black_mages_rod, fellwar_stone, lightning_greaves, mind_stone, rakdos_signet,
+    ruby_medallion, sol_ring, swiftfoot_boots, talisman_of_indulgence, blazemire_verge,
+    blood_crypt, bojuka_bog, command_tower, dragonskull_summit, foreboding_ruins, graven_cairns,
+    haunted_ridge, lindblum_industrial_regency, luxury_suite, path_of_ancestry, smoldering_marsh,
+    sulfurous_springs, tainted_peak, black_waltz_no_3, coruscation_mage, dark_confidant,
+    fandaniel_telophoroi_ascian, firebrand_archer, gandalf_goblins_bane, gleeful_arsonist,
+    guttersnipe, harmonic_prodigy, kefka_dancing_mad, mysidian_elder, queen_brahne, roaming_throne,
+    solphim_mayhem_dominus, storm_kiln_artist, tomik_izzet_sparkmage, artists_talent, city_on_fire,
+    collective_inferno, fiery_inscription, abrade, bedevil, big_score, chaos_warp, dark_ritual,
+    deadly_dispute, demand_answers, sos_flashback_instant, laughing_mad, lightning_bolt,
+    rakdos_charm, seething_song, terminate, thrill_of_possibility, transpose, unexpected_windfall,
+    untimely_malfunction, vivis_persistence, wizards_lightning, blasphemous_act, boltwave,
+    circle_of_power, cornered_by_black_mages, faithless_looting, feed_the_swarm, grab_the_prize,
+    jeskas_will, light_up_the_stage, mana_geyser, mizzixs_mastery, nights_whisper, read_the_bones,
+    sign_in_blood, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

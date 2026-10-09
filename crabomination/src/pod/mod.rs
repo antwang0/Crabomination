@@ -2367,6 +2367,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SISAY_COMMANDERS,
             main: decks::SISAY_MAIN,
         },
+        // Seat 325: Kuja, Genome Sorcerer's EDHREC average deck. `--pod-decks 325`.
+        PodDeck {
+            name: "Kuja, Genome Sorcerer (BR)",
+            commanders: decks::KUJA_COMMANDERS,
+            main: decks::KUJA_MAIN,
+        },
     ]
 }
 
@@ -4335,6 +4341,7 @@ mod tests {
             ("Ygra, Eater of All", [0x1964, 322, 9247]),
             ("Orvar, the All-Form", [0x0A7F, 323, 9248]),
             ("Sisay, Weatherlight Captain", [0x515A, 324, 9249]),
+            ("Kuja, Genome Sorcerer", [0x0C1A, 325, 9250]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
