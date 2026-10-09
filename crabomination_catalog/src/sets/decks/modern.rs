@@ -48530,7 +48530,8 @@ pub fn nulldrifter() -> CardDefinition {
 
 /// Guide of Souls — {W} 1/2 Human Cleric. Another creature entering gains
 /// you 1 life and {E}; attacking may pay {E}{E}{E} for two +1/+1 counters
-/// and flying on target attacker (the Angel type rider is dropped).
+/// and flying on target attacker, which becomes an Angel in addition to its
+/// other types until end of turn.
 pub fn guide_of_souls() -> CardDefinition {
     CardDefinition {
         name: "Guide of Souls",
@@ -48573,6 +48574,11 @@ pub fn guide_of_souls() -> CardDefinition {
                                 ),
                                 kind: CounterType::PlusOnePlusOne,
                                 amount: Value::Const(2),
+                            },
+                            Effect::AddCreatureTypes {
+                                what: Selector::Target(0),
+                                creature_types: vec![CreatureType::Angel],
+                                duration: Duration::EndOfTurn,
                             },
                             Effect::GrantKeyword {
                                 what: Selector::Target(0),

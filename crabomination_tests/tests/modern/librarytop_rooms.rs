@@ -1510,6 +1510,7 @@ fn guide_of_souls_energy_engine() {
     let cp = g.computed_permanent(attacker).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "two +1/+1 counters");
     assert!(cp.keywords().contains(&Keyword::Flying), "gained flying");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Angel), "an Angel too");
 }
 
 // ── CR 613.7d — SwitchPT + animated-state abilities ─────────────────────────
