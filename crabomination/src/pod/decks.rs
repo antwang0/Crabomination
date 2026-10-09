@@ -9570,3 +9570,55 @@ pub const KONA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest,
 ];
+
+pub const MARROW_GNAWER_COMMANDERS: &[CardFactory] = &[marrow_gnawer];
+
+/// **Marrow-Gnawer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Marrow-Gnawer Rats (B): Rat Colony, Swarm of Rats and Thrumming Stone ripples, Gruesome Fate and Foul-Tongue Shriek finishers
+pub const MARROW_GNAWER_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, coat_of_arms, heralds_horn, jet_medallion, lightning_greaves,
+    patchwork_banner, skullclamp, sol_ring, thornbite_staff, thrumming_stone, vanquishers_banner,
+    bojuka_bog, cabal_coffers, cabal_stronghold, mudflat_village, swarmyard, three_tree_city,
+    urborg_tomb_of_yawgmoth, ashcoat_of_the_shadow_swarm, ayara_first_of_locthwain, crypt_rats,
+    ink_eyes_servant_of_oni, karumonix_the_rat_king, lord_skitter_sewer_king, mirkwood_bats,
+    ogre_slumlord, pack_rat, persistent_marshstalker, piper_of_the_swarm, rat_colony, rat_colony,
+    rat_colony, rat_colony, rat_colony, rat_colony, rat_colony, rat_colony, rat_colony, rat_colony,
+    rat_colony, rat_colony, rat_colony, rat_colony, rat_colony, rat_colony, rat_colony,
+    rat_king_verminister, ratcatcher, species_specialist, swarm_of_rats, tangled_colony,
+    typhoid_rats, valley_rotcaller, black_market, grave_pact, haunted_one, phyrexian_arena,
+    dark_ritual, deadly_dispute, defile, foul_tongue_shriek, go_for_the_throat, vampiric_tutor,
+    village_rites, demonic_tutor, echoing_return, feed_the_swarm, gruesome_fate, kindred_dominance,
+    patriarchs_bidding, sign_in_blood,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const ALEXIOS_COMMANDERS: &[CardFactory] = &[alexios_deimos_of_kosmos];
+
+/// **Alexios, Deimos of Kosmos**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Alexios, Deimos of Kosmos equipment (R): Beamtown Beatstick, Thran Power Suit, Two-Handed Axe and Infiltration Lens on the goaded giant
+pub const ALEXIOS_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, blackblade_reforged, brotherhood_regalia, champions_helm,
+    commanders_plate, fellwar_stone, fire_diamond, goldvein_pick, hammer_of_nazahn,
+    infiltration_lens, lightning_greaves, mask_of_memory, mind_stone, mithril_coat, rogues_gloves,
+    ruby_medallion, sol_ring, swiftfoot_boots, sword_of_the_animist, the_spear_of_leonidas,
+    thran_power_suit, trailblazers_boots, two_handed_axe, whispersilk_cloak, arena_of_glory,
+    buried_ruin, command_beacon, myriad_landscape, rogues_passage, war_room, agitator_ant,
+    bladegraft_aspirant, brash_taunter, brass_squire, death_kiss, foundry_inspector, iron_myr,
+    kediss_emberclaw_familiar, komainu_battle_armor, lizard_blades, ornithopter_of_paradise,
+    professional_face_breaker, silent_arbiter, simian_spirit_guide, solemn_simulacrum,
+    blacksmiths_talent, blood_moon, curse_of_opulence, shiny_impetus, sticky_fingers,
+    the_sound_of_drums, abrade, bulk_up, chaos_warp, lightning_bolt, return_the_favor,
+    seething_song, temur_battle_rage, thrill_of_possibility, unleash_fury, untimely_malfunction,
+    jeska_thrice_reborn, blasphemous_act, chandras_ignition, disrupt_decorum, faithless_looting,
+    jeskas_will, spectacular_showdown, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];

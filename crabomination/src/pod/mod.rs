@@ -2385,6 +2385,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KONA_COMMANDERS,
             main: decks::KONA_MAIN,
         },
+        // Seat 328: Marrow-Gnawer's EDHREC average deck. `--pod-decks 328`.
+        PodDeck {
+            name: "Marrow-Gnawer (B)",
+            commanders: decks::MARROW_GNAWER_COMMANDERS,
+            main: decks::MARROW_GNAWER_MAIN,
+        },
+        // Seat 329: Alexios, Deimos of Kosmos's EDHREC average deck. `--pod-decks 329`.
+        PodDeck {
+            name: "Alexios, Deimos of Kosmos (R)",
+            commanders: decks::ALEXIOS_COMMANDERS,
+            main: decks::ALEXIOS_MAIN,
+        },
     ]
 }
 
@@ -4378,6 +4390,8 @@ mod tests {
             ("Kuja, Genome Sorcerer", [0x0C1A, 325, 9250]),
             ("Urtet, Remnant of Memnarch", [0x0B7E, 326, 9251]),
             ("Kona, Rescue Beastie", [0x0C0A, 327, 9252]),
+            ("Marrow-Gnawer", [0x0A12, 328, 9253]),
+            ("Alexios, Deimos of Kosmos", [0x0A1E, 329, 9254]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
