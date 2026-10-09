@@ -13629,6 +13629,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::NamedSpellTax { .. }
         | SE::OpponentActivityCostsMoreOnYourTurn { .. }
         | SE::OpponentSpellsCostMore { .. }
+        | SE::OpponentSpellsFromGraveyardOrExileCostMore { .. }
         | SE::SpellTaxPerControllerPermanent { .. }
         | SE::SpellsCostMoreExceptOnControllerTurn { .. }
         | SE::TaxOpponentSpellsTargeting { .. }

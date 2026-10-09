@@ -33262,6 +33262,7 @@ fn static_effect_to_effects(
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
             | StaticEffect::OpponentSpellsCostMore { .. }
+            | StaticEffect::OpponentSpellsFromGraveyardOrExileCostMore { .. }
             | StaticEffect::SpellTaxPerControllerPermanent { .. }
             // Tithe Taker — read at `extra_cost_for_spell` /
             // `effective_ability_mana_cost`; no continuous-layer effect.

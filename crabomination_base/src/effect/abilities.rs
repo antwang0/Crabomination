@@ -804,6 +804,10 @@ pub enum StaticEffect {
     /// Traben-for-opponents). Unlike `AdditionalCost`, the source's controller
     /// is exempt. Applied in `extra_cost_for_spell`.
     OpponentSpellsCostMore { filter: SelectionRequirement, amount: u32 },
+    /// "Spells your opponents cast from graveyards or from exile cost {N}
+    /// more to cast" (Aven Interrupter). The origin is the card's zone as the
+    /// cost is figured, or the graveyard a hop-through-hand cast came from.
+    OpponentSpellsFromGraveyardOrExileCostMore { amount: u32 },
     /// Jubilant-Skybonder-style "spells your opponents cast that target a
     /// [`target_filter`] permanent you control cost `amount` more" — a
     /// continuous target-tax read off the source's controller. Evaluated in

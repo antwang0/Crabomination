@@ -1794,6 +1794,16 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 {
                     tax += amount;
                 }
+                // Aven Interrupter — an opponent's spell cast from a graveyard
+                // or from exile.
+                StaticEffect::OpponentSpellsFromGraveyardOrExileCostMore { amount }
+                    if !state.same_team(src.controller, caster)
+                        && (state.casting_hop == Some((card.id, crate::game::HopFrom::Graveyard))
+                            || state.exile.iter().any(|c| c.id == card.id)
+                            || state.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == card.id))) =>
+                {
+                    tax += amount;
+                }
                 StaticEffect::NamedSpellTax { amount }
                     if src.named_card.as_deref().is_some_and(|n| card.definition.has_name(n)) =>
                 {
