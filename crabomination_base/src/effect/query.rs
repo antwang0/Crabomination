@@ -5372,7 +5372,13 @@ impl Effect {
                 // walkers have to agree about which slots exist.
                 | Effect::TopOfGraveyardToLibraryTop { who, .. }
                 | Effect::LookTopMayPayLifeToBin { who, .. }
-                | Effect::DiscardUnlessKind { who, .. } => pref_find(who, slot),
+                | Effect::DiscardUnlessKind { who, .. }
+                // `requires_target` counts these (`player_has_target`); a slot
+                // read through `ControllerOf(TargetFiltered)` carries its own
+                // filter ("target opponent loses the game" — Mirrodin
+                // Besieged).
+                | Effect::WinGame { who }
+                | Effect::LoseGame { who } => pref_find(who, slot),
                 Effect::WaiveShroudForPlayerThisTurn { player } => {
                     pref_find(player, slot)
                 }
