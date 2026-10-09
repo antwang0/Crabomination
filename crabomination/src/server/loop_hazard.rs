@@ -139,43 +139,97 @@ const PROBE_PASSES_PER_SEAT: usize = 48;
 /// Board growth that, with the stack never draining, reads as a loop.
 const PROBE_GROWTH: usize = 16;
 
-/// The dynamic half: resolve `post` (an action's settled state) with every
-/// seat passing and `seat`'s policy answering asks. A CR 104.4b draw, or a
-/// stack that never drains while the board grows by [`PROBE_GROWTH`] within
-/// the budget, is a loop — Polyraptor beside Marauding Raptor, a Room door
-/// that returns Ghostly Dancers under Secret Arcade. A finite cascade drains.
-pub(super) fn resolution_loops(post: &GameState, seat: usize, w: &super::bot::EvalWeights) -> bool {
-    if post.stack.is_empty() {
-        return false;
-    }
-    let mut g = post.clone();
+/// What resolving a stack to empty showed.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Probe {
+    /// A CR 104.4b draw, or a stack that never drained while the board grew
+    /// by [`PROBE_GROWTH`].
+    Loop,
+    /// The stack emptied (or the game ended decided).
+    Drained,
+    /// Out of budget without growth, or the engine refused a step.
+    Unknown,
+}
+
+/// Resolve `g` in place with every seat passing and each ask answered by the
+/// asked seat's policy.
+fn resolve_probe(g: &mut GameState, w: &super::bot::EvalWeights) -> Probe {
     let (board0, depth0) = (g.battlefield.len(), g.stack.len());
     for _ in 0..PROBE_PASSES_PER_SEAT * g.players.len() {
         if g.is_game_over() {
-            return matches!(g.game_over, Some(None));
+            return if matches!(g.game_over, Some(None)) { Probe::Loop } else { Probe::Drained };
         }
-        if g.stack.is_empty() {
-            return false;
+        if g.stack.is_empty() && g.pending_decision.is_none() {
+            return Probe::Drained;
         }
         let action = match g.pending_decision.as_ref() {
-            Some(p) if p.acting_player() == seat => GameAction::SubmitDecision(super::bot::decide_pending_policy(
-                &g,
-                seat,
-                w,
-                &p.decision,
-                false,
-            )),
             Some(p) => {
                 let who = p.acting_player();
-                GameAction::SubmitDecision(super::bot::decide_pending_policy(&g, who, w, &p.decision, false))
+                GameAction::SubmitDecision(super::bot::decide_pending_policy(g, who, w, &p.decision, false))
             }
             None => GameAction::PassPriority,
         };
         if g.perform_action_inner(action).is_err() {
-            return false;
+            return Probe::Unknown;
         }
     }
-    g.stack.len() >= depth0 && g.battlefield.len() >= board0 + PROBE_GROWTH
+    if g.stack.len() >= depth0 && g.battlefield.len() >= board0 + PROBE_GROWTH { Probe::Loop } else { Probe::Unknown }
+}
+
+/// Resolve `post` (an action's settled state): a loop already running — Polyraptor cast beside Marauding Raptor, a Room door
+/// returning Ghostly Dancers under Secret Arcade. A finite cascade drains.
+#[cfg(test)]
+fn resolution_loops(post: &GameState, w: &super::bot::EvalWeights) -> bool {
+    !post.stack.is_empty() && resolve_probe(&mut post.clone(), w) == Probe::Loop
+}
+
+/// Whether firing one of `seat`'s repeatable token triggers on the quiet
+/// board `g` (stack empty) loops: Marauding Raptor beside Polyraptor waits
+/// for the first damage, Secret Arcade beside Gremlin Tamer for the next
+/// enchantment. One probe per distinct trigger; a targeted one is skipped.
+fn primed(g: &GameState, seat: usize, w: &super::bot::EvalWeights) -> bool {
+    let mut seen: Vec<(&str, usize)> = Vec::new();
+    for c in g.battlefield.iter().filter(|c| c.controller == seat) {
+        for (i, t) in c.definition.triggered_abilities.iter().enumerate() {
+            let self_etb = t.event.kind == EventKind::EntersBattlefield && t.event.scope == EventScope::SelfSource;
+            if self_etb
+                || t.event.once_per_turn
+                || t.effect.requires_target()
+                || !t.effect.any_nested(&|e| matches!(e, Effect::CreateToken { .. } | Effect::CreateTokenCopyOf { .. }))
+                || seen.contains(&(c.definition.name, i))
+            {
+                continue;
+            }
+            seen.push((c.definition.name, i));
+            let mut h = g.clone();
+            h.push_stack(
+                crate::game::types::TriggerPush::new(c.id, seat, t.effect.clone())
+                    .trigger_source(Some(crate::game::effects::EntityRef::Permanent(c.id)))
+                    .build(),
+            );
+            if resolve_probe(&mut h, w) == Probe::Loop {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// The action that settled `pre` into `post` leaves a loop running or primed
+/// that `pre` didn't have.
+pub(super) fn sets_up_loop(pre: &GameState, post: &GameState, seat: usize, w: &super::bot::EvalWeights) -> bool {
+    let mut g = post.clone();
+    match resolve_probe(&mut g, w) {
+        Probe::Loop => true,
+        Probe::Unknown => false,
+        Probe::Drained => {
+            if g.is_game_over() || !g.stack.is_empty() || !primed(&g, seat, w) {
+                false
+            } else {
+                !(pre.stack.is_empty() && primed(pre, seat, w))
+            }
+        }
+    }
 }
 
 /// Whether taking the action that settled `pre` into `post` starts (or sets
@@ -263,9 +317,29 @@ mod tests {
         let w = crate::server::bot::EvalWeights::default();
         let cast = |id| GameAction::CastSpell { card_id: id, target: None, additional_targets: Vec::new(), mode: None, x_value: None };
         let post = GameState::accept_on(&g, cast(poly)).expect("castable");
-        assert!(resolution_loops(&post, 0, &w));
+        assert!(resolution_loops(&post, &w));
         let post = GameState::accept_on(&g, cast(bear)).expect("castable");
-        assert!(!resolution_loops(&post, 0, &w));
+        assert!(!resolution_loops(&post, &w));
+    }
+
+    /// CR 104.4b — Marauding Raptor cast beside Polyraptor starts nothing yet,
+    /// but primes the loop for Polyraptor's first damage; a plain creature
+    /// primes nothing.
+    #[test]
+    fn marauding_raptor_beside_polyraptor_sets_up_a_loop() {
+        let (mut g, _) = arcade_game();
+        g.add_card_to_battlefield(0, crate::catalog::polyraptor());
+        let raptor = g.add_card_to_hand(0, crate::catalog::marauding_raptor());
+        let bear = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.players[0].mana_pool.add(Color::Green, 2);
+        let w = crate::server::bot::EvalWeights::default();
+        let cast = |id| GameAction::CastSpell { card_id: id, target: None, additional_targets: Vec::new(), mode: None, x_value: None };
+        let post = GameState::accept_on(&g, cast(raptor)).expect("castable");
+        assert!(!resolution_loops(&post, &w), "nothing loops yet");
+        assert!(sets_up_loop(&g, &post, 0, &w));
+        let post = GameState::accept_on(&g, cast(bear)).expect("castable");
+        assert!(!sets_up_loop(&g, &post, 0, &w));
     }
 
     /// CR 104.4b — unlocking Secret Arcade under a Gremlin Tamer sets the loop

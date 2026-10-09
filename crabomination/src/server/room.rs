@@ -49,7 +49,7 @@ pub(super) fn pick_room_door(state: &GameState, seat: usize) -> Option<GameActio
         }
         GameState::accept_on(state, a.clone()).is_some_and(|g| {
             !super::loop_hazard::starts_loop(state, &g, seat)
-                && !super::loop_hazard::resolution_loops(&g, seat, &super::bot::EvalWeights::default())
+                && !super::loop_hazard::sets_up_loop(state, &g, seat, &super::bot::EvalWeights::default())
         })
     })
 }

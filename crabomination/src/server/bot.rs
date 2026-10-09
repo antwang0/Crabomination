@@ -10273,7 +10273,7 @@ fn main_phase_action_with(
                 if loop_watch
                     && settled.as_ref().is_some_and(|g| {
                         super::loop_hazard::starts_loop(state, g, seat)
-                            || super::loop_hazard::resolution_loops(g, seat, w)
+                            || super::loop_hazard::sets_up_loop(state, g, seat, w)
                     })
                 {
                     continue;
