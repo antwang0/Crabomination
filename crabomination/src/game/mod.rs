@@ -16703,6 +16703,15 @@ impl GameState {
                         .unwrap_or(0);
                     (base_p - hi, base_t - hi)
                 }
+                crate::card::DynamicPt::HalfHighestOpponentLife => {
+                    let hi = self.players.iter().enumerate()
+                        .filter(|(i, p)| !p.eliminated && !self.same_team(*i, card.controller))
+                        .map(|(_, p)| p.life)
+                        .max()
+                        .unwrap_or(0);
+                    let half = if hi > 0 { (hi + 1) / 2 } else { hi / 2 };
+                    (half, half)
+                }
                 // Unwrapped above; a doubly-wrapped formula is meaningless.
                 crate::card::DynamicPt::OnlyDuringYourTurn { base_p, base_t, .. } => {
                     (base_p, base_t)

@@ -6634,6 +6634,9 @@ pub enum DynamicPt {
     /// P/T = base − the highest life total among players (Scourge of the
     /// Skyclaves: 20 − highest life).
     BaseMinusHighestLife { base_p: i32, base_t: i32 },
+    /// P/T = half the highest life total among the controller's opponents,
+    /// rounded up (Malignus).
+    HalfHighestOpponentLife,
     /// Power = toughness = base + cards in opponents' graveyards, optionally
     /// creature cards only. Consuming Aberration (base 0, all cards), Wight
     /// of Precinct Six (base 1, creatures only).
