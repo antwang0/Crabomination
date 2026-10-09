@@ -2331,6 +2331,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ROXANNE_COMMANDERS,
             main: decks::ROXANNE_MAIN,
         },
+        // Seat 319: Lightning, Army of One's EDHREC average deck. `--pod-decks 319`.
+        PodDeck {
+            name: "Lightning, Army of One (RW)",
+            commanders: decks::LIGHTNING_ARMY_COMMANDERS,
+            main: decks::LIGHTNING_ARMY_MAIN,
+        },
     ]
 }
 
@@ -4293,6 +4299,7 @@ mod tests {
             ("Hazezon, Shaper of Sand", [0x4A2E, 316, 9241]),
             ("Eluge, the Shoreless Sea", [0xE106, 317, 9242]),
             ("Roxanne, Starfall Savant", [0x20A2, 318, 9243]),
+            ("Lightning, Army of One", [0x1197, 319, 9244]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

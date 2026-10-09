@@ -9319,3 +9319,31 @@ pub const ROXANNE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const LIGHTNING_ARMY_COMMANDERS: &[CardFactory] = &[lightning_army_of_one];
+
+/// **Lightning, Army of One**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 9 Mountains + 11 Plains = 99.
+/// Equipment and attack triggers
+pub const LIGHTNING_ARMY_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, boros_signet, brotherhood_regalia, buster_sword,
+    colossus_hammer, embercleave, genji_glove, hammer_of_nazahn, lightning_greaves, mithril_coat,
+    sol_ring, swiftfoot_boots, sword_of_feast_and_famine, sword_of_the_animist,
+    talisman_of_conviction, the_reaver_cleaver, the_spear_of_leonidas, trailblazers_boots,
+    arid_mesa, battlefield_forge, clifftop_retreat, command_tower, furycalm_snarl,
+    needleverge_pathway, rogues_passage, rugged_prairie, sacred_foundry, slayers_stronghold,
+    spectator_seating, sunbillow_verge, sundown_pass, sunhome_fortress_of_the_legion,
+    temple_of_triumph, akiri_fearless_voyager, aurelia_the_warleader, bastion_protector,
+    blade_historian, cloud_midgar_mercenary, combat_celebrant, danitha_capashen, esper_sentinel,
+    firion_wild_rose_warrior, gisela_blade_of_goldnight, iroas_god_of_victory,
+    karlach_fury_of_avernus, kediss_emberclaw_familiar, lizard_blades, mother_of_runes,
+    professional_face_breaker, puresteel_paladin, reyav_master_smith, sram_senior_edificer,
+    stoneforge_mystic, aggravated_assault, duelists_heritage, fighter_class, forge_anew,
+    sigardas_aid, smothering_tithe, akromas_will, boros_charm, chaos_warp, deflecting_palm,
+    flawless_maneuver, legion_leadership, lightning_bolt, lightning_helix, path_to_exile,
+    restoration_magic, stroke_of_midnight, swords_to_plowshares, blasphemous_act, full_throttle,
+    jeskas_will, open_the_armory, seize_the_day, steelshapers_gift, taunt_from_the_rampart,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
