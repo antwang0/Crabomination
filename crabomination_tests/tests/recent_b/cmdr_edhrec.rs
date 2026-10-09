@@ -1448,3 +1448,55 @@ fn echoing_deeps_copies_a_graveyard_land() {
     assert_eq!(c.definition.name, "Forest");
     assert!(c.tapped);
 }
+
+/// Thran Vigil: reanimating a creature card on your turn grows a creature.
+#[test]
+fn thran_vigil_counts_graveyard_departures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::thran_vigil());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let raise = g.add_card_to_hand(0, catalog::raise_dead());
+    cast(&mut g, raise, Some(Target::Permanent(dead)));
+    let grown = [bear, dead].iter().any(|&b| g.battlefield_find(b).is_some_and(|c| c.counter_count(crabomination::card::CounterType::PlusOnePlusOne) == 1));
+    assert!(grown, "one creature got the counter");
+}
+
+/// Vohar's loot: discarding an instant drains each opponent 1.
+#[test]
+fn vohar_drains_on_a_spell_discard() {
+    let mut g = pod(2);
+    let vohar = ready(&mut g, 0, catalog::vohar_vodalian_desecrator());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![bolt])]));
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    activate(&mut g, vohar, None);
+    assert_eq!((g.players[0].life, g.players[1].life), (mine + 1, theirs - 1));
+}
+
+/// Iron Spider's tap pumps each artifact creature you control.
+#[test]
+fn iron_spider_counters_artifact_creatures() {
+    let mut g = pod(2);
+    let spider = ready(&mut g, 0, catalog::iron_spider_stark_upgrade());
+    let thopter = ready(&mut g, 0, catalog::ornithopter());
+    activate(&mut g, spider, None);
+    let p1 = crabomination::card::CounterType::PlusOnePlusOne;
+    assert_eq!(g.battlefield_find(thopter).unwrap().counter_count(p1), 1);
+    assert_eq!(g.battlefield_find(spider).unwrap().counter_count(p1), 1);
+}
+
+/// Zur makes an enchantment a creature with P/T equal to its mana value,
+/// and it gains deathtouch.
+#[test]
+fn zur_animates_an_enchantment() {
+    let mut g = pod(2);
+    let zur = ready(&mut g, 0, catalog::zur_eternal_schemer());
+    let vigil = ready(&mut g, 0, catalog::thran_vigil());
+    flood(&mut g);
+    activate(&mut g, zur, Some(Target::Permanent(vigil)));
+    let cp = g.computed_permanent(vigil).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Deathtouch));
+}

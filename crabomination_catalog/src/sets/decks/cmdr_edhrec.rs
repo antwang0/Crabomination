@@ -2464,3 +2464,162 @@ pub fn blossoming_tortoise() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Thran Vigil — {1}{B} Enchantment. Whenever one or more artifact and/or
+/// creature cards leave your graveyard during your turn, put a +1/+1 counter
+/// on target creature you control (CR 603.2c — once per batch).
+pub fn thran_vigil() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Thran Vigil",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.or(R::Creature) },
+                ]))
+                .once_per_batch(),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vohar, Vodalian Desecrator — {U}{B} 1/2. {T}: loot; discarding an instant
+/// or sorcery drains each opponent 1. {2}, sacrifice Vohar (sorcery speed):
+/// you may cast target instant or sorcery card from your graveyard this
+/// turn, exiled if it would hit the graveyard.
+pub fn vohar_vodalian_desecrator() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    let is = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Vohar, Vodalian Desecrator",
+        cost: cost(&[u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Merfolk, CreatureType::Wizard]),
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::If {
+                        cond: Predicate::SelectorExists(Selector::DiscardedThisResolution { filter: is() }),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                sac_cost: true,
+                sorcery_speed: true,
+                effect: Effect::GrantMayPlay {
+                    what: target_filtered(is().and(R::InYourGraveyard)),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: true,
+                    pay_own_cost: false,
+                    any_color: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Iron Spider, Stark Upgrade — {3} 2/3 vigilance artifact creature. {T}:
+/// a +1/+1 counter on each artifact creature and/or Vehicle you control.
+/// {2}, remove two +1/+1 counters from among your artifacts: draw a card.
+pub fn iron_spider_stark_upgrade() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType};
+    CardDefinition {
+        name: "Iron Spider, Stark Upgrade",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Spider, CreatureType::Hero]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        R::ControlledByYou.and(R::Artifact.and(R::Creature).or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                remove_counter_among_filter: Some((Some(CounterType::PlusOnePlusOne), 2, R::Artifact)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Zur, Eternal Schemer — {W}{U}{B} 1/4 flying. Enchantment creatures you
+/// control have deathtouch, lifelink, and hexproof. {1}{W}: target non-Aura
+/// enchantment you control becomes a creature in addition to its other
+/// types with base P/T equal to its mana value.
+pub fn zur_eternal_schemer() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility, StaticEffect};
+    let ench_creatures = || Selector::EachPermanent(R::Enchantment.and(R::Creature).and(R::ControlledByYou));
+    let grant = |keyword: Keyword, description: &'static str| StaticAbility {
+        description,
+        effect: StaticEffect::GrantKeyword { applies_to: ench_creatures(), keyword },
+    };
+    CardDefinition {
+        name: "Zur, Eternal Schemer",
+        cost: cost(&[w(), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            grant(Keyword::Deathtouch, "Enchantment creatures you control have deathtouch."),
+            grant(Keyword::Lifelink, "Enchantment creatures you control have lifelink."),
+            grant(Keyword::Hexproof, "Enchantment creatures you control have hexproof."),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::BecomeCreature {
+                what: target_filtered(
+                    R::Enchantment
+                        .and(R::Not(Box::new(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))))
+                        .and(R::ControlledByYou),
+                ),
+                power: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                toughness: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
