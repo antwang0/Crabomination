@@ -2973,3 +2973,83 @@ pub fn mnemonic_betrayal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rona, Herald of Invasion // Rona, Tolarian Obliterator — {1}{U} 1/3.
+/// Untaps when you cast a legendary spell; {T}: loot; {5}{B/P} (sorcery
+/// speed): transform. Back: 5/5 trample; whenever a source deals damage to
+/// it, that source's controller exiles a card at random from hand — you may
+/// put a land onto the battlefield or cast anything else free.
+pub fn rona_herald_of_invasion() -> CardDefinition {
+    use crate::mana::ManaSymbol;
+    let may = |description: &str, body: Effect| Effect::MayDo { description: description.into(), body: Box::new(body) };
+    let damager = PlayerRef::LastDamagerControllerOf(Box::new(Selector::This));
+    let back = CardDefinition {
+        name: "Rona, Tolarian Obliterator",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Wizard]),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::RandomOf(Box::new(Selector::EachMatching { zone: crate::effect::ZoneRef::Hand(damager), filter: R::Any })),
+                    to: ZoneDest::Exile,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::LastMoved, filter: R::Land },
+                    then: Box::new(may(
+                        "Put the exiled land onto the battlefield under your control?",
+                        Effect::Move { what: Selector::LastMoved, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false } },
+                    )),
+                    // The free cast asks its own "may".
+                    else_: Box::new(Effect::CastWithoutPayingImmediate {
+                        what: Selector::LastMoved,
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    }),
+                },
+            ]),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rona, Herald of Invasion",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasSupertype(Supertype::Legendary),
+            }),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: crate::mana::ManaCost { symbols: vec![ManaSymbol::Generic(5), ManaSymbol::Phyrexian(Color::Black)] },
+                sorcery_speed: true,
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(back)),
+        ..Default::default()
+    }
+}

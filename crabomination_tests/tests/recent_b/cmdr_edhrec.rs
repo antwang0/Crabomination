@@ -1787,3 +1787,30 @@ fn mnemonic_betrayal_borrows_the_graveyard() {
     to_end_step(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "the bear went home");
 }
+
+/// Rona: {5}{B/P} (2 life for the {B/P}) transforms her; damage to the back
+/// face exiles a random card from the dealer's controller's hand, and Rona's
+/// controller may cast it free.
+#[test]
+fn rona_transforms_and_steals_on_damage() {
+    let mut g = pod(2);
+    let rona = ready(&mut g, 0, catalog::rona_herald_of_invasion());
+    g.players[0].mana_pool.add_colorless(5);
+    let life = g.players[0].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: rona, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("transform for 2 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2);
+    assert_eq!(g.computed_permanent(rona).unwrap().power, 5, "Tolarian Obliterator");
+    g.players[1].hand.clear();
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let shock = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: shock, target: Some(Target::Permanent(rona)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt Rona");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear && c.controller == 0), "cast the stolen bear");
+}
