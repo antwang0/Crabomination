@@ -2205,6 +2205,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KENRITH_COMMANDERS,
             main: decks::KENRITH_MAIN,
         },
+        // Seat 298: Fire Lord Azula's EDHREC average deck. `--pod-decks 298`.
+        PodDeck {
+            name: "Fire Lord Azula (BRU)",
+            commanders: decks::FIRE_LORD_AZULA_COMMANDERS,
+            main: decks::FIRE_LORD_AZULA_MAIN,
+        },
     ]
 }
 
@@ -4135,6 +4141,7 @@ mod tests {
             ("Arcades, the Strategist", [0xA4CA, 295, 9220]),
             ("Queen Marchesa", [0x4A2C, 296, 9221]),
             ("Kenrith, the Returned King", [0x4E7A, 297, 9222]),
+            ("Fire Lord Azula", [0xA2A1, 298, 9223]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

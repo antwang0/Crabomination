@@ -8733,3 +8733,31 @@ pub const KENRITH_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp, swamp,
 ];
+
+pub const FIRE_LORD_AZULA_COMMANDERS: &[CardFactory] = &[fire_lord_azula];
+
+/// **Fire Lord Azula**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 84 nonbasic cards + 5 Islands + 6 Mountains + 4 Swamps = 99.
+/// spells cast mid-combat
+pub const FIRE_LORD_AZULA_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, izzet_signet, lightning_greaves, sol_ring, swiftfoot_boots,
+    talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence, twinning_staff,
+    blood_crypt, bloodstained_mire, command_tower, crumbling_necropolis, dragonskull_summit,
+    drowned_catacomb, exotic_orchard, fire_nation_palace, polluted_delta, reliquary_tower,
+    rogues_passage, scalding_tarn, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls,
+    training_center, watery_grave, xanders_lounge, archmage_emeritus, ashling_flame_dancer,
+    azula_cunning_usurper, dualcaster_mage, electro_assaulting_battery, etali_primal_storm,
+    faerie_mastermind, firebending_student, goblin_electromancer, guttersnipe, high_fae_trickster,
+    nightscape_familiar, ozai_the_phoenix_king, storm_kiln_artist, torrential_gearhulk,
+    valley_floodcaller, veyran_voice_of_duality, zuko_firebending_master, fated_firepower,
+    firebender_ascension, leyline_of_anticipation, rhystic_study, abrade, an_offer_you_cant_refuse,
+    big_score, borne_upon_a_wind, brainstorm, bulk_up, chaos_warp, counterspell, dark_ritual,
+    deadly_rollick, deflecting_swat, demand_answers, electrodominance, fists_of_flame,
+    frantic_search, lightning_bolt, lightning_strike, narsets_reversal, opt, pyretic_ritual,
+    redirect_lightning, seething_song, snap, the_last_agni_kai, thrill_of_possibility,
+    unexpected_windfall, waterlogged_teachings, blasphemous_act, crackle_with_power, demonic_tutor,
+    jeskas_will, mana_geyser, sozins_comet,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp,
+];
