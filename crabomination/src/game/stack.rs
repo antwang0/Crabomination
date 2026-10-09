@@ -6170,6 +6170,13 @@ impl GameState {
                 if let Some(pos) = self.phased_out.iter().position(|c| c.id == id) {
                     let mut card = self.phased_out.remove(pos);
                     card.controller = card.owner;
+                    // CR 400.7 — a new object in exile: no phasing hold, no
+                    // battlefield state (Birgi, held by p4's card under p3's
+                    // control, kept the hold — six-seat audit pod, seed
+                    // 3141116 game 11).
+                    card.phased_out_by = None;
+                    card.tapped = false;
+                    card.leave_battlefield_state();
                     events.push(GameEvent::PermanentExiled { card_id: id });
                     self.exile.push(card);
                 }

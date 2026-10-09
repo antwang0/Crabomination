@@ -12,6 +12,8 @@ impl GameState {
     /// one way back for every phase-in path.
     pub(crate) fn phase_in_card(&mut self, mut c: crate::card::CardInstance) {
         self.board_instance_keywords |= !c.keyword_counters.is_empty();
+        // Phased in, it is held by nothing any more.
+        c.phased_out_by = None;
         // CR 702.26i — an Aura / Equipment that phased out directly phases in
         // unattached once its host has left the battlefield (no unattach
         // trigger, 702.26j). A host still phased out is still there.

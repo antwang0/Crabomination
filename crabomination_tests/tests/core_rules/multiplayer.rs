@@ -9564,3 +9564,23 @@ fn cr_104_3d_the_default_opponent_skips_a_seat_that_cant_lose() {
     assert!(g.player_cant_lose_game(1));
     assert_eq!(g.default_hostile_opponent(0), Some(2));
 }
+
+/// CR 800.4a / 400.7 — a phased-out permanent the departed seat controlled is
+/// exiled as a new object: no phasing hold, untapped. Birgi kept the hold of
+/// the card that phased it out (six-seat audit pod, seed 3141116 game 11).
+#[test]
+fn cr_800_4a_a_phased_out_permanent_exiled_with_its_controller_sheds_its_hold() {
+    let mut g = multi_player_game(3);
+    let holder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut card = g.battlefield.iter().find(|c| c.id == bear).unwrap().clone();
+    g.battlefield.retain(|c| c.id != bear);
+    card.controller = 2;
+    card.tapped = true;
+    card.phased_out_by = Some(holder);
+    g.phased_out.push(card);
+    g.concede(2);
+    let c = g.exile.iter().find(|c| c.id == bear).expect("exiled with its controller");
+    assert_eq!(c.phased_out_by, None);
+    assert!(!c.tapped);
+}
