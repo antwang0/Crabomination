@@ -2223,6 +2223,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JOLLY_BALLOON_MAN_COMMANDERS,
             main: decks::JOLLY_BALLOON_MAN_MAIN,
         },
+        // Seat 301: Eriette of the Charmed Apple's EDHREC average deck. `--pod-decks 301`.
+        PodDeck {
+            name: "Eriette of the Charmed Apple (BW)",
+            commanders: decks::ERIETTE_COMMANDERS,
+            main: decks::ERIETTE_MAIN,
+        },
+        // Seat 302: Alela, Cunning Conqueror's EDHREC average deck. `--pod-decks 302`.
+        PodDeck {
+            name: "Alela, Cunning Conqueror (BU)",
+            commanders: decks::ALELA_CUNNING_COMMANDERS,
+            main: decks::ALELA_CUNNING_MAIN,
+        },
     ]
 }
 
@@ -4167,6 +4179,8 @@ mod tests {
             ("Fire Lord Azula", [0xA2A1, 298, 9223]),
             ("Minsc & Boo, Timeless Heroes", [0xB00B, 299, 9224]),
             ("The Jolly Balloon Man", [0xBA11, 300, 9225]),
+            ("Eriette of the Charmed Apple", [0xE21E, 301, 9226]),
+            ("Alela, Cunning Conqueror", [0xA1E1, 302, 9227]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

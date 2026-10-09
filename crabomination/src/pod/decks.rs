@@ -8817,3 +8817,58 @@ pub const JOLLY_BALLOON_MAN_MAIN: &[CardFactory] = &[
     mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const ERIETTE_COMMANDERS: &[CardFactory] = &[eriette_of_the_charmed_apple];
+
+/// **Eriette of the Charmed Apple**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 79 nonbasic cards + 11 Plains + 9 Swamps = 99.
+/// Auras on opponents
+pub const ERIETTE_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, orzhov_signet, sol_ring, swiftfoot_boots, talisman_of_hierarchy,
+    bojuka_bog, caves_of_koilos, command_tower, fetid_heath, godless_shrine,
+    hall_of_heliods_generosity, isolated_chapel, orzhov_basilica, reliquary_tower,
+    shattered_sanctum, shineshadow_snarl, tainted_field, temple_of_silence, vault_of_champions,
+    archon_of_suns_grace, ashioks_reaper, danitha_capashen, hateful_eidolon, heliods_pilgrim,
+    killian_decisive_mentor, killian_ink_duelist, kor_spiritdancer, light_paws_emperors_voice,
+    lurrus_of_the_dream_den, mesa_enchantress, neva_stalked_by_nightmares, ondu_spiritdancer,
+    pearl_ear_imperial_advisor, scriv_the_obligator, sram_senior_edificer, starfield_mystic,
+    transcendent_envoy, all_that_glitters, angelic_destiny, angelic_gift, changing_loyalty,
+    clawing_torment, coercive_impetus, darksteel_mutation, ethereal_armor, eye_of_nidhogg,
+    ghostly_prison, ghoulish_impetus, gift_of_immortality, greater_auramancy, kayas_ghostform,
+    lord_skitters_blessing, martial_impetus, minions_return, nurgles_rot, parasitic_impetus,
+    redemption_arc, reprobation, sages_reverie, sheltered_by_ghosts, sigil_of_the_empty_throne,
+    songbirds_blessing, sphere_of_safety, spirit_link, spirit_mantle, timely_ward,
+    trespassers_curse, vampiric_link, anguished_unmaking, generous_gift, not_dead_after_all,
+    path_to_exile, swords_to_plowshares, damn, open_the_armory, resurgent_belief, retether,
+    winds_of_rath,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ALELA_CUNNING_COMMANDERS: &[CardFactory] = &[alela_cunning_conqueror];
+
+/// **Alela, Cunning Conqueror**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 80 nonbasic cards + 11 Islands + 8 Swamps = 99.
+/// Faeries on the opponent's turn
+pub const ALELA_CUNNING_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, dimir_signet, fellwar_stone, misleading_signpost, skullclamp,
+    sol_ring, talisman_of_dominance, thought_vessel, bojuka_bog, choked_estuary, command_tower,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, exotic_orchard, faerie_conclave,
+    path_of_ancestry, reliquary_tower, secluded_glen, shipwreck_marsh, sunken_hollow, tainted_isle,
+    underground_river, watery_grave, archmage_of_echoes, bitterbloom_bearer, blightwing_bandit,
+    brazen_borrower, faerie_bladecrafter, faerie_harbinger, faerie_mastermind,
+    glen_elendra_archmage, glen_elendra_liege, high_fae_trickster, malleable_impostor,
+    mocking_sprite, nymris_oonas_trickster, obyra_dreaming_duelist, oonas_blackguard,
+    rankle_master_of_pranks, scion_of_oona, shadow_puppeteers, sower_of_temptation,
+    spellstutter_sprite, talion_the_kindly_lord, tegwyll_duke_of_splendor, voracious_tome_skimmer,
+    wavebreak_hippocamp, bitterblossom, kindred_discovery, leyline_of_anticipation,
+    reconnaissance_mission, reflections_of_littjara, an_offer_you_cant_refuse, arcane_denial,
+    brainstorm, consider, counterspell, cyclonic_rift, deadly_rollick, faerie_fencing,
+    frantic_search, harmonized_crescendo, infernal_grasp, keep_watch, negate, opt, pongify,
+    rapid_hybridization, reality_shift, run_away_together, snap, spell_stutter, unwind,
+    waterlogged_teachings, distant_melody, kindred_dominance, notorious_throng, tegwylls_scouring,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
