@@ -1471,3 +1471,18 @@ fn a_pod_seats_crackle_with_power_never_names_its_caster() {
     assert!(!picks.is_empty());
     assert!(!picks.contains(&Target::Player(0)), "the caster is not a target: {picks:?}");
 }
+
+/// CR 603.2 — "at the beginning of each opponent's upkeep" (Fatespinner)
+/// never triggers on its controller's own upkeep: a 4-seat pod skipped its
+/// own draw step for 70 turns into a no-progress draw (seed 4400248).
+#[test]
+fn cr_603_2_an_each_opponents_upkeep_trigger_skips_its_controllers_upkeep() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::fatespinner());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    assert!(g.stack.is_empty(), "not on its controller's upkeep");
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    assert_eq!(g.stack.len(), 1, "on an opponent's");
+}

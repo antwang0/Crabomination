@@ -1209,7 +1209,7 @@ impl GameState {
         // re-check it after gathering — predicate evaluation needs
         // `&self.evaluate_predicate(...)` which can't run inside the inner
         // closure due to the `iter` borrow.
-        let scope_matches = |scope: &EventScope, controller: usize| match scope {
+        let scope_matches_kind = |scope: &EventScope, controller: usize| match scope {
             EventScope::AnyPlayer => true,
             EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
                 controller == active
@@ -1234,6 +1234,13 @@ impl GameState {
         | EventScope::OpponentOfYoursAttacked
         | EventScope::AnyPlayerAttacks
         | EventScope::YouAttackedPlayer => false, // combat-based
+        };
+        // `from_opponent` ("at the beginning of each opponent's upkeep" —
+        // Fatespinner) is the active player being an opponent: the step has
+        // no actor, so the walk asks it here (it fired on its controller's
+        // own upkeep, a 4-seat pod's 116-turn no-progress draw).
+        let scope_matches = |ev: &crate::effect::EventSpec, controller: usize| {
+            (!ev.actor_is_opponent || !self.same_team(controller, active)) && scope_matches_kind(&ev.scope, controller)
         };
         // One board-level scan for the whole walk: the per-card shim rebuilds
         // it, so asking it per battlefield permanent is O(cards²).
@@ -1302,7 +1309,7 @@ impl GameState {
                 // command-zone walk below gathers it. Last in the `&&` so
                 // only a kind match pays for the compare.
                 if t.event.kind == kind
-                    && scope_matches(&t.event.scope, c.controller)
+                    && scope_matches(&t.event, c.controller)
                     && !t.event.zone.command_zone_only()
                 {
                     candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
@@ -1311,13 +1318,13 @@ impl GameState {
             if any_own_grant {
                 self.for_each_granted_trigger_matching(
                     c.id,
-                    |t| t.event.kind == kind && scope_matches(&t.event.scope, c.controller),
+                    |t| t.event.kind == kind && scope_matches(&t.event, c.controller),
                     |t| candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone())),
                 );
             }
             if any_static_grant || !c.definition.station.is_empty() {
                 for t in self.statics_granted_triggers_on(c, &trigger_grants) {
-                    if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
+                    if t.event.kind == kind && scope_matches(&t.event, c.controller) {
                         candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
                     }
                 }
@@ -1352,7 +1359,7 @@ impl GameState {
                 let Some(bonus) = &eq.definition.equipped_bonus else { return };
                 let Some(host) = self.battlefield.find_by_id(host_id) else { return };
                 for t in &bonus.triggered_abilities {
-                    if t.event.kind == kind && scope_matches(&t.event.scope, host.controller) {
+                    if t.event.kind == kind && scope_matches(&t.event, host.controller) {
                         let source = if bonus.triggers_on_equipment { eq.id } else { host_id };
                         candidates.push((
                             source,
