@@ -8872,3 +8872,30 @@ pub const ALELA_CUNNING_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const OVIKA_COMMANDERS: &[CardFactory] = &[ovika_enigma_goliath];
+
+/// **Ovika, Enigma Goliath**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 76 nonbasic cards + 12 Islands + 11 Mountains = 99.
+/// noncreature spells into Phyrexian Goblins
+pub const OVIKA_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, commanders_sphere, decanter_of_endless_water, dreamstone_hedron,
+    fellwar_stone, fire_diamond, gilded_lotus, hedron_archive, heraldic_banner, izzet_signet,
+    midnight_clock, mind_stone, skullclamp, sky_diamond, sol_ring, talisman_of_creativity,
+    thought_vessel, thran_dynamo, worn_powerstone, cascade_bluffs, command_tower, exotic_orchard,
+    frostboil_snarl, izzet_boilerworks, reliquary_tower, shivan_reef, steam_vents,
+    stormcarved_coast, sulfur_falls, temple_of_epiphany, training_center, chief_engineer,
+    goblin_electromancer, guttersnipe, krenko_mob_boss, magnus_the_red, molten_gatekeeper,
+    purphoros_god_of_the_forge, skirk_prospector, storm_kiln_artist, witty_roastmaster,
+    city_on_fire, goblin_bombardment, impact_tremors, kindred_discovery, raid_bombardment,
+    shared_animosity, sorcerer_class, abrade, an_offer_you_cant_refuse, arcane_denial,
+    artistic_refusal, battle_hymn, big_score, brightstone_ritual, chaos_warp, counterspell,
+    dig_through_time, frantic_search, harmonized_crescendo, meeting_of_minds, negate,
+    seething_song, transcendent_message, blasphemous_act, distant_melody, explosive_singularity,
+    jeskas_will, mana_geyser, mizzixs_mastery, surge_to_victory, thoughtcast, treasure_cruise,
+    volcanic_salvo, volcanic_vision,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
