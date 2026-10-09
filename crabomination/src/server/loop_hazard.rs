@@ -67,9 +67,15 @@ pub(super) fn self_feeding(state: &GameState, seat: usize) -> bool {
     }
     let mut h = state.clone();
     let mut events = Vec::new();
-    let spells: Vec<_> = seat_permanent_spells(state, seat).map(|c| c.definition.arc()).collect();
-    for def in spells {
-        h.mint_token_onto_battlefield(def, seat, false, &mut events);
+    let spells: Vec<_> = seat_permanent_spells(state, seat)
+        .map(|c| (c.definition.arc(), c.definition.room.is_some().then_some(c.split_cast == Some(1))))
+        .collect();
+    for (def, room_door) in spells {
+        let id = h.mint_token_onto_battlefield(def, seat, false, &mut events);
+        // CR 709.5d — a Room enters with the cast door unlocked.
+        if let Some(right) = room_door {
+            h.set_room_door_unlocked(id, right, &mut events);
+        }
     }
     let sources: Vec<(crate::card::CardId, usize, TokenDefinition)> = h
         .battlefield
@@ -156,6 +162,29 @@ mod tests {
         let locked = GameState::accept_on(&g, cast.clone()).expect("castable");
         assert!(!starts_loop(&g, &locked, 0), "a locked Arcade adds no type");
         g.set_room_door_unlocked(room, false, &mut Vec::new());
+        let post = GameState::accept_on(&g, cast).expect("castable");
+        assert!(starts_loop(&g, &post, 0));
+    }
+
+    /// CR 709.5d / 104.4b — casting Secret Arcade (it enters with that door
+    /// unlocked) under Ghostly Dancers sets the loop up too.
+    #[test]
+    fn casting_secret_arcade_under_ghostly_dancers_is_a_loop() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(0, crate::catalog::ghostly_dancers());
+        let room = g.add_card_to_hand(0, crate::catalog::secret_arcade_dusty_parlor());
+        g.players[0].mana_pool.add(Color::White, 5);
+        let cast = GameAction::CastSpell {
+            card_id: room,
+            target: None,
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        };
         let post = GameState::accept_on(&g, cast).expect("castable");
         assert!(starts_loop(&g, &post, 0));
     }
