@@ -2343,6 +2343,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ISSHIN_COMMANDERS,
             main: decks::ISSHIN_MAIN,
         },
+        // Seat 321: Jodah, the Unifier's EDHREC average deck. `--pod-decks 321`.
+        PodDeck {
+            name: "Jodah, the Unifier (BGRUW)",
+            commanders: decks::JODAH_UNIFIER_COMMANDERS,
+            main: decks::JODAH_UNIFIER_MAIN,
+        },
+        // Seat 322: Ygra, Eater of All's EDHREC average deck. `--pod-decks 322`.
+        PodDeck {
+            name: "Ygra, Eater of All (BG)",
+            commanders: decks::YGRA_COMMANDERS,
+            main: decks::YGRA_MAIN,
+        },
     ]
 }
 
@@ -4307,6 +4319,8 @@ mod tests {
             ("Roxanne, Starfall Savant", [0x20A2, 318, 9243]),
             ("Lightning, Army of One", [0x1197, 319, 9244]),
             ("Isshin, Two Heavens as One", [0x1551, 320, 9245]),
+            ("Jodah, the Unifier", [0x10DA, 321, 9246]),
+            ("Ygra, Eater of All", [0x1964, 322, 9247]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

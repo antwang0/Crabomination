@@ -9376,3 +9376,61 @@ pub const ISSHIN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
     plains, plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const JODAH_UNIFIER_COMMANDERS: &[CardFactory] = &[jodah_the_unifier];
+
+/// **Jodah, the Unifier**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 87 nonbasic cards + 4 Forests + 2 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Jodah, the Unifier legends (WUBRG): Great Hall, Kethis, Yoshimaru and Hajar around the legend cascade
+pub const JODAH_UNIFIER_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, commanders_sphere, fellwar_stone, heroes_podium,
+    lightning_greaves, mox_amber, relic_of_legends, sol_ring, timeless_lotus, blood_crypt,
+    breeding_pool, command_tower, exotic_orchard, flooded_strand, godless_shrine,
+    great_hall_of_the_citadel, hallowed_fountain, jetmirs_garden, ketria_triome, marsh_flats,
+    misty_rainforest, overgrown_tomb, path_of_ancestry, plaza_of_heroes, sacred_foundry,
+    sparas_headquarters, steam_vents, stomping_ground, temple_garden, the_world_tree,
+    verdant_catacombs, watery_grave, windswept_heath, wooded_foothills, aragorn_the_uniter,
+    arvad_the_cursed, birds_of_paradise, bloom_tender, boromir_warden_of_the_tower, captain_sisay,
+    chulane_teller_of_tales, delighted_halfling, esika_god_of_the_tree, faeburrow_elder,
+    hajar_loyal_bodyguard, inga_and_esika, jhoira_weatherlight_captain, kellan_the_kid,
+    kenrith_the_returned_king, kethis_the_hidden_hand, kutzil_malamet_exemplar,
+    najeela_the_blade_blossom, odric_lunarch_marshal, raff_capashen_ships_mage,
+    ratadrabik_of_urborg, reki_the_history_of_kamigawa, serah_farron, shalai_voice_of_plenty,
+    shanid_sleepers_scourge, sisay_weatherlight_captain, skrelv_defector_mite, surrak_dragonclaw,
+    toski_bearer_of_secrets, vega_the_watcher, venat_heart_of_hydaelyn, yoshimaru_ever_faithful,
+    annie_joins_up, flowering_of_the_white_tree, rhystic_study, smothering_tithe, vraska_joins_up,
+    beast_within, counterspell, cyclonic_rift, heroic_intervention, path_to_exile,
+    swords_to_plowshares, teferis_protection, dihada_binder_of_wills, cultivate, farseek,
+    kodamas_reach, natures_lore, primevals_glorious_rebirth, three_visits, urzas_ruinous_blast,
+    // Basics
+    forest, forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp,
+    swamp,
+];
+
+pub const YGRA_COMMANDERS: &[CardFactory] = &[ygra_eater_of_all];
+
+/// **Ygra, Eater of All**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 80 nonbasic cards + 11 Forests + 8 Swamps = 99.
+/// Ygra, Eater of All Food (BG): The Shire, Elanor and Viridian Revel off the Food-and-artifact churn
+pub const YGRA_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, heaped_harvest, lightning_greaves, nuka_cola_vending_machine,
+    skullclamp, sol_ring, swiftfoot_boots, witchs_oven, bojuka_bog, command_tower, deathcap_glade,
+    exotic_orchard, golgari_rot_farm, llanowar_wastes, necroblossom_snarl, overgrown_tomb,
+    restless_cottage, rogues_passage, tainted_wood, temple_of_malady, the_shire, twilight_mire,
+    undergrowth_stadium, woodland_cemetery, academy_manufactor, bane_of_progress,
+    birds_of_paradise, blood_artist, braids_arisen_nightmare, camellia_the_seedmiser,
+    cauldron_familiar, chatterfang_squirrel_general, elanor_gardner, experimental_confectioner,
+    gilded_goose, greta_sweettooth_scourge, gyome_master_chef, hazels_brewmaster,
+    honored_dreyleader, manglehorn, marionette_apprentice, mirkwood_bats, peregrin_took,
+    pitiless_plunderer, rapacious_guest, ravenous_squirrel, sakura_tribe_elder, savvy_hunter,
+    thornvault_forager, tireless_provisioner, viscera_seer, warren_soultrader, zulaport_cutthroat,
+    doubling_season, moldervine_reclamation, night_of_the_sweets_revenge, ninja_pizza,
+    scavengers_talent, trail_of_crumbs, viridian_revel, assassins_trophy, beast_within,
+    collective_resistance, dark_ritual, deadly_dispute, heroic_intervention, natures_claim,
+    putrefy, revitalizing_repast, creeping_corrosion, cultivate, fade_from_history, kodamas_reach,
+    many_partings, natures_lore, pest_infestation, rampant_growth, season_of_gathering,
+    toxic_deluge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
