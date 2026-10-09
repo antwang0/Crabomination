@@ -5565,6 +5565,18 @@ impl GameState {
                     R::BlockedBySourceThisTurn => source
                         .and_then(|s| self.battlefield_find(s))
                         .is_some_and(|src| self.blocks_declared_this_turn.contains(&(src.id, card.id))),
+                    R::BlockedBySourceNowOrAsItLeft => source.is_some_and(|s| {
+                        if self.battlefield_find(s).is_some() {
+                            self.block_map.get(&s).is_some_and(|atk| atk.contains(&card.id))
+                        } else {
+                            self.leaves_bf_lki.get(&s).is_some()
+                                && matches!(
+                                    self.step,
+                                    crate::game::TurnStep::DeclareBlockers | crate::game::TurnStep::FirstStrikeDamage | crate::game::TurnStep::CombatDamage | crate::game::TurnStep::EndCombat
+                                )
+                                && self.blocks_declared_this_turn.contains(&(s, card.id))
+                        }
+                    }),
                     // The game-level pair log, not the candidate's own field:
                     // the body that asks is an end-of-combat one and
                     // `resolve_combat` has already dropped `block_map`.
@@ -7317,6 +7329,7 @@ impl GameState {
             | R::BlockingHostOfSource
             | R::BlockingOrBlockedByHostOfSource
             | R::BlockedBySourceThisTurn
+            | R::BlockedBySourceNowOrAsItLeft
             | R::BlockedSourceThisTurn
             | R::PlayerDamagedBySourceThisTurn | R::ControllerCombatDamagedBySourceThisTurn
             | R::SaddledSourceThisTurn => false,

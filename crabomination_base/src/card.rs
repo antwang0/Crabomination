@@ -3180,6 +3180,11 @@ pub enum SelectionRequirement {
     /// `blocks_declared_this_turn` pair log, so it still answers after combat
     /// has been torn down (Wall of Nets' end-of-combat exile).
     BlockedBySourceThisTurn,
+    /// "Target creature [source] is blocking" — live while the source is on
+    /// the battlefield, else (CR 608.2b reads a sacrificed source by last
+    /// known information) the blocks it declared, while combat lasts. Tinder
+    /// Wall's "{R}, Sacrifice: 2 damage to target creature it's blocking".
+    BlockedBySourceNowOrAsItLeft,
     /// The mirror: "creatures that blocked [source] this turn". Reads
     /// `GameState.blocks_declared_this_turn`, not the candidate's own field,
     /// so it still answers after `resolve_combat` has dropped `block_map` —

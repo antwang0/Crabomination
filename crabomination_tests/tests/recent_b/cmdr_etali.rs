@@ -1263,6 +1263,48 @@ fn reckless_barbarian_and_tinder_wall_sacrifice_for_two_red() {
     assert!(catalog::tinder_wall().keywords.contains(&Keyword::Defender));
 }
 
+/// Tinder Wall's "{R}, Sacrifice: 2 damage to target creature it's blocking":
+/// only the creature IT blocks is a legal target (it shipped as any blocked
+/// creature), and the ability still resolves after the Wall is sacrificed as
+/// a cost — the target is re-checked through its LKI (CR 608.2b).
+#[test]
+fn tinder_wall_pings_only_the_creature_it_blocks() {
+    let mut g = c_main(2);
+    let wall = g.add_card_to_battlefield(0, catalog::tinder_wall());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, a), (bear, b)])).expect("block");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    let ping = |g: &mut GameState, t| {
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: wall, ability_index: 1, target: Some(Target::Permanent(t)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(ping(&mut g, b).is_err(), "the bear's attacker isn't the Wall's");
+    ping(&mut g, a).expect("the Wall's own attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_none(), "sacrificed");
+    assert!(g.battlefield_find(a).is_none(), "2 damage killed the Wall's attacker");
+    assert!(g.battlefield_find(b).is_some());
+}
+
 // ── Cost reducers ───────────────────────────────────────────────────────────
 
 /// Radagast: the first creature spell each turn costs {2} less; the second

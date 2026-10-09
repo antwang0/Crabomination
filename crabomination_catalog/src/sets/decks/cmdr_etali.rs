@@ -1495,15 +1495,9 @@ pub fn reckless_barbarian() -> CardDefinition {
 }
 
 /// Tinder Wall — {G} Creature — Plant Wall 0/3. Defender. Sacrifice this
-/// creature: Add {R}{R}. `{R}, Sacrifice this creature: It deals 2 damage to
-/// target creature it's blocking.`
-///
-/// Approximation: the damage ability targets any *blocked* creature
-/// (`R::IsBlocked`), not specifically one Tinder Wall is blocking. The
-/// source is sacrificed as a cost, and `BlockingOrBlockedBySource` reads the
-/// live `block_map` (the Wall's entry is gone once it's sacrificed) while
-/// `BlockedBySourceThisTurn` is gated on the source still being on the
-/// battlefield, so the exact "it's blocking" filter would fizzle on resolution.
+/// creature: Add {R}{R}. {R}, Sacrifice this creature: It deals 2 damage to
+/// target creature it's blocking (`BlockedBySourceNowOrAsItLeft`: the target
+/// is checked live, and again on resolution through the Wall's LKI).
 pub fn tinder_wall() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Defender],
@@ -1513,7 +1507,7 @@ pub fn tinder_wall() -> CardDefinition {
                 mana_cost: cost(&[r()]),
                 sac_cost: true,
                 effect: Effect::DealDamage {
-                    to: crate::effect::shortcut::target_filtered(R::Creature.and(R::IsBlocked)),
+                    to: crate::effect::shortcut::target_filtered(R::Creature.and(R::BlockedBySourceNowOrAsItLeft)),
                     amount: Value::Const(2),
                 },
                 ..Default::default()
