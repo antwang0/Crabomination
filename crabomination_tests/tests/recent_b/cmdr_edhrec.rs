@@ -3499,3 +3499,70 @@ fn roxanne_artifacts() {
     assert_eq!(named(&g, "Icy Manalith"), 1);
     assert_eq!(g.players[1].life, life - 2);
 }
+
+/// Isshin's and Lightning's attackers: Karlach untaps the first combat's
+/// attackers with first strike and banks a combat; Audacious Thief draws;
+/// Mardu Ascendancy adds an attacking Goblin; the Spear of Leonidas grants
+/// double strike; Akiri draws for an equipped attacker and unattaches for a
+/// tapped, indestructible body; Fighter Class tutors and makes equip free.
+#[test]
+fn isshin_and_lightning_attackers() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::karlach_fury_of_avernus());
+    ready(&mut g, 0, catalog::mardu_ascendancy());
+    let thief = ready(&mut g, 0, catalog::audacious_thief());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: thief, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "Karlach untapped it");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike));
+    assert_eq!(g.additional_combat_phases, 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the Thief drew");
+    assert_eq!(named(&g, "Goblin"), 2, "a Goblin per nontoken attacker");
+
+    let mut g = pod(2);
+    flood(&mut g);
+    g.players[0].library.clear();
+    let spear = g.add_card_to_library(0, catalog::the_spear_of_leonidas());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let class = g.add_card_to_hand(0, catalog::fighter_class());
+    cast(&mut g, class, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spear), "tutored");
+    activate(&mut g, class, None);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: class, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("level 3");
+    drain_stack(&mut g);
+    cast(&mut g, spear, None);
+    ready(&mut g, 0, catalog::akiri_fearless_voyager());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::Equip { equipment: spear, target: bear }).expect("equip for free at level 2");
+    drain_stack(&mut g);
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Akiri drew");
+    let akiri = g.battlefield.iter().find(|c| c.definition.name == "Akiri, Fearless Voyager").map(|c| c.id).unwrap();
+    g.battlefield_find_mut(bear).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, akiri, None);
+    assert_eq!(g.battlefield_find(spear).unwrap().attached_to, None, "unattached");
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
+}

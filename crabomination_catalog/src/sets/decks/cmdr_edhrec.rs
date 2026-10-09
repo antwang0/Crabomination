@@ -6862,3 +6862,205 @@ pub fn svella_ice_shaper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Karlach, Fury of Avernus — {4}{R} 5/4 Tiefling Barbarian; choose a
+/// Background. Whenever you attack in the turn's first combat, untap the
+/// attackers; they gain first strike, and another combat phase follows.
+pub fn karlach_fury_of_avernus() -> CardDefinition {
+    use crate::effect::Duration;
+    let attackers = || Selector::EachPermanent(R::Creature.and(R::IsAttacking).and(R::ControlledByYou));
+    CardDefinition {
+        name: "Karlach, Fury of Avernus",
+        cost: cost(&[generic(4), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Tiefling, CreatureType::Barbarian]),
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::ChooseABackground],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(Predicate::IsFirstCombatPhaseThisTurn),
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: attackers(), up_to: None },
+                Effect::GrantKeywords { what: attackers(), keywords: vec![Keyword::FirstStrike], duration: Duration::EndOfTurn },
+                Effect::AdditionalCombatPhase { count: Value::ONE },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Audacious Thief — {2}{B} 2/2 Human Rogue. Attacking, you draw a card and
+/// lose 1 life.
+pub fn audacious_thief() -> CardDefinition {
+    CardDefinition {
+        name: "Audacious Thief",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Rogue]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Mardu Ascendancy — {R}{W}{B} Enchantment. Whenever a nontoken creature you
+/// control attacks, a 1/1 red Goblin enters tapped and attacking. Sacrifice
+/// it: creatures you control get +0/+3 until end of turn.
+pub fn mardu_ascendancy() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Mardu Ascendancy",
+        cost: cost(&[r(), w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken }),
+            effect: Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(token_1_1("Goblin", Color::Red, CreatureType::Goblin)),
+                cleanup: Default::default(),
+                defender: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(0),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Spear of Leonidas — {2}{R} legendary Equipment. Whenever equipped
+/// creature attacks, choose one — double strike until end of turn; Phobos, a
+/// legendary 3/2 red Horse; or discard two, then draw two. Equip {2}.
+pub fn the_spear_of_leonidas() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    use crate::effect::Duration;
+    let phobos = TokenDefinition {
+        name: "Phobos".into(),
+        power: 3,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        colors: vec![Color::Red],
+        subtypes: creature_types(vec![CreatureType::Horse]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Spear of Leonidas",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![on_attack(Effect::ChooseMode(vec![
+                Effect::GrantKeywords { what: Selector::This, keywords: vec![Keyword::DoubleStrike], duration: Duration::EndOfTurn },
+                mint(phobos, Value::ONE),
+                Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ]),
+            ]))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Akiri, Fearless Voyager — {1}{R}{W} 3/3 Kor Warrior. Whenever you attack
+/// with one or more equipped creatures, draw a card. {W}: you may unattach an
+/// Equipment from a creature you control; if you do, tap that creature and it
+/// gains indestructible until end of turn.
+pub fn akiri_fearless_voyager() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    use crate::effect::Duration;
+    let host = || Selector::AttachedTo(Box::new(Selector::SeparatedPile { chosen: true }));
+    CardDefinition {
+        name: "Akiri, Fearless Voyager",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Kor, CreatureType::Warrior]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl)
+                .with_filter(Predicate::AttackedWithCreatureMatching { who: PlayerRef::You, filter: R::IsEquipped }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::MayDo {
+                description: "Unattach an Equipment to tap its creature and make it indestructible?".into(),
+                body: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(
+                        R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::AttachedToCreature).and(R::ControlledByYou),
+                    ),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: host() },
+                        Effect::GrantKeywords { what: host(), keywords: vec![Keyword::Indestructible], duration: Duration::EndOfTurn },
+                        Effect::Unattach { what: Selector::SeparatedPile { chosen: true } },
+                    ])),
+                    other: Box::new(Effect::Noop),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fighter Class — {R}{W} Class. ETB: tutor an Equipment to hand. Level 2
+/// ({1}{R}{W}): your equip abilities cost {2} less. Level 3 ({3}{R}{W}):
+/// whenever a creature you control attacks, up to one target creature blocks
+/// it this combat if able.
+pub fn fighter_class() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, StaticAbility, StaticEffect};
+    let level_up = |mana, from| ActivatedAbility {
+        mana_cost: mana,
+        sorcery_speed: true,
+        condition: Some(Predicate::SourceClassLevelIs(from)),
+        effect: Effect::AdvanceClassLevel,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Fighter Class",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Class], ..Default::default() },
+        triggered_abilities: vec![
+            etb(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::MustBlockTarget { blocker: target_filtered(R::Creature), attacker: Selector::TriggerSource }),
+                },
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Equip abilities you activate cost {2} less to activate.",
+            effect: StaticEffect::WhileClassLevelAtLeast { n: 2, inner: Box::new(StaticEffect::EquipCostReduction { amount: 2 }) },
+        }],
+        activated_abilities: vec![level_up(cost(&[generic(1), r(), w()]), 1), level_up(cost(&[generic(3), r(), w()]), 2)],
+        ..Default::default()
+    }
+}
