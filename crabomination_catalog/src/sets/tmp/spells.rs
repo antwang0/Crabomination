@@ -342,6 +342,7 @@ pub fn intuition() -> CardDefinition {
             opponent_picks: 1,
             chosen_to: ZoneDest::Hand(PlayerRef::You),
             rest_to: ZoneDest::Graveyard,
+            filter: None,
         },
     )
 }

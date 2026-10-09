@@ -365,6 +365,10 @@ pub struct PlayerCold {
     /// `cant_cast_noncreature_this_turn`.
     #[serde(default)]
     pub noncreature_locked_by: u64,
+    /// "Lands you control enter tapped this turn" (Nahiri's Lithoforming).
+    /// Read by `apply_enters_tapped_replacement`; cleared at the turn's end.
+    #[serde(default)]
+    pub lands_enter_tapped_this_turn: bool,
     /// CR 702.131b — a permanent with ascend has entered under this player's
     /// control, so permanent entries check for the city's blessing.
     #[serde(default)]

@@ -26891,7 +26891,7 @@ impl GameState {
             }
 
             Effect::SearchSplitOpponentChooses {
-                opponent, count, opponent_picks, chosen_to, rest_to,
+                opponent, count, opponent_picks, chosen_to, rest_to, filter,
             } => {
                 let p = ctx.controller;
                 let opp = self
@@ -26916,6 +26916,7 @@ impl GameState {
                     .library
                     .iter()
                     .take(limit)
+                    .filter(|c| filter.as_ref().is_none_or(|f| self.evaluate_requirement_on_card(f, c, p)))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 // Auto default: the first `count` distinct-named cards (the
@@ -35002,6 +35003,11 @@ impl GameState {
 
             Effect::PermanentsEnterTappedThisTurn => {
                 self.permanents_enter_tapped_this_turn = true;
+                Ok(())
+            }
+
+            Effect::YourLandsEnterTappedThisTurn => {
+                self.players[ctx.controller].lands_enter_tapped_this_turn = true;
                 Ok(())
             }
 

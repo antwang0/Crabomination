@@ -908,6 +908,7 @@ impl Effect {
             | Effect::SearchAuraAttachToSource
             | Effect::SearchAuraAttachToSourceCappedBy { .. }
             | Effect::SetSourceChosenNumber(_)
+            | Effect::YourLandsEnterTappedThisTurn
             | Effect::PutOntoBattlefieldAttached { .. }
             | Effect::RevealTopPutAttached { .. }
             | Effect::RevealUntilPutAttachedElseHand { .. }

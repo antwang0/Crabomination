@@ -56717,6 +56717,7 @@ pub fn gifts_ungiven() -> CardDefinition {
             opponent_picks: 2,
             chosen_to: ZoneDest::Graveyard,
             rest_to: ZoneDest::Hand(PlayerRef::You),
+            filter: None,
         },
         ..Default::default()
     }

@@ -5470,6 +5470,11 @@ impl GameState {
         self.additional_post_main_combats = 0;
         self.combat_phases_this_turn = 0;
         self.permanents_enter_tapped_this_turn = false;
+        for pl in self.players.iter_mut() {
+            if pl.lands_enter_tapped_this_turn {
+                pl.lands_enter_tapped_this_turn = false;
+            }
+        }
         self.additional_end_steps = 0;
         self.end_steps_this_turn = 0;
         self.additional_upkeep_steps = 0;

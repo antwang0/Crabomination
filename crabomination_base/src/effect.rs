@@ -7090,6 +7090,10 @@ pub enum Effect {
         opponent_picks: u32,
         chosen_to: ZoneDest,
         rest_to: ZoneDest,
+        /// Only cards matching this may be found ("up to four land cards" —
+        /// Realms Uncharted). `None` admits any card.
+        #[serde(default)]
+        filter: Option<crate::card::SelectionRequirement>,
     },
     /// Move the resolving spell (`ctx.source`) from the stack into its
     /// owner's library, then shuffle. The Beacon cycle's "Shuffle this card
@@ -11623,6 +11627,9 @@ pub enum Effect {
     /// CR 614 — "Permanents enter tapped this turn" (Due Respect). A
     /// turn-scoped blanket replacement over every entry path.
     PermanentsEnterTappedThisTurn,
+    /// "Lands you control enter tapped this turn" (Nahiri's Lithoforming) —
+    /// the controller-scoped, land-only sibling.
+    YourLandsEnterTappedThisTurn,
     /// "Until end of turn, if one or more creatures would enter from exile
     /// or after being cast from exile, their owners shuffle them into their
     /// libraries instead" (Don't Blink).

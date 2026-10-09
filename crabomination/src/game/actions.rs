@@ -5207,6 +5207,10 @@ impl GameState {
         // source/controller.
         let self_seat = self.battlefield[idx].controller;
         let self_id = self.battlefield[idx].id;
+        // Nahiri's Lithoforming — "lands you control enter tapped this turn".
+        if self.players[self_seat].lands_enter_tapped_this_turn && self.battlefield[idx].definition.is_land() {
+            should_tap = true;
+        }
         // "You may reveal a [card] from your hand" (the reveal lands, Primal
         // Beyond): untapped only if a reveal is the arm that held and the
         // controller chose to reveal.
