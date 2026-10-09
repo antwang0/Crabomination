@@ -1972,6 +1972,11 @@ pub enum Keyword {
     /// Firebending X, where X is the number of experience counters the
     /// attacker's controller has (Zuko, Firebending Master).
     FirebendingExperience,
+    /// Firebender Ascension — "whenever a creature you control attacking
+    /// causes a triggered ability of that creature to trigger, put a quest
+    /// counter on this; then if it has four or more, you may copy that
+    /// ability." The attack commit queues that trigger above its cause.
+    AttackTriggerQuestCopy,
     /// CR 702.190 — Sneak [cost]. A spell-static alt cast: during your declare
     /// blockers step you may cast this by paying [cost] and returning an
     /// unblocked creature you control to its owner's hand. Carried for display;

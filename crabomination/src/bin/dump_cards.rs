@@ -253,6 +253,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackIfDefenderHasUntappedLand
         | Keyword::CantAttackAuraController
         | Keyword::CantAttackPlayerAttackedThisTurn
+        | Keyword::AttackTriggerQuestCopy
         | Keyword::CantAttackPlayer(_)
         | Keyword::CantAttackOwner
         | Keyword::CantAttackIfAttackedLastTurn

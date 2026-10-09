@@ -2659,6 +2659,16 @@ impl GameState {
 
         // "Whenever one or more …" slots spent by this declaration.
         let mut batch_fired: Vec<(CardId, usize)> = Vec::new();
+        // Firebender Ascension's listeners, `(id, controller)`.
+        let questers: Vec<(CardId, usize)> = if triggers.is_empty() {
+            Vec::new()
+        } else {
+            self.battlefield
+                .iter()
+                .filter(|c| c.definition.keywords.contains(&Keyword::AttackTriggerQuestCopy))
+                .map(|c| (c.id, c.controller))
+                .collect()
+        };
         for (source, effect, controller, filter, once) in triggers {
             // CR 603.2 + CR 506.5: evaluate the trigger's optional filter
             // predicate at fire-time, which for Attacks is "after the
@@ -2740,6 +2750,7 @@ impl GameState {
                         converged_value: 0,
                         mana_spent: 0,
                     });
+                    self.push_quest_copy_triggers(&questers, source, controller, true);
                 }
                 continue;
             }
@@ -2767,6 +2778,7 @@ impl GameState {
                         .mode(mode)
                         .build(),
                 );
+                self.push_quest_copy_triggers(&questers, source, controller, false);
             }
         }
 
