@@ -342,6 +342,44 @@ fn party_thrasher_digs_two_after_discard() {
     assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 1, "one of them is playable");
 }
 
+/// CR 702.51 — Party Thrasher: a noncreature spell cast from exile has
+/// convoke — a green creature pays the {1} of Lightning Strike the Mountain
+/// can't; a creature spell from exile gets no convoke.
+#[test]
+fn party_thrasher_gives_exile_casts_convoke() {
+    use crabomination::card::{MayPlayDuration, MayPlayPermission};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let thrasher = g.add_card_to_battlefield(0, catalog::party_thrasher());
+    g.battlefield_find_mut(thrasher).unwrap().tapped = true; // not a helper here
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let grant = |g: &mut GameState, def| {
+        let id = g.next_id();
+        let mut c = crabomination::card::CardInstance::new(id, def, 0);
+        c.may_play_until = Some(MayPlayPermission {
+            cast_only: false, locks_further_casts: false, one_cast_group: None, player: 0,
+            granted_turn: g.turn_number, duration: MayPlayDuration::EndOfThisTurn, exile_after: false,
+            miracle: false, pay_life: false, bottom_after: false, undaunted: false,
+        });
+        c.granted_alt_cast_cost_eot = Some(c.definition.cost.clone());
+        g.exile.push(c);
+        id
+    };
+    let giant = grant(&mut g, catalog::hill_giant());
+    assert!(g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: giant, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "a creature spell from exile gets no convoke");
+    let strike = grant(&mut g, catalog::lightning_strike());
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: strike, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("{R} from the Mountain, {1} convoked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mountain).unwrap().tapped && g.battlefield_find(bear).unwrap().tapped);
+    assert_eq!(g.players[1].life, 17);
+}
+
 /// Suppression Ray taps every creature the target player controls.
 #[test]
 fn suppression_ray_taps_all_target_players_creatures() {

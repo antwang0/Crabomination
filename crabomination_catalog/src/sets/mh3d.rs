@@ -476,9 +476,8 @@ pub fn eladamri_korvecdal() -> CardDefinition {
 
 /// Party Thrasher — {1}{R} 1/4 Lizard Wizard. At the beginning of your first
 /// main phase, you may discard a card; if you do, exile the top two cards of
-/// your library, choose one, and you may play it this turn. (The
-/// "noncreature spells cast from exile have convoke" static is omitted: the
-/// paying cast-from-exile path has no convoke.)
+/// your library, choose one, and you may play it this turn. Noncreature
+/// spells you cast from exile have convoke (`ExileCastSpellsHaveConvoke`).
 pub fn party_thrasher() -> CardDefinition {
     CardDefinition {
         name: "Party Thrasher",
@@ -490,6 +489,10 @@ pub fn party_thrasher() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Noncreature spells you cast from exile have convoke.",
+            effect: crate::effect::StaticEffect::ExileCastSpellsHaveConvoke { filter: R::Noncreature },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::types::TurnStep::PreCombatMain),

@@ -1852,6 +1852,10 @@ pub enum StaticEffect {
     /// "Damage isn't removed from this creature during cleanup steps"
     /// (Ancient Adamantoise) — the CR 514.2 sweep skips it.
     KeepsDamageThroughCleanup,
+    /// "[filter] spells you cast from exile have convoke" (Party Thrasher,
+    /// CR 702.51). Read by the may-play cast path only, which taps the
+    /// fewest untapped creatures that make the cost payable.
+    ExileCastSpellsHaveConvoke { filter: crate::card::SelectionRequirement },
     /// Isshin, Two Heavens as One / Windcrag Siege (Mardu) — "If a creature
     /// attacking causes a triggered ability of a permanent you control to
     /// trigger, that ability triggers an additional time." Read at trigger

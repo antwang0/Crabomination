@@ -9426,6 +9426,66 @@ impl GameState {
         })
     }
 
+    /// CR 702.51 — Party Thrasher's "noncreature spells you cast from exile
+    /// have convoke": when mana alone can't pay `cost`, tap the fewest of
+    /// `p`'s untapped creatures (weakest first) that make it payable, each
+    /// paying a pip of its color or {1}. `None` (nothing tapped) when no such
+    /// static covers the card or no set of creatures is enough.
+    fn pay_exile_cast_with_convoke(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        cost: &crate::mana::ManaCost,
+        forced_only: bool,
+    ) -> Option<PaymentReceipt> {
+        let card = self.exile.iter().find(|c| c.id == card_id)?;
+        let granted = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, c) {
+                    Some(crate::effect::StaticEffect::ExileCastSpellsHaveConvoke { filter }) => {
+                        crate::game::layers::requirement_matches_card(filter, card, p)
+                    }
+                    _ => false,
+                })
+        });
+        if !granted {
+            return None;
+        }
+        let mut helpers: Vec<(i32, CardId)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && !c.tapped && self.permanent_is_creature(c.id))
+            .map(|c| (self.computed_permanent(c.id).map_or(0, |cp| cp.power), c.id))
+            .collect();
+        helpers.sort();
+        for k in 1..=helpers.len().min(cost.cmc() as usize) {
+            let snapshot = self.snapshot_payment_state(p);
+            for &(_, cid) in &helpers[..k] {
+                let colors: Vec<crate::mana::Color> =
+                    self.computed_permanent(cid).map(|cp| cp.colors.to_vec()).unwrap_or_default();
+                if let Some(c) = self.battlefield.find_by_id_mut(cid) {
+                    c.tapped = true;
+                }
+                match colors.iter().copied().find(|c| self.cost_still_needs_color(p, cost, *c)) {
+                    Some(color) => self.players[p].mana_pool.add(color, 1),
+                    None => self.players[p].mana_pool.add_colorless(1),
+                }
+            }
+            match self.try_pay_with_auto_tap_mode(p, cost, forced_only) {
+                Ok(mut receipt) => {
+                    // The convoke taps are taps (CR 702.51): "becomes tapped"
+                    // triggers see them.
+                    for &(_, cid) in &helpers[..k] {
+                        receipt.auto_events.push(GameEvent::PermanentTapped { card_id: cid, actor: None, as_attacker: false });
+                    }
+                    return Some(receipt);
+                }
+                Err(_) => self.restore_payment_state(p, snapshot),
+            }
+        }
+        None
+    }
+
     /// CR 702.175 — the offspring cost a `CreatureSpellsGainOffspring` static
     /// `p` controls grants this creature spell (Zinnia, Valley's Voice).
     /// `None` for a card with its own kicker or offspring, whose `kicked`
@@ -14231,7 +14291,11 @@ impl GameState {
             self.players[p].free_exile_cast_used_this_turn = true;
         } else if let Some(cost) = alt_cast_cost {
             let forced_only = self.players[p].manual_mana;
-            let mut receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+            let mut receipt = match self.try_pay_with_auto_tap_mode(p, &cost, forced_only) {
+                Ok(r) => r,
+                Err(e) if zone == crate::card::Zone::Exile => self.pay_exile_cast_with_convoke(p, card_id, &cost, forced_only).ok_or(e)?,
+                Err(e) => return Err(e),
+            };
             self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
             mana_spent = receipt
                 .pool_before

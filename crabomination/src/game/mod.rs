@@ -33403,6 +33403,8 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleEquippedCreatureDeathTriggers
             // Read by the CR 514.2 cleanup sweep; no layer effect.
             | StaticEffect::KeepsDamageThroughCleanup
+            // Read by the may-play exile cast's payment; no layer effect.
+            | StaticEffect::ExileCastSpellsHaveConvoke { .. }
             | StaticEffect::DoubleControllerAttackTriggers
             // Hama Pashar — read in `Effect::Venture` via
             // `dungeon_room_extra_fires`; no layer effect.
