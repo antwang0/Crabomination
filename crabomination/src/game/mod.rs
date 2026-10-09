@@ -34001,6 +34001,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExileReturnIsLeaveTrigger
             // Kentaro / Dream Halls — consulted by `effective_alternative_cost`.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
+            | StaticEffect::GrantWarpToHandCards { .. }
             | StaticEffect::LifeAlternativeCostOncePerYourTurn { .. }
             | StaticEffect::ZeroAlternativeCostOncePerTurn { .. }
             | StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters(_)

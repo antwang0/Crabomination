@@ -2943,6 +2943,11 @@ pub enum StaticEffect {
     /// spells you cast, where X is that spell's mana value" (Kentaro, the
     /// Smiling Cat). Read by `effective_alternative_cost`.
     GenericAlternativeCostForFilter { filter: SelectionRequirement },
+    /// "[filter] cards in your hand have warp [cost]" (Tannuk, Steadfast
+    /// Second): a hand card the filter admits may be cast for `cost` as a
+    /// warp alternative cost (exiled at the next end step, recastable from
+    /// exile later). Read by `effective_alternative_cost`.
+    GrantWarpToHandCards { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// CR 118.9 — "You may pay `energy` {E} rather than pay the mana cost for
     /// [filter] spells you cast" (Nissa, Worldsoul Speaker). Read by
     /// `effective_alternative_cost`.

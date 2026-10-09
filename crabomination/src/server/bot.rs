@@ -7450,6 +7450,7 @@ impl BoardFacts {
                     }
                     SE::FiveColorAlternativeCost
                     | SE::GenericAlternativeCostForFilter { .. }
+                    | SE::GrantWarpToHandCards { .. }
                     | SE::EnergyAlternativeCostForFilter { .. }
                     | SE::LifeAlternativeCostOncePerYourTurn { .. }
                     // The {0} grants (Darksteel Monolith, One with the

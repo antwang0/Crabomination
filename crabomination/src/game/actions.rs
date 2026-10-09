@@ -651,6 +651,22 @@ impl GameState {
                 ..Default::default()
             });
         }
+        // Tannuk, Steadfast Second — "[filter] cards in your hand have warp
+        // [cost]".
+        if zone == AltCastZone::Hand
+            && let Some(warp) = self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+                c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::GrantWarpToHandCards { filter, cost }
+                        if self.evaluate_requirement_on_card(filter, card, p) =>
+                    {
+                        Some(cost.clone())
+                    }
+                    _ => None,
+                })
+            })
+        {
+            return Some(crate::card::AlternativeCost { mana_cost: warp, warp: true, ..Default::default() });
+        }
         // Rooftop Storm — "you may pay {0} rather than pay the mana cost for
         // Zombie creature spells you cast": any zone, so a Zombie commander
         // too, with CR 903.8's tax still owed on top. A hand cast takes the
