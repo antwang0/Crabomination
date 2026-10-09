@@ -5098,6 +5098,14 @@ impl GameState {
         if card.controller != p {
             card.controller = p;
         }
+        // CR 614.1c — Lotus Vale's "sacrifice two untapped lands instead":
+        // refused, the land goes to the graveyard and the drop stays spent.
+        let mut paid_events = Vec::new();
+        if Self::has_entry_cost(&card) && self.entry_refused(&card, p, &mut paid_events) {
+            self.route_to_graveyard(card, &mut paid_events);
+            paid_events.insert(0, GameEvent::LandPlayed { player: p, card_id, played: true, from_hand });
+            return Ok(paid_events);
+        }
         // CR 613.7d — its timestamp is its entry time; the dispatch restamps it.
         card.battlefield_timestamp = self.next_timestamp();
         self.battlefield.push(card);
@@ -5129,9 +5137,12 @@ impl GameState {
                     remaining,
                 },
             }));
-            return Ok(vec![GameEvent::LandPlayed { player: p, card_id, played: true, from_hand }]);
+            let mut out = vec![GameEvent::LandPlayed { player: p, card_id, played: true, from_hand }];
+            out.append(&mut paid_events);
+            return Ok(out);
         }
         let mut out = vec![GameEvent::LandPlayed { player: p, card_id, played: true, from_hand }];
+        out.append(&mut paid_events);
         out.append(&mut copy_events);
         out.append(&mut self.finish_land_entry(card_id, p));
         Ok(out)

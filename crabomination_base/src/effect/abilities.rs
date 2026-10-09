@@ -3329,6 +3329,11 @@ pub enum StaticEffect {
     /// cast or no mana was spent to cast it, exile it instead." A self
     /// replacement read off the entering card (Primeval Spawn).
     ExileSelfIfEntersUncastOrFree,
+    /// CR 614.1c — "If this would enter, [cost] instead. If you do, put it
+    /// onto the battlefield. If you don't, put it into its owner's
+    /// graveyard." Read off the entering card by every entry hop
+    /// (`game::entry_cost`); `optional` is Mox Diamond's "you may".
+    EntersOnlyIfPaid { cost: crate::card::WardCost, optional: bool },
     /// CR 402.2 — "You have no maximum hand size." While the controller has
     /// a permanent carrying this static, their cleanup-step discard is
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,

@@ -3007,6 +3007,14 @@ impl GameState {
                     PlayerRef::OwnerOfMoved => card.owner,
                     _ => self.resolve_player(controller, &ctx).unwrap_or(default_player),
                 };
+                // CR 614.1c — an entry cost (Mox Diamond, Lotus Vale) is paid
+                // before it enters; refused, it goes to the graveyard instead.
+                if Self::has_entry_cost(&card) && self.entry_refused(&card, p, events) {
+                    if !card.is_token {
+                        self.route_to_graveyard(card, events);
+                    }
+                    return;
+                }
                 card.controller = p;
                 card.tapped = *tapped;
                 card.summoning_sick = card.definition.is_creature();

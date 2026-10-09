@@ -141,6 +141,8 @@ mod enter_attacking;
 mod token_replacement;
 // CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
 mod legendary_spell;
+// CR 614.1c — "if this would enter, [cost] instead" (Mox Diamond, Lotus Vale).
+mod entry_cost;
 // CR 608.3 — the entry tallies a resolving permanent spell adds (Celebration).
 mod entry_tally;
 // CR 120.3a — "damage doesn't cause you to lose life" (Archon of Coronation).
@@ -10878,6 +10880,18 @@ impl GameState {
                 def.cost = crate::mana::ManaCost::default();
             }
             c.set_definition(std::sync::Arc::new(def));
+        }
+        // CR 614.1c — a token copy of Mox Diamond pays its entry cost too;
+        // refused, it never entered (no events have been pushed for it yet).
+        if copied
+            && let Some(pos) = self.battlefield.iter().position(|c| c.id == id)
+            && Self::has_entry_cost(&self.battlefield[pos])
+        {
+            let probe = self.battlefield[pos].clone();
+            if self.entry_refused(&probe, ctrl, events) {
+                self.battlefield.retain(|c| c.id != id);
+                return id;
+            }
         }
         // CR 614.12 — a mint is a battlefield entry, so the as-enters
         // replacements run on it too. *After* `apply_enters_as_copy`, because
@@ -33877,6 +33891,7 @@ fn static_effect_to_effects(
             // no layer effect.
             | StaticEffect::ExileNontokenCreaturesNotCast
             | StaticEffect::ExileSelfIfEntersUncastOrFree
+            | StaticEffect::EntersOnlyIfPaid { .. }
             // NoMaximumHandSize / OpponentsMaxHandSizeReduced — consulted
             // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize

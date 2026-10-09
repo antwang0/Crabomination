@@ -2694,6 +2694,18 @@ impl GameState {
                     events.push(GameEvent::PermanentExiled { card_id: cid });
                     return Ok(events);
                 }
+                // CR 614.1c — "if this would enter, [cost] instead" (Mox
+                // Diamond): unpaid, it goes from the stack to the graveyard.
+                if card.definition.is_permanent()
+                    && !card.casting_alt_half()
+                    && Self::has_entry_cost(&card)
+                    && self.entry_refused(&card, caster, &mut events)
+                {
+                    if !card.is_token {
+                        self.route_to_graveyard(card, &mut events);
+                    }
+                    return Ok(events);
+                }
                 if card.definition.is_permanent() && !card.casting_alt_half() {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the
