@@ -5653,3 +5653,204 @@ pub fn saltskitter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Blessed Sanctuary — {3}{W}{W} Enchantment. Prevent all noncombat damage to
+/// you and creatures you control. Whenever a nontoken creature you control
+/// enters, create a 2/2 white Unicorn.
+pub fn blessed_sanctuary() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let unicorn = TokenDefinition {
+        name: "Unicorn".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: creature_types(vec![CreatureType::Unicorn]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Blessed Sanctuary",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Prevent all noncombat damage that would be dealt to you.",
+                effect: StaticEffect::PreventNoncombatDamageToYou,
+            },
+            StaticAbility {
+                description: "Prevent all noncombat damage that would be dealt to creatures you control.",
+                effect: StaticEffect::PreventNoncombatDamageToYourCreatures,
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::NotToken),
+            }),
+            effect: mint(unicorn, Value::ONE),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ayula, Queen Among Bears — {1}{G} 2/2 Bear. Whenever another Bear you
+/// control enters, choose one — two +1/+1 counters on target Bear; or target
+/// Bear you control fights target creature you don't control.
+pub fn ayula_queen_among_bears() -> CardDefinition {
+    use crate::card::CounterType;
+    let bear = || R::HasCreatureType(CreatureType::Bear);
+    CardDefinition {
+        name: "Ayula, Queen Among Bears",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Bear]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf)),
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: bear() },
+            ])),
+            effect: Effect::ChooseMode(vec![
+                Effect::AddCounter {
+                    what: target_filtered(bear().and(R::Creature)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                Effect::Fight {
+                    attacker: target_filtered(bear().and(R::Creature).and(R::ControlledByYou)),
+                    defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Beorn the Fierce — {3}{G}{G} 6/6 trample Bear Shapeshifter Warrior. Other
+/// Bears you control get +2/+2. At the beginning of combat on your turn, a
+/// trample counter on up to one target creature you control, which becomes a
+/// Bear too; then with three or more Bears, draw two.
+pub fn beorn_the_fierce() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::Duration;
+    let bear = || R::HasCreatureType(CreatureType::Bear);
+    CardDefinition {
+        name: "Beorn the Fierce",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Bear, CreatureType::Shapeshifter, CreatureType::Warrior]),
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Other Bears you control get +2/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(bear().and(R::Creature).and(R::ControlledByYou).and(R::OtherThanSource)),
+                power: 2,
+                toughness: 2,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::AddKeywordCounter {
+                            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                            keyword: Keyword::Trample,
+                            amount: Value::ONE,
+                        },
+                        Effect::AddCreatureTypes {
+                            what: Selector::Target(0),
+                            creature_types: vec![CreatureType::Bear],
+                            duration: Duration::Permanent,
+                        },
+                    ])),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::count(Selector::EachPermanent(bear().and(R::Creature).and(R::ControlledByYou))),
+                        Value::Const(3),
+                    ),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// King Darien XLVIII — {1}{G}{W} 2/3 Human Soldier. Other creatures you
+/// control get +1/+1. {3}{G}{W}: a +1/+1 counter on it and a 1/1 white
+/// Soldier. Sacrifice it: creature tokens you control gain hexproof and
+/// indestructible until end of turn.
+pub fn king_darien_xlviii() -> CardDefinition {
+    use crate::card::{CounterType, StaticAbility, StaticEffect};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "King Darien XLVIII",
+        cost: cost(&[generic(1), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), g(), w()]),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    mint(token_1_1("Soldier", Color::White, CreatureType::Soldier), Value::ONE),
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                sac_cost: true,
+                effect: Effect::GrantKeywords {
+                    what: Selector::EachPermanent(R::Creature.and(R::IsToken).and(R::ControlledByYou)),
+                    keywords: vec![Keyword::Hexproof, Keyword::Indestructible],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wilson, Refined Grizzly — {1}{G} 2/2 Bear Warrior. Can't be countered;
+/// reach, vigilance, trample; ward {2}; choose a Background.
+pub fn wilson_refined_grizzly() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Wilson, Refined Grizzly",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Bear, CreatureType::Warrior]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Reach,
+            Keyword::Vigilance,
+            Keyword::Trample,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+            Keyword::ChooseABackground,
+        ],
+        ..Default::default()
+    }
+}

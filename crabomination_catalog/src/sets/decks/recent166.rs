@@ -147,8 +147,7 @@ pub fn white_lotus_hideout() -> CardDefinition {
 
 /// Jasmine Dragon Tea Shop — Land. `{T}: Add {C}.` `{T}: Add one mana of any
 /// color. Spend only to cast an Ally spell or activate an Ally's ability.`
-/// (Approximated as "cast an Ally creature spell".) `{5}, {T}: Create a 1/1
-/// white Ally creature token.`
+/// `{5}, {T}: Create a 1/1 white Ally creature token.`
 pub fn jasmine_dragon_tea_shop() -> CardDefinition {
     CardDefinition {
         name: "Jasmine Dragon Tea Shop",
@@ -168,7 +167,7 @@ pub fn jasmine_dragon_tea_shop() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyOneColor(Value::ONE)),
-                        SpendRestriction::CreatureOfType(CreatureType::Ally),
+                        SpendRestriction::TypeSpellOrItsAbility(CreatureType::Ally),
                     ),
                 },
                 ..Default::default()

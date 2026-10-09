@@ -3049,3 +3049,63 @@ fn rocco_and_tannuk_cards() {
     to_end_step(&mut g);
     assert!(g.battlefield_find(salt).is_some(), "back at the end step");
 }
+
+/// Blessed Sanctuary: a Bolt to its controller or their creature does
+/// nothing, an opponent's creature still takes it, and a nontoken creature
+/// arriving brings a Unicorn.
+#[test]
+fn blessed_sanctuary_shields_and_makes_unicorns() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::blessed_sanctuary());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g);
+    let life = g.players[0].life;
+    for target in [Target::Player(0), Target::Permanent(mine), Target::Permanent(theirs)] {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, Some(target));
+    }
+    assert_eq!(g.players[0].life, life);
+    assert!(g.battlefield_find(mine).is_some());
+    assert!(g.battlefield_find(theirs).is_none());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None);
+    assert_eq!(named(&g, "Unicorn"), 1);
+}
+
+/// Kudo's Bears: Ayula answers another Bear with two counters; Beorn pumps
+/// the other Bears, makes a target a trampling Bear at combat and draws with
+/// three Bears; King Darien's anthem and Soldier; Wilson can't be countered.
+#[test]
+fn kudo_bears() {
+    use crabomination::card::{CounterType, CreatureType, Keyword};
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ayula_queen_among_bears());
+    flood(&mut g);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    cast(&mut g, bear, None);
+    let counters: u32 = g.battlefield.iter().map(|c| c.counter_count(CounterType::PlusOnePlusOne)).sum();
+    assert_eq!(counters, 2);
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::beorn_the_fierce());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "Beorn's +2/+2");
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let trampling = [bear, elf].iter().filter(|&&id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Trample)).count();
+    assert_eq!(trampling, 1, "one target got the trample counter");
+    let elf_is_bear = g.computed_permanent(elf).unwrap().subtypes().creature_types.contains(&CreatureType::Bear);
+    assert_eq!(g.players[0].hand.len(), hand + if elf_is_bear { 2 } else { 0 }, "three Bears draw two");
+
+    let mut g = pod(2);
+    let king = ready(&mut g, 0, catalog::king_darien_xlviii());
+    flood(&mut g);
+    activate(&mut g, king, None);
+    let soldier = g.battlefield.iter().find(|c| c.definition.name == "Soldier").map(|c| c.id).unwrap();
+    assert_eq!(g.computed_permanent(soldier).unwrap().power, 2);
+    assert!(catalog::wilson_refined_grizzly().keywords.contains(&Keyword::CantBeCountered));
+}

@@ -88,32 +88,31 @@ pub fn plated_geopede() -> CardDefinition {
 }
 
 /// Scale Up — {G} Sorcery. Until end of turn, target creature you control
-/// becomes a 6/4 Wurm. (Overload is approximated away — base mode only.)
+/// becomes a green Wurm with base power and toughness 6/4. Overload {4}{G}{G}.
 pub fn scale_up() -> CardDefinition {
-    CardDefinition {
-        name: "Scale Up",
-        cost: cost(&[g()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::BecomeCreature {
-            what: target_filtered(R::Creature.and(R::ControlledByYou)),
-            power: Value::Const(6),
-            toughness: Value::Const(4),
-            creature_types: vec![CreatureType::Wurm],
-            keywords: vec![],
-            duration: Duration::EndOfTurn,
-        },
-        // CR 702.96 — Overload {4}{G}{G}: "target" becomes "each", which is
-        // what `effect_override` is for.
-        alternative_cost: Some(crate::card::AlternativeCost {
-            mana_cost: cost(&[generic(4), g(), g()]),
-            effect_override: Some(Effect::BecomeCreature {
-                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+    let wurm = |what: Selector| {
+        Effect::Seq(vec![
+            Effect::BecomeCreature {
+                what: what.clone(),
                 power: Value::Const(6),
                 toughness: Value::Const(4),
                 creature_types: vec![CreatureType::Wurm],
                 keywords: vec![],
                 duration: Duration::EndOfTurn,
-            }),
+            },
+            Effect::BecomeColor { what, colors: vec![Color::Green], duration: Duration::EndOfTurn, additive: false },
+        ])
+    };
+    CardDefinition {
+        name: "Scale Up",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: wurm(target_filtered(R::Creature.and(R::ControlledByYou))),
+        // CR 702.96 — Overload {4}{G}{G}: "target" becomes "each", which is
+        // what `effect_override` is for.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect_override: Some(wurm(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)))),
             ..Default::default()
         }),
         ..Default::default()
