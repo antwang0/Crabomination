@@ -3090,3 +3090,88 @@ pub fn mech_hangar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Inga and Esika — {2}{G}{U} 4/4 Human God. Creatures you control have
+/// vigilance and "{T}: Add one mana of any color, only for a creature spell";
+/// a creature spell cast with three or more mana from creatures draws a card.
+pub fn inga_and_esika() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::ManaPayload;
+    use crate::mana::SpendRestriction;
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Inga and Esika",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::God]),
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control have vigilance.",
+                effect: StaticEffect::GrantKeyword { applies_to: yours(), keyword: Keyword::Vigilance },
+            },
+            StaticAbility {
+                description: "Creatures you control have \"{T}: Add one mana of any color. Spend this mana only to cast a creature spell.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: yours(),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::Restricted(
+                                Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                                SpendRestriction::CreatureOnlyFromCreature,
+                            ),
+                        },
+                        ..Default::default()
+                    },
+                    condition: None,
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::ValueAtLeast(Value::CreatureManaSpentToCastTriggerSource, Value::Const(3)),
+            ])),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tam, Mindful First-Year — {1}{G/U} 2/2 Gorgon Wizard. Each other creature
+/// you control has hexproof from each of its colors; {T}: target creature you
+/// control becomes all colors until end of turn.
+pub fn tam_mindful_first_year() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Tam, Mindful First-Year",
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Gorgon, CreatureType::Wizard]),
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Each other creature you control has hexproof from each of its colors.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                keyword: Keyword::HexproofFromItsColors,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::BecomeColor {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                colors: Color::ALL.to_vec(),
+                duration: Duration::EndOfTurn,
+                additive: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -1839,3 +1839,46 @@ fn mech_hangar_funds_vehicles_and_animates_one() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(copter).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
 }
+
+/// CR 702.11d — Tam grants "hexproof from each of its colors": an opponent's
+/// red Bolt can't target a red creature but can target a green one; after
+/// Tam's {T} turns the bear all colors, it can't be Bolted either.
+#[test]
+fn cr_702_11d_tam_hexproof_from_its_colors() {
+    let mut g = pod(2);
+    let tam = ready(&mut g, 0, catalog::tam_mindful_first_year());
+    let goblin = ready(&mut g, 0, catalog::goblin_guide());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt_at = |g: &mut GameState, t: CardId| {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(t)), additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(bolt_at(&mut g, goblin).is_err(), "red can't target a red creature");
+    flood(&mut g);
+    activate(&mut g, tam, Some(Target::Permanent(bear)));
+    assert!(bolt_at(&mut g, bear).is_err(), "an all-colors bear is red too");
+    assert!(bolt_at(&mut g, tam).is_ok(), "Tam itself isn't covered");
+}
+
+/// Inga and Esika: three creature-made mana into a creature spell draws; the
+/// granted mana is creature-spell only.
+#[test]
+fn inga_and_esika_draws_off_creature_mana() {
+    let mut g = pod(2);
+    let inga = ready(&mut g, 0, catalog::inga_and_esika());
+    let dorks: Vec<CardId> = (0..2).map(|_| ready(&mut g, 0, catalog::grizzly_bears())).collect();
+    for id in [inga, dorks[0], dorks[1]] {
+        let idx = g.battlefield_find(id).unwrap().definition.activated_abilities.len();
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: idx, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .expect("granted mana");
+    }
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand = g.players[0].hand.len();
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    cast(&mut g, giant, None);
+    assert!(g.battlefield_find(giant).is_some());
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew off three creature mana");
+}

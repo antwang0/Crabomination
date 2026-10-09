@@ -4665,6 +4665,8 @@ static DECKS: &[Factory] = &[
     super::decks::mnemonic_betrayal,
     super::decks::rona_herald_of_invasion,
     super::decks::mech_hangar,
+    super::decks::inga_and_esika,
+    super::decks::tam_mindful_first_year,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,
