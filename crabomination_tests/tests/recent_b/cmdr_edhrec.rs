@@ -3129,3 +3129,68 @@ fn kudo_bears() {
     assert_eq!(g.computed_permanent(soldier).unwrap().power, 2);
     assert!(catalog::wilson_refined_grizzly().keywords.contains(&Keyword::CantBeCountered));
 }
+
+/// Winota's Humans: Greymond's chosen pair (vigilance + lifelink here) rides
+/// every Human, plus +2/+2 at four; Lena makes a Soldier per nontoken creature
+/// and, sacrificed, makes the smaller ones indestructible; Phoenix Chick
+/// rejoins a three-creature attack.
+#[test]
+fn winota_humans() {
+    use crabomination::card::{CounterType, Keyword};
+    let mut g = pod(2);
+    flood(&mut g);
+    let human = ready(&mut g, 0, catalog::elite_vanguard());
+    let greymond = g.add_card_to_hand(0, catalog::greymond_avacyns_stalwart());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2)]));
+    cast(&mut g, greymond, None);
+    let kws = g.computed_permanent(human).unwrap().keywords().to_vec();
+    assert!(kws.contains(&Keyword::Vigilance) && kws.contains(&Keyword::Lifelink));
+    assert!(!kws.contains(&Keyword::FirstStrike));
+    let base = g.computed_permanent(human).unwrap().power;
+    ready(&mut g, 0, catalog::elite_vanguard());
+    ready(&mut g, 0, catalog::elite_vanguard());
+    assert_eq!(g.computed_permanent(human).unwrap().power, base + 2, "four Humans");
+
+    let mut g = pod(2);
+    flood(&mut g);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let lena = g.add_card_to_hand(0, catalog::lena_selfless_champion());
+    cast(&mut g, lena, None);
+    assert_eq!(named(&g, "Soldier"), 3, "Bear, Giant and Lena");
+    activate(&mut g, lena, None);
+    let soldier = g.battlefield.iter().find(|c| c.definition.name == "Soldier").map(|c| c.id).unwrap();
+    assert!(g.computed_permanent(soldier).unwrap().keywords().contains(&Keyword::Indestructible));
+    assert!(!g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Indestructible), "power 3 isn't less");
+
+    let mut g = pod(2);
+    let chick = g.add_card_to_graveyard(0, catalog::phoenix_chick());
+    let attackers: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::grizzly_bears())).collect();
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(
+        attackers.iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(chick).expect("back");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.attacking.iter().any(|a| a.attacker == chick));
+}
+
+/// Hope of Ghirapur: having hit a player, its sacrifice locks their
+/// noncreature spells through their own turn, until its controller's next.
+#[test]
+fn hope_of_ghirapur_locks_until_your_next_turn() {
+    let mut g = pod(2);
+    let hope = ready(&mut g, 0, catalog::hope_of_ghirapur());
+    connect(&mut g, hope);
+    activate(&mut g, hope, Some(Target::Player(1)));
+    assert!(g.players[1].cant_cast_noncreature_this_turn);
+    advance_to_turn_of(&mut g, 1);
+    assert!(g.players[1].cant_cast_noncreature_this_turn, "still locked on their turn");
+    advance_to_turn_of(&mut g, 0);
+    assert!(!g.players[1].cant_cast_noncreature_this_turn, "free from our next turn");
+}

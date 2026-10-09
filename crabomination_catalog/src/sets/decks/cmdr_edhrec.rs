@@ -5854,3 +5854,137 @@ pub fn wilson_refined_grizzly() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Greymond, Avacyn's Stalwart — {2}{W}{W} 3/4 Human Soldier. As it enters,
+/// choose two of first strike, vigilance and lifelink; Humans you control have
+/// them. With four or more Humans, Humans you control get +2/+2. (The pair is
+/// the source's chosen number: 1 first strike + vigilance, 2 first strike +
+/// lifelink, 3 vigilance + lifelink.)
+pub fn greymond_avacyns_stalwart() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let humans = || Selector::EachPermanent(R::HasCreatureType(CreatureType::Human).and(R::Creature).and(R::ControlledByYou));
+    let n = || Value::ChosenNumberOfSource;
+    let is = |k: i32| Predicate::All(vec![Predicate::ValueAtLeast(n(), Value::Const(k)), Predicate::ValueAtMost(n(), Value::Const(k))]);
+    let grant = |condition: Predicate, keyword: Keyword, description: &'static str| StaticAbility {
+        description,
+        effect: StaticEffect::WhileCondition {
+            condition,
+            inner: Box::new(StaticEffect::GrantKeyword { applies_to: humans(), keyword }),
+        },
+    };
+    CardDefinition {
+        name: "Greymond, Avacyn's Stalwart",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 3,
+        toughness: 4,
+        as_enters_effect: Some(Effect::AsEntersChooseMode(vec![
+            Effect::SetSourceChosenNumber(1),
+            Effect::SetSourceChosenNumber(2),
+            Effect::SetSourceChosenNumber(3),
+        ])),
+        static_abilities: vec![
+            grant(Predicate::Any(vec![is(1), is(2)]), Keyword::FirstStrike, "Humans you control have first strike (if chosen)."),
+            grant(Predicate::Any(vec![is(1), is(3)]), Keyword::Vigilance, "Humans you control have vigilance (if chosen)."),
+            grant(Predicate::Any(vec![is(2), is(3)]), Keyword::Lifelink, "Humans you control have lifelink (if chosen)."),
+            StaticAbility {
+                description: "As long as you control four or more Humans, Humans you control get +2/+2.",
+                effect: StaticEffect::WhileCondition {
+                    condition: Predicate::ValueAtLeast(Value::count(humans()), Value::Const(4)),
+                    inner: Box::new(StaticEffect::PumpPT { applies_to: humans(), power: 2, toughness: 2 }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Hope of Ghirapur — {1} 1/1 flying legendary artifact creature Thopter.
+/// Sacrifice it: until your next turn, target player it dealt combat damage
+/// this turn can't cast noncreature spells.
+pub fn hope_of_ghirapur() -> CardDefinition {
+    CardDefinition {
+        name: "Hope of Ghirapur",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Thopter]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::CantCastNoncreatureUntilYourNextTurn {
+                who: target_filtered(R::Player.and(R::PlayerDamagedBySourceThisTurn)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lena, Selfless Champion — {4}{W}{W} 3/3 Human Knight. ETB: a 1/1 white
+/// Soldier for each nontoken creature you control. Sacrifice it: creatures you
+/// control with power less than its power gain indestructible until end of
+/// turn.
+pub fn lena_selfless_champion() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lena, Selfless Champion",
+        cost: cost(&[generic(4), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Knight]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(mint(
+            token_1_1("Soldier", Color::White, CreatureType::Soldier),
+            Value::count(Selector::EachPermanent(R::Creature.and(R::NotToken).and(R::ControlledByYou))),
+        ))],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GrantKeywords {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::PowerLessThanSource)),
+                keywords: vec![Keyword::Indestructible],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phoenix Chick — {R} 1/1 flying, haste Phoenix; can't block. Whenever you
+/// attack with three or more creatures, you may pay {R}{R} to return it from
+/// your graveyard tapped and attacking with a +1/+1 counter.
+pub fn phoenix_chick() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Phoenix Chick",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phoenix]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::CantBlock],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::FromYourGraveyard).with_filter(Predicate::ValueAtLeast(
+                Value::count(Selector::EachPermanent(R::Creature.and(R::IsAttacking).and(R::ControlledByYou))),
+                Value::Const(3),
+            )),
+            effect: Effect::MayPay {
+                description: "Pay {R}{R} to return Phoenix Chick tapped and attacking?".into(),
+                mana_cost: cost(&[r(), r()]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::This, to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true } },
+                    Effect::JoinCombatAttackingChosen { cleanup: crate::effect::AttackingTokenCleanup::None, what: Selector::This },
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
