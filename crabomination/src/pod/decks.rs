@@ -8789,3 +8789,31 @@ pub const MINSC_BOO_MAIN: &[CardFactory] = &[
     forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const JOLLY_BALLOON_MAN_COMMANDERS: &[CardFactory] = &[the_jolly_balloon_man];
+
+/// **The Jolly Balloon Man**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Plains = 99.
+/// balloon copies
+pub const JOLLY_BALLOON_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, boros_signet, idol_of_oblivion, illusionists_bracers,
+    panharmonicon, patriars_seal, skullclamp, sol_ring, swiftfoot_boots, talisman_of_conviction,
+    arid_mesa, battlefield_forge, boros_garrison, clifftop_retreat, command_tower, exotic_orchard,
+    furycalm_snarl, rugged_prairie, sacred_foundry, spectator_seating, sundown_pass,
+    sunscorched_divide, temple_of_triumph, agate_instigator, agrus_kos_eternal_soldier,
+    ao_the_dawn_sky, arabella_abandoned_doll, atsushi_the_blazing_sky, circuit_mender,
+    combat_celebrant, delney_streetwise_lookout, enduring_innocence, ertha_jo_frontier_mentor,
+    gold_myr, helpful_hunter, imperial_recruiter, inspiring_overseer, iron_myr, karmic_guide,
+    kiki_jiki_mirror_breaker, loran_of_the_third_path, marvin_murderous_mimic, molten_gatekeeper,
+    mondrak_glory_dominus, ornithopter_of_paradise, patron_of_the_arts, recruiter_of_the_guard,
+    restoration_angel, skyclave_apparition, solemn_simulacrum, spirited_companion, sun_titan,
+    trumpeting_carnosaur, village_bell_ringer, wall_of_omens, welcoming_vampire, witch_enchanter,
+    witty_roastmaster, zealous_conscripts, anointed_procession, caretakers_talent,
+    determined_iteration, goblin_bombardment, impact_tremors, warleaders_call, boros_charm,
+    chaos_warp, ephemerate, generous_gift, path_to_exile, rootborn_defenses, swords_to_plowshares,
+    untimely_malfunction, austere_command, blasphemous_act, fell_the_mighty, sevinnes_reclamation,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];

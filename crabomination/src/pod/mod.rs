@@ -2217,6 +2217,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MINSC_BOO_COMMANDERS,
             main: decks::MINSC_BOO_MAIN,
         },
+        // Seat 300: The Jolly Balloon Man's EDHREC average deck. `--pod-decks 300`.
+        PodDeck {
+            name: "The Jolly Balloon Man (RW)",
+            commanders: decks::JOLLY_BALLOON_MAN_COMMANDERS,
+            main: decks::JOLLY_BALLOON_MAN_MAIN,
+        },
     ]
 }
 
@@ -4155,6 +4161,7 @@ mod tests {
             ("Kenrith, the Returned King", [0x4E7A, 297, 9222]),
             ("Fire Lord Azula", [0xA2A1, 298, 9223]),
             ("Minsc & Boo, Timeless Heroes", [0xB00B, 299, 9224]),
+            ("The Jolly Balloon Man", [0xBA11, 300, 9225]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
