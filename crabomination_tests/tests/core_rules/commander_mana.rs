@@ -657,7 +657,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CreatureOfType(_) | CreatureSpellOfType(_) | CreatureOfTypeOrItsAbility(_)
                 | CreatureOfAnyTypes(_) | InstantSorceryOrTypes(_)
                 | LandAbilitiesOnly | CreatureOnly | CreatureOnlyFromCreature | MarksCast
-                | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
+                | CreatureSpellsOrAbilities | CreatureAbilitiesOnly | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | ForetellOnly | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
                 | EnchantmentSpell | NotGeneric | MulticoloredSpell | ColoredSpellWithoutX
@@ -696,6 +696,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureOnlyFromCreature,
             MarksCast,
             CreatureSpellsOrAbilities,
+            CreatureAbilitiesOnly,
             NoNonartifactSpells,
             AbilitiesOnly,
             LessonSpellsOnly,

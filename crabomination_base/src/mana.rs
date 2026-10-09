@@ -711,6 +711,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast creature spells or activate abilities
     /// of creatures." (Castle Garenbrig.)
     CreatureSpellsOrAbilities,
+    /// "Spend this mana only to activate abilities of creature sources"
+    /// (Shang-Chi, Master of Kung Fu).
+    CreatureAbilitiesOnly,
     /// "This mana can't be spent to cast a nonartifact spell." (Powerstone
     /// tokens, CR 111.10q — abilities and artifact casts are fine.)
     NoNonartifactSpells,
@@ -897,6 +900,7 @@ impl SpendRestriction {
             SpendRestriction::LandAbilitiesOnly => "only abilities of lands",
             SpendRestriction::CreatureOnly | SpendRestriction::CreatureOnlyFromCreature => "only creature spells",
             SpendRestriction::CreatureSpellsOrAbilities => "only creatures and their abilities",
+            SpendRestriction::CreatureAbilitiesOnly => "only abilities of creatures",
             SpendRestriction::NoNonartifactSpells => "not on nonartifact spells",
             SpendRestriction::AbilitiesOnly => "only activated abilities",
             SpendRestriction::SpellsOnly => "only spells",
@@ -1018,6 +1022,7 @@ impl SpendRestriction {
             SpendRestriction::CreatureSpellsOrAbilities => {
                 kind.creature || kind.creature_ability
             }
+            SpendRestriction::CreatureAbilitiesOnly => kind.creature_ability,
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
             SpendRestriction::SpellsOnly => !kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,

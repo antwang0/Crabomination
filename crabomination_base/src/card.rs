@@ -811,6 +811,8 @@ pub enum CounterType {
     /// Croak counter — Grolnok, the Omnivore exiles milled permanent cards
     /// with one; you may play them while Grolnok remains.
     Croak,
+    /// Credit counter — Icatian Moneychanger's bank, cashed in for life.
+    Credit,
     /// Rev counter — Chainsaw gains one whenever creatures die and pumps the
     /// equipped creature by that many.
     Rev,
