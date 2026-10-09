@@ -3134,6 +3134,25 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-09 (Commander routine — session `01SYwcUg`, second checkpoint) — guardrail; seats 274-293
+
+Hot-path touches: every trigger push asks `source_trigger_extra_fires` (one
+`battlefield_find` of the trigger's source; Cloud's walk only on a match);
+`scaled_counter_count_on` walks the controller's statics once per counter
+placement (`DoubleCountersMatching`); the growth-loop watch reads the stack
+depth and board length around each trigger resolution. `release-fast` at
+`4cce0376f`'s parent (trace-only since).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak_rss 37.1 MiB
+release pods     330 games (11 shuffled 4-seat groups x 30, seed 27000,
+                 strict) over seats 248-293: 327 decided, 3 draws — all
+                 Marauding Raptor + Polyraptor, a real CR 104.4b loop the
+                 growth watch ends; 0 caps, 0 panics
+suite            24,600 / 0 / 5 at the 290-seat checkpoint; clippy clean
+```
+
 ### 2026-10-09 (Commander routine — session `01SYwcUg`) — guardrail; EDHREC seats 248-273
 
 Hot-path touches: the counter-event pass tallies own +1/+1 placements
