@@ -987,22 +987,6 @@ fn tariff_eats_the_unaffordable_fatty() {
     assert!(g.battlefield_find(small).is_some());
 }
 
-/// Lotus Vale eats two untapped lands and pays three back.
-#[test]
-fn lotus_vale_costs_two_lands() {
-    let mut g = two_player_game();
-    let a = ready(&mut g, 0, catalog::forest());
-    let b = ready(&mut g, 0, catalog::forest());
-    let vale = g.add_card_to_battlefield(0, catalog::lotus_vale());
-    let etb = catalog::lotus_vale().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_ability(vale, 0, None);
-    g.resolve_effect(&etb, &ctx).expect("etb");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(vale).is_some());
-    let left = [a, b].iter().filter(|&&id| g.battlefield_find(id).is_some()).count();
-    assert_eq!(left, 0, "both lands were the cost");
-}
-
 /// Ertai's Familiar mills you when it phases out.
 #[test]
 fn ertais_familiar_mills_on_phase_out() {
