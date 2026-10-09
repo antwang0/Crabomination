@@ -4729,6 +4729,8 @@ static DECKS: &[Factory] = &[
     super::decks::voracious_tome_skimmer,
     super::decks::harmonized_crescendo,
     super::decks::unwind,
+    super::decks::transcendent_message,
+    super::decks::explosive_singularity,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

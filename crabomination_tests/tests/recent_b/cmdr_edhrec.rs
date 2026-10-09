@@ -2869,3 +2869,43 @@ fn alela_faeries() {
     cast(&mut g, crescendo, None);
     assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "two Faeries");
 }
+
+/// Ovika's big spells: four tapped creatures take {4} off Explosive
+/// Singularity's generic but never pay its {R}{R}; Transcendent Message's X
+/// convokes.
+#[test]
+fn explosive_singularity_and_transcendent_message() {
+    let mut g = pod(2);
+    let goblins: Vec<CardId> = (0..4).map(|_| ready(&mut g, 0, catalog::goblin_guide())).collect();
+    let boom = g.add_card_to_hand(0, catalog::explosive_singularity());
+    let convoke = |g: &mut GameState, card_id, target, x_value, helpers: &[CardId]| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpellConvoke {
+            card_id,
+            target,
+            additional_targets: vec![],
+            mode: None,
+            x_value,
+            convoke_creatures: helpers.to_vec(),
+        })
+    };
+    g.players[0].mana_pool.add_colorless(6);
+    assert!(convoke(&mut g, boom, Some(Target::Player(1)), None, &goblins).is_err(), "red creatures can't pay {{R}}");
+    assert!(goblins.iter().all(|&id| !g.battlefield_find(id).unwrap().tapped), "rolled back");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let life = g.players[1].life;
+    convoke(&mut g, boom, Some(Target::Player(1)), None, &goblins).expect("{4}{R}{R} after four taps");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 10);
+
+    let mut g = pod(2);
+    let helpers: Vec<CardId> = (0..2).map(|_| ready(&mut g, 0, catalog::grizzly_bears())).collect();
+    let message = g.add_card_to_hand(0, catalog::transcendent_message());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    let hand = g.players[0].hand.len();
+    convoke(&mut g, message, None, Some(2), &helpers).expect("X = 2 by convoke");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
+}

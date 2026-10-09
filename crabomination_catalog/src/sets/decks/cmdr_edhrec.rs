@@ -5150,3 +5150,30 @@ pub fn unwind() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Transcendent Message — {X}{U}{U}{U}{U} Instant, convoke. Draw X cards.
+pub fn transcendent_message() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Transcendent Message",
+        cost: cost(&[x(), u(), u(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        ..Default::default()
+    }
+}
+
+/// Explosive Singularity — {8}{R}{R} Sorcery. You may tap any number of
+/// untapped creatures you control as you cast it; it costs {1} less for each.
+/// 10 damage to any target.
+pub fn explosive_singularity() -> CardDefinition {
+    CardDefinition {
+        name: "Explosive Singularity",
+        cost: cost(&[generic(8), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::TapCreaturesForGeneric],
+        effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(10) },
+        ..Default::default()
+    }
+}
