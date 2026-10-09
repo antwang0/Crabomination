@@ -6073,10 +6073,17 @@ impl GameState {
         } else {
             0
         };
+        // CR 104.3d — a seat that can't lose the game (an opponent's Abyssal
+        // Persecutor) is no seat to drain: Enduring Tenacity's "target
+        // opponent loses that much life" kept picking the lowest life total,
+        // at -9,740, and a Bloodthirsty Conqueror loop ran to the action cap
+        // (six-seat audit pod, seed 3130344 game 4).
+        let cant_lose = if self.player_cant_lose_game(q) { 1_000 } else { 0 };
         i64::from(race) * 3
             + i64::from(100 - self.effective_life(q).clamp(0, 100)) * 2
             + (10 - untapped.min(10)) as i64
             - shielded
+            - cant_lose
     }
 
     /// CR 800.4j — the seat that actually receives priority when `seat` would.

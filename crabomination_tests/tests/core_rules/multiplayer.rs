@@ -9551,3 +9551,16 @@ fn cr_506_4_a_join_combat_pick_outlived_by_combat_is_spent() {
     g.submit_decision(DecisionAnswer::Target(crabomination::game::types::Target::Player(2))).expect("answer");
     assert!(g.pending_decision.is_none() && g.attacking.is_empty(), "moot: nothing joins a finished combat");
 }
+
+/// CR 104.3d — the default "target opponent" never picks a seat that can't
+/// lose the game while another opponent can: p2's Abyssal Persecutor keeps p1
+/// alive at -50, so p0 aims at p2. A drain loop aimed at the lowest life total
+/// ran to the action cap (six-seat audit pod, seed 3130344 game 4).
+#[test]
+fn cr_104_3d_the_default_opponent_skips_a_seat_that_cant_lose() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(2, catalog::abyssal_persecutor());
+    g.players[1].life = -50;
+    assert!(g.player_cant_lose_game(1));
+    assert_eq!(g.default_hostile_opponent(0), Some(2));
+}
