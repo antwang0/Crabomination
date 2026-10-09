@@ -863,20 +863,10 @@ pub fn stirring_honormancer() -> CardDefinition {
 /// card to the battlefield under its owner's control at the beginning
 /// of the next end step."
 ///
-/// Push (modern_decks): the "return at next end step" delayed rider is
-/// **now wired** via an extension to `Effect::DelayUntil` that falls
-/// back to `Selector::CastSpellTarget(0)` (the just-cast spell's
-/// target) when `ctx.targets` is empty. The Repartee trigger fires
-/// `Seq(Exile(CastSpellTarget(0)) + DelayUntil(NextEndStep, Move →
-/// Battlefield(Owner)))`; the DelayUntil capture-fallback pulls the
-/// cast spell's target off the stack and stashes it so the next-end-
-/// step body's `Selector::Target(0)` resolves back to the exiled
-/// creature.
-///
-/// Approximation: printed "exile up to one target creature" is a free,
-/// optional choice of any creature, but the code force-exiles exactly
-/// the cast spell's own target (`Selector::CastSpellTarget(0)`) —
-/// removing both the free target choice and the opt-out.
+/// Repartee is an optional trigger target (`OptionalTargets { min: 0 }`):
+/// any creature, or none. The delayed return reads the trigger's own
+/// `Target(0)`, captured by `DelayUntil`. (It force-exiled the cast spell's
+/// own target before.)
 pub fn conciliators_duelist() -> CardDefinition {
     use crate::effect::{DelayedTriggerKind, ZoneDest, shortcut::repartee};
     CardDefinition {
@@ -907,24 +897,26 @@ pub fn conciliators_duelist() -> CardDefinition {
                     },
                 ]),
             },
-            // Repartee — exile the cast spell's target creature, then
-            // bring it back at next end step. The DelayUntil captures
-            // the cast-spell target via the CastSpellTarget(0) fallback.
-            repartee(Effect::Seq(vec![
-                Effect::Exile {
-                    what: Selector::CastSpellTarget(0),
-                },
-                Effect::DelayUntil {
-                    kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Move {
-                        what: Selector::Target(0),
-                        to: ZoneDest::Battlefield {
-                            controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                            tapped: false,
-                        },
-                    }),
-                },
-            ])),
+            // Repartee — exile up to one target creature, then bring it
+            // back at the next end step.
+            repartee(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Exile {
+                        what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
+                    },
+                    Effect::DelayUntil {
+                        kind: DelayedTriggerKind::NextEndStep,
+                        body: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                tapped: false,
+                            },
+                        }),
+                    },
+                ])),
+            }),
         ],
         ..Default::default()
     }

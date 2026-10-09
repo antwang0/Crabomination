@@ -534,6 +534,47 @@ fn conciliators_duelist_repartee_returns_target_at_end_step() {
         "bear should be gone from exile zone");
 }
 
+/// CR 115.1 — Repartee's "exile up to one target creature" is its own
+/// target, free of the cast spell's: Bolt aimed at one bear, the trigger
+/// exiles the other.
+#[test]
+fn conciliators_duelist_repartee_picks_its_own_target() {
+    use crabomination::decision::Decision;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::conciliators_duelist());
+    let bolted = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // A prompting seat names the trigger's target itself.
+    g.players[0].wants_ui = true;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bolted)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    let mut asked = false;
+    for _ in 0..10 {
+        let Some(p) = g.pending_decision.as_ref() else { break };
+        let answer = match &p.decision {
+            Decision::ChooseTarget { .. } => {
+                asked = true;
+                DecisionAnswer::Target(Target::Permanent(other))
+            }
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer");
+    }
+    g.players[0].wants_ui = false;
+    drain_stack(&mut g);
+    assert!(asked, "the trigger asked for its own target");
+    assert!(g.exile.iter().any(|c| c.id == other), "the trigger exiled its own target");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolted), "Bolt killed the other bear");
+}
+
 #[test]
 fn hardened_academic_grants_counter_when_card_leaves_graveyard() {
     // Hardened Academic triggers off the `EventKind::CardLeftGraveyard`
