@@ -1071,6 +1071,10 @@ pub struct PlayerData {
     /// `permanents_sacrificed_this_turn`; Evendo Brushrazer). Same clock.
     #[serde(default)]
     pub nontoken_sacrificed_this_turn: u32,
+    /// Foods this player has sacrificed this turn (a subset of
+    /// `permanents_sacrificed_this_turn`; Elanor Gardner). Same clock.
+    #[serde(default)]
+    pub foods_sacrificed_this_turn: u32,
     /// "Face-down spells you cast this turn cost {N} less to cast" (Goblin
     /// Maskmaker). Summed into `face_down_cast_cost`; cleared in
     /// `finish_cleanup` alongside `turn_spell_discounts`.
@@ -1763,6 +1767,7 @@ impl Player {
             permanents_sacrificed_this_turn: 0,
             artifacts_sacrificed_this_turn: 0,
             nontoken_sacrificed_this_turn: 0,
+            foods_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,
             historic_spells_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,

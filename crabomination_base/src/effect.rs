@@ -2334,6 +2334,9 @@ pub enum Predicate {
     /// `Player.artifacts_sacrificed_this_turn`. Used by "if you've sacrificed an
     /// artifact this turn" riders (Suspicious Detonation, Furtive Courier).
     SacrificedArtifactThisTurn { who: PlayerRef },
+    /// `who` has sacrificed a Food this turn (Elanor Gardner). Backed by
+    /// `Player.foods_sacrificed_this_turn`.
+    SacrificedFoodThisTurn { who: PlayerRef },
     /// At least `at_least` creatures died this turn under **any** player's
     /// control — the global "Morbid" condition (CR 700.4 "a creature died
     /// this turn"). Sums `Player.creatures_died_this_turn` across all

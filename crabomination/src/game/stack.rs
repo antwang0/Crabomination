@@ -5077,6 +5077,7 @@ impl GameState {
             pl.permanents_sacrificed_this_turn = 0;
             pl.artifacts_sacrificed_this_turn = 0;
             pl.nontoken_sacrificed_this_turn = 0;
+            pl.foods_sacrificed_this_turn = 0;
             // CR 702.179 — Freerunning's combat-damage gate is per-turn.
             pl.dealt_combat_damage_to_player_this_turn = false;
             // Quest for Pure Flame's turn-scoped source-damage doubling.

@@ -3166,6 +3166,9 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .map(|p| self.players[p].artifacts_sacrificed_this_turn > 0)
                 .unwrap_or(false),
+            Predicate::SacrificedFoodThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].foods_sacrificed_this_turn > 0),
             Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 let total: u32 = self

@@ -3986,8 +3986,9 @@ impl crate::game::GameState {
     }
 
     /// Whether `player` may play the land `card_id` from their graveyard: any
-    /// land under `player_may_play_lands_from_graveyard`, or one matching a
-    /// `MayPlayLandsFromGraveyardMatching` filter (Titania's Forests).
+    /// land under `player_may_play_lands_from_graveyard`, one matching a
+    /// `MayPlayLandsFromGraveyardMatching` filter (Titania's Forests), or one
+    /// carrying its own may-play permission (Kethis).
     pub fn player_may_play_land_from_graveyard(&self, player: usize, card_id: CardId) -> bool {
         use crate::effect::StaticEffect;
         if self.player_may_play_lands_from_graveyard(player) || self.graveyard_land_play_grant(player, Some(card_id)).is_some() {
@@ -3996,6 +3997,11 @@ impl crate::game::GameState {
         let Some(card) = self.players[player].graveyard.iter().find(|c| c.id == card_id) else {
             return false;
         };
+        // CR 305.1 — a "you may play this card" grant stamped on the card
+        // itself (Kethis, the Hidden Hand) covers a land: it is played.
+        if card.may_play_until.is_some_and(|perm| perm.player == player && !perm.cast_only) {
+            return true;
+        }
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
