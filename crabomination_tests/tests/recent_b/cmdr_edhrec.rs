@@ -2594,3 +2594,53 @@ fn emberwilde_captain_punishes_attacks_on_the_monarch() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3);
 }
+
+/// Kenrith's table: Agatha's power comes off her own pump's generic (five
+/// mana does the six-mana pump); Gluntch hands out three gifts to three
+/// different players; The Theorist draws on an opponent's draw step and
+/// bounces their creature with −2.
+#[test]
+fn kenrith_agatha_gluntch_and_the_theorist() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let agatha = ready(&mut g, 0, catalog::agatha_of_the_vile_cauldron());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, agatha, None);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(agatha).unwrap().power, 1, "others only");
+
+    let mut g = pod(3);
+    let gluntch = ready(&mut g, 0, catalog::gluntch_the_bestower());
+    ready(&mut g, 2, catalog::grizzly_bears());
+    let hands: Vec<usize> = g.players.iter().map(|p| p.hand.len()).collect();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gluntch).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "first gift is ours");
+    assert_eq!(g.players[1].hand.len(), hands[1] + 1, "the creatureless opponent draws");
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure" && c.controller == 2).count();
+    assert_eq!(treasures, 2);
+    assert_eq!(g.players[0].hand.len(), hands[0]);
+
+    let mut g = pod(2);
+    let jace = ready(&mut g, 0, catalog::the_theorist_jace_beleren());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Draw);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace,
+        ability_index: 1,
+        target: Some(Target::Permanent(theirs)),
+        x_value: None,
+    })
+    .expect("-2");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "bounced");
+}

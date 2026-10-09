@@ -4630,3 +4630,130 @@ pub fn court_of_embereth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Agatha of the Vile Cauldron — {R}{G} 1/1 Human Warlock. Activated abilities
+/// of creatures you control cost {X} less (X her power, floored at one mana);
+/// {4}{R}{G}: other creatures you control get +1/+1, trample and haste until
+/// end of turn.
+pub fn agatha_of_the_vile_cauldron() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::Duration;
+    let others = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource));
+    CardDefinition {
+        name: "Agatha of the Vile Cauldron",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Warlock]),
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of creatures you control cost {X} less to activate, where X is Agatha's power.",
+            effect: StaticEffect::YourCreatureActivatedAbilitiesCostLessBySourcePower,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), r(), g()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: others(), power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+                Effect::GrantKeywords {
+                    what: others(),
+                    keywords: vec![Keyword::Trample, Keyword::Haste],
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gluntch, the Bestower — {1}{G}{W} 0/5 flying Jellyfish. Your end step: one
+/// chosen player puts two +1/+1 counters on a creature they control, a second
+/// draws a card, a third makes two Treasures.
+pub fn gluntch_the_bestower() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Gluntch, the Bestower",
+        cost: cost(&[generic(1), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Jellyfish]),
+        power: 0,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::ChooseDistinctPlayers(vec![
+                Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::AddCounter {
+                        what: Selector::SeparatedPile { chosen: true },
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(2),
+                    }),
+                    other: Box::new(Effect::Noop),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                mint(crabomination_base::tokens::treasure_token(), Value::Const(2)),
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Theorist, Jace Beleren — {2}{U}{U}, loyalty 3. Each opponent's draw
+/// step, you draw. +1: a 1/1 blue Illusion. −2: for each opponent, return up
+/// to one target artifact or creature they control to its owner's hand. −6:
+/// draw three, then X +1/+1 counters on each creature you control, X your hand
+/// size.
+pub fn the_theorist_jace_beleren() -> CardDefinition {
+    use crate::card::{CounterType, LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "The Theorist, Jace Beleren",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace], ..Default::default() },
+        base_loyalty: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::OpponentControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: mint(token_1_1("Illusion", Color::Blue, CreatureType::Illusion), Value::ONE),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::ForEachOpponentTarget {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::Artifact.or(R::Creature).and(R::ControlledByOpponent),
+                        effect: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                        }),
+                    }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::HandSizeOf(PlayerRef::You),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
