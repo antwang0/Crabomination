@@ -2043,6 +2043,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LUMRA_COMMANDERS,
             main: decks::LUMRA_MAIN,
         },
+        // Seat 271: Marina Vendrell's EDHREC average deck. `--pod-decks 271`.
+        PodDeck {
+            name: "Marina Vendrell (BGRUW)",
+            commanders: decks::MARINA_COMMANDERS,
+            main: decks::MARINA_MAIN,
+        },
     ]
 }
 
@@ -3828,6 +3834,7 @@ mod tests {
             ("Atla Palani, Nest Tender", [0xA71A, 268, 9192]),
             ("Betor, Kin to All", [0xBE71, 269, 9193]),
             ("Lumra, Bellow of the Woods", [0x1B4A, 270, 9194]),
+            ("Marina Vendrell", [0x3A41, 271, 9195]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

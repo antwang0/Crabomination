@@ -7964,3 +7964,36 @@ pub const LUMRA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest,
 ];
+
+pub const MARINA_COMMANDERS: &[CardFactory] = &[marina_vendrell];
+
+/// **Marina Vendrell**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 85 nonbasic cards + 4 Forests + 3 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// Five-color Rooms: Marina locks and unlocks doors for repeat unlock triggers.
+pub const MARINA_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, keys_to_the_house, sol_ring, arcane_sanctum,
+    breeding_pool, command_tower, evolving_wilds, exotic_orchard, godless_shrine,
+    hall_of_heliods_generosity, hallowed_fountain, indatha_triome, jetmirs_garden, opulent_palace,
+    overgrown_tomb, path_of_ancestry, reliquary_tower, sandsteppe_citadel, seaside_citadel,
+    sparas_headquarters, stomping_ground, temple_garden, terramorphic_expanse, the_world_tree,
+    valgavoths_lair, windswept_heath, balemurk_leech, destiny_spinner, doomwake_giant,
+    dryad_of_the_ilysian_grove, eidolon_of_blossoms, enduring_vitality, entity_tracker,
+    fear_of_sleep_paralysis, ghostly_dancers, ghostly_keybearer, gremlin_tamer,
+    herald_of_the_pantheon, inquisitive_glimmer, jukai_naturalist, mesa_enchantress,
+    ondu_spiritdancer, overlord_of_the_hauntwoods, sanctum_weaver, setessan_champion,
+    sythis_harvests_hand, victor_valgavoths_seneschal, zur_eternal_schemer,
+    bottomless_pool_locker_room, central_elevator_promising_stairs, charred_foyer_warped_space,
+    cramped_vents_access_maze, dazzling_theater_prop_room, defiled_crypt_cadaver_lab,
+    derelict_attic_widows_walk, dollmakers_shop_porcelain_gallery, enchantresss_presence,
+    funeral_room_awakening_hall, glassworks_shattered_yard, grand_entryway_elegant_rotunda,
+    greenhouse_rickety_gazebo, meat_locker_drowned_diner, mirror_room_fractured_realm,
+    moldering_gym_weight_room, painters_studio_defaced_gallery, restricted_office_lecture_hall,
+    roaring_furnace_steaming_sauna, secret_arcade_dusty_parlor, smoky_lounge_misty_salon,
+    sphere_of_safety, surgical_suite_hospital_room, ticket_booth_tunnel_of_hate,
+    underwater_tunnel_slimy_aquarium, unholy_annex_ritual_chamber, walk_in_closet_forgotten_cellar,
+    counterspell, get_out, path_to_exile, swords_to_plowshares, cultivate, farseek, idyllic_tutor,
+    redress_fate,
+    // Basics
+    forest, forest, forest, forest, island, island, island, mountain, mountain, plains, plains,
+    plains, swamp, swamp,
+];
