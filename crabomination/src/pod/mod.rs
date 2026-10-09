@@ -2283,6 +2283,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WINOTA_COMMANDERS,
             main: decks::WINOTA_MAIN,
         },
+        // Seat 311: Ziatora, the Incinerator's EDHREC average deck. `--pod-decks 311`.
+        PodDeck {
+            name: "Ziatora, the Incinerator (BGR)",
+            commanders: decks::ZIATORA_COMMANDERS,
+            main: decks::ZIATORA_MAIN,
+        },
+        // Seat 312: Helga, Skittish Seer's EDHREC average deck. `--pod-decks 312`.
+        PodDeck {
+            name: "Helga, Skittish Seer (GUW)",
+            commanders: decks::HELGA_COMMANDERS,
+            main: decks::HELGA_MAIN,
+        },
+        // Seat 313: Vihaan, Goldwaker's EDHREC average deck. `--pod-decks 313`.
+        PodDeck {
+            name: "Vihaan, Goldwaker (BRW)",
+            commanders: decks::VIHAAN_COMMANDERS,
+            main: decks::VIHAAN_MAIN,
+        },
     ]
 }
 
@@ -4237,6 +4255,9 @@ mod tests {
             ("Sokka, Tenacious Tactician", [0x50CA, 308, 9233]),
             ("Tifa Lockhart", [0x71FA, 309, 9234]),
             ("Winota, Joiner of Forces", [0x3107, 310, 9235]),
+            ("Ziatora, the Incinerator", [0x21A7, 311, 9236]),
+            ("Helga, Skittish Seer", [0x4E16, 312, 9237]),
+            ("Vihaan, Goldwaker", [0x71AA, 313, 9238]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

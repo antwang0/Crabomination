@@ -9094,3 +9094,90 @@ pub const WINOTA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains, plains,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ZIATORA_COMMANDERS: &[CardFactory] = &[ziatora_the_incinerator];
+
+/// **Ziatora, the Incinerator**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 82 nonbasic cards + 7 Forests + 5 Mountains + 5 Swamps = 99.
+/// sacrifice for damage and Treasures
+pub const ZIATORA_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, skullclamp, sol_ring, swiftfoot_boots, the_skullspore_nexus,
+    vat_of_rebirth, blood_crypt, bojuka_bog, cinder_glade, command_tower, dragonskull_summit,
+    exotic_orchard, kessig_wolf_run, luxury_suite, overgrown_tomb, riveteers_overlook,
+    rockfall_vale, rootbound_crag, savage_lands, smoldering_marsh, spire_garden, stomping_ground,
+    undergrowth_stadium, woodland_cemetery, ziatoras_proving_ground, academy_manufactor,
+    atsushi_the_blazing_sky, birds_of_paradise, daemogoth_titan, daemogoth_woe_eater,
+    eternal_witness, feldon_of_the_third_path, ghalta_primal_hunger, goldspan_dragon,
+    honest_rutstein, ignoble_hierarch, junji_the_midnight_sky, juri_master_of_the_revue,
+    korvold_fae_cursed_king, kresh_the_bloodbraided, malignus, mayhem_devil, mirkwood_bats,
+    morbid_opportunist, mr_orfeo_the_boulder, phytotitan, professional_face_breaker,
+    sakura_tribe_elder, smaug_wicked_worm, solphim_mayhem_dominus, stalking_vengeance,
+    xenagos_god_of_revels, xorn, yargle_and_multani, zopandrel_hunger_dominus, garruks_uprising,
+    greater_good, rain_of_riches, rhythm_of_the_wild, riveteers_ascendancy, sneak_attack,
+    unnatural_growth, assassins_trophy, beast_within, chaos_warp, deadly_dispute, fling,
+    heroic_intervention, return_of_the_wildspeaker, terminate, blasphemous_act, chandras_ignition,
+    cultivate, farseek, kodamas_reach, natures_lore, rampant_growth, reanimate, rishkars_expertise,
+    three_visits, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const HELGA_COMMANDERS: &[CardFactory] = &[helga_skittish_seer];
+
+/// **Helga, Skittish Seer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 84 nonbasic cards + 7 Forests + 4 Islands + 4 Plains = 99.
+/// counters and mana value
+pub const HELGA_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, sol_ring, swiftfoot_boots, the_great_henge,
+    bountiful_promenade, breeding_pool, brushland, canopy_vista, command_tower, dreamroot_cascade,
+    exotic_orchard, flooded_strand, glacial_fortress, hallowed_fountain, hinterland_harbor,
+    prairie_stream, rejuvenating_springs, reliquary_tower, seaside_citadel, sparas_headquarters,
+    sunpetal_grove, temple_garden, windswept_heath, yavimaya_coast, apex_devastator,
+    avacyns_pilgrim, beast_whisperer, birds_of_paradise, chakram_retriever,
+    chulane_teller_of_tales, craterhoof_behemoth, defiler_of_vigor, delighted_halfling,
+    disciple_of_freyalise, fanatic_of_rhonas, forgotten_ancient, ghalta_primal_hunger,
+    goldvein_hydra, goreclaw_terror_of_qal_sisma, hullbreaker_horror, hydroid_krasis,
+    inga_and_esika, kalonian_hydra, kami_of_whispered_hopes, kioras_follower, koma_cosmos_serpent,
+    llanowar_elves, mulldrifter, mystic_snake, noble_hierarch, nulldrifter, radagast_of_rhosgobel,
+    railway_brawler, saryth_the_vipers_fang, shalai_voice_of_plenty, silverback_elder,
+    solemn_simulacrum, surrak_and_goreclaw, the_goose_mother, thryx_the_sudden_storm,
+    witch_enchanter, zimone_paradox_sculptor, branching_evolution, brokers_ascendancy,
+    garruks_uprising, hardened_scales, innkeepers_talent, intruder_alarm, an_offer_you_cant_refuse,
+    beast_within, counterspell, generous_gift, heroic_intervention, inspiring_call, path_to_exile,
+    shore_up, swords_to_plowshares, kiora_behemoth_beckoner, cultivate, farseek, natures_lore,
+    rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island, plains,
+    plains, plains, plains,
+];
+
+pub const VIHAAN_COMMANDERS: &[CardFactory] = &[vihaan_goldwaker];
+
+/// **Vihaan, Goldwaker**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 85 nonbasic cards + 5 Mountains + 4 Plains + 5 Swamps = 99.
+/// Treasures and artifacts
+pub const VIHAAN_MAIN: &[CardFactory] = &[
+    arcane_signet, idol_of_oblivion, lightning_greaves, skullclamp, sol_ring,
+    talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, the_reaver_cleaver,
+    battlefield_forge, blood_crypt, bojuka_bog, caves_of_koilos, clifftop_retreat, command_tower,
+    dragonskull_summit, exotic_orchard, godless_shrine, isolated_chapel, luxury_suite,
+    mines_of_moria, nomad_outpost, sacred_foundry, savai_triome, smoldering_marsh,
+    spectator_seating, sulfurous_springs, treasure_vault, vault_of_champions,
+    vault_of_the_archangel, academy_manufactor, ancient_copper_dragon, captain_lannery_storm,
+    crime_novelist, generous_plunderer, goldspan_dragon, grim_hireling, jan_jansen_chaos_crafter,
+    kambal_profiteering_mayor, kellogg_dangerous_mind, lotho_corrupt_shirriff, magda_brazen_outlaw,
+    mahadi_emporium_master, mari_the_killing_quill, marionette_apprentice, mayhem_devil,
+    mirkwood_bats, mondrak_glory_dominus, morbid_opportunist, nadiers_nightblade,
+    olivia_opulent_outlaw, pitiless_plunderer, professional_face_breaker, ragavan_nimble_pilferer,
+    reckless_fireweaver, smaug_the_magnificent, smaug_wicked_worm, xorn, alchemists_talent,
+    anointed_procession, black_market_connections, descent_into_avernus, gleaming_splendor,
+    monologue_tax, rain_of_riches, revel_in_riches, smothering_tithe, anguished_unmaking,
+    big_score, boros_charm, bottle_cap_blast, deadly_dispute, dispatch, great_train_heist,
+    path_to_exile, swords_to_plowshares, unexpected_windfall, blasphemous_act, blood_money,
+    brasss_bounty, hell_to_pay, hit_the_mother_lode, ruinous_ultimatum, seize_the_spoils,
+    seize_the_spotlight,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, swamp, swamp,
+    swamp, swamp, swamp,
+];
