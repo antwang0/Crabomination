@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls](#fixed-2026-10-09-twelfth-commander-run-01g4zua3--per-slot-6082b-for-spells-four-more-invariants-two-bot-stalls) | 40 |
 | Bugs & robustness | [FIXED 2026-10-08 (tenth Commander run, `01GdFPW9`) — state invariants on the audit build](#fixed-2026-10-08-tenth-commander-run-01gdfpw9--state-invariants-on-the-audit-build) | 113 |
 | Bugs & robustness | [FIXED 2026-10-08 (ninth Commander run, `01NdGdpR`) — fuzzed strict sweeps on the optimized audit build](#fixed-2026-10-08-ninth-commander-run-01ndgdpr--fuzzed-strict-sweeps-on-the-optimized-audit-build) | 80 |
 | Bugs & robustness | [FIXED 2026-10-07 (eighth Commander run, `019mKDqk`) — the uniform pilot's first pod sweep](#fixed-2026-10-07-eighth-commander-run-019mkdqk--the-uniform-pilots-first-pod-sweep) | 14 |
@@ -115,6 +116,43 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls
+
+Shipped first: **CR 608.2b for a spell's every slot** (the tenth run's NEXT
+(a)). `CardInstance::cast_bf_slots` replaces the slot-0 bool; a multi-target
+spell with a legal target left holes each illegal battlefield or player slot
+(an exile no longer finds the dead creature's card in the graveyard), and
+`push_stack` / `remark_stack_targets` OR the mark in at push and after every
+in-stack retarget (CR 115.7), so a copy or a redirected slot counts as
+targeted when it was. `cr_recent118::cr_608_2b_a_*spell*`.
+
+New audit-build invariants (`pod/mod.rs`): a stack spell keeps no battlefield
+state (a card that keeps its counters, CR 122.2, may carry them — Me, the
+Immortal); a library card is face up; no card is transformed in exile save a
+battle (the Siege path); no stack object belongs to a departed seat (CR
+800.4a). Two sweeps, all 271 decks in shuffled groups at 3..8 seats × 20,
+half under `CRAB_POD_CONCEDE=20`: 6,520 + 6,640 games. Fixed, each with a
+test:
+- ✅ **CR 712.4** — a transformed commander went to the command zone on its
+  back face (Sephiroth after a mass exile; all four command-zone entry paths).
+- ✅ **CR 903.9b** — `ShuffleHandsDrawSame` (Molten Psyche) and Lich's Mirror's
+  reset moved a commander into a library.
+- ✅ **CR 712.4** — the direct move path exiled every transformed permanent on
+  its back face so a defeated Siege could be cast transformed; only a battle
+  keeps it now (Aerial Extortionist on Abolisher of Bloodlines).
+- ✅ **Bot, CR 104.3d** — the default "target opponent" ranked a seat that
+  can't lose (an opponent's Abyssal Persecutor) first by its life total; an
+  Enduring Tenacity + Bloodthirsty Conqueror drain ran to the action cap.
+- ✅ **Bot, CR 508.1g** — no evasion is bought under an attack tax: a Ranar
+  seat spent its Replicated Rings on Whirler Rogue every turn and never paid
+  Sphere of Safety's tax (339 turns).
+
+Open, not defects: **Gremlin Tamer + Secret Arcade** (seat 271, Marina
+Vendrell) is a real unbounded mandatory loop — every Gremlin is an
+enchantment, so the eerie trigger re-fires — and ends as a board cap; 11 of
+the 18 caps over both sweeps. A Scute Swarm board reached the cap at turn 100
+as it attacked (slow, not stuck). Undecided rate 0.06 % / 0.24 %, all caps.
 
 ## FIXED 2026-10-08 (tenth Commander run, `01GdFPW9`) — state invariants on the audit build
 
