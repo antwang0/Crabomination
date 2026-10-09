@@ -5,17 +5,18 @@
 
 use super::EffectContext;
 use crate::card::ArtifactSubtype;
-use crate::effect::{ActivatedAbility, Selector};
+use crate::effect::{ActivatedAbility, Selector, TriggeredAbility};
 use crate::game::GameState;
 use crate::game::types::{GameError, GameEvent};
 
 impl GameState {
-    /// `Effect::StampTokenCopyExceptions { artifact_subtypes, activated }` —
-    /// add the subtypes and abilities to the tokens this resolution created.
+    /// `Effect::StampTokenCopyExceptions` — add the subtypes and abilities to
+    /// the tokens this resolution created.
     pub(super) fn stamp_token_copy_exceptions(
         &mut self,
         artifact_subtypes: &[ArtifactSubtype],
         activated: &[ActivatedAbility],
+        triggered: &[TriggeredAbility],
         ctx: &EffectContext,
         _events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
@@ -33,6 +34,7 @@ impl GameState {
                 }
             }
             def.activated_abilities.extend(activated.iter().cloned());
+            def.triggered_abilities.extend(triggered.iter().cloned());
         }
         Ok(())
     }

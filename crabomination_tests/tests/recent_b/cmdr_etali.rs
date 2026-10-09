@@ -400,6 +400,8 @@ fn chandra_flameshaper_plus_one_makes_a_hasty_copy() {
     let tokens = a_tokens_named(&g, "Grizzly Bears");
     assert_eq!(tokens.len(), 1);
     assert!(a_has_haste(&g, tokens[0]), "except it has haste");
+    // CR 707.9b — the sacrifice is the token's own copiable text.
+    assert_eq!(g.battlefield_find(tokens[0]).unwrap().definition.triggered_abilities.len(), 1);
     a_to_end_step(&mut g);
     assert!(a_tokens_named(&g, "Grizzly Bears").is_empty(), "sacrificed at the end step");
 }

@@ -5842,6 +5842,11 @@ pub enum Effect {
     StampTokenCopyExceptions {
         artifact_subtypes: Vec<crate::card::ArtifactSubtype>,
         activated: Vec<ActivatedAbility>,
+        /// Triggered abilities the copy "has" (Chandra, Flameshaper's "At the
+        /// beginning of the end step, sacrifice this token") — copiable, so a
+        /// copy of the token keeps them (CR 707.9b).
+        #[serde(default)]
+        triggered: Vec<TriggeredAbility>,
     },
     /// "Return this card from your graveyard to the battlefield attached to
     /// [host]" with the host a declared selector, so an activated ability

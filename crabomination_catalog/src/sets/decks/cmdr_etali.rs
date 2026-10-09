@@ -145,29 +145,51 @@ fn a_copy_of(
 
 /// "Create a token that's a copy of [source], except it has haste and 'At the
 /// beginning of the end step, sacrifice this token.'" (Kindle the Inner Flame,
-/// Chandra, Flameshaper's +1). The printed trigger fires at the first end step
-/// the token sees, which is the next one — modeled as the next-end-step
-/// sacrifice (`SacrificeLastCreatedTokensAtNextEndStep`, Urabrask's Forge).
+/// Chandra, Flameshaper's +1).
 fn a_copy_haste_sac_at_end_step(source: Selector) -> Effect {
+    // The trigger is the token's own copiable text (CR 707.9b).
     Effect::Seq(vec![
         a_copy_of(source, Value::ONE, false, false, vec![Keyword::Haste]),
-        Effect::SacrificeLastCreatedTokensAtNextEndStep,
+        Effect::StampTokenCopyExceptions {
+            artifact_subtypes: vec![],
+            activated: vec![],
+            triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+                effect: Effect::SacrificePermanent { what: Selector::This },
+            }],
+        },
     ])
 }
 
 /// "Create a token that's a copy of [source] that's tapped and attacking …
 /// exile it at end of combat" — Calamity's shape (tapped copy + join combat,
-/// the defender the controller's choice)
-/// with Kiki-Jiki's bound-token delayed exile, keyed to end of combat.
-/// `non_legendary` is Delina's "except it's not legendary".
-fn a_temp_attacking_copy(source: Selector, non_legendary: bool) -> Effect {
+/// the defender the controller's choice), the exile a delayed one keyed to
+/// end of combat (Flamerush Rider; Delina's is the token's own text).
+fn a_temp_attacking_copy(source: Selector) -> Effect {
     Effect::Seq(vec![
-        a_copy_of(source, Value::ONE, true, non_legendary, vec![]),
+        a_copy_of(source, Value::ONE, true, false, vec![]),
         // Every token a doubler made is exiled at end of combat, not only
         // the last.
         Effect::JoinCombatAttackingChosen {
             what: Selector::LastCreatedTokens,
             cleanup: AttackingTokenCleanup::ExileAtEndOfCombat,
+        },
+    ])
+}
+
+/// Delina's token: "…except it's not legendary and it has 'At end of combat,
+/// exile this token.'" — copiable text (CR 707.9b), so a copy keeps it.
+fn a_delina_copy(source: Selector) -> Effect {
+    Effect::Seq(vec![
+        a_copy_of(source, Value::ONE, true, true, vec![]),
+        Effect::JoinCombatAttackingChosen { what: Selector::LastCreatedTokens, cleanup: AttackingTokenCleanup::None },
+        Effect::StampTokenCopyExceptions {
+            artifact_subtypes: vec![],
+            activated: vec![],
+            triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::EndCombat), EventScope::AnyPlayer),
+                effect: Effect::Exile { what: Selector::This },
+            }],
         },
     ])
 }
@@ -181,7 +203,7 @@ fn a_delina_roll() -> Effect {
             count: Value::ONE,
             modifier: Value::Const(0),
             reroll_at_most: 0,
-            results: vec![(1, 20, a_temp_attacking_copy(target_filtered(R::Creature.and(R::ControlledByYou)), true))],
+            results: vec![(1, 20, a_delina_copy(target_filtered(R::Creature.and(R::ControlledByYou))))],
             ignore_lowest: 0,
             on_doubles: None,
         }),
@@ -315,9 +337,8 @@ pub fn orthion_hero_of_lavabrink() -> CardDefinition {
 /// attacks, choose target creature you control, then roll a d20. 1–14: create a
 /// tapped and attacking non-legendary token copy of it that's exiled at end of
 /// combat. 15–20: create one of those tokens; you may roll again.
-/// "You may roll again" is asked each time, without bound (`RepeatWhileMay`).
-/// Residual: the token's own "At end of combat, exile this token" is a
-/// delayed exile bound to it, so a copy of the token would not inherit it.
+/// "You may roll again" is asked each time, without bound (`RepeatWhileMay`);
+/// each token's end-of-combat exile is its own copiable text.
 pub fn delina_wild_mage() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_attack(a_delina_roll())],
@@ -337,10 +358,9 @@ pub fn delina_wild_mage() -> CardDefinition {
 /// The copy attacks the defending player its controller chooses (CR 508.4).
 pub fn flamerush_rider() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_attack(a_temp_attacking_copy(
-            target_filtered(R::Creature.and(R::IsAttacking).and(R::OtherThanSource)),
-            false,
-        ))],
+        triggered_abilities: vec![on_attack(a_temp_attacking_copy(target_filtered(
+            R::Creature.and(R::IsAttacking).and(R::OtherThanSource),
+        )))],
         alternative_cost: Some(dash(cost(&[generic(2), r(), r()]))),
         ..a_creature(
             "Flamerush Rider",
@@ -482,8 +502,7 @@ pub fn molten_echoes() -> CardDefinition {
 /// copy of target creature you control, except it has haste and "At the
 /// beginning of the end step, sacrifice this token." Flashback—{1}{R}, Behold
 /// three Elementals.
-/// Approximation: the token's end-step sacrifice is the next-end-step delayed
-/// sacrifice (same first firing; a copy of the token wouldn't inherit it).
+/// The token's end-step sacrifice is its own copiable trigger.
 /// "Behold three Elementals" is a flashback *gate* — you control and/or hold
 /// at least three Elemental permanents/cards in hand — nothing is revealed or
 /// chosen, and one card can't be both beheld and counted twice (the counts
@@ -524,9 +543,9 @@ pub fn kindle_the_inner_flame() -> CardDefinition {
 /// except it has haste and "At the beginning of the end step, sacrifice this
 /// token." −4: 8 damage divided among any number of target creatures and/or
 /// planeswalkers.
-/// Approximation: +1's end-step sacrifice is the next-end-step delayed
-/// sacrifice. −4's "any number" is capped at eight target slots (8 damage can't
-/// usefully split wider).
+/// The +1 token carries its "sacrifice this token" end-step trigger as text, so
+/// a copy of it does too; −4's "any number" is eight slots (8 damage divides
+/// eight ways at most).
 pub fn chandra_flameshaper() -> CardDefinition {
     CardDefinition {
         name: "Chandra, Flameshaper",
@@ -570,9 +589,7 @@ pub fn chandra_flameshaper() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: a_copy_haste_sac_at_end_step(target_filtered(
-                    R::Creature.and(R::ControlledByYou),
-                )),
+                effect: a_copy_haste_sac_at_end_step(target_filtered(R::Creature.and(R::ControlledByYou))),
                 ..Default::default()
             },
             LoyaltyAbility {

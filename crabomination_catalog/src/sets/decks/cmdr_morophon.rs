@@ -143,6 +143,7 @@ pub fn brenard_ginger_sculptor() -> CardDefinition {
                     Effect::StampTokenCopyExceptions {
                         artifact_subtypes: vec![ArtifactSubtype::Food],
                         activated: vec![gain],
+                        triggered: vec![],
                     },
                 ])),
             },
