@@ -2142,6 +2142,9 @@ pub enum Predicate {
     /// riders (Skitterbeam Battalion) — token copies and reanimated bodies
     /// don't re-fire. Backed by the persistent `CardInstance` cast flags.
     SourceWasCast,
+    /// `SourceWasCast` asked of the trigger's subject — "whenever an Aura you
+    /// control enters, if you cast it" (Light-Paws, Emperor's Voice).
+    TriggerSourceWasCast,
     /// The narrower sibling: true only if the source permanent reached the
     /// battlefield by being cast **from its owner's hand** (Phage the
     /// Untouchable's "if you didn't cast it from your hand, you lose the
@@ -12629,6 +12632,12 @@ pub enum Effect {
     /// library this way, shuffle." Boonweaver Giant. Candidates pool all three
     /// zones; the Aura's own enchant filter is not re-checked.
     SearchAuraAttachToSource,
+    /// "Search your library for an Aura card with mana value less than or
+    /// equal to [`cap`] and with a different name than each Aura you control,
+    /// put that card onto the battlefield attached to [this], then shuffle"
+    /// (Light-Paws, Emperor's Voice). Only an Aura that can enchant the source
+    /// is offered.
+    SearchAuraAttachToSourceCappedBy { cap: Selector },
 
     /// CR 303.4f / 301.5c — put every `filter` card from the controller's
     /// `zones` (preference order, greatest mana value first, at most `max`)

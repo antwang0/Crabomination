@@ -906,6 +906,7 @@ impl Effect {
             | Effect::ChooseStepToSkipThisTurn { .. }
             | Effect::SearchExileThenTokensPerCard { .. }
             | Effect::SearchAuraAttachToSource
+            | Effect::SearchAuraAttachToSourceCappedBy { .. }
             | Effect::PutOntoBattlefieldAttached { .. }
             | Effect::RevealTopPutAttached { .. }
             | Effect::RevealUntilPutAttachedElseHand { .. }

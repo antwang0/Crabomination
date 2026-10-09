@@ -23,6 +23,7 @@ mod distribute;
 mod seat_mode;
 mod commander;
 mod attach_choice;
+mod aura_search;
 mod party;
 mod stack_sweep;
 mod token_riders;
@@ -39801,6 +39802,9 @@ impl GameState {
             Effect::RevealUntilPutAttachedElseHand { filter } => {
                 self.reveal_until_put_attached_else_hand(filter, ctx, events, effect);
                 Ok(())
+            }
+            Effect::SearchAuraAttachToSourceCappedBy { cap } => {
+                self.search_aura_attach_to_source_capped_by(cap, effect, ctx, events)
             }
             Effect::SearchAuraAttachToSource => {
                 // Boonweaver Giant — pool graveyard + hand + library for an

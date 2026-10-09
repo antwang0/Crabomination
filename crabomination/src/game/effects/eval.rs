@@ -2902,6 +2902,18 @@ impl GameState {
                 .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.cast_from_escape)
                 .unwrap_or(false),
+            Predicate::TriggerSourceWasCast => match ctx.trigger_source {
+                Some(EntityRef::Permanent(cid)) | Some(EntityRef::Card(cid)) => self.battlefield.find_by_id(cid),
+                _ => None,
+            }
+            .is_some_and(|c| {
+                !c.is_token
+                    && (c.cast_from_hand
+                        || c.cast_from_exile
+                        || c.cast_via_flashback
+                        || c.cast_from_suspend
+                        || c.cast_from_escape)
+            }),
             Predicate::SourceWasCast => ctx
                 .source
                 .and_then(|cid| self.battlefield.find_by_id(cid))
