@@ -4658,6 +4658,8 @@ static DECKS: &[Factory] = &[
     super::decks::scorn_blade_berserker,
     super::decks::reality_acid,
     super::decks::venser_the_sojourner,
+    super::decks::queen_allenal_of_ruadach,
+    super::decks::rabble_rousing,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

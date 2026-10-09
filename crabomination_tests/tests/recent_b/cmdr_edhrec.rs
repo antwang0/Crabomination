@@ -1681,3 +1681,36 @@ fn venser_flickers_your_permanent() {
     to_end_step(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
 }
+
+/// Queen Allenal: a creature token comes with a Soldier, and she counts it.
+#[test]
+fn queen_allenal_adds_a_soldier() {
+    let mut g = pod(2);
+    let queen = ready(&mut g, 0, catalog::queen_allenal_of_ruadach());
+    let spell = g.add_card_to_hand(0, catalog::gelatinous_genesis());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(1) })
+        .expect("one Ooze");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Soldier"), 1);
+    assert_eq!(g.computed_permanent(queen).unwrap().power, 3, "queen, Ooze, Soldier");
+}
+
+/// Rabble Rousing: attacking with two makes two Citizens.
+#[test]
+fn rabble_rousing_makes_citizens_per_attacker() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::rabble_rousing());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Citizen"), 2);
+}

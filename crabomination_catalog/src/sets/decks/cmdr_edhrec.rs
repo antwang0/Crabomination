@@ -2772,3 +2772,69 @@ pub fn venser_the_sojourner() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Queen Allenal of Ruadach — {G}{W}{W} */* Elf Noble, P/T = creatures you
+/// control. Creature tokens created under your control come with a 1/1 white
+/// Soldier (CR 614.1a, once per resolution).
+pub fn queen_allenal_of_ruadach() -> CardDefinition {
+    use crate::card::{DynamicPt, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Queen Allenal of Ruadach",
+        cost: cost(&[g(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Noble]),
+        dynamic_pt: Some(DynamicPt::CreaturesControlled { base: 0 }),
+        static_abilities: vec![StaticAbility {
+            description: "If one or more creature tokens would be created under your control, those tokens plus a 1/1 white Soldier creature token are created instead.",
+            effect: StaticEffect::CreatureTokenCreationAddsToken {
+                definition: token_1_1("Soldier", Color::White, CreatureType::Soldier),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rabble Rousing — {4}{W} Enchantment, hideaway 5. Attacking with one or
+/// more creatures makes that many 1/1 green-white Citizens; then with ten
+/// or more creatures you may play the hidden card free.
+pub fn rabble_rousing() -> CardDefinition {
+    let mut citizen = token_1_1("Citizen", Color::Green, CreatureType::Citizen);
+    citizen.colors = vec![Color::Green, Color::White];
+    let attackers = Value::CountOf(Box::new(Selector::EachPermanent(
+        R::Creature.and(R::IsAttacking).and(R::ControlledByYou),
+    )));
+    CardDefinition {
+        name: "Rabble Rousing",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Hideaway { count: Value::Const(5) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_batch(),
+                effect: Effect::Seq(vec![
+                    mint(citizen, attackers),
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)))),
+                            Value::Const(10),
+                        ),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::PlayLandAmongNow { what: Selector::CardExiledWithSource },
+                            Effect::CastWithoutPayingImmediate {
+                                what: Selector::CardExiledWithSource,
+                                source_zone: crate::card::Zone::Exile,
+                                exile_after: false,
+                                copy: false,
+                                reduce_generic: 0,
+                                pay_own_cost: false,
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
