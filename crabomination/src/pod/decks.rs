@@ -8479,3 +8479,59 @@ pub const VREN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const KRENKO_MB_COMMANDERS: &[CardFactory] = &[krenko_mob_boss];
+
+/// **Krenko, Mob Boss**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Mono-red Goblins: Krenko doubles the Goblin count every tap.
+pub const KRENKO_MB_MAIN: &[CardFactory] = &[
+    arcane_signet, coat_of_arms, hazorets_monument, lightning_greaves, patriars_seal,
+    ruby_medallion, skullclamp, sol_ring, staff_of_domination, sting_the_glinting_dagger,
+    swiftfoot_boots, thousand_year_elixir, arena_of_glory, castle_embereth, den_of_the_bugbear,
+    path_of_ancestry, three_tree_city, battle_cry_goblin, beetleback_chief, conspicuous_snoop,
+    gempalm_incinerator, general_kreat_the_boltbringer, goblin_chieftain, goblin_chirurgeon,
+    goblin_instigator, goblin_king, goblin_lackey, goblin_matron, goblin_piledriver,
+    goblin_recruiter, goblin_ringleader, goblin_trashmaster, goblin_warchief, grenzo_havoc_raiser,
+    hexing_squelcher, hobgoblin_bandit_lord, howlsquad_heavy, kiki_jiki_mirror_breaker,
+    krenko_tin_street_kingpin, legion_warboss, mogg_war_marshal, muxus_goblin_grandee,
+    pashalik_mons, purphoros_god_of_the_forge, rundvelt_hordemaster, siege_gang_commander,
+    skirk_prospector, warren_instigator, blood_moon, boggart_shenanigans, goblin_bombardment,
+    impact_tremors, quest_for_the_goblin_lord, raid_bombardment, shared_animosity, abrade,
+    battle_hymn, brightstone_ritual, chaos_warp, lightning_bolt, massive_raid,
+    thrill_of_possibility, blasphemous_act, dragon_fodder, faithless_looting, goblin_grenade,
+    goblin_war_strike, hordeling_outburst, krenkos_command, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const ARABELLA_COMMANDERS: &[CardFactory] = &[arabella_abandoned_doll];
+
+/// **Arabella, Abandoned Doll**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 77 nonbasic cards + 10 Mountains + 12 Plains = 99.
+/// Boros small creatures: Arabella's attacks drain each opponent for every creature with power 2 or less.
+pub const ARABELLA_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, dolmen_gate, lightning_greaves, oketras_monument, skullclamp,
+    sol_ring, swiftfoot_boots, talisman_of_conviction, access_tunnel, battlefield_forge,
+    boros_garrison, clifftop_retreat, command_tower, exotic_orchard, furycalm_snarl,
+    rogues_passage, rugged_prairie, sacred_foundry, spectator_seating, sundown_pass,
+    temple_of_triumph, adeline_resplendent_cathar, agate_instigator, ainok_strike_leader,
+    anim_pakal_thousandth_moon, charismatic_conqueror, delney_streetwise_lookout,
+    enduring_innocence, esper_sentinel, gold_myr, iron_myr, jacked_rabbit, krenko_mob_boss,
+    krenko_tin_street_kingpin, loyal_apprentice, mentor_of_the_meek, molten_gatekeeper,
+    mondrak_glory_dominus, mother_of_runes, ocelot_pride, ornithopter_of_paradise, ragged_playmate,
+    selfless_spirit, siege_gang_lieutenant, skyknight_vanguard, solemn_simulacrum, splitskin_doll,
+    subira_tulzidi_caravanner, the_jolly_balloon_man, voice_of_victory, welcoming_vampire,
+    assemble_the_legion, city_on_fire, impact_tremors, raid_bombardment, reconnaissance,
+    tocasias_welcome, windcrag_siege, boros_charm, call_the_coppercoats, chaos_warp,
+    flawless_maneuver, generous_gift, grand_crescendo, path_to_exile, secure_the_wastes,
+    swords_to_plowshares, elspeth_suns_champion, dragon_fodder, dusk_dawn, fell_the_mighty,
+    hop_to_it, hordeling_outburst, raise_the_past, song_of_totentanz, the_battle_of_bywater,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];

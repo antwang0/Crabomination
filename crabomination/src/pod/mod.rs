@@ -2151,6 +2151,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VREN_COMMANDERS,
             main: decks::VREN_MAIN,
         },
+        // Seat 289: Krenko, Mob Boss's EDHREC average deck. `--pod-decks 289`.
+        PodDeck {
+            name: "Krenko, Mob Boss (R)",
+            commanders: decks::KRENKO_MB_COMMANDERS,
+            main: decks::KRENKO_MB_MAIN,
+        },
+        // Seat 290: Arabella, Abandoned Doll's EDHREC average deck. `--pod-decks 290`.
+        PodDeck {
+            name: "Arabella, Abandoned Doll (RW)",
+            commanders: decks::ARABELLA_COMMANDERS,
+            main: decks::ARABELLA_MAIN,
+        },
     ]
 }
 
@@ -4056,6 +4068,8 @@ mod tests {
             ("Mendicant Core, Guidelight", [0x3E4D, 286, 9211]),
             ("Wick, the Whorled Mind", [0x31C4, 287, 9212]),
             ("Vren, the Relentless", [0x7E0E, 288, 9213]),
+            ("Krenko, Mob Boss", [0x4E7B, 289, 9214]),
+            ("Arabella, Abandoned Doll", [0xA4AB, 290, 9215]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
