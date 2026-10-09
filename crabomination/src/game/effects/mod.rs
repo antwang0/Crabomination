@@ -30082,9 +30082,11 @@ impl GameState {
             }
 
             Effect::ShuffleHandsDrawSame { who } => {
-                
                 for p in self.resolve_players(who, ctx) {
-                    let hand = std::mem::take(&mut *self.players[p].hand);
+                    let mut hand = std::mem::take(&mut *self.players[p].hand);
+                    // CR 903.9b — a commander may go home instead; "that
+                    // many" counts the cards shuffled in.
+                    self.commander_zone_redirect_all(&mut hand, crate::card::Zone::Hand, crate::card::Zone::Library);
                     let n = hand.len() as u32;
                     self.players[p].library.extend(hand);
                     self.shuffle_library(p, events);

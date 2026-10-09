@@ -21557,20 +21557,28 @@ impl GameState {
         if !has {
             return false;
         }
+        use crate::card::Zone;
+        // CR 903.9b — a commander may go to the command zone instead.
         let mut into_library: Vec<crate::card::CardInstance> =
             std::mem::take(&mut *self.players[p].hand);
-        into_library.extend(std::mem::take(&mut *self.players[p].graveyard));
+        self.commander_zone_redirect_all(&mut into_library, Zone::Hand, Zone::Library);
+        let mut gy: Vec<crate::card::CardInstance> = std::mem::take(&mut *self.players[p].graveyard).into();
+        self.commander_zone_redirect_all(&mut gy, Zone::Graveyard, Zone::Library);
+        into_library.extend(gy);
         // Tokens cease to exist rather than joining the library (CR 111.7).
         let owned: Vec<CardId> =
             self.battlefield.iter().filter(|c| c.owner == p).map(|c| c.id).collect();
+        let mut from_bf = Vec::new();
         for id in owned {
             if let Some(idx) = self.battlefield.iter().position(|c| c.id == id) {
                 let card = self.battlefield.remove(idx);
                 if !card.is_token {
-                    into_library.push(card);
+                    from_bf.push(card);
                 }
             }
         }
+        self.commander_zone_redirect_all(&mut from_bf, Zone::Battlefield, Zone::Library);
+        into_library.extend(from_bf);
         // CR 122.2 — counters cease to exist on the zone change.
         for card in &mut into_library {
             card.counters.clear();

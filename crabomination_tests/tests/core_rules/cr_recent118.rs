@@ -1223,3 +1223,22 @@ fn cr_712_4_a_transformed_commander_goes_home_front_face_up() {
     assert!(!home.transformed);
     assert_eq!(home.definition.name, "Sephiroth, Fabled SOLDIER");
 }
+
+/// CR 903.9b — "each player shuffles their hand into their library, then
+/// draws that many cards": a commander in hand may go to the command zone
+/// instead, and "that many" counts what was shuffled in. Molten Psyche put
+/// Olivia, Opulent Outlaw into a library (eight-seat pod, seed 3121026 game 17).
+#[test]
+fn cr_903_9b_a_hand_shuffled_into_a_library_sends_its_commander_home() {
+    let mut g = main_phase();
+    let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.players[0].hand.push(card);
+    g.add_card_to_hand(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    resolve(&mut g, crabomination::card::CardId(0), None, &Effect::ShuffleHandsDrawSame { who: PlayerRef::You });
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd), "home");
+    assert!(g.players[0].library.iter().all(|c| c.id != cmd));
+    assert_eq!(g.players[0].hand.len(), hand - 1, "draws the one card shuffled in");
+}
