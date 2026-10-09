@@ -35396,8 +35396,7 @@ pub fn nettle_guard() -> CardDefinition {
 }
 
 /// Frilled Sparkshooter — {3}{R} 3/3 Lizard Archer with Menace and Reach. It
-/// enters with a +1/+1 counter if an opponent lost life this turn. (Modeled as
-/// an ETB conditional counter rather than an enters-with replacement.)
+/// enters with a +1/+1 counter if an opponent lost life this turn.
 pub fn frilled_sparkshooter() -> CardDefinition {
     CardDefinition {
         name: "Frilled Sparkshooter",
@@ -35410,17 +35409,14 @@ pub fn frilled_sparkshooter() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Menace, Keyword::Reach],
-        triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerLostLifeThisTurn {
-                who: PlayerRef::EachOpponent,
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+                then: Box::new(Value::ONE),
+                else_: Box::new(Value::ZERO),
             },
-            then: Box::new(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            }),
-            else_: Box::new(Effect::Noop),
-        })],
+        )),
         ..Default::default()
     }
 }

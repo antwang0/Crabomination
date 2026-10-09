@@ -67,8 +67,8 @@ pub fn strongbox_raider() -> CardDefinition {
 
 /// Fireglass Mentor — {B}{R} 2/1 Lizard Warlock. At the beginning of your second
 /// main phase, if an opponent lost life this turn, exile the top two cards of
-/// your library; until end of turn you may play one. (Grant-both impulse
-/// approximation.)
+/// your library; until end of turn you may play one of them — the first cast
+/// spends the other.
 pub fn fireglass_mentor() -> CardDefinition {
     CardDefinition {
         name: "Fireglass Mentor",
@@ -88,15 +88,18 @@ pub fn fireglass_mentor() -> CardDefinition {
             .with_filter(Predicate::PlayerLostLifeThisTurn {
                 who: PlayerRef::EachOpponent,
             }),
-            effect: Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: true,
-                uncast_penalty: None,
-            },
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                Effect::OneCastAmongGranted { what: Selector::ExiledThisResolution { filter: crate::card::SelectionRequirement::Any } },
+            ]),
         }],
         ..Default::default()
     }

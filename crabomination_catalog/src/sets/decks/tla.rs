@@ -2038,8 +2038,8 @@ pub fn deadly_precision() -> CardDefinition {
 }
 
 /// Enter the Avatar State — {W} Instant — Lesson. Until end of turn, target
-/// creature you control gains flying, first strike, lifelink, and hexproof.
-/// (The "becomes an Avatar" type-add is dropped — no additive type primitive.)
+/// creature you control becomes an Avatar in addition to its other types and
+/// gains flying, first strike, lifelink, and hexproof.
 pub fn enter_the_avatar_state() -> CardDefinition {
     let tgt = || {
         target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou))
@@ -2068,6 +2068,11 @@ pub fn enter_the_avatar_state() -> CardDefinition {
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddCreatureTypes {
+                what: Selector::Target(0),
+                creature_types: vec![CreatureType::Avatar],
                 duration: Duration::EndOfTurn,
             },
         ]),

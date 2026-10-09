@@ -1704,8 +1704,13 @@ fn nettle_guard_sacrifices_to_destroy_artifact() {
 fn frilled_sparkshooter_grows_if_opponent_lost_life() {
     let mut g = two_player_game();
     g.players[1].lost_life_this_turn = true;
-    let id = g.add_card_to_battlefield(0, catalog::frilled_sparkshooter());
-    g.fire_self_etb_triggers(id, 0);
+    let id = g.add_card_to_hand(0, catalog::frilled_sparkshooter());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "entered with a +1/+1 counter");

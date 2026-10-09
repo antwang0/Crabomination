@@ -3121,13 +3121,32 @@ fn roving_actuator_void_recasts_cheap_instant() {
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt left the graveyard");
 }
 
-/// Tannuk gives other creatures you control haste.
+/// Tannuk gives other creatures you control haste, and red creature cards in
+/// hand warp {2}{R}: a Hill Giant warped in is a hasty 3/3 that leaves at the
+/// end step.
 #[test]
 fn tannuk_grants_other_creatures_haste() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::tannuk_steadfast_second());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: giant,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("warp for {2}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some(), "the Giant entered");
+    assert!(g.players[0].warped_spell_this_turn, "cast for its warp cost");
 }
 
 /// Secluded Starforge's {5},{T} ability mints a 2/2 Robot.

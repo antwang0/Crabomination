@@ -7776,8 +7776,8 @@ pub fn all_fates_scroll() -> CardDefinition {
 }
 
 /// Tannuk, Steadfast Second — {2}{R}{R} 3/5 Legendary Kavu Pilot. Other
-/// creatures you control have haste. (The "artifact / red creature cards in
-/// your hand have warp {2}{R}" grant is dropped — no in-hand alt-cost static.)
+/// creatures you control have haste; artifact cards and red creature cards in
+/// your hand have warp {2}{R}.
 pub fn tannuk_steadfast_second() -> CardDefinition {
     CardDefinition {
         name: "Tannuk, Steadfast Second",
@@ -7799,6 +7799,15 @@ pub fn tannuk_steadfast_second() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 ),
                 keyword: Keyword::Haste,
+            },
+        },
+        StaticAbility {
+            description: "Artifact cards and red creature cards in your hand have warp {2}{R}.",
+            effect: StaticEffect::GrantWarpToHandCards {
+                filter: SelectionRequirement::Artifact.or(
+                    SelectionRequirement::Creature.and(SelectionRequirement::HasColor(crate::mana::Color::Red)),
+                ),
+                cost: cost(&[generic(2), r()]),
             },
         }],
         ..Default::default()
