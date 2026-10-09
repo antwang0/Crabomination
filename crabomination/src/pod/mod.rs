@@ -2634,7 +2634,13 @@ fn play_pod_game(
                             .battlefield
                             .iter()
                             .chain(g.phased_out.iter())
-                            .find(|c| c.damage != 0 || !c.end_of_turn_effects_are_clear())
+                            .find(|c| {
+                                // Ancient Adamantoise keeps its damage (CR 514.2's own exception).
+                                let keeps = c.definition.static_abilities.iter().any(|sa| {
+                                    matches!(sa.effect, crate::effect::StaticEffect::KeepsDamageThroughCleanup)
+                                });
+                                (c.damage != 0 && !keeps) || !c.end_of_turn_effects_are_clear()
+                            })
                         {
                             panic!(
                                 "seed {seed}: {} {:?} kept {} damage / an end-of-turn bonus past turn {turn}'s cleanup (after {actions} actions, now {:?})",
