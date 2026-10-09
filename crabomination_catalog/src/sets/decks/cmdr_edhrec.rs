@@ -2695,3 +2695,80 @@ pub fn scorn_blade_berserker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Reality Acid — {2}{U} Aura, enchant permanent, vanishing 3. When it
+/// leaves the battlefield, the enchanted permanent's controller sacrifices
+/// it.
+pub fn reality_acid() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Reality Acid",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Vanishing(3)],
+        effect: Effect::Attach { what: Selector::This, to: Selector::TargetFiltered { slot: 0, filter: R::Permanent } },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::SacrificePermanent { what: Selector::AttachedTo(Box::new(Selector::This)) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Venser, the Sojourner — {3}{W}{U}, loyalty 3. +2: exile target permanent
+/// you own; it returns under your control at the next end step. −1:
+/// creatures can't be blocked this turn (granted to the creatures on the
+/// battlefield as it resolves). −8: emblem — whenever you cast a spell,
+/// exile target permanent.
+pub fn venser_the_sojourner() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Venser, the Sojourner",
+        cost: cost(&[generic(3), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Venser], ..Default::default() },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Seq(vec![
+                    Effect::Exile { what: target_filtered(R::Permanent.and(R::OwnedByYou)) },
+                    Effect::DelayUntil {
+                        kind: DelayedTriggerKind::NextEndStep,
+                        body: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Venser, the Sojourner".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                        effect: Effect::Exile { what: target_filtered(R::Permanent) },
+                    }],
+                    statics: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -1651,3 +1651,33 @@ fn vizier_spends_any_type_on_creatures() {
         .perform_action(GameAction::CastSpell { card_id: wisps, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
         .is_err());
 }
+
+/// Reality Acid: when it leaves (here, bounced), the enchanted permanent's
+/// controller sacrifices it.
+#[test]
+fn reality_acid_takes_its_host_with_it() {
+    let mut g = pod(2);
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let acid = g.add_card_to_hand(0, catalog::reality_acid());
+    flood(&mut g);
+    cast(&mut g, acid, Some(Target::Permanent(theirs)));
+    assert_eq!(g.battlefield_find(acid).unwrap().attached_to, Some(theirs));
+    g.remove_from_battlefield_to_exile(acid);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
+/// Venser's +2 flickers a permanent you own back at the next end step.
+#[test]
+fn venser_flickers_your_permanent() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let venser = ready(&mut g, 0, catalog::venser_the_sojourner());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: venser, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None })
+        .expect("+2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    to_end_step(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
+}
