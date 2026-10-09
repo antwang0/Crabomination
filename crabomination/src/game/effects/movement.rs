@@ -2955,6 +2955,7 @@ impl GameState {
                 card.exiled_with = None;
                 card.controller = owner;
                 card.revert_transform(); // CR 712.4
+                card.forget_spell_choices(); // CR 400.7
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
             }

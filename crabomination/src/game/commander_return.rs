@@ -166,6 +166,7 @@ impl GameState {
         card.reveal();
         // CR 712.4 — front face up off the battlefield and the stack.
         card.revert_transform();
+        card.forget_spell_choices();
         self.players[owner].command.push(card);
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);
@@ -199,6 +200,7 @@ impl GameState {
         card.reveal();
         // CR 712.4 — front face up off the battlefield and the stack.
         card.revert_transform();
+        card.forget_spell_choices();
         self.players[owner].command.push(card);
         self.offboard_keyword_grants = true;
         self.note_commander_to_command_zone(id, owner);

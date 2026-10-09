@@ -11720,7 +11720,21 @@ impl CardInstance {
                 || self.kicked_options.contains(&GRANTED_OFFSPRING_OPTION))
     }
 
+    /// CR 400.7 — a spell's choices (kicked, how many times) and a may-play
+    /// permission name the old object; the card a zone change makes carries
+    /// neither. Guarded: a write unshares the CoW card.
+    pub fn forget_spell_choices(&mut self) {
+        if self.kicked || self.kick_count != 0 {
+            self.kicked = false;
+            self.kick_count = 0;
+        }
+        if self.may_play_until.is_some() {
+            self.may_play_until = None;
+        }
+    }
+
     pub fn leave_battlefield_state(&mut self) {
+        self.forget_spell_choices();
         if self.perm_power_bonus != 0 || self.perm_toughness_bonus != 0 {
             self.perm_power_bonus = 0;
             self.perm_toughness_bonus = 0;

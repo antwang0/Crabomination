@@ -9232,6 +9232,7 @@ impl GameState {
                 // 712.4 — front face up.
                 card.controller = owner;
                 card.revert_transform();
+                card.forget_spell_choices();
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
                 if self.players[owner].commanders.contains(&id) {

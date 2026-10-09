@@ -1856,7 +1856,10 @@ impl PlayerData {
         if self.library.is_empty() {
             return None;
         }
-        let card = self.library.remove(0);
+        let mut card = self.library.remove(0);
+        // CR 400.7 — a "play the top card" permission stamped on it ends as
+        // it is drawn (Reforge the Soul sat in hand with it).
+        card.forget_spell_choices();
         let id = card.id;
         self.hand.push(card);
         self.cards_drawn_this_turn = self.cards_drawn_this_turn.saturating_add(1);
@@ -1882,6 +1885,8 @@ impl PlayerData {
         // `Arc::make_mut` — so clearing an already-empty map deep-copies a
         // shared card, and most permanents die with no counters at all.
         card.drop_counters_for_zone_change(crate::card::Zone::Graveyard);
+        // CR 400.7 — nor a resolved spell's kicker (Into the Roil).
+        card.forget_spell_choices();
         // CR 400.7 / 607 — a link to the exile it once left is not this
         // object's (a card cast from exile kept it). Read first: the write
         // is a `make_mut`.

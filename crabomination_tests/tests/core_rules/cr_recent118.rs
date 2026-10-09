@@ -1298,3 +1298,54 @@ fn cr_122_2_a_graveyard_shuffled_into_a_library_sheds_kept_counters() {
     let c = g.players[1].library.iter().find(|c| c.id == sb).expect("in the library");
     assert!(c.counters.is_empty());
 }
+
+/// CR 400.7 — a kicked spell's card in the graveyard is a new object: back in
+/// hand and cast again without kicker, Into the Roil doesn't draw. The kicked
+/// flag used to ride into the graveyard and read as kicked on the recast (an
+/// audit-pod invariant found it on 60+ cards, seed 31731).
+#[test]
+fn cr_400_7_a_recast_card_is_not_kicked_by_its_last_cast() {
+    use crabomination::mana::Color;
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let roil = g.add_card_to_hand(0, catalog::into_the_roil());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: roil, target: Some(Target::Permanent(b1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    let pos = g.players[0].graveyard.iter().position(|c| c.id == roil).expect("in the graveyard");
+    assert!(!g.players[0].graveyard[pos].kicked, "the graveyard card is not kicked");
+    let card = g.players[0].graveyard.remove(pos);
+    g.players[0].hand.push(card);
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: roil, target: Some(Target::Permanent(b2)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("unkicked");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "no kicker draw");
+}
+
+/// CR 400.7 — a permission stamped on a library card ends when it is drawn.
+#[test]
+fn cr_400_7_a_drawn_card_loses_its_play_permission() {
+    let mut g = main_phase();
+    let top = g.add_card_to_library(0, catalog::island());
+    let perm = crabomination::card::MayPlayPermission {
+        cast_only: false, locks_further_casts: false, one_cast_group: None, player: 0, granted_turn: g.turn_number,
+        duration: crabomination::card::MayPlayDuration::EndOfThisTurn, exile_after: false, miracle: false,
+        pay_life: false, bottom_after: false, undaunted: false,
+    };
+    g.players[0].library.iter_mut().find(|c| c.id == top).unwrap().may_play_until = Some(perm);
+    g.draw_one(0, &mut Vec::new());
+    let c = g.players[0].hand.iter().find(|c| c.id == top).expect("drawn");
+    assert!(c.may_play_until.is_none());
+}
