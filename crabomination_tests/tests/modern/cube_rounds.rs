@@ -2225,37 +2225,43 @@ fn tishanas_tidebinder_etb_counters_target_ability() {
     )), "Scry-on-cast trigger should have been countered");
 }
 
-/// **The Tidebinder blanks what it hits, and only while it is out.**
+/// **The Tidebinder blanks what it countered, and only while it is out.**
 ///
-/// ⚠ "…that permanent loses all abilities for as long as this creature
-/// remains on the battlefield" was dropped, and it is the half that wins
-/// games: a countered permanent stays blank. The engine's `CounterAbility`
-/// targets the ability's *source*, so the strip lands on the target whether
-/// or not a trigger was there to counter — the approximation is in the
-/// card's comment.
+/// "…If an ability of an artifact, creature, or planeswalker is countered
+/// this way, that permanent loses all abilities for as long as this creature
+/// remains on the battlefield." Cloudkin Seer's ETB draw is countered and the
+/// Seer stops flying; it flies again once the Tidebinder leaves.
 #[test]
 fn tishanas_tidebinder_blanks_its_target_while_it_lives() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
-    let seer = g.add_card_to_battlefield(1, catalog::cloudkin_seer()); // 2/2 flier
-    assert!(
-        g.computed_permanent(seer).expect("seer").keywords().contains(&Keyword::Flying),
-        "a flier to start",
-    );
+    g.add_card_to_library(1, catalog::island());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let seer = g.add_card_to_hand(1, catalog::cloudkin_seer()); // 2/2 flier, ETB draw
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: seer, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the Seer");
+    // Both pass: the Seer resolves and its ETB trigger goes on the stack.
+    g.perform_action(GameAction::PassPriority).expect("p1 passes");
+    g.perform_action(GameAction::PassPriority).expect("p0 passes");
+    assert!(g.battlefield_find(seer).is_some(), "the Seer is in play");
+    let hand = g.players[1].hand.len();
 
     let tide = g.add_card_to_hand(0, catalog::tishanas_tidebinder());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
-        card_id: tide,
-        target: Some(Target::Permanent(seer)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
+        card_id: tide, target: Some(Target::Permanent(seer)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Tidebinder castable at instant speed (Flash)");
     drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand, "the draw was countered");
     assert!(
         !g.computed_permanent(seer).expect("seer").keywords().contains(&Keyword::Flying),
         "blanked while the Tidebinder is out",
@@ -2268,6 +2274,30 @@ fn tishanas_tidebinder_blanks_its_target_while_it_lives() {
     assert!(
         g.computed_permanent(seer).expect("seer").keywords().contains(&Keyword::Flying),
         "and it flies again once the Tidebinder is gone",
+    );
+}
+
+/// "Counter up to one target activated or triggered ability": with no
+/// ability on the stack the Tidebinder names nothing, so nothing is blanked
+/// (it used to strip any nonland permanent unconditionally).
+#[test]
+fn tishanas_tidebinder_blanks_nothing_without_an_ability_to_counter() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let seer = g.add_card_to_battlefield(1, catalog::cloudkin_seer());
+    let tide = g.add_card_to_hand(0, catalog::tishanas_tidebinder());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tide, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tidebinder castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tide).is_some());
+    assert!(
+        g.computed_permanent(seer).expect("seer").keywords().contains(&Keyword::Flying),
+        "no ability countered, so the Seer keeps flying",
     );
 }
 

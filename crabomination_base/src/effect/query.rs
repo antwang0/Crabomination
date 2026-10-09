@@ -2119,6 +2119,7 @@ impl Effect {
             | Effect::GainControlWhileMatches { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::CounterAbilityAndDestroySource { what }
+            | Effect::CounterAbilityAndStripSource { what }
             | Effect::WeldArtifacts { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
             | Effect::CreateTokenAttacking { who, count, .. }
@@ -2798,6 +2799,7 @@ impl Effect {
             | Effect::BecomeCopyOfExiledCard { what, .. }
             | Effect::ReturnSameNameFromAllGraveyards { what }
             | Effect::CounterAbilityAndDestroySource { what }
+            | Effect::CounterAbilityAndStripSource { what }
             | Effect::WeldArtifacts { what }
             | Effect::GainControlAndReattachAura { what } => sel_filter(what),
             Effect::LookExileAnyNumberRestBack { who, .. }
@@ -5339,6 +5341,7 @@ impl Effect {
                     | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }
                 | Effect::CounterAbilityAndDestroySource { what }
+                | Effect::CounterAbilityAndStripSource { what }
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),
                 Effect::RevealLibraryNamedCountPunish { who, .. }
                 | Effect::AlternatingExileFromHand { who } => sel_find(who, slot),

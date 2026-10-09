@@ -9708,6 +9708,12 @@ pub enum Effect {
     /// that artifact if it's on the battlefield" (Ouphe Vandals) — the
     /// `CounterAbility` sibling that also kills the source.
     CounterAbilityAndDestroySource { what: Selector },
+    /// "Counter up to one target activated or triggered ability. If an
+    /// ability of an artifact, creature, or planeswalker is countered this
+    /// way, that permanent loses all abilities for as long as this creature
+    /// remains on the battlefield" (Tishana's Tidebinder) — the
+    /// `CounterAbility` sibling that strips the source.
+    CounterAbilityAndStripSource { what: Selector },
     /// Counter target spell, activated ability, or triggered ability (Voidslime).
     /// The one selector may resolve to a stack spell (matched by card id) or an
     /// ability's source (matched like `CounterAbility`); whichever kind the

@@ -941,15 +941,12 @@ pub fn up_the_beanstalk() -> CardDefinition {
 }
 
 /// Tishana's Tidebinder — {2}{U}, 3/2 Merfolk Wizard with Flash. ETB:
-/// counter target activated or triggered ability of an artifact, creature,
-/// enchantment, or planeswalker (a "nonland permanent" — Battles aren't
-/// modeled).
-///
-/// Reuses `Effect::CounterAbility` (which Consign to Memory introduced),
-/// targeting any nonland permanent and removing the topmost
-/// `StackItem::Trigger` whose source matches. Auto-target picks the
-/// most-recent opponent permanent's pending trigger first (via the
-/// stack-aware fallback in `auto_target_for_effect`).
+/// counter up to one target activated or triggered ability; if an ability
+/// of an artifact, creature, or planeswalker is countered this way, that
+/// permanent loses all abilities for as long as this creature remains
+/// (`Effect::CounterAbilityAndStripSource`). It targeted any nonland
+/// permanent and stripped it unconditionally, even with nothing countered —
+/// its own side's included when the opponent had none.
 pub fn tishanas_tidebinder() -> CardDefinition {
     use crate::card::TriggeredAbility;
     use crate::effect::shortcut::target_filtered;
@@ -967,24 +964,13 @@ pub fn tishanas_tidebinder() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::CounterAbility {
-                    what: target_filtered(
-                        SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                    ),
-                },
-                // "…that permanent loses all abilities for as long as this
-                // creature remains on the battlefield." The rider was dropped
-                // and it is the half that wins games — a countered Sheoldred
-                // stays blanked. ⚠ The engine's `CounterAbility` targets the
-                // ability's *source*, so the strip lands unconditionally
-                // where the card says "if an ability … is countered this
-                // way"; the target filter is the same one either way.
-                Effect::LoseAllAbilities {
-                    what: Selector::Target(0),
-                    duration: crate::effect::Duration::WhileSourceOnBattlefield,
-                },
-            ]),
+            // "Up to one": no ability of an opponent's on the stack, no pick.
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::CounterAbilityAndStripSource {
+                    what: target_filtered(SelectionRequirement::HasAbilityOnStack),
+                }),
+            },
         }],
         ..Default::default()
     }

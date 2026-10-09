@@ -24297,6 +24297,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CounterAbilityAndStripSource { what } => {
+                // Tishana's Tidebinder — the source is read before the counter
+                // takes the ability away; only an artifact, creature, or
+                // planeswalker source loses its abilities, for as long as the
+                // Tidebinder (`ctx.source`) stays.
+                let sources: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id().and_then(|cid| self.stack_ability_source(cid)))
+                    .collect();
+                self.run_effect(&Effect::CounterAbility { what: what.clone() }, ctx, events)?;
+                for cid in sources {
+                    let strips = self.battlefield_find(cid).is_some_and(|c| {
+                        c.definition.is_artifact() || self.computed_is_creature(c) || c.definition.is_planeswalker()
+                    });
+                    if strips {
+                        let strip = Effect::LoseAllAbilities {
+                            what: Selector::ExactObjects(vec![cid]),
+                            duration: crate::effect::Duration::WhileSourceOnBattlefield,
+                        };
+                        self.run_effect(&strip, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CounterSpellOrAbility { what } => {
                 // Voidslime: the target is either a stack spell (matched by card
                 // id) or an ability (matched by its source). Try the spell first,
