@@ -34,20 +34,19 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-327 / 330 pod decks carry no residual (2026-10-09, fifteenth Commander run `01TW7nNh`). Mox Diamond
+328 / 330 pod decks carry no residual (2026-10-09, fifteenth Commander run `01TW7nNh`). Mox Diamond
 now pays its entry cost before it enters (`StaticEffect::EntersOnlyIfPaid`, CR 614.1c — six decks),
 Planetarium's once-a-turn use is spent by the cast, and a concurrent session fixed Giver of Runes and
-the may-discard choice. Left: Will of the Abzan's "any number of target opponents" (a `ChooseModesCast`
-mode with a variable slot count), the stand-in sticker collection, Kona's "you may". `--table` output
+the may-discard choice. Will of the Abzan names its target opponents (an earlier mode's unfilled
+optional slots are holes, CR 601.2c). Left: the stand-in sticker collection, Kona's "you may". `--table` output
 pasted as is:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
-| 149 | Felothar the Steadfast (WBG) | 1: will_of_the_abzan |
 | 204 | Etali, Primal Conqueror (GR) | 1: blank_goblin |
 | 327 | Kona, Rescue Beastie (G) | 1: kona_rescue_beastie |
 
-327 / 330 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+328 / 330 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
