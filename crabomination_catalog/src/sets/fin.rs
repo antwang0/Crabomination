@@ -3249,9 +3249,9 @@ pub fn clives_hideaway() -> CardDefinition {
     }
 }
 
-/// Starting Town — Land — Town. {T}: Add {C}. {T}, Pay 1 life: Add one mana of
-/// any color. (Approximation: the "enters tapped unless it's your first,
-/// second, or third turn" clause is modeled as always entering tapped.)
+/// Starting Town — Land — Town. Enters tapped unless it's your first, second,
+/// or third turn of the game. {T}: Add {C}. {T}, Pay 1 life: Add one mana of
+/// any color.
 pub fn starting_town() -> CardDefinition {
     use crate::card::{ActivatedAbility, LandType};
     CardDefinition {
@@ -3273,7 +3273,16 @@ pub fn starting_town() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        static_abilities: vec![enters_tapped()],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This land enters tapped unless it's your first, second, or third turn of the game.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: crate::effect::Selector::This,
+                condition: crate::effect::Predicate::All(vec![
+                    crate::effect::Predicate::IsTurnOf(PlayerRef::You),
+                    crate::effect::Predicate::ValueAtMost(Value::TurnsBegunBy(PlayerRef::You), Value::Const(3)),
+                ]),
+            },
+        }],
         ..Default::default()
     }
 }

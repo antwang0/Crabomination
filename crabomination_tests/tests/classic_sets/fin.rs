@@ -5707,3 +5707,19 @@ fn clouds_limit_break_cross_slash_kills_one_tapped_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "the tapped creature died");
 }
+
+/// Starting Town enters untapped on your first three turns, tapped after.
+#[test]
+fn starting_town_untapped_only_early() {
+    for (begun, tapped) in [(0u32, false), (2, false), (3, true)] {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.starting_player = 0;
+        g.players[0].turns_begun = begun;
+        g.step = crabomination::game::types::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let town = g.add_card_to_hand(0, catalog::starting_town());
+        g.perform_action(GameAction::PlayLand(town)).expect("play");
+        assert_eq!(g.battlefield_find(town).unwrap().tapped, tapped, "turn {}", begun + 1);
+    }
+}
