@@ -7167,3 +7167,248 @@ pub fn mishra_lost_to_phyrexia() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Great Hall of the Citadel — Land. {T}: Add {C}. {1}, {T}: Add two mana in
+/// any combination of colors; spend this mana only to cast legendary spells.
+pub fn great_hall_of_the_citadel() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    use crate::mana::SpendRestriction;
+    CardDefinition {
+        name: "Great Hall of the Citadel",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyColors(Value::Const(2))),
+                        SpendRestriction::LegendarySpell,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Hajar, Loyal Bodyguard — {R}{G} Legendary 3/3 Human Soldier. Sacrifice
+/// Hajar: legendary creatures you control get +1/+0 and gain indestructible
+/// until end of turn.
+pub fn hajar_loyal_bodyguard() -> CardDefinition {
+    // CR 611.2c — the set is locked in as the ability resolves; Hajar is
+    // already gone (sacrificed as a cost), so it never pumps itself.
+    let legends = || Selector::EachPermanent(R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou));
+    CardDefinition {
+        name: "Hajar, Loyal Bodyguard",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: legends(), power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: legends(), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kethis, the Hidden Hand — {W}{B}{G} Legendary 3/4 Elf Advisor. Legendary
+/// spells you cast cost {1} less. Exile two legendary cards from your
+/// graveyard: until end of turn, each legendary card in your graveyard gains
+/// "You may play this card from your graveyard."
+pub fn kethis_the_hidden_hand() -> CardDefinition {
+    use crate::card::{MayPlayDuration, StaticAbility};
+    use crate::effect::{StaticEffect, ZoneRef};
+    let legendary = || R::HasSupertype(Supertype::Legendary);
+    CardDefinition {
+        name: "Kethis, the Hidden Hand",
+        cost: cost(&[w(), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elf, CreatureType::Advisor]),
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Legendary spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: legendary(), amount: 1 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            exile_other_filter: Some((legendary(), 2)),
+            // CR 611.2c — "each legendary card in your graveyard" is the set
+            // there as it resolves; a card put there later gains nothing. A
+            // stamped permission per card is exactly that, paid at its own
+            // cost; a land rides the graveyard land-play gate.
+            effect: Effect::GrantMayPlay {
+                what: Selector::EachMatching { zone: ZoneRef::Graveyard(PlayerRef::You), filter: legendary() },
+                duration: MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Yoshimaru, Ever Faithful — {W} Legendary 1/1 Dog with partner. Whenever
+/// another legendary permanent you control enters, put a +1/+1 counter on it.
+pub fn yoshimaru_ever_faithful() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Yoshimaru, Ever Faithful",
+        cost: cost(&[w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Dog]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Partner],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasSupertype(Supertype::Legendary) },
+            ),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Shire — Legendary Land. Enters tapped unless you control a legendary
+/// creature. {T}: Add {G}. {1}{G}, {T}, Tap an untapped creature you control:
+/// Create a Food token.
+pub fn the_shire() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "The Shire",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "The Shire enters tapped unless you control a legendary creature.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou),
+                )),
+            },
+        }],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Green),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1), g()]),
+                tap_others_cost: Some((R::Creature.and(R::ControlledByYou), 1)),
+                effect: mint(crabomination_base::tokens::food_token(), Value::ONE),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Elanor Gardner — {3}{G} Legendary 2/4 Halfling Scout. When she enters,
+/// create a Food. At the beginning of your end step, if you sacrificed a Food
+/// this turn, you may search for a basic land card and put it onto the
+/// battlefield tapped.
+pub fn elanor_gardner() -> CardDefinition {
+    let sacrificed_food = || Predicate::SacrificedFoodThisTurn { who: PlayerRef::You };
+    CardDefinition {
+        name: "Elanor Gardner",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Halfling, CreatureType::Scout]),
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(mint(crabomination_base::tokens::food_token(), Value::ONE)),
+            TriggeredAbility {
+                // CR 603.4 — checked as it triggers and again as it resolves.
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                    .with_filter(sacrificed_food()),
+                effect: Effect::If {
+                    cond: sacrificed_food(),
+                    then: Box::new(Effect::MayDo {
+                        description: "Search for a basic land and put it onto the battlefield tapped?".into(),
+                        body: Box::new(Effect::Search {
+                            who: PlayerRef::You,
+                            filter: R::IsBasicLand,
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Viridian Revel — {1}{G}{G} Enchantment. Whenever an artifact is put into an
+/// opponent's graveyard from the battlefield, you may draw a card.
+pub fn viridian_revel() -> CardDefinition {
+    CardDefinition {
+        name: "Viridian Revel",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            // "An opponent's graveyard" is its owner's (CR 404.2), so the
+            // filter reads ownership, not who controlled it.
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Artifact.and(R::OwnedByYou.negate()),
+            }),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fade from History — {2}{G}{G} Sorcery. Each player who controls an artifact
+/// or enchantment creates a 2/2 green Bear. Then destroy all artifacts and
+/// enchantments.
+pub fn fade_from_history() -> CardDefinition {
+    let bear = TokenDefinition {
+        name: "Bear".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: creature_types(vec![CreatureType::Bear]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Fade from History",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::EachPlayerDoes {
+                who: PlayerRef::EachPlayer,
+                body: Box::new(Effect::If {
+                    cond: Predicate::SelectorExists(Selector::EachPermanent(
+                        R::Artifact.or(R::Enchantment).and(R::ControlledByYou),
+                    )),
+                    then: Box::new(mint(bear, Value::ONE)),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+            Effect::Destroy { what: Selector::EachPermanent(R::Artifact.or(R::Enchantment)) },
+        ]),
+        ..Default::default()
+    }
+}

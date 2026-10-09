@@ -3590,3 +3590,104 @@ fn mishra_melds_mid_attack() {
     assert!(g.attacking.iter().any(|a| a.attacker == lost), "attacking");
     assert!(g.players[1].life <= life - 2, "drained for two attackers");
 }
+
+/// Jodah, the Unifier's legends kit: Great Hall's two restricted mana pay for
+/// a legendary spell only; Kethis's graveyard grant recasts a legend; Yoshimaru grows when another legend enters; Hajar's
+/// sacrifice makes the legends indestructible.
+#[test]
+fn jodah_legends_kit() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let hall = ready(&mut g, 0, catalog::great_hall_of_the_citadel());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: hall, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("hall");
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err(),
+        "the Hall's mana can't cast a nonlegendary spell"
+    );
+    let yoshimaru = ready(&mut g, 0, catalog::yoshimaru_ever_faithful());
+    ready(&mut g, 0, catalog::kethis_the_hidden_hand());
+    flood(&mut g);
+    let hajar = g.add_card_to_hand(0, catalog::hajar_loyal_bodyguard());
+    cast(&mut g, hajar, None);
+    assert_eq!(named(&g, "Hajar, Loyal Bodyguard"), 1, "cast");
+    assert_eq!(g.battlefield_find(yoshimaru).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    activate(&mut g, hajar, None);
+    assert!(g.computed_permanent(yoshimaru).unwrap().keywords().contains(&Keyword::Indestructible));
+    assert_eq!(g.computed_permanent(yoshimaru).unwrap().power, 3, "1/1 + counter + Hajar's +1/+0");
+    // Hajar is in the graveyard beside two cheaper legends: Kethis exiles those
+    // two and Hajar may be cast from there.
+    g.add_card_to_graveyard(0, catalog::yoshimaru_ever_faithful());
+    g.add_card_to_graveyard(0, catalog::yoshimaru_ever_faithful());
+    let kethis = g.battlefield.iter().find(|c| c.definition.name == "Kethis, the Hidden Hand").map(|c| c.id).unwrap();
+    activate(&mut g, kethis, None);
+    assert!(g.players[0].graveyard.iter().all(|c| c.definition.name != "Yoshimaru, Ever Faithful"), "two legends exiled");
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: hajar, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Hajar from the graveyard");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Hajar, Loyal Bodyguard"), 1);
+    // A legendary land is played from there, as the land drop. (It joins the
+    // graveyard after the cost is paid, so the cheapest-first pick can't
+    // exile it.)
+    g.add_card_to_graveyard(0, catalog::yoshimaru_ever_faithful());
+    g.add_card_to_graveyard(0, catalog::yoshimaru_ever_faithful());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: kethis, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("Kethis");
+    let shire = g.add_card_to_graveyard(0, catalog::the_shire());
+    drain_stack(&mut g);
+    g.players[0].lands_played_this_turn = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLandFromGraveyard(shire)).expect("The Shire from the graveyard");
+    assert_eq!(named(&g, "The Shire"), 1);
+    assert_eq!(g.players[0].lands_played_this_turn, 1);
+}
+
+/// Ygra's Food kit: The Shire taps a creature for a Food; Elanor's Food,
+/// sacrificed, fetches a tapped basic at the end step; Viridian Revel draws
+/// off an opponent's dying artifact; Fade from History gives a Bear only to
+/// players with an artifact or enchantment, then sweeps them.
+#[test]
+fn ygra_food_kit() {
+    let mut g = pod(3);
+    flood(&mut g);
+    let shire = ready(&mut g, 0, catalog::the_shire());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: shire, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("shire");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "tapped a creature for the cost");
+    assert_eq!(named(&g, "Food"), 1);
+    let elanor = g.add_card_to_hand(0, catalog::elanor_gardner());
+    cast(&mut g, elanor, None);
+    assert_eq!(named(&g, "Food"), 2);
+    g.add_card_to_library(0, catalog::forest());
+    let food = g.battlefield.iter().find(|c| c.definition.name == "Food").map(|c| c.id).unwrap();
+    activate(&mut g, food, None);
+    let forests = named(&g, "Forest");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    to_end_step(&mut g);
+    assert_eq!(named(&g, "Forest"), forests + 1, "fetched a basic");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest" && c.tapped));
+
+    let mut g = pod(3);
+    flood(&mut g);
+    ready(&mut g, 0, catalog::viridian_revel());
+    ready(&mut g, 1, catalog::sol_ring());
+    ready(&mut g, 2, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let fade = g.add_card_to_hand(0, catalog::fade_from_history());
+    cast(&mut g, fade, None);
+    assert_eq!(named(&g, "Sol Ring") + named(&g, "Viridian Revel"), 0, "artifacts and enchantments destroyed");
+    let bears_of = |g: &GameState, p: usize| g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Bear").count();
+    assert_eq!((bears_of(&g, 0), bears_of(&g, 1), bears_of(&g, 2)), (1, 1, 0));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the Revel saw the opponent's Sol Ring die");
+}
