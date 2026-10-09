@@ -9238,3 +9238,31 @@ pub const BRENARD_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, island, island, island, island, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const HAZEZON_COMMANDERS: &[CardFactory] = &[hazezon_shaper_of_sand];
+
+/// **Hazezon, Shaper of Sand**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 90 nonbasic cards + 5 Forests + 2 Mountains + 2 Plains = 99.
+/// Deserts and Sand Warriors
+pub const HAZEZON_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, exploration_broodship, skullclamp, sol_ring, zuran_orb,
+    abraded_bluffs, arid_archway, bristling_backwoods, cactus_preserve, command_tower,
+    conduit_pylons, cradle_of_the_accursed, creosote_heath, desert, desert_of_the_fervent,
+    desert_of_the_indomitable, desert_of_the_true, dunes_of_the_dead, endless_sands,
+    field_of_the_dead, grasping_dunes, hashep_oasis, hostile_desert, jetmirs_garden, jungle_shrine,
+    lazotep_quarry, mirage_mesa, painted_bluffs, ramunap_ruins, sandstorm_verge, scavenger_grounds,
+    shefet_dunes, stomping_ground, sunscorched_desert, survivors_encampment, ancient_greenwarden,
+    azusa_lost_but_seeking, baylen_the_haymaker, colossal_rattlewurm, dryad_of_the_ilysian_grove,
+    dune_chanter, elvish_reclaimer, icetill_explorer, jetmir_nexus_of_revels, knight_of_new_alara,
+    lotus_cobra, maja_bretagard_protector, mina_and_denn_wildborn, oracle_of_mul_daya,
+    outcaster_greenblade, ramunap_excavator, rumor_gatherer, sand_scout, scute_swarm,
+    sprouting_goblin, sylvan_safekeeper, tannuk_memorial_ensign, tireless_provisioner,
+    titania_protector_of_argoth, yuma_proud_protector, annie_joins_up, aura_shards, desert_warfare,
+    druid_class, exploration, felidar_retreat, impact_tremors, parallel_lives, spelunking,
+    warleaders_call, beast_within, crop_rotation, generous_gift, harrow, heroic_intervention,
+    path_to_exile, realms_uncharted, swords_to_plowshares, cataclysmic_prospecting,
+    dance_of_the_tumbleweeds, explore, farseek, hour_of_promise, magmatic_insight,
+    map_the_frontier, nahiris_lithoforming, scapeshift, shamanic_revelation, splendid_reclamation,
+    // Basics
+    forest, forest, forest, forest, forest, mountain, mountain, plains, plains,
+];

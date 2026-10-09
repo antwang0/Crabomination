@@ -2313,6 +2313,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRENARD_COMMANDERS,
             main: decks::BRENARD_MAIN,
         },
+        // Seat 316: Hazezon, Shaper of Sand's EDHREC average deck. `--pod-decks 316`.
+        PodDeck {
+            name: "Hazezon, Shaper of Sand (GRW)",
+            commanders: decks::HAZEZON_COMMANDERS,
+            main: decks::HAZEZON_MAIN,
+        },
     ]
 }
 
@@ -4272,6 +4278,7 @@ mod tests {
             ("Vihaan, Goldwaker", [0x71AA, 313, 9238]),
             ("Tayam, Luminous Enigma", [0x7A4A, 314, 9239]),
             ("Brenard, Ginger Sculptor", [0xB2E9, 315, 9240]),
+            ("Hazezon, Shaper of Sand", [0x4A2E, 316, 9241]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
