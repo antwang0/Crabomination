@@ -1372,6 +1372,10 @@ pub enum Value {
     /// enters-with rider): the `CardData::cast_artifact_mana` stamp, so 0 for
     /// a permanent that wasn't cast.
     ArtifactManaSpentToCastSource,
+    /// Mana from creatures spent to cast the trigger source — the spell a
+    /// "whenever you cast" trigger saw (Inga and Esika's "three or more mana
+    /// from creatures").
+    CreatureManaSpentToCastTriggerSource,
     /// Mana from Deserts spent to cast the source spell (Cataclysmic
     /// Prospecting): the `CardData::cast_desert_mana` stamp.
     DesertManaSpentToCastSource,

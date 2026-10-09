@@ -699,6 +699,10 @@ pub enum SpendRestriction {
     LandAbilitiesOnly,
     /// "Spend this mana only to cast a creature spell." (Ancient Ziggurat.)
     CreatureOnly,
+    /// `CreatureOnly` made by a creature (Inga and Esika's granted ability):
+    /// restricted mana skips the pool's creature provenance, so a payment's
+    /// spent count of this one is added to the creature-mana tally instead.
+    CreatureOnlyFromCreature,
     /// "Spend this mana only to cast creature spells or activate abilities
     /// of creatures." (Castle Garenbrig.)
     CreatureSpellsOrAbilities,
@@ -886,7 +890,7 @@ impl SpendRestriction {
                 "only instants, sorceries and spells of the listed creature types"
             }
             SpendRestriction::LandAbilitiesOnly => "only abilities of lands",
-            SpendRestriction::CreatureOnly => "only creature spells",
+            SpendRestriction::CreatureOnly | SpendRestriction::CreatureOnlyFromCreature => "only creature spells",
             SpendRestriction::CreatureSpellsOrAbilities => "only creatures and their abilities",
             SpendRestriction::NoNonartifactSpells => "not on nonartifact spells",
             SpendRestriction::AbilitiesOnly => "only activated abilities",
@@ -1001,7 +1005,7 @@ impl SpendRestriction {
                         || kind.changeling
                         || ts.iter().any(|t| kind.creature_types.contains(t)))
             }
-            SpendRestriction::CreatureOnly => kind.creature,
+            SpendRestriction::CreatureOnly | SpendRestriction::CreatureOnlyFromCreature => kind.creature,
             SpendRestriction::NoncreatureSpellsOnly => {
                 !kind.creature && !kind.activating_ability
             }
@@ -1491,6 +1495,22 @@ impl ManaPool {
             };
             let n = before.artifact[i].min(was.saturating_sub(now));
             self.artifact[i] = self.artifact[i].min(before.artifact[i] - n);
+            spent += n;
+        }
+        spent
+    }
+
+    /// Creature mana `self` spent since `before` — `settle_artifact_spent`
+    /// over the `creature` provenance (Inga and Esika).
+    pub fn settle_creature_spent(&mut self, before: &ManaPool) -> u32 {
+        let mut spent = 0;
+        for i in 0..6 {
+            let (was, now) = match i {
+                5 => (before.colorless, self.colorless),
+                _ => (*before.slot(Color::ALL[i]), *self.slot(Color::ALL[i])),
+            };
+            let n = before.creature[i].min(was.saturating_sub(now));
+            self.creature[i] = self.creature[i].min(before.creature[i] - n);
             spent += n;
         }
         spent

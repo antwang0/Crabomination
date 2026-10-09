@@ -656,7 +656,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 InstantSorceryOnly | InstantSorceryOrClassLevel | ArtifactOnly | CreatureOfTypeUncounterable(_)
                 | CreatureOfType(_) | CreatureSpellOfType(_) | CreatureOfTypeOrItsAbility(_)
                 | CreatureOfAnyTypes(_) | InstantSorceryOrTypes(_)
-                | LandAbilitiesOnly | CreatureOnly
+                | LandAbilitiesOnly | CreatureOnly | CreatureOnlyFromCreature
                 | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | ForetellOnly | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
@@ -669,7 +669,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy
-                | AuraOrEquipmentSpells | MountOrVehicleSpells | CreatureCastCounter
+                | AuraOrEquipmentSpells | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
                 | SpellsOnly | TypeSpellOrItsAbility(_) => {}
             }
@@ -693,6 +693,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             InstantSorceryOrTypes([CreatureType::Demon, CreatureType::Spirit]),
             LandAbilitiesOnly,
             CreatureOnly,
+            CreatureOnlyFromCreature,
             CreatureSpellsOrAbilities,
             NoNonartifactSpells,
             AbilitiesOnly,
@@ -702,6 +703,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             InstantSorceryUncounterable,
             EquipmentOnly,
             AuraOrEquipmentSpells,
+            PilotOrVehicleSpells,
             MountOrVehicleSpells,
             CreatureCastCounter,
             CreatureOfEitherTypeOrItsAbility(CreatureType::Bear, CreatureType::Elf),

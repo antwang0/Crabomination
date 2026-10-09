@@ -1625,6 +1625,12 @@ impl GameState {
                 let n = self.find_card_anywhere(id).map(|c| c.cast_desert_mana);
                 i32::from(n.or_else(|| self.resolving_spell(id).map(|s| s.cast_desert_mana)).unwrap_or(0))
             }),
+            Value::CreatureManaSpentToCastTriggerSource => match ctx.trigger_source {
+                Some(EntityRef::Card(id) | EntityRef::Permanent(id)) => {
+                    self.find_card_anywhere(id).map_or(0, |c| i32::from(c.cast_creature_mana))
+                }
+                _ => 0,
+            },
             Value::ArtifactManaSpentToCastSource => ctx
                 .source
                 .and_then(|id| self.find_card_anywhere(id))

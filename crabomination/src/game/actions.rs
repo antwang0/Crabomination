@@ -3742,6 +3742,12 @@ impl crate::game::GameState {
         if spent > 0 {
             self.players[p].cast_paid_artifact_mana = spent;
         }
+        // Inga and Esika — how much creature mana this payment spent.
+        let spent = self.players[p].mana_pool.settle_creature_spent(&receipt.pool_before)
+            + receipt.side_effects.spent_count(SpendRestriction::CreatureOnlyFromCreature);
+        if spent > 0 {
+            self.players[p].cast_paid_creature_mana = spent;
+        }
         let spent = receipt.pool_before.desert_amount().saturating_sub(self.players[p].mana_pool.desert_amount());
         if spent > 0 {
             self.players[p].cast_paid_desert_mana = spent;
@@ -12390,6 +12396,9 @@ impl GameState {
         }
         if self.players[p].cast_paid_desert_mana > 0 {
             card.cast_desert_mana = std::mem::take(&mut self.players[p].cast_paid_desert_mana).min(255) as u8;
+        }
+        if self.players[p].cast_paid_creature_mana > 0 {
+            card.cast_creature_mana = std::mem::take(&mut self.players[p].cast_paid_creature_mana).min(255) as u8;
         }
 
         let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();

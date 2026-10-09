@@ -9666,6 +9666,10 @@ pub struct CardData {
     /// `Value::DesertManaSpentToCastSource` (Cataclysmic Prospecting). Not
     /// serialized.
     pub cast_desert_mana: u8,
+    /// Mana from creatures spent to cast this spell, capped at 255. Read by
+    /// `Value::CreatureManaSpentToCastTriggerSource` (Inga and Esika). Not
+    /// serialized.
+    pub cast_creature_mana: u8,
     /// The source whose `PutFromHandOntoBattlefield` put this permanent onto
     /// the battlefield; cleared as it leaves (CR 400.7). Read by
     /// `SelectionRequirement::PutOntoBattlefieldBySource`. Not serialized.
@@ -10689,6 +10693,7 @@ impl CardInstance {
             cast_with_treasure_mana: false,
             cast_artifact_mana: 0,
             cast_desert_mana: 0,
+            cast_creature_mana: 0,
             put_onto_battlefield_by: None,
             cast_via_mayhem: false,
             cast_via_madness: false,

@@ -205,6 +205,10 @@ pub struct PlayerCold {
     /// same way.
     #[serde(skip)]
     pub cast_paid_artifact_mana: u32,
+    /// Transient: the creature-produced twin of `cast_paid_artifact_mana`,
+    /// consumed into `CardData::cast_creature_mana`.
+    #[serde(skip)]
+    pub cast_paid_creature_mana: u32,
     /// Transient: the Desert-produced twin of `cast_paid_artifact_mana`,
     /// consumed into `CardData::cast_desert_mana`.
     #[serde(skip)]
