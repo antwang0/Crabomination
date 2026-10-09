@@ -3343,7 +3343,7 @@ fn play_pod_game(
         // audit pod, seed 3195569 game 17).
         #[cfg(debug_assertions)]
         if !g.is_game_over()
-            && !(g.pending_decision.is_some() && g.players.iter().any(|p| p.eliminated && !p.left_game))
+            && (g.pending_decision.is_none() || !g.players.iter().any(|p| p.eliminated && !p.left_game))
         {
             let gone = |p: usize| g.players.get(p).is_none_or(|pl| !pl.is_alive());
             if let Some(c) = g.battlefield.iter().find(|c| gone(c.owner) || gone(c.controller)) {
