@@ -167,6 +167,10 @@ returns now skip a departed owner's card).
 
 A fourth, fuzzed, on the fixed tree (seed 31517): 6,660 games, **0 panics**,
 3 undecided (one CR 104.4 draw, two Secret Arcade caps).
+A fifth, fuzzed, after the census fixes (seed 31623): 6,660 games, **0 panics,
+0 caps**, 5 CR 104.4 draws. Two-player pools on the same audit build: cube /
+sos / sealed × seeds 7101-7103 (7103 under `CRAB_LADDER_FUZZ=2500`, strict) —
+12,500 games, 0 undecided, 0 panics.
 
 Open, not defects: **Gremlin Tamer + Secret Arcade** (seat 271, Marina
 Vendrell) is a real unbounded mandatory loop — every Gremlin is an
