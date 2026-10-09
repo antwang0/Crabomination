@@ -573,21 +573,23 @@ pub fn walking_bulwark() -> CardDefinition {
 
 /// Will of the Abzan — any number of target opponents each sacrifice their
 /// greatest-power creature and lose 3, or reanimate a creature card from your
-/// graveyard; both with a commander. ("Any number of target opponents" is
-/// modeled as each opponent: a `ChooseModesCast` mode can't yet own a
-/// variable number of target slots.)
+/// graveyard; both with a commander. The first mode owns seven optional
+/// opponent slots (an eight-seat pod's most); unnamed ones are holes.
 pub fn will_of_the_abzan() -> CardDefinition {
     let modes = || {
         vec![
-            Effect::ForEachOpponent {
-                body: Box::new(Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 7,
+                min_targets: 0,
+                filter: R::OpponentPlayer,
+                effect: Box::new(Effect::Seq(vec![
                     Effect::SacrificeGreatestMV {
-                        who: Selector::Player(PlayerRef::Triggerer),
+                        who: Selector::Target(0),
                         count: Value::ONE,
                         filter: R::Creature,
                         by_power: true,
                     },
-                    Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(3) },
+                    Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(3) },
                 ])),
             },
             Effect::Move {

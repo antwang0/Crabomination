@@ -424,20 +424,55 @@ fn walking_bulwark_unleashes_a_wall() {
     assert_eq!(g.players[1].life, 7);
 }
 
-/// Will of the Abzan — each opponent sacrifices their biggest and loses 3.
+/// Will of the Abzan — "any number of target opponents": only the named
+/// opponents sacrifice their biggest and lose 3 (CR 115.1, 601.2c).
 #[test]
-fn will_of_the_abzan_punishes() {
-    let mut g = pod(2);
+fn will_of_the_abzan_punishes_only_the_named_opponents() {
+    let mut g = pod(4);
     let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
     let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spared = g.add_card_to_battlefield(2, catalog::hill_giant());
+    let third = g.add_card_to_battlefield(3, catalog::hill_giant());
     let w = g.add_card_to_hand(0, catalog::will_of_the_abzan());
     flood(&mut g, 0);
-    g.perform_action(GameAction::CastSpell { card_id: w, target: None, additional_targets: vec![], mode: Some(0), x_value: None })
-        .expect("will");
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.perform_action(GameAction::CastSpell {
+        card_id: w, target: Some(Target::Player(1)), additional_targets: vec![Target::Player(3)], mode: Some(0), x_value: None,
+    })
+    .expect("will");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(giant).is_none());
-    assert!(g.battlefield_find(bears).is_some());
-    assert_eq!(g.players[1].life, 17);
+    assert!(g.battlefield_find(giant).is_none() && g.battlefield_find(bears).is_some(), "seat 1 lost its biggest");
+    assert!(g.battlefield_find(third).is_none(), "seat 3 too");
+    assert!(g.battlefield_find(spared).is_some(), "seat 2 wasn't targeted");
+    assert_eq!(
+        (g.players[1].life, g.players[2].life, g.players[3].life),
+        (life[1] - 3, life[2], life[3] - 3),
+    );
+}
+
+/// With a commander both modes: the punish mode's unnamed slots are holes, so
+/// the reanimate mode's target sits after all seven (CR 700.2, 601.2c).
+#[test]
+fn will_of_the_abzan_chooses_both_with_a_commander() {
+    use crabomination::game::target_hole::TARGET_HOLE;
+    let mut g = pod(3);
+    let cmd = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].commanders.push(cmd);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let dead = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let w = g.add_card_to_hand(0, catalog::will_of_the_abzan());
+    flood(&mut g, 0);
+    let life2 = g.players[2].life;
+    let mut extra = vec![TARGET_HOLE; 6];
+    extra.push(Target::Permanent(dead));
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: w, spree_modes: vec![0, 1], target: Some(Target::Player(1)), additional_targets: extra, x_value: None,
+    })
+    .expect("both modes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "the named opponent sacrificed");
+    assert!(g.battlefield_find(dead).is_some(), "and the Angel came back");
+    assert_eq!(g.players[2].life, life2, "the unnamed opponent was untouched");
 }
 
 /// Arbor Adherent — X mana from the greatest toughness.
