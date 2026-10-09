@@ -5875,6 +5875,11 @@ pub enum Effect {
     /// each friend runs `friend` and each foe runs `foe`, as that player
     /// (`EachPlayerDoes`). Untargeted.
     FriendOrFoe { friend: Box<Effect>, foe: Box<Effect> },
+    /// "Choose a player. They [first]. Choose a second player to [second].
+    /// Then choose a third player to [third]." (Gluntch, the Bestower): the
+    /// controller names a different living player per body, then each body
+    /// runs as its player (`EachPlayerDoes`). Untargeted (CR 115.10).
+    ChooseDistinctPlayers(Vec<Effect>),
     /// CR 701.38 secret council where any player (yourself included) may get
     /// votes and the count matters (Círdan the Shipwright): `per_vote` runs
     /// once per vote a player received, then `unvoted` once for each player

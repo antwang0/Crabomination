@@ -326,6 +326,54 @@ impl GameState {
         }
     }
 
+    /// `Effect::ChooseDistinctPlayers` — the controller names a different
+    /// living player for each body, in order, then each body runs as its
+    /// player (`EachPlayerDoes`). A body left without a player to name does
+    /// nothing. Headless: the first body is the controller's own, the rest
+    /// go where a gift helps least (`gift_ballot`).
+    pub(super) fn choose_distinct_players(
+        &mut self,
+        bodies: &[Effect],
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use crate::effect::PlayerRef;
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let gifts = self.gift_ballot(me);
+        let mut left: Vec<usize> = std::iter::once(me)
+            .chain(gifts)
+            .chain(self.seats_in_turn_order_from(me))
+            .filter(|&q| self.players[q].is_alive())
+            .fold(Vec::new(), |mut v, q| {
+                if !v.contains(&q) {
+                    v.push(q);
+                }
+                v
+            });
+        let mut cursor = 0usize;
+        let mut runs = Vec::with_capacity(bodies.len());
+        for (k, body) in bodies.iter().enumerate() {
+            if left.is_empty() {
+                break;
+            }
+            if k > 0 && left[0] == me && left.len() > 1 {
+                left.rotate_left(1);
+            }
+            let labels: Vec<String> =
+                left.iter().map(|&q| if q == me { "You".to_string() } else { format!("Player {}", q + 1) }).collect();
+            let prompt = format!("Choose a player ({} of {})", k + 1, bodies.len());
+            let Some(i) = self.ask_seat_option(&mut cursor, me, prompt, source, labels, effect) else {
+                return Ok(());
+            };
+            let q = left.remove(i.min(left.len() - 1));
+            runs.push(Effect::EachPlayerDoes { who: PlayerRef::Seat(q), body: Box::new(body.clone()) });
+        }
+        self.clear_answer_log();
+        self.run_effect(&Effect::seq(runs), ctx, events)
+    }
+
     /// `Effect::CantBeBlockedByPlayer` (CR 509.1b): the picked permanents
     /// can't be blocked by creatures those players control — one seat, or a
     /// set ("creatures your opponents control": `EachOpponent`, so a

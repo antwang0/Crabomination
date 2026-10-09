@@ -378,6 +378,7 @@ impl Effect {
             | Effect::SlotGroups(v)
             | Effect::ChooseMode(v)
             | Effect::ChooseModeAtRandom(v)
+            | Effect::ChooseDistinctPlayers(v)
             | Effect::AsEntersChooseMode(v) => {
                 for e in v {
                     f(e);
@@ -1204,6 +1205,7 @@ impl Effect {
                 on_opponent.requires_target() || on_you.requires_target()
             }
             Effect::FriendOrFoe { friend, foe } => friend.requires_target() || foe.requires_target(),
+            Effect::ChooseDistinctPlayers(v) => v.iter().any(|e| e.requires_target()),
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames
             | Effect::ReturnAllMatchingFromGraveyardToBattlefield { .. } => false,

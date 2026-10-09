@@ -37139,6 +37139,7 @@ impl GameState {
 
             Effect::FriendOrFoe { friend, foe } => self.friend_or_foe(friend, foe, effect, ctx, events),
 
+            Effect::ChooseDistinctPlayers(bodies) => self.choose_distinct_players(bodies, effect, ctx, events),
             Effect::EachOpponentChooses { prompt, options } => {
                 self.each_opponent_chooses(prompt, options, effect, ctx, events)
             }
