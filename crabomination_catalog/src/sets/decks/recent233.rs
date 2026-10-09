@@ -45,15 +45,16 @@ pub fn metamorphic_blast() -> CardDefinition {
     }
 }
 
-/// Return the Favor — {R}{R} Instant. Spree: +{1} copy target instant or sorcery
-/// spell (you may choose new targets); +{1} change the target of target spell or
-/// ability with a single target. (The "activated/triggered ability" copy target
-/// is approximated to instant/sorcery spells.)
+/// Return the Favor — {R}{R} Instant. Spree: +{1} copy target instant spell,
+/// sorcery spell, activated ability, or triggered ability (you may choose new
+/// targets); +{1} change the target of target spell or ability with a single
+/// target.
 pub fn return_the_favor() -> CardDefinition {
-    let a_spell = || {
+    let spell_or_ability = || {
         target_filtered(
             R::IsSpellOnStack
-                .and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                .and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))
+                .or(R::HasAbilityOnStack),
         )
     };
     CardDefinition {
@@ -63,9 +64,10 @@ pub fn return_the_favor() -> CardDefinition {
         effect: spree(vec![
             mode(
                 cost(&[generic(1)]),
-                Effect::CopySpellMayChooseTargets {
-                    what: a_spell(),
-                    count: Value::Const(1),
+                Effect::If {
+                    cond: crate::effect::Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsSpellOnStack },
+                    then: Box::new(Effect::CopySpellMayChooseTargets { what: spell_or_ability(), count: Value::Const(1) }),
+                    else_: Box::new(Effect::CopyAbility { what: Selector::Target(0), times: Value::Const(1) }),
                 },
             ),
             mode(

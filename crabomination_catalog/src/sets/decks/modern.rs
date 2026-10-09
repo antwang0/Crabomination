@@ -26391,7 +26391,7 @@ pub fn the_endstone() -> CardDefinition {
 
 /// Mightform Harmonizer — {2}{G}{G} 4/4. Landfall — whenever a land you
 /// control enters, double the power of target creature you control until end
-/// of turn. (Warp is dropped — no warp alt-cast primitive.)
+/// of turn. Warp {2}{G}.
 pub fn mightform_harmonizer() -> CardDefinition {
     CardDefinition {
         name: "Mightform Harmonizer",

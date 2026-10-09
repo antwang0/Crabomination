@@ -1139,6 +1139,31 @@ mod recent233 {
         g.resolve_effect(&modes[0].effect, &ctx).unwrap();
         assert!(g.stack.len() > stack_before, "a copy was added to the stack");
     }
+
+    /// Return the Favor's copy mode takes an activated ability too: a Prodigal
+    /// Pyromancer ping on the stack is copied.
+    #[test]
+    fn return_the_favor_copies_an_activated_ability() {
+        let mut g = two_player_game();
+        g.step = crabomination::game::TurnStep::PreCombatMain;
+        let tool = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+        g.clear_sickness(tool);
+        g.priority.player_with_priority = 0;
+        g.perform_action(crabomination::game::GameAction::ActivateAbility {
+            card_id: tool,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("ping");
+        let stack_before = g.stack.len();
+        let modes = spree_modes(&catalog::return_the_favor());
+        let ctx = EffectContext { targets: vec![Target::Permanent(tool)], ..EffectContext::for_spell(0, None, 0, 0) };
+        g.resolve_effect(&modes[0].effect, &ctx).unwrap();
+        assert_eq!(g.stack.len(), stack_before + 1, "the ping was copied");
+    }
 }
 
 mod recent234 {
