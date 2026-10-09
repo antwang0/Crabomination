@@ -3733,3 +3733,71 @@ fn orvar_targeting_kit() {
     assert_eq!(g.players[0].hand.len(), hand + 3, "Enervate's and both Fluxes' draws at the next upkeep");
     assert!(!g.computed_permanent(bear).unwrap().supertypes().contains(&Supertype::Snow), "the snow wore off");
 }
+
+/// Sisay's legends: Cultist of the Absolute grows and arms your commander and
+/// makes it eat a creature each upkeep; Samut gives haste; Ioreth untaps two
+/// other legends; Ertai's destroy mode lets the victim's controller draw.
+#[test]
+fn sisay_legends_kit() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    flood(&mut g);
+    let cmdr = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].commanders.push(cmdr);
+    ready(&mut g, 0, catalog::cultist_of_the_absolute());
+    let cp = g.computed_permanent(cmdr).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::Deathtouch));
+
+    let samut = ready(&mut g, 0, catalog::samut_hazorets_champion());
+    let fresh = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(fresh).unwrap().keywords().contains(&Keyword::Haste));
+
+    let ioreth = ready(&mut g, 0, catalog::ioreth_of_the_healing_house());
+    let ertai = g.add_card_to_hand(0, catalog::ertai_resurrected());
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    let their_hand = g.players[1].hand.len();
+    g.players[0].hostile_player_targets = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast(&mut g, ertai, None);
+    assert!(g.battlefield_find(victim).is_none(), "destroyed");
+    assert_eq!(g.players[1].hand.len(), their_hand + 1, "its controller drew");
+    let ertai = g.battlefield.iter().find(|c| c.definition.name == "Ertai Resurrected").map(|c| c.id).unwrap();
+    for id in [samut, ertai] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ioreth,
+        ability_index: 1,
+        target: Some(Target::Permanent(samut)),
+        additional_targets: vec![Target::Permanent(ertai)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Ioreth");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(samut).unwrap().tapped && !g.battlefield_find(ertai).unwrap().tapped);
+
+    let creatures = |g: &GameState| g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count();
+    let before = creatures(&g);
+    advance_to_turn_of(&mut g, 1);
+    advance_to_turn_of(&mut g, 0);
+    assert_eq!(creatures(&g), before - 1, "the commander's upkeep sacrifice");
+}
+
+/// Orvar copies the other permanent you control that your instant targets.
+#[test]
+fn orvar_copies_the_targeted_permanent() {
+    let mut g = pod(2);
+    flood(&mut g);
+    ready(&mut g, 0, catalog::orvar_the_all_form());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let twiddle = g.add_card_to_hand(0, catalog::twiddle());
+    cast(&mut g, twiddle, Some(Target::Permanent(bear)));
+    assert_eq!(named(&g, "Grizzly Bears"), 2);
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let twiddle = g.add_card_to_hand(0, catalog::twiddle());
+    cast(&mut g, twiddle, Some(Target::Permanent(theirs)));
+    assert_eq!(named(&g, "Grizzly Bears"), 3, "an opponent's permanent is no copy");
+}

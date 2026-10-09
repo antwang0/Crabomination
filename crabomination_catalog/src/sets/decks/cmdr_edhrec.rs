@@ -7502,3 +7502,191 @@ pub fn vesuvan_duplimancy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ertai Resurrected — {2}{U}{B} Legendary 3/2 Phyrexian Human Wizard, flash.
+/// When it enters, choose up to one — counter target spell, activated ability,
+/// or triggered ability, and its controller draws a card; or destroy another
+/// target creature or planeswalker, and its controller draws a card.
+pub fn ertai_resurrected() -> CardDefinition {
+    // The draw reads the target's controller before the counter or the
+    // destruction moves it; a declined target is the "none" mode.
+    let then_its_controller_draws = |body: Effect| Effect::OptionalTargets {
+        min: 0,
+        body: Box::new(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::ONE,
+            },
+            body,
+        ])),
+    };
+    CardDefinition {
+        name: "Ertai Resurrected",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Wizard]),
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            then_its_controller_draws(Effect::CounterSpellOrAbility {
+                what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack)),
+            }),
+            then_its_controller_draws(Effect::Destroy {
+                what: target_filtered(R::Creature.or(R::Planeswalker).and(R::OtherThanSource)),
+            }),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Ioreth of the Healing House — {2}{U} Legendary 1/4 Human Cleric. {T}: Untap
+/// another target permanent. {T}: Untap two other target legendary creatures.
+pub fn ioreth_of_the_healing_house() -> CardDefinition {
+    CardDefinition {
+        name: "Ioreth of the Healing House",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Cleric]),
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Untap { what: target_filtered(R::Permanent.and(R::OtherThanSource)), up_to: None },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 2,
+                    filter: R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::OtherThanSource),
+                    effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Samut, Hazoret's Champion — {1}{R} Legendary 2/2 Human Warrior Cleric.
+/// Creatures you control have haste.
+pub fn samut_hazorets_champion() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Samut, Hazoret's Champion",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Cleric]),
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Haste,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cultist of the Absolute — {B} Legendary Enchantment — Background.
+/// Commander creatures you own get +3/+3 and have flying, deathtouch,
+/// "Ward—Pay 3 life," and "At the beginning of your upkeep, sacrifice a
+/// creature."
+pub fn cultist_of_the_absolute() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility, StaticEffect, WardCost};
+    let yours = || R::Creature.and(R::IsCommander).and(R::OwnedByYou);
+    let keyword = |keyword: Keyword| StaticAbility {
+        description: "Commander creatures you own have flying, deathtouch, and \"Ward—Pay 3 life.\"",
+        effect: StaticEffect::GrantKeyword { applies_to: Selector::EachPermanent(yours()), keyword },
+    };
+    CardDefinition {
+        name: "Cultist of the Absolute",
+        cost: cost(&[b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Background], ..Default::default() },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Commander creatures you own get +3/+3.",
+                effect: StaticEffect::PumpPT { applies_to: Selector::EachPermanent(yours()), power: 3, toughness: 3 },
+            },
+            keyword(Keyword::Flying),
+            keyword(Keyword::Deathtouch),
+            keyword(Keyword::Ward(WardCost::Life(3))),
+            StaticAbility {
+                description: "Commander creatures you own have \"At the beginning of your upkeep, sacrifice a creature.\"",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: yours(),
+                    ability: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                        effect: Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature },
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Orvar, the All-Form — {3}{U} Legendary 3/3 Shapeshifter, changeling.
+/// Whenever you cast an instant or sorcery spell, if it targets one or more
+/// other permanents you control, create a token that's a copy of one of those
+/// permanents. When a spell or ability an opponent controls causes you to
+/// discard this card, create a token that's a copy of target permanent.
+pub fn orvar_the_all_form() -> CardDefinition {
+    let copy_of = |source: Selector| Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        source,
+        extra_creature_types: vec![],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: false,
+        legendary: false,
+        extra_keywords: vec![],
+        no_mana_cost: false,
+        enters_with_counters: None,
+        remove_keywords: vec![],
+    };
+    let yours = || Selector::MatchingAmong {
+        inner: Box::new(Selector::AllCastSpellTargets),
+        filter: R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource),
+    };
+    CardDefinition {
+        name: "Orvar, the All-Form",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Shapeshifter]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Changeling],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                // "One of those" is the priciest of them.
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::All(vec![
+                        crate::effect::shortcut::cast_is_instant_or_sorcery(),
+                        Predicate::SelectorExists(yours()),
+                    ]),
+                ),
+                effect: copy_of(Selector::TakeGreatestManaValue { inner: Box::new(yours()), count: Box::new(Value::ONE) }),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::OpponentCausedYouToDiscard, EventScope::SelfSource),
+                effect: copy_of(target_filtered(R::Permanent)),
+            },
+        ],
+        ..Default::default()
+    }
+}
