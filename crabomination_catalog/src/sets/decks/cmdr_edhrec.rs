@@ -6613,3 +6613,123 @@ pub fn nahiris_lithoforming() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ojer Pakpatiq, Deepest Epoch // Temple of Cyclical Time — {2}{U}{U} 4/3
+/// flying God. An instant you cast from your hand gains rebound. Dying, it
+/// returns tapped and transformed with three time counters. The Temple taps
+/// for {U} and sheds a time counter; {2}{U}, {T}: transform it back once it has
+/// none (sorcery speed).
+pub fn ojer_pakpatiq_deepest_epoch() -> CardDefinition {
+    use crate::card::CounterType;
+    let temple = CardDefinition {
+        name: "Temple of Cyclical Time",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::Colors(vec![Color::Blue]) },
+                    Effect::RemoveCounter { what: Selector::This, kind: CounterType::Time, amount: Value::ONE },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), u()]),
+                sorcery_speed: true,
+                condition: Some(Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::WithCounter(CounterType::Time),
+                }))),
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Ojer Pakpatiq, Deepest Epoch",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::God]),
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCardType(CardType::Instant).and(R::WasCastFromHand),
+                }),
+                effect: Effect::GrantReboundToSpell { what: Selector::TriggerSource },
+            },
+            crate::effect::shortcut::on_dies(Effect::Seq(vec![
+                Effect::ReturnSelfTransformedTappedToOwner,
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Time, amount: Value::Const(3) },
+            ])),
+        ],
+        back_face: Some(Box::new(temple)),
+        ..Default::default()
+    }
+}
+
+/// Blur — {2}{U} Instant. Exile target creature you control, then return it
+/// to the battlefield under its owner's control. Draw a card.
+pub fn blur() -> CardDefinition {
+    CardDefinition {
+        name: "Blur",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileAndReturnToOwner { what: target_filtered(R::Creature.and(R::ControlledByYou)) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flow of Knowledge — {4}{U} Instant. Draw a card for each Island you
+/// control, then discard two cards.
+pub fn flow_of_knowledge() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Flow of Knowledge",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(R::HasLandType(LandType::Island).and(R::ControlledByYou))),
+            },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Aquitect's Will — {U} Kindred Sorcery — Merfolk. A flood counter on target
+/// land, an Island too while it has one; with a Merfolk, draw a card.
+pub fn aquitects_will() -> CardDefinition {
+    use crate::card::{CounterType, LandType};
+    CardDefinition {
+        name: "Aquitect's Will",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
+        subtypes: creature_types(vec![CreatureType::Merfolk]),
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Land), kind: CounterType::Flood, amount: Value::ONE },
+            Effect::GainLandType {
+                what: Selector::Target(0),
+                land_type: LandType::Island,
+                duration: crate::effect::Duration::WhileHasCounter(CounterType::Flood),
+            },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(R::HasCreatureType(CreatureType::Merfolk).and(R::ControlledByYou))),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

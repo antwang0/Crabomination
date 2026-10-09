@@ -3445,3 +3445,34 @@ fn hazezon_deserts() {
     g.perform_action(GameAction::PlayLand(land)).expect("a land");
     assert!(g.battlefield_find(land).unwrap().tapped);
 }
+
+/// Eluge's islands: Ojer Pakpatiq gives a hand-cast instant rebound and dies
+/// into its Temple with three time counters; Aquitect's Will makes a land an
+/// Island while its flood counter stays; Flow of Knowledge counts Islands.
+#[test]
+fn eluge_islands() {
+    use crabomination::card::{CounterType, LandType};
+    let mut g = pod(2);
+    let ojer = ready(&mut g, 0, catalog::ojer_pakpatiq_deepest_epoch());
+    flood(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == bolt), "rebound exiles it");
+    let doom = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, doom, Some(Target::Permanent(ojer)));
+    let temple = g.battlefield_find(ojer).expect("back as the Temple");
+    assert_eq!(temple.counter_count(CounterType::Time), 3);
+    assert!(temple.tapped);
+
+    let mut g = pod(2);
+    let forest = ready(&mut g, 0, catalog::forest());
+    ready(&mut g, 0, catalog::island());
+    flood(&mut g);
+    let will = g.add_card_to_hand(0, catalog::aquitects_will());
+    cast(&mut g, will, Some(Target::Permanent(forest)));
+    assert!(g.computed_permanent(forest).unwrap().subtypes().land_types.contains(&LandType::Island));
+    let hand = g.players[0].hand.len();
+    let flow = g.add_card_to_hand(0, catalog::flow_of_knowledge());
+    cast(&mut g, flow, None);
+    assert_eq!(g.players[0].hand.len(), hand + 2 - 2, "two Islands drawn, two discarded");
+}
