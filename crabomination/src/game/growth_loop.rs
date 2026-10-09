@@ -4,8 +4,8 @@
 //! watch in `stack.rs` cannot see it; this one counts the consecutive
 //! triggered-ability resolutions that put a permanent onto the battlefield
 //! (a non-growing rider between them is carried, not counted) and never leave
-//! the stack shallower than the chain began. Each resolution pops one item, so
-//! holding the depth for
+//! the stack shallower than the last growing resolution found it. Each
+//! resolution pops one item, so holding the depth for
 //! [`GROWTH_LOOP_DRAW_RESOLUTIONS`] resolutions means every one pushed a
 //! successor — a loop, not a finite cascade (a cascade from one event pushes
 //! its triggers at once and then drains).
@@ -53,6 +53,40 @@ impl GameState {
             events.push(GameEvent::GameOver { winner: None });
             return (0, 0);
         }
-        (floor, count << 6 | tag)
+        // The floor ratchets to each growing resolution's depth: a loop
+        // re-pushes at the same depth (or deeper), while a cascade a single
+        // event fanned out drains below it and starts over (a Lumra land
+        // drop under 160 Scute Swarms is 400 growing resolutions, all
+        // above the depth-1 trigger that began them — seed 4100128).
+        (floor.max(depth), count << 6 | tag)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn run(g: &mut GameState, depths: impl Iterator<Item = usize>) -> bool {
+        let (mut w, mut events) = ((0, 0), Vec::new());
+        for d in depths {
+            w = g.note_growth_loop(true, d, true, w, &mut events);
+        }
+        g.game_over.is_some()
+    }
+
+    /// CR 104.4b — a growing trigger that re-pushes at one depth is a loop.
+    #[test]
+    fn a_constant_depth_growing_chain_draws() {
+        let mut g = crate::game::multi_player_game(2);
+        assert!(run(&mut g, std::iter::repeat_n(1, GROWTH_LOOP_DRAW_RESOLUTIONS as usize + 1)));
+        assert_eq!(g.game_over, Some(None));
+    }
+
+    /// CR 104.4b — a finite fan-out that drains (450 Scute Swarm copies off
+    /// one land) grows the board 450 times but is no loop.
+    #[test]
+    fn a_draining_growing_cascade_does_not_draw() {
+        let mut g = crate::game::multi_player_game(2);
+        assert!(!run(&mut g, std::iter::once(1).chain((1..=450).rev())));
     }
 }
