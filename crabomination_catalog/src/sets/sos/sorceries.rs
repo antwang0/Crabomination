@@ -2146,36 +2146,12 @@ pub fn archaics_agony() -> CardDefinition {
     }
 }
 
-/// Improvisation Capstone — {5}{R}{R} Lorehold Sorcery.
-/// "Exile cards from the top of your library until you exile cards with
-/// total mana value 4 or greater. You may cast any number of spells from
-/// among them without paying their mana costs. / Paradigm (Then exile
-/// this spell. After you first resolve a spell with this name, you may
-/// cast a copy of it from exile without paying its mana cost at the
-/// beginning of each of your first main phases.)"
-///
-/// Push (modern_decks): full body now wired via the new cast-from-exile
-/// pipeline + Paradigm primitives. Both clauses ship:
-/// 1. **Exile + may-cast**: exiles from the top until total MV ≥ 4
-///    (`TopOfLibraryUntilMvAtLeast`). For each
-///    non-land card exiled, the controller is asked
-///    "cast without paying?" via
-///    `Effect::CastWithoutPayingImmediate(LastMoved, Exile)`. AutoDecider
-///    declines by default; ScriptedDecider's `Bool(true)` opts in per
-///    card. Lands in the exile group are skipped silently.
-/// 2. **Paradigm rider**: `Effect::RegisterParadigm` registers a
-///    recurring `YourNextMainPhase` delayed trigger whose body is
-///    `Effect::CastFreeParadigmCopy` — at the start of each of the
-///    caster's pre-combat mains, the controller is asked
-///    "cast a copy of Improvisation Capstone?", and on yes a tokenized
-///    copy is minted in exile + free-cast (per CR 706 copy semantics).
-///    `exile_on_resolve: true` parks the original Improvisation Capstone
-///    in exile so it stays reachable for the recurrence.
-///
-/// Approximations vs. printed Oracle:
-/// - Multi-cast loop iterates each exiled card sequentially; the
-///   controller is asked one yes/no per card (no "cast in any order"
-///   prompt — the engine has no batched same-zone cast prompt).
+/// Improvisation Capstone — {5}{R}{R} Sorcery — Lesson. Exile from the top
+/// until the exiled cards' total mana value is 4 or more
+/// (`TopOfLibraryUntilMvAtLeast`); cast any number of spells from among them
+/// free, in the order you choose (`CastAnyOrderWithoutPaying` re-offers a
+/// declined card after each cast). Paradigm: it exiles itself on resolution
+/// and `RegisterParadigm` offers a free copy at each of your first main phases.
 pub fn improvisation_capstone() -> CardDefinition {
     use crate::card::Zone;
     use crate::effect::ZoneDest;
