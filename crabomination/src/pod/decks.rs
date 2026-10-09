@@ -8955,3 +8955,113 @@ pub const GEV_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const KUDO_COMMANDERS: &[CardFactory] = &[kudo_king_among_bears];
+
+/// **Kudo, King Among Bears**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 77 nonbasic cards + 12 Forests + 10 Plains = 99.
+/// Bears
+pub const KUDO_MAIN: &[CardFactory] = &[
+    arcane_signet, banner_of_kinship, lightning_greaves, patchwork_banner, sol_ring,
+    swiftfoot_boots, vanquishers_banner, bountiful_promenade, brushland, canopy_vista,
+    command_tower, fortified_village, gavony_township, hushwood_verge, overgrown_farmland,
+    selesnya_sanctuary, sunpetal_grove, temple_garden, temple_of_plenty, windswept_heath,
+    adaptive_automaton, arwen_weaver_of_hope, avacyns_pilgrim, ayula_queen_among_bears,
+    basking_broodscale, beast_whisperer, beorn_the_fierce, birds_of_paradise, champion_of_lambholt,
+    elesh_norn_grand_cenobite, elvish_mystic, enduring_innocence, esper_sentinel,
+    forgotten_ancient, kami_of_whispered_hopes, king_darien_xlviii, kutzil_malamet_exemplar,
+    llanowar_elves, maja_bretagard_protector, mentor_of_the_meek, metallic_mimic,
+    rampaging_yao_guai, scute_swarm, shalai_voice_of_plenty, studious_first_year,
+    surrak_and_goreclaw, toski_bearer_of_secrets, welcoming_vampire, werebear,
+    wilson_refined_grizzly, anthem_of_champions, beastmaster_ascension, cathars_crusade,
+    dancing_from_dark_to_dawn, felidar_retreat, flowering_of_the_white_tree, hardened_scales,
+    miraris_wake, rally_the_ranks, reverence, aura_mutation, beast_within, eladamris_call,
+    generous_gift, heroic_intervention, inspiring_call, path_to_exile, swords_to_plowshares,
+    unbreakable_formation, elspeth_suns_champion, cultivate, farseek, kodamas_reach, natures_lore,
+    rampant_growth, requisition_raid, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ROCCO_COMMANDERS: &[CardFactory] = &[rocco_cabaretti_caterer];
+
+/// **Rocco, Cabaretti Caterer**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 85 nonbasic cards + 5 Forests + 4 Mountains + 5 Plains = 99.
+/// creatures on arrival
+pub const ROCCO_MAIN: &[CardFactory] = &[
+    arcane_signet, birthing_pod, fellwar_stone, genesis_chamber, lotus_petal, panharmonicon,
+    sol_ring, arid_mesa, battlefield_forge, boseiju_who_endures, bountiful_promenade, brushland,
+    canopy_vista, cinder_glade, clifftop_retreat, command_tower, exotic_orchard, jetmirs_garden,
+    jungle_shrine, karplusan_forest, sacred_foundry, spectator_seating, spire_garden,
+    stomping_ground, sunpetal_grove, temple_garden, windswept_heath, wooded_foothills,
+    agate_instigator, arbaaz_mir, avacyns_pilgrim, birds_of_paradise, bloom_tender,
+    champion_of_lambholt, delighted_halfling, elvish_mystic, enduring_innocence, esper_sentinel,
+    eternal_witness, faeburrow_elder, felidar_guardian, fyndhorn_elves, gala_greeters,
+    grand_abolisher, heronblade_elite, imperial_recruiter, karmic_guide, kiki_jiki_mirror_breaker,
+    llanowar_elves, mentor_of_the_meek, molten_gatekeeper, norin_the_wary, pia_aether_ascetic,
+    purphoros_god_of_the_forge, rose_room_treasurer, rumor_gatherer, saltskitter,
+    squee_the_immortal, welcoming_vampire, wirewood_symbiote, witty_roastmaster, aura_shards,
+    blessed_sanctuary, food_chain, guardian_project, impact_tremors, smothering_tithe,
+    tocasias_welcome, beast_within, chaos_warp, chord_of_calling, eladamris_call,
+    enlightened_tutor, generous_gift, path_to_exile, silence, swords_to_plowshares, worldly_tutor,
+    blasphemous_act, cultivate, eldritch_evolution, farseek, natures_lore, rampant_growth,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains,
+];
+
+pub const SOKKA_COMMANDERS: &[CardFactory] = &[sokka_tenacious_tactician];
+
+/// **Sokka, Tenacious Tactician**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 81 nonbasic cards + 7 Islands + 5 Mountains + 6 Plains = 99.
+/// Allies and noncreature spells
+pub const SOKKA_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, fellwar_stone, izzet_signet, skullclamp, sol_ring,
+    swiftfoot_boots, talisman_of_conviction, talisman_of_creativity, talisman_of_progress,
+    abandoned_air_temple, adarkar_wastes, battlefield_forge, clifftop_retreat, command_tower,
+    exotic_orchard, glacial_fortress, hallowed_fountain, jasmine_dragon_tea_shop, mystic_monastery,
+    path_of_ancestry, prairie_stream, raugrin_triome, reliquary_tower, sacred_foundry, shivan_reef,
+    steam_vents, sulfur_falls, avatar_enthusiasts, hakoda_selfless_commander, hero_of_goma_fada,
+    kabira_evangel, katara_water_tribes_hope, kazuul_warlord, longshot_rebel_bowman, ondu_cleric,
+    resolute_blademaster, sea_gate_loremaster, sokka_lateral_strategist, south_pole_voyager,
+    storm_kiln_artist, suki_courageous_rescuer, sun_warriors, tuktuk_scrapper,
+    veyran_voice_of_duality, wartime_protestors, allied_teamwork, frostcliff_siege, impact_tremors,
+    jeskai_ascendancy, kindred_discovery, sokkas_charge, warleaders_call, whirlwind_of_thought,
+    abandon_attachments, an_offer_you_cant_refuse, boros_charm, brainstorm, consider, counterspell,
+    enter_the_avatar_state, flawless_maneuver, frantic_search, itll_quench_ya, lightning_bolt,
+    octopus_form, opt, path_to_exile, redirect_lightning, snap, swords_to_plowshares, yip_yip,
+    blasphemous_act, boomerang_basics, crash_through, expressive_iteration, faithless_looting,
+    ponder, preordain, spirit_water_revival, united_front,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains,
+];
+
+pub const TIFA_COMMANDERS: &[CardFactory] = &[tifa_lockhart];
+
+/// **Tifa Lockhart**'s EDHREC average deck (fetched 2026-10-08), card for card:
+/// 74 nonbasic cards + 25 Forests = 99.
+/// landfall and equipment
+pub const TIFA_MAIN: &[CardFactory] = &[
+    adventuring_gear, blackblade_reforged, conduit_of_worlds, emerald_medallion, lightning_greaves,
+    skyclave_pick_axe, sol_ring, staff_of_titania, swiftfoot_boots, sword_of_the_animist,
+    brokers_hideout, cabaretti_courtyard, escape_tunnel, evolving_wilds, fabled_passage,
+    myriad_landscape, riveteers_overlook, rogues_passage, terramorphic_expanse, verdant_catacombs,
+    windswept_heath, wooded_foothills, ancient_greenwarden, azusa_lost_but_seeking,
+    bristly_bill_spine_sower, icetill_explorer, llanowar_elves, loot_exuberant_explorer,
+    lotus_cobra, mightform_harmonizer, mossborn_hydra, oracle_of_mul_daya, rampaging_baloths,
+    ramunap_excavator, sakura_tribe_elder, sazhs_chocobo, scute_swarm, scythecat_cub,
+    springbloom_druid, tireless_provisioner, tireless_tracker, traveling_chocobo, blanchwood_armor,
+    exploration, retreat_to_kazandu, ride_the_shoopuf, roaring_earth, sylvan_library,
+    unnatural_growth, beast_within, blossoming_defense, crop_rotation, entish_restoration, harrow,
+    heroic_intervention, invigorate, overprotect, ram_through, roiling_regrowth, snakeskin_veil,
+    tamiyos_safekeeping, tifas_limit_break, tyvars_stand, cultivate, explore, harmonize,
+    kodamas_reach, natures_lore, planar_engineering, rampant_growth, scale_up, scapeshift,
+    skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest,
+];

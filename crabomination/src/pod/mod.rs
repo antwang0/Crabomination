@@ -2253,6 +2253,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GEV_COMMANDERS,
             main: decks::GEV_MAIN,
         },
+        // Seat 306: Kudo, King Among Bears's EDHREC average deck. `--pod-decks 306`.
+        PodDeck {
+            name: "Kudo, King Among Bears (GW)",
+            commanders: decks::KUDO_COMMANDERS,
+            main: decks::KUDO_MAIN,
+        },
+        // Seat 307: Rocco, Cabaretti Caterer's EDHREC average deck. `--pod-decks 307`.
+        PodDeck {
+            name: "Rocco, Cabaretti Caterer (GRW)",
+            commanders: decks::ROCCO_COMMANDERS,
+            main: decks::ROCCO_MAIN,
+        },
+        // Seat 308: Sokka, Tenacious Tactician's EDHREC average deck. `--pod-decks 308`.
+        PodDeck {
+            name: "Sokka, Tenacious Tactician (RUW)",
+            commanders: decks::SOKKA_COMMANDERS,
+            main: decks::SOKKA_MAIN,
+        },
+        // Seat 309: Tifa Lockhart's EDHREC average deck. `--pod-decks 309`.
+        PodDeck {
+            name: "Tifa Lockhart (G)",
+            commanders: decks::TIFA_COMMANDERS,
+            main: decks::TIFA_MAIN,
+        },
     ]
 }
 
@@ -4202,6 +4226,10 @@ mod tests {
             ("Ovika, Enigma Goliath", [0x0F1C, 303, 9228]),
             ("Tannuk, Steadfast Second", [0x7A23, 304, 9229]),
             ("Gev, Scaled Scorch", [0x6E55, 305, 9230]),
+            ("Kudo, King Among Bears", [0xBEA2, 306, 9231]),
+            ("Rocco, Cabaretti Caterer", [0x20CC, 307, 9232]),
+            ("Sokka, Tenacious Tactician", [0x50CA, 308, 9233]),
+            ("Tifa Lockhart", [0x71FA, 309, 9234]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
