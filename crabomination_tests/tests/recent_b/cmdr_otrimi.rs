@@ -365,7 +365,7 @@ fn exiled_play_grants_pay_as_printed() {
         let mut g = pod(2);
         let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
         let src = g.add_card_to_battlefield(0, catalog::mindleecher());
-        let effect = Effect::ExileTopFaceDownGrantPlay { library: PlayerRef::Seat(1), grantee: PlayerRef::You, spend };
+        let effect = Effect::ExileTopFaceDownGrantPlay { library: PlayerRef::Seat(1), grantee: PlayerRef::You, spend, cast_only: false };
         let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
         g.resolve_effect(&effect, &ctx).expect("exile");
         g.players[0].mana_pool.add(Color::Green, 1);

@@ -1185,6 +1185,7 @@ pub fn rogue_class() -> CardDefinition {
                     library: PlayerRef::Target(0),
                     grantee: PlayerRef::You,
                     spend: crate::effect::ExiledPlaySpend::AnyColor,
+                    cast_only: false,
                 }),
                 else_: Box::new(Effect::ExileTopOfLibrary {
                     who: Selector::Player(PlayerRef::Target(0)),

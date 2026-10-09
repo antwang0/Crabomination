@@ -61,6 +61,7 @@ pub fn gonti_canny_acquisitor() -> CardDefinition {
                 library: PlayerRef::Target(0),
                 grantee: PlayerRef::You,
                 spend: crate::effect::ExiledPlaySpend::AnyType,
+                cast_only: false,
             },
         }],
         ..creature(
@@ -133,6 +134,7 @@ pub fn dream_thiefs_bandana() -> CardDefinition {
                 library: PlayerRef::Target(0),
                 grantee: PlayerRef::You,
                 spend: crate::effect::ExiledPlaySpend::AnyType,
+                cast_only: false,
             })],
             triggers_on_equipment: true,
             ..Default::default()

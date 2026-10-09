@@ -10171,6 +10171,10 @@ pub enum Effect {
         grantee: PlayerRef,
         #[serde(default)]
         spend: ExiledPlaySpend,
+        /// "You may **cast** that card" — a land can't be played (Rev, Tithe
+        /// Extractor).
+        #[serde(default)]
+        cast_only: bool,
     },
 
     /// CR 614 — "As this enters, exile up to `count` cards matching `filter`

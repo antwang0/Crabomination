@@ -252,6 +252,7 @@ pub fn mindleecher() -> CardDefinition {
                 library: PlayerRef::Triggerer,
                 grantee: PlayerRef::You,
                 spend: crate::effect::ExiledPlaySpend::Own,
+                cast_only: false,
             }),
         })],
         ..creature("Mindleecher", cost(&[generic(4), b(), b()]), vec![CreatureType::Nightmare], 5, 5)

@@ -990,6 +990,7 @@ pub fn gonti_night_minister() -> CardDefinition {
                     library: PlayerRef::Target(0),
                     grantee: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                     spend: crate::effect::ExiledPlaySpend::AnyType,
+                    cast_only: false,
                 },
             },
         ],

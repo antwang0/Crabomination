@@ -39959,7 +39959,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopFaceDownGrantPlay { library, grantee, spend } => {
+            Effect::ExileTopFaceDownGrantPlay { library, grantee, spend, cast_only } => {
                 // Gonti, Night Minister — the library and the player who gets
                 // to play the card are different seats (the damaged opponent
                 // and the damaging creature's controller).
@@ -39972,7 +39972,7 @@ impl GameState {
                     .expect("id read off the top of this library just above");
                 card.exiled_with = ctx.source;
                 card.face_down = true;
-                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
+                card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: *cast_only, locks_further_casts: false, one_cast_group: None,
                     player: to,
                     granted_turn: self.turn_number,
                     duration: crate::card::MayPlayDuration::WhileExiled,
