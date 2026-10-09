@@ -7561,8 +7561,8 @@ pub fn portable_hole() -> CardDefinition {
 }
 
 /// Giver of Runes — {W} 1/2 Creature — Kor Cleric. {T}: Another target creature
-/// you control gains protection from the color of your choice until end of turn.
-/// (The "or from colorless" option is approximated as a color choice.)
+/// you control gains protection from colorless or from the color of your choice
+/// until end of turn.
 pub fn giver_of_runes() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -7577,7 +7577,7 @@ pub fn giver_of_runes() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::GrantProtectionFromChosenColor {
+            effect: Effect::GrantProtectionFromChosenColorOrColorless {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou)

@@ -802,6 +802,29 @@ fn giver_of_runes_grants_protection_to_another_creature() {
     assert!(err.is_err(), "Giver of Runes can't target itself");
 }
 
+/// Giver of Runes' colorless choice: a Walking Ballista ping aimed at an elf
+/// is answered with protection from colorless, and the ping loses its target.
+#[test]
+fn giver_of_runes_answers_a_colorless_threat_with_protection_from_colorless() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let giver = g.add_card_to_battlefield(0, catalog::giver_of_runes());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.clear_sickness(giver);
+    let ballista = g.add_card_to_battlefield(1, catalog::walking_ballista());
+    g.battlefield_find_mut(ballista).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ballista, ability_index: 0, target: Some(Target::Permanent(elf)), additional_targets: Vec::new(), x_value: None, mode: None })
+        .expect("Ballista pings the elf");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: giver, ability_index: 0, target: Some(Target::Permanent(elf)), additional_targets: Vec::new(), x_value: None, mode: None })
+        .expect("Giver answers");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_some(), "the ping lost its target");
+}
+
 #[test]
 fn exclude_counters_creature_and_draws() {
     let mut g = two_player_game();
