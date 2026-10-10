@@ -152,7 +152,10 @@ the handoff.
   about: Polyraptor + Marauding Raptor; Zellix + Altar of the Brood with
   Blightsteel Colossus in a library (milled, shuffled back, CR 701.17c still
   counts it milled); Ghostly Dancers + Secret Arcade (every Spirit token is an
-  enchantment). `--a dflt` 183001 (4/6 seats × 10): 1,480 games, 0 bad. Two-
+  enchantment) — ✅ but the bot started that one: `loop_hazard::watch` read a
+  manifested Dancers' face-down 2/2 and switched the probe off, so it turned
+  the Dancers up with its own creature spell on the stack (a face-down
+  permanent's real face now counts). `--a dflt` 183001 (4/6 seats × 10): 1,480 games, 0 bad. Two-
   player sos/cube/sealed seed 9401 × 100 on the audit build: 2,500, 0 bad.
 - Censused, not built: 72 triggered/activated abilities require 2+ slots (the
   five printing "up to" are fine — see the CR 601.2c entry); the picker's
