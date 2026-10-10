@@ -32553,6 +32553,9 @@ impl GameState {
                     };
                     plan.push((p, top_ids, chosen));
                 }
+                // Every ask answered: the log is spent (the cursor contract —
+                // a fuzzed strict pod, seed 191001, aborted on the leftover).
+                self.clear_answer_log();
                 for (p, top_ids, to_bf) in plan {
                     for cid in &top_ids {
                         let Some(card) = self.players[p].library.iter().find(|c| c.id == *cid) else { continue };

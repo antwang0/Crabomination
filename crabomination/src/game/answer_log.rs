@@ -70,4 +70,26 @@ mod tests {
         assert!(g.pending_decision.is_none());
         assert!(g.scratch.resolution_answer_log.is_empty(), "no answer outlives the dropped decision");
     }
+
+    /// Gishath's "put any number" reveal spends its answer: a second asking arm
+    /// in the same `Seq` used to replay the first's pick against its own
+    /// candidates and put nothing in (fuzzed strict pod, seed 191001).
+    #[test]
+    fn a_reveal_pick_does_not_leak_into_the_next_ask() {
+        use crate::card::SelectionRequirement;
+        use crate::effect::{Effect, PlayerRef, Value};
+        let mut g = two_player_game();
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        let reveal = Effect::RevealTopNPutMatchingToBattlefield {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            filter: SelectionRequirement::Creature,
+        };
+        let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+        g.resolve_effect(&Effect::Seq(vec![reveal.clone(), reveal]), &ctx).expect("resolves");
+        let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+        assert_eq!(bears, 4, "both reveals put their creatures in");
+    }
 }
