@@ -10114,3 +10114,61 @@ pub const ATHREOS_GOP_EDHREC_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const KETRAMOSE_EDHREC_COMMANDERS: &[CardFactory] = &[ketramose_the_new_dawn];
+
+/// **Ketramose, the New Dawn**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 82 nonbasic cards + 9 Plains + 8 Swamps = 99.
+/// Ketramose, the New Dawn exile value (WB): flicker and graveyard hate put cards into
+/// exile, Ketramose draws for each batch and swings once seven are there.
+pub const KETRAMOSE_EDHREC_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, arcane_signet, conjurers_closet, currency_converter, fellwar_stone,
+    ghost_vacuum, orzhov_signet, relic_of_progenitus, scrabbling_claws, sol_ring,
+    talisman_of_hierarchy, thought_vessel, unlicensed_hearse, bleachbone_verge, bojuka_bog,
+    brightclimb_pathway, caves_of_koilos, command_tower, fetid_heath, godless_shrine,
+    isolated_chapel, marsh_flats, orzhov_basilica, pit_of_offerings, reliquary_tower,
+    shadowy_backstreet, shattered_sanctum, shineshadow_snarl, tainted_field, vault_of_champions,
+    abdel_adrian_gorions_ward, abyssal_harvester, all_fates_stalker, boggart_trawler,
+    charming_prince, dauthi_voidwalker, elas_il_kor_sadistic_pilgrim, emperor_of_bones,
+    felidar_guardian, flickering_hound, flickerwisp, gray_merchant_of_asphodel, lion_sash,
+    loran_of_the_third_path, lotho_corrupt_shirriff, obzedat_ghost_council,
+    phelia_exuberant_shepherd, restoration_angel, senu_keen_eyed_protector,
+    sheoldred_the_apocalypse, skyclave_apparition, solemn_simulacrum, solitude, soul_warden,
+    syr_vondam_sunstar_exemplar, witch_enchanter, airbender_ascension, blind_obedience,
+    grasp_of_fate, leyline_of_the_void, smothering_tithe, teleportation_circle,
+    touch_the_spirit_realm, anguished_unmaking, cling_to_dust, cloudshift, dark_ritual,
+    deadly_rollick, despark, eerie_interlude, ephemerate, parting_gust, path_to_exile,
+    swords_to_plowshares, vanishing_verse, kaya_orzhov_usurper, avatars_wrath, damn,
+    demonic_tutor, exorcise, farewell, winds_of_abandon,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const NIKO_EDHREC_COMMANDERS: &[CardFactory] = &[niko_light_of_hope];
+
+/// **Niko, Light of Hope**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 78 nonbasic cards + 10 Islands + 11 Plains = 99.
+/// Niko, Light of Hope blink (WU): flicker ETB creatures, Shards copy the best one,
+/// Restoration Angel and Ephemerate reuse the triggers.
+pub const NIKO_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, conjurers_closet, fellwar_stone, mind_stone, panharmonicon,
+    sol_ring, talisman_of_progress, thought_vessel, adarkar_wastes, azorius_chancery,
+    command_tower, deserted_beach, flooded_strand, floodfarm_verge, glacial_fortress,
+    hallowed_fountain, port_town, prairie_stream, reliquary_tower, sea_of_clouds,
+    skycloud_expanse, temple_of_enlightenment, aerial_extortionist, archon_of_suns_grace,
+    battle_angels_of_tyr, charming_prince, curiosity_crafter, displacer_kitten, dour_port_mage,
+    dream_trawler, enduring_curiosity, entity_tracker, exalted_sunborn, flickering_hound,
+    flickerwisp, hero_of_bladehold, mulldrifter, nesting_dovehawk, ornithopter_of_paradise,
+    overlord_of_the_floodpits, overlord_of_the_mistmoors, restoration_angel, silent_hallcreeper,
+    silverwing_squadron, sludge_monster, solemn_simulacrum, soulherder, spirited_companion,
+    starfield_vocalist, sun_titan, thassa_deep_dwelling, witch_enchanter, airbender_ascension,
+    candlekeep_sage, far_traveler, skybind, sphere_of_safety, teleportation_circle,
+    an_offer_you_cant_refuse, arcane_denial, cloudshift, counterspell, dovins_veto,
+    eerie_interlude, ephemerate, essence_flux, flicker_of_fate, generous_gift, ghostly_flicker,
+    momentary_blink, parting_gust, path_to_exile, swords_to_plowshares, niko_aris,
+    avatars_wrath, supreme_verdict, time_wipe,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

@@ -2512,6 +2512,19 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ATHREOS_GOP_EDHREC_COMMANDERS,
             main: decks::ATHREOS_GOP_EDHREC_MAIN,
         },
+        // Seat 347: Ketramose, the New Dawn's EDHREC average deck.
+        // `--pod-decks 347`.
+        PodDeck {
+            name: "Ketramose, the New Dawn (WB)",
+            commanders: decks::KETRAMOSE_EDHREC_COMMANDERS,
+            main: decks::KETRAMOSE_EDHREC_MAIN,
+        },
+        // Seat 348: Niko, Light of Hope's EDHREC average deck. `--pod-decks 348`.
+        PodDeck {
+            name: "Niko, Light of Hope (WU)",
+            commanders: decks::NIKO_EDHREC_COMMANDERS,
+            main: decks::NIKO_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4539,6 +4552,8 @@ mod tests {
             ("Indominus Rex, Alpha", [0x0A7E, 344, 9269]),
             ("Tergrid, God of Fright", [0x0A7F, 345, 9270]),
             ("Athreos, God of Passage", [0x0A80, 346, 9271]),
+            ("Ketramose, the New Dawn", [0x0A81, 347, 9272]),
+            ("Niko, Light of Hope", [0x0A82, 348, 9273]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
