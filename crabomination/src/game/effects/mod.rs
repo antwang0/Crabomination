@@ -25514,6 +25514,15 @@ impl GameState {
                     if let Some(Some(host)) = aura {
                         self.attach_moved_aura(cid, host, events);
                     }
+                    // A commander already home didn't move (CR 400.7: the
+                    // discarded card a trigger names went to the command zone
+                    // first), so nothing downstream may name it — Tinybones'
+                    // stash and play grant landed on it there.
+                    if !matches!(to, ZoneDest::Command)
+                        && self.players.iter().any(|p| p.command.iter().any(|c| c.id == cid))
+                    {
+                        continue;
+                    }
                     // Stash the moved id so a downstream
                     // `Selector::LastMoved` in the same Seq can target
                     // it (Practiced Scrollsmith's Move → GrantMayPlay

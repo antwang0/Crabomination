@@ -1740,6 +1740,26 @@ fn tinybones_stashes_and_plays_a_discard() {
     assert_eq!(g.players[1].life, life - 3, "cast with blue mana");
 }
 
+/// CR 903.9a / 400.7 — a discarded commander its owner sends home is a new
+/// object: Tinybones' trigger finds no card in the graveyard to stash, and the
+/// commander keeps no play permission or stash counter in the command zone (a
+/// fuzzed four-seat audit pod, seed 18500264 game 4, found it there with one).
+#[test]
+fn tinybones_does_not_stash_a_commander_that_went_home() {
+    let mut g = pod(2);
+    let bones = ready(&mut g, 0, catalog::tinybones_bauble_burglar());
+    let ids = g.seat_commanders(1, vec![catalog::grizzly_bears()]);
+    let bear = ids[0];
+    let card = g.players[1].command.pop().expect("seated");
+    g.players[1].hand.clear();
+    g.players[1].hand.push(card);
+    flood(&mut g);
+    activate(&mut g, bones, None);
+    let c = g.players[1].command.iter().find(|c| c.id == bear).expect("home in the command zone");
+    assert!(c.may_play_until.is_none(), "no play permission");
+    assert_eq!(c.counter_count(crabomination::card::CounterType::Stash), 0);
+}
+
 /// Grolnok: a Frog attacking mills three; the milled permanent cards are
 /// exiled with croak counters and playable, the instants stay binned.
 #[test]
