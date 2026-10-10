@@ -42010,6 +42010,18 @@ impl GameState {
                 what, source_zone, exile_after, pay_own_cost, copy, reduce_generic, None, false, ctx, events,
             ),
 
+            Effect::CastImmediateAnyManaType { what, source_zone } => {
+                // CR 609.4b — any type spends, so the mana value as generic.
+                let mv = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .map_or(0, |c| c.definition.cost.cmc());
+                let any_type = crate::mana::ManaCost::new(vec![crate::mana::generic(mv)]);
+                self.cast_immediate(what, source_zone, &false, &true, &false, &0, Some(&any_type), false, ctx, events)
+            }
+
             Effect::CastImmediateForLife { what, source_zone } => {
                 self.cast_immediate(what, source_zone, &false, &false, &false, &0, None, true, ctx, events)
             }

@@ -24,7 +24,8 @@ fn pick_is_gain(e: &Effect) -> bool {
         | Effect::AttachAnyNumberTo { .. }
         | Effect::CastWithoutPayingImmediate { .. }
         | Effect::CopyCardAndCastFree { .. }
-        | Effect::CastImmediateForLife { .. } => true,
+        | Effect::CastImmediateForLife { .. }
+        | Effect::CastImmediateAnyManaType { .. } => true,
         Effect::Move { to, .. } => matches!(
             to,
             ZoneDest::Hand(PlayerRef::You | PlayerRef::OwnerOfMoved)

@@ -10084,6 +10084,10 @@ pub enum Effect {
     /// Mindrender — not later in the turn, 2024-06-07 ruling). CR 119.4: only
     /// with at least that much life.
     CastImmediateForLife { what: Selector, source_zone: crate::card::Zone },
+    /// "You may cast [it], and mana of any type can be spent to cast that
+    /// spell" as the effect resolves (Tinybones, the Pickpocket): its own cost,
+    /// paid as generic mana equal to its mana value (CR 609.4b).
+    CastImmediateAnyManaType { what: Selector, source_zone: crate::card::Zone },
     /// "You may cast any number of spells from among them without paying
     /// their mana costs" — repeatedly offers the remaining castable cards
     /// (a declined card is re-offered after each accepted cast), so the

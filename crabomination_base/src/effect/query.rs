@@ -2177,6 +2177,7 @@ impl Effect {
             | Effect::LoseCardTypeUntilEot { what, .. } => sel_has_target(what),
             Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CastImmediateForLife { what, .. }
+            | Effect::CastImmediateAnyManaType { what, .. }
             | Effect::CastCopyForCost { what, .. } => {
                 sel_has_target(what)
             }
@@ -2785,6 +2786,7 @@ impl Effect {
             | Effect::MakeSpellUncounterable { what }
             | Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CastImmediateForLife { what, .. }
+            | Effect::CastImmediateAnyManaType { what, .. }
             | Effect::CastCopyForCost { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
@@ -3739,7 +3741,9 @@ impl Effect {
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
             // Recasting a target card *from the graveyard* (Efreet Flamepainter,
             // The Dawning Archaic) wants the graveyard walked for the target.
-            Effect::CastWithoutPayingImmediate { source_zone, .. } | Effect::CastImmediateForLife { source_zone, .. } => {
+            Effect::CastWithoutPayingImmediate { source_zone, .. }
+            | Effect::CastImmediateForLife { source_zone, .. }
+            | Effect::CastImmediateAnyManaType { source_zone, .. } => {
                 matches!(source_zone, crate::card::Zone::Graveyard)
             }
             // Granting flashback to a card always targets one in a graveyard
@@ -4533,7 +4537,9 @@ impl Effect {
                 )
             }
             // Targets a card to recast (graveyard/exile), not a player.
-            Effect::CastWithoutPayingImmediate { .. } | Effect::CastImmediateForLife { .. } => false,
+            Effect::CastWithoutPayingImmediate { .. }
+            | Effect::CastImmediateForLife { .. }
+            | Effect::CastImmediateAnyManaType { .. } => false,
             Effect::TapAndHoldWhileSourceTapped { .. }
             | Effect::MoveChosenKeyword { .. }
             | Effect::RedirectNextCombatDamageTo { .. }
@@ -5596,6 +5602,7 @@ impl Effect {
                 | Effect::GrantMayPlayForLife { what, .. }
                 | Effect::CastWithoutPayingImmediate { what, .. }
                 | Effect::CastImmediateForLife { what, .. }
+                | Effect::CastImmediateAnyManaType { what, .. }
                 | Effect::CastCopyForCost { what, .. }
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::DoubleAllCountersOn { what }
