@@ -662,3 +662,128 @@ fn rebuff_the_wicked_guards_your_permanents() {
     assert!(g.battlefield_find(bear).is_some());
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
 }
+
+/// Yurlok: everyone adds {B}{R}{G}; unspent, it burns each player for 3 as
+/// the step ends — except a Horizon Stone controller, whose mana turns
+/// colorless instead (CR 106.4 override) and so isn't lost.
+#[test]
+fn yurlok_burns_unspent_mana_and_horizon_stone_spares_it() {
+    let mut g = pod(3);
+    let yurlok = ready(&mut g, 0, catalog::yurlok_of_scorch_thrash());
+    ready(&mut g, 2, catalog::horizon_stone());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: yurlok,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].mana_pool.total(), 3);
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    for _ in 0..3 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_ne!(g.step, TurnStep::PreCombatMain);
+    assert_eq!(g.players[0].life, life[0] - 3);
+    assert_eq!(g.players[1].life, life[1] - 3);
+    assert_eq!(g.players[2].life, life[2], "Horizon Stone: the mana became colorless");
+    assert_eq!(g.players[2].mana_pool.total(), 3);
+}
+
+/// Rug of Smothering: the third spell in a turn costs its caster 3 life.
+#[test]
+fn rug_of_smothering_taxes_each_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::rug_of_smothering());
+    let life = g.players[1].life;
+    for _ in 0..3 {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("bolt");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, life - 6, "1 + 2 + 3");
+}
+
+/// Power Surge counts the lands that were untapped as the turn began, not
+/// the ones the untap step untapped.
+#[test]
+fn power_surge_reads_lands_untapped_at_turn_start() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::power_surge());
+    let a = ready(&mut g, 0, catalog::forest());
+    ready(&mut g, 0, catalog::forest());
+    g.battlefield_find_mut(a).unwrap().tapped = true;
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let life = g.players[0].life;
+    // Seat 1's end step, so seat 0's turn begins (and untaps) for real.
+    g.active_player_idx = 1;
+    g.step = TurnStep::End;
+    g.priority.player_with_priority = 1;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1);
+}
+
+/// Belbe: in the postcombat main phase the active player adds {C}{C} per
+/// opponent of Belbe's controller who lost life this turn.
+#[test]
+fn belbe_pays_out_for_opponents_who_lost_life() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::belbe_corrupted_observer());
+    g.players[1].lost_life_this_turn = true;
+    g.players[2].lost_life_this_turn = true;
+    g.step = TurnStep::EndCombat;
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.step, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 4);
+}
+
+/// Umbral Mantle's granted {3}, {Q} pump: untap the equipped creature for
+/// +2/+2.
+#[test]
+fn umbral_mantle_grants_an_untap_pump() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mantle = ready(&mut g, 0, catalog::umbral_mantle());
+    g.perform_action(GameAction::Equip { equipment: mantle, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("pump");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(!b.tapped);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+}

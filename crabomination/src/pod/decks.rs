@@ -9940,3 +9940,32 @@ pub const LIGHT_PAWS_EDHREC_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const YURLOK_EDHREC_COMMANDERS: &[CardFactory] = &[yurlok_of_scorch_thrash];
+
+/// **Yurlok of Scorch Thrash**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 81 nonbasic cards + 7 Forests + 6 Mountains + 5 Swamps = 99.
+/// Yurlok mana burn (BRG): everyone gets {B}{R}{G} and loses what they don't spend; Power
+/// Surge, Rug of Smothering and Lavaleaper punish the table, Horizon Stone keeps Yurlok's side.
+pub const YURLOK_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, horizon_stone, lightning_greaves, sol_ring, staff_of_domination,
+    swiftfoot_boots, sword_of_the_paruns, thousand_year_elixir, umbral_mantle, victory_chimes,
+    blood_crypt, bojuka_bog, cinder_glade, command_tower, dragonskull_summit, exotic_orchard,
+    luxury_suite, overgrown_tomb, rockfall_vale, rootbound_crag, savage_lands, smoldering_marsh,
+    spire_garden, stomping_ground, undergrowth_stadium, woodland_cemetery,
+    ziatoras_proving_ground, barbflare_gremlin, belbe_corrupted_observer, birds_of_paradise,
+    goblin_anarchomancer, harsh_mentor, ignoble_hierarch, kaervek_the_merciless, lavaleaper,
+    leyline_tyrant, magus_of_the_candelabra, magus_of_the_vineyard, nyxbloom_ancient,
+    omnath_locus_of_mana, ozai_the_phoenix_king, rug_of_smothering, scytheclaw_raptor,
+    seedborn_muse, seeker_of_skybreak, stoneshaker_shaman, xantcha_sleeper_agent,
+    zhur_taa_ancient, zhur_taa_druid, citadel_of_pain, dictate_of_karametra, eladamris_vineyard,
+    heartbeat_of_spring, helix_pinnacle, leyline_of_abundance, mana_flare, mana_reflection,
+    manabarbs, overabundance, power_surge, rites_of_flourishing, wars_toll, wound_reflection,
+    assassins_trophy, beast_within, chaos_warp, comet_storm, heroic_intervention, rakdos_charm,
+    terminate, blasphemous_act, crackle_with_power, cultivate, exsanguinate, farseek,
+    jayas_immolating_inferno, kodamas_reach, lavalanche, rampant_growth, torment_of_hailfire,
+    vandalblast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp,
+];

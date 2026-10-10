@@ -2470,6 +2470,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIGHT_PAWS_EDHREC_COMMANDERS,
             main: decks::LIGHT_PAWS_EDHREC_MAIN,
         },
+        // Seat 341: Yurlok of Scorch Thrash's EDHREC average deck.
+        // `--pod-decks 341`.
+        PodDeck {
+            name: "Yurlok of Scorch Thrash (BRG)",
+            commanders: decks::YURLOK_EDHREC_COMMANDERS,
+            main: decks::YURLOK_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4491,6 +4498,7 @@ mod tests {
             ("Voja, Jaws of the Conclave", [0x0A78, 338, 9263]),
             ("Choco, Seeker of Paradise", [0x0A79, 339, 9264]),
             ("Light-Paws, Emperor's Voice", [0x0A7A, 340, 9265]),
+            ("Yurlok of Scorch Thrash", [0x0A7B, 341, 9266]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -2,7 +2,7 @@
 //! average deck and a complete pod seat, second file (`cmdr_edhrec` is the
 //! first). Henzie "Toolbox" Torre, Frodo, Adventurous Hobbit + Sam, Loyal
 //! Attendant, K'rrik, Son of Yawgmoth, Voja, Jaws of the Conclave, Choco, Seeker of
-//! Paradise, and Light-Paws, Emperor's Voice. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
+//! Paradise, Light-Paws, Emperor's Voice, and Yurlok of Scorch Thrash. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, EnchantmentSubtype, EquipBonus, EquipScale,
@@ -14,7 +14,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, on_attack, on_dies};
 use crate::effect::{Effect, LookPick, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, mono_hybrid, u, w, Color};
+use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
 use crabomination_base::tokens::{food_token, treasure_token};
 use std::sync::Arc;
 
@@ -993,6 +993,180 @@ pub fn rebuff_the_wicked() -> CardDefinition {
                 R::Permanent.and(R::ControlledByYou),
             ))),
         },
+        ..Default::default()
+    }
+}
+
+/// Yurlok of Scorch Thrash — {1}{B}{R}{G} 4/4 legendary Lizard Shaman,
+/// vigilance. A player losing unspent mana loses that much life. {1}, {T}:
+/// each player adds {B}{R}{G}.
+pub fn yurlok_of_scorch_thrash() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "A player losing unspent mana causes that player to lose that much life.".into(),
+            effect: StaticEffect::PlayersLoseLifeForUnspentMana,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::EachPlayer,
+                body: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Black, Color::Red, Color::Green]),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Yurlok of Scorch Thrash",
+            cost(&[generic(1), b(), r(), g()]),
+            vec![CreatureType::Lizard, CreatureType::Shaman],
+            4,
+            4,
+        )
+    }
+}
+
+/// Horizon Stone — {5} Artifact. If you would lose unspent mana, that mana
+/// becomes colorless instead.
+pub fn horizon_stone() -> CardDefinition {
+    CardDefinition {
+        name: "Horizon Stone",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "If you would lose unspent mana, that mana becomes colorless instead.".into(),
+            effect: StaticEffect::UnspentManaBecomesColorless,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Umbral Mantle — {3} Equipment. Equipped creature has "{3}, {Q}: this
+/// creature gets +2/+2 until end of turn." Equip {0}.
+pub fn umbral_mantle() -> CardDefinition {
+    CardDefinition {
+        name: "Umbral Mantle",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(0)]))],
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                untap_self_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Belbe, Corrupted Observer — {B}{G} 2/2 legendary Phyrexian Zombie Elf. At
+/// the beginning of each postcombat main phase, the active player adds
+/// {C}{C} for each of your opponents who lost life this turn.
+pub fn belbe_corrupted_observer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PostCombatMain), EventScope::AnyPlayer),
+            effect: Effect::AddMana {
+                who: PlayerRef::ActivePlayer,
+                pool: ManaPayload::Colorless(Value::Times(
+                    Box::new(Value::OpponentsWhoLostLifeThisTurn),
+                    Box::new(Value::Const(2)),
+                )),
+            },
+        }],
+        ..legend(
+            "Belbe, Corrupted Observer",
+            cost(&[b(), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Zombie, CreatureType::Elf],
+            2,
+            2,
+        )
+    }
+}
+
+/// Lavaleaper — {3}{R} 4/4 Elemental. All creatures have haste. Whenever a
+/// player taps a basic land for mana, that player adds one more of a type it
+/// produced (CR 605.1b triggered mana ability).
+pub fn lavaleaper() -> CardDefinition {
+    CardDefinition {
+        name: "Lavaleaper",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Elemental]),
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "All creatures have haste.".into(),
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature),
+                    keyword: Keyword::Haste,
+                },
+            },
+            StaticAbility {
+                description: "Whenever a player taps a basic land for mana, that player adds one mana of any type that land produced.".into(),
+                effect: StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: false,
+                    filter: R::IsBasicLand,
+                    extra: crate::effect::ExtraManaKind::Mirror,
+                    while_monarch: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rug of Smothering — {3} 1/3 Construct artifact creature, flying. Whenever
+/// a player casts a spell, they lose 1 life for each spell they've cast this
+/// turn.
+pub fn rug_of_smothering() -> CardDefinition {
+    CardDefinition {
+        name: "Rug of Smothering",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Construct]),
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::SpellsCastThisTurn(PlayerRef::Triggerer),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Power Surge — {R}{R} Enchantment. At the beginning of each player's
+/// upkeep, it deals X damage to that player, X the untapped lands they
+/// controlled as the turn began.
+pub fn power_surge() -> CardDefinition {
+    CardDefinition {
+        name: "Power Surge",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::UntappedLandsActivePlayerHadAtTurnStart,
+            },
+        }],
         ..Default::default()
     }
 }
