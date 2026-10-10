@@ -1,7 +1,7 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
-//! Ashvale and Kastral, the Windcrested. Tests in
+//! Ashvale, Kastral, the Windcrested and Jodah, Archmage Eternal. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -12,7 +12,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, TriggerZone, ZoneDest};
-use crate::mana::{cost, generic, r, u, w, x, Color, SpendRestriction};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color, SpendRestriction};
 use crabomination_base::tokens::treasure_token;
 use std::sync::Arc;
 
@@ -571,6 +571,152 @@ pub fn the_eagles_are_coming() -> CardDefinition {
                 ])),
             }),
         },
+        ..Default::default()
+    }
+}
+
+/// Imoti, Celebrant of Bounty — {3}{G}{U} 3/1 legendary Snake Druid,
+/// cascade. Spells you cast with mana value 6 or greater have cascade (CR
+/// 702.85: cascade triggers on cast, below the spell's own mana value).
+pub fn imoti_celebrant_of_bounty() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cascade],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::ValueAtLeast(
+                Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                Value::Const(6),
+            )),
+            effect: Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)), filter: None },
+        }],
+        ..legend(
+            "Imoti, Celebrant of Bounty",
+            cost(&[generic(3), g(), u()]),
+            vec![CreatureType::Snake, CreatureType::Druid],
+            3,
+            1,
+        )
+    }
+}
+
+/// Leyline Immersion — {3}{G} Aura, enchant legendary creature. Enchanted
+/// creature has ward {2} and "{T}: Add five mana in any combination of
+/// colors. Spend this mana only to cast spells."
+pub fn leyline_immersion() -> CardDefinition {
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Leyline Immersion",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::HasSupertype(Supertype::Legendary))),
+        },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature has ward {2}.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: host(),
+                    keyword: Keyword::Ward(crate::card::WardCost::generic(2)),
+                },
+            },
+            StaticAbility {
+                description: "Enchanted creature has \"{T}: Add five mana in any combination of colors. Spend this mana only to cast spells.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: host(),
+                    ability: tap_for(ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyColors(Value::Const(5))),
+                        SpendRestriction::SpellsOnly,
+                    )),
+                    condition: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nicol Bolas, God-Pharaoh — {4}{U}{B}{R} legendary planeswalker, loyalty 7.
+/// +2: target opponent exiles from the top until a nonland card; you may cast
+/// it free this turn. +1: each opponent exiles two cards from their hand.
+/// −4: 7 damage to target opponent, or creature or planeswalker an opponent
+/// controls. −12: exile each nonland permanent your opponents control.
+pub fn nicol_bolas_god_pharaoh() -> CardDefinition {
+    CardDefinition {
+        name: "Nicol Bolas, God-Pharaoh",
+        cost: cost(&[generic(4), u(), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Bolas], ..Default::default() },
+        base_loyalty: 7,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::TargetPlayerThen {
+                    filter: R::Player.and(R::ControlledByOpponent),
+                    then: Box::new(Effect::ExileTopUntilNonlandMayPlay {
+                        who: PlayerRef::Target(0),
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        free: true,
+                        hand_unless_mv_below: None,
+                        grant_to_exiling_player: false,
+                    }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ExileFromHand { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::DealDamage {
+                    to: target_filtered(
+                        R::OpponentPlayer
+                            .or(R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent)),
+                    ),
+                    amount: Value::Const(7),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -12,
+                effect: Effect::Exile { what: Selector::EachPermanent(R::Nonland.and(R::ControlledByOpponent)) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Emergent Ultimatum — {B}{B}{G}{G}{G}{U}{U} sorcery. Search for up to three
+/// monocolored cards with different names and exile them; an opponent
+/// chooses one to shuffle back; you may cast the others free (CR 118.9).
+/// Exile it as it resolves.
+pub fn emergent_ultimatum() -> CardDefinition {
+    CardDefinition {
+        name: "Emergent Ultimatum",
+        cost: cost(&[b(), b(), g(), g(), g(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
+        effect: Effect::Seq(vec![
+            Effect::SearchSplitOpponentChooses {
+                opponent: Selector::None,
+                count: 3,
+                opponent_picks: 1,
+                chosen_to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Shuffled },
+                rest_to: ZoneDest::ExileWithSourceStamp,
+                filter: Some(R::Monocolored),
+            },
+            Effect::CastAnyOrderWithoutPaying {
+                what: Selector::CardExiledWithSource,
+                source_zone: crate::card::Zone::Exile,
+                filter: None,
+                cap: None,
+                total_mana_value: None,
+            },
+        ]),
         ..Default::default()
     }
 }

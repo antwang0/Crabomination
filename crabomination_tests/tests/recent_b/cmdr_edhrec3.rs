@@ -432,3 +432,95 @@ fn the_eagles_are_coming_trades_creatures_for_birds() {
         assert_eq!(named(&g, "Bird Soldier"), returned, "the next upkeep is seat 1's");
     }
 }
+
+/// Imoti: a mana value 6 spell gains cascade (CR 702.85a) and finds the
+/// first cheaper nonland card.
+#[test]
+fn imoti_gives_big_spells_cascade() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::imoti_celebrant_of_bounty());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    flood(&mut g);
+    cast_x(&mut g, wurm, None);
+    assert!(g.battlefield_find(wurm).is_some());
+    assert!(g.battlefield_find(bear).is_some(), "cascaded into the bear");
+}
+
+/// Leyline Immersion: ward {2} and five spell-only mana for the legend it
+/// enchants.
+#[test]
+fn leyline_immersion_turns_a_legend_into_a_mana_engine() {
+    let mut g = pod(2);
+    let isamaru = ready(&mut g, 0, catalog::isamaru_hound_of_konda());
+    let aura = ready(&mut g, 0, catalog::leyline_immersion());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(isamaru);
+    let cp = g.computed_permanent(isamaru).unwrap();
+    assert!(cp.keywords().iter().any(|k| matches!(k, crabomination::card::Keyword::Ward(_))));
+    activate(&mut g, isamaru, 0);
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 5, "spell-only mana");
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast_x(&mut g, ring, None);
+    assert!(g.battlefield_find(ring).is_some(), "spell-only mana casts a spell");
+}
+
+/// Nicol Bolas, God-Pharaoh: +1 strips two cards from each opponent's hand,
+/// −4 deals 7 to an opponent, +2 exiles to a nonland card castable free, −12
+/// exiles the opponents' nonland permanents.
+#[test]
+fn nicol_bolas_god_pharaoh_four_abilities() {
+    let mut g = pod(3);
+    let bolas = ready(&mut g, 0, catalog::nicol_bolas_god_pharaoh());
+    g.battlefield_find_mut(bolas).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 7);
+    let reset = |g: &mut GameState| g.battlefield_find_mut(bolas).unwrap().loyalty_uses_this_turn = 0;
+    for seat in [1, 2] {
+        for _ in 0..3 {
+            g.add_card_to_hand(seat, catalog::island());
+        }
+    }
+    loyalty(&mut g, bolas, 1, None);
+    assert_eq!((g.players[1].hand.len(), g.players[2].hand.len()), (1, 1));
+
+    reset(&mut g);
+    let life = g.players[1].life;
+    loyalty(&mut g, bolas, 2, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 7);
+
+    reset(&mut g);
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::island());
+    loyalty(&mut g, bolas, 0, Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("free cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
+
+    reset(&mut g);
+    let theirs = ready(&mut g, 2, catalog::hill_giant());
+    let land = ready(&mut g, 2, catalog::island());
+    g.battlefield_find_mut(bolas).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 20);
+    loyalty(&mut g, bolas, 3, None);
+    assert!(g.battlefield_find(theirs).is_none() && g.battlefield_find(land).is_some());
+    assert!(g.battlefield_find(bear).is_some(), "your own permanents stay");
+}
+
+/// Emergent Ultimatum: three monocolored cards, the opponent sends one back
+/// (shuffled in), the rest are cast free; the Ultimatum exiles itself.
+#[test]
+fn emergent_ultimatum_casts_what_the_opponent_leaves() {
+    let mut g = pod(2);
+    let picks = [
+        g.add_card_to_library(0, catalog::grizzly_bears()),
+        g.add_card_to_library(0, catalog::hill_giant()),
+        g.add_card_to_library(0, catalog::savannah_lions()),
+    ];
+    let ult = g.add_card_to_hand(0, catalog::emergent_ultimatum());
+    flood(&mut g);
+    cast_x(&mut g, ult, None);
+    let on_field = picks.iter().filter(|id| g.battlefield_find(**id).is_some()).count();
+    let in_library = picks.iter().filter(|id| g.players[0].library.iter().any(|c| c.id == **id)).count();
+    assert_eq!((on_field, in_library), (2, 1));
+    assert!(g.exile.iter().any(|c| c.id == ult), "exiles itself");
+}
