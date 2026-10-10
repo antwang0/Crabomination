@@ -45802,8 +45802,9 @@ pub fn lurrus_of_the_dream_den() -> CardDefinition {
 }
 
 /// Gyruda, Doom of Depths — {4}{U/B}{U/B} 6/6 Demon Kraken. ETB: each player
-/// mills four. (The reanimate-an-even-MV-milled-creature rider is approximated
-/// away.) Companion: deck contains only even-mana-value cards.
+/// mills four, then you put a creature card with an even mana value from
+/// among the milled cards onto the battlefield under your control.
+/// Companion: deck contains only even-mana-value cards.
 pub fn gyruda_doom_of_depths() -> CardDefinition {
     CardDefinition {
         name: "Gyruda, Doom of Depths",
@@ -45822,10 +45823,24 @@ pub fn gyruda_doom_of_depths() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Companion],
         companion: Some(crate::card::CompanionRule::NonlandEvenManaValue),
-        triggered_abilities: vec![etb(Effect::Mill {
-            who: Selector::Player(PlayerRef::EachPlayer),
-            amount: Value::Const(4),
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ClearLastMoved,
+            Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(4) },
+            Effect::ChooseOneAmong {
+                what: Selector::MatchingAmong {
+                    inner: Box::new(Selector::LastMoved),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueParity { odd: false })
+                        .and(SelectionRequirement::InGraveyard),
+                },
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::Move {
+                    what: Selector::SeparatedPile { chosen: true },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+                other: Box::new(Effect::Noop),
+            },
+        ]))],
         ..Default::default()
     }
 }

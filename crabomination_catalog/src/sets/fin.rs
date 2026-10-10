@@ -6234,8 +6234,8 @@ pub fn jenova_ancient_calamity() -> CardDefinition {
 /// Ardyn, the Usurper — {5}{B}{B}{B} 4/4 Elder Human Noble. Demons you control
 /// have menace, lifelink, and haste. Starscourge — at the beginning of combat on
 /// your turn, exile up to one target creature card from a graveyard; if you do,
-/// create a token copy of it that's a 5/5 black Demon. (The "up to one" is
-/// modeled as a required target — no-op with no graveyard creature.)
+/// create a token copy of it that's a 5/5 black Demon (Demon instead of its
+/// other creature types, CR 707.9b).
 pub fn ardyn_the_usurper() -> CardDefinition {
     CardDefinition {
         name: "Ardyn, the Usurper",
@@ -6270,30 +6270,46 @@ pub fn ardyn_the_usurper() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::BeginCombat),
                 EventScope::YourControl,
             ),
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
-                    ),
-                    to: ZoneDest::Exile,
-                },
-                Effect::CreateTokenCopyOf {
-                    extra_keywords: vec![],
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    source: Selector::Target(0),
-                    extra_creature_types: vec![CreatureType::Demon],
-                    extra_card_types: vec![],
-                    override_pt: Some((5, 5)),
-                    override_colors: Some(vec![Color::Black]),
-                    enters_tapped: false,
-                    non_legendary: false,
-                    legendary: false,
-                    no_mana_cost: false,
-                    enters_with_counters: None,
-                    remove_keywords: vec![],
-                },
-            ]),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                        ),
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::If {
+                        cond: crate::card::Predicate::SelectorExists(Selector::LastMoved),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::CreateTokenCopyOf {
+                                extra_keywords: vec![],
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                                source: Selector::Target(0),
+                                extra_creature_types: vec![],
+                                extra_card_types: vec![],
+                                override_pt: Some((5, 5)),
+                                override_colors: Some(vec![Color::Black]),
+                                enters_tapped: false,
+                                non_legendary: false,
+                                legendary: false,
+                                no_mana_cost: false,
+                                enters_with_counters: None,
+                                remove_keywords: vec![],
+                            },
+                            // CR 707.9b — "except it's a 5/5 black Demon":
+                            // Demon instead of its other creature types.
+                            Effect::SetCopiableCreatureTypes {
+                                what: Selector::LastCreatedToken,
+                                creature_types: vec![CreatureType::Demon],
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
         }],
         ..Default::default()
     }

@@ -993,3 +993,55 @@ fn balor_spreads_its_modes_over_different_opponents() {
         }
     }
 }
+
+/// Gyruda, Doom of Depths: each player mills four, and an even-mana-value
+/// creature card from among them comes to your side.
+#[test]
+fn gyruda_takes_an_even_creature_from_the_mill() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let elves = g.add_card_to_library(0, catalog::llanowar_elves());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let gyruda = g.add_card_to_hand(0, catalog::gyruda_doom_of_depths());
+    flood(&mut g);
+    cast_x(&mut g, gyruda, None);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0), "the bear (2) is even");
+    assert!(g.battlefield_find(elves).is_none(), "the elf (1) is odd");
+}
+
+/// Ardyn, the Usurper: "up to one" — no creature card in any graveyard is
+/// no target and no token; with one, a 5/5 black token that's only a Demon
+/// (CR 707.9b).
+#[test]
+fn ardyn_makes_a_demon_copy_or_nothing() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    ready(&mut g, 0, catalog::ardyn_the_usurper());
+    let tokens = |g: &GameState| g.battlefield.iter().filter(|c| c.is_token).count();
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(tokens(&g), 0);
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ardyn_the_usurper());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("a token");
+    let cp = g.computed_permanent(token.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Demon]);
+}
