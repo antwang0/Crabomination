@@ -2697,3 +2697,26 @@ fn falkenrath_noble_drains_a_targeted_player_on_each_death() {
     assert_eq!(g.players[0].life, l0 + 1, "you gain 1");
     assert_eq!(g.players[1].life, l1 - 1, "and the targeted player loses 1");
 }
+
+/// CR 614.12 / 400.7 — Herald's Horn's "as this enters, choose a creature
+/// type" is a replacement, not a trigger: the type is set as it enters and
+/// nothing waits on the stack (a trigger could be answered by destroying the
+/// Horn, then stamped the choice on the card in the graveyard — six-seat
+/// audit pod, seed 16100460 game 5). The shared helper also builds Urza's
+/// Incubator; Steely Resolve's builds Cover of Darkness.
+#[test]
+fn heralds_horn_chooses_its_type_as_it_enters() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let horn = g.add_card_to_hand(0, catalog::heralds_horn());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: horn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Herald's Horn");
+    assert_eq!(g.stack.len(), 1);
+    g.resolve_top_of_stack().expect("resolve the Horn");
+    let c = g.battlefield_find(horn).expect("on the battlefield");
+    assert!(c.chosen_creature_type.is_some(), "the type is set as it enters");
+    assert!(g.stack.is_empty(), "no choose-a-type trigger");
+}

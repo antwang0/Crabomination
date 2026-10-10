@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, SelectionRequirement as R, StaticAbility,
     StaticEffect,
 };
-use crate::effect::shortcut::{deal, etb};
+use crate::effect::shortcut::deal;
 use crate::effect::{Effect, Selector};
 use crate::mana::{cost, generic, r};
 
@@ -21,9 +21,10 @@ fn incubator(
         name,
         cost: cost(mana),
         card_types: types,
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
-            what: Selector::This,
-        })],
+        // "As this enters, choose a creature type" is a replacement (CR 614.12),
+        // not a trigger: destroyed in response, a trigger stamped the choice on
+        // the card in the graveyard (CR 400.7; audit pod seed 16100460 game 5).
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         static_abilities: vec![StaticAbility {
             description: "Creature spells you cast of the chosen type cost less.",
             effect: StaticEffect::ChosenTypeSpellCostReduction { amount },

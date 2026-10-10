@@ -7,7 +7,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
     StaticAbility, StaticEffect, Subtypes,
 };
-use crate::effect::shortcut::etb;
+
 use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, w};
 
@@ -21,9 +21,10 @@ fn chosen_type_keyword(
         name,
         cost: cost(mana),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::NameCreatureType {
-            what: Selector::This,
-        })],
+        // "As this enters, choose a creature type" is a replacement (CR 614.12),
+        // not a trigger: destroyed in response, a trigger stamped the choice on
+        // the card in the graveyard (CR 400.7; audit pod seed 16100460 game 5).
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type have the granted keyword.",
             effect: StaticEffect::GrantKeywordToChosenType {
