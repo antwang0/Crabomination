@@ -158,11 +158,18 @@ the handoff.
   five printing "up to" are fine — see the CR 601.2c entry); the picker's
   `optional` reading `min_targets_in_mode` instead of `target_slot_optional_x`
   differs on 22 `If`-wrapped slots but `declines_own_side_pick` already reads
-  the right one for triggers — no observable divergence, left as is. ⚠ Open:
-  Waste Management's unkicked "up to two cards from a single graveyard" is
-  aimed at the caster's own graveyard by the all-slots picker (`slot_owner`
-  over `If` returns the kicked branch's owner first, so the exile reads
-  friendly).
+  the right one for triggers — no observable divergence, left as is. ✅
+  Waste Management's unkicked "up to two cards from a single graveyard" was
+  aimed at the caster's own graveyard by the all-slots picker; an optional
+  slot that could name an opponent's card now spares your own.
+- **Fuzzed strict sweep** 184001 (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`,
+  3/4/6/8 × 15 = 4,665 games): one abort, the bot's sink gate under Agatha's
+  Soul Cauldron (fixed); four undecided — Polyraptor, a simultaneous loss, a
+  token board cap, and **an action cap the loop watch can't call**: Shalai and
+  Hallar + Heliod, Sun-Crowned against a seat holding Darksteel Angel ("you
+  can't lose") is a genuine mandatory infinite loop, but life totals change
+  every pass, so the no-progress digest never repeats. Open, low value: a
+  CR 104.4b reading that ignores a seat's life while it can't lose.
 
 ## FIXED/OPEN 2026-10-10 (seventeenth Commander run, `017yfeX4`) — eight EDHREC seats, eleven primitives, the CR 601.2c census
 
