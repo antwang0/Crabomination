@@ -1961,6 +1961,17 @@ pub struct ColdState {
     /// Each entry is `(permanent, the seat whose next turn ends it)`; the
     /// entry is dropped at that seat's untap step.
     pub(crate) damage_locked_until_turn_of: Vec<(CardId, usize)>,
+    /// CR 601 — "until your next turn, your opponents can't cast spells from
+    /// anywhere other than their hands" (Avatar's Wrath): the seats whose
+    /// opponents are locked, each dropped at that seat's untap step.
+    #[serde(default)]
+    pub(crate) non_hand_casts_locked_until_turn_of: Vec<usize>,
+    /// CR 121.2a — "the next time they would draw a card this turn, instead
+    /// they exile the top card of their library; they may play it this turn"
+    /// (Urabrask, Heretic Praetor): one entry per pending replacement, spent
+    /// by the seat's next draw and cleared at cleanup.
+    #[serde(default)]
+    pub(crate) next_draw_impulse_this_turn: Vec<usize>,
     /// CR 614.9 — one-shot "all damage to you and your permanents this turn is
     /// dealt to the chosen permanent instead" (Gideon's Sacrifice). Each entry
     /// is `(protected_player, redirect_target, creatures_only)`; consulted in
@@ -10697,6 +10708,10 @@ impl GameState {
             || (!def.is_creature()
                 && matches!(zone, Zone::Graveyard | Zone::Exile)
                 && self.graveyard_exile_locked())
+            // Avatar's Wrath: the same lock, from a resolved spell, until the
+            // caster's next turn.
+            || (!matches!(zone, Zone::Hand)
+                && self.non_hand_casts_locked_until_turn_of.iter().any(|&s| !self.same_team(s, caster)))
             // CR 601 — Drannith Magistrate: an opponent's permanent forbids
             // casting from any zone but the hand.
             || (!matches!(zone, Zone::Hand)
@@ -22006,6 +22021,28 @@ impl GameState {
                 _ => DrawOutcome::Skipped,
             };
         }
+        // Urabrask, Heretic Praetor — this one draw is replaced by an exile
+        // the seat may play this turn; an empty library exiles nothing, and
+        // the replaced draw decks no one.
+        if let Some(i) = self.next_draw_impulse_this_turn.iter().position(|&s| s == p) {
+            self.next_draw_impulse_this_turn.remove(i);
+            let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), p, None);
+            if let Ok(mut evs) = self.resolve_effect_driven(
+                &crate::effect::Effect::ExileTopAndGrantMayPlay {
+                    who: crate::effect::PlayerRef::Seat(p),
+                    count: crate::effect::Value::ONE,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                &ctx,
+            ) {
+                events.append(&mut evs);
+            }
+            return DrawOutcome::Drew;
+        }
         // One lane read in front of the eleven board walks below (PERF
         // `(-233)`): every static any of them matches is in the lane's
         // predicate, so a clear lane answers all of them at once, and a
@@ -22642,6 +22679,8 @@ impl GameState {
                     || (p.duration == crate::card::MayPlayDuration::UntilYourNextEndStep
                         && end_step_begins
                         && p.player == active)
+                    || (p.duration == crate::card::MayPlayDuration::UntilSeatsNextEndStep { seat: active }
+                        && end_step_begins)
             ) {
                 c.may_play_until = None;
                 c.granted_alt_cast_cost_eot = None;
@@ -22669,7 +22708,9 @@ impl GameState {
     pub(crate) fn arm_step_bounded_may_play(&mut self, d: crate::card::MayPlayDuration) {
         if matches!(
             d,
-            crate::card::MayPlayDuration::EndOfThisStep | crate::card::MayPlayDuration::UntilYourNextEndStep
+            crate::card::MayPlayDuration::EndOfThisStep
+                | crate::card::MayPlayDuration::UntilYourNextEndStep
+                | crate::card::MayPlayDuration::UntilSeatsNextEndStep { .. }
         ) {
             self.step_bounded_may_play = true;
         }
@@ -22686,6 +22727,7 @@ impl GameState {
                     p.duration,
                     crate::card::MayPlayDuration::EndOfThisStep
                         | crate::card::MayPlayDuration::UntilYourNextEndStep
+                        | crate::card::MayPlayDuration::UntilSeatsNextEndStep { .. }
                 )
             )
         };

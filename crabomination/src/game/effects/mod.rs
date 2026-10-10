@@ -30581,6 +30581,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OpponentsCantCastFromNonHandUntilYourNextTurn => {
+                if !self.non_hand_casts_locked_until_turn_of.contains(&ctx.controller) {
+                    self.non_hand_casts_locked_until_turn_of.push(ctx.controller);
+                }
+                Ok(())
+            }
+
+            Effect::NextDrawThisTurnBecomesImpulse { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.next_draw_impulse_this_turn.push(p);
+                }
+                Ok(())
+            }
+
             Effect::SilencePlayersUntilTheirNextTurn { who } => {
                 // Re-armed at each turn boundary until that player's untap.
                 for p in self.resolve_players(who, ctx) {
@@ -41190,6 +41204,15 @@ impl GameState {
                                 crate::card::MAY_PLAY_DORMANT
                             };
                             (seat, duration.bound_to(recipient).bound_to_source(ctx.source))
+                        }
+                        // Rocco: "until YOUR next end step" — the source's
+                        // controller's, whoever holds the card.
+                        crate::card::MayPlayDuration::UntilSeatsNextEndStep { .. } => {
+                            let seat = ctx
+                                .source
+                                .and_then(|s| self.battlefield_find(s).map(|c| c.controller))
+                                .unwrap_or(granter_player);
+                            (recipient, crate::card::MayPlayDuration::UntilSeatsNextEndStep { seat })
                         }
                         d => (recipient, d.bound_to_source(ctx.source)),
                     };

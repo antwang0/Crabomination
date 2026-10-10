@@ -9198,6 +9198,14 @@ pub enum Effect {
     /// "a permanent card with equal or lesser mana value" than the entrant:
     /// `WithX { x: ManaValueOf(TriggerSource), body }`.
     WithX { x: Value, body: Box<Effect> },
+    /// CR 601 — "Until your next turn, your opponents can't cast spells from
+    /// anywhere other than their hands" (Avatar's Wrath): a lock the
+    /// controller's next untap step lifts.
+    OpponentsCantCastFromNonHandUntilYourNextTurn,
+    /// CR 121.2a — "the next time [who] would draw a card this turn, instead
+    /// they exile the top card of their library. They may play it this turn"
+    /// (Urabrask, Heretic Praetor). Spent by that draw; lapses at cleanup.
+    NextDrawThisTurnBecomesImpulse { who: PlayerRef },
     /// Run `body` with the spell's target slots `slot..slot + count` moved to
     /// slots `0..count`.
     ///

@@ -1182,6 +1182,11 @@ pub enum MayPlayDuration {
     /// begins, by the step-transition sweep (`clear_step_bounded_may_play`),
     /// so it is gated by the same `step_bounded_may_play` flag.
     UntilYourNextEndStep,
+    /// "Until **your** next end step" over a card another player holds —
+    /// Rocco, Street Chef's "each player may play the card they exiled": ends
+    /// as `seat`'s next end step begins, whoever holds it. Printed with seat
+    /// 0; `GrantMayPlay` binds the granting source's controller.
+    UntilSeatsNextEndStep { seat: usize },
     /// "During any turn you attacked with a token, you may play that card"
     /// (Neyali, Suns' Vanguard). Never expires; the turn sweep parks the
     /// permission's `player` at [`MAY_PLAY_DORMANT`] and declaring a token

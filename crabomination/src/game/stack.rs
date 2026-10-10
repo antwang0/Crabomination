@@ -721,6 +721,9 @@ impl GameState {
                 if self.damage_locked_until_turn_of.iter().any(|(_, seat)| ends_for(*seat)) {
                     retain_cold!(self.damage_locked_until_turn_of, |(_, seat)| !ends_for(*seat));
                 }
+                if self.non_hand_casts_locked_until_turn_of.iter().any(|seat| ends_for(*seat)) {
+                    retain_cold!(self.non_hand_casts_locked_until_turn_of, |seat| !ends_for(*seat));
+                }
                 // Oracle en-Vec's mandate arms as its victim's turn begins.
                 if self.attack_mandates.iter().any(|m| m.seat == ap && !m.armed) {
                     for m in self.attack_mandates.iter_mut().filter(|m| m.seat == ap) {
@@ -5637,6 +5640,7 @@ impl GameState {
         clear_cold!(self.combat_damage_prevented_to_matching_this_turn);
         self.life_gain_punish_this_turn = 0;
         clear_cold!(self.draws_redirected_this_turn);
+        clear_cold!(self.next_draw_impulse_this_turn);
         self.damage_becomes_this_turn = None;
         clear_cold!(self.combat_damage_prevented_to_players_this_turn);
         clear_cold!(self.combat_damage_prevented_to_walkers_this_turn);
@@ -5828,7 +5832,8 @@ impl GameState {
                     // Parked and woken as a fetch player enters or leaves.
                     crate::card::MayPlayDuration::WhileHolderControlsFetchPlayer { .. } => false,
                     // Swept as the holder's end step begins, not here.
-                    crate::card::MayPlayDuration::UntilYourNextEndStep => false,
+                    crate::card::MayPlayDuration::UntilYourNextEndStep
+                    | crate::card::MayPlayDuration::UntilSeatsNextEndStep { .. } => false,
                     // Step-bounded miracle windows are also dead by turn end.
                     crate::card::MayPlayDuration::EndOfThisStep => true,
                     crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. }

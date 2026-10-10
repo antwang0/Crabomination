@@ -758,6 +758,7 @@ impl Effect {
             | Effect::DoublePlayerCounters { .. }
             | Effect::SpreadCounterKindToOthers { .. }
             | Effect::ReverseTurnOrder
+            | Effect::OpponentsCantCastFromNonHandUntilYourNextTurn
             | Effect::AddManaAmongColorsOf { .. }
             | Effect::ExileUntilCastOneTakeOne { .. }
             | Effect::RevealDeployOneTakeOne { .. }
@@ -1606,9 +1607,9 @@ impl Effect {
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::EndMayPlayOnCardsExiledWithSource => false,
-            Effect::SilencePlayersThisTurn { who } | Effect::SilencePlayersUntilTheirNextTurn { who } => {
-                player_has_target(who)
-            }
+            Effect::SilencePlayersThisTurn { who }
+            | Effect::SilencePlayersUntilTheirNextTurn { who }
+            | Effect::NextDrawThisTurnBecomesImpulse { who } => player_has_target(who),
             Effect::MayPayBy { who, body, else_, .. } => {
                 player_has_target(who)
                     || body.requires_target()
