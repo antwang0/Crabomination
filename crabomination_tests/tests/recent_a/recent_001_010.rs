@@ -7815,7 +7815,13 @@ mod recent2 {
         let foe_def = catalog::grizzly_bears();
         let mut g = two_player_game();
         let foe = g.add_card_to_battlefield(1, foe_def);
-        g.move_card_to_battlefield_for_test(0, catalog::ossification());
+        let plains = g.add_card_to_battlefield(0, catalog::plains());
+        let oss = g.add_card_to_hand(0, catalog::ossification());
+        g.players[0].mana_pool.add(Color::White, 2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: oss, target: Some(Target::Permanent(plains)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("enchant a basic land you control");
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.id == foe), "opponent creature exiled");
         assert!(g.battlefield_find(foe).is_none());

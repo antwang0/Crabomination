@@ -623,9 +623,7 @@ pub fn vat_emergence() -> CardDefinition {
 }
 
 /// Shardmage's Rescue — {W} Aura with flash. Enchant a creature you control;
-/// it gets +1/+1 and (approximated as ongoing) hexproof. The printed
-/// "hexproof only while this entered this turn" window is granted for the
-/// duration instead — the protect-the-target intent is preserved.
+/// it gets +1/+1, and hexproof as long as this Aura entered this turn.
 pub fn shardmages_rescue() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -647,7 +645,17 @@ pub fn shardmages_rescue() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Hexproof],
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: R::Any,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Hexproof],
+                condition: Some(crate::effect::Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::EnteredThisTurn,
+                }),
+                ..Default::default()
+            }],
             ..Default::default()
         }),
         ..Default::default()

@@ -447,7 +447,6 @@ Scans: `audit_copy_except.py`, `audit_nontoken.py`, `audit_control_duration.py`,
 | Clement, the Worrywort | Frogs you control don't gain "{T}: Add {G} or {U}" (creature-spell-only) | no static grant of a restricted mana ability to a filter |
 | Kitesail Larcenist | exiles one opponent's nonland permanent for good instead of making up to one artifact/creature per player a Treasure while it stays | `BecomeTreasure`'s granted mana ability and layer effects have no "while the source remains" duration |
 | The Necrobloom | land cards in your graveyard don't have dredge 2 | dredge is read off the card's own definition |
-| Ragost, Deft Gastronaut | artifacts you control aren't Foods and don't gain the Food ability | no type-and-ability grant to a filter |
 | Preacher | the caster picks the stolen creature (printed: an opponent's choice) | `GainControlWhileSourceTapped` resolves a caster target |
 | Croaking Counterpart | the Frog copy keeps its other creature types | `CreateTokenCopyOf` adds creature types but can't replace them |
 | Sunscourge Champion | eternalize's "Discard a card" additional cost isn't paid | the `eternalize` shortcut carries a mana cost only |

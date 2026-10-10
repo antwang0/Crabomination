@@ -343,10 +343,11 @@ pub fn firebender_ascension() -> CardDefinition {
     }
 }
 
-/// Ragost, Deft Gastronaut — {R}{W} 2/2 legendary Lobster Citizen. `{1}, {T},
-/// Sacrifice a Food: Ragost deals 3 damage to each opponent.` At the beginning
-/// of each end step, if you gained life this turn, untap Ragost. (The "artifacts
-/// you control are Foods with a sac-for-life ability" static is dropped.)
+/// Ragost, Deft Gastronaut — {R}{W} 2/2 legendary Lobster Citizen. Artifacts
+/// you control are Foods with "{2}, {T}, Sacrifice this artifact: You gain 3
+/// life." `{1}, {T}, Sacrifice a Food: Ragost deals 3 damage to each
+/// opponent.` At the beginning of each end step, if you gained life this turn,
+/// untap Ragost.
 pub fn ragost_deft_gastronaut() -> CardDefinition {
     CardDefinition {
         name: "Ragost, Deft Gastronaut",
@@ -359,6 +360,30 @@ pub fn ragost_deft_gastronaut() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        static_abilities: vec![
+            crate::card::StaticAbility {
+                description: "Artifacts you control are Foods in addition to their other types.".into(),
+                effect: crate::effect::StaticEffect::AddCardTypeToMatching {
+                    applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
+                    card_type: CardType::Artifact,
+                    artifact_subtype: Some(ArtifactSubtype::Food),
+                },
+            },
+            crate::card::StaticAbility {
+                description: "Artifacts you control have \"{2}, {T}, Sacrifice this artifact: You gain 3 life.\"".into(),
+                effect: crate::effect::StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        sac_cost: true,
+                        mana_cost: cost(&[generic(2)]),
+                        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                        ..Default::default()
+                    },
+                    condition: None,
+                },
+            },
+        ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),

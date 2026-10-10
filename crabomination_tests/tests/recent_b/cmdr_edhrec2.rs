@@ -936,3 +936,89 @@ fn quintorius_kand_drains_on_casts_from_exile() {
     assert_eq!(g.players[1].life, life[1] - 5);
     assert_eq!(g.players[2].life, life[2] - 2);
 }
+
+// ── Target-deck residuals fixed this run (pod_residuals named them) ──────────
+
+/// Ossification enchants a basic land you control (CR 303.4a — the Aura
+/// spell's target) and its trigger exiles an opponent's creature.
+#[test]
+fn ossification_enchants_your_basic_land() {
+    let mut g = pod(2);
+    let plains = ready(&mut g, 0, catalog::plains());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let oss = enchant(&mut g, catalog::ossification(), plains);
+    assert_eq!(g.battlefield_find(oss).unwrap().attached_to, Some(plains));
+    assert!(g.battlefield_find(theirs).is_none());
+    let their_plains = ready(&mut g, 1, catalog::plains());
+    let again = g.add_card_to_hand(0, catalog::ossification());
+    flood(&mut g);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: again,
+            target: Some(Target::Permanent(their_plains)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "not a land you control",
+    );
+}
+
+/// Shardmage's Rescue: hexproof only during the turn it entered; the +1/+1
+/// stays.
+#[test]
+fn shardmages_rescue_hexproof_lasts_its_entry_turn() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    enchant(&mut g, catalog::shardmages_rescue(), bear);
+    let hexproof = |g: &GameState| g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Hexproof);
+    assert!(hexproof(&g));
+    g.turn_number += 1;
+    assert!(!hexproof(&g));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
+
+/// War's Toll (CR 508.1d): an opponent may attack with nothing, but once one
+/// of their creatures attacks, all of them able to must.
+#[test]
+fn wars_toll_all_or_nothing_attacks() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::wars_toll());
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let mut solo = g.clone();
+    assert!(
+        solo.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: a, target: AttackTarget::Player(0) }]))
+            .is_err(),
+        "one attacking drags the other in",
+    );
+    g.perform_action(GameAction::DeclareAttackers(vec![])).expect("no attack is fine");
+}
+
+/// Ragost: your artifacts are Foods with the sac-for-3-life ability.
+#[test]
+fn ragost_makes_your_artifacts_food() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ragost_deft_gastronaut());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let food = crabomination::card::ArtifactSubtype::Food;
+    assert!(g.computed_permanent(ring).unwrap().subtypes().artifact_subtypes.contains(&food));
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ring,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("granted food ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3);
+    assert!(g.battlefield_find(ring).is_none());
+}

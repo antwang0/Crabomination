@@ -1052,10 +1052,10 @@ pub fn stickytongue_sentinel() -> CardDefinition {
     }
 }
 
-/// Ossification — {1}{W} Enchantment — Aura. When it enters, exile target
-/// creature or planeswalker an opponent controls until it leaves the
-/// battlefield. (Models as an O-Ring; the "enchant a basic land you control"
-/// flavor is dropped — it functions as a standalone removal enchantment.)
+/// Ossification — {1}{W} Enchantment — Aura, enchant basic land you control.
+/// When it enters, exile target creature or planeswalker an opponent controls
+/// until it leaves the battlefield. The Aura's own target is the land (cast
+/// time, CR 303.4a); the trigger targets separately as it goes on the stack.
 pub fn ossification() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
@@ -1065,6 +1065,13 @@ pub fn ossification() -> CardDefinition {
         subtypes: crate::card::Subtypes {
             enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
             ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::IsBasicLand.and(SelectionRequirement::ControlledByYou),
+            },
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),

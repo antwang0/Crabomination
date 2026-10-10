@@ -13,22 +13,21 @@ use crate::effect::{
 use crate::mana::{b, cost, generic, r, w};
 
 /// War's Toll — {3}{R} Enchantment. Whenever an opponent taps a land for mana,
-/// tap all lands they control; and their creatures attack each combat if able.
-///
-/// Approximation: the printed attack clause only bites once one of their
-/// creatures attacks — here it's an unconditional attack requirement.
+/// tap all lands they control. If a creature an opponent controls attacks,
+/// all creatures that opponent controls attack if able (CR 508.1d —
+/// `MustAttackIfAnotherAttacks`, which binds only once one of theirs attacks).
 pub fn wars_toll() -> CardDefinition {
     CardDefinition {
         name: "War's Toll",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "Creatures your opponents control attack each combat if able.",
+            description: "If a creature an opponent controls attacks, all creatures that opponent controls attack if able.",
             effect: StaticEffect::AnthemForFilter {
                 filter: R::Creature,
                 power: 0,
                 toughness: 0,
-                keywords: vec![Keyword::MustAttack],
+                keywords: vec![Keyword::MustAttackIfAnotherAttacks],
                 opponents: true,
                 all_players: false,
                 only_your_turn: false,

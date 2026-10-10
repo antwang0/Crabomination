@@ -2117,7 +2117,8 @@ fn bronze_bombshell_punishes_theft() {
 
 // ── Gap wave 8 ──────────────────────────────────────────────────────────────
 
-/// War's Toll taps out an opponent who taps a land, and forces their attacks.
+/// War's Toll taps out an opponent who taps a land, and once one of their
+/// creatures attacks, the rest must (CR 508.1d).
 #[test]
 fn wars_toll_taps_the_rest_of_their_lands() {
     let mut g = two_player_game();
@@ -2138,8 +2139,8 @@ fn wars_toll_taps_the_rest_of_their_lands() {
     }
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     assert!(
-        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttack),
-        "their creatures must attack",
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttackIfAnotherAttacks),
+        "their creatures must join an attack",
     );
 }
 
