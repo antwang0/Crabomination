@@ -3134,7 +3134,7 @@ pub struct GameState {
     /// is size-capped (`cow::tests::game_state_stays_small`).
     #[serde(skip)]
     pub(crate) end_requested: Option<EndRequest>,
-    /// CR 702.46 — Cipher. Set by `Effect::Cipher` to the creature the
+    /// CR 702.99 — Cipher. Set by `Effect::Cipher` to the creature the
     /// resolving spell should be exiled "encoded on"; the post-resolution
     /// routing consumes it to send the card to exile (with `encoded_on` stamped)
     /// instead of the graveyard. Cleared once consumed.
@@ -3536,7 +3536,7 @@ pub struct GameState {
     pub acted_on_own_turn_mask: u64,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
-    /// CR 701.19 — "search for up to N cards" is one search: the picks
+    /// CR 701.23 — "search for up to N cards" is one search: the picks
     /// `SearchUpToN` runs share its prohibitions, tax and event. See
     /// `game/search_batch.rs`.
     #[serde(skip)]
@@ -9005,7 +9005,7 @@ impl GameState {
         events
     }
 
-    /// CR 702.29 — Echo. At the beginning of the controller's upkeep, each
+    /// CR 702.30 — Echo. At the beginning of the controller's upkeep, each
     /// permanent they control with an unpaid echo (it came under their
     /// control since their last upkeep) is sacrificed unless its echo cost
     /// is paid: mana echoes auto-pay from the pool when affordable
@@ -11179,7 +11179,7 @@ impl GameState {
         counterer: usize,
         events: &mut Vec<crate::game::GameEvent>,
     ) {
-        // CR 701.5 — "a spell or ability you control counters a spell"
+        // CR 701.6 — "a spell or ability you control counters a spell"
         // (Lullmage Mentor) plus the Summoning Trap per-turn tally, both keyed
         // on the counterer rather than the countered spell's caster.
         events.push(crate::game::GameEvent::SpellCountered { card_id: card.id, player: counterer });
@@ -14955,7 +14955,7 @@ impl GameState {
             }
         }
         sa_audit(sa_mask, gs::SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST, before, all_effects.len());
-        // CR 702.183 — Impending: a permanent with the Impending keyword isn't
+        // CR 702.176 — Impending: a permanent with the Impending keyword isn't
         // a creature while it has a time counter. Emit a layer-4
         // RemoveCardType(Creature) self-effect while counters remain.
         for card in if any_impending { &self.battlefield[..] } else { &[] } {
@@ -29117,7 +29117,7 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = vec![];
-                // CR 701.19c — a searched library is shuffled whether or not
+                // CR 701.23 — a searched library is shuffled whether or not
                 // anything was found (declines included). Shuffling first is
                 // safe: the pick is extracted by id below. Library
                 // destinations (Goblin Recruiter's "shuffle, then put them on
@@ -30865,7 +30865,7 @@ impl GameState {
             });
             return Ok(events);
         }
-        // CR 702.46 — Cipher. `Effect::Cipher` set `cipher_encode_pending` to
+        // CR 702.99 — Cipher. `Effect::Cipher` set `cipher_encode_pending` to
         // the creature this spell should be encoded on. Route the card to exile
         // with `encoded_on` stamped instead of the graveyard.
         if let Some(creature) = self.cipher_encode_pending.take() {
@@ -31426,7 +31426,7 @@ impl GameState {
 
     /// Single funnel for on-battlefield control changes (steals, exchanges,
     /// duration reverts). Applies CR 302.6 summoning sickness and re-arms echo
-    /// (CR 702.29b — echo is owed again once it "came under your control").
+    /// (CR 702.30b — echo is owed again once it "came under your control").
     /// Returns the previous controller when control actually changed.
     pub(crate) fn change_control(&mut self, id: CardId, new_ctrl: usize) -> Option<usize> {
         // CR 800.4b — an object never changes to the control of a player who
@@ -35122,7 +35122,7 @@ pub(crate) fn view_block_facts(cp: &ComputedPermanent) -> ViewBlockFacts {
 /// `(-335)`'s device on the declaration path.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub(crate) struct AttackerBlockReqs {
-    /// CR 702.110b — Menace.
+    /// CR 702.111b — Menace.
     pub menace: bool,
     /// CR 509.1b — the max `CantBeBlockedExceptByN(n)`, 0 when absent. The max
     /// rather than the first: the loop it replaces returned on the first arm

@@ -3134,6 +3134,31 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-10 (Commander routine — eighteenth run, session `01Xu59CH`) — guardrail; required slots, sacrifice, picker and sink-gate fixes
+
+Hot-path touch: the cast path walks one slot filter past the supplied targets
+(`required_target_slots` only when that slot exists); `sacrifice_one` reads the
+permanent's controller; `Move` scans the (empty, two-player) command zones per
+moved card; `sink_facts` folds Agatha's Soul Cauldron into K'rrik's statics pass.
+Release `bot_ladder` at `6404859ad` against base `56f8c4d7d` (the commit before
+this run's first), Xeon @ 2.80 GHz (4 cores, 15 GB).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 on both sides; determinism ok (all pairs split),
+                 thread_determinism ok (3 vs 1); peak_rss 31.2 MiB
+paired wall      bench_ab.py base vs tip, 16 pairs: B/A median +3.31 %,
+                 mean +3.58 % (sd 5.99) — no regression (inside noise)
+audit pods       overflow + debug-assertions: 181001 (9,270 games) / 182001
+                 (9,330) every deck x 3/4/6/8 x 30; `--a dflt` 183001 (1,480);
+                 fuzzed strict 184001 (4,665) / 185001 (4,710). 4 aborts, all
+                 fixed (champion sacrifice, Soul Cauldron sink gate, LastMoved
+                 x2); undecided 0.07 % — simultaneous losses, token caps, and
+                 genuine mandatory loops (one bot-started, fixed)
+2-player         release tip, --a dflt --b dflt --seed 9501 x 300: cube 2,398 /
+                 2 caps, sos 1,500 / 0, sealed 3,600 / 0; 0 panics
+```
+
 ### 2026-10-10 (Commander routine — sixteenth run, session `01S495N5`) — guardrail; optional slots, sweep fixes, seats 331-334
 
 Hot-path touch: `Value::Sum` / `Diff` / `Times` saturate (`fold(0, i32::saturating_add)`,

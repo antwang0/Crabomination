@@ -2204,7 +2204,7 @@ impl GameState {
         })
     }
 
-    /// CR 701.34 — manifest the card `cid` (in player `p`'s library): flip it
+    /// CR 701.40 — manifest the card `cid` (in player `p`'s library): flip it
     /// face down in place so it enters as a vanilla 2/2 (no real-card ETB
     /// triggers), then put it onto the battlefield under `p`'s control.
     pub fn manifest_card(

@@ -112,7 +112,7 @@ fn cr_702_98a_unleash_on_a_reanimated_creature() {
     assert_eq!(g.battlefield_find(rev).expect("returned").counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-/// CR 702.96 — Scavenge is a sorcery-speed activated ability: it can't be used
+/// CR 702.97 — Scavenge is a sorcery-speed activated ability: it can't be used
 /// during an opponent's combat.
 #[test]
 fn cr_702_96_scavenge_is_sorcery_speed() {

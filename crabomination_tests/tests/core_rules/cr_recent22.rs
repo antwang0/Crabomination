@@ -11,7 +11,7 @@ use crabomination::game::types::{GameAction, TurnStep};
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
 
-/// CR 701.12b — in a fight each creature's damage equals its power measured
+/// CR 701.14b — in a fight each creature's damage equals its power measured
 /// simultaneously, so an uneven pairing kills only the smaller creature. Guild
 /// Feud deploys the top creature for each player, then fights the two.
 #[test]

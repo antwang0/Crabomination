@@ -355,7 +355,7 @@ pub fn inspired_idea() -> CardDefinition {
             },
             Effect::ReduceMaxHandSize { who: Selector::You, by: Value::Const(3) },
         ]),
-        // CR 702.147 — Cleave {3}{U}{U}: cast for the cleave cost and the
+        // CR 702.148 — Cleave {3}{U}{U}: cast for the cleave cost and the
         // bracketed words come off, so the override is the draw alone.
         alternative_cost: Some(crate::card::AlternativeCost {
             mana_cost: cost(&[generic(3), u(), u()]),

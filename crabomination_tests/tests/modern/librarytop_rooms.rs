@@ -715,7 +715,7 @@ fn leonin_arbiter_taxes_searches() {
     assert_eq!(g.players[0].mana_pool.total(), 0, "tax consumed the floating mana");
 }
 
-/// CR 701.19 — "search for up to two basic lands" is one search: Leonin
+/// CR 701.23 — "search for up to two basic lands" is one search: Leonin
 /// Arbiter's {2} is paid once (not again per card) and Ob Nixilis
 /// Unshackled's "whenever an opponent searches their library" fires once.
 #[test]
@@ -1710,7 +1710,7 @@ fn ghosts_of_the_innocent_halves_combat_damage() {
     assert_eq!(g.players[1].life, 19, "2 halved to 1");
 }
 
-// ── CR 702.41 — Entwine (Tooth and Nail) ────────────────────────────────────
+// ── CR 702.42 — Entwine (Tooth and Nail) ────────────────────────────────────
 
 /// Plain cast runs only the chosen mode (mode 1: put creatures from hand).
 #[test]

@@ -363,7 +363,7 @@ impl GameState {
             // out over a graveyard (Celestial Gatekeeper's "up to two target
             // Bird and/or Cleric cards") re-picked the card it already claimed
             // and stalled after one slot.
-            let pick = best_graveyard_card(self, controller, opp, prefer_friendly, |c| {
+            let pick = best_graveyard_card(self, controller, opp, prefer_friendly, false, |c| {
                 !avoid.contains(&c.id) && is_legal(&Target::Permanent(c.id))
             });
             if pick.is_some() {
@@ -1092,6 +1092,7 @@ impl GameState {
                         controller,
                         opp,
                         eff.prefers_friendly_target_for_slot(slot, mode),
+                        !req.excludes_opponents_side() && eff.target_slot_optional_x(slot, mode, x.unwrap_or(u32::MAX)),
                         is_legal_gy,
                     );
                 }
@@ -1236,6 +1237,7 @@ impl GameState {
                         controller,
                         opp,
                         eff.prefers_friendly_target_for_slot(slot, mode),
+                        !req.excludes_opponents_side() && eff.target_slot_optional_x(slot, mode, x.unwrap_or(u32::MAX)),
                         is_legal_gy,
                     );
                 }
@@ -1271,6 +1273,7 @@ fn best_graveyard_card(
     controller: usize,
     opp: usize,
     friendly: bool,
+    spare_own: bool,
     is_legal: impl Fn(&CardInstance) -> bool,
 ) -> Option<Target> {
     let n = state.players.len();
@@ -1278,7 +1281,10 @@ fn best_graveyard_card(
         .map(|k| (controller + k) % n)
         .filter(|&s| s != opp && state.players[s].is_alive());
     let head = if friendly { [Some(controller), Some(opp)] } else { [Some(opp), None] };
-    let tail = (!friendly).then_some(controller);
+    // An optional unfriendly slot that could name an opponent's card ("exile
+    // up to two target cards from a single graveyard") is declined rather
+    // than spent on your own.
+    let tail = (!friendly && !spare_own).then_some(controller);
     for p in head.into_iter().flatten().chain(others).chain(tail) {
         let poorest = !friendly && p == controller;
         let mut best: Option<((bool, u32), CardId)> = None;

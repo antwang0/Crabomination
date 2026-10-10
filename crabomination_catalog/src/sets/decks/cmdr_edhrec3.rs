@@ -2,8 +2,8 @@
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
-//! Rakdos, Lord of Riots, Be'lakor's Demons and Myrel, Shield of Argive. Tests in
-//! `tests/recent_b/cmdr_edhrec3.rs`.
+//! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive and Fire
+//! Lord Zuko. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -1465,6 +1465,212 @@ pub fn martyrdom() -> CardDefinition {
             }),
             duration: Duration::EndOfTurn,
         },
+        ..Default::default()
+    }
+}
+
+// ── Fire Lord Zuko (RWB) ────────────────────────────────────────────────────
+
+/// Fire Nation Turret — {2}{R} Artifact. At the beginning of combat on your
+/// turn, up to one target creature gets +2/+0 and gains firebending 2 until
+/// end of turn. {R}: a charge counter. Remove fifty: 50 damage to any target.
+pub fn fire_nation_turret() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Fire Nation Turret",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature,
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::Target(0),
+                        power: Value::Const(2),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Firebending(2),
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                remove_counter_cost: Some((CounterType::Charge, 50)),
+                effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(50) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Commander Liara Portyr — {3}{R}{W} 5/3. Whenever you attack, spells you
+/// cast from exile this turn cost {X} less (X = players being attacked, fixed
+/// as it resolves); exile your top X cards, castable until end of turn.
+pub fn commander_liara_portyr() -> CardDefinition {
+    let x = || Value::OpponentsAttackedThisCombat;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::SpellsCostLessThisTurnByValue { filter: R::InExile, amount: x() },
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: x(),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                // "You may CAST spells": an exiled land can't be played.
+                Effect::RestrictMayPlayToCasting { what: Selector::ExiledThisResolution { filter: R::Any } },
+            ]),
+        }],
+        ..legend(
+            "Commander Liara Portyr",
+            cost(&[generic(3), r(), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            5,
+            3,
+        )
+    }
+}
+
+/// Fire Lord Ozai — {3}{B} 4/4. Attacking, you may sacrifice another creature
+/// for {R} equal to its power, kept until end of combat (the firebending pool,
+/// CR 702.189a). {6}: exile each opponent's top card; play one of them free
+/// this turn.
+pub fn fire_lord_ozai() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Sacrifice another creature for {R} equal to its power?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::SacrificeAndRemember {
+                        who: PlayerRef::You,
+                        filter: R::Creature.and(R::OtherThanSource),
+                    },
+                    Effect::Firebend { amount: Value::SacrificedPower },
+                ])),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::EachOpponent,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: false,
+                    uncast_penalty: None,
+                },
+                Effect::OneCastAmongGranted { what: Selector::ExiledThisResolution { filter: R::Any } },
+            ]),
+            ..Default::default()
+        }],
+        ..legend("Fire Lord Ozai", cost(&[generic(3), b()]), vec![CreatureType::Human, CreatureType::Noble], 4, 4)
+    }
+}
+
+/// Iroh, Dragon of the West — {2}{R}{R} 4/4 haste, mentor. At the beginning
+/// of combat on your turn, each creature you control with a counter on it
+/// gains firebending 2 until end of turn.
+pub fn iroh_dragon_of_the_west() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![
+            crate::effect::shortcut::mentor(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), EventScope::YourControl),
+                effect: Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::WithAnyCounter)),
+                    keyword: Keyword::Firebending(2),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..legend(
+            "Iroh, Dragon of the West",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Noble, CreatureType::Ally],
+            4,
+            4,
+        )
+    }
+}
+
+/// Avatar Roku — The Legend of Roku's back face: 4/4 legendary Avatar,
+/// firebending 4; {8}: a 4/4 red flying Dragon with firebending 4.
+pub fn avatar_roku() -> CardDefinition {
+    CardDefinition {
+        // CR 105.2c — a transformed Saga's back face carries a color indicator.
+        color_indicator: vec![Color::Red],
+        keywords: vec![Keyword::Firebending(4)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition {
+                    name: "Dragon".into(),
+                    power: 4,
+                    toughness: 4,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+                    keywords: vec![Keyword::Flying, Keyword::Firebending(4)],
+                    ..Default::default()
+                }),
+            },
+            ..Default::default()
+        }],
+        ..legend("Avatar Roku", crate::mana::ManaCost::default(), vec![CreatureType::Avatar], 4, 4)
+    }
+}
+
+/// The Legend of Roku — {2}{R}{R} Saga. I: exile your top three, playable
+/// until the end of your next turn. II: one mana of any color. III: exile it,
+/// return it transformed (Avatar Roku).
+pub fn the_legend_of_roku() -> CardDefinition {
+    CardDefinition {
+        name: "The Legend of Roku",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+            ),
+            (2, Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) }),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(avatar_roku())),
         ..Default::default()
     }
 }

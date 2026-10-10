@@ -1901,7 +1901,7 @@ fn guardian_scalelord_will_not_reanimate_above_its_power() {
 
 #[test]
 fn guardian_scalelord_backup_1_grants_its_attack_trigger() {
-    // CR 702.164a — Backup N grants the abilities printed below it, the
+    // CR 702.165a — Backup N grants the abilities printed below it, the
     // reanimation trigger included, to another creature until end of turn.
     use crabomination::card::CounterType;
     use crabomination::game::{Attack, AttackTarget};

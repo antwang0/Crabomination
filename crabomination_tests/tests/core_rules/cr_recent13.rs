@@ -38,7 +38,7 @@ fn cr_615_12_excruciator_source_scoped_unpreventable() {
     assert_eq!(g.players[1].life, 13, "only Excruciator's 7 got through");
 }
 
-/// CR 701.16 — the Demon's edict is a sacrifice, not destruction, so a
+/// CR 701.21 — the Demon's edict is a sacrifice, not destruction, so a
 /// regeneration shield on the chosen creature doesn't save it.
 #[test]
 fn cr_701_16_edict_sacrifice_ignores_regeneration() {

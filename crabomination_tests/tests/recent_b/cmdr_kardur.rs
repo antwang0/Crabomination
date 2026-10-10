@@ -136,7 +136,7 @@ fn explosion_of_riches_burns_per_card_drawn() {
     assert_eq!(g.players[0].life, g.players[0].starting_life, "never you");
 }
 
-/// CR 701.38 — Kardur goads every creature your opponents control, including
+/// CR 701.15 — Kardur goads every creature your opponents control, including
 /// one that enters later (its ruling), until your next turn; an attacking
 /// creature dying drains each opponent 1 for 1.
 #[test]

@@ -411,7 +411,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                     }
                 }
             }
-            // CR 702.131 — Afflict: a blocked attacker drains the defending
+            // CR 702.130 — Afflict: a blocked attacker drains the defending
             // player (life loss, surfaced as predicted player-life change).
             if let AttackTarget::Player(p) = atk.target {
                 let afflict = state

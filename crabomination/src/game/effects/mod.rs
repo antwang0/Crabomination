@@ -801,7 +801,7 @@ impl GameState {
     #[inline(never)]
     /// Phyrexian Dreadnought — "sacrifice this unless you sacrifice any number
     /// of `filter` with total power `total_power` or greater." The source is
-    /// never eligible fodder (CR 701.17a — it is what's being spared).
+    /// never eligible fodder (CR 701.21a — it is what's being spared).
     fn run_sacrifice_unless_total_power(
         &mut self,
         filter: &SelectionRequirement,
@@ -3578,7 +3578,7 @@ impl GameState {
     }
 
     pub fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
-        // CR 701.17a — a player can sacrifice only a permanent they control:
+        // CR 701.21a — a player can sacrifice only a permanent they control:
         // an opponent's copy of a "sacrifice this" trigger does nothing.
         if !self.can_be_sacrificed(id) || self.battlefield_find(id).is_some_and(|c| c.controller != who) {
             return;
@@ -8486,7 +8486,7 @@ impl GameState {
             } => {
                 // Reflexive sacrifice cost: ask yes/no (only when the
                 // controller actually has a legal sacrifice), then which ones
-                // (CR 701.17a — the sacrificing player chooses; a headless
+                // (CR 701.21a — the sacrificing player chooses; a headless
                 // seat takes the weakest non-source matches) and run `then`.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let source_id = ctx.source;
@@ -9320,7 +9320,7 @@ impl GameState {
                 // and protection-based prevention (CR 701.12b).
                 let atk_power = self.computed_permanent(atk_id).map(|cp| cp.power).unwrap_or(0);
                 let def_power = self.computed_permanent(def_id).map(|cp| cp.power).unwrap_or(0);
-                // CR 701.12 — both creatures fight ("whenever a creature you
+                // CR 701.14 — both creatures fight ("whenever a creature you
                 // control fights" — Foe-Razer Regent).
                 for id in [atk_id, def_id] {
                     if let Some(c) = self.battlefield_find(id) {
@@ -10820,7 +10820,7 @@ impl GameState {
             }
 
             Effect::Learn { who } => {
-                // CR 701.45 — Learn. Reveal a Lesson from the sideboard into
+                // CR 701.48 — Learn. Reveal a Lesson from the sideboard into
                 // hand, or discard a card to draw a card. When no Lesson is
                 // available (no sideboard configured), fall back to the
                 // legacy `Draw 1` approximation so existing games are
@@ -13878,7 +13878,7 @@ impl GameState {
             }
 
             Effect::Explore { who } => {
-                // CR 701.40 — each resolved permanent explores: reveal the
+                // CR 701.44 — each resolved permanent explores: reveal the
                 // top card of its controller's library; a land goes to hand,
                 // otherwise the permanent gets a +1/+1 counter (the revealed
                 // nonland card stays on top — the optional graveyard choice
@@ -18852,7 +18852,7 @@ impl GameState {
             }
 
             Effect::Meld { partner, into, attacking } => {
-                // CR 701.37 — meld the source with the named partner. Both
+                // CR 701.42 — meld the source with the named partner. Both
                 // must be owned AND controlled by the resolving player
                 // (701.37b: otherwise nothing happens — the source stays).
                 let Some(source) = ctx.source else { return Ok(()) };
@@ -19702,7 +19702,7 @@ impl GameState {
             }
 
             Effect::Airbend { what } => {
-                // CR 701.65a — exile each object; while exiled its owner may
+                // CR 701.13a — exile each object; while exiled its owner may
                 // cast it for {2} rather than its mana cost (a never-expiring
                 // WhileExiled may-play grant + a {2} alt-cast cost).
                 let ids: Vec<CardId> = self
@@ -22137,7 +22137,7 @@ impl GameState {
             }
 
             Effect::WarpWorld => {
-                // CR 701.20 — every player shuffles their permanents in, then
+                // CR 701.24 — every player shuffles their permanents in, then
                 // reveals that many and redeploys in two waves so an Aura has
                 // something to attach to.
                 use crate::card::CardType as CT;
@@ -24684,7 +24684,7 @@ impl GameState {
                 // picking the source when other legal candidates exist, so the
                 // printed "another" intent is honored.
                 let source_id = ctx.source;
-                // CR 701.16 — the player doing the sacrificing chooses which
+                // CR 701.21 — the player doing the sacrificing chooses which
                 // permanent(s). For a `wants_ui` player with a genuine choice
                 // (more legal candidates than required) we suspend: a *single*
                 // sacrifice uses the in-scene `ChooseTarget` cursor, a
@@ -25011,7 +25011,7 @@ impl GameState {
             }
 
             Effect::SacrificeSource => {
-                // CR 701.16 — through the shared sacrifice (its gate, events
+                // CR 701.21 — through the shared sacrifice (its gate, events
                 // and the per-resolution record "if you do" reads: Standstill).
                 if let Some(id) = ctx.source
                     && let Some(p) = self.battlefield_find(id).map(|c| c.controller)
@@ -25054,7 +25054,7 @@ impl GameState {
             }
 
             Effect::SacrificeSourceUnlessSacrifice { filter, count } => {
-                // CR 701.16 — "Sacrifice this permanent unless you sacrifice
+                // CR 701.21 — "Sacrifice this permanent unless you sacrifice
                 // [count] [filter]" (The Gitrog Monster's upkeep, Cosmic
                 // Larva's two lands). The controller may spare the source by
                 // sacrificing `count` matching permanents; with fewer (or a UI
@@ -25513,6 +25513,15 @@ impl GameState {
                     self.move_card_to(cid, to, ctx, events);
                     if let Some(Some(host)) = aura {
                         self.attach_moved_aura(cid, host, events);
+                    }
+                    // A commander already home didn't move (CR 400.7: the
+                    // discarded card a trigger names went to the command zone
+                    // first), so nothing downstream may name it — Tinybones'
+                    // stash and play grant landed on it there.
+                    if !matches!(to, ZoneDest::Command)
+                        && self.players.iter().any(|p| p.command.iter().any(|c| c.id == cid))
+                    {
+                        continue;
                     }
                     // Stash the moved id so a downstream
                     // `Selector::LastMoved` in the same Seq can target
@@ -26313,7 +26322,7 @@ impl GameState {
                 // test thread's stack.
                 let one =
                     Effect::Search { who: who.clone(), filter: filter.clone(), to: to.clone() };
-                // CR 701.19 — the N picks are one search (`game/search_batch.rs`):
+                // CR 701.23 — the N picks are one search (`game/search_batch.rs`):
                 // a nested batch (a pick's own trigger) restores the outer one.
                 let outer = std::mem::replace(&mut self.search_batch, SearchBatch::First);
                 for done in 0..n {
@@ -26382,7 +26391,7 @@ impl GameState {
                 // The library-search prohibitions only bite when a library is
                 // actually being searched; a hand/graveyard-only search
                 // (Dark Supplicant with an empty library clause) goes ahead.
-                // CR 701.19 — a later pick of one "up to N" search shares the
+                // CR 701.23 — a later pick of one "up to N" search shares the
                 // first pick's gate (`game/search_batch.rs`).
                 if include_library && let Some(go) = self.search_batch.skip_gate() {
                     if !go {
@@ -26402,7 +26411,7 @@ impl GameState {
                     if !ok {
                         return Ok(());
                     }
-                    // CR 701.19 — `p` searched their library this turn (Archive
+                    // CR 701.23 — `p` searched their library this turn (Archive
                     // Trap) and the search itself is an event (Ob Nixilis).
                     self.players[p].searched_library_this_turn = true;
                     events.push(GameEvent::PlayerSearchedLibrary { player: p });
@@ -26623,7 +26632,7 @@ impl GameState {
                         self.scratch.last_moved_cards.push(id);
                     }
                 }
-                // CR 701.19c — the library is shuffled even on an empty pick.
+                // CR 701.24c — the library is shuffled even on an empty pick.
                 self.shuffle_library(p, events);
                 Ok(())
             }
@@ -33409,7 +33418,7 @@ impl GameState {
                 for c in hand.into_iter().rev() {
                     self.players[v].library.insert(0, c);
                 }
-                // CR 701.19a — the *caster* searches; the cards land in the
+                // CR 701.23a — the *caster* searches; the cards land in the
                 // victim's hand.
                 use crate::decision::{Decision, DecisionAnswer};
                 let candidates: Vec<(CardId, String)> = self.players[v]
@@ -41963,7 +41972,7 @@ impl GameState {
             }
 
             Effect::Forage { then } => {
-                // CR 701.61 — exile three cards from your graveyard or sacrifice
+                // CR 701.61 — forage: exile three cards from your graveyard or sacrifice
                 // a Food. Optional: ask the controller; on yes, pay (prefer
                 // exiling three graveyard cards, else sacrifice a Food) and run
                 // the reflexive payoff.
@@ -45099,7 +45108,7 @@ impl GameState {
                 Ok(())
             }
 
-    /// CR 702.77 — Champion a [filter]: exile another matching permanent you
+    /// CR 702.72 — Champion a [filter]: exile another matching permanent you
     /// control linked to the source (returned by `return_linked_exiles` when
     /// the source leaves), or sacrifice the source if nothing was exiled.
     fn resolve_champion(
@@ -45110,7 +45119,7 @@ impl GameState {
     ) -> Result<(), GameError> {
         let Some(source) = ctx.source else { return Ok(()) };
         let p = ctx.controller;
-        // CR 701.17a — only the champion's controller can sacrifice it, and
+        // CR 701.21a — only the champion's controller can sacrifice it, and
         // once it has left, its leaves trigger is spent (CR 607.2a): exiling
         // then is a loss with nothing to avoid, so the controller declines.
         // (A copy under an opponent's control — Aboleth Spawn — or a champion

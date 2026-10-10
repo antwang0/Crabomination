@@ -296,7 +296,7 @@ fn transmogrifying_wand_makes_an_ox() {
     assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Ox"));
 }
 
-/// CR 701.34 — Ugin's Mastery manifests on a colorless creature spell.
+/// CR 701.40 — Ugin's Mastery manifests on a colorless creature spell.
 #[test]
 fn ugins_mastery_manifests() {
     let mut g = pod();

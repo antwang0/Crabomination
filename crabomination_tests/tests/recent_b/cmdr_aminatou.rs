@@ -151,7 +151,7 @@ fn banishing_stroke_bottoms() {
     assert_eq!(g.players[1].library.last().map(|c| c.id), Some(bear));
 }
 
-/// CR 701.34 — Cloudform and Lightform manifest and enchant their 2/2.
+/// CR 701.40 — Cloudform and Lightform manifest and enchant their 2/2.
 #[test]
 fn manifest_auras() {
     let mut g = pod();
@@ -236,7 +236,7 @@ fn isolated_watchtower_needs_to_be_behind() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Plains" && c.tapped));
 }
 
-/// CR 701.34 — Jeskai Infiltrator re-manifests itself and the top card.
+/// CR 701.40 — Jeskai Infiltrator re-manifests itself and the top card.
 #[test]
 fn jeskai_infiltrator_hides() {
     let mut g = pod();
@@ -328,7 +328,7 @@ fn portent_offers_the_shuffle() {
     assert!(*asked.lock().unwrap(), "the shuffle is offered");
 }
 
-/// CR 701.34 — Primordial Mist manifests; a face-down card may be played.
+/// CR 701.40 — Primordial Mist manifests; a face-down card may be played.
 #[test]
 fn primordial_mist_manifests() {
     let mut g = pod();

@@ -507,7 +507,7 @@ pub fn handle_game_input(
                         cancel_targeting(targeting, legal_targets);
                         return;
                     }
-                    // CR 702.152 — Reconfigure moves an Equipment creature
+                    // CR 702.151 — Reconfigure moves an Equipment creature
                     // onto the clicked creature.
                     if let Some(equipment) = targeting.pending_reconfigure_source {
                         outbox.submit(GameAction::Reconfigure {

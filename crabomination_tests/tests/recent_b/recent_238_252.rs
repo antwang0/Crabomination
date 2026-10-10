@@ -1310,7 +1310,7 @@ mod recent241 {
         assert!(c.keywords().contains(&Keyword::CantBlock), "suspected -> can't block");
     }
 
-    /// CR 701.13 — an investigated Clue sacrifices for a card.
+    /// CR 701.16 — an investigated Clue sacrifices for a card.
     #[test]
     fn cr_701_13_clue_sacrifices_to_draw() {
         use crabomination::game::GameAction;

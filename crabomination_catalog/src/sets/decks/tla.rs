@@ -2891,7 +2891,8 @@ pub fn the_mechanist_aerial_artisan() -> CardDefinition {
 }
 
 /// Iroh, Tea Master — {1}{R}{W} 2/2 legendary Human Citizen Ally. When it
-/// enters, create a Food token. (The combat donate ability is dropped.)
+/// enters, create a Food token. At the beginning of combat on your turn, you
+/// may donate a permanent for a 1/1 Ally that grows per donated permanent.
 pub fn iroh_tea_master() -> CardDefinition {
     CardDefinition {
         name: "Iroh, Tea Master",
@@ -4187,7 +4188,7 @@ pub fn wan_shi_tong_librarian() -> CardDefinition {
                     amount: Value::HalfDown(Box::new(Value::XFromCost)),
                 },
             ])),
-            // CR 701.19 — "Whenever an opponent searches their library, put a
+            // CR 701.23 — "Whenever an opponent searches their library, put a
             // +1/+1 counter on him and draw a card." Same rail as Ob Nixilis,
             // Unshackled.
             TriggeredAbility {

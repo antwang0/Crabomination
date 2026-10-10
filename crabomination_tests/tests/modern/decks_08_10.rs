@@ -1044,7 +1044,7 @@ fn lotus_field_etb_sacrifices_two_lands() {
         "Lotus Field's ETB should sacrifice two of your lands");
 }
 
-/// CR 701.16 — a `wants_ui` player choosing a *multi* sacrifice (Lotus Field's
+/// CR 701.21 — a `wants_ui` player choosing a *multi* sacrifice (Lotus Field's
 /// "sacrifice two lands") gets a `ChooseCards` modal to pick exactly two,
 /// rather than the engine auto-dumping the weakest.
 #[test]

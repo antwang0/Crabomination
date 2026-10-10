@@ -3624,7 +3624,7 @@ impl GameState {
                 let blocked = g.blocker_count_of(atk.attacker) > 0;
                 if !blocked {
                     events.push(GameEvent::AttackerWentUnblocked { attacker: atk.attacker });
-                    // CR 702.35 — Frenzy N: an unblocked attacker gets +N/+0.
+                    // CR 702.68 — Frenzy N: an unblocked attacker gets +N/+0.
                     // Read computed keywords so statically-granted Frenzy
                     // (Frenzy Sliver) counts too.
                     if let Some(cp) = g.computed_permanent(atk.attacker) {
@@ -6096,7 +6096,7 @@ impl GameState {
                         self.combat_victims_by_name.push((name, p));
                     }
                 }
-                // CR 702.180c — Toxic N adds N poison on combat damage to a
+                // CR 702.164c — Toxic N adds N poison on combat damage to a
                 // player, on top of any life loss (and stacks with Infect's
                 // poison). Only when damage was actually dealt.
                 if atk.toxic > 0 && amount > 0 {
@@ -7670,7 +7670,7 @@ impl GameState {
             }
         }
 
-        // CR 702.46 — Cipher. A card exiled encoded on this creature offers its
+        // CR 702.99 — Cipher. A card exiled encoded on this creature offers its
         // controller a free copy whenever the creature deals combat damage to a
         // player. Reuses the Paradigm free-copy effect (mint a token copy of the
         // exiled card and free-cast it; the encoded original stays in exile).

@@ -3618,7 +3618,7 @@ pub enum StaticEffect {
     /// the doubling at `GameState::mill_count_for`; the milling player orders
     /// the replacements (CR 616.1), so the doubling applies first.
     OpponentMillExtra { count: u32 },
-    /// CR 701.19c — "If an opponent would search a library, that player
+    /// CR 701.23c — "If an opponent would search a library, that player
     /// searches the top `count` cards of that library instead." Consulted by
     /// `Effect::Search`: an opponent of this static's controller only sees
     /// candidates among the top N. Aven Mindcensor.

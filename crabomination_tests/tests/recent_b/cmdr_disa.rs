@@ -226,6 +226,22 @@ fn coram_bot_sees_an_opponents_milled_spell_with_an_empty_graveyard() {
     let _ = HeuristicBot::new().next_action(&g, 0);
 }
 
+/// Agatha's Soul Cauldron lets a creature's ability be paid with mana of any
+/// color: the bot's sink gate read Emperor of Bones' {1}{B} adapt as
+/// unpayable off two Plains and skipped it (an eight-seat fuzzed strict pod,
+/// seed 18400204 game 2, tripped `gated_pick!`'s "skipped a real action").
+#[test]
+fn soul_cauldron_opens_the_bots_sink_gate_for_off_color_creature_abilities() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::agathas_soul_cauldron());
+    let emperor = g.add_card_to_battlefield(0, catalog::emperor_of_bones());
+    g.clear_sickness(emperor);
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::plains());
+    let _ = HeuristicBot::new().next_action(&g, 0);
+}
+
 /// An instant aimed at one opponent's nonland permanent is copied onto a
 /// different opponent's (CR 707.10c — the copy is yours).
 #[test]

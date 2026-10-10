@@ -1,7 +1,7 @@
 //! CR conformance for this run:
 //! - CR 615.8 — a "next time … would deal damage to you" shield soaks exactly
 //!   one instance and only damage aimed at its owner.
-//! - CR 701.19c — a library search shuffles even when nothing is taken.
+//! - CR 701.23 — a library search shuffles even when nothing is taken.
 //! - CR 611.2c — a "for as long as this remains attached" effect ends the
 //!   moment its source unattaches.
 //! - CR 702.165 — a permanent spell's promised gift resolves as it enters.
@@ -71,7 +71,7 @@ fn cr_615_8_next_damage_shield_is_one_instance_and_seat_scoped() {
     assert_eq!(g.players[0].life, 17, "the shield is spent");
 }
 
-/// CR 701.19c — searching shuffles the library even when the player takes
+/// CR 701.23 — searching shuffles the library even when the player takes
 /// nothing.
 #[test]
 fn cr_701_19c_search_any_number_shuffles_on_an_empty_pick() {

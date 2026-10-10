@@ -704,7 +704,7 @@ fn cr_508_1g_archangel_attack_tax_needs_it_untapped() {
     }
 }
 
-// ── CR 702.46 — Cipher ────────────────────────────────────────────────────────
+// ── CR 702.99 — Cipher ────────────────────────────────────────────────────────
 
 /// A Cipher spell exiles encoded on a creature; when that creature deals combat
 /// damage to a player, its controller casts a free copy.
@@ -781,7 +781,7 @@ fn cr_614_9_palisade_giant_redirects_combat_damage_to_player() {
     assert_eq!(g.battlefield_find(giant).unwrap().damage, 6, "giant took the hit");
 }
 
-// ── CR 702.103 — Jump-start ───────────────────────────────────────────────────
+// ── CR 702.133 — Jump-start ───────────────────────────────────────────────────
 
 /// Jump-start casts from the graveyard for the card's own cost plus a
 /// discard, and exiles after resolving.
@@ -1482,7 +1482,7 @@ fn cr_602_2b_blood_token_discard_is_a_cost() {
     );
 }
 
-/// CR 702.47a — Soulshift returns a Spirit from YOUR graveyard, never an
+/// CR 702.46a — Soulshift returns a Spirit from YOUR graveyard, never an
 /// opponent's.
 #[test]
 fn cr_702_47a_soulshift_only_fetches_own_graveyard() {
@@ -3171,7 +3171,7 @@ fn cr_702_13_intimidate_blockable_only_by_artifact_or_shared_color() {
     assert_block(catalog::ornithopter(), true, "artifact creature can block Intimidate");
 }
 
-/// CR 702.72a — Skulk: an attacker can't be blocked by a creature with greater
+/// CR 702.118a — Skulk: an attacker can't be blocked by a creature with greater
 /// power (computed, so anthem-pumped power counts).
 #[test]
 fn cr_702_72_skulk_blocked_only_by_equal_or_lesser_power() {
@@ -3606,7 +3606,7 @@ fn cr_605_1a_painland_damage_rider_is_still_a_mana_ability() {
     assert!(g.battlefield_find(spell).is_some(), "bear cast off the painland's mana");
 }
 
-// ── CR 701.19 — Searching (multi-card) ────────────────────────────────────────
+// ── CR 701.23 — Searching (multi-card) ────────────────────────────────────────
 /// Deathbellow War Cry searches for up to four Minotaurs; the count-search
 /// chains single picks, and a non-matching card is never offered.
 #[test]
@@ -3632,7 +3632,7 @@ fn cr_701_19_search_up_to_n_picks_matches_only() {
         "the non-Minotaur stays in the library");
 }
 
-// ── CR 701.19c — a searched library is shuffled, found or not ─────────────────
+// ── CR 701.23 — a searched library is shuffled, found or not ─────────────────
 /// Declining every pick still counts as searching, so the library must be
 /// shuffled afterward (with 30 cards, an unchanged order is a ~1/30! fluke).
 #[test]
@@ -3924,7 +3924,7 @@ fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
         "a shadow creature can't block a non-shadow attacker");
 }
 
-// ── CR 702.12 — Defender ─────────────────────────────────────────────────────
+// ── CR 702.3 — Defender ─────────────────────────────────────────────────────
 
 /// CR 702.12b/702.12c — a creature with defender can't attack, but a static
 /// ability may let it attack anyway while a condition holds (Drowsing
@@ -4019,7 +4019,7 @@ fn cr_702_11e_hexproof_from_black_blocks_only_black() {
     assert!(g.battlefield_find(knight).is_none(), "white Swords exiled it");
 }
 
-// ── CR 702.165 — Gift ─────────────────────────────────────────────────────────
+// ── CR 702.174 — Gift ─────────────────────────────────────────────────────────
 
 /// CR 702.165 — promising a Gift bestows the gift on the opponent *before* the
 /// spell's other (enhanced) effects, and broadens the resolution accordingly.
@@ -4621,9 +4621,9 @@ fn cr_601_2f_rides_end_target_conditional_reduction() {
     );
 }
 
-// ── CR 701.13 — Investigate ───────────────────────────────────────────────────
+// ── CR 701.16 — Investigate ───────────────────────────────────────────────────
 
-/// CR 701.13 — Hostile Investigator's "whenever a player discards, investigate"
+/// CR 701.16 — Hostile Investigator's "whenever a player discards, investigate"
 /// (once each turn) creates a Clue artifact token.
 #[test]
 fn cr_701_13_investigate_makes_a_clue() {
@@ -4647,7 +4647,7 @@ fn cr_701_13_investigate_makes_a_clue() {
     );
 }
 
-// ── CR 702.166 — Offspring ────────────────────────────────────────────────────
+// ── CR 702.175 — Offspring ────────────────────────────────────────────────────
 
 /// CR 702.166 — paying a creature's Offspring cost makes a 1/1 token copy of it
 /// enter when the creature itself enters.
@@ -4930,7 +4930,7 @@ fn cr_702_148_cleave_removes_bracketed_clause() {
     assert!(g.battlefield_find(big).is_none(), "cleave wipes all creatures");
 }
 
-// ── CR 701.16 — Sacrifice as a reflexive cost ────────────────────────────────
+// ── CR 701.21 — Sacrifice as a reflexive cost ────────────────────────────────
 
 /// `Effect::MaySacrifice` ("you may sacrifice X; if you do, …") declined leaves
 /// the board untouched and skips the payoff.
@@ -5435,8 +5435,8 @@ fn cr_611_2_deafening_silence_locks_only_noncreature_spells() {
     }).expect("creature spell unaffected by Deafening Silence");
 }
 
-// ── CR 701.16 — targeted sacrifice fires sacrifice + death triggers ─────────
-/// CR 701.16 — Effect::SacrificePermanent is a genuine sacrifice: a creature
+// ── CR 701.21 — targeted sacrifice fires sacrifice + death triggers ─────────
+/// CR 701.21 — Effect::SacrificePermanent is a genuine sacrifice: a creature
 /// sacrificed this way fires CreatureDied, so a death payoff (Harvester of
 /// Souls) sees it. Footsteps of the Goryo sacrifices its reanimated creature
 /// at the end step.
@@ -5754,7 +5754,7 @@ fn descend_8_grants_unblockable_only_at_eight_permanent_cards() {
     );
 }
 
-// ── CR 702.169 — Craft ────────────────────────────────────────────────────────
+// ── CR 702.167 — Craft ────────────────────────────────────────────────────────
 
 /// Craft (CR 702.167) is a sorcery-speed activated ability that exiles the
 /// source and other objects, returning the source transformed.
@@ -5831,7 +5831,7 @@ fn cr_701_57_discover_digs_and_casts() {
     assert!(found, "discovered card moved out of the library (cast or to hand)");
 }
 
-/// CR 702.56 — Forecast: a hand-activated ability usable only during the
+/// CR 702.57 — Forecast: a hand-activated ability usable only during the
 /// owner's upkeep, only once each turn. Pride of the Clouds mints a Bird.
 #[test]
 fn cr_702_56_forecast_once_per_turn_in_upkeep() {
@@ -5926,7 +5926,7 @@ fn cr_615_7_prevent_all_damage_from_chosen_source() {
     assert_eq!(g.players[0].life, life1, "the chosen source's damage was prevented");
 }
 
-/// CR 701.40 — Explore via a Map token: sacrifice the Map to explore a
+/// CR 701.44 — Explore via a Map token: sacrifice the Map to explore a
 /// creature; a land reveal goes to hand.
 #[test]
 fn cr_701_40_map_token_explore() {
@@ -7685,7 +7685,7 @@ fn cr_704_5c_ten_poison_counters_loses() {
     assert!(g.players[1].eliminated, "ten poison counters loses the game (CR 704.5c)");
 }
 
-// ── CR 702.180c — Toxic adds poison equal to its value on combat damage ──────
+// ── CR 702.164c — Toxic adds poison equal to its value on combat damage ──────
 
 /// A toxic-4 attacker dealing combat damage to a player gives four poison
 /// counters (Tyrranax Rex).
@@ -8185,7 +8185,7 @@ fn cr_119_life_lock_prevents_combat_damage_loss() {
     assert_eq!(g.players[0].life, before, "locked life total unchanged by the 2 combat damage");
 }
 
-// ── CR 702.92 — Battle cry ───────────────────────────────────────────────────
+// ── CR 702.91 — Battle cry ───────────────────────────────────────────────────
 
 /// CR 702.92a — "Whenever this creature attacks, each other attacking creature
 /// gets +1/+0 until end of turn." Granted mid-turn (Reckless Pyrosurfer's
@@ -8781,7 +8781,7 @@ fn cr_117_7c_cost_reduction_is_generic_only() {
     }).expect("castable for just {U} — the generic {3} is fully reduced");
 }
 
-// ── CR 702.90 — Exalted stacks once per instance ─────────────────────────────
+// ── CR 702.83 — Exalted stacks once per instance ─────────────────────────────
 
 /// CR 702.90b — each Exalted instance triggers separately when a creature
 /// attacks alone. Two Exalted sources pump the lone attacker +2/+2.
@@ -9860,9 +9860,9 @@ fn cr_613_4_animated_vehicle_keeps_artifact_type() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact), "still an artifact (additive)");
 }
 
-// ── CR 701.42 — Surveil ──────────────────────────────────────────────────────
+// ── CR 701.25 — Surveil ──────────────────────────────────────────────────────
 
-/// CR 701.42a — a surveiled card the player declines to keep on top goes to the
+/// CR 701.25a — a surveiled card the player declines to keep on top goes to the
 /// graveyard (not the bottom of the library, as scry would).
 #[test]
 fn cr_701_42_surveil_routes_declined_card_to_graveyard() {
@@ -10307,7 +10307,7 @@ fn cr_702_93_undying_returns_only_without_counter() {
     );
 }
 
-/// CR 702.180 — Toxic N adds N poison counters when a creature deals combat
+/// CR 702.164 — Toxic N adds N poison counters when a creature deals combat
 /// damage to a player, on top of the normal life loss.
 #[test]
 fn cr_702_180_toxic_adds_poison_on_combat_damage() {
@@ -10330,7 +10330,7 @@ fn cr_702_180_toxic_adds_poison_on_combat_damage() {
     assert_eq!(g.players[1].life, life - 2, "and still deals its 2 combat damage");
 }
 
-/// CR 702.71 — Wither: combat damage to a creature is dealt as -1/-1 counters,
+/// CR 702.80 — Wither: combat damage to a creature is dealt as -1/-1 counters,
 /// but combat damage to a player is normal life loss (no poison, unlike Infect).
 #[test]
 fn cr_702_71_wither_creatures_as_counters_players_as_life() {
@@ -10643,7 +10643,7 @@ fn cr_115_7_bolt_bend_repoints_a_spell() {
     assert_eq!(g.players[1].life, 17, "the bolt was redirected to its caster");
 }
 
-// ── CR 702.72 — Deathtouch: any nonzero combat damage is lethal ─────────────
+// ── CR 702.2 — Deathtouch: any nonzero combat damage is lethal ─────────────
 /// A 1/1 deathtoucher kills a 5/6 blocker with a single point of combat damage
 /// (CR 702.2e — SBA marks it destroyed).
 #[test]
@@ -10705,7 +10705,7 @@ fn cr_601_2d_distribute_counters_then_double_on_all_targets() {
     assert_eq!((n(a), n(b)), (4, 2), "distributed 2/1 then doubled to 4/2");
 }
 
-/// CR 702.17 — Flash lets a permanent be cast any time you could cast an instant
+/// CR 702.8 — Flash lets a permanent be cast any time you could cast an instant
 /// (here, during the opponent's turn); a creature without Flash can't.
 #[test]
 fn cr_702_17_flash_permanent_castable_at_instant_speed() {
@@ -11116,7 +11116,7 @@ fn cr_202_3b_x_cost_is_zero_in_graveyard() {
 
 // ── CR 701.5g / 709.3 / 608.2h (this run's DIS gap wave) ─────────────────────
 
-/// CR 701.5g — a countered spell is put into its owner's graveyard. Swift
+/// CR 701.6a — a countered spell is put into its owner's graveyard. Swift
 /// Silence counters every other spell on the stack; the countered card lands
 /// in the graveyard (not exile).
 #[test]
@@ -11410,9 +11410,9 @@ fn cr_702_16e_protection_from_own_colors_blocks_same_color_blockers() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(artifact, attacker)])).is_ok());
 }
 
-// ── CR 701.7 — destroying a permanent ───────────────────────────────────────
+// ── CR 701.8 — destroying a permanent ───────────────────────────────────────
 
-/// CR 701.7a — "destroy" by a spell or ability an opponent controls is a
+/// CR 701.8a — "destroy" by a spell or ability an opponent controls is a
 /// distinct event from a combat/SBA death, and only the cross-team case fires
 /// the watcher (Karmic Justice).
 #[test]
@@ -11447,7 +11447,7 @@ fn cr_701_7a_opponent_destroy_fires_the_retaliation_watcher() {
     assert!(g.battlefield_find(theirs).is_none());
 }
 
-/// CR 701.7a — destroying your *own* permanent emits no cross-team event, so
+/// CR 701.8a — destroying your *own* permanent emits no cross-team event, so
 /// the watcher stays quiet.
 #[test]
 fn cr_701_7a_self_destroy_does_not_fire_the_watcher() {

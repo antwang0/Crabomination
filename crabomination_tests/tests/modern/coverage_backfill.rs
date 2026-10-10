@@ -1445,7 +1445,7 @@ fn fumigate_destroys_creatures_and_gains_life_per_creature() {
     assert_eq!(g.players[0].life, life + 3, "gained 1 per destroyed creature (3)");
 }
 
-/// CR 701.15 — the mass-destroy path honours a regeneration shield too.
+/// CR 701.8 — the mass-destroy path honours a regeneration shield too.
 /// Fumigate prints "Destroy all creatures. You gain 1 life for each creature
 /// destroyed this way" and no regeneration clause, and it shipped as
 /// `DestroyNoRegen` like seven other sweepers; found by

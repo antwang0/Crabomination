@@ -638,7 +638,7 @@ pub fn daemogoth_titan() -> CardDefinition {
 ///
 /// ✅ The upkeep tithe rides `StepBegins(Upkeep)/YourControl`; the
 /// sacrifice payoff rides `EventKind::CreatureSacrificed/SelfSource`
-/// (CR 701.16 — sacrifice is its own event, so death by combat or
+/// (CR 701.21 — sacrifice is its own event, so death by combat or
 /// removal does NOT fire the payoff).
 pub fn daemogoth_woe_eater() -> CardDefinition {
     CardDefinition {

@@ -1696,7 +1696,7 @@ fn regal_sliver_crowns_then_pumps() {
     assert_eq!(pt(&g, r), (4, 4));
 }
 
-/// CR 701.38 — each Sliver of yours entering goads an opposing creature.
+/// CR 701.15 — each Sliver of yours entering goads an opposing creature.
 #[test]
 fn cr_701_38_taunting_sliver_goads_on_entry() {
     let mut g = main_phase();
@@ -2437,12 +2437,12 @@ fn wrens_run_packmaster_champions_an_elf_and_arms_wolves() {
     assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
-/// CR 701.17a — an opponent's copy of the champion trigger (Aboleth Spawn)
+/// CR 701.21a — an opponent's copy of the champion trigger (Aboleth Spawn)
 /// can't sacrifice a Packmaster it doesn't control; before the fix it did, and
 /// the original trigger then exiled the Elf under a champion already gone
 /// (CR 607.2a: its leaves trigger spent), stranding it in exile.
 #[test]
-fn cr_701_17a_a_copied_champion_trigger_cannot_sacrifice_anothers_champion() {
+fn cr_701_21a_a_copied_champion_trigger_cannot_sacrifice_anothers_champion() {
     let mut g = main_phase();
     g.add_card_to_battlefield(1, catalog::aboleth_spawn());
     let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());

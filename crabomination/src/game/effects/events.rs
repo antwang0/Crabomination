@@ -401,7 +401,7 @@ fn reference_event_kind_matches(
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,
         (EventKind::PutIntoGraveyard, GameEvent::CardPutIntoGraveyard { .. }) => true,
-        // CR 701.15b — a milled card is "put into a graveyard from a library",
+        // CR 701.17b — a milled card is "put into a graveyard from a library",
         // so "whenever a card is put into a graveyard from anywhere" triggers
         // (Emrakul self-mill, The Haunt of Hightower) fire on mills too.
         (EventKind::PutIntoGraveyard, GameEvent::CardMilled { .. }) => true,
@@ -1013,7 +1013,7 @@ fn event_matches_spec_rest(
             | GameEvent::PermanentPhasedOut { card_id }
             | GameEvent::CumulativeUpkeepUnpaid { card_id, .. } if *card_id == source.id
         ) || matches!(
-            // CR 701.40 — "Whenever this creature explores." Source must
+            // CR 701.44 — "Whenever this creature explores." Source must
             // equal the exploring permanent.
             event,
             GameEvent::Explored { card_id, .. } | GameEvent::Connived { card_id, .. } if *card_id == source.id
@@ -1070,7 +1070,7 @@ fn event_matches_spec_rest(
             event,
             GameEvent::ControlChanged { card_id, .. } if *card_id == source.id
         ) || matches!(
-            // CR 701.15 — "Whenever this creature regenerates."
+            // CR 701.19 — "Whenever this creature regenerates."
             event,
             GameEvent::Regenerated { card_id } if *card_id == source.id
         ) || matches!(

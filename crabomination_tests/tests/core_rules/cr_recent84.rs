@@ -2,7 +2,7 @@
 //! - CR 712 — double-faced cards: a face swap into an instant/sorcery face
 //!   does nothing, and a spell told to enter transformed onto such a face
 //!   falls through to the graveyard.
-//! - CR 701.28 — an "as this transforms" effect resolves inside the flip.
+//! - CR 701.27 — an "as this transforms" effect resolves inside the flip.
 
 use crabomination::catalog;
 use crabomination::game::*;

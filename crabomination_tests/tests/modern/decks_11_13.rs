@@ -1288,7 +1288,7 @@ fn mortify_destroys_creature() {
         "Bear should be destroyed");
 }
 
-/// CR 701.15 — Mortify prints "Destroy target creature or enchantment" and
+/// CR 701.8 — Mortify prints "Destroy target creature or enchantment" and
 /// **nothing else**, so a regeneration shield saves the creature. It shipped
 /// as `Effect::DestroyNoRegen` with a test asserting the opposite; found by
 /// `scripts/audit_invented_rider.py`, which reads a no-regen rider against

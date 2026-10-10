@@ -34,7 +34,7 @@ fn cr_305_6_realmwright_land_taps_for_chosen_color() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "taps for blue");
 }
 
-/// CR 701.12b — Fight deals damage simultaneously; a 6/6 and a 7/6 fighting
+/// CR 701.14b — Fight deals damage simultaneously; a 6/6 and a 7/6 fighting
 /// via Gruul Ragebeast's ETB both take lethal and die together.
 #[test]
 fn cr_701_12_fight_is_simultaneous_both_die() {

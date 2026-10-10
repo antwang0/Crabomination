@@ -3,7 +3,7 @@
 //!   didn't have defender" static lets a Wall attack (High Alert).
 //! - CR 510.1c — a creature that "assigns combat damage equal to its toughness"
 //!   deals toughness, not power, to the defending player (High Alert).
-//! - CR 701.15b — a milled card is put into a graveyard, so "whenever a card is
+//! - CR 701.17b — a milled card is put into a graveyard, so "whenever a card is
 //!   put into a graveyard from anywhere" triggers fire on mills (The Haunt of
 //!   Hightower).
 
@@ -48,7 +48,7 @@ fn cr_508_1a_defender_cant_attack_without_grant() {
     );
 }
 
-/// CR 701.15b — a milled card is "put into a graveyard from a library", firing
+/// CR 701.17b — a milled card is "put into a graveyard from a library", firing
 /// The Haunt of Hightower's "whenever a card is put into an opponent's
 /// graveyard from anywhere" counter trigger.
 #[test]

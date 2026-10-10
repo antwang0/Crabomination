@@ -1519,7 +1519,7 @@ pub fn etb_scry(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// CR 701.40 — "this permanent explores." Reveal the top card of your
+/// CR 701.44 — "this permanent explores." Reveal the top card of your
 /// library; if it's a land, put it into your hand, otherwise put a
 /// +1/+1 counter on the exploring permanent.
 pub fn explore() -> Effect {
@@ -1557,7 +1557,7 @@ pub fn boast(cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
     }
 }
 
-/// CR 701.31 — "`cost`: Monstrosity `n`." Grows the source to monstrous once.
+/// CR 701.37 — "`cost`: Monstrosity `n`." Grows the source to monstrous once.
 ///
 /// ⚠ **It is NOT sorcery-speed.** CR 701.31a defines monstrosity as a plain
 /// activated ability with no timing rider, and playing Polukranos at instant

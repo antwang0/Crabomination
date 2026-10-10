@@ -144,6 +144,10 @@ fn walk(v: &Value, out: &mut ColorSet) {
                             color_of(c, out);
                         }
                     }
+                    // A printed "add {R} … until end of combat" (Fire Lord
+                    // Ozai). The firebending keyword's own `Firebend` is built
+                    // in combat, never serialized: its {R} is reminder text.
+                    "Firebend" => out.insert(Color::Red),
                     // CR 903.4 — the color indicator, and a characteristic-
                     // defining color (the Kobolds' red, Transguild Courier).
                     "color_indicator" | "color_override" => each_color(p, out),

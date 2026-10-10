@@ -1203,7 +1203,7 @@ impl Effect {
             Effect::TapUpToValue { .. } => false,
             // CR 702.55 — the haunted creature is auto-picked at resolution.
             Effect::HauntCreature { .. } => false,
-            // CR 701.31 — voting is untargeted; choices happen at resolution.
+            // CR 701.38 — voting is untargeted; choices happen at resolution.
             Effect::WillOfTheCouncilExile { .. } => false,
             // CR 701.38 votes are untargeted; the chosen option's body may
             // target, but it's chosen at resolution.
@@ -5872,7 +5872,7 @@ impl Effect {
             | Effect::PreventNextDamageDivided { .. }
             | Effect::DealDamageDividedEvenly { .. }
             | Effect::DistributeCounters { .. } => Some(1),
-            // CR 701.32a — support N is "each of **up to** N target
+            // CR 701.41a — support N is "each of **up to** N target
             // creatures": zero is a legal choice (Lead by Example with no
             // creature in play was uncastable).
             Effect::SupportCounters { .. } => Some(0),
@@ -6186,6 +6186,15 @@ impl Effect {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),
             },
+            // A conditional body's instance is still one instance (Shower of
+            // Coals' threshold `If` named one opponent three times).
+            Effect::If { then, else_, .. } => {
+                then.distinct_target_count(mode).or_else(|| else_.distinct_target_count(mode))
+            }
+            Effect::OptionalTargets { body, .. }
+            | Effect::CollectEvidence { then: body, .. }
+            | Effect::CollectEvidenceX { then: body }
+            | Effect::PayEnergy { then: body, .. } => body.distinct_target_count(mode),
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }

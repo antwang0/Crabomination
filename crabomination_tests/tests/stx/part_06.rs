@@ -902,7 +902,7 @@ fn quandrix_synthesist_magecraft_pumps_team() {
     assert_eq!(c2, 1);
 }
 
-// ── CR 701.46a — Stun counter consumption on untap ─────────────────────────
+// ── CR 122.1d — Stun counter consumption on untap ─────────────────────────
 
 #[test]
 fn stun_counter_replaces_untap_per_cr_701_46a() {

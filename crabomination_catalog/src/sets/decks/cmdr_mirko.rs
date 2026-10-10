@@ -51,7 +51,7 @@ fn draw(n: i32) -> Effect {
     Effect::Draw { who: Selector::You, amount: Value::Const(n) }
 }
 
-/// CR 701.42 — "whenever you surveil".
+/// CR 701.25 — "whenever you surveil".
 fn on_surveil(effect: Effect) -> TriggeredAbility {
     TriggeredAbility { event: EventSpec::new(EventKind::Surveilled, EventScope::YourControl), effect }
 }

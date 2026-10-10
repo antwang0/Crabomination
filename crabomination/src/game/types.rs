@@ -1502,7 +1502,7 @@ impl PendingDecision {
         if let crate::decision::Decision::SearchLibrary { player, .. } = &self.decision {
             return *player;
         }
-        // CR 701.8a — a player discards cards *they* choose. "Target player
+        // CR 701.9a — a player discards cards *they* choose. "Target player
         // discards N" (Arcane Omens) therefore asks the discarding seat,
         // not the caster; `Decision::Discard.player` always names whoever
         // is picking. Left to the resume's owner, the caster got to choose
@@ -2240,7 +2240,7 @@ pub enum PendingEffectState {
     /// Conundrum Sphinx: stash `player`'s named card in
     /// `GameState.scratch.names_this_resolution` for the later reveal step.
     StashNamePending { player: usize },
-    /// CR 701.45 — suspended on a `Decision::Learn`. The resume step reads
+    /// CR 701.48 — suspended on a `Decision::Learn`. The resume step reads
     /// `DecisionAnswer::Learn(choice)` and reveals a Lesson into `player`'s
     /// hand, rummages (discard-then-draw), or declines.
     LearnPending { player: usize },
@@ -2925,7 +2925,7 @@ pub enum GameEvent {
     /// ability targeting an opponent, something they control or own, or a
     /// spell/ability they control). Fires once per qualifying spell or ability.
     CommittedCrime { player: usize },
-    /// CR 701.19 — `player` searched their own library.
+    /// CR 701.23 — `player` searched their own library.
     PlayerSearchedLibrary { player: usize },
     /// CR 103.2c — a spell or ability caused `player` to shuffle their library
     /// (Psychogenic Probe). Game-setup shuffles don't emit it.
@@ -3034,7 +3034,7 @@ pub enum GameEvent {
     /// gain control of this permanent" triggers (Risky Move); `from` is the
     /// previous controller.
     ControlChanged { card_id: CardId, from: usize, to: usize },
-    /// CR 701.40 — a permanent explored. `card_id` is the exploring
+    /// CR 701.44 — a permanent explored. `card_id` is the exploring
     /// permanent; `controller` is its controller (whose library was
     /// revealed). `explored_land` is true when the revealed top card was a
     /// land (Nicanzil filters land vs nonland explores; surfaced through
@@ -3047,7 +3047,7 @@ pub enum GameEvent {
     /// `Value::TriggerEventAmount`).
     Discovered { player: usize, value: u32 },
     /// CR 701.31 — a permanent became monstrous.
-    /// CR 701.31 — `n` is the monstrosity value, read via
+    /// CR 701.37 — `n` is the monstrosity value, read via
     /// `Value::TriggerEventAmount` (Polukranos's X damage).
     BecameMonstrous { card_id: CardId, n: u32 },
     /// CR 712 — a permanent transformed to its other face.
@@ -3063,7 +3063,7 @@ pub enum GameEvent {
     /// A permanent left the battlefield for a hand (Azorius Aethermage).
     /// `player` is whose hand it landed in.
     PermanentReturnedToHand { card_id: CardId, player: usize },
-    /// CR 701.5 — `card_id` was countered on the stack. `player` is the
+    /// CR 701.6 — `card_id` was countered on the stack. `player` is the
     /// counterer (the controller of the countering spell or ability), which is
     /// what `EventScope::YourControl`/`OpponentControl` reads.
     SpellCountered { card_id: CardId, player: usize },
@@ -3073,7 +3073,7 @@ pub enum GameEvent {
     /// "put into your graveyard from your hand" family
     /// (`EventKind::PutIntoGraveyardFromHand`: Desert Warfare).
     CardPutIntoGraveyardFromHand { player: usize, card_id: CardId },
-    /// CR 701.42a — a surveiled card was put into `player`'s graveyard from
+    /// CR 701.25a — a surveiled card was put into `player`'s graveyard from
     /// their library. Not a mill (CR 701.13): it matches the "put into your
     /// graveyard from your library" family (`EventKind::CardMilled`) but not
     /// the literal "mills" wording (`EventKind::Milled`). The surveil also
@@ -3083,7 +3083,7 @@ pub enum GameEvent {
     /// Stickfingers' creature cards). The "put into a graveyard from a
     /// library" family (`EventKind::CardMilled`), not a mill.
     CardRevealedIntoGraveyard { player: usize, card_id: CardId },
-    /// CR 701.7 — a permanent was destroyed by a spell or ability. `destroyer`
+    /// CR 701.8 — a permanent was destroyed by a spell or ability. `destroyer`
     /// is that effect's controller (Karmic Justice). Emitted only from the
     /// `Effect::Destroy` funnel, so combat/SBA deaths don't match.
     PermanentDestroyedByEffect {

@@ -1717,7 +1717,7 @@ pub struct ExileCardView {
     /// a "returns when X leaves" tether. `None` for plain exile.
     #[serde(default)]
     pub exiled_by: Option<CardId>,
-    /// CR 702.46 — Cipher: if this exiled card is encoded on a creature, that
+    /// CR 702.99 — Cipher: if this exiled card is encoded on a creature, that
     /// creature's `CardId`. Lets the client badge it "encoded on X" and tether
     /// it to the carrier. `None` for plain exile.
     #[serde(default)]
@@ -2287,7 +2287,7 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub can_attack_despite_defender: bool,
-    /// CR 701.38 — the seats that goaded this creature, in goad order. A
+    /// CR 701.15 — the seats that goaded this creature, in goad order. A
     /// goaded creature must attack each combat if able, and must attack a
     /// player *other than* each goader if able (CR 701.38b), so in a pod the
     /// client needs *who*, not just the `goaded` flag, to say which seats it
@@ -2553,7 +2553,7 @@ pub enum DecisionWire {
         #[serde(default)]
         mode_texts: Vec<String>,
     },
-    /// CR 701.45 — Learn: reveal a Lesson from `lessons` into hand, or
+    /// CR 701.48 — Learn: reveal a Lesson from `lessons` into hand, or
     /// discard a card from `hand` to draw.
     Learn {
         player: usize,

@@ -2580,6 +2580,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ANTI_VENOM_EDHREC_COMMANDERS,
             main: decks::ANTI_VENOM_EDHREC_MAIN,
         },
+        // Seat 357: Fire Lord Zuko's EDHREC average deck. `--pod-decks 357`.
+        PodDeck {
+            name: "Fire Lord Zuko (RWB)",
+            commanders: decks::FIRE_LORD_ZUKO_COMMANDERS,
+            main: decks::FIRE_LORD_ZUKO_MAIN,
+        },
     ]
 }
 
@@ -3348,7 +3354,7 @@ fn play_pod_game(
             }
         }
         // CR 704.5m / 800.4a — an Aura on a player is on one still in the
-        // game; CR 701.37 — a melded permanent's halves were exiled into it,
+        // game; CR 701.42 — a melded permanent's halves were exiled into it,
         // so they hold no battlefield state of their own. Debug-only.
         #[cfg(debug_assertions)]
         if !g.is_game_over() {
@@ -4653,6 +4659,7 @@ mod tests {
             ("Myrel, Shield of Argive", [0x0A88, 354, 9279]),
             ("Be'lakor, the Dark Master", [0x0A89, 355, 9280]),
             ("Anti-Venom, Horrifying Healer", [0x0A8A, 356, 9281]),
+            ("Fire Lord Zuko", [0x0A8B, 357, 9282]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

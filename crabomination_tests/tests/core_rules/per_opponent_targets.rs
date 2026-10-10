@@ -208,3 +208,33 @@ fn cr_601_2c_every_required_slot_is_filled_and_up_to_slots_may_not_be() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1);
 }
+
+/// CR 115.3 — "each of up to three targets" is one instance of the word
+/// "target", so no player is named twice, under Shower of Coals' threshold
+/// `If` too: naming the opponent three times dealt 6 where 2 is printed.
+#[test]
+fn cr_115_3_one_up_to_n_instance_names_each_target_once_under_a_condition() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let shower = g.add_card_to_hand(0, catalog::shower_of_coals());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cast = |g: &mut GameState, targets: Vec<Target>| {
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 5);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: shower,
+            target: targets.first().cloned(),
+            additional_targets: targets.into_iter().skip(1).collect(),
+            mode: None,
+            x_value: None,
+        })
+    };
+    let three = vec![Target::Player(1); 3];
+    assert!(cast(&mut g, three).is_err(), "one opponent named three times");
+    let life = g.players[1].life;
+    cast(&mut g, vec![Target::Player(1), Target::Permanent(bear)]).expect("two different targets");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.battlefield_find(bear).is_none());
+}

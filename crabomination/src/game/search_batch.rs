@@ -1,4 +1,4 @@
-//! CR 701.19 — "search your library for up to N cards" is ONE search. The
+//! CR 701.23 — "search your library for up to N cards" is ONE search. The
 //! engine runs it as N single picks (`Effect::SearchUpToN`), and each pick
 //! used to search anew: Ob Nixilis Unshackled's "whenever an opponent
 //! searches their library" fired once per card, and Leonin Arbiter's {2}

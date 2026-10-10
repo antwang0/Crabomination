@@ -425,7 +425,7 @@ Fugitive of the Judoon (two picks in turn), Infernal Offering (each player
 returns their own pick; its "choose an opponent" was already asked — the
 residual note was stale), and per player inside a `ForEach`: Summon: Esper
 Valigarmanda, The Weaver King, Valki. **`Effect::MaySacrifice` asks which
-permanent** (CR 701.17a) — 82 cards; the source stays a last resort and a
+permanent** (CR 701.21a) — 82 cards; the source stays a last resort and a
 headless seat keeps the weakest-first pick.
 
 Multi-card picks: `Effect::ChooseSomeAmong` (`shortcut::choose_some_then`,

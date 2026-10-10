@@ -512,7 +512,7 @@ fn unspeakable_symbol_pays_life_for_counters() {
     assert_eq!(g.battlefield_find(knight).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-// ── CR 702.36b — Morph with a non-mana turn-up cost ─────────────────────────
+// ── CR 702.37b — Morph with a non-mana turn-up cost ─────────────────────────
 
 /// Zombie Cutthroat's flip is five life, not mana.
 #[test]

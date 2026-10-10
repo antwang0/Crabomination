@@ -2363,7 +2363,7 @@ fn wan_shi_tong_enters_with_x_counters() {
     assert_eq!(g.players[0].library.len(), lib0 - 2, "drew half of 4 = 2");
 }
 
-/// CR 701.19 — an opponent's library search grows Wan Shi Tong and draws
+/// CR 701.23 — an opponent's library search grows Wan Shi Tong and draws
 /// (`audit_oracle_verbs.py`, `search_library` class: the rider was dropped as
 /// "no search trigger", which `EventKind::PlayerSearchedLibrary` refutes).
 #[test]

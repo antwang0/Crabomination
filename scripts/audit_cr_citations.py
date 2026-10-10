@@ -39,6 +39,22 @@ def main():
             header[h.group(1)] = h.group(2).strip().lower()
             by_name.setdefault(h.group(2).strip().lower(), h.group(1))
     named = re.compile(r"\b([A-Z][a-z]+(?: [a-z]+)?) \(CR (70[12]\.[0-9]+)[a-z]?\)")
+    # "CR 701.N — <verb>": the keyword-action verb right after the citation is
+    # another 701 header's, and the cited one's appears nowhere on the line
+    # ("CR 701.17a — a player can sacrifice": 701.17 is Mill, sacrifice 701.21).
+    def forms(h):
+        root = h[:-1] if h.endswith("e") else h
+        return {h, h + "s", h + "d", h + "ed", h + "es", root + "ing", root + "ed"}
+    # Verbs too common in plain prose to name a rule ("an activated ability",
+    # "double-faced", "create a token") never count as the *other* keyword.
+    common = {"activate", "cast", "create", "double", "play", "reveal"}
+    roots = {n: forms(h) for n, h in header.items() if n.startswith("701.") and " " not in h}
+    stem = {n: h[:5] for n, h in header.items() if n.startswith("701.")}
+    verb_after = re.compile(r"CR (701\.[0-9]+)[a-z]? (?:—|-|:) ([^.;)]{0,50})")
+    # "CR 702.N — Name …": the text right after the citation starts with
+    # another keyword's exact header ("CR 702.46 — Cipher", Cipher is 702.99).
+    name_after = re.compile(r"CR (70[12]\.[0-9]+)[a-z]? (?:—|-|:) ([A-Za-z][^.;:(]{0,40})")
+    names = sorted(((h, n) for h, n in by_name.items() if len(h) > 3), key=lambda t: -len(t[0]))
     misnamed = []
     cited, where = Counter(), {}
     for d in DIRS:
@@ -52,6 +68,22 @@ def main():
                         right = by_name.get(name.lower())
                         if right and right != num and header.get(num) != name.lower():
                             misnamed.append(f"{os.path.relpath(path, ROOT)}:{i}  {name} cites {num}, the rule is {right}")
+                    for num, after in name_after.findall(line):
+                        own = header.get(num, "~")
+                        if own.split()[0][:5] in line.lower():
+                            continue
+                        for h, n in names:
+                            if n != num and n[:3] == num[:3] and re.match(re.escape(h) + r"\b", after.lower()):
+                                misnamed.append(f"{os.path.relpath(path, ROOT)}:{i}  CR {num} ({own}) names {h}, the rule is {n}")
+                                break
+                    for num, after in verb_after.findall(line):
+                        words = re.findall(r"[a-z]+", after.lower())
+                        own = roots.get(num)
+                        hits = {n for n, fs in roots.items() if n != num and header[n] not in common and any(w in fs for w in words)}
+                        mine = stem.get(num, "~")
+                        if own and hits and not any(w.startswith(mine) for w in re.findall(r"[a-z]+", line.lower())):
+                            right = ", ".join(f"{n} ({header[n]})" for n in sorted(hits))
+                            misnamed.append(f"{os.path.relpath(path, ROOT)}:{i}  CR {num} ({header[num]}) reads as {right}")
                     for r in CITE.findall(line):
                         if r not in rules:
                             cited[r] += 1
