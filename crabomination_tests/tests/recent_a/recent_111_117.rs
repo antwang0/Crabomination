@@ -396,7 +396,7 @@ mod recent112 {
         assert_eq!(g.players[0].mana_pool.total(), 1, "one mana of any color added");
     }
 
-    /// CR 602.5h — a summoning-sick creature can't pay {Q} either.
+    /// CR 602.5a — a summoning-sick creature can't pay {Q} either.
     #[test]
     fn cr_602_5h_untap_cost_summoning_sick() {
         let mut g = two_player_game();

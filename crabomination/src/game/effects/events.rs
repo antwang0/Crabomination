@@ -1075,7 +1075,7 @@ fn event_matches_spec_rest(
             GameEvent::Regenerated { card_id } if *card_id == source.id
         ) || matches!(
             // "Whenever this permanent activates an ability" — the equipped
-            // creature's own activations (Illusionist's Bracers, CR 706.10).
+            // creature's own activations (Illusionist's Bracers, CR 707.10).
             event,
             GameEvent::AbilityActivated { source: cid, .. } if *cid == source.id
         ),
@@ -1109,7 +1109,7 @@ fn event_matches_spec_rest(
                         p.graveyard.iter().any(|c| c.id == target))
                 })
                 // For token deaths the SBA "ceases to exist" rule
-                // (CR 111.7c) removes the token from every zone
+                // (CR 111.7) removes the token from every zone
                 // in the same SBA sweep as the death event emission, so by
                 // the time the trigger dispatcher walks this lookup the
                 // token isn't anywhere. The `died_card_snapshots` cache

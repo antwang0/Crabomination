@@ -385,7 +385,7 @@ pub struct LegalTargets {
     /// Short effect description (e.g. "exile target card from a
     /// graveyard") shown after the source name.
     pub description: String,
-    /// CR 601.4d — the engine says this pick may be declined ("up to N
+    /// CR 601.2c — the engine says this pick may be declined ("up to N
     /// targets"). Escape then answers `DecisionAnswer::DeclineTarget`
     /// instead of reporting that the choice can't be cancelled.
     pub declinable: bool,

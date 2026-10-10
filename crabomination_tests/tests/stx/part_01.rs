@@ -1387,7 +1387,7 @@ fn curate_nets_zero_hand_size_via_scry_three_draw_one() {
         "Curate: -1 cast + 1 draw = 0 net hand size");
 }
 
-// ── Killian, Ink Duelist — target-aware cost reduction (CR 117.7c / 601.2f) ──
+// ── Killian, Ink Duelist — target-aware cost reduction (CR 118.7a / 601.2f) ──
 
 /// Killian's static "spells you cast that target a creature cost {2} less"
 /// reduces a creature-targeting spell's generic cost by 2. Murder is
@@ -4254,7 +4254,7 @@ fn memory_lapse_routes_countered_spell_to_library_top_per_cr_701_6a() {
     assert_eq!(
         g.players[1].library.len(),
         lib_before + 1,
-        "Bolt placed on top of P1's library (CR 701.5g)"
+        "Bolt placed on top of P1's library (CR 701.6a)"
     );
     assert_eq!(
         g.players[1].graveyard.len(),

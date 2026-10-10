@@ -35,7 +35,7 @@ fn cast(g: &mut GameState, id: CardId, targets: &[Target]) {
     drain_stack(g);
 }
 
-/// Cleric, Rogue, Warrior and Wizard — a full party (CR 700.18).
+/// Cleric, Rogue, Warrior and Wizard — a full party (CR 700.8).
 fn full_party(g: &mut GameState) -> Vec<CardId> {
     [catalog::malakir_blood_priest, catalog::mages_attendant, catalog::mardu_strike_leader, catalog::galepowder_mage]
         .into_iter()

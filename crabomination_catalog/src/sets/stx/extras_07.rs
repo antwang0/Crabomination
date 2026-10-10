@@ -1971,7 +1971,7 @@ pub fn pestilent_haze() -> CardDefinition {
 /// battlefield" rider now lands via the new card-intrinsic
 /// `affinity_filter: Some(Creature)` slot — `cost_reduction_for_spell`
 /// adds 1 to the reduction per battlefield creature (CR 601.2f /
-/// 117.7c clamp to generic-only via `ManaCost::reduce_generic`). On a
+/// 118.7a clamp to generic-only via `ManaCost::reduce_generic`). On a
 /// board with 5 creatures, this becomes a {1}{W} mana wrath; with 7+,
 /// the entire generic side is consumed and the spell costs just {W}.
 pub fn vanquish_the_horde() -> CardDefinition {

@@ -5143,7 +5143,7 @@ mod recent {
         assert!(z.definition.keywords.contains(&Keyword::Decayed));
     }
 
-    /// Militia Rallier can't be declared as the lone attacker (CR 508.0).
+    /// Militia Rallier can't be declared as the lone attacker (CR 508.1c).
     #[test]
     fn militia_rallier_cant_attack_alone() {
         let mut g = two_player_game();

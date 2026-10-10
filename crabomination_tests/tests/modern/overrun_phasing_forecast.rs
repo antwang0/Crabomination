@@ -1627,7 +1627,7 @@ fn expend_threshold_fires_only_on_crossing() {
     assert!(!pred_false, "staying above 4 does not re-fire");
 }
 
-/// CR 702.146e — casting a daybound spell while it's neither day nor night
+/// CR 702.145d — casting a daybound spell while it's neither day nor night
 /// makes it day.
 #[test]
 fn daybound_spell_cast_makes_it_day() {

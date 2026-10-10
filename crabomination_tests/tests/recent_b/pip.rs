@@ -1,6 +1,6 @@
 //! Fallout (PIP) — the rad-counter cards (`catalog::sets::pip`).
 //!
-//! The CR 728.2 turn-based action itself (mill, the nonland-only life loss,
+//! The CR 122.1i turn-based action itself (mill, the nonland-only life loss,
 //! the counter that survives a land) is covered in `core_rules/counters`; these
 //! assert only what is unique to each card — who gets how many counters.
 

@@ -2729,7 +2729,7 @@ impl GameState {
                     def.supertypes.push(*st);
                 }
             }
-            // CR 707.2e — strip Legendary so the copy dodges the legend rule.
+            // CR 707.9b — strip Legendary so the copy dodges the legend rule.
             if spec.non_legendary {
                 def.supertypes.retain(|s| *s != crate::card::Supertype::Legendary);
             }
@@ -6203,7 +6203,7 @@ impl GameState {
             Effect::CopyActivatedAbilityMayChooseTargets => {
                 // Illusionist's Bracers — copy the activation that fired this
                 // trigger. Mana abilities never use the stack, so anything
-                // still on it is a legal copy target (CR 706.10).
+                // still on it is a legal copy target (CR 707.10).
                 // The activation's source is the trigger's subject when the
                 // watcher is a separate permanent (Kurkesh); the equipped
                 // creature itself when the trigger rides Equipment (Bracers).
@@ -6227,7 +6227,7 @@ impl GameState {
                         None => return Ok(()),
                     },
                 };
-                // CR 706.10 — "you may choose new targets for the copy".
+                // CR 707.10 — "you may choose new targets for the copy".
                 if let StackItem::Trigger {
                     controller,
                     effect,
@@ -23872,7 +23872,7 @@ impl GameState {
                                 self.players[owner].library.push(*card);
                             }
                             CounteredSpellZone::OwnerLibraryTopOrBottom => {
-                                // CR 701.5g — the spell's OWNER chooses top or
+                                // CR 701.6a — the spell's OWNER chooses top or
                                 // bottom (Subtlety). The owner essentially
                                 // always wants their spell back on top, so
                                 // Auto seats pick top (the old blanket "no"

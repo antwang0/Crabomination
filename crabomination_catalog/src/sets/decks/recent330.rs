@@ -743,7 +743,7 @@ pub fn boon_reflection() -> CardDefinition {
 /// card the ability is named after and was the one not in the catalog.
 ///
 /// ⚠ The two halves are independent and only the first is the famous one: the
-/// static exempts the controller's creatures from CR 602.5g's summoning-
+/// static exempts the controller's creatures from CR 602.5a's summoning-
 /// sickness gate on `{T}` costs, and the untap is an ordinary targeted ability
 /// that works on anyone's creature.
 pub fn thousand_year_elixir() -> CardDefinition {

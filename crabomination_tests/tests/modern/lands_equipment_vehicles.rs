@@ -2782,7 +2782,7 @@ fn cr_614_boon_reflection_doubles_your_life_gain_only() {
 /// Thousand-Year Elixir: "You may activate abilities of creatures you control
 /// as though those creatures had haste."
 ///
-/// CR 602.5g bars a summoning-sick creature from paying a `{T}` cost. The
+/// CR 602.5a bars a summoning-sick creature from paying a `{T}` cost. The
 /// Elixir exempts the controller's creatures; the test is that the *same*
 /// activation fails before it lands and succeeds after.
 #[test]
@@ -2804,7 +2804,7 @@ fn cr_602_5g_thousand_year_elixir_exempts_the_summoning_sickness_gate() {
             mode: None,
         })
     };
-    assert!(act(&mut g).is_err(), "a sick creature can't tap-activate (CR 602.5g)");
+    assert!(act(&mut g).is_err(), "a sick creature can't tap-activate (CR 602.5a)");
     g.add_card_to_battlefield(0, catalog::thousand_year_elixir());
     act(&mut g).expect("the Elixir's static exempts the gate");
 }

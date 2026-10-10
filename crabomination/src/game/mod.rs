@@ -2227,7 +2227,7 @@ pub struct ColdState {
     pub(crate) last_name_sticker_vowels: u8,
 }
 
-/// A declined optional extra-target slot (CR 601.4d — "up to N targets"),
+/// A declined optional extra-target slot (CR 601.2c — "up to N targets"),
 /// recorded against the exact cast attempt it was answered for so the
 /// prompt stays declined across the replays a hand-paying caster's cast
 /// goes through. See [`GameState::suppress_extra_target_prompts`].
@@ -3573,7 +3573,7 @@ pub struct GameState {
     /// `evaluate_requirement_static` zone walk) so AnotherOfYours-
     /// scope triggers with creature-type filters (Witherbloom
     /// Pestmaster, Felisa, Fang of Silverquill) fire correctly when
-    /// the dying subject is a token — CR 111.7c's "ceases to exist"
+    /// the dying subject is a token — CR 111.7's "ceases to exist"
     /// SBA removes the token from every zone in the same sweep as
     /// the death event emission, so by the time
     /// `dispatch_triggers_for_events` runs the token is gone from
@@ -12520,7 +12520,7 @@ impl GameState {
             || self.battlefield.iter().any(card_can_change_colors)
     }
 
-    /// CR 602.5g/h — is `card_id`'s `{T}`/`{Q}` ability barred right now
+    /// CR 602.5a — is `card_id`'s `{T}`/`{Q}` ability barred right now
     /// because the permanent is a summoning-sick creature?
     ///
     /// Callers must have established that the ability actually has a tap cost
@@ -34206,7 +34206,7 @@ fn static_effect_to_effects(
             // `check_target_legality`; no layer effect.
             | StaticEffect::GraveyardCardsUntargetable
             // ControllerCreatureAbilitiesAsThoughHaste (Tyvar) — consulted at
-            // the CR 602.5g activation gate; no layer effect.
+            // the CR 602.5a activation gate; no layer effect.
             | StaticEffect::ControllerCreatureAbilitiesAsThoughHaste
             // UntapSelfEachUntapStep (Thousand Moons Infantry) — consulted by
             // `do_untap`; no layer effect.

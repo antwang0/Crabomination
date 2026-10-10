@@ -1503,7 +1503,7 @@ impl GameState {
             }
         }
 
-        // CR 508.0 — "attacks only alone" (Master of Cruelties). If any
+        // CR 508.1c — "attacks only alone" (Master of Cruelties). If any
         // declared attacker carries AttacksAlone, the batch must be a
         // single attacker. Read from the computed keyword set so granted
         // variants count.
@@ -1518,7 +1518,7 @@ impl GameState {
             return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
         }
 
-        // CR 508.0 — "can't attack alone" (Militia Rallier). A lone attacker
+        // CR 508.1c — "can't attack alone" (Militia Rallier). A lone attacker
         // carrying CantAttackAlone makes the batch illegal.
         if attacks.len() == 1
             && computed.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {

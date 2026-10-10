@@ -1,4 +1,4 @@
-//! Zendikar Rising party (CR 700.18): payoffs that scale with `Value::PartyCount`.
+//! Zendikar Rising party (CR 700.8): payoffs that scale with `Value::PartyCount`.
 //! Tests in `tests/recent58.rs`.
 
 use crate::card::{
@@ -99,7 +99,7 @@ pub fn kabira_outrider() -> CardDefinition {
 }
 
 /// Tajuru Paragon — {1}{G} 3/2 Elf that's also a Cleric, Rogue, Warrior, and
-/// Wizard, so it can fill any one party slot (still only one — CR 700.18).
+/// Wizard, so it can fill any one party slot (still only one — CR 700.8).
 /// Kicker {3}; if kicked, dig six for a creature card. (The "shares a creature
 /// type" filter is approximated as any creature.)
 pub fn tajuru_paragon() -> CardDefinition {

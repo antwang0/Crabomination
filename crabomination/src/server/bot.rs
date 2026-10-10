@@ -12916,7 +12916,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
         });
         attackers.truncate(cap as usize);
     }
-    // CR 508.0 — drop a lone attacker that can't attack alone
+    // CR 508.1c — drop a lone attacker that can't attack alone
     // (Militia Rallier): a single-attacker batch with
     // CantAttackAlone would be rejected, costing the bot its
     // whole combat. Only matters when it's the sole attacker.
@@ -12989,7 +12989,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
             None => attackers.retain(|&id| id != okk),
         }
     }
-    // CR 508.0, the other half — `AttacksAlone` (Aisling Leprechaun's
+    // CR 508.1c, the other half — `AttacksAlone` (Aisling Leprechaun's
     // cousins): a creature that *attacks alone* makes any batch with a
     // second attacker illegal, and the engine rejects the batch rather than
     // the pair. Drop those creatures from a multi-attacker declaration; a
@@ -13398,7 +13398,7 @@ fn trim_attacks_to_payable_tax(
         i += 1;
         k
     });
-    // CR 508.0 — the trim must not manufacture the rejection the picker
+    // CR 508.1c — the trim must not manufacture the rejection the picker
     // already guards against one step up: a lone `CantAttackAlone` attacker.
     if attacks.len() == 1
         && state
@@ -17575,7 +17575,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         if p.controller != seat {
             continue;
         }
-        // CR 602.5g/h — every ability this loop counts has a `{T}` cost
+        // CR 602.5a — every ability this loop counts has a `{T}` cost
         // (`is_countable_mana_ability` requires it), so a summoning-sick
         // creature contributes nothing: `try_pay_with_auto_tap` refuses it.
         // This estimate had no sickness gate, and a summoning-sick Llanowar
@@ -24357,7 +24357,7 @@ mod tests {
         g2.declare_attackers(attacks).expect("the plan is legal");
     }
 
-    /// CR 508.0 — `AttacksAlone`. A creature that attacks alone makes any
+    /// CR 508.1c — `AttacksAlone`. A creature that attacks alone makes any
     /// batch with a second attacker illegal, so the planner drops it rather
     /// than losing the combat.
     #[test]

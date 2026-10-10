@@ -3083,7 +3083,7 @@ fn unctus_grand_metatect_statics() {
     assert_eq!(g.players[0].graveyard.len(), gy0 + 1, "discarded one");
 }
 
-/// Tyvar lets a summoning-sick creature tap-activate (CR 602.5g exemption).
+/// Tyvar lets a summoning-sick creature tap-activate (CR 602.5a exemption).
 #[test]
 fn tyvar_grants_ability_haste() {
     let mut g = two_player_game();
@@ -3101,7 +3101,7 @@ fn tyvar_grants_ability_haste() {
         card_id: dancer, ability_index: 0, target: Some(Target::Permanent(target)),
         additional_targets: vec![], x_value: None, mode: None,
     });
-    assert!(act(&mut g).is_err(), "sick creature can't tap-activate (CR 602.5g)");
+    assert!(act(&mut g).is_err(), "sick creature can't tap-activate (CR 602.5a)");
     g.add_card_to_battlefield(0, catalog::tyvar_jubilant_brawler());
     act(&mut g).expect("Tyvar's static exempts the gate");
 }

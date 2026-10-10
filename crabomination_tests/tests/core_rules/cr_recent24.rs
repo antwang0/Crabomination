@@ -1,5 +1,5 @@
 //! CR conformance for rules exercised by this run's DGM gap wave 3:
-//! CR 606.3 (one loyalty ability per turn — Ral Zarek), CR 117.7c (cost
+//! CR 606.3 (one loyalty ability per turn — Ral Zarek), CR 118.7a (cost
 //! reduction is generic-only — Council of the Absolute's chosen-name discount),
 //! and CR 510 (a "deals combat damage to you" trigger identifies the dealing
 //! creature — Teysa, Envoy of Ghosts).
@@ -30,7 +30,7 @@ fn cr_606_3_one_loyalty_ability_per_turn() {
     assert!(matches!(err, Err(GameError::LoyaltyAbilityAlreadyUsed(_))), "second is illegal");
 }
 
-/// CR 117.7c — a cost reduction lowers only the generic portion of a cost.
+/// CR 118.7a — a cost reduction lowers only the generic portion of a cost.
 /// Council of the Absolute's chosen-name discount shaves {2} off Punish the
 /// Enemy's {4}{R}, so {2}{R} (three mana) casts it; the colored {R} is never
 /// reduced away.

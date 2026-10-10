@@ -14410,7 +14410,7 @@ pub fn zealous_conscripts() -> CardDefinition {
 /// total becomes 1. Master of Cruelties deals no combat damage this
 /// turn."
 ///
-/// "Can attack only alone" is wired via `Keyword::AttacksAlone` (CR 508.0).
+/// "Can attack only alone" is wired via `Keyword::AttacksAlone` (CR 508.1c).
 /// The `AttacksAndIsntBlocked` trigger sets the defender to 1 life and grants
 /// `Keyword::DealsNoCombatDamage` until end of turn, so its first-strike
 /// deathtouch ping no longer finishes the kill — the printed "deals no
@@ -27028,7 +27028,7 @@ pub fn nettlecyst() -> CardDefinition {
 /// Helm of the Host — {4} Legendary Artifact — Equipment. At the beginning of
 /// combat on your turn, create a non-legendary token copy of equipped creature
 /// with haste. Equip {5}. (`non_legendary` strips the copy's supertypes so a
-/// legendary host doesn't lose the original to the legend rule, CR 707.2e.)
+/// legendary host doesn't lose the original to the legend rule, CR 707.9b.)
 pub fn helm_of_the_host() -> CardDefinition {
     use crate::card::{ArtifactSubtype, Supertype};
     use crate::game::types::TurnStep;

@@ -28,7 +28,7 @@ fn treasure() -> Arc<TokenDefinition> {
     Arc::new(crabomination_base::tokens::treasure_token())
 }
 
-/// A Cleric, Rogue, Warrior or Wizard — the four party roles (CR 700.18).
+/// A Cleric, Rogue, Warrior or Wizard — the four party roles (CR 700.8).
 fn party_role() -> R {
     R::HasCreatureType(CreatureType::Cleric)
         .or(R::HasCreatureType(CreatureType::Rogue))

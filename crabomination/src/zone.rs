@@ -578,7 +578,7 @@ const LANE_LIFE_STATIC: u32 = 54;
 /// predicate reading no instance field. See [`card_has_attach_grant`].
 const LANE_ATTACH_GRANT: u32 = 56;
 /// Any permanent's definition lets its controller activate a summoning-sick
-/// creature's abilities as though it had haste (Tyvar, CR 602.5g) — the walk
+/// creature's abilities as though it had haste (Tyvar, CR 602.5a) — the walk
 /// `tap_ability_summoning_sick` closes with, once per untapped summoning-sick
 /// creature the bot's mana sweep and every activation gate meet (PERF
 /// `(-316)`). See [`card_has_haste_static`].
@@ -996,7 +996,7 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
 
 /// Does this permanent's definition let its controller activate a
 /// summoning-sick creature's abilities as though it had haste (Tyvar, CR
-/// 602.5g), under any of the `While*` wrappers (peeled unconditionally here,
+/// 602.5a), under any of the `While*` wrappers (peeled unconditionally here,
 /// the sound direction — the walk this gates matches the effect bare)? The
 /// [`LANE_HASTE_STATIC`] predicate; definition-only, so the walk's
 /// `controller == p` test stays the caller's.

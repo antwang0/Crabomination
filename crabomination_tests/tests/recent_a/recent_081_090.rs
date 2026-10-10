@@ -928,7 +928,7 @@ mod recent86 {
         }
     }
 
-    /// CR 601.2f / 117.7c — a cost reduction only removes generic mana; colored
+    /// CR 601.2f / 118.7a — a cost reduction only removes generic mana; colored
     /// pips survive. Urza's Incubator naming Elf can't waive Llanowar Elves' {G}.
     #[test]
     fn cr_601_2f_reduction_is_generic_only() {

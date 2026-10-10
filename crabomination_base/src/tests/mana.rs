@@ -114,7 +114,7 @@ fn distinct_colors_counts_unique_colored_pips() {
     assert_eq!(cost(&[crate::mana::colorless(2)]).distinct_colors(), 0);
 }
 
-// ── Cost reduction (CR 601.2f / 117.7c) ─────────────────────────────────────
+// ── Cost reduction (CR 601.2f / 118.7a) ─────────────────────────────────────
 
 #[test]
 fn reduce_generic_drains_a_single_generic_pip() {
@@ -143,7 +143,7 @@ fn reduce_generic_splits_multiple_generic_pips() {
 
 #[test]
 fn reduce_generic_preserves_colored_colorless_and_x_pips() {
-    // CR 601.2f / 117.7c — only Generic pips are reducible.
+    // CR 601.2f / 118.7a — only Generic pips are reducible.
     use crate::mana::{colorless, x};
     let mut c = cost(&[w(), r(), colorless(1), x()]);
     let before = c.symbols.clone();

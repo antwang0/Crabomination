@@ -179,7 +179,7 @@ pub fn vanishing_verse() -> CardDefinition {
 /// ✅ The static "spells you cast that target a creature cost {2} less to
 /// cast" now wires via `StaticEffect::CostReductionTargetingFilter`. The
 /// reduction is applied during `cast_spell_with_convoke` after target
-/// validation; CR 601.2f / 117.7c forbid trimming colored or X pips, so
+/// validation; CR 601.2f / 118.7a forbid trimming colored or X pips, so
 /// the engine's `ManaCost::reduce_generic` helper drains generic pips
 /// only and clamps at zero. The spell filter is `Any` (any spell with a
 /// creature target qualifies — the printed Oracle reads "spells you

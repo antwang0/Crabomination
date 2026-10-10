@@ -938,7 +938,7 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::PreCombatMain => {
-                // CR 728.2 — rad-counter mill is a turn-based action that
+                // CR 122.1i — rad-counter mill is a turn-based action that
                 // happens as the precombat main phase begins, before
                 // players receive priority (and thus before step triggers).
                 let mut rad = self.do_rad_counters();
@@ -3141,7 +3141,7 @@ impl GameState {
                         }
                     }
 
-                    // CR 702.146e — a daybound permanent entering while it's
+                    // CR 702.145d — a daybound permanent entering while it's
                     // neither day nor night makes it day.
                     if self.day_night.is_none()
                         && self
@@ -3782,7 +3782,7 @@ impl GameState {
         events
     }
 
-    /// CR 728.2 / 122.1i — rad-counter turn-based action. As the active
+    /// CR 122.1i / 122.1i — rad-counter turn-based action. As the active
     /// player begins their precombat main phase, if they have any rad
     /// counters they mill that many cards; for each *nonland* card milled
     /// this way they lose 1 life and remove one rad counter.
@@ -7907,7 +7907,7 @@ impl GameState {
             events.push(GameEvent::CreatureDied { card_id: id });
             // Cache the dying card's snapshot so AnotherOfYours-scope
             // triggers AND printed-type filter predicates fire reliably
-            // even for tokens. CR 111.7c's
+            // even for tokens. CR 111.7's
             // "ceases to exist" SBA removes the token from every zone in
             // the same sweep — by dispatch time the zone-walking lookup
             // returns None. The cached `CardInstance` survives the sweep
@@ -9231,7 +9231,7 @@ impl GameState {
             card.drop_counters_for_zone_change(zone);
         }
         // The graveyard→exile redirect (Rest in Peace / Leyline / Disturb back
-        // face, CR 614.6 / 702.146e) and its void-counter rider read the back
+        // face, CR 614.6 / 702.146) and its void-counter rider read the back
         // face, so capture them *before* the CR 712.4 front-face revert.
         // One walk, not two: `graveyard_exiled_for` *is*
         // `graveyard_exile_redirects(..).0`, and both walked every static
@@ -9248,7 +9248,7 @@ impl GameState {
         // unflipped / front face off the battlefield.
         card.revert_flip();
         card.revert_transform();
-        // CR 702.160c — a prototype permanent has only its printed
+        // CR 702.160a — a prototype permanent has only its printed
         // (full, colorless) characteristics off the battlefield.
         card.revert_prototype();
         // CR 709.5c — Room unlocked designations are battlefield-only.
@@ -9305,7 +9305,7 @@ impl GameState {
                 self.players[owner].library.shuffle(&mut rng);
             }
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
-            // graveyard arrival to exile; CR 702.146e — so does a Disturb
+            // graveyard arrival to exile; CR 702.146 — so does a Disturb
             // back face.
             Zone::Graveyard if exile_on_graveyard => {
                 let mut card = card;

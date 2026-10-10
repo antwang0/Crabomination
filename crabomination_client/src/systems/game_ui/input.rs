@@ -430,7 +430,7 @@ pub fn handle_game_input(
                 if !targeting.pending_decision_target {
                     cancel_targeting(targeting, legal_targets);
                 } else if legal_targets.declinable {
-                    // CR 601.4d — an "up to N targets" slot may be left
+                    // CR 601.2c — an "up to N targets" slot may be left
                     // empty. Escape is the Skip control for it; the engine
                     // ends target selection and finishes the cast.
                     outbox.submit(GameAction::SubmitDecision(

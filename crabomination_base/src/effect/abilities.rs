@@ -796,7 +796,7 @@ pub enum StaticEffect {
     /// Applied during `cast_spell_with_convoke` (and the back-face / alt-
     /// cost siblings) *after* the cast's target is validated. The reduction
     /// is clamped at the spell's current generic-pip total (it cannot
-    /// reduce a colored pip), matching CR 601.2f / CR 117.7c.
+    /// reduce a colored pip), matching CR 601.2f / CR 118.7a.
     CostReductionTargetingFilter {
         spell_filter: SelectionRequirement,
         target_filter: SelectionRequirement,
@@ -2617,7 +2617,7 @@ pub enum StaticEffect {
     /// own Affinity-for-creatures self-cast doesn't double-dip; non-Balancer
     /// IS spells the controller casts only get the static grant).
     ///
-    /// CR 601.2f / 117.7c: generic-only via the existing
+    /// CR 601.2f / 118.7a: generic-only via the existing
     /// `ManaCost::reduce_generic` clamp. Powers Witherbloom, the Balancer's
     /// "Instant and sorcery spells you cast have affinity for creatures"
     /// printed second clause. Future "your IS spells have affinity for
@@ -3552,7 +3552,7 @@ pub enum StaticEffect {
     OpponentsCreatureAbilitiesLocked,
     /// "You may activate abilities of creatures you control as though those
     /// creatures had haste." Exempts the controller's creatures from the
-    /// CR 602.5g summoning-sickness gate on {T}/{Q} costs (Tyvar, Jubilant
+    /// CR 602.5a summoning-sickness gate on {T}/{Q} costs (Tyvar, Jubilant
     /// Brawler; Thousand-Year Elixir kin).
     ControllerCreatureAbilitiesAsThoughHaste,
     /// CR 122.1 — Solemnity-style lock: "Counters can't be put on
@@ -4002,7 +4002,7 @@ pub struct StateTriggeredAbility {
 pub struct ActivatedAbility {
     pub tap_cost: bool,
     /// CR 107.17 — the untap symbol `{Q}`: the source must be tapped and
-    /// untaps as a cost (Pili-Pala). Shares `{T}`'s CR 602.5g/h
+    /// untaps as a cost (Pili-Pala). Shares `{T}`'s CR 602.5a
     /// summoning-sickness gate.
     #[serde(default)]
     pub untap_self_cost: bool,

@@ -864,7 +864,7 @@ fn helm_of_the_host_copies_only_copiable_values() {
     );
 }
 
-/// CR 707.2e — Helm's copy of a *legendary* host isn't legendary, so the
+/// CR 707.9b — Helm's copy of a *legendary* host isn't legendary, so the
 /// legend-rule SBA doesn't destroy the original alongside it.
 #[test]
 fn helm_of_the_host_copy_of_legend_is_not_legendary() {

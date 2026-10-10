@@ -1,5 +1,5 @@
 //! CR conformance: 115.7c multi-slot retargeting, 601.2c distinct slots,
-//! 706.10 activated-ability copies, and the 104.4b / 732.3 loop guards.
+//! 707.10 activated-ability copies, and the 104.4b / 732.3 loop guards.
 
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -53,7 +53,7 @@ fn cr_115_7c_redirect_repoints_every_slot() {
     assert_eq!(theirs_tapped, 2, "both slots landed on distinct opposing creatures");
 }
 
-/// CR 706.10 — a copied activated ability may choose new targets; the copy
+/// CR 707.10 — a copied activated ability may choose new targets; the copy
 /// takes the scripted pick rather than inheriting the original's.
 #[test]
 fn cr_706_10_copied_activated_ability_takes_new_targets() {
