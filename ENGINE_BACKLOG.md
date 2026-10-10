@@ -119,6 +119,51 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-10-10 (eighteenth Commander run, `01Xu59CH`, concurrent with the seventeenth) — required slots, who may sacrifice, CR citations
+
+- **CR 601.2c** — the cast path requires every required slot of a multi-slot
+  spell (`Effect::required_target_slots`; detail under the seventeenth run's
+  census entry below). **CR 115.3** — `distinct_target_count` walks `If` /
+  `OptionalTargets` / `CollectEvidence(X)` / `PayEnergy`: Shower of Coals'
+  threshold `If` let one opponent be named three times (6 damage for 2); 24
+  conditional "up to N" instances newly covered.
+- **CR 701.21a** — `sacrifice_one` refuses a permanent the named player doesn't
+  control. Pod sweep 181001 (decks 107/338/207/45, game 8) aborted on the CR
+  610.3 invariant: Aboleth Spawn's owner copied Wren's Run Packmaster's
+  champion trigger, the copy sacrificed the Packmaster, and the original then
+  exiled an Elf under a champion already gone. `resolve_champion` also
+  declines when its champion is gone or not its controller's (CR 607.2a).
+- Subtlety reads its printed "up to one target creature or planeswalker spell"
+  and `declines_own_side_pick` gained a stack branch; `GameState` back under
+  its 1,680-byte cap (`untapped_lands_at_turn_start` / `block_poison_this_turn`
+  as `u16`s); Aurora of Emrakul colorless (the CR 903.4 audit).
+- **CR citations:** sacrifice is 701.21, not 701.17 (Mill). `scripts/audit_cr_citations.py`
+  now reports a citation whose number exists but names another keyword —
+  "CR 701.N — <verb>" with another header's verb and none of its own, and
+  "CR 70x.N — <Keyword>" naming another header exactly. ~200 comments moved
+  to the 2026-09-25 numbers (the pre-Behold 701 numbering; Cipher, Impending,
+  Echo, … in 702). The report reads 0; 61 absent numbers remain (listed by
+  the script; each needs a reading, not a sed).
+- **Seat 356: Anti-Venom, Horrifying Healer** (Saving Grace, Martyrdom).
+- **Sweeps** (audit build): 181001 every deck × 3/4/6/8 × 30 = 9,270 games, 1
+  abort (the champion, fixed); 182001 = 9,330 games, 0 aborts, 7 undecided —
+  three CR 104.4a simultaneous losses, a token board cap (Blech + Cauldron of
+  Essence), and three **genuine mandatory loops** the CR 104.4b draw is right
+  about: Polyraptor + Marauding Raptor; Zellix + Altar of the Brood with
+  Blightsteel Colossus in a library (milled, shuffled back, CR 701.17c still
+  counts it milled); Ghostly Dancers + Secret Arcade (every Spirit token is an
+  enchantment). `--a dflt` 183001 (4/6 seats × 10): 1,480 games, 0 bad. Two-
+  player sos/cube/sealed seed 9401 × 100 on the audit build: 2,500, 0 bad.
+- Censused, not built: 72 triggered/activated abilities require 2+ slots (the
+  five printing "up to" are fine — see the CR 601.2c entry); the picker's
+  `optional` reading `min_targets_in_mode` instead of `target_slot_optional_x`
+  differs on 22 `If`-wrapped slots but `declines_own_side_pick` already reads
+  the right one for triggers — no observable divergence, left as is. ⚠ Open:
+  Waste Management's unkicked "up to two cards from a single graveyard" is
+  aimed at the caster's own graveyard by the all-slots picker (`slot_owner`
+  over `If` returns the kicked branch's owner first, so the exile reads
+  friendly).
+
 ## FIXED/OPEN 2026-10-10 (seventeenth Commander run, `017yfeX4`) — eight EDHREC seats, eleven primitives, the CR 601.2c census
 
 **Seats 335-342** (`decks::cmdr_edhrec2`, 46 cards): Henzie, Frodo + Sam, K'rrik,
@@ -191,7 +236,7 @@ Riots. Primitives, each with a card test in `recent_b::cmdr_edhrec3`:
   and exile but never on death** (Candlekeep Sage's commander grant): the
   snapshot pass paired it with `PermanentLeftBattlefield` only.
 
-**Still open from the scan:** Anti-Venom (Martyrdom, above); **Be'lakor** —
+**Still open from the scan:** (Anti-Venom seated as 356 by the eighteenth run); **Be'lakor** —
 Dream Devourer needs a hand-wide foretell grant (the granted-cost machinery is
 Ethereal Valkyrie's, `effects/foretell.rs`) plus a "whenever you foretell" event,
 Balor's "one or more — each mode a different player", Raphael a per-player
