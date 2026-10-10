@@ -2643,16 +2643,33 @@ pub fn play_one_pod_game(
 const POD_SAME_ACTIVATION_PER_TURN: u32 = 64;
 
 /// This turn's activation counts by (seat, source, ability index; a cast is
-/// index `usize::MAX`); see [`POD_SAME_ACTIVATION_PER_TURN`].
+/// index `usize::MAX`), and casts again by (seat, card name); see
+/// [`POD_SAME_ACTIVATION_PER_TURN`].
 #[derive(Default)]
 struct RepeatGuard {
     turn: u32,
     seen: Vec<(usize, crate::card::CardId, usize, u32)>,
+    /// Casts by name: a free creature that dies and comes back to hand spreads
+    /// its loop over every copy (Shadowborn Apostle under Edgewalker and
+    /// Athreos, God of Passage: 760 casts over sixteen copies in one turn,
+    /// none past the per-card cap).
+    names: Vec<(usize, &'static str, u32)>,
 }
 
 impl RepeatGuard {
     /// Count `action` for `seat`; `false` once it is past the per-turn cap.
+    /// `name` is the cast card's, when the action is a cast.
     fn admit(&mut self, turn: u32, seat: usize, action: &crate::game::GameAction) -> bool {
+        self.admit_named(turn, seat, action, None)
+    }
+
+    fn admit_named(
+        &mut self,
+        turn: u32,
+        seat: usize,
+        action: &crate::game::GameAction,
+        name: Option<&'static str>,
+    ) -> bool {
         let (card_id, ability_index) = match *action {
             crate::game::GameAction::ActivateAbility { card_id, ability_index, .. } => (card_id, ability_index),
             _ => match action.cast_card_id() {
@@ -2663,6 +2680,22 @@ impl RepeatGuard {
         if turn != self.turn {
             self.turn = turn;
             self.seen.clear();
+            self.names.clear();
+        }
+        if let Some(name) = name.filter(|_| ability_index == usize::MAX) {
+            let n = match self.names.iter_mut().find(|r| r.0 == seat && r.1 == name) {
+                Some(r) => {
+                    r.2 += 1;
+                    r.2
+                }
+                None => {
+                    self.names.push((seat, name, 1));
+                    1
+                }
+            };
+            if n > POD_SAME_ACTIVATION_PER_TURN {
+                return false;
+            }
         }
         let key = (seat, card_id, ability_index);
         let n = match self.seen.iter_mut().find(|r| (r.0, r.1, r.2) == key) {
@@ -2960,7 +2993,8 @@ fn play_pod_game(
             // never polled suppressed every other seat's actions.
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
             let crate::server::bot::BotStep { mut action, mut settled } = step;
-            if !repeats.admit(g.turn_number, seat, &action) {
+            let cast_name = action.cast_card_id().and_then(|id| g.find_card_anywhere(id)).map(|c| c.definition.name);
+            if !repeats.admit_named(g.turn_number, seat, &action, cast_name) {
                 action = crate::game::GameAction::PassPriority;
                 settled = None;
             }
@@ -4717,6 +4751,28 @@ mod tests {
         assert!(!guard.admit(3, 0, &cast(6)), "the 65th cast in one turn is a pass");
         assert!(guard.admit(3, 0, &cast(7)), "another card");
         assert!(guard.admit(4, 0, &cast(6)), "a new turn resets it");
+    }
+
+    /// CR 732.2a — an optional loop spread over many copies of one card is
+    /// still one loop: the 65th cast of a name in a turn is a pass, whichever
+    /// copy it is (Shadowborn Apostle under Edgewalker and Athreos, God of
+    /// Passage, seed 17100148).
+    #[test]
+    fn cr_732_2a_a_seat_stops_recasting_one_name_past_the_cap() {
+        let cast = |card| crate::game::GameAction::CastSpell {
+            card_id: crate::card::CardId(card),
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        let mut guard = RepeatGuard::default();
+        for i in 0..POD_SAME_ACTIVATION_PER_TURN {
+            assert!(guard.admit_named(3, 0, &cast(100 + i % 16), Some("Shadowborn Apostle")));
+        }
+        assert!(!guard.admit_named(3, 0, &cast(200), Some("Shadowborn Apostle")), "a fresh copy, same loop");
+        assert!(guard.admit_named(3, 0, &cast(201), Some("Grizzly Bears")), "another name");
+        assert!(guard.admit_named(3, 1, &cast(202), Some("Shadowborn Apostle")), "another seat");
     }
 
     /// The pod loop is reproducible: same seed, same outcome. Cross-process
