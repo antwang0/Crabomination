@@ -738,6 +738,11 @@ pub enum StaticEffect {
     /// it that many times plus an additional time" (Twinning Staff). Read by
     /// `copy_stack_spell_controlled` for the copies' controller.
     SpellCopiesPlusOne,
+    /// "Casualty X. The copy isn't legendary and has starting loyalty X"
+    /// (Ob Nixilis, the Adversary): read off the spell as its casualty copy
+    /// is made, X being the sacrificed creature's power. No battlefield
+    /// effect.
+    CasualtyCopyLoyaltyFromSacrifice,
     /// "[filter] spells you cast have conspire" (Wort, the Raidmother, CR
     /// 702.78) — consulted with the printed keyword by the conspire cast path.
     /// `from_exile`: only spells cast from exile (Rassilon, the War

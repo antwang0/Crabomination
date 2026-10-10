@@ -7426,6 +7426,12 @@ impl GameState {
         if !sac_ok {
             return Err(GameError::InvalidTarget);
         }
+        let sac_power = self.battlefield_find(sacrifice).map_or(0, |c| self.effective_power_on(c).max(0) as u32);
+        let rewrite = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .is_some_and(|c| super::casualty_copy::rewrites_casualty_copy(&c.definition));
         // Pay the casualty cost (CR 601.2b additional cost): sacrifice now; its
         // own death triggers are parked and go on the stack above the spell
         // (CR 603.3).
@@ -7443,6 +7449,9 @@ impl GameState {
         let mut cast_events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
         events.append(&mut cast_events);
         self.copy_stack_spell(card_id, 1, true, &mut events);
+        if rewrite {
+            self.rewrite_casualty_copy(card_id, sac_power);
+        }
         Ok(events)
     }
 

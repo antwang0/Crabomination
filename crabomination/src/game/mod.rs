@@ -149,6 +149,7 @@ mod entry_tally;
 mod damage_life;
 mod mana_burn;
 mod exile_triggers;
+mod casualty_copy;
 mod loss_exile;
 mod mystic_barrier;
 mod loyalty_copy;
@@ -33444,6 +33445,7 @@ fn static_effect_to_effects(
             | StaticEffect::MatchingEnterUntapped { .. }
             | StaticEffect::OthersEnterWithSourceTapState
             | StaticEffect::SpellCopiesPlusOne
+            | StaticEffect::CasualtyCopyLoyaltyFromSacrifice
             | StaticEffect::GrantConspireToSpells { .. }
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
