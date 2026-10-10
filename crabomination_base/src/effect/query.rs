@@ -3476,7 +3476,11 @@ impl Effect {
     pub fn permanent_slot_is_hostile(&self, slot: u8, mode: Option<usize>) -> bool {
         fn hostile(e: &Effect) -> bool {
             match e {
+                // Exile and tap (Solitude, Splash Lasher) are as hostile as a
+                // destroy: an optional "up to one" slot of either spares your own.
                 Effect::Destroy { .. }
+                | Effect::Exile { .. }
+                | Effect::Tap { .. }
                 | Effect::ExileUntilSourceLeaves { .. }
                 | Effect::DealDamage { .. }
                 | Effect::Fight { .. }
@@ -3492,7 +3496,7 @@ impl Effect {
                 Effect::PumpPT { power, toughness, .. } => {
                     !(Effect::value_is_non_negative(power) && Effect::value_is_non_negative(toughness))
                 }
-                Effect::AddCounter { kind, .. } => matches!(kind, CounterType::MinusOneMinusOne),
+                Effect::AddCounter { kind, .. } => matches!(kind, CounterType::MinusOneMinusOne | CounterType::Stun),
                 Effect::PlayersMayAccept { on_accept, otherwise, .. } => hostile(on_accept) || hostile(otherwise),
                 Effect::ApplyToTargets { effect, .. } => hostile(effect),
                 Effect::Seq(v) => v.iter().any(hostile),

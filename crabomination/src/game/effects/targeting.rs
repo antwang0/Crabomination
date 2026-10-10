@@ -125,13 +125,19 @@ impl GameState {
     /// own side's. The walk's last resort takes one (a mandatory slot must),
     /// so Aerial Extortionist exiled its controller's own Mind Stone and Star
     /// Athlete made its controller sacrifice or take 5. A slot that only
-    /// names your own ("target land you control") keeps its pick.
+    /// names your own ("target land you control") keeps its pick. A card in
+    /// your own graveyard counts as your side: Raven Eagle's "exile up to one
+    /// target card from a graveyard" took the last resort's own card.
     fn declines_own_side_pick(&self, eff: &Effect, controller: usize, t: &Target) -> bool {
         let Target::Permanent(tid) = t else { return false };
         eff.target_slot_optional(0, None)
             && eff.permanent_slot_is_hostile(0, None)
             && eff.target_filter_for_slot(0).is_some_and(|f| !f.excludes_opponents_side())
-            && self.battlefield_find(*tid).is_some_and(|c| self.same_team(c.controller, controller))
+            && self
+                .battlefield_find(*tid)
+                .map(|c| c.controller)
+                .or_else(|| self.players.iter().position(|p| p.graveyard.iter().any(|c| c.id == *tid)))
+                .is_some_and(|side| self.same_team(side, controller))
     }
 
     fn auto_target_for_effect_avoiding_set_xc_inner(
