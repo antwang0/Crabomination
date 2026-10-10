@@ -4859,6 +4859,8 @@ static DECKS: &[Factory] = &[
     super::decks::bilbo_fellow_conspirator,
     super::decks::the_sackville_bagginses,
     super::decks::asmodeus_the_archfiend,
+    super::decks::saving_grace,
+    super::decks::martyrdom,
     super::decks::hoarding_broodlord,
     super::decks::razaketh_the_foulblooded,
     super::decks::beseech_the_queen,

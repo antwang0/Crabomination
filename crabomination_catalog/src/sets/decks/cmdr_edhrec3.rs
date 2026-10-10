@@ -1420,3 +1420,51 @@ pub fn balor() -> CardDefinition {
         ..creature("Balor", cost(&[generic(3), r(), r()]), vec![CreatureType::Demon], 5, 5)
     }
 }
+
+/// Saving Grace — {1}{W} Aura, flash, enchant creature you control. ETB: all
+/// damage that would be dealt this turn to you and permanents you control is
+/// dealt to the enchanted creature instead (CR 614.9 — bound to that creature
+/// as the trigger resolves, so it keeps redirecting if the Aura leaves).
+/// Enchanted creature gets +0/+3.
+pub fn saving_grace() -> CardDefinition {
+    CardDefinition {
+        name: "Saving Grace",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
+        equipped_bonus: Some(crate::card::EquipBonus { toughness: 3, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::RedirectYourDamageToChosen {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+            creatures_only: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Martyrdom — {1}{W}{W} Instant. Until end of turn, target creature you
+/// control gains "{0}: The next 1 damage that would be dealt to target
+/// creature, planeswalker, or player this turn is dealt to this creature
+/// instead." (CR 614.9). "Only you may activate" is its controller here,
+/// which is you unless its control changes this turn.
+pub fn martyrdom() -> CardDefinition {
+    CardDefinition {
+        name: "Martyrdom",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GainActivatedAbility {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            ability: Box::new(ActivatedAbility {
+                effect: Effect::RedirectNextDamage {
+                    target: target_filtered(R::Creature.or(R::Planeswalker).or(R::Player)),
+                    to: Selector::This,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            }),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}

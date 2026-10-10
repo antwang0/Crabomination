@@ -1393,3 +1393,76 @@ fn secret_salvage_finds_every_copy() {
     assert!(g.exile.iter().any(|c| c.id == gy));
     assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Shadowborn Apostle").count(), 3);
 }
+
+/// Seat 1 bolts seat 0.
+fn bolt_player_zero(g: &mut GameState) {
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(g);
+}
+
+/// Saving Grace (Anti-Venom's list): CR 614.9 — the turn's damage to you goes
+/// to the enchanted creature, which the Aura's +0/+3 keeps alive.
+#[test]
+fn saving_grace_takes_the_turns_damage_to_you() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let grace = g.add_card_to_hand(0, catalog::saving_grace());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: grace,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Saving Grace");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    bolt_player_zero(&mut g);
+    assert_eq!(g.players[0].life, life, "the Bolt went to the bear");
+    assert_eq!(g.battlefield_find(bear).expect("2/5 survives").damage, 3);
+}
+
+/// Martyrdom (Anti-Venom's list): the granted {0} ability moves the next 1
+/// damage to you onto the creature (CR 614.9), once per activation.
+#[test]
+fn martyrdom_grants_a_one_damage_redirect() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let martyr = g.add_card_to_hand(0, catalog::martyrdom());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: martyr,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Martyrdom");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the granted {0} ability");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    bolt_player_zero(&mut g);
+    assert_eq!(g.players[0].life, life - 2);
+    assert_eq!(g.battlefield_find(bear).expect("1 damage on a 2/2").damage, 1);
+}
