@@ -9888,16 +9888,21 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     // K'rrik — "for each {B} in a cost, you may pay 2 life": those pips need
     // no mana of their colour (a five-seat strict debug pod, seed 64036,
     // asserted on Champion of Stray Souls' {B}{B} with one Swamp untapped).
-    let life_pips: u8 = state
+    // Agatha's Soul Cauldron — a creature of yours activates with mana of any
+    // color, so its pips are no gate either (an eight-seat fuzzed strict pod,
+    // seed 18400204 game 2, asserted on Emperor of Bones' {1}{B} with two
+    // Plains). Same pass.
+    let (life_pips, any_color_creature_abilities): (u8, bool) = state
         .battlefield
         .iter()
         .filter(|c| c.controller == seat)
         .flat_map(|c| c.definition.static_abilities.iter())
-        .fold(0, |m, sa| match sa.effect {
+        .fold((0, false), |(m, any), sa| match sa.effect {
             crate::effect::StaticEffect::PhyrexianPipsForAllSpells { color } => {
-                m | 1 << crate::game::actions::color_index(color)
+                (m | 1 << crate::game::actions::color_index(color), any)
             }
-            _ => m,
+            crate::effect::StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities => (m, true),
+            _ => (m, any),
         });
     let mut gy_ability_grant = false;
     // A static that makes artifacts Equipment (Bludgeon Brawl, Arterial
@@ -9970,6 +9975,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             if idx < printed
                 && ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
                 && !restricted_floating
+                && !(any_color_creature_abilities && state.computed_is_creature(c))
                 && !colors_coverable_paying_life(&ab.mana_cost, have.get(), life_pips)
             {
                 continue;
