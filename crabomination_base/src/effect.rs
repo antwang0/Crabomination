@@ -1066,6 +1066,10 @@ pub enum Value {
     LibrarySizeOf(PlayerRef),
     /// The X value paid in the spell's cost.
     XFromCost,
+    /// 1 while `pred` holds, else 0 — a predicate as a number ("if this
+    /// spell was kicked, any number instead": The Eagles Are Coming!'s
+    /// target cap).
+    OneIf(Box<Predicate>),
     /// Number of spells cast this turn by controller (Storm).
     StormCount,
     /// Dungeons the effect's controller has completed this game
@@ -13212,6 +13216,10 @@ pub enum DelayedTriggerKind {
     /// attacker is the trigger source.
     CreatureAttacksYouUntilYourNextTurn,
     YourNextUpkeep,
+    /// "At the beginning of the next upkeep" — whoever's turn it is, and not
+    /// the current one when registered during an upkeep (The Eagles Are
+    /// Coming!).
+    NextUpkeep,
     NextEndStep,
     /// "At the beginning of your next end step" (Desert Warfare): the
     /// controller's own end step — this turn's if it's theirs and it hasn't

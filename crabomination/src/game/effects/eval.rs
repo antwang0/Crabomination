@@ -1752,6 +1752,7 @@ impl GameState {
                 .unwrap_or(0),
             // A permanent reads its own stamped count; a resolving spell
             // (Spell Contortion) reads the count threaded onto the context.
+            Value::OneIf(pred) => self.evaluate_predicate(pred, ctx) as i32,
             Value::TimesKicked => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))

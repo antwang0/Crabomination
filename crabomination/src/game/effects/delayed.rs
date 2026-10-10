@@ -30,6 +30,7 @@ pub(crate) fn delayed_kind_from_effect(
             DelayedKind::PlayersNextEndStep { player: controller, after_turn: turn.saturating_sub(1) }
         }
         DelayedTriggerKind::YourNextUpkeep => DelayedKind::YourNextUpkeep,
+        DelayedTriggerKind::NextUpkeep => DelayedKind::NextUpkeep { after_turn: turn },
         DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
         DelayedTriggerKind::OpponentPermanentDamagesYouThisTurn => DelayedKind::OpponentPermanentDamagesYouThisTurn,
         DelayedTriggerKind::NextCleanupStep => DelayedKind::NextCleanupStep,
