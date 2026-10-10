@@ -506,7 +506,7 @@ pub fn narci_fable_singer() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![
-            // CR 714.2c — X is the Saga's mana value as its chapter resolved.
+            // CR 714.2e — X is the Saga's mana value as its chapter resolved.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SagaFinalChapterResolved, EventScope::YourControl),
                 effect: Effect::Seq(vec![

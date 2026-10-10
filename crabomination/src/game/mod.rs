@@ -4907,10 +4907,6 @@ impl GameState {
     pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         let Some(c) = self.battlefield_find_mut(id) else { return };
         if !c.transformed {
-            // CR 701.27c — a modal DFC isn't a transforming permanent.
-            if c.definition.is_modal_dfc() {
-                return;
-            }
             let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) else { return };
             if back.is_instant() || back.is_sorcery() {
                 return;

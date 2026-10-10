@@ -2086,7 +2086,7 @@ impl GameState {
         chapters.sort_by_key(|(n, _)| *n);
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for (n, mut effect) in chapters {
-            // CR 714.2c — the final chapter announces its own resolution, for
+            // CR 714.2e — the final chapter announces its own resolution, for
             // "whenever the final chapter ability of a Saga you control
             // resolves" (Narci, Fable Singer; Tom Bombadil).
             if n == final_ch {
@@ -5161,6 +5161,7 @@ impl GameState {
             pl.creatures_exiled_from_control_this_turn = 0;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;
+            pl.play_from_top_pay_life_this_turn = false;
             // Johann's once-per-turn top-of-library cast resets each turn.
             pl.cast_from_library_top_this_turn = false;
         }

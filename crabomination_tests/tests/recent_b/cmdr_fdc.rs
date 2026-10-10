@@ -4437,11 +4437,11 @@ fn cr_118_9_demon_of_fates_design_casts_one_enchantment_a_turn_for_life() {
     assert_eq!(pt(&g, demon), (11, 6));
 }
 
-/// CR 714.2c — Narci, Fable Singer: as a Saga's final chapter ability
+/// CR 714.2e — Narci, Fable Singer: as a Saga's final chapter ability
 /// resolves, each opponent loses (and you gain) the Saga's mana value; the
 /// Saga's sacrifice afterwards (CR 714.4) draws a card.
 #[test]
-fn cr_714_2c_narci_drains_on_a_sagas_final_chapter() {
+fn cr_714_2e_narci_drains_on_a_sagas_final_chapter() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::narci_fable_singer());
     g.add_card_to_library(0, catalog::forest());

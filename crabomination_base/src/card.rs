@@ -7019,14 +7019,6 @@ impl CardDefinition {
         })
     }
 
-    /// CR 712.1b — a *modal* double-faced card: its back face has a mana cost
-    /// of its own (it is cast, CR 712.12), or is a land no ability turns over
-    /// (the pathway / God // land backs). CR 701.27c: it can't transform.
-    pub fn is_modal_dfc(&self) -> bool {
-        let Some(back) = self.back_face.as_deref() else { return false };
-        !back.cost.symbols.is_empty() || (back.card_types.contains(&CardType::Land) && !self.is_transforming_dfc())
-    }
-
     /// CR 123.1 / 707.2 — this definition's copiable values: itself, or, on a
     /// name-stickered definition, the same card with its unstickered name.
     pub fn copiable(self: &Arc<Self>) -> Arc<Self> {

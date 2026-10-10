@@ -2840,7 +2840,7 @@ pub enum GameEventWire {
     ScriedOrSurveiled { player: usize, surveil: bool },
     /// Wire mirror of `GameEvent::Proliferated` (CR 701.34).
     Proliferated { player: usize },
-    /// Wire mirror of `GameEvent::SagaFinalChapterResolved` (CR 714.2c).
+    /// Wire mirror of `GameEvent::SagaFinalChapterResolved` (CR 714.2e).
     SagaFinalChapterResolved { player: usize, saga: CardId },
     /// Wire mirror of `GameEvent::Foraged` (CR 701.61).
     Foraged { player: usize },
