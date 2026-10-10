@@ -3134,6 +3134,36 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-10 (Commander routine — seventeenth run, closing, session `017yfeX4`) — guardrail; audit-sweep aborts
+
+Hot-path touch: `sink_facts`'s statics pass (K'rrik's pips, the Soul Cauldron)
+now walks every seat's statics, not only the actor's, and also reads Chromatic
+Orrery / Mycosynth Lattice — one pass, as before. Cold: `ShuffleSelfIntoLibrary`
+checks whether its source is in a zone; the CR 800.4a departure pass reverts
+phased-out permanents before its control reverts. Release `bot_ladder` at
+`47fc798e9` against a base of the same tip with this run's two engine commits
+reverted, Xeon @ 2.80 GHz (4 cores, 15 GB).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 on both sides; determinism ok (all pairs split);
+                 peak_rss 31.1 MiB
+paired wall      bench_ab.py base vs tip, 16 pairs: B/A median -1.11 %,
+                 mean -0.65 % (sd 5.59) — inside noise
+audit pods       overflow + debug-assertions, every deck x 3/4/6/8 x 30:
+                 172001 (9,390 games) found 3 aborts — Serra Avatar's trigger
+                 shuffled the next spell (a kicked Rite of Replication) into
+                 its library; a departed seat's Etali and a stolen Kate Stewart
+                 phased back in (Out of Time); the Soul Cauldron sink gate on
+                 Incubation Druid — all fixed, each block re-run clean.
+                 Closing tip 173001: 9,450 games, 0 aborts, 8 undecided
+                 (Polyraptor loops x4, token board caps x2, CR 104.4a
+                 simultaneous losses x2)
+2-player         release tip, --a dflt --b dflt --seed 9601 x 300: cube 2,400 /
+                 0 undecided, sos 1,500 / 0, sealed 3,600 / 0; 0 panics
+suite            24,841 / 0 / 5 at the fix commit; clippy 0
+```
+
 ### 2026-10-10 (Commander routine — eighteenth run, session `01Xu59CH`) — guardrail; required slots, sacrifice, picker and sink-gate fixes
 
 Hot-path touch: the cast path walks one slot filter past the supplied targets
