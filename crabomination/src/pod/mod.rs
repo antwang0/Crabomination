@@ -2642,15 +2642,25 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
         "a library"
     } else if g.players.iter().any(|p| has(&p.command)) {
         "a command zone"
-    } else if g
-        .exile
-        .iter()
-        .chain(g.players.iter().flat_map(|p| p.graveyard.iter().chain(p.hand.iter()).chain(p.library.iter())))
-        .any(|c| c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|p| p.id == id))
-    {
+    } else if let Some(zone) = {
         // Still a failure (CR 712.4: off the battlefield a melded or merged
-        // card is its parts), but one that names where it went.
-        "nowhere (inside a melded or merged card off the battlefield)"
+        // card is its parts), but one that names where the shell went.
+        let inside = |z: &[crate::card::CardInstance]| {
+            z.iter().any(|c| c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|p| p.id == id))
+        };
+        if inside(&g.exile) {
+            Some("nowhere (inside a melded or merged card in exile)")
+        } else if g.players.iter().any(|p| inside(&p.graveyard)) {
+            Some("nowhere (inside a melded or merged card in a graveyard)")
+        } else if g.players.iter().any(|p| inside(&p.hand) || inside(&p.library)) {
+            Some("nowhere (inside a melded or merged card in a hand or library)")
+        } else if g.players.iter().any(|p| inside(&p.command)) {
+            Some("nowhere (inside a melded or merged card in a command zone)")
+        } else {
+            None
+        }
+    } {
+        zone
     } else {
         "nowhere"
     }
