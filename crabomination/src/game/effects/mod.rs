@@ -32452,30 +32452,59 @@ impl GameState {
             Effect::RevealTopNPutMatchingToBattlefield { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
+                // "Put any number of [filter] cards from among them onto the
+                // battlefield" (Gishath) is the controller's pick. Every choice
+                // first (a re-run replays the log), then the cards move.
+                let mut cursor = 0;
+                let mut plan: Vec<(usize, Vec<CardId>, Vec<CardId>)> = Vec::new();
                 for p in self.resolve_players(who, ctx) {
                     let top_ids: Vec<CardId> =
                         self.players[p].library.iter().take(n).map(|c| c.id).collect();
-                    let mut to_bf = Vec::new();
-                    let mut to_bottom = Vec::new();
+                    let matching: Vec<(CardId, String)> = self.players[p]
+                        .library
+                        .iter()
+                        .take(n)
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let chosen = if matching.is_empty() {
+                        Vec::new()
+                    } else {
+                        let all: Vec<CardId> = matching.iter().map(|(id, _)| *id).collect();
+                        let max = all.len() as u32;
+                        let Some(v) = self.ask_seat_cards_logged(
+                            &mut cursor,
+                            p,
+                            "Put any number of the revealed cards onto the battlefield".to_string(),
+                            ctx.source.unwrap_or(CardId(0)),
+                            matching,
+                            0,
+                            max,
+                            crate::decision::PickValue::Gain,
+                            effect,
+                            all,
+                        ) else {
+                            return Ok(());
+                        };
+                        v
+                    };
+                    plan.push((p, top_ids, chosen));
+                }
+                for (p, top_ids, to_bf) in plan {
                     for cid in &top_ids {
                         let Some(card) = self.players[p].library.iter().find(|c| c.id == *cid) else { continue };
                         events.push(GameEvent::TopCardRevealed {
                             player: p, card_name: card.definition.name, is_land: card.definition.is_land(),
                         });
-                        if self.evaluate_requirement_on_card(filter, card, p) {
-                            to_bf.push(*cid);
-                        } else {
-                            to_bottom.push(*cid);
-                        }
                     }
-                    for cid in to_bf {
+                    for &cid in &to_bf {
                         self.move_card_to(
                             cid,
                             &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
                             ctx, events,
                         );
                     }
-                    for cid in to_bottom {
+                    for cid in top_ids.into_iter().filter(|c| !to_bf.contains(c)) {
                         self.move_card_to(
                             cid,
                             &ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::Bottom },

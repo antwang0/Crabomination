@@ -3452,6 +3452,24 @@ fn gishath_reveals_and_drops_dinosaurs() {
     assert!(g.battlefield_find(dino_b).is_some(), "second Dinosaur entered");
     assert!(g.players[0].library.iter().any(|c| c.id == bear), "non-Dinosaur bottomed back into library");
     assert_eq!(g.players[0].library.last().unwrap().id, bear, "bear is on the bottom");
+
+    // "Put any number of Dinosaur creature cards": the controller may take
+    // fewer — here none, and the declined Dinosaur goes to the bottom too.
+    let dino_c = g.add_card_to_library(0, catalog::huatlis_snubhorn());
+    g.players[0].library.retain(|c| c.id != bear);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Cards(vec![]),
+    ]));
+    let evs = g.resolve_effect(&crabomination::effect::Effect::RevealTopNPutMatchingToBattlefield {
+        who: crabomination::effect::PlayerRef::You,
+        count: crabomination::card::Value::Const(1),
+        filter: crabomination::card::SelectionRequirement::Creature
+            .and(crabomination::card::SelectionRequirement::HasCreatureType(crabomination::card::CreatureType::Dinosaur)),
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dino_c).is_none(), "declined");
+    assert_eq!(g.players[0].library.last().unwrap().id, dino_c, "on the bottom");
 }
 
 /// The Mycotyrant's P/T count your Fungi/Saprolings, and its end step makes one
