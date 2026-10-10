@@ -10563,3 +10563,33 @@ pub const KRATOS_GOD_OF_WAR_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const EDDIE_BROCK_COMMANDERS: &[CardFactory] = &[eddie_brock];
+
+/// **Eddie Brock**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 83 nonbasic cards + 6 Forests + 4 Mountains + 6 Swamps = 99.
+/// Eddie Brock (BRG) Symbiote reanimator: cheap creatures recur through Eddie, then Venom
+/// trades them for cards and free permanents.
+pub const EDDIE_BROCK_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, sol_ring, the_skullspore_nexus, the_soul_stone,
+    thought_vessel, blood_crypt, bloodstained_mire, cinder_glade, command_tower,
+    dragonskull_summit, exotic_orchard, karplusan_forest, llanowar_wastes, overgrown_tomb,
+    reliquary_tower, rootbound_crag, savage_lands, smoldering_marsh, spire_garden,
+    stomping_ground, undergrowth_stadium, verdant_catacombs, wooded_foothills,
+    woodland_cemetery, ziatoras_proving_ground, agent_venom, anger, anticausal_vestige,
+    atsushi_the_blazing_sky, birds_of_paradise, bygone_colossus, carnage_crimson_chaos,
+    delighted_halfling, diamond_weapon, disciple_of_freyalise, etali_primal_conqueror,
+    eternal_witness, fanatic_of_rhonas, ghalta_primal_hunger, ghalta_stampede_tyrant,
+    goreclaw_terror_of_qal_sisma, gwenom_remorseless, haywire_mite, honest_rutstein,
+    ignoble_hierarch, junji_the_midnight_sky, kodama_of_the_east_tree, korvold_fae_cursed_king,
+    llanowar_elves, meren_of_clan_nel_toth, primeval_protector, protean_hulk,
+    sakura_tribe_elder, solemn_simulacrum, spider_manifestation, vaultborn_tyrant,
+    venom_deadly_devourer, xu_ifit_osteoharmonist, animate_dead, garruks_uprising,
+    maximum_carnage, rhythm_of_the_wild, riveteers_ascendancy, sneak_attack, assassins_trophy,
+    beast_within, chaos_warp, dark_ritual, deadly_rollick, heroic_intervention, infernal_grasp,
+    terminate, behold_the_sinister_six, blasphemous_act, cultivate, farseek, natures_lore,
+    rampant_growth, reanimate, three_visits, toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

@@ -2610,6 +2610,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KRATOS_GOD_OF_WAR_COMMANDERS,
             main: decks::KRATOS_GOD_OF_WAR_MAIN,
         },
+        // Seat 362: Eddie Brock's EDHREC average deck. `--pod-decks 362`.
+        PodDeck {
+            name: "Eddie Brock (BRG)",
+            commanders: decks::EDDIE_BROCK_COMMANDERS,
+            main: decks::EDDIE_BROCK_MAIN,
+        },
     ]
 }
 
@@ -4688,6 +4694,7 @@ mod tests {
             ("Terra, Magical Adept", [0x0A8D, 359, 9284]),
             ("Atreus, Impulsive Son", [0x0A8E, 360, 9285]),
             ("Kratos, God of War", [0x0A8F, 361, 9286]),
+            ("Eddie Brock", [0x0A90, 362, 9287]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
