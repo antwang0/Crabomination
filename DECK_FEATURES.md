@@ -34,20 +34,22 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-333 / 334 pod decks carry no residual (2026-10-10, sixteenth Commander run `01S495N5`). Seats 331-334
-are EDHREC average decks, card for card (`scripts/edhrec_deck.py`): **Athreos, Shroud-Veiled (WB)**,
-**Rakdos, the Muscle (BR)**, **Captain N'ghathrod**'s crowd list (UB, no new card) and **Kotis, the
-Fangkeeper (BGU)**. New cards: Mangara of Corondor, Dargo, the Shipwrecker, Burnt Offering, Sacrifice,
-Inquisitor's Flail, Aether Tunnel, Combat Research, Favor of the Overbeing, Security Bypass; residuals
-closed in their lists: Timeline Culler warps from the graveyard, Reluctant Role Model's slot is optional,
-Dragonfire Blade's per-color equip discount, Brokkos mutates from the graveyard. Left: the stand-in
-sticker collection. `--table` output pasted as is:
+341 / 342 pod decks carry no residual (2026-10-10, seventeenth Commander run `017yfeX4`). Seats
+335-342 are EDHREC average decks, card for card (`scripts/edhrec_deck.py`, cards in
+`decks::cmdr_edhrec2`): **Henzie "Toolbox" Torre (BRG)** and **Frodo + Sam (WBG)** (crowd lists beside
+their precon seats), **K'rrik, Son of Yawgmoth (B)**, **Voja, Jaws of the Conclave (GRW)**, **Choco,
+Seeker of Paradise (GWU)**, **Light-Paws, Emperor's Voice (W)**, **Yurlok of Scorch Thrash (BRG)** and
+**Rocco, Street Chef (GRW)** — 46 new cards, none with a residual; the scan then named four older
+cards in their lists, all fixed (Ossification's land attach, Shardmage's Rescue's one-turn hexproof,
+War's Toll's all-or-nothing attack, Ragost's Food grant). Seats 331-334 (sixteenth run):
+Athreos, Rakdos the Muscle, Captain N'ghathrod's crowd list, Kotis. Left: the stand-in sticker
+collection. `--table` output pasted as is:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 204 | Etali, Primal Conqueror (GR) | 1: blank_goblin |
 
-333 / 334 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+341 / 342 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not

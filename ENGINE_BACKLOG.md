@@ -119,6 +119,59 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED/OPEN 2026-10-10 (seventeenth Commander run, `017yfeX4`) — eight EDHREC seats, eleven primitives, the CR 601.2c census
+
+**Seats 335-342** (`decks::cmdr_edhrec2`, 46 cards): Henzie, Frodo + Sam, K'rrik,
+Voja, Choco, Light-Paws, Yurlok, Rocco, Street Chef. Primitives, each with a
+card test in `recent_b::cmdr_edhrec2`:
+
+- `LookPick::one_each` — "a creature card and/or a land card" (Ojer Kaslem);
+  In the Presence of Ages no longer takes two creatures.
+- `StaticEffect::TokenNamedAlsoMints` (Bilbo), `ReplaceDrawWithExileFaceDownWithSource`
+  (Asmodeus; an empty library replaces the draw with nothing),
+  `CostReductionPerTypeSharedWithExiled` (Cemetery Prowler — the spell being
+  cast is in flight, so a `Value` reading it through `find_card_anywhere` saw
+  nothing; the cost walk has the card), `PlayersLoseLifeForUnspentMana`
+  (Yurlok — `game/mana_burn.rs`; a burn that triggers gives priority before
+  the step ends).
+- `Effect::CopySpellAddingTypes` (Tawnos), `OpponentsCantCastFromNonHandUntilYourNextTurn`
+  (Avatar's Wrath), `NextDrawThisTurnBecomesImpulse` (Urabrask).
+- `MayPlayDuration::UntilSeatsNextEndStep { seat }` — Rocco's "until YOUR next
+  end step" over a card another player holds (`UntilYourNextEndStep` ended at
+  the *holder's*).
+- `EquipBonus::protection_keeps_yours` (Benevolent Blessing, CR 702.16k),
+  `GameState::untapped_lands_at_turn_start` (Power Surge).
+- ⚠ **`EachPlayerDoes` over a `LastMoved` grant needs `Effect::ClearLastMoved`
+  per iteration** — without it the last seat's `GrantMayPlay` re-granted every
+  earlier seat's card to itself (Rocco's first cut).
+
+**Residuals fixed in target-deck cards** (`pod_residuals` named them once the
+seats landed): Ossification now enchants a basic land you control; Shardmage's
+Rescue's hexproof lasts only the turn it entered; War's Toll's attack clause is
+`MustAttackIfAnotherAttacks` (it was an unconditional `MustAttack`); Ragost's
+Food type-and-ability grant (Hazel's shape, ungated).
+
+**Audit sweep** (seed 170001, every deck × 3/4/6/8 × 30 = 8,940 games): zero
+aborts. Five undecided: four the known Polyraptor + Marauding Raptor
+mandatory loop (CR 104.4b draw, deck 282), one a token explosion at the
+simulator's board cap (Rabble Rousing + Beastmaster Ascension, 8 seats).
+
+**⚠ Open — the CR 601.2c census is taken** (`core_rules`'
+`unchecked_required_slots_census`, ignored): **206** non-permanent spells
+declare two or more target slots with no minimum, so the cast path's count
+check (`min >= 2` only) never sees them. By oracle text: **159** really
+require every slot (Prey Upon, Arc Trail — the strict check is right for
+them); **24** are modal (`ChooseN` / escalate — the per-mode count needs the
+chosen modes, not `mode: None`); **15** print "up to" / "any number" and would
+be rejected by a strict check until marked: Render Speechless, Vibrant
+Outburst, Cost of Brilliance, Dissection Practice, Homesickness, Burrog
+Barrage, Chelonian Tackle, Domineering Will, Waste Management, Shatterskull
+Smashing, Twisted Fealty, Bioshift, Allies at Last, Urgent Necropsy, Shower of
+Coals; 8 weren't in the oracle cache. The order is: mark the 15 with
+`OptionalTargets { min }`, teach the census the chosen modes, then tighten
+`actions.rs`'s check to `min_targets_in_mode(mode).unwrap_or(slots)`. Bot
+casts with a short target list then start failing — run a sweep after.
+
 ## FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required
 
 `scripts/audit_up_to_one.py` (printed "up to one [other] target …" vs a
@@ -140,7 +193,7 @@ closed the thirteenth run's open "~70 more" row:
   (an optional Solitude / Splash Lasher slot was never declined). Solitude's
   slot is now declared by its exile step, and no longer reads "an opponent
   controls". Golden traces and pod digests unchanged.
-- ⚠ **Open — the cast path is laxer than CR 601.2c:** `actions.rs` checks a
+- ⚠ **Open (census taken by the seventeenth run, above) — the cast path is laxer than CR 601.2c:** `actions.rs` checks a
   target count only for a multi-target instance (`min_targets_in_mode >= 2`),
   so a spell's later *required* single slot can be omitted at cast and is
   skipped at resolution; the activation path is strict (Path to the World
