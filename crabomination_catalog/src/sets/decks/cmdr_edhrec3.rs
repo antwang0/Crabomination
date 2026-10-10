@@ -1,7 +1,8 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
-//! Ashvale, Kastral, the Windcrested and Jodah, Archmage Eternal. Tests in
+//! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal and Child of
+//! Alara. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -717,6 +718,128 @@ pub fn emergent_ultimatum() -> CardDefinition {
                 total_mana_value: None,
             },
         ]),
+        ..Default::default()
+    }
+}
+
+fn gate() -> R {
+    R::HasLandType(crate::card::LandType::Gate)
+}
+
+fn basic_or_gate() -> R {
+    R::IsBasicLand.or(gate())
+}
+
+/// Navigation Orb — {3} artifact. {2}, {T}, sacrifice it: search for up to
+/// two basic land and/or Gate cards, one onto the battlefield tapped and the
+/// other into your hand (the Cultivate split, one search per destination).
+pub fn navigation_orb() -> CardDefinition {
+    CardDefinition {
+        name: "Navigation Orb",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: basic_or_gate(),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::Search { who: PlayerRef::You, filter: basic_or_gate(), to: ZoneDest::Hand(PlayerRef::You) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// District Guide — {2}{G} 2/2 Elf Scout. On entry you may search for a
+/// basic land or Gate card and put it into your hand.
+pub fn district_guide() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for a basic land or Gate card?".into(),
+            body: Box::new(Effect::Search { who: PlayerRef::You, filter: basic_or_gate(), to: ZoneDest::Hand(PlayerRef::You) }),
+        })],
+        ..creature("District Guide", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Scout], 2, 2)
+    }
+}
+
+/// Nine-Fingers Keene — {1}{B}{G}{U} 4/4 legendary Human Rogue, menace,
+/// ward—pay 9 life. Combat damage to a player: look at the top nine, you
+/// may put a Gate from among them onto the battlefield; then with nine or
+/// more Gates the rest go to your hand, else to the bottom in a random order.
+pub fn nine_fingers_keene() -> CardDefinition {
+    let nine_gates = Predicate::ValueAtLeast(
+        Value::count(Selector::EachPermanent(gate().and(R::ControlledByYou))),
+        Value::Const(9),
+    );
+    CardDefinition {
+        keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::Life(9))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                count: Value::Const(9),
+                pick_filter: Some(gate()),
+                to_battlefield: true,
+                optional: true,
+                rest_bottom_random: true,
+                rest_to_hand_if: Some(nine_gates),
+                ..Default::default()
+            })),
+        }],
+        ..legend(
+            "Nine-Fingers Keene",
+            cost(&[generic(1), b(), g(), u()]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            4,
+            4,
+        )
+    }
+}
+
+/// Guild Summit — {2}{U} enchantment. On entry, tap any number of untapped
+/// Gates you control and draw a card for each. Whenever a Gate you control
+/// enters, draw a card.
+pub fn guild_summit() -> CardDefinition {
+    CardDefinition {
+        name: "Guild Summit",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::TapAnyNumberThenDraw { filter: gate() }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: gate() },
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nasty End — {1}{B} instant; as an additional cost, sacrifice a creature.
+/// Draw two cards, or three if the sacrificed creature was legendary (read
+/// from the sacrificed card, CR 608.2h).
+pub fn nasty_end() -> CardDefinition {
+    let draw = |n: i32| Effect::Draw { who: Selector::You, amount: Value::Const(n) };
+    CardDefinition {
+        name: "Nasty End",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent { filter: R::Creature, count: 1 }],
+        effect: Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::SacrificedCard,
+                filter: R::HasSupertype(Supertype::Legendary),
+            },
+            then: Box::new(draw(3)),
+            else_: Box::new(draw(2)),
+        },
         ..Default::default()
     }
 }

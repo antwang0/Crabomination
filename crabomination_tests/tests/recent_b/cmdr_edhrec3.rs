@@ -524,3 +524,98 @@ fn emergent_ultimatum_casts_what_the_opponent_leaves() {
     assert_eq!((on_field, in_library), (2, 1));
     assert!(g.exile.iter().any(|c| c.id == ult), "exiles itself");
 }
+
+/// Navigation Orb: one land onto the battlefield tapped, one into hand.
+#[test]
+fn navigation_orb_splits_two_lands() {
+    let mut g = pod(2);
+    let orb = ready(&mut g, 0, catalog::navigation_orb());
+    let a = g.add_card_to_library(0, catalog::plains());
+    let b = g.add_card_to_library(0, catalog::azorius_guildgate());
+    flood(&mut g);
+    activate(&mut g, orb, 0);
+    let on_field: Vec<CardId> = [a, b].into_iter().filter(|id| g.battlefield_find(*id).is_some()).collect();
+    assert_eq!(on_field.len(), 1);
+    assert!(g.battlefield_find(on_field[0]).unwrap().tapped);
+    assert_eq!([a, b].iter().filter(|id| g.players[0].hand.iter().any(|c| c.id == **id)).count(), 1);
+}
+
+/// District Guide: a Gate counts as well as a basic.
+#[test]
+fn district_guide_finds_a_gate() {
+    let mut g = pod(2);
+    let gate = g.add_card_to_library(0, catalog::azorius_guildgate());
+    let guide = g.add_card_to_hand(0, catalog::district_guide());
+    flood(&mut g);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    cast_x(&mut g, guide, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == gate));
+}
+
+/// Nine-Fingers Keene: a Gate from the top nine; at nine Gates the rest come
+/// to hand (no draw, CR 121.5), otherwise they go to the bottom.
+#[test]
+fn nine_fingers_keene_digs_for_gates() {
+    for gates_before in [0, 8] {
+        let mut g = pod(2);
+        for _ in 0..gates_before {
+            ready(&mut g, 0, catalog::azorius_guildgate());
+        }
+        let keene = ready(&mut g, 0, catalog::nine_fingers_keene());
+        let gate = g.add_card_to_library(0, catalog::azorius_guildgate());
+        for _ in 0..8 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let hand = g.players[0].hand.len();
+        connect(&mut g, keene);
+        assert!(g.battlefield_find(gate).is_some(), "the Gate entered");
+        let expected = if gates_before == 8 { hand + 8 } else { hand };
+        assert_eq!(g.players[0].hand.len(), expected, "gates before: {gates_before}");
+        assert_eq!(g.players[0].cards_drawn_this_turn, 0, "not a draw");
+    }
+}
+
+/// Guild Summit: tapping two Gates draws two; a Gate entering draws one.
+#[test]
+fn guild_summit_draws_per_gate() {
+    let mut g = pod(2);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::azorius_guildgate());
+    ready(&mut g, 0, catalog::azorius_guildgate());
+    let summit = g.add_card_to_hand(0, catalog::guild_summit());
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    cast_x(&mut g, summit, None);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Azorius Guildgate" && c.tapped).count(), 2);
+    let land = g.add_card_to_hand(0, catalog::azorius_guildgate());
+    let hand = g.players[0].hand.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("play gate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 1);
+}
+
+/// Nasty End: three cards off a legendary sacrifice, two otherwise.
+#[test]
+fn nasty_end_draws_more_for_a_legend() {
+    for legendary in [false, true] {
+        let mut g = pod(2);
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        if legendary {
+            ready(&mut g, 0, catalog::isamaru_hound_of_konda());
+        } else {
+            ready(&mut g, 0, catalog::grizzly_bears());
+        }
+        let end = g.add_card_to_hand(0, catalog::nasty_end());
+        flood(&mut g);
+        let hand = g.players[0].hand.len();
+        cast_x(&mut g, end, None);
+        assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 0, "sacrificed");
+        assert_eq!(g.players[0].hand.len(), hand - 1 + if legendary { 3 } else { 2 });
+    }
+}
