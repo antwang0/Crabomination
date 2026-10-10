@@ -2630,6 +2630,15 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
         "a library"
     } else if g.players.iter().any(|p| has(&p.command)) {
         "a command zone"
+    } else if g
+        .exile
+        .iter()
+        .chain(g.players.iter().flat_map(|p| p.graveyard.iter().chain(p.hand.iter()).chain(p.library.iter())))
+        .any(|c| c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|p| p.id == id))
+    {
+        // Still a failure (CR 712.4: off the battlefield a melded or merged
+        // card is its parts), but one that names where it went.
+        "nowhere (inside a melded or merged card off the battlefield)"
     } else {
         "nowhere"
     }
@@ -2657,8 +2666,8 @@ fn check_commanders(
             let now = g.commander_cast_count.get(&cmd).copied().unwrap_or(0);
             let (was, before) = seen.iter().find(|s| s.0 == cmd).map_or(("unknown", 0), |s| (s.1, s.2));
             assert!(
-                zone != "nowhere",
-                "seed {seed}: p{i}'s commander {cmd:?} left {was} for no zone (turn {}, {:?}, after {actions} actions; pending {:?})",
+                !zone.starts_with("nowhere"),
+                "seed {seed}: p{i}'s commander {cmd:?} left {was} for {zone} (turn {}, {:?}, after {actions} actions; pending {:?})",
                 g.turn_number,
                 g.step,
                 g.pending_decision.as_ref().map(|p| &p.decision),
@@ -2816,6 +2825,16 @@ fn play_pod_game(
                 if let Some(a) = traced {
                     let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
                     eprintln!("{actions} t{} {:?} stack {} life {life:?} p{seat} {a}", g.turn_number, g.step, g.stack.len());
+                    // A live seat at 0 or less life names what spares it (CR 704.5a).
+                    for (i, p) in g.players.iter().enumerate().filter(|&(i, p)| p.is_alive() && g.effective_life(i) <= 0) {
+                        eprintln!(
+                            "  p{i} alive at {} life: cant_lose_game {} (this turn {}), unlife {}",
+                            p.life,
+                            g.player_cant_lose_game(i),
+                            p.cant_lose_this_turn,
+                            g.player_unlife_active(i),
+                        );
+                    }
                 }
                 census.bump(key);
                 census.note_triggers(&g);
