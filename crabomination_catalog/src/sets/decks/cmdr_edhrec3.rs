@@ -1,8 +1,8 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
-//! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara
-//! and Rakdos, Lord of Riots. Tests in
+//! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
+//! Rakdos, Lord of Riots, Be'lakor's Demons and Myrel, Shield of Argive. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -1215,5 +1215,180 @@ pub fn burning_rune_demon() -> CardDefinition {
             6,
             6,
         )
+    }
+}
+
+fn soldier_of(types: Vec<CreatureType>, colorless_artifact: bool) -> TokenDefinition {
+    TokenDefinition {
+        name: if types.len() > 1 { "Human Soldier".into() } else { "Soldier".into() },
+        power: 1,
+        toughness: 1,
+        colors: if colorless_artifact { vec![] } else { vec![Color::White] },
+        card_types: if colorless_artifact { vec![CardType::Artifact, CardType::Creature] } else { vec![CardType::Creature] },
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        ..Default::default()
+    }
+}
+
+fn soldier_creature() -> R {
+    R::Creature.and(R::HasCreatureType(CreatureType::Soldier))
+}
+
+/// Horn of Gondor — {3} legendary artifact. On entry, a 1/1 white Human
+/// Soldier. {3}, {T}: X of them, X the number of Humans you control.
+pub fn horn_of_gondor() -> CardDefinition {
+    let human_soldier = || Arc::new(soldier_of(vec![CreatureType::Human, CreatureType::Soldier], false));
+    CardDefinition {
+        name: "Horn of Gondor",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: human_soldier() })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::count(Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Human).and(R::ControlledByYou),
+                )),
+                definition: human_soldier(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Horn of Valhalla // Ysgard's Call — {1}{W} Equipment: equipped creature
+/// gets +1/+1 for each creature you control; equip {3}. Adventure (CR
+/// 715): Ysgard's Call, {X}{W}{W} sorcery — X 1/1 white Soldiers.
+pub fn horn_of_valhalla() -> CardDefinition {
+    CardDefinition {
+        name: "Horn of Valhalla",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            scale: Some(crate::card::EquipScale {
+                filter: R::Creature.and(R::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Ysgard's Call".into(),
+            cost: cost(&[x(), w(), w()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                definition: Arc::new(soldier_of(vec![CreatureType::Soldier], false)),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Preeminent Captain — {2}{W} 2/2 Kithkin Soldier, first strike. Whenever
+/// it attacks, you may put a Soldier creature card from your hand onto the
+/// battlefield tapped and attacking (CR 508.4).
+pub fn preeminent_captain() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DeployCreatureFromHandAttacking { filter: soldier_creature(), return_to_hand_eot: false },
+        }],
+        ..creature("Preeminent Captain", cost(&[generic(2), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Rescue Retriever — {3}{W}{W} 3/3 Dog Soldier, flash. On entry, a +1/+1
+/// counter on each other Soldier you control. Prevent all damage that would
+/// be dealt to other attacking Soldiers you control (CR 615).
+pub fn rescue_retriever() -> CardDefinition {
+    let other_soldiers = || soldier_creature().and(R::ControlledByYou).and(R::OtherThanSource);
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(other_soldiers()),
+            kind: crate::card::CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all damage that would be dealt to other attacking Soldiers you control.",
+            effect: StaticEffect::PreventAllDamageToAttackingMatching { filter: other_soldiers() },
+        }],
+        ..creature("Rescue Retriever", cost(&[generic(3), w(), w()]), vec![CreatureType::Dog, CreatureType::Soldier], 3, 3)
+    }
+}
+
+/// Siege Veteran — {2}{W} 2/2 Human Soldier. At the beginning of combat on
+/// your turn, a +1/+1 counter on target creature you control. Whenever
+/// another nontoken Soldier you control dies, a 1/1 colorless Soldier
+/// artifact creature token.
+pub fn siege_veteran() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Soldier).and(R::NotToken),
+                    },
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(soldier_of(vec![CreatureType::Soldier], true)),
+                },
+            },
+        ],
+        ..creature("Siege Veteran", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Valiant Veteran — {1}{W} 2/2 Kor Soldier. Other Soldiers you control get
+/// +1/+1. {3}{W}{W}, exile it from your graveyard: a +1/+1 counter on each
+/// Soldier you control.
+pub fn valiant_veteran() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other Soldiers you control get +1/+1.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: soldier_creature().and(R::ControlledByYou).and(R::OtherThanSource),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            from_graveyard: true,
+            exile_self_cost: true,
+            mana_cost: cost(&[generic(3), w(), w()]),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(soldier_creature().and(R::ControlledByYou)),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature("Valiant Veteran", cost(&[generic(1), w()]), vec![CreatureType::Kor, CreatureType::Soldier], 2, 2)
     }
 }

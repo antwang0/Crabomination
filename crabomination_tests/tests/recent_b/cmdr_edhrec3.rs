@@ -843,3 +843,120 @@ fn burning_rune_demon_splits_two_cards() {
     assert_eq!(g.players[0].graveyard.len(), 1);
     assert!(g.players[0].library.iter().any(|c| c.id == other), "never a second Burning-Rune Demon");
 }
+
+/// Horn of Gondor: a Human Soldier on entry, then one per Human you control.
+#[test]
+fn horn_of_gondor_musters_per_human() {
+    let mut g = pod(2);
+    let horn = g.add_card_to_hand(0, catalog::horn_of_gondor());
+    flood(&mut g);
+    cast_x(&mut g, horn, None);
+    assert_eq!(named(&g, "Human Soldier"), 1);
+    activate(&mut g, horn, 0);
+    assert_eq!(named(&g, "Human Soldier"), 2, "one Human, one more Soldier");
+}
+
+/// Horn of Valhalla: its adventure (CR 715.3) makes X Soldiers and exiles
+/// it; cast later, the Equipment pumps by your creature count.
+#[test]
+fn horn_of_valhalla_calls_soldiers_then_scales() {
+    let mut g = pod(2);
+    let horn = g.add_card_to_hand(0, catalog::horn_of_valhalla());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventure { card_id: horn, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("Ysgard's Call");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Soldier"), 2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gear = ready(&mut g, 0, catalog::horn_of_valhalla());
+    g.battlefield_find_mut(gear).unwrap().attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2 + 3, 2 + 3), "three creatures: two Soldiers and the bear");
+}
+
+/// Preeminent Captain: its attack brings a Soldier from hand in attacking
+/// (CR 508.4).
+#[test]
+fn preeminent_captain_brings_a_soldier_in_attacking() {
+    let mut g = pod(2);
+    let captain = ready(&mut g, 0, catalog::preeminent_captain());
+    let vet = g.add_card_to_hand(0, catalog::valiant_veteran());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Cards(vec![vet]),
+    ]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: captain, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vet).is_some_and(|c| c.tapped));
+    assert!(g.attacking.iter().any(|a| a.attacker == vet));
+}
+
+/// Rescue Retriever: counters on the other Soldiers, and damage to an
+/// attacking Soldier is prevented (CR 615) — a Bolt too, not only combat.
+#[test]
+fn rescue_retriever_shields_attacking_soldiers() {
+    let mut g = pod(2);
+    let vet = ready(&mut g, 0, catalog::siege_veteran());
+    let dog = g.add_card_to_hand(0, catalog::rescue_retriever());
+    flood(&mut g);
+    cast_x(&mut g, dog, None);
+    assert_eq!(g.battlefield_find(vet).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: vet, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let bolt = Effect::DealDamage { to: Selector::ExactObjects(vec![vet]), amount: crabomination::card::Value::Const(3) };
+    g.resolve_effect(&bolt, &ctx).expect("bolt");
+    assert_eq!(g.battlefield_find(vet).unwrap().damage, 0, "prevented");
+}
+
+/// Siege Veteran: a counter at your beginning of combat, and a Soldier
+/// token when another nontoken Soldier dies.
+#[test]
+fn siege_veteran_replaces_fallen_soldiers() {
+    let mut g = pod(2);
+    let siege = ready(&mut g, 0, catalog::siege_veteran());
+    let other = ready(&mut g, 0, catalog::valiant_veteran());
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![other]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Soldier"), 1);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Soldier").unwrap();
+    assert!(token.definition.card_types.contains(&crabomination::card::CardType::Artifact));
+    g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let counters: u32 = [siege]
+        .iter()
+        .chain(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").map(|c| &c.id))
+        .filter_map(|id| g.battlefield_find(*id))
+        .map(|c| c.counter_count(crabomination::card::CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(counters, 1, "one counter on a creature you control");
+}
+
+/// Valiant Veteran: other Soldiers get +1/+1; from the graveyard it exiles
+/// itself to put a counter on each Soldier.
+#[test]
+fn valiant_veteran_lords_and_rallies_from_the_grave() {
+    let mut g = pod(2);
+    let siege = ready(&mut g, 0, catalog::siege_veteran());
+    let vet = ready(&mut g, 0, catalog::valiant_veteran());
+    assert_eq!(g.computed_permanent(siege).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(vet).unwrap().power, 2, "not itself");
+    let gy = g.add_card_to_graveyard(0, catalog::valiant_veteran());
+    flood(&mut g);
+    activate(&mut g, gy, 0);
+    assert!(g.exile.iter().any(|c| c.id == gy));
+    assert_eq!(g.battlefield_find(siege).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(vet).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
