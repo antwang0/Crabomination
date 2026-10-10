@@ -120,7 +120,9 @@ fn makes_tokens_repeatably(def: &crate::card::CardDefinition) -> bool {
 
 /// Per-tick gate for the probes: a Commander seat with a repeatable token
 /// trigger anywhere it could come from (battlefield, hand, graveyard, command
-/// zone). Off, the probes cost nothing.
+/// zone), a face-down permanent's real face included — turning a manifested
+/// Ghostly Dancers up under Secret Arcade started the loop (pod sweep 182001,
+/// four seats, decks 271/233/285/18, game 3). Off, the probes cost nothing.
 pub(super) fn watch(state: &GameState, seat: usize) -> bool {
     let p = &state.players[seat];
     !p.commanders.is_empty()
@@ -131,7 +133,10 @@ pub(super) fn watch(state: &GameState, seat: usize) -> bool {
             .chain(p.hand.iter())
             .chain(p.graveyard.iter())
             .chain(p.command.iter())
-            .any(|c| makes_tokens_repeatably(&c.definition))
+            .any(|c| {
+                makes_tokens_repeatably(&c.definition)
+                    || c.face_up_def.as_deref().is_some_and(makes_tokens_repeatably)
+            })
 }
 
 /// Passes per seat the resolution probe may spend.
@@ -377,6 +382,33 @@ mod tests {
         assert!(sets_up_loop(&g, &post, 0, &w));
         let post = GameState::accept_on(&g, cast(bear)).expect("castable");
         assert!(!sets_up_loop(&g, &post, 0, &w));
+    }
+
+    /// CR 104.4b — turning a manifested Ghostly Dancers face up under an
+    /// unlocked Secret Arcade, with a creature spell of yours on the stack,
+    /// starts the loop: the gate read only the face-down 2/2 and let it through
+    /// (pod sweep 182001, decks 271/233/285/18, game 3).
+    #[test]
+    fn turning_ghostly_dancers_face_up_under_secret_arcade_is_a_loop() {
+        let (mut g, room) = arcade_game();
+        g.set_room_door_unlocked(room, false, &mut Vec::new());
+        let dancers = g.add_card_to_graveyard(0, crate::catalog::ghostly_dancers());
+        let manifest = Effect::ManifestFromGraveyard {
+            who: PlayerRef::Seat(0),
+            filter: crate::card::SelectionRequirement::Creature,
+        };
+        let ctx = crate::game::effects::EffectContext::for_ability(room, 0, None);
+        g.resolve_effect(&manifest, &ctx).expect("manifest");
+        assert!(g.battlefield_find(dancers).is_some_and(|c| c.face_down));
+        let bear = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: Vec::new(), mode: None, x_value: None })
+            .expect("bear on the stack");
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::White, 5);
+        let w = crate::server::bot::EvalWeights::default();
+        let up = crate::server::bot::BotStep::plain(GameAction::TurnFaceUp { card_id: dancers });
+        assert!(action_starts_loop(&g, 0, &up, &w));
     }
 
     /// CR 104.4b — unlocking Secret Arcade under a Gremlin Tamer sets the loop
