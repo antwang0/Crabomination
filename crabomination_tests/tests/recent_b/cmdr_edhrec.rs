@@ -4052,3 +4052,117 @@ fn raggadragga_green_kit() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
 }
+
+/// Mangara of Corondor (Athreos's seat): `{T}` exiles Mangara and the target
+/// permanent; with Mangara gone in response, the target still goes (CR 608.2b
+/// checks only the target).
+#[test]
+fn mangara_exiles_itself_and_target_permanent() {
+    let mut g = pod(3);
+    let mangara = ready(&mut g, 0, catalog::mangara_of_corondor());
+    let theirs = g.add_card_to_battlefield(2, catalog::sol_ring());
+    activate(&mut g, mangara, Some(Target::Permanent(theirs)));
+    assert!(g.battlefield_find(theirs).is_none() && g.exile.iter().any(|c| c.id == theirs));
+    assert!(g.exile.iter().any(|c| c.id == mangara), "Mangara exiles itself too");
+
+    let mut g = pod(2);
+    let mangara = ready(&mut g, 0, catalog::mangara_of_corondor());
+    let theirs = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mangara, ability_index: 0, target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate");
+    g.remove_from_battlefield_to_graveyard_raw(mangara);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == theirs), "the target goes without Mangara");
+}
+
+/// Dargo, the Shipwrecker (Rakdos, the Muscle's seat): {2} less for each
+/// permanent sacrificed to cast it and {2} less for each other artifact or
+/// creature sacrificed earlier this turn — {6}{R} with two Bears sacrificed
+/// now and one creature before is {R}.
+#[test]
+fn dargo_costs_two_less_per_sacrifice_now_and_earlier() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    g.players[0].artifacts_or_creatures_sacrificed_this_turn = 1;
+    let dargo = g.add_card_to_hand(0, catalog::dargo_the_shipwrecker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dargo, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("{6}{R} less six is {R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dargo).is_some());
+    assert_eq!(named(&g, "Grizzly Bears"), 0, "both Bears were sacrificed");
+}
+
+/// A sacrificed artifact or creature counts toward Dargo's later discount; a
+/// land does not.
+#[test]
+fn artifact_or_creature_sacrifices_are_tallied_for_the_turn() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let land = g.add_card_to_battlefield(0, catalog::swamp());
+    for id in [bear, ring, land] {
+        let ctx = EffectContext::for_spell(0, Some(Target::Permanent(id)), 0, 0);
+        let evs = g
+            .resolve_effect(
+                &crabomination::effect::Effect::SacrificePermanent {
+                    what: crabomination::effect::Selector::Target(0),
+                },
+                &ctx,
+            )
+            .unwrap();
+        g.dispatch_triggers_for_events(&evs);
+    }
+    assert_eq!(g.players[0].permanents_sacrificed_this_turn, 3);
+    assert_eq!(g.players[0].artifacts_or_creatures_sacrificed_this_turn, 2);
+}
+
+/// Burnt Offering adds the sacrificed creature's mana value in {B} and/or
+/// {R}; Sacrifice adds it in {B}.
+#[test]
+fn burnt_offering_and_sacrifice_add_the_sacrificed_mana_value() {
+    for (card, black_only) in [
+        (catalog::burnt_offering as fn() -> crabomination::card::CardDefinition, false),
+        (catalog::sacrifice, true),
+    ] {
+        let mut g = pod(2);
+        g.add_card_to_battlefield(0, catalog::serra_angel());
+        let id = g.add_card_to_hand(0, card());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(named(&g, "Serra Angel"), 0);
+        assert_eq!(g.players[0].mana_pool.total(), 5, "Serra Angel's mana value");
+        if black_only {
+            assert_eq!(g.players[0].mana_pool.amount(Color::Black), 5);
+        }
+    }
+}
+
+/// Timeline Culler: "You may cast this card from your graveyard using its
+/// warp ability" — {B} and 2 life from the graveyard.
+#[test]
+fn timeline_culler_warps_from_the_graveyard() {
+    let mut g = pod(2);
+    let culler = g.add_card_to_graveyard(0, catalog::timeline_culler());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: culler, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("warp from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(culler).is_some());
+    assert_eq!(g.players[0].life, life - 2);
+}

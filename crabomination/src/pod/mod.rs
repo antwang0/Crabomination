@@ -2403,6 +2403,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAGGADRAGGA_COMMANDERS,
             main: decks::RAGGADRAGGA_MAIN,
         },
+        // Seat 331: Athreos, Shroud-Veiled's EDHREC average deck. `--pod-decks 331`.
+        PodDeck {
+            name: "Athreos, Shroud-Veiled (WB)",
+            commanders: decks::ATHREOS_COMMANDERS,
+            main: decks::ATHREOS_MAIN,
+        },
+        // Seat 332: Rakdos, the Muscle's EDHREC average deck. `--pod-decks 332`.
+        PodDeck {
+            name: "Rakdos, the Muscle (BR)",
+            commanders: decks::RAKDOS_MUSCLE_COMMANDERS,
+            main: decks::RAKDOS_MUSCLE_MAIN,
+        },
     ]
 }
 
@@ -4404,6 +4416,8 @@ mod tests {
             ("Marrow-Gnawer", [0x0A12, 328, 9253]),
             ("Alexios, Deimos of Kosmos", [0x0A1E, 329, 9254]),
             ("Raggadragga, Goreguts Boss", [0x0A6A, 330, 9255]),
+            ("Athreos, Shroud-Veiled", [0x0A71, 331, 9256]),
+            ("Rakdos, the Muscle", [0x0A72, 332, 9257]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

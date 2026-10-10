@@ -396,8 +396,8 @@ pub fn solitude() -> CardDefinition {
 
 /// Grief — {2}{B}{B} Creature — Elemental Incarnation, 3/2, Menace.
 /// Evoke—exile a black card from hand. ETB: target opponent discards a
-/// nonland card you choose (Thoughtseize-on-ETB). (Reveal-hand step
-/// collapses to the engine's `DiscardChosen`.)
+/// nonland card you choose (Thoughtseize-on-ETB). `DiscardChosen` picks from
+/// the whole hand, which is what the reveal shows the chooser.
 pub fn grief() -> CardDefinition {
     CardDefinition {
         name: "Grief",

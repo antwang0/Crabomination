@@ -1222,8 +1222,8 @@ pub fn rootwise_survivor() -> CardDefinition {
 
 /// Reluctant Role Model — {1}{W} Human Survivor 2/2. Survival — put a flying,
 /// lifelink, or +1/+1 counter on it. Whenever it or another creature you
-/// control dies, put those counters on up to one target creature. ("Up to one"
-/// is modeled as a required target.)
+/// control dies, put those counters on up to one target creature (an optional
+/// slot, CR 601.2c).
 pub fn reluctant_role_model() -> CardDefinition {
     CardDefinition {
         name: "Reluctant Role Model",
@@ -1255,10 +1255,10 @@ pub fn reluctant_role_model() -> CardDefinition {
             ])),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
-                effect: Effect::MoveAllCounters {
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::MoveAllCounters {
                     from: Selector::TriggerSource,
                     to: target_filtered(R::Creature),
-                },
+                }) },
             },
         ],
         ..Default::default()

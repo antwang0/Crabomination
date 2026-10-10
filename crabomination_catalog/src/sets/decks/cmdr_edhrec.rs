@@ -8393,3 +8393,97 @@ pub fn leyline_of_abundance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mangara of Corondor — {1}{W}{W} Legendary Creature — Human Wizard 1/1.
+/// `{T}: Exile Mangara and target permanent.` (Athreos, Shroud-Veiled's seat.)
+/// The target goes even if Mangara has already left (CR 608.2b reads only the
+/// target).
+pub fn mangara_of_corondor() -> CardDefinition {
+    CardDefinition {
+        name: "Mangara of Corondor",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: target_filtered(R::Permanent) },
+                Effect::Exile { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dargo, the Shipwrecker — {6}{R} Legendary Creature — Giant Pirate 7/5.
+/// As an additional cost, you may sacrifice any number of artifacts and/or
+/// creatures. It costs {2} less for each permanent sacrificed this way and
+/// {2} less for each other artifact or creature you've sacrificed this turn.
+/// Trample; partner. (Rakdos, the Muscle's seat.)
+///
+/// The count sacrificed this way rides the cast's X (`SacrificeAnyNumber`,
+/// Rottenmouth Viper's shape at {2} each); "other" is the per-turn tally as
+/// the cost is determined, before this cast's sacrifices (CR 601.2f).
+pub fn dargo_the_shipwrecker() -> CardDefinition {
+    CardDefinition {
+        name: "Dargo, the Shipwrecker",
+        cost: cost(&[generic(6), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Giant, CreatureType::Pirate]),
+        power: 7,
+        toughness: 5,
+        keywords: vec![Keyword::Trample, Keyword::Partner],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeAnyNumber { filter: R::Artifact.or(R::Creature) }],
+        self_cost_reduction_per_sacrificed: true,
+        self_cost_reduction_per_sacrificed_amount: 2,
+        self_cost_reduction_per: Some((Value::ArtifactsOrCreaturesSacrificedThisTurn(PlayerRef::You), 2)),
+        ..Default::default()
+    }
+}
+
+/// Burnt Offering — {B} Instant. As an additional cost, sacrifice a creature.
+/// Add X mana in any combination of {B} and/or {R}, where X is the sacrificed
+/// creature's mana value. (Rakdos, the Muscle's seat.)
+pub fn burnt_offering() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Burnt Offering",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature.and(R::ControlledByYou),
+            count: 1,
+        }],
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::OfColors(vec![Color::Black, Color::Red], Value::SacrificedManaValue),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sacrifice — {B} Instant. As an additional cost, sacrifice a creature. Add
+/// an amount of {B} equal to the sacrificed creature's mana value. (Rakdos,
+/// the Muscle's seat.)
+pub fn sacrifice() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Sacrifice",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature.and(R::ControlledByYou),
+            count: 1,
+        }],
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::OfColor(Color::Black, Value::SacrificedManaValue),
+        },
+        ..Default::default()
+    }
+}

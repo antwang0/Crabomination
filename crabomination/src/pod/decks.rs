@@ -9650,3 +9650,58 @@ pub const RAGGADRAGGA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const ATHREOS_COMMANDERS: &[CardFactory] = &[athreos_shroud_veiled];
+
+/// **Athreos, Shroud-Veiled**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 78 nonbasic cards + 10 Plains + 11 Swamps = 99.
+/// Athreos, Shroud-Veiled coins (WB): coin counters on whatever dies, wraths and sacrifice outlets
+/// returning the table's creatures to your side; Mangara of Corondor exiles a threat.
+pub const ATHREOS_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, commanders_sphere, fellwar_stone, mind_stone, orzhov_signet,
+    sol_ring, strionic_resonator, talisman_of_hierarchy, the_ozolith, bojuka_bog, caves_of_koilos,
+    command_tower, fetid_heath, godless_shrine, isolated_chapel, nesting_grounds, orzhov_basilica,
+    scoured_barrens, shattered_sanctum, shineshadow_snarl, tainted_field, temple_of_silence,
+    urborg_tomb_of_yawgmoth, vault_of_champions, accursed_marauder, ashen_rider,
+    athreos_god_of_passage, blood_artist, braids_arisen_nightmare, burnished_hart,
+    cruel_celebrant, elas_il_kor_sadistic_pilgrim, gray_merchant_of_asphodel,
+    junji_the_midnight_sky, karmic_guide, knight_of_the_white_orchid, loran_of_the_third_path,
+    luminous_broodmoth, mangara_of_corondor, massacre_wurm, noxious_gearhulk, plaguecrafter,
+    priest_of_fell_rites, puppeteer_clique, ravenous_chupacabra, reluctant_role_model,
+    sepulchral_primordial, solemn_simulacrum, spirited_companion, sun_titan, viscera_seer,
+    black_market, debtors_knell, ghostly_prison, land_tax, phyrexian_arena, resourceful_defense,
+    smothering_tithe, anguished_unmaking, contractual_safeguard, dark_ritual, despark,
+    generous_gift, mortify, path_to_exile, swords_to_plowshares, village_rites,
+    the_eternal_wanderer, austere_command, damn, farewell, fumigate, kayas_wrath, reanimate,
+    sign_in_blood, victimize, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const RAKDOS_MUSCLE_COMMANDERS: &[CardFactory] = &[rakdos_the_muscle];
+
+/// **Rakdos, the Muscle**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 83 nonbasic cards + 7 Mountains + 9 Swamps = 99.
+/// Rakdos, the Muscle sacrifice (BR): fodder and free outlets, rituals off sacrificed mana value
+/// (Burnt Offering, Sacrifice), Dargo cast for its discount, Underworld Breach loops.
+pub const RAKDOS_MUSCLE_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, chrome_mox, fellwar_stone, lotus_petal, mana_vault,
+    phyrexian_altar, rakdos_signet, sol_ring, talisman_of_indulgence, badlands, blazemire_verge,
+    blood_crypt, bloodstained_mire, command_tower, dragonskull_summit, exotic_orchard,
+    foreboding_ruins, haunted_ridge, luxury_suite, mount_doom, phyrexian_tower, raucous_theater,
+    smoldering_marsh, sulfurous_springs, tainted_peak, accursed_marauder, blood_artist, blood_pet,
+    boggart_trawler, braids_arisen_nightmare, carrion_feeder, dargo_the_shipwrecker, forsaken_miner,
+    fury, golgari_thug, greedy_freebooter, grief, impulsive_pilferer, ingot_chewer, mayhem_devil,
+    party_thrasher, pinnacle_monk, pitiless_plunderer, poxwalkers, priest_of_gix,
+    priest_of_urabrask, prosper_tome_bound, ragavan_nimble_pilferer, reassembling_skeleton,
+    reckless_barbarian, shriekmaw, skittering_precursor, solemn_simulacrum, timeline_culler,
+    umbral_collar_zealot, viscera_seer, warren_soultrader, animate_dead, chthonian_nightmare,
+    goblin_bombardment, underworld_breach, burnt_offering, cabal_ritual, culling_the_weak,
+    dark_ritual, deadly_dispute, deflecting_swat, entomb, flare_of_duplication, red_elemental_blast,
+    sacrifice, saw_in_half, vampiric_tutor, blasphemous_act, demonic_tutor, diabolic_intent,
+    feed_the_swarm, infernal_plunge, jeskas_will, reanimate, rite_of_flame, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

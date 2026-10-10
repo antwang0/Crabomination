@@ -6052,11 +6052,12 @@ pub fn starfield_shepherd() -> CardDefinition {
     }
 }
 
-/// Timeline Culler — {B}{B} 2/2 Drix Warlock. Haste; Warp—{B}, Pay 2 life. (The
-/// "cast from graveyard via warp" clause is dropped — warp casts from hand.)
+/// Timeline Culler — {B}{B} 2/2 Drix Warlock. Haste. You may cast this card
+/// from your graveyard using its warp ability. Warp—{B}, Pay 2 life.
 pub fn timeline_culler() -> CardDefinition {
     let mut warp_cost = warp(cost(&[b()]));
     warp_cost.life_cost = 2;
+    warp_cost.also_from_graveyard = true;
     CardDefinition {
         name: "Timeline Culler",
         cost: cost(&[b(), b()]),
