@@ -2437,6 +2437,23 @@ fn wrens_run_packmaster_champions_an_elf_and_arms_wolves() {
     assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
+/// CR 701.17a — an opponent's copy of the champion trigger (Aboleth Spawn)
+/// can't sacrifice a Packmaster it doesn't control; before the fix it did, and
+/// the original trigger then exiled the Elf under a champion already gone
+/// (CR 607.2a: its leaves trigger spent), stranding it in exile.
+#[test]
+fn cr_701_17a_a_copied_champion_trigger_cannot_sacrifice_anothers_champion() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::aboleth_spawn());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let pm = g.add_card_to_hand(0, catalog::wrens_run_packmaster());
+    // Seat 1 copies the trigger.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, pm, &[]);
+    assert!(g.battlefield_find(pm).is_some(), "the Packmaster stays");
+    assert!(g.exile.iter().any(|c| c.id == elf), "its own trigger championed the Elf");
+}
+
 // ── Grave Danger (Gisa and Geralf, SCD) ─────────────────────────────────────
 
 fn cast_from_gy(g: &mut GameState, id: CardId) -> Result<(), String> {

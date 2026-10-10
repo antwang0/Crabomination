@@ -45090,6 +45090,14 @@ impl GameState {
     ) -> Result<(), GameError> {
         let Some(source) = ctx.source else { return Ok(()) };
         let p = ctx.controller;
+        // CR 701.17a — only the champion's controller can sacrifice it, and
+        // once it has left, its leaves trigger is spent (CR 607.2a): exiling
+        // then is a loss with nothing to avoid, so the controller declines.
+        // (A copy under an opponent's control — Aboleth Spawn — or a champion
+        // already gone.)
+        if self.battlefield_find(source).is_none_or(|c| c.controller != p) {
+            return Ok(());
+        }
         // Lowest-power match keeps the better body on the battlefield.
         let pick = self
             .battlefield
