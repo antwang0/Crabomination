@@ -10410,3 +10410,35 @@ pub const ANTI_VENOM_EDHREC_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const FIRE_LORD_ZUKO_COMMANDERS: &[CardFactory] = &[fire_lord_zuko];
+
+/// **Fire Lord Zuko**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 84 nonbasic cards + 7 Mountains + 4 Plains + 4 Swamps = 99.
+/// Fire Lord Zuko (RWB) exile-cast counters: impulse draw and firebending feed a commander
+/// that grows the team whenever a spell or permanent comes from exile.
+pub const FIRE_LORD_ZUKO_MAIN: &[CardFactory] = &[
+    arcane_signet, fire_nation_turret, lightning_greaves, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, vedalken_orrery,
+    abandoned_air_temple, battlefield_forge, blood_crypt, bloodstained_mire, caves_of_koilos,
+    clifftop_retreat, command_tower, cori_mountain_monastery, dragonskull_summit,
+    exotic_orchard, fire_nation_palace, godless_shrine, isolated_chapel, nomad_outpost,
+    sacred_foundry, savai_triome, smoldering_marsh, spectator_seating, sulfurous_springs,
+    sundown_pass, abzan_falconer, appa_steadfast_guardian, ashling_flame_dancer,
+    bonehoard_dracosaur, cait_sith_fortune_teller, commander_liara_portyr,
+    dragonhawk_fates_tempest, dream_devourer, electro_assaulting_battery, etali_primal_storm,
+    fire_lord_ozai, firebending_student, hellkite_charger, inti_seneschal_of_the_sun,
+    iroh_dragon_of_the_west, isshin_two_heavens_as_one, laelia_the_blade_reforged,
+    leyline_tyrant, norin_the_wary, ozai_the_phoenix_king, party_thrasher,
+    pia_nalaar_consul_of_revival, professional_face_breaker, prosper_tome_bound,
+    wild_magic_sorcerer, zuko_exiled_prince, airbender_ascension, charred_foyer_warped_space,
+    fated_firepower, firebender_ascension, tavern_brawler, the_legend_of_roku, wild_wasteland,
+    airbenders_reversal, blazing_crescendo, chaos_warp, commune_with_lava, deflecting_swat,
+    delayed_blast_fireball, electrodominance, ephemerate, great_train_heist, haste_magic,
+    opera_love_song, path_to_exile, redirect_lightning, swords_to_plowshares, the_last_agni_kai,
+    avatars_wrath, blasphemous_act, improvisation_capstone, jeskas_will, light_up_the_stage,
+    ruinous_ultimatum, sozins_comet,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp,
+];
