@@ -2628,6 +2628,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHILGENGAR_COMMANDERS,
             main: decks::SHILGENGAR_MAIN,
         },
+        // Seat 365: Norin the Wary's EDHREC average deck. `--pod-decks 365`.
+        PodDeck {
+            name: "Norin the Wary (R)",
+            commanders: decks::NORIN_COMMANDERS,
+            main: decks::NORIN_MAIN,
+        },
     ]
 }
 
@@ -4710,6 +4716,7 @@ mod tests {
             ("Eddie Brock", [0x0A90, 362, 9287]),
             ("Nicol Bolas, the Ravager", [0x0A91, 363, 9288]),
             ("Shilgengar, Sire of Famine", [0x0A92, 364, 9289]),
+            ("Norin the Wary", [0x0A93, 365, 9290]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

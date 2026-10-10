@@ -10651,3 +10651,33 @@ pub const SHILGENGAR_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const NORIN_COMMANDERS: &[CardFactory] = &[norin_the_wary];
+
+/// **Norin the Wary**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Norin the Wary (R) flicker chaos: Norin blinks away from every spell and attack while
+/// alliance pingers and token makers punish the table.
+pub const NORIN_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, cursed_mirror, genesis_chamber, honor_worn_shaku,
+    mind_stone, panharmonicon, relic_of_legends, ruby_medallion, skullclamp, sol_ring,
+    springleaf_drum, tome_of_legends, dwarven_mine, kher_keep, nykthos_shrine_to_nyx,
+    sokenzan_crucible_of_defiance, valakut_the_molten_pinnacle, war_room, agate_instigator,
+    general_kreat_the_boltbringer, gimli_of_the_glittering_caves, imperial_recruiter, iron_myr,
+    irreverent_gremlin, magus_of_the_wheel, molten_gatekeeper, ojer_axonil_deepest_might,
+    purphoros_god_of_the_forge, raphael_tough_turtle, rose_room_treasurer,
+    shocking_sharpshooter, slash_reptile_rampager, solemn_simulacrum, solphim_mayhem_dominus,
+    terror_of_the_peaks, tokka_rahzar_unsupervised, torbran_thane_of_red_fell, treasure_nabber,
+    twinflame_tyrant, weftstalker_ardent, witty_roastmaster, blood_moon, city_on_fire,
+    confusion_in_the_ranks, fiery_emancipation, impact_tremors, mechanized_warfare,
+    outpost_siege, pandemonium, possibility_storm, powerbalance, warstorm_surge, abrade,
+    big_score, chaos_warp, lightning_bolt, thrill_of_possibility, tibalts_trickery,
+    valakut_awakening, wild_magic_surge, chandra_torch_of_defiance, blasphemous_act,
+    chain_reaction, faithless_looting, gamble, jeskas_will, mana_geyser, vandalblast,
+    warp_world, wheel_of_misfortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
