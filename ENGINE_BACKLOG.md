@@ -212,7 +212,14 @@ plus Read the Tides, Earth Rumble, Combat Tutorial and two synthesised STX
 spells; Allies at Last's required opposing creature moved to slot 0. The
 ignored census became the ratchet `spells_requiring_two_targets_print_no_optional_target`
 (oracle cache; reviewed: Fiery Justice). `target_slot_text` walks the same
-wrappers, so an `OptionalTargets` slot prompt names its slot.
+wrappers, so an `OptionalTargets` slot prompt names its slot. The ability
+half was censused the same day: 72 triggered/activated abilities require two
+or more slots; the five whose card prints "up to … target" are marked
+(Everything Pizza) or outcome-equivalent by design (Barret, Raubahn,
+Blacksmith's Talent attach nothing without the second object; Blaster Hulk's
+divided damage sits under `PayEnergy`, which `min_targets_in_mode` doesn't
+walk). The activation path was already strict; a CR 603.3d check that drops a
+trigger short of a required later slot is not built (no observed divergence).
 
 ## FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required
 

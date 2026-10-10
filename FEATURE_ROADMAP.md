@@ -289,7 +289,10 @@ Each unblocks a large swath of cards.
   1-to-each-of-3, Elemental Expressionism bounce-2); an **optional single slot
   alongside a required one** ships via `Effect::OptionalTargets { min, body }`
   (Primal Might's required pumped creature + optional fight target, Boom Box's
-  three optional destroy slots). Protection now gates spells
+  three optional destroy slots). Since 2026-10-10 the cast path requires
+  **every** required slot of a multi-slot spell, not only an "N target"
+  instance's (`Effect::required_target_slots`, CR 601.2c; ratchet
+  `spells_requiring_two_targets_print_no_optional_target`). Protection now gates spells
   *and* abilities (CR 702.16c — `ability_target_has_protection`) across color /
   creatures / creature-type (Kitsune Riftwalker, Yawgmoth, Baneslayer) /
   spell-subtype / **multicolored** (`ProtectionFromMulticolored` — Stonecoil
