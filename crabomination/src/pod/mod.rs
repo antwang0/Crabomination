@@ -2552,6 +2552,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CHILD_OF_ALARA_EDHREC_COMMANDERS,
             main: decks::CHILD_OF_ALARA_EDHREC_MAIN,
         },
+        // Seat 353: Rakdos, Lord of Riots's EDHREC average deck (Rakdos, the
+        // Muscle is seat 332). `--pod-decks 353`.
+        PodDeck {
+            name: "Rakdos, Lord of Riots (BR)",
+            commanders: decks::RAKDOS_RIOTS_EDHREC_COMMANDERS,
+            main: decks::RAKDOS_RIOTS_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4585,6 +4592,7 @@ mod tests {
             ("Kastral, the Windcrested", [0x0A84, 350, 9275]),
             ("Jodah, Archmage Eternal", [0x0A85, 351, 9276]),
             ("Child of Alara", [0x0A86, 352, 9277]),
+            ("Rakdos, Lord of Riots", [0x0A87, 353, 9278]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

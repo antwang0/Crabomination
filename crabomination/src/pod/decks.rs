@@ -10292,3 +10292,32 @@ pub const CHILD_OF_ALARA_EDHREC_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp,
     swamp,
 ];
+
+pub const RAKDOS_RIOTS_EDHREC_COMMANDERS: &[CardFactory] = &[rakdos_lord_of_riots];
+
+/// **Rakdos, Lord of Riots**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 80 nonbasic cards + 9 Mountains + 10 Swamps = 99.
+/// Rakdos, Lord of Riots big Demons for less (BR): opponents losing life discounts every
+/// creature spell, so seven-drops come down for two.
+pub const RAKDOS_RIOTS_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, cryptolith_fragment, fellwar_stone, lightning_greaves, rakdos_signet,
+    sol_ring, swiftfoot_boots, talisman_of_indulgence, whip_of_erebos, blazemire_verge,
+    blood_crypt, bloodstained_mire, bojuka_bog, command_tower, dragonskull_summit,
+    foreboding_ruins, graven_cairns, haunted_ridge, luxury_suite, rakdos_carnarium,
+    shadowblood_ridge, smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice,
+    ancient_cellarspawn, archfiend_of_depravity, archfiend_of_despair, artisan_of_kozilek,
+    bloodgift_demon, creeping_bloodsucker, florian_voldaren_scion, harvester_of_souls,
+    indulgent_tormentor, it_that_betrays, kaervek_the_merciless, kardur_doomscourge,
+    keen_duelist, knollspine_dragon, kozilek_butcher_of_truth, lobber_crew, neheb_the_eternal,
+    nettle_drone, orcus_prince_of_undeath, plague_spitter, rakdos_patron_of_chaos,
+    rune_scarred_demon, scrawling_crawler, solemn_simulacrum, sower_of_discord, spawn_of_mayhem,
+    spear_spewer, stormfist_crusader, thermo_alchemist, ulamog_the_ceaseless_hunger,
+    ulamog_the_infinite_gyre, unruly_catapult, vilis_broker_of_blood, descent_into_avernus,
+    phyrexian_arena, sanctum_of_stone_fangs, sarkhans_unsealing, theater_of_horrors, bedevil,
+    bolt_bend, chaos_warp, dark_ritual, deflecting_swat, lightning_bolt, rakdos_charm,
+    terminate, ob_nixilis_the_adversary, blasphemous_act, boltwave, demonic_tutor,
+    feed_the_swarm, flame_rift, read_the_bones, sign_in_blood, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
