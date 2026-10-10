@@ -26564,7 +26564,13 @@ impl GameState {
                 }
                 self.players[p].searched_library_this_turn = true;
                 let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
-                let filter = filter.resolve_x(ctx.x_value);
+                // "Cards with the same name as that card" (Secret Salvage) —
+                // the target's name, as `SearchUpToN` reads it for Pack Hunt.
+                let target_name = ctx.targets.iter().find_map(|t| match t {
+                    crate::game::Target::Permanent(id) => self.find_card_anywhere(*id).map(|c| c.definition.name),
+                    _ => None,
+                });
+                let filter = filter.resolve_x(ctx.x_value).resolve_target_name(target_name);
                 let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()
