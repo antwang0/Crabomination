@@ -8172,15 +8172,25 @@ impl GameState {
         // post-death board. Only a Persist/Undying return grows it.
         let scan = if board_grew { self.sba_board_scan() } else { scan };
 
-        // Planeswalkers with 0 loyalty die (CR 704.5i).
+        // Planeswalkers with 0 loyalty die (CR 704.5i) — unless their
+        // controller has Sanctum Lurker's exemption.
         let pw_dead: Vec<CardId> = if !scan.planeswalker {
             Vec::new()
         } else {
+            let exempt = |seat: usize| {
+                self.battlefield.iter().any(|s| {
+                    s.controller == seat
+                        && s.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, crate::effect::StaticEffect::YourPlaneswalkersSurviveZeroLoyalty)
+                        })
+                })
+            };
             self.battlefield
                 .iter()
                 .filter(|c| {
                     self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
                         && c.counter_count(crate::card::CounterType::Loyalty) == 0
+                        && !exempt(c.controller)
                 })
                 .map(|c| c.id)
                 .collect()

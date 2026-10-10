@@ -32314,6 +32314,15 @@ pub(crate) fn effective_loyalty_abilities(
             }
         }
     }
+    for c in battlefield.iter().filter(|c| c.attached_to == Some(card.id)) {
+        for sa in &c.definition.static_abilities {
+            if let crate::effect::StaticEffect::AttachedPlaneswalkerHasLoyaltyAbilities { abilities: granted } =
+                &sa.effect
+            {
+                abilities.extend(granted.iter().cloned());
+            }
+        }
+    }
     abilities
 }
 
@@ -33787,6 +33796,8 @@ fn static_effect_to_effects(
             | StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
             | StaticEffect::HasAllOtherPlaneswalkerLoyaltyAbilities
             | StaticEffect::PlaneswalkersHaveLoyaltyAbilities { .. }
+            | StaticEffect::AttachedPlaneswalkerHasLoyaltyAbilities { .. }
+            | StaticEffect::YourPlaneswalkersSurviveZeroLoyalty
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.
             | StaticEffect::PlayFromLibraryTop { .. }

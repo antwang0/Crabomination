@@ -2016,6 +2016,12 @@ pub enum StaticEffect {
     /// and '[−12]: Take an extra turn after this one.'" Appended past the
     /// printed abilities at loyalty-activation time.
     PlaneswalkersHaveLoyaltyAbilities { abilities: Vec<LoyaltyAbility> },
+    /// "Enchanted planeswalker has [loyalty abilities]" (Liliana's Talent):
+    /// appended past the printed ones on the planeswalker this is attached to.
+    AttachedPlaneswalkerHasLoyaltyAbilities { abilities: Vec<LoyaltyAbility> },
+    /// "Planeswalkers you control aren't put into their owners' graveyards
+    /// for having 0 loyalty" (Sanctum Lurker) — exempts them from CR 704.5i.
+    YourPlaneswalkersSurviveZeroLoyalty,
     /// CR 401.6-adjacent: the controller may play/cast cards matching
     /// `filter` from the top of their library (Courser of Kruphix /
     /// Oracle of Mul Daya lands, Mystic Forge artifact+colorless spells).
