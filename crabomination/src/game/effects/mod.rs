@@ -12,6 +12,7 @@ mod among;
 mod may_cost;
 mod may_pick;
 mod sacrifice_record;
+mod tap_draw;
 mod with_targets;
 mod choose_one;
 mod keep_one;
@@ -16739,6 +16740,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TapAnyNumberThenDraw { filter } => {
+                self.resolve_tap_any_number_then_draw(filter, ctx, events, effect)
+            }
+
             Effect::TapAnyNumberThenCounters { filter, counter } => {
                 // "You may tap any number of untapped [filter] you control. If
                 // you do, put a counter on each of those" (Urge to Feed).
@@ -27160,6 +27165,7 @@ impl GameState {
                     picked_matching_to_battlefield,
                     battlefield_haste,
                     one_each,
+                    rest_to_hand_if,
                 } = &**lp;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -27250,6 +27256,7 @@ impl GameState {
                     picked_matching_to_battlefield: picked_matching_to_battlefield.clone(),
                     battlefield_haste: *battlefield_haste,
                     one_each: one_each.clone(),
+                    rest_to_hand_if: rest_to_hand_if.clone(),
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -27322,6 +27329,7 @@ impl GameState {
                     picked_matching_to_battlefield: None,
                     battlefield_haste: false,
                     one_each: Vec::new(),
+                    rest_to_hand_if: None,
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -27377,6 +27385,7 @@ impl GameState {
                     picked_matching_to_battlefield: None,
                     battlefield_haste: false,
                     one_each: Vec::new(),
+                    rest_to_hand_if: None,
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {

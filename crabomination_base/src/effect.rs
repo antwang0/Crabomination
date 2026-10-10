@@ -7996,6 +7996,9 @@ pub enum Effect {
     /// a `counter` counter on each of those" (Urge to Feed). The counter-payout
     /// sibling of `TapAnyNumberThenPumpPerTapped`.
     TapAnyNumberThenCounters { filter: SelectionRequirement, counter: crate::card::CounterType },
+    /// "You may tap any number of untapped `filter` you control. Draw a card
+    /// for each one tapped this way" (Guild Summit).
+    TapAnyNumberThenDraw { filter: SelectionRequirement },
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },
@@ -13544,6 +13547,11 @@ pub struct LookPick {
     /// card per filter. Empty = no per-category limit.
     #[serde(default)]
     pub one_each: Vec<SelectionRequirement>,
+    /// "Then if [predicate], put the rest into your hand" (Nine-Fingers
+    /// Keene's nine Gates): read after the picks land; when it holds the
+    /// rest go to hand (not a draw, CR 121.5) instead of their usual route.
+    #[serde(default)]
+    pub rest_to_hand_if: Option<Predicate>,
 }
 
 impl Default for LookPick {
@@ -13567,6 +13575,7 @@ impl Default for LookPick {
             picked_matching_to_battlefield: None,
             battlefield_haste: false,
             one_each: Vec::new(),
+            rest_to_hand_if: None,
         }
     }
 }

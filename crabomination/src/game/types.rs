@@ -2317,6 +2317,9 @@ pub enum PendingEffectState {
         /// `LookPick::one_each` — each pick fills a distinct filter.
         #[serde(default)]
         one_each: Vec<crate::card::SelectionRequirement>,
+        /// `LookPick::rest_to_hand_if` — read after the picks land.
+        #[serde(default)]
+        rest_to_hand_if: Option<crate::effect::Predicate>,
         /// Source of the originating `LookPickToHand`, for `then_if_picked`.
         #[serde(default)]
         source: Option<CardId>,

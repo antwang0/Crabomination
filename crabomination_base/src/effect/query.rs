@@ -991,6 +991,7 @@ impl Effect {
             | Effect::PutAnyNumberFromGraveyardOnTop { .. }
             | Effect::ExileTopUntilNonland { .. }
             | Effect::TapAnyNumberThenCounters { .. }
+            | Effect::TapAnyNumberThenDraw { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.
             | Effect::AddManaAtNextMainPhase { .. }

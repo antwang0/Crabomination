@@ -29209,7 +29209,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, rest_on_top, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, one_each, source } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, rest_on_top, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, one_each, rest_to_hand_if, source } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -29356,13 +29356,22 @@ impl GameState {
                 // so a deterministic bottom would be known information).
                 let mut greatest_milled_power: Option<i32> = None;
                 let mut bottom_batch: Vec<crate::card::CardInstance> = Vec::new();
+                // Nine-Fingers Keene — "then if you control nine or more
+                // Gates, put the rest into your hand", read after the picks.
+                let rest_to_hand = rest_to_hand_if.as_ref().is_some_and(|pred| {
+                    let ctx = crate::game::effects::EffectContext { controller: player, source, ..Default::default() };
+                    self.evaluate_predicate(pred, &ctx)
+                });
                 for rid in &revealed {
                     // Diabolic Vision — the rest simply stay on top.
-                    if picks.contains(rid) || rest_on_top {
+                    if picks.contains(rid) || rest_on_top && !rest_to_hand {
                         continue;
                     }
                     if let Some(card) = Self::take_card(&mut self.players[player].library, *rid) {
-                        if rest_to_exile {
+                        if rest_to_hand {
+                            // CR 121.5 — not a draw.
+                            self.players[player].hand.push(card);
+                        } else if rest_to_exile {
                             // Devourer of Destiny — the non-kept cards are
                             // exiled outright.
                             let cid = card.id;
