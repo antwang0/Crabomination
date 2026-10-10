@@ -643,6 +643,11 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // One event per investigation, exploit, enlist or die: "whenever
             // you roll a 4 or higher" off three dice fires per die (Mr. House).
             | EventKind::Performed(_)
+            // CR 603.2c — each `DiscardedBatch` is already ONE player's "one
+            // or more", so "whenever a player discards one or more cards"
+            // fires once per discarding player (Tinybones, Pocket Nuisance —
+            // "each opponent discards" read as one trigger).
+            | EventKind::DiscardedOneOrMore
     )
 }
 
