@@ -2463,6 +2463,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CHOCO_EDHREC_COMMANDERS,
             main: decks::CHOCO_EDHREC_MAIN,
         },
+        // Seat 340: Light-Paws, Emperor's Voice's EDHREC average deck.
+        // `--pod-decks 340`.
+        PodDeck {
+            name: "Light-Paws, Emperor's Voice (W)",
+            commanders: decks::LIGHT_PAWS_EDHREC_COMMANDERS,
+            main: decks::LIGHT_PAWS_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4483,6 +4490,7 @@ mod tests {
             ("K'rrik, Son of Yawgmoth, EDHREC", [0x0A77, 337, 9262]),
             ("Voja, Jaws of the Conclave", [0x0A78, 338, 9263]),
             ("Choco, Seeker of Paradise", [0x0A79, 339, 9264]),
+            ("Light-Paws, Emperor's Voice", [0x0A7A, 340, 9265]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

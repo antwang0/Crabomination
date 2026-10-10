@@ -9911,3 +9911,32 @@ pub const CHOCO_EDHREC_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, island, island, island, island, island,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const LIGHT_PAWS_EDHREC_COMMANDERS: &[CardFactory] = &[light_paws_emperors_voice];
+
+/// **Light-Paws, Emperor's Voice**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Light-Paws Auras (W): a cast Aura fetches a differently named one of no greater mana value; Ethereal Armor,
+/// Armored Ascension and With Great Power . . . stacking on one Fox.
+pub const LIGHT_PAWS_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, helm_of_the_gods, pearl_medallion, sol_ring, swiftfoot_boots,
+    thran_power_suit, eiganjo_seat_of_the_empire, hall_of_heliods_generosity,
+    nykthos_shrine_to_nyx, rogues_passage, serras_sanctum, war_room, archon_of_suns_grace,
+    danitha_capashen, eidolon_of_countless_battles, esper_sentinel, heliods_pilgrim,
+    hero_of_iroas, kor_spiritdancer, mesa_enchantress, mother_of_runes,
+    pearl_ear_imperial_advisor, sram_senior_edificer, starfield_mystic, transcendent_envoy,
+    umbra_mystic, all_that_glitters, angelic_destiny, angelic_gift, armored_ascension,
+    battle_mastery, benevolent_blessing, chains_of_custody, darksteel_mutation,
+    daybreak_coronet, ethereal_armor, feather_of_flight, flickering_ward, hyena_umbra, idolized,
+    light_of_promise, mantle_of_the_ancients, mask_of_law_and_grace, on_serras_wings,
+    ossification, pariah, reprobation, sages_reverie, sentinels_eyes, shardmages_rescue,
+    sheltered_by_ghosts, shield_of_duty_and_reason, sigardas_aid, spirit_link, spirit_mantle,
+    stoneskin, timely_ward, twinblade_blessing, unquestioned_authority, with_great_power,
+    blacksmiths_skill, enlightened_tutor, karametras_blessing, lorans_escape, path_to_exile,
+    rebuff_the_wicked, swords_to_plowshares, open_the_armory, retether, single_combat,
+    winds_of_rath,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];

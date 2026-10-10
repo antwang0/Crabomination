@@ -1,11 +1,12 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, second file (`cmdr_edhrec` is the
 //! first). Henzie "Toolbox" Torre, Frodo, Adventurous Hobbit + Sam, Loyal
-//! Attendant, K'rrik, Son of Yawgmoth, Voja, Jaws of the Conclave and Choco, Seeker of
-//! Paradise. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
+//! Attendant, K'rrik, Son of Yawgmoth, Voja, Jaws of the Conclave, Choco, Seeker of
+//! Paradise, and Light-Paws, Emperor's Voice. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, MayPlayDuration, CardType, CounterType, CreatureType,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, EnchantmentSubtype, EquipBonus, EquipScale,
+    MayPlayDuration, CardType, CounterType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, Selector, StaticAbility, Subtypes, Supertype,
     TriggeredAbility, Value,
@@ -858,6 +859,139 @@ pub fn flurry_of_wings() -> CardDefinition {
                 subtypes: creature_types(vec![CreatureType::Bird, CreatureType::Soldier]),
                 ..Default::default()
             }),
+        },
+        ..Default::default()
+    }
+}
+
+fn aura_on(name: &'static str, mana: crate::mana::ManaCost, enchant: R, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: crate::effect::shortcut::target_filtered(enchant) },
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    }
+}
+
+/// Helm of the Gods — {1} Equipment. Equipped creature gets +1/+1 for each
+/// enchantment you control. Equip {1}.
+pub fn helm_of_the_gods() -> CardDefinition {
+    CardDefinition {
+        name: "Helm of the Gods",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: R::Enchantment.and(R::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Armored Ascension — {3}{W} Aura. Enchanted creature gets +1/+1 for each
+/// Plains you control and has flying.
+pub fn armored_ascension() -> CardDefinition {
+    aura_on(
+        "Armored Ascension",
+        cost(&[generic(3), w()]),
+        R::Creature,
+        EquipBonus {
+            keywords: vec![Keyword::Flying],
+            scale: Some(EquipScale {
+                filter: R::Land.and(R::HasLandType(LandType::Plains)).and(R::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+    )
+}
+
+/// Battle Mastery — {2}{W} Aura. Enchanted creature has double strike.
+pub fn battle_mastery() -> CardDefinition {
+    aura_on(
+        "Battle Mastery",
+        cost(&[generic(2), w()]),
+        R::Creature,
+        EquipBonus { keywords: vec![Keyword::DoubleStrike], ..Default::default() },
+    )
+}
+
+/// Benevolent Blessing — {1}{W} Aura, flash. As it enters, choose a color;
+/// enchanted creature has protection from that color, which doesn't remove
+/// Auras you control already on it (CR 702.16k; protection never sheds
+/// Equipment in this engine, so that half holds by construction).
+pub fn benevolent_blessing() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has protection from the chosen color.".into(),
+            effect: StaticEffect::GrantProtectionFromChosenColor {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..aura_on(
+            "Benevolent Blessing",
+            cost(&[generic(1), w()]),
+            R::Creature,
+            EquipBonus { protection_keeps_yours: true, ..Default::default() },
+        )
+    }
+}
+
+/// With Great Power . . . — {3}{W} Aura, enchant creature you control. +2/+2
+/// for each Aura and Equipment attached to it; all damage that would be dealt
+/// to you is dealt to it instead.
+pub fn with_great_power() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All damage that would be dealt to you is dealt to enchanted creature instead.".into(),
+            effect: StaticEffect::RedirectControllerDamageToEquippedCreature,
+        }],
+        ..aura_on(
+            "With Great Power . . .",
+            cost(&[generic(3), w()]),
+            R::Creature.and(R::ControlledByYou),
+            EquipBonus {
+                scale: Some(EquipScale {
+                    filter: R::Any,
+                    per_power: 2,
+                    per_toughness: 2,
+                    count_host_attachments: Some(
+                        R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                            .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                    ),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        )
+    }
+}
+
+/// Rebuff the Wicked — {W} Instant. Counter target spell that targets a
+/// permanent you control.
+pub fn rebuff_the_wicked() -> CardDefinition {
+    CardDefinition {
+        name: "Rebuff the Wicked",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: crate::effect::shortcut::target_filtered(R::SpellTargetsMatching(Box::new(
+                R::Permanent.and(R::ControlledByYou),
+            ))),
         },
         ..Default::default()
     }

@@ -36,12 +36,30 @@ def factories():
     return out
 
 
+def by_printed_name():
+    """Card name -> factory, from the first string literal in each factory's
+    body: a factory named apart from its card (`danitha_capashen` for
+    "Danitha Capashen, Paragon")."""
+    out = {}
+    for p in glob.glob(os.path.join(ROOT, "crabomination_catalog", "src", "**", "*.rs"), recursive=True):
+        text = open(p, encoding="utf-8").read()
+        for m in re.finditer(r"pub fn (\w+)\(\) -> CardDefinition \{(.*?)\n\}", text, re.S):
+            lit = re.search(r'"((?:[^"\\]|\\.)*)"', m.group(2))
+            if lit:
+                out.setdefault(lit.group(1), m.group(1))
+    return out
+
+
 def report(page, fns):
     deck = page["deck"]
     rows = [tuple(x) for x in deck["commander_v2"]] + [tuple(x) for v in deck["cards"].values() for x in v]
     # A split card's factory is named for both halves (`spring_mind`), an
     # MDFC's for its front face.
-    name_of = {n: (slug(n, True) if slug(n, True) in fns else slug(n)) for n, _ in rows}
+    printed = by_printed_name()
+    name_of = {
+        n: slug(n, True) if slug(n, True) in fns else slug(n) if slug(n) in fns else printed.get(n, slug(n))
+        for n, _ in rows
+    }
     missing = [n for n, _ in rows if n not in BASICS and name_of[n] not in fns]
     print(f"{sum(k for _, k in rows)} cards; {len(missing)} missing: {missing}")
     if missing:

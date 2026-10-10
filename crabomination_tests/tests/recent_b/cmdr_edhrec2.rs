@@ -540,3 +540,125 @@ fn flurry_of_wings_counts_attackers() {
     cast(&mut g, fw);
     assert_eq!(named(&g, "Bird Soldier"), 2);
 }
+
+fn enchant(g: &mut GameState, aura: crabomination::card::CardDefinition, host: CardId) -> CardId {
+    let id = g.add_card_to_hand(0, aura);
+    flood(g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(host)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("aura");
+    drain_stack(g);
+    id
+}
+
+/// Armored Ascension counts Plains; Battle Mastery adds double strike; With
+/// Great Power counts both Auras (+2/+2 each, itself included).
+#[test]
+fn light_paws_auras_stack_up() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::plains());
+    }
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    enchant(&mut g, catalog::armored_ascension(), bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5);
+    enchant(&mut g, catalog::battle_mastery(), bear);
+    let kw = g.computed_permanent(bear).unwrap().keywords().to_vec();
+    assert!(kw.contains(&crabomination::card::Keyword::Flying) && kw.contains(&crabomination::card::Keyword::DoubleStrike));
+    enchant(&mut g, catalog::with_great_power(), bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5 + 6, "three Auras attached, +2/+2 each");
+}
+
+/// With Great Power . . . sends damage dealt to you onto the enchanted
+/// creature.
+#[test]
+fn with_great_power_redirects_your_damage() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    enchant(&mut g, catalog::with_great_power(), bear);
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert_eq!(g.players[0].life, life);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 3);
+}
+
+/// Helm of the Gods: +1/+1 per enchantment you control.
+#[test]
+fn helm_of_the_gods_counts_enchantments() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::howling_moon());
+    ready(&mut g, 0, catalog::birthing_ritual());
+    let helm = ready(&mut g, 0, catalog::helm_of_the_gods());
+    flood(&mut g);
+    g.perform_action(GameAction::Equip { equipment: helm, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+}
+
+/// Benevolent Blessing (CR 702.16k): protection from white keeps your own
+/// white Aura on the creature, but sheds an opponent's.
+#[test]
+fn benevolent_blessing_keeps_your_auras() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mine = enchant(&mut g, catalog::battle_mastery(), bear);
+    let theirs = g.add_card_to_battlefield(1, catalog::battle_mastery());
+    g.battlefield_find_mut(theirs).unwrap().attached_to = Some(bear);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::White)]));
+    enchant(&mut g, catalog::benevolent_blessing(), bear);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(mine).is_some_and(|c| c.attached_to == Some(bear)));
+    assert!(g.battlefield_find(theirs).is_none(), "an opponent's white Aura falls off");
+}
+
+/// Rebuff the Wicked counters a spell aimed at your permanent, and can't
+/// target one aimed elsewhere.
+#[test]
+fn rebuff_the_wicked_guards_your_permanents() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    let rebuff = g.add_card_to_hand(0, catalog::rebuff_the_wicked());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rebuff,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("rebuff");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
