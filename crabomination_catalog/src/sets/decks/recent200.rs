@@ -5,8 +5,8 @@ use crate::card::{ArtifactSubtype, CardDefinition, CardType, EquipBonus, Keyword
 use crate::mana::{cost, generic};
 
 /// Dragonfire Blade — {1} Equipment. Equipped creature gets +2/+2 and has
-/// hexproof from monocolored. Equip {4}. (The "costs {1} less per color of the
-/// equip target" reduction is approximated as a flat {4}.)
+/// hexproof from monocolored. Equip {4}; it costs {1} less for each color of
+/// the creature it targets (`EquipCostReducedPerTargetColor`).
 pub fn dragonfire_blade() -> CardDefinition {
     CardDefinition {
         name: "Dragonfire Blade",
@@ -17,6 +17,10 @@ pub fn dragonfire_blade() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This ability costs {1} less to activate for each color of the creature it targets.",
+            effect: crate::card::StaticEffect::EquipCostReducedPerTargetColor,
+        }],
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,

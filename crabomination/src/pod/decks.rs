@@ -9705,3 +9705,61 @@ pub const RAKDOS_MUSCLE_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const NGHATHROD_EDHREC_COMMANDERS: &[CardFactory] = &[captain_nghathrod];
+
+/// **Captain N'ghathrod**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 80 nonbasic cards + 10 Islands + 9 Swamps = 99. Same commander as the Mind
+/// Flayarrrs precon's "N'ghathrod (UB)" seat; this is the crowd's list.
+/// Captain N'ghathrod Horrors (UB): mill with Mind Grind and Maddening Cacophony, Horror counters
+/// stealing the milled artifacts and creatures back out of opponents' graveyards.
+pub const NGHATHROD_EDHREC_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, dimir_keyrune, dimir_signet, heralds_horn,
+    lightning_greaves, mindcrank, sol_ring, talisman_of_dominance, the_water_crystal,
+    thought_vessel, choked_estuary, command_tower, darkwater_catacombs, dimir_aqueduct,
+    drowned_catacomb, exotic_orchard, morphic_pool, myriad_landscape, nephalia_drownyard,
+    path_of_ancestry, river_of_tears, rogues_passage, shipwreck_marsh, sunken_hollow, tainted_isle,
+    temple_of_deceit, watery_grave, aboleth_spawn, ancient_cellarspawn, brainstealer_dragon,
+    bruvac_the_grandiloquent, chasm_skulker, consuming_aberration, grazilaxx_illithid_scholar,
+    grell_philosopher, guiltfeeder, hullbreaker_horror, hunted_horror, mind_flayer,
+    nemesis_of_reason, nighthowler, overcharged_amalgam, phyrexian_obliterator,
+    ravenous_chupacabra, ruin_crab, sewer_nemesis, silent_hallcreeper, sludge_monster, spellskite,
+    the_mindskinner, toxrill_the_corrosive, uchuulon, wharf_infiltrator, zellix_sanity_flayer,
+    bloodchief_ascension, court_of_cunning, endless_evil, haunted_one, psychic_corrosion,
+    reflections_of_littjara, counterspell, cyclonic_rift, dark_ritual, didnt_say_please,
+    drown_in_dreams, drown_in_the_loch, memory_plunder, negate, visions_of_beyond,
+    jace_the_perfected_mind, breach_the_multiverse, extract_from_darkness, feed_the_swarm,
+    fractured_sanity, maddening_cacophony, mind_grind, psionic_ritual, reanimate,
+    singularity_rupture,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KOTIS_COMMANDERS: &[CardFactory] = &[kotis_the_fangkeeper];
+
+/// **Kotis, the Fangkeeper**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 83 nonbasic cards + 7 Forests + 5 Islands + 4 Swamps = 99.
+/// Kotis, the Fangkeeper voltron (BGU): Auras and Equipment on an unblockable Kotis
+/// (Aether Tunnel, Security Bypass, Inquisitor's Flail), exiling and casting opponents' top cards.
+pub const KOTIS_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, brotherhood_regalia, dragonfire_blade, fellwar_stone,
+    fireshrieker, inquisitors_flail, leyline_axe, power_fist, shadowspear, sol_ring,
+    swiftfoot_boots, talisman_of_curiosity, winged_boots, breeding_pool, command_tower,
+    dreamroot_cascade, drowned_catacomb, exotic_orchard, hinterland_harbor, llanowar_wastes,
+    opulent_palace, overgrown_tomb, polluted_delta, rejuvenating_springs, rogues_passage,
+    sunken_hollow, undergrowth_stadium, verdant_catacombs, watery_grave, woodland_cemetery,
+    yavimaya_coast, zagoth_triome, ancient_cellarspawn, baleful_strix, birds_of_paradise,
+    bloom_tender, brokkos_apex_of_forever, delighted_halfling, elvish_mystic, felix_five_boots,
+    forgotten_ancient, gemrazer, gonti_night_minister, guardian_augmenter, llanowar_elves,
+    sakura_tribe_elder, the_thirteenth_doctor, toski_bearer_of_secrets, aether_tunnel,
+    ancestral_mask, aqueous_form, audacity, bear_umbra, combat_research, favor_of_the_overbeing,
+    hollowmurk_siege, indomitable_might, propaganda, rancor, security_bypass, strong_back,
+    an_offer_you_cant_refuse, arcane_denial, assassins_trophy, beast_within, counterspell,
+    growth_spiral, heroic_intervention, invigorate, negate, overprotect, slip_out_the_back,
+    snakeskin_veil, swan_song, cultivate, damnation, farseek, kodamas_reach, natures_lore,
+    rampant_growth, three_visits, villainous_wealth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
+    island, swamp, swamp, swamp, swamp,
+];

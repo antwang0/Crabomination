@@ -8487,3 +8487,149 @@ pub fn sacrifice() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The bonus of an Aura or Equipment, "while the creature it's attached to
+/// matches `filter`" — `WhileCondition` over `AttachedTo(This)`.
+fn while_attached_matches(filter: R, inner: crate::card::StaticEffect) -> crate::card::StaticEffect {
+    crate::card::StaticEffect::WhileCondition {
+        condition: Predicate::EntityMatches { what: Selector::AttachedTo(Box::new(Selector::This)), filter },
+        inner: Box::new(inner),
+    }
+}
+
+fn aura(name: &'static str, mana: crate::mana::ManaCost) -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        ..Default::default()
+    }
+}
+
+fn attached_gets(power: i32, toughness: i32) -> crate::card::StaticEffect {
+    crate::card::StaticEffect::PumpPT { applies_to: Selector::AttachedTo(Box::new(Selector::This)), power, toughness }
+}
+
+fn attached_has(keyword: Keyword) -> crate::card::StaticEffect {
+    crate::card::StaticEffect::GrantKeyword { applies_to: Selector::AttachedTo(Box::new(Selector::This)), keyword }
+}
+
+/// Inquisitor's Flail — {2} Equipment. Equipped creature deals double combat
+/// damage, and another creature deals it double combat damage (CR 614.1a).
+/// Equip {2}. (Kotis, the Fangkeeper's seat.)
+pub fn inquisitors_flail() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Inquisitor's Flail",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If equipped creature would deal combat damage, it deals double that damage instead.",
+                effect: StaticEffect::AttachedDealsDoubleCombatDamage,
+            },
+            StaticAbility {
+                description: "If another creature would deal combat damage to equipped creature, it deals double that damage to equipped creature instead.",
+                effect: StaticEffect::AttachedTakesDoubleCombatDamage,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Aether Tunnel — {1}{U} Aura. Enchanted creature gets +1/+0 and can't be
+/// blocked. (Kotis, the Fangkeeper's seat.)
+pub fn aether_tunnel() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus { power: 1, keywords: vec![Keyword::Unblockable], ..Default::default() }),
+        ..aura("Aether Tunnel", cost(&[generic(1), u()]))
+    }
+}
+
+/// Combat Research — {U} Aura. Enchanted creature has "Whenever this creature
+/// deals combat damage to a player, draw a card." As long as it's legendary,
+/// it gets +1/+1 and has ward {1}. (Kotis, the Fangkeeper's seat.)
+pub fn combat_research() -> CardDefinition {
+    use crate::card::{EquipBonus, StaticAbility, WardCost};
+    let legendary = || R::HasSupertype(Supertype::Legendary);
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            }],
+            ..Default::default()
+        }),
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as enchanted creature is legendary, it gets +1/+1.",
+                effect: while_attached_matches(legendary(), attached_gets(1, 1)),
+            },
+            StaticAbility {
+                description: "As long as enchanted creature is legendary, it has ward {1}.",
+                effect: while_attached_matches(
+                    legendary(),
+                    attached_has(Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))),
+                ),
+            },
+        ],
+        ..aura("Combat Research", cost(&[u()]))
+    }
+}
+
+/// Favor of the Overbeing — {1}{G/U} Aura. While enchanted creature is green,
+/// +1/+1 and vigilance; while it's blue, +1/+1 and flying. (Kotis, the
+/// Fangkeeper's seat.)
+pub fn favor_of_the_overbeing() -> CardDefinition {
+    use crate::card::StaticAbility;
+    let green = || R::HasColor(Color::Green);
+    let blue = || R::HasColor(Color::Blue);
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as enchanted creature is green, it gets +1/+1.",
+                effect: while_attached_matches(green(), attached_gets(1, 1)),
+            },
+            StaticAbility {
+                description: "As long as enchanted creature is green, it has vigilance.",
+                effect: while_attached_matches(green(), attached_has(Keyword::Vigilance)),
+            },
+            StaticAbility {
+                description: "As long as enchanted creature is blue, it gets +1/+1.",
+                effect: while_attached_matches(blue(), attached_gets(1, 1)),
+            },
+            StaticAbility {
+                description: "As long as enchanted creature is blue, it has flying.",
+                effect: while_attached_matches(blue(), attached_has(Keyword::Flying)),
+            },
+        ],
+        ..aura("Favor of the Overbeing", cost(&[generic(1), hybrid(Color::Green, Color::Blue)]))
+    }
+}
+
+/// Security Bypass — {1}{U} Aura. While enchanted creature is attacking alone,
+/// it can't be blocked; it has "Whenever this creature deals combat damage to
+/// a player, it connives" (CR 701.50). (Kotis, the Fangkeeper's seat.)
+pub fn security_bypass() -> CardDefinition {
+    use crate::card::{EquipBonus, StaticAbility};
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Connive { what: Selector::This, amount: Value::ONE },
+            }],
+            ..Default::default()
+        }),
+        static_abilities: vec![StaticAbility {
+            description: "As long as enchanted creature is attacking alone, it can't be blocked.",
+            effect: while_attached_matches(R::IsAttackingAlone, attached_has(Keyword::Unblockable)),
+        }],
+        ..aura("Security Bypass", cost(&[generic(1), u()]))
+    }
+}

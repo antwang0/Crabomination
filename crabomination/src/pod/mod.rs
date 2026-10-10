@@ -2415,6 +2415,19 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAKDOS_MUSCLE_COMMANDERS,
             main: decks::RAKDOS_MUSCLE_MAIN,
         },
+        // Seat 333: Captain N'ghathrod's EDHREC average deck (the precon is an
+        // earlier seat). `--pod-decks 333`.
+        PodDeck {
+            name: "Captain N'ghathrod, EDHREC (UB)",
+            commanders: decks::NGHATHROD_EDHREC_COMMANDERS,
+            main: decks::NGHATHROD_EDHREC_MAIN,
+        },
+        // Seat 334: Kotis, the Fangkeeper's EDHREC average deck. `--pod-decks 334`.
+        PodDeck {
+            name: "Kotis, the Fangkeeper (BGU)",
+            commanders: decks::KOTIS_COMMANDERS,
+            main: decks::KOTIS_MAIN,
+        },
     ]
 }
 
@@ -4428,6 +4441,8 @@ mod tests {
             ("Raggadragga, Goreguts Boss", [0x0A6A, 330, 9255]),
             ("Athreos, Shroud-Veiled", [0x0A71, 331, 9256]),
             ("Rakdos, the Muscle", [0x0A72, 332, 9257]),
+            ("Captain N'ghathrod, EDHREC", [0x0A73, 333, 9258]),
+            ("Kotis, the Fangkeeper", [0x0A74, 334, 9259]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

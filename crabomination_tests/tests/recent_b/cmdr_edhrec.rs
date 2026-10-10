@@ -4166,3 +4166,85 @@ fn timeline_culler_warps_from_the_graveyard() {
     assert!(g.battlefield_find(culler).is_some());
     assert_eq!(g.players[0].life, life - 2);
 }
+
+/// Runs combat from declare-attackers: `attacker` attacks player 1, who blocks
+/// with `blocker`.
+fn fight_through(g: &mut GameState, attacker: CardId, blocker: CardId) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+}
+
+/// Inquisitor's Flail (Kotis's seat) — CR 614.1a both ways: an equipped Craw
+/// Wurm (6/4) blocked by a Hill Giant deals it 12 and takes 6, so both die
+/// (without the second line the Wurm took 3 and lived).
+#[test]
+fn inquisitors_flail_doubles_combat_damage_dealt_and_taken() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 0, catalog::craw_wurm());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let flail = g.add_card_to_battlefield(0, catalog::inquisitors_flail());
+    g.battlefield_find_mut(flail).unwrap().attached_to = Some(angel);
+    fight_through(&mut g, angel, giant);
+    assert!(g.battlefield_find(giant).is_none(), "12 damage kills the Giant");
+    assert!(g.battlefield_find(angel).is_none(), "the Giant's 3 is doubled to 6");
+}
+
+/// Dragonfire Blade — equip {4}, {1} less for each color of the creature it
+/// targets: {1} equips three-color Kotis and does not equip a mono-green Bear.
+#[test]
+fn dragonfire_blade_equips_for_less_per_target_color() {
+    let mut g = pod(2);
+    let blade = g.add_card_to_battlefield(0, catalog::dragonfire_blade());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let kotis = ready(&mut g, 0, catalog::kotis_the_fangkeeper());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::Equip { equipment: blade, target: bear }).is_err(), "{{3}} for one color");
+    g.perform_action(GameAction::Equip { equipment: blade, target: kotis }).expect("{{1}} for three colors");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(blade).unwrap().attached_to, Some(kotis));
+}
+
+/// Brokkos, Apex of Forever — "You may cast this card from your graveyard
+/// using its mutate ability": mutated from the graveyard onto a non-Human.
+#[test]
+fn brokkos_mutates_from_the_graveyard() {
+    let mut g = pod(2);
+    let host = ready(&mut g, 0, catalog::grizzly_bears());
+    let brokkos = g.add_card_to_graveyard(0, catalog::brokkos_apex_of_forever());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastMutate { card_id: brokkos, target: host, on_top: true, x_value: None })
+        .expect("mutate from the graveyard");
+    drain_stack(&mut g);
+    let merged = g.battlefield_find(host).expect("the merged permanent keeps the host's id");
+    assert_eq!(merged.mutate_stack.len(), 2);
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == brokkos));
+}
+
+/// Combat Research — CR 613.1: the +1/+1 and ward {1} hold only while the
+/// enchanted creature is legendary.
+#[test]
+fn combat_research_buffs_only_a_legendary_creature() {
+    let mut g = pod(2);
+    let kotis = ready(&mut g, 0, catalog::kotis_the_fangkeeper());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    for host in [kotis, bear] {
+        let aura = g.add_card_to_battlefield(0, catalog::combat_research());
+        g.battlefield_find_mut(aura).unwrap().attached_to = Some(host);
+    }
+    let kp = g.computed_permanent(kotis).unwrap();
+    let bp = g.computed_permanent(bear).unwrap();
+    assert_eq!((kp.power, kp.toughness), (3, 2), "Kotis 2/1 gets +1/+1");
+    assert_eq!((bp.power, bp.toughness), (2, 2), "the Bear doesn't");
+}

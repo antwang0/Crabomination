@@ -65737,8 +65737,8 @@ pub fn howl_of_the_hunt() -> CardDefinition {
 }
 
 /// Brokkos, Apex of Forever — {2}{B}{G}{U} 6/6 Nightmare Beast Elemental,
-/// trample. Mutate {2}{U/B}{G}{G}. (The "cast from graveyard using mutate"
-/// rider is dropped — mutate casts from hand only.)
+/// trample. Mutate {2}{U/B}{G}{G}. You may cast it from your graveyard using
+/// its mutate ability (`mutate_from_graveyard`).
 pub fn brokkos_apex_of_forever() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -65763,6 +65763,7 @@ pub fn brokkos_apex_of_forever() -> CardDefinition {
             g(),
             g(),
         ])),
+        mutate_from_graveyard: true,
         ..Default::default()
     }
 }
