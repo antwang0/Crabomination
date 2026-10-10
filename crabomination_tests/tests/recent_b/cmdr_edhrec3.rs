@@ -233,3 +233,47 @@ fn niko_aris_plus_one_returns_the_creature_after_damage() {
     assert_eq!(g.players[1].life, opp - 2);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "back to hand");
 }
+
+/// Emperor of Bones: counters on it return a creature card it exiled, with a
+/// finality counter and haste, and a CR 603.7 delayed trigger sacrifices it —
+/// the finality counter then exiles it instead (CR 122.1g).
+#[test]
+fn emperor_of_bones_borrows_what_it_exiled() {
+    let mut g = pod(2);
+    let emperor = ready(&mut g, 0, catalog::emperor_of_bones());
+    let giant = g.add_card_to_exile(1, catalog::hill_giant());
+    g.exile.iter_mut().find(|c| c.id == giant).unwrap().exiled_with = Some(emperor);
+    flood(&mut g);
+    activate(&mut g, emperor, 0);
+    let back = g.battlefield_find(giant).expect("the giant came back");
+    assert_eq!(back.controller, 0);
+    assert_eq!(back.counter_count(crabomination::card::CounterType::Finality), 1);
+    assert!(g.computed_permanent(giant).unwrap().keywords().contains(&crabomination::card::Keyword::Haste));
+    to_end_step(&mut g);
+    assert!(g.battlefield_find(giant).is_none());
+    assert!(g.exile.iter().any(|c| c.id == giant), "finality exiles it");
+}
+
+/// Kaya, Orzhov Usurper +1: two cards from one graveyard; 2 life only when a
+/// creature card was among them.
+#[test]
+fn kaya_orzhov_usurper_gains_for_an_exiled_creature() {
+    let mut g = pod(2);
+    let kaya = ready(&mut g, 0, catalog::kaya_orzhov_usurper());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    loyalty(&mut g, kaya, 0, None);
+    assert_eq!(g.players[1].graveyard.len(), 0);
+    assert_eq!(g.players[0].life, life + 2);
+    g.add_card_to_graveyard(1, catalog::island());
+    g.battlefield_find_mut(kaya).unwrap().loyalty_uses_this_turn = 0;
+    loyalty(&mut g, kaya, 0, None);
+    assert_eq!(g.players[0].life, life + 2, "a land gains nothing");
+}
+
+fn to_end_step(g: &mut GameState) {
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(g);
+}

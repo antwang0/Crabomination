@@ -4875,8 +4875,8 @@ pub fn hydroid_krasis() -> CardDefinition {
 /// Kaya, Orzhov Usurper — {1}{W}{B} loyalty-3 Planeswalker. +1: exile up to two
 /// target cards from a single graveyard. −1: exile target nonland permanent with
 /// mana value 1 or less. −5: deal damage to target player equal to the cards
-/// they own in exile and gain that much. (The +1 "gain 2 if a creature was
-/// exiled" rider and the −5's "target player" → opponent are minor collapses.)
+/// they own in exile and gain that much. The +1 gains 2 life if a creature
+/// card was among the exiled (`Selector::LastMoved`).
 pub fn kaya_orzhov_usurper() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
     CardDefinition {
@@ -4892,11 +4892,14 @@ pub fn kaya_orzhov_usurper() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::ExileUpToNFromGraveyards {
-                    count: Value::Const(2),
-                    of: None,
-                    single: true,
-                }) },
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
+                    Effect::ExileUpToNFromGraveyards { count: Value::Const(2), of: None, single: true },
+                    Effect::If {
+                        cond: crate::effect::Predicate::EntityMatchesAny { what: Selector::LastMoved, filter: R::Creature },
+                        then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])) },
                 ..Default::default()
             },
             LoyaltyAbility {

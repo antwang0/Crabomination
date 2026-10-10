@@ -265,8 +265,11 @@ pub fn thief_of_existence() -> CardDefinition {
 }
 
 /// Emperor of Bones — {1}{B} 2/2 Skeleton Noble. At the beginning of combat on
-/// your turn, exile up to one target card from a graveyard. {1}{B}: Adapt 2.
-/// (The counter-triggered reanimation of a card exiled with it is omitted.)
+/// your turn, exile up to one target card from a graveyard (linked to it).
+/// {1}{B}: Adapt 2. Whenever one or more +1/+1 counters are put on it, put a
+/// creature card exiled with it onto the battlefield under your control with
+/// a finality counter; it gains haste; sacrifice it at the next end step
+/// (CR 603.7 delayed trigger).
 pub fn emperor_of_bones() -> CardDefinition {
     CardDefinition {
         name: "Emperor of Bones",
@@ -287,9 +290,27 @@ pub fn emperor_of_bones() -> CardDefinition {
                 max_targets: 1,
                 min_targets: 0,
                 filter: R::InGraveyard,
-                effect: Box::new(Effect::Exile {
-                    what: Selector::Target(0),
-                }),
+                effect: Box::new(Effect::ExileLinked { what: Selector::Target(0) }),
+            },
+        },
+        TriggeredAbility {
+            event: EventSpec {
+                once_per_batch: true,
+                ..EventSpec::new(EventKind::CounterAdded(CounterType::PlusOnePlusOne), EventScope::SelfSource)
+            },
+            effect: Effect::ChooseOneAmong {
+                what: Selector::EachMatching { zone: ZoneRef::Exile, filter: R::ExiledWithSource.and(R::Creature) },
+                chooser: PlayerRef::You,
+                chosen: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Finality, amount: Value::ONE },
+                    Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Haste, duration: Duration::Permanent },
+                    Effect::SacrificeAtNextEndStep { what: Selector::LastMoved },
+                ])),
+                other: Box::new(Effect::Noop),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
