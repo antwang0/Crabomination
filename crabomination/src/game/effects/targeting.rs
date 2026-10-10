@@ -131,7 +131,7 @@ impl GameState {
     fn declines_own_side_pick(&self, eff: &Effect, controller: usize, t: &Target) -> bool {
         let Target::Permanent(tid) = t else { return false };
         if !eff.target_slot_optional(0, None)
-            || !eff.target_filter_for_slot(0).is_some_and(|f| !f.excludes_opponents_side())
+            || eff.target_filter_for_slot(0).is_none_or(|f| f.excludes_opponents_side())
         {
             return false;
         }

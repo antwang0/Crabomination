@@ -1280,7 +1280,7 @@ pub fn horn_of_valhalla() -> CardDefinition {
             ..Default::default()
         }),
         adventure: Some(Box::new(crate::card::Adventure {
-            name: "Ysgard's Call".into(),
+            name: "Ysgard's Call",
             cost: cost(&[x(), w(), w()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::CreateToken {

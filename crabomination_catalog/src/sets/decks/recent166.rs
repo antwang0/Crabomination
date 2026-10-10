@@ -362,7 +362,7 @@ pub fn ragost_deft_gastronaut() -> CardDefinition {
         toughness: 2,
         static_abilities: vec![
             crate::card::StaticAbility {
-                description: "Artifacts you control are Foods in addition to their other types.".into(),
+                description: "Artifacts you control are Foods in addition to their other types.",
                 effect: crate::effect::StaticEffect::AddCardTypeToMatching {
                     applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
                     card_type: CardType::Artifact,
@@ -370,7 +370,7 @@ pub fn ragost_deft_gastronaut() -> CardDefinition {
                 },
             },
             crate::card::StaticAbility {
-                description: "Artifacts you control have \"{2}, {T}, Sacrifice this artifact: You gain 3 life.\"".into(),
+                description: "Artifacts you control have \"{2}, {T}, Sacrifice this artifact: You gain 3 life.\"",
                 effect: crate::effect::StaticEffect::GrantActivatedAbility {
                     applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
                     ability: ActivatedAbility {

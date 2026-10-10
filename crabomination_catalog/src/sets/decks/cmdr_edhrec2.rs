@@ -291,8 +291,7 @@ pub fn belladonna_took() -> CardDefinition {
 pub fn bilbo_fellow_conspirator() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "If you would create a Food token, instead create a Food token and a Treasure token."
-                .into(),
+            description: "If you would create a Food token, instead create a Food token and a Treasure token.",
             effect: StaticEffect::TokenNamedAlsoMints { name: "Food".into(), also: treasure_token() },
         }],
         ..legend(
@@ -348,7 +347,7 @@ pub fn the_sackville_bagginses() -> CardDefinition {
 pub fn asmodeus_the_archfiend() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "If you would draw a card, exile the top card of your library face down instead.".into(),
+            description: "If you would draw a card, exile the top card of your library face down instead.",
             effect: StaticEffect::ReplaceDrawWithExileFaceDownWithSource,
         }],
         activated_abilities: vec![
@@ -383,7 +382,7 @@ pub fn hoarding_broodlord() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Convoke, Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "Spells you cast from exile have convoke.".into(),
+            description: "Spells you cast from exile have convoke.",
             effect: StaticEffect::ExileCastSpellsHaveConvoke { filter: R::Any },
         }],
         triggered_abilities: vec![etb(Effect::Seq(vec![
@@ -500,8 +499,7 @@ pub fn bramblewood_paragon() -> CardDefinition {
         toughness: 2,
         static_abilities: vec![
             StaticAbility {
-                description: "Each other Warrior creature you control enters with an additional +1/+1 counter on it."
-                    .into(),
+                description: "Each other Warrior creature you control enters with an additional +1/+1 counter on it.",
                 effect: StaticEffect::MatchingEntersWithExtraCounters {
                     filter: R::Creature.and(R::HasCreatureType(CreatureType::Warrior)).and(R::OtherThanSource),
                     kind: CounterType::PlusOnePlusOne,
@@ -509,7 +507,7 @@ pub fn bramblewood_paragon() -> CardDefinition {
                 },
             },
             StaticAbility {
-                description: "Each creature you control with a +1/+1 counter on it has trample.".into(),
+                description: "Each creature you control with a +1/+1 counter on it has trample.",
                 effect: StaticEffect::GrantKeyword {
                     applies_to: Selector::EachPermanent(
                         R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne)),
@@ -544,7 +542,7 @@ pub fn cemetery_prowler() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         static_abilities: vec![StaticAbility {
-            description: "Spells you cast cost {1} less to cast for each card type they share with cards exiled with this creature.".into(),
+            description: "Spells you cast cost {1} less to cast for each card type they share with cards exiled with this creature.",
             effect: StaticEffect::CostReductionPerTypeSharedWithExiled,
         }],
         triggered_abilities: vec![etb(exile_one()), on_attack(exile_one())],
@@ -689,7 +687,7 @@ pub fn chocobo_camp() -> CardDefinition {
         name: "Chocobo Camp",
         card_types: vec![CardType::Land],
         static_abilities: vec![StaticAbility {
-            description: "This land enters tapped unless you control a legendary creature.".into(),
+            description: "This land enters tapped unless you control a legendary creature.",
             effect: StaticEffect::EntersTappedUnless {
                 applies_to: Selector::This,
                 condition: Predicate::SelectorExists(Selector::EachPermanent(
@@ -732,15 +730,14 @@ pub fn gwaihir_the_windlord() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         static_abilities: vec![
             StaticAbility {
-                description: "This spell costs {2} less to cast as long as you've drawn two or more cards this turn."
-                    .into(),
+                description: "This spell costs {2} less to cast as long as you've drawn two or more cards this turn.",
                 effect: StaticEffect::SelfCostReducedIf {
                     condition: Predicate::ValueAtLeast(Value::CardsDrawnThisTurn(PlayerRef::You), Value::Const(2)),
                     amount: 2,
                 },
             },
             StaticAbility {
-                description: "Other Birds you control have vigilance.".into(),
+                description: "Other Birds you control have vigilance.",
                 effect: StaticEffect::GrantKeyword {
                     applies_to: Selector::EachPermanent(bird().and(R::ControlledByYou).and(R::OtherThanSource)),
                     keyword: Keyword::Vigilance,
@@ -792,7 +789,7 @@ pub fn the_lord_of_the_eagles() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "This spell costs {X} less to cast, where X is the total power of creatures you control with flying.".into(),
+            description: "This spell costs {X} less to cast, where X is the total power of creatures you control with flying.",
             effect: StaticEffect::SelfCostReducedByValue {
                 amount: Value::PowerOf(Box::new(Selector::EachPermanent(
                     R::Creature.and(R::ControlledByYou).and(R::HasKeyword(Keyword::Flying)),
@@ -823,7 +820,7 @@ pub fn watcher_of_the_spheres() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "Creature spells with flying you cast cost {1} less to cast.".into(),
+            description: "Creature spells with flying you cast cost {1} less to cast.",
             effect: StaticEffect::CostReduction { filter: flier(), amount: 1 },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -938,7 +935,7 @@ pub fn benevolent_blessing() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
-            description: "Enchanted creature has protection from the chosen color.".into(),
+            description: "Enchanted creature has protection from the chosen color.",
             effect: StaticEffect::GrantProtectionFromChosenColor {
                 applies_to: Selector::AttachedTo(Box::new(Selector::This)),
             },
@@ -958,7 +955,7 @@ pub fn benevolent_blessing() -> CardDefinition {
 pub fn with_great_power() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "All damage that would be dealt to you is dealt to enchanted creature instead.".into(),
+            description: "All damage that would be dealt to you is dealt to enchanted creature instead.",
             effect: StaticEffect::RedirectControllerDamageToEquippedCreature,
         }],
         ..aura_on(
@@ -1005,7 +1002,7 @@ pub fn yurlok_of_scorch_thrash() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
         static_abilities: vec![StaticAbility {
-            description: "A player losing unspent mana causes that player to lose that much life.".into(),
+            description: "A player losing unspent mana causes that player to lose that much life.",
             effect: StaticEffect::PlayersLoseLifeForUnspentMana,
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -1038,7 +1035,7 @@ pub fn horizon_stone() -> CardDefinition {
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
-            description: "If you would lose unspent mana, that mana becomes colorless instead.".into(),
+            description: "If you would lose unspent mana, that mana becomes colorless instead.",
             effect: StaticEffect::UnspentManaBecomesColorless,
         }],
         ..Default::default()
@@ -1110,14 +1107,14 @@ pub fn lavaleaper() -> CardDefinition {
         toughness: 4,
         static_abilities: vec![
             StaticAbility {
-                description: "All creatures have haste.".into(),
+                description: "All creatures have haste.",
                 effect: StaticEffect::GrantKeyword {
                     applies_to: Selector::EachPermanent(R::Creature),
                     keyword: Keyword::Haste,
                 },
             },
             StaticAbility {
-                description: "Whenever a player taps a basic land for mana, that player adds one mana of any type that land produced.".into(),
+                description: "Whenever a player taps a basic land for mana, that player adds one mana of any type that land produced.",
                 effect: StaticEffect::ExtraManaOnLandTap {
                     enchanted_only: false,
                     filter: R::IsBasicLand,
@@ -1178,7 +1175,7 @@ pub fn power_surge() -> CardDefinition {
 fn from_exile_triggers(scope: EventScope, effect: Effect) -> Vec<TriggeredAbility> {
     vec![
         TriggeredAbility {
-            event: EventSpec::new(EventKind::LandPlayed, scope.clone()).with_filter(Predicate::All(vec![
+            event: EventSpec::new(EventKind::LandPlayed, scope).with_filter(Predicate::All(vec![
                 Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::ONE),
                 trigger_is(R::EnteredFromExileThisTurn),
             ])),
@@ -1249,7 +1246,7 @@ pub fn pia_nalaar_consul_of_revival() -> CardDefinition {
     };
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Thopters you control have haste.".into(),
+            description: "Thopters you control have haste.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Selector::EachPermanent(
                     R::Creature.and(R::HasCreatureType(CreatureType::Thopter)).and(R::ControlledByYou),
@@ -2029,7 +2026,7 @@ pub fn taborax_hopes_demise() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
-            description: "Taborax has lifelink as long as it has five or more +1/+1 counters on it.".into(),
+            description: "Taborax has lifelink as long as it has five or more +1/+1 counters on it.",
             effect: StaticEffect::SelfHasKeywordWhile {
                 keyword: Keyword::Lifelink,
                 condition: R::WithCounterAtLeast(CounterType::PlusOnePlusOne, 5),
