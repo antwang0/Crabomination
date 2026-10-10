@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required](#fixedopen-2026-10-10-sixteenth-commander-run-01s495n5--up-to-one-target-modelled-as-required) | 27 |
 | Bugs & robustness | [FIXED 2026-10-09 (fourteenth Commander run, `01LidV9f`) — the bot stops starting loops, and a false CR 104.4b draw](#fixed-2026-10-09-fourteenth-commander-run-01lidv9f--the-bot-stops-starting-loops-and-a-false-cr-1044b-draw) | 63 |
 | Bugs & robustness | [FIXED 2026-10-09 (twelfth Commander run, `01G4zUa3`) — per-slot 608.2b for spells, four more invariants, two bot stalls](#fixed-2026-10-09-twelfth-commander-run-01g4zua3--per-slot-6082b-for-spells-four-more-invariants-two-bot-stalls) | 40 |
 | Bugs & robustness | [FIXED 2026-10-08 (tenth Commander run, `01GdFPW9`) — state invariants on the audit build](#fixed-2026-10-08-tenth-commander-run-01gdfpw9--state-invariants-on-the-audit-build) | 113 |
@@ -118,6 +119,35 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required
+
+`scripts/audit_up_to_one.py` (printed "up to one [other] target …" vs a
+definition with no optional marker; `dump_cards --effects`, `--pod NAMES`)
+closed the thirteenth run's open "~70 more" row:
+
+- **20 cards fixed** with `OptionalTargets` (list in the commit): a hostile
+  required slot fell back to its controller's own permanent (Constable of
+  the Realm, Space Marine Devastator, Touch the Spirit Realm, Pizzasaur's
+  reflexive destroy — pod cards), and a required lone slot made a spell or
+  activation unusable on an empty board (Gold Rush, Path to the World Tree,
+  Heritage Reclamation's third mode).
+- **Engine:** `declines_own_side_pick` also spares a card in a same-team
+  graveyard (Raven Eagle exiled its controller's own card), and
+  `permanent_slot_is_hostile` counts `Exile`, `Tap` and stun counters
+  (an optional Solitude / Splash Lasher slot was never declined). Solitude's
+  slot is now declared by its exile step, and no longer reads "an opponent
+  controls". Golden traces and pod digests unchanged.
+- ⚠ **Open — the cast path is laxer than CR 601.2c:** `actions.rs` checks a
+  target count only for a multi-target instance (`min_targets_in_mode >= 2`),
+  so a spell's later *required* single slot can be omitted at cast and is
+  skipped at resolution; the activation path is strict (Path to the World
+  Tree failed there). Tightening it needs a census of which spells rely on
+  the laxness — the trailing "up to one" slots (Combat Tutorial, Vibrant
+  Outburst) do, and are left unmarked for that reason (the scan's REVIEWED).
+- Open, low value: a stack-spell slot (Subtlety) has no own-side decline;
+  the scan's remaining `either` rows are friendly counters/pumps or
+  per-player fan-outs.
+
 ## FIXED/OPEN 2026-10-09 (thirteenth Commander run, `01Ug49mf`, late) — one search per "up to N", spells a Move can lift, and type-union scans
 
 - **CR 701.19 — an up-to-N search is ONE search** (`game/search_batch.rs`).
@@ -145,10 +175,8 @@ the handoff.
   its own Sol Ring), Summon: Bahamut, Syr Vondam, All-Fates Stalker,
   Lodestone Needle, Petrifying Meddler, Conciliator's Duelist; Tishana's
   Tidebinder got `Effect::CounterAbilityAndStripSource` (it stripped any
-  nonland permanent with nothing countered). ⚠ Open: an ad-hoc scan finds
-  ~70 more "up to one target" cards with no optional marker; most are
-  friendly or opponent-only filters, but graveyard-card slots (Raven Eagle,
-  Ardyn's Starscourge) can still exile your own card.
+  nonland permanent with nothing countered). ✅ The ~70 more: the
+  sixteenth run's section above (`scripts/audit_up_to_one.py`).
 - **Bot: a life exchange is activated** (`server/life_swap.rs`): Soul
   Conduit was never used — activated abilities go through per-effect
   pickers and none covered `ExchangeLifeTotals`. Now: self + the
