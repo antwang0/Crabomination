@@ -80,6 +80,7 @@ impl GameState {
         // has the Surge to Victory / Leitmotif Composer story.
         if self.battlefield.len() as i64 + self.spell_token_estimate(card_id, ctx.controller)
             > crate::recommend::BOARD_GATE as i64
+            || self.stack_spell_count() >= crate::recommend::STACK_GATE
         {
             return Ok(());
         }

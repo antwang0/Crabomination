@@ -186,6 +186,49 @@ fn a_spell_copy_chain_stops_at_the_stack_bound() {
     assert!(g.stack.len() > 100, "the copies up to the bound were made");
 }
 
+/// An optional free cast is declined once `recommend::STACK_GATE` spells are
+/// on the stack (a simulator bound, not a rule): Jadzi's magecraft under
+/// Thousand-Year Storm recast its library top into the 512-spell bound and
+/// ended a pod as a board cap (seed 16000293 game 20).
+#[test]
+fn an_optional_free_cast_is_declined_at_the_stack_gate() {
+    use crabomination::card::{Value, Zone};
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    let gate = crabomination::recommend::STACK_GATE;
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bolt)];
+    g.resolve_effect(&Effect::CopySpell { what: Selector::Target(0), count: Value::Const(gate as i32 - 1) }, &ctx)
+        .expect("copies");
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    let before = g.stack.len();
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(top)];
+    g.resolve_effect(
+        &Effect::CastWithoutPayingImmediate {
+            what: Selector::Target(0),
+            source_zone: Zone::Library,
+            exile_after: false,
+            copy: false,
+            reduce_generic: 0,
+            pay_own_cost: false,
+        },
+        &ctx,
+    )
+    .expect("declined, not an error");
+    assert_eq!(g.stack.len(), before, "nothing cast past the gate");
+    assert!(g.players[0].library.iter().any(|c| c.id == top));
+}
+
 // ── CR 505.1 — "your next main phase" is the first OR the second ────────────
 
 /// Pass priority until `step` begins (the stack is drained on the way).

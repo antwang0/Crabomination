@@ -1828,6 +1828,12 @@ pub const MAX_STACK_ITEMS: usize = 8 * MAX_BATTLEFIELD;
 /// gated board over the bound one at a time.
 pub const BOARD_GATE: usize = MAX_BATTLEFIELD - MAX_BATTLEFIELD / 8;
 
+/// [`BOARD_GATE`]'s stack sibling: an optional free cast is declined once this
+/// many spells are on the stack, an eighth short of [`MAX_STACK`]. Jadzi's
+/// magecraft under Thousand-Year Storm recast its top card into the bound
+/// (three-seat audit pod, seed 16000293 game 20).
+pub const STACK_GATE: usize = MAX_STACK - MAX_STACK / 8;
+
 /// Why a driver loop stops, in the loop's own order — the rules first, then
 /// the two simulator bounds, then staleness — or `None` to play on. Both
 /// loops ([`play_one_game_traced`] and the actor's) ask this so the bounds
