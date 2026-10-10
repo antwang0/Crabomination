@@ -1814,6 +1814,10 @@ pub enum StaticEffect {
         amount: u32,
         #[serde(default)]
         other: bool,
+        /// "A red **or artifact** source" (Mechanized Warfare): an artifact
+        /// source qualifies whatever its colors.
+        #[serde(default)]
+        or_artifact: bool,
     },
     /// CR 614.5 — like `AddDamageToOpponents` but the bonus equals the number of
     /// `kind` counters on this static's own source permanent, read live at

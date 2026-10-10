@@ -9966,6 +9966,11 @@ impl GameState {
         ent: crate::game::effects::EntityRef,
         amount: u32,
     ) -> u32 {
+        // CR 120.8 / 614.7a — 0 damage is no damage: an increase has no event
+        // to replace (a 0-power artifact under Mechanized Warfare dealt 1).
+        if amount == 0 {
+            return 0;
+        }
         if !self.damage_scaling_in_scope() {
             debug_assert_eq!(
                 self.scale_damage_to_inner(source, ent, amount),
@@ -10140,14 +10145,15 @@ impl GameState {
                         {
                             amount = amount.min(*cap);
                         }
-                        StaticEffect::AddDamageToOpponents { source_color, amount: bonus, other }
+                        StaticEffect::AddDamageToOpponents { source_color, amount: bonus, other, or_artifact }
                             if !(self.same_team(c.controller, p) || *other && source == Some(c.id)) =>
                         {
                             // "+N if a [color] source you control" — needs a
                             // known source controlled by the static's owner.
                             if let Some((src_ctrl, src_colors)) = &source_info
                                 && *src_ctrl == c.controller
-                                && source_color.is_none_or(|sc| src_colors.contains(&sc))
+                                && (source_color.is_none_or(|sc| src_colors.contains(&sc))
+                                    || *or_artifact && source.is_some_and(|s| self.source_is_artifact(s)))
                             {
                                 amount = amount.saturating_add(*bonus);
                             }

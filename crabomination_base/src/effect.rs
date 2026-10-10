@@ -10236,6 +10236,11 @@ pub enum Effect {
     /// with mana value `max_mv` or less from among them without paying its
     /// mana cost. Put the rest on the bottom." (Sunbird's Invocation, CR
     /// 601.2 — cast from the library.) One cast at most; lands are skipped.
+    /// "Reveal the top card of your library; you may cast it without paying
+    /// its mana cost if it matches `filter`" — a declined or unmatched card
+    /// stays on top (Powerbalance's "if the two spells have the same mana
+    /// value", read through `WithX`).
+    RevealTopMayCastFreeKeepOnTop { filter: SelectionRequirement },
     RevealTopMayCastOneFree {
         count: Value,
         max_mv: Value,
@@ -11153,6 +11158,12 @@ pub enum Effect {
     /// them. The picks go through `ask_seat_amount`, so a UI seat is prompted
     /// on its own turn through the suspend machinery.
     EachPlayerChoosesNumberHighestLoses { max: u32, on_you_win: Box<Effect> },
+    /// Wheel of Misfortune — each player secretly picks a number (0 to
+    /// `max`), revealed at once; the source deals the highest number in
+    /// damage to each player who picked it, and each player who didn't pick
+    /// the lowest discards their hand and draws seven. A headless seat picks
+    /// 0, its controller 1 (it cast the wheel to refill).
+    WheelOfMisfortune { max: u32 },
 
     /// CR 708.2 — "Look at target face-down creature." The resolving
     /// controller sees the real card for as long as it stays face down

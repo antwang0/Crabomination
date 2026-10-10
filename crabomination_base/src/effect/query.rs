@@ -865,6 +865,7 @@ impl Effect {
                 on_you_win.requires_target()
             }
             Effect::CreateTokenOfChosenColorAndType { .. }
+            | Effect::WheelOfMisfortune { .. }
             | Effect::EachPlayerDiscardsElseLosesLife { .. }
             | Effect::EachPlayerRevealsCreaturesForTokens { .. }
             | Effect::AnyLifeGainPunishedThisTurn { .. } => false,
@@ -2189,7 +2190,7 @@ impl Effect {
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Cascade { .. } => false,
             Effect::Ripple { .. } => false,
-            Effect::RevealTopMayCastOneFree { .. } => false,
+            Effect::RevealTopMayCastOneFree { .. } | Effect::RevealTopMayCastFreeKeepOnTop { .. } => false,
             Effect::EachPlayerDrawsDamageTheyDealtToSource => false,
             Effect::CopySpellOntoAnotherOpponentsPermanent { .. } => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),

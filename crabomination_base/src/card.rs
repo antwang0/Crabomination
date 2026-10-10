@@ -4004,6 +4004,16 @@ impl SelectionRequirement {
         }
     }
 
+    /// Does the filter read `SharesCardTypeWithTarget` anywhere?
+    pub fn mentions_target_card_types(&self) -> bool {
+        match self {
+            Self::SharesCardTypeWithTarget => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_target_card_types() || b.mentions_target_card_types(),
+            Self::Not(inner) => inner.mentions_target_card_types(),
+            _ => false,
+        }
+    }
+
     /// Concretize `SharesCardTypeWithTarget` against the target's card types
     /// (an `Or` of `HasCardType`, or "matches nothing"), recursing through
     /// And/Or/Not.

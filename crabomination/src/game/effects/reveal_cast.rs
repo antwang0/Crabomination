@@ -17,6 +17,7 @@ impl GameState {
         count: &Value,
         max_mv: &Value,
         filter: Option<&crate::card::SelectionRequirement>,
+        keep_rest_on_top: bool,
         ctx: &EffectContext,
         effect: &Effect,
         events: &mut Vec<GameEvent>,
@@ -27,6 +28,10 @@ impl GameState {
             return Ok(());
         }
         let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+        // The card walk below is context-free, so an X-relative filter reads
+        // this resolution's X now (Powerbalance's "same mana value").
+        let owned = filter.filter(|f| f.names_x_or_converge()).map(|f| f.resolve_x(ctx.x_value));
+        let filter = owned.as_ref().or(filter);
         let revealed: Vec<CardId> = self.players[p].library[..n].iter().map(|c| c.id).collect();
         let castable = |c: &crate::card::CardInstance| {
             !c.definition.is_land()
@@ -67,6 +72,9 @@ impl GameState {
                 let target = self.auto_target_for_effect_avoiding(&def.effect, p, Some(pick));
                 events.extend(self.cast_card_for_free(p, pick, Zone::Library, target, vec![], None, None, false)?);
             }
+        }
+        if keep_rest_on_top {
+            return Ok(());
         }
         // CR 401.4 — the rest go to the bottom in a random order.
         let rest: Vec<CardId> = revealed.into_iter().filter(|&cid| picked.first() != Some(&cid)).collect();

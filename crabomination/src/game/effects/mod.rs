@@ -30902,6 +30902,58 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WheelOfMisfortune { max } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0usize;
+                let mut picks: Vec<(usize, u32)> = Vec::new();
+                for seat in self.apnap_sort(self.living_seats().collect()) {
+                    let Some(n) = self.ask_seat_amount(
+                        &mut cursor,
+                        seat,
+                        "Secretly choose a number".to_string(),
+                        source,
+                        *max,
+                        AmountKind::Cost { free: u32::from(seat == ctx.controller) },
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push((seat, n));
+                }
+                self.clear_answer_log();
+                let (Some(high), Some(low)) =
+                    (picks.iter().map(|(_, n)| *n).max(), picks.iter().map(|(_, n)| *n).min())
+                else {
+                    return Ok(());
+                };
+                for &(seat, n) in &picks {
+                    if n == high && high > 0 {
+                        let hit = Effect::DealDamage {
+                            to: Selector::Player(PlayerRef::Seat(seat)),
+                            amount: crate::effect::Value::Const(high as i32),
+                        };
+                        self.run_effect(&hit, ctx, events)?;
+                    }
+                }
+                for &(seat, n) in &picks {
+                    if n != low && self.players[seat].is_alive() {
+                        let wheel = Effect::Seq(vec![
+                            Effect::Discard {
+                                who: Selector::Player(PlayerRef::Seat(seat)),
+                                amount: crate::effect::Value::Const(100),
+                                random: false,
+                            },
+                            Effect::Draw {
+                                who: Selector::Player(PlayerRef::Seat(seat)),
+                                amount: crate::effect::Value::Const(7),
+                            },
+                        ]);
+                        self.run_effect(&wheel, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             // CR 708.2 — peek at a face-down permanent; the peek sticks for
             // as long as it stays face down.
             Effect::LookAtFaceDown { what } => {
@@ -35660,6 +35712,17 @@ impl GameState {
                             Box::new(SelectionRequirement::Not(Box::new(SelectionRequirement::Any))),
                         )),
                     }
+                } else if find.mentions_target_card_types() {
+                    // "A permanent card that shares a card type with that
+                    // permanent" (Wild Magic Surge): the target's types, off
+                    // its last known card after the destroy.
+                    let types: Vec<crate::card::CardType> = match ctx.targets.first() {
+                        Some(crate::game::Target::Permanent(id)) => {
+                            self.find_card_anywhere(*id).map(|c| c.definition.card_types.clone()).unwrap_or_default()
+                        }
+                        _ => Vec::new(),
+                    };
+                    Some(find.resolve_target_card_types(&types))
                 } else {
                     None
                 };
@@ -41579,8 +41642,17 @@ impl GameState {
             }
 
             Effect::RevealTopMayCastOneFree { count, max_mv, filter } => {
-                self.reveal_top_may_cast_one_free(count, max_mv, filter.as_ref(), ctx, effect, events)
+                self.reveal_top_may_cast_one_free(count, max_mv, filter.as_ref(), false, ctx, effect, events)
             }
+            Effect::RevealTopMayCastFreeKeepOnTop { filter } => self.reveal_top_may_cast_one_free(
+                &crate::effect::Value::ONE,
+                &crate::effect::Value::Const(i32::MAX),
+                Some(filter),
+                true,
+                ctx,
+                effect,
+                events,
+            ),
 
             Effect::Ripple { n, of_trigger_spell } => {
                 // CR 702.20: reveal the top N cards; cast any with the same
