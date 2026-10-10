@@ -229,7 +229,7 @@ fn final_reward_exiles_target_creature() {
 fn holy_light_sweeps_minus_one_minus_one() {
     let mut g = two_player_game();
     let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // 1/1
-    g.clear_sickness(elf); // auto-tap may only tap a non-sick elf (CR 602.5g)
+    g.clear_sickness(elf); // auto-tap may only tap a non-sick elf (CR 602.5a)
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let id = g.add_card_to_hand(0, catalog::holy_light());
     g.players[0].mana_pool.add(Color::White, 1);

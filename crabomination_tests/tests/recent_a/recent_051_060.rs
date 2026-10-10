@@ -2273,7 +2273,7 @@ mod recent58 {
 
     #[test]
     fn tajuru_paragon_fills_only_one_party_slot() {
-        // Tajuru is all four roles but fills only one slot (CR 700.18): with just
+        // Tajuru is all four roles but fills only one slot (CR 700.8): with just
         // Squad (Warrior), the party is 2 — Squad→Warrior, Tajuru→one other.
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, catalog::tajuru_paragon());

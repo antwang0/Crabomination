@@ -851,7 +851,7 @@ pub fn stifle() -> CardDefinition {
 /// Wired via `Effect::CounterSpellToZone { zone: OwnerLibraryTop }` (push
 /// modern_decks): the on-stack card is lifted off the stack and placed on
 /// top of its owner's library rather than routed to the graveyard. Matches
-/// CR 701.5g's "instead" clause exactly.
+/// CR 701.6a's "instead" clause exactly.
 pub fn memory_lapse() -> CardDefinition {
     use crate::effect::CounteredSpellZone;
     CardDefinition {

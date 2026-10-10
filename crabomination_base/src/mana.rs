@@ -571,7 +571,7 @@ impl ManaCost {
 
     /// Subtract `amount` from this cost's total Generic pips, clamping at
     /// zero. Colored / colorless / hybrid / Phyrexian / snow / X pips are
-    /// untouched — CR 601.2f and CR 117.7c forbid cost reductions from
+    /// untouched — CR 601.2f and CR 118.7a forbid cost reductions from
     /// reducing a colored or X pip. Returns the actually-applied
     /// reduction (so callers can short-circuit when the cost is already
     /// floored). If multiple Generic pips exist, drain them in order.

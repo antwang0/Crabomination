@@ -748,7 +748,7 @@ pub enum Value {
     /// The printed (copiable) power of the first entity `what` resolves to —
     /// "draw cards equal to its base power" (Curie, Emergent Intelligence).
     BasePowerOf(Box<Selector>),
-    /// CR 700.18 — the size of the controller's party: the number of distinct
+    /// CR 700.8 — the size of the controller's party: the number of distinct
     /// roles (Cleric, Rogue, Warrior, Wizard) among creatures they control,
     /// capped at 4. A single creature counts for at most one role. Powers
     /// Zendikar Rising party payoffs (Squad Commander, Tajuru Paragon).
@@ -3124,7 +3124,7 @@ pub enum ZoneDest {
 }
 
 /// Where a countered spell goes after being lifted off the stack. The
-/// default (graveyard) matches CR 701.5g; Memory Lapse routes to the
+/// default (graveyard) matches CR 701.6a; Memory Lapse routes to the
 /// owner's library top, Spell Crumple routes to exile, etc.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CounteredSpellZone {
@@ -7862,7 +7862,7 @@ pub enum Effect {
     RevealUntilCreatureDoubleBasePt,
     /// Illusionist's Bracers — copy the activated ability that just triggered
     /// this. Mana abilities never reach the stack, so the topmost `activated`
-    /// stack item from the source is always a legal copy target (CR 706.10).
+    /// stack item from the source is always a legal copy target (CR 707.10).
     /// The copy may choose new targets in every declared slot; the original
     /// is offered first, so a conservative decider keeps it.
     CopyActivatedAbilityMayChooseTargets,
@@ -9469,7 +9469,7 @@ pub enum Effect {
         /// tapped token that's a copy"). `false` = enters untapped (default).
         #[serde(default)]
         enters_tapped: bool,
-        /// CR 707.2e rider — the token copy isn't legendary (Helm of the
+        /// CR 707.9b rider — the token copy isn't legendary (Helm of the
         /// Host). Strips supertypes from the copy so the legend rule doesn't
         /// destroy it alongside a legendary host.
         #[serde(default)]
@@ -9596,7 +9596,7 @@ pub enum Effect {
     /// `what` becomes a copy of `source` for `duration`, via a
     /// `Modification::CopyCardDefinition` continuous effect (the snapshot is
     /// locked in at resolution). `non_legendary` strips the Legendary
-    /// supertype from the copy (CR 707.2e — Echoing Equation's "except
+    /// supertype from the copy (CR 707.9b — Echoing Equation's "except
     /// they aren't legendary"). Computed characteristics (types, colors,
     /// keywords, P/T) and printed-ability dispatch both honor the copy
     /// while it lasts. `Duration::WhileSourceTapped` here watches the copied

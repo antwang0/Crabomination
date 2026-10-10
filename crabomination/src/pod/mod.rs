@@ -4392,7 +4392,7 @@ mod tests {
             ("Prossh", [0x9055, 130, 9054]),
             // CR 700.8 parties (Stick Together), CR 611.2b next-turn copies.
             ("Morophon", [0x0A0B, 131, 9055]),
-            // CR 700.18 full party, CR 702.84 granted unearth, CR 603.3d
+            // CR 700.8 full party, CR 702.84 granted unearth, CR 603.3d
             // once-each-turn grants (Folk Hero).
             ("Nalia", [0x4A11, 136, 9060]),
             // CR 107.16 energy; CR 118.9 an energy alternative cost.

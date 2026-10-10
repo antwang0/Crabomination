@@ -542,7 +542,7 @@ fn nuclear_fallout_shrinks_twice_x_and_irradiates_everyone() {
         assert_eq!(g.players[seat].rad_counters, 1, "seat {seat} got X rad counters");
     }
 
-    // CR 728.2 — the active player's precombat main turn-based action mills
+    // CR 122.1i — the active player's precombat main turn-based action mills
     // one card per counter, loses 1 life per nonland milled, and spends the
     // counter for each nonland. Stepped into rather than called: the action
     // fires as the phase begins, before anyone has priority.

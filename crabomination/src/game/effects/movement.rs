@@ -2812,7 +2812,7 @@ impl GameState {
         if intended != crate::card::Zone::Battlefield {
             card.revert_flip();
         }
-        // CR 712.4 / 702.160c — and a transformed DFC or a prototyped card
+        // CR 712.4 / 702.160a — and a transformed DFC or a prototyped card
         // bound anywhere but exile shows its front / printed face: Evacuation
         // bounced a disturbed Generous Soul into a hand as its back face (pod
         // seed 818288). In exile only a battle keeps its back face (a

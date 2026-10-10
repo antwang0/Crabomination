@@ -2165,12 +2165,12 @@ pub enum Keyword {
     /// holds at least one +1/+1 counter. Rakdos Cackler, Gore-House
     /// Chainwalker, Spawn of Rix Maadi.
     Unleash,
-    /// CR 508.0 — "This creature can't attack unless it's the only creature
+    /// CR 508.1c — "This creature can't attack unless it's the only creature
     /// attacking" (Master of Cruelties). Enforced in `declare_attackers`:
     /// a batch that declares this creature alongside any other attacker is
     /// rejected.
     AttacksAlone,
-    /// CR 508.0 — "This creature can't attack alone" (Militia Rallier,
+    /// CR 508.1c — "This creature can't attack alone" (Militia Rallier,
     /// Cemetery Gatekeeper-era). Enforced in `declare_attackers`: a batch
     /// where this is the *only* attacker is rejected.
     CantAttackAlone,
@@ -5027,7 +5027,7 @@ pub struct CardDefinition {
     /// battlefield)" — Affinity-class generic cost reduction whose discount
     /// scales off the caster's permanent count matching `filter`.
     ///
-    /// Affects only the generic-pip side of the cost (CR 601.2f / 117.7c),
+    /// Affects only the generic-pip side of the cost (CR 601.2f / 118.7a),
     /// clamped at the spell's printed generic total. Read by
     /// `cost_reduction_for_spell` at cast time. Powers:
     /// - **Vanquish the Horde** (`SelectionRequirement::Creature`)
@@ -5706,7 +5706,7 @@ pub struct EntersAsCopy {
     /// stamped.
     #[serde(default)]
     pub legendary: bool,
-    /// CR 707.2e — "except it's not legendary." When true the copy strips the
+    /// CR 707.9b — "except it's not legendary." When true the copy strips the
     /// Legendary supertype so it doesn't trigger the legend rule (Mirror Image).
     #[serde(default)]
     pub non_legendary: bool,
@@ -7972,7 +7972,7 @@ impl CardDefinition {
     pub fn has_prototype(&self) -> Option<&Prototype> {
         self.prototype.as_deref()
     }
-    /// CR 702.160c — a clone of this definition with the prototype cost,
+    /// CR 702.160a — a clone of this definition with the prototype cost,
     /// color, and size applied (color follows the cost; the `prototype`
     /// field is retained so a snapshot round-trip can re-apply it).
     pub fn with_prototype_applied(&self) -> Option<CardDefinition> {
@@ -11531,7 +11531,7 @@ impl CardInstance {
         }
     }
 
-    /// CR 702.160c — a permanent cast for its prototype cost has only its
+    /// CR 702.160a — a permanent cast for its prototype cost has only its
     /// printed (full, colorless) characteristics once it leaves the
     /// battlefield. Restore the printed definition as the card changes zones.
     pub fn revert_prototype(&mut self) {
@@ -11626,7 +11626,7 @@ impl CardInstance {
         }
     }
 
-    /// CR 702.146e — true for a transformed Disturb card (a back face whose
+    /// CR 702.146 — true for a transformed Disturb card (a back face whose
     /// front prints Disturb): "if it would be put into a graveyard from
     /// anywhere, exile it instead." Consulted at the graveyard funnels.
     pub fn disturb_back_exiles(&self) -> bool {

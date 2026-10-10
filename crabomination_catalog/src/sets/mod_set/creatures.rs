@@ -2262,7 +2262,7 @@ pub fn spark_double() -> CardDefinition {
         enters_as_copy: Some(EntersAsCopy {
             // "a creature **or planeswalker** you control" — the planeswalker
             // half had shipped missing, along with the "and it isn't
-            // legendary" exception (CR 707.2e, which is why the card is a
+            // legendary" exception (CR 707.9b, which is why the card is a
             // legend-rule dodge in the first place).
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Planeswalker)

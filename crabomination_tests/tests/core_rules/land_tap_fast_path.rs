@@ -116,7 +116,7 @@ fn mutavault_mana_yes_animate_no() {
     });
 }
 
-/// An animated land is a creature (CR 106.12, CR 602.5g): generic path.
+/// An animated land is a creature (CR 106.12, CR 602.5a): generic path.
 #[test]
 fn animated_land_declines() {
     both_ways("animated mutavault", false, || {

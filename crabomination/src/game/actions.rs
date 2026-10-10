@@ -1903,7 +1903,7 @@ pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster
 ///     `target` (so Lightning Bolt at face counts as targeting a player,
 ///     Lightning Bolt at a creature counts as targeting a creature).
 ///
-/// CR 601.2f / 117.7c: cost reductions can never reduce a colored or X
+/// CR 601.2f / 118.7a: cost reductions can never reduce a colored or X
 /// pip. The caller funnels the returned reduction through
 /// `ManaCost::reduce_generic`, which clamps at the generic pip total.
 /// True if the filter tree names a controller clause explicitly
@@ -2519,7 +2519,7 @@ fn self_cost_reduction_from_card(
     let mut reduction = 0u32;
     // Card-intrinsic Affinity-for-[filter] cost reduction: "{1} less for
     // each [filter]" baked onto the spell card itself. Counts every
-    // battlefield permanent matching `affinity_filter`. CR 601.2f / 117.7c —
+    // battlefield permanent matching `affinity_filter`. CR 601.2f / 118.7a —
     // generic-only, the colored-pip clamp happens in
     // `ManaCost::reduce_generic` once the caller folds this back into the
     // cost.
@@ -6286,7 +6286,7 @@ impl GameState {
                                     mode,
                                     x_value.unwrap_or(0),
                                 ),
-                                // CR 601.4d — the slots of one multi-target
+                                // CR 115.3 — the slots of one multi-target
                                 // instance must name distinct objects.
                                 // `Some(first)`: distinct from the picks at
                                 // slots `first..`.
@@ -12666,7 +12666,7 @@ impl GameState {
         }
 
         let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();
-        // CR 702.146e — casting a daybound spell while it's neither day nor
+        // CR 702.145d — casting a daybound spell while it's neither day nor
         // night makes it day as the spell is put onto the stack.
         let casts_daybound = card.definition.keywords.has_kw(&Keyword::Daybound);
         // CR 702.40 — Storm: when this spell is cast, copy it for each spell
@@ -12828,7 +12828,7 @@ impl GameState {
         // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
         // observe the actual amount paid for *this* spell.
         self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value, false);
-        // CR 702.146e — a daybound spell cast while neither day nor night
+        // CR 702.145d — a daybound spell cast while neither day nor night
         // makes it day.
         if casts_daybound && self.day_night.is_none() {
             let mut day_evs = Vec::new();
@@ -20283,7 +20283,7 @@ impl GameState {
         if w & mana_summary::PLAIN_LAND == 0 || !mana_summary::plain_tap(w, ability_index) {
             return None;
         }
-        // Layer 4 could make it a creature (CR 106.12, CR 602.5g); a
+        // Layer 4 could make it a creature (CR 106.12, CR 602.5a); a
         // land-type rewrite could take a basic's intrinsic ability away
         // (CR 305.6); a strip could take the printed ability away (CR
         // 305.7 / 613.1f); a granted `CantActivateTapAbilities` bars it
@@ -21195,7 +21195,7 @@ impl GameState {
             return Err(GameError::AbilityAlreadyUsedThisTurn);
         }
 
-        // CR 602.5g/h — a creature's ability with a {T} or {Q} cost can't be
+        // CR 602.5a — a creature's ability with a {T} or {Q} cost can't be
         // activated while the creature is summoning-sick, unless it has haste
         // or its controller has a Tyvar-style "as though they had haste"
         // static. One method, because the bot's `available_mana` has to

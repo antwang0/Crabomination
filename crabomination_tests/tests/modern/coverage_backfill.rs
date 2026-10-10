@@ -1914,7 +1914,7 @@ fn spark_double_copies_with_an_extra_counter() {
     assert_eq!(dbl.counter_count(CounterType::Loyalty), 0, "and not a loyalty counter");
 }
 
-/// CR 707.2e — "a creature **or planeswalker** you control … an additional
+/// CR 707.9b — "a creature **or planeswalker** you control … an additional
 /// loyalty counter on it if it's a planeswalker, and it isn't legendary". All
 /// three halves had shipped missing: the filter was creature-only, so a
 /// planeswalker was not even offered.
@@ -1939,7 +1939,7 @@ fn spark_double_copies_a_planeswalker_with_a_loyalty_counter() {
         "a planeswalker copy enters with one loyalty counter more than printed",
     );
     assert_eq!(dbl.counter_count(CounterType::PlusOnePlusOne), 0, "and no +1/+1 counter");
-    // CR 707.2e — not legendary, so the legend rule does not eat one of them.
+    // CR 707.9b — not legendary, so the legend rule does not eat one of them.
     assert!(
         !dbl.definition.supertypes.contains(&crabomination::card::Supertype::Legendary),
         "the copy isn't legendary",
@@ -2416,7 +2416,7 @@ fn mirror_image_copies_only_your_own_creature() {
     assert_eq!(img.definition.name, "Grizzly Bears");
 }
 
-/// CR 707.2e — Mirror Image's copy is not legendary, so it dodges the legend
+/// CR 707.9b — Mirror Image's copy is not legendary, so it dodges the legend
 /// rule and both it and the original survive.
 #[test]
 fn mirror_image_copy_is_not_legendary() {
@@ -2435,7 +2435,7 @@ fn mirror_image_copy_is_not_legendary() {
     let img = g.battlefield_find(id).expect("copy survives the legend rule");
     assert_eq!(img.definition.name, "Thalia, Guardian of Thraben", "copied the legend");
     assert!(!img.definition.supertypes.contains(&Supertype::Legendary),
-        "the copy is not legendary (CR 707.2e)");
+        "the copy is not legendary (CR 707.9b)");
     assert!(g.battlefield_find(legend).is_some(), "the original legend also survives");
 }
 

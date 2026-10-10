@@ -771,7 +771,7 @@ fn inkling_aspect_etb_pumps_self_and_grants_menace() {
 fn pestmaster_pumps_on_pest_token_death_via_cached_controller() {
     // Lock-in for the push (modern_decks claude/modern_decks) engine fix:
     // `died_card_controllers` cache lets AnotherOfYours triggers fire
-    // off dying tokens (CR 111.7c "ceases to exist" SBA removes the
+    // off dying tokens (CR 111.7 "ceases to exist" SBA removes the
     // token from every zone in the same sweep as the death event, so
     // the zone-walking subject_controller lookup returns None without
     // the cache).
@@ -815,7 +815,7 @@ fn pestmaster_pumps_on_pest_token_death_via_cached_controller() {
 fn counter_death_trigger_reads_a_dying_pest_token() {
     // Lock-in for the push (modern_decks batch 47) token-death snapshot
     // cache: a "creature with a +1/+1 counter dies" filter must read a
-    // dying TOKEN's counters. Before the cache landed, the CR 111.7c
+    // dying TOKEN's counters. Before the cache landed, the CR 111.7
     // "token ceases to exist" SBA removed the dying token from every zone
     // in the same sweep, so the `WithCounter(+1/+1)` filter returned false.
     // (This test used Felisa, whose print says "nontoken"; Gladehart

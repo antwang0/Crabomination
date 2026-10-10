@@ -88,7 +88,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
 ///
 /// The discount is a `StaticEffect::CostReduction` whose filter is
 /// (Instant ∨ Sorcery) ∧ ManaValueAtLeast(5) — evaluated against your
-/// own spells at cast time; generic pips only per CR 601.2f/117.7c.
+/// own spells at cast time; generic pips only per CR 601.2f/118.7a.
 /// (An earlier revision shipped a synthesized Prowess trigger the
 /// printed card never had.)
 pub fn spectacle_mage() -> CardDefinition {

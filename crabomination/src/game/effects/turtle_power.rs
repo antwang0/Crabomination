@@ -11,7 +11,7 @@ impl GameState {
     /// CR 702.116a's shape: for each opponent of the source's controller
     /// other than the one it attacks, a token copy of the source enters
     /// tapped and attacking that opponent, cleaned up by `cleanup`.
-    /// `non_legendary` strips Legendary (CR 707.2e); `player_only` makes a
+    /// `non_legendary` strips Legendary (CR 707.9b); `player_only` makes a
     /// source attacking a planeswalker or battle do nothing ("attacks a
     /// player"). No-op when the source isn't attacking.
     pub(super) fn copies_attack_each_other_opponent(

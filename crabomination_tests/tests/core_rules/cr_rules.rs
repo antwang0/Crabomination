@@ -3458,7 +3458,7 @@ fn cr_509_1c_grasping_giant_exiles_every_blocker() {
     assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none(), "both blockers exiled");
 }
 
-// ── CR 117.7c / 601.2f — cost reductions can't reduce colored pips ─────────────
+// ── CR 118.7a / 601.2f — cost reductions can't reduce colored pips ─────────────
 
 /// CR 601.2f — Thryx's {1}-off discount applies to the generic part only; a
 /// mana-value-5+ spell still needs all its colored pips.
@@ -3806,7 +3806,7 @@ fn cr_702_160_prototype_sets_cost_color_and_size_keeping_abilities() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(full).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 4));
-    assert!(cp.colors.is_empty(), "full-cost prototype is colorless (CR 702.160c)");
+    assert!(cp.colors.is_empty(), "full-cost prototype is colorless (CR 702.160a)");
 
     // Prototype cast: colored, smaller, same abilities, smaller mana value.
     let proto = g.add_card_to_hand(0, catalog::goring_warplow());
@@ -3817,7 +3817,7 @@ fn cr_702_160_prototype_sets_cost_color_and_size_keeping_abilities() {
     }).expect("prototype cast");
     drain_stack(&mut g);
     let cp = g.computed_permanent(proto).unwrap();
-    assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size (CR 702.160c)");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size (CR 702.160a)");
     assert_eq!(cp.colors.to_vec(), vec![Color::Black], "prototype color follows its cost");
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Deathtouch), "abilities/types kept");
 }
@@ -4104,7 +4104,7 @@ fn cr_702_183_countered_omen_shuffles_into_library() {
     g.perform_action(GameAction::CastOmen {
         card_id: regent, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Claim Territory");
-    // Lift the spell off the stack as if countered (CR 701.5g → 702.183 instead).
+    // Lift the spell off the stack as if countered (CR 701.6a → 702.183 instead).
     let card = match g.stack.pop().expect("Omen spell on the stack") {
         crabomination::game::StackItem::Spell { card, .. } => *card,
         _ => unreachable!("top of stack is the Omen spell"),
@@ -4585,11 +4585,11 @@ fn cr_601_2c_up_to_two_targets_accepts_one() {
     );
 }
 
-// ── CR 601.2f / 117.7c — target-conditional cost reduction ────────────────────
+// ── CR 601.2f / 118.7a — target-conditional cost reduction ────────────────────
 
 /// CR 601.2f — Ride's End ("costs {3} less if it targets a tapped permanent")
 /// is castable for {1}{W} against a tapped creature, but its full {4}{W} stands
-/// against an untapped one. The colored {W} pip is never reduced (117.7c).
+/// against an untapped one. The colored {W} pip is never reduced (118.7a).
 #[test]
 fn cr_601_2f_rides_end_target_conditional_reduction() {
     // Tapped target → discounted, castable for {1}{W}.
@@ -5168,7 +5168,7 @@ fn cr_706_4_die_result_trigger_grants_trample() {
     assert!(!roll(3), "rolling a 3 does not");
 }
 
-/// CR 702.146e — a Disturb back face that's an Aura is exiled (not put into a
+/// CR 702.146 — a Disturb back face that's an Aura is exiled (not put into a
 /// graveyard) when it leaves the battlefield, just like a creature back.
 #[test]
 fn cr_702_146e_disturb_aura_back_exiles_on_leave() {
@@ -7950,7 +7950,7 @@ fn cr_704_5q_equipment_unattaches_when_host_dies() {
     assert_eq!(s.attached_to, None, "Equipment became unattached when its host left");
 }
 
-/// CR 707.2e — a token that's a copy of a permanent copies its printed
+/// CR 707.9b — a token that's a copy of a permanent copies its printed
 /// characteristics, not the counters on it. The Fire Crystal copies a bear with
 /// a +1/+1 counter; the token is a printed 2/2, not 3/3.
 #[test]
@@ -8762,9 +8762,9 @@ fn cr_712_modal_dfc_back_is_the_played_face() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "back face taps for B");
 }
 
-// ── CR 117.7c / 601.2f — cost reductions touch only the generic component ─────
+// ── CR 118.7a / 601.2f — cost reductions touch only the generic component ─────
 
-/// CR 117.7c — a "costs {N} less" reduction removes only generic mana; the
+/// CR 118.7a — a "costs {N} less" reduction removes only generic mana; the
 /// colored requirement survives. Deem Inferior ({3}{U}) after four draws
 /// reduces its {3} to nothing and is castable for a single {U}.
 #[test]
@@ -11114,7 +11114,7 @@ fn cr_202_3b_x_cost_is_zero_in_graveyard() {
     assert_eq!(g.computed_permanent(aven).unwrap().power, 3, "five distinct MVs → +2/+2");
 }
 
-// ── CR 701.5g / 709.3 / 608.2h (this run's DIS gap wave) ─────────────────────
+// ── CR 701.6a / 709.3 / 608.2h (this run's DIS gap wave) ─────────────────────
 
 /// CR 701.6a — a countered spell is put into its owner's graveyard. Swift
 /// Silence counters every other spell on the stack; the countered card lands

@@ -70,7 +70,7 @@ fn echoing_equation_copies_until_end_of_turn() {
     let bear = g.battlefield_find(small).unwrap();
     assert_eq!(bear.definition.name, "Sheoldred, the Apocalypse", "copied the target");
     assert!(!bear.definition.supertypes.contains(&crabomination::card::Supertype::Legendary),
-        "copy isn't legendary (CR 707.2e)");
+        "copy isn't legendary (CR 707.9b)");
     assert_eq!((bear.definition.power, bear.definition.toughness), (4, 5));
     assert_eq!(g.battlefield_find(theirs).unwrap().definition.name, "Grizzly Bears",
         "opponent's creature unaffected");

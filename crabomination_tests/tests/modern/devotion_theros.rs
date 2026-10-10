@@ -148,7 +148,7 @@ fn cr_614_tainted_remedy_turns_an_opponents_life_gain_into_a_loss() {
     assert_eq!(g.players[0].life, yours + 5, "your own gain is untouched");
 }
 
-// ── CR 508.0 — "attacks only alone" (Master of Cruelties) ─────────────────────
+// ── CR 508.1c — "attacks only alone" (Master of Cruelties) ─────────────────────
 
 #[test]
 fn master_of_cruelties_cannot_attack_alongside_another_creature() {

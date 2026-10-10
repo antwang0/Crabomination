@@ -286,7 +286,7 @@ pub enum Decision {
         source_name: String,
         #[serde(default)]
         description: String,
-        /// True when the pick may be declined ("up to N targets" — CR 601.4d
+        /// True when the pick may be declined ("up to N targets" — CR 601.2c
         /// lets the chooser take fewer). A decliner answers
         /// `DecisionAnswer::DeclineTarget`; declining ends target selection
         /// for the effect (targets fill left-to-right).

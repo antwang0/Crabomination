@@ -88,7 +88,7 @@ fn kill(g: &mut GameState, id: CardId) {
 }
 
 /// Pass from the draw step into the precombat main phase, where the rad
-/// counters are spent (CR 728.2).
+/// counters are spent (CR 122.1i).
 fn into_main(g: &mut GameState) {
     g.step = TurnStep::Draw;
     for _ in 0..20 {

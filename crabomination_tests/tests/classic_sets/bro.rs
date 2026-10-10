@@ -52,7 +52,7 @@ fn goring_warplow_prototype_is_black_1_1_with_deathtouch() {
 }
 
 /// A prototype creature round-trips its smaller cost/color/size through a
-/// name→factory snapshot (CR 702.160c copiable values).
+/// name→factory snapshot (CR 702.160a copiable values).
 #[test]
 fn prototype_state_survives_snapshot_roundtrip() {
     let mut g = two_player_game();
@@ -266,7 +266,7 @@ fn steel_seraph_grants_flying_at_combat() {
     assert!(g.computed_permanent(ground).unwrap().keywords().contains(&Keyword::Flying));
 }
 
-/// CR 702.160c — a prototype permanent reverts to its printed (full,
+/// CR 702.160a — a prototype permanent reverts to its printed (full,
 /// colorless) characteristics when it leaves the battlefield.
 #[test]
 fn prototype_reverts_to_printed_when_it_dies() {

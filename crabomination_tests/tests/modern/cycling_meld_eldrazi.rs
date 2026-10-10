@@ -742,7 +742,7 @@ fn disturb_casts_back_face_from_graveyard() {
     assert!(c.definition.keywords.contains(&Keyword::Flying));
 }
 
-/// CR 702.146e — a dying Disturb back face is exiled instead of going to
+/// CR 702.146 — a dying Disturb back face is exiled instead of going to
 /// the graveyard.
 #[test]
 fn disturb_back_face_exiles_instead_of_dying() {

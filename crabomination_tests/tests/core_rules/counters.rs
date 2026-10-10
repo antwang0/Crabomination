@@ -490,7 +490,7 @@ fn disowned_ancestor_outlasts_and_citadel_castellan_is_renowned() {
     assert_eq!((cv.power, cv.toughness), (2, 3));
 }
 
-// ── CR 728.2 / 122.1i — Rad counters ───────────────────────────────────────
+// ── CR 122.1i / 122.1i — Rad counters ───────────────────────────────────────
 
 /// CR 724.2 — at the start of a player's precombat main phase, if they have
 /// rad counters they mill that many cards; for each *nonland* milled they
@@ -515,7 +515,7 @@ fn cr_728_2_rad_counters_mill_and_drain_on_nonland() {
     assert_eq!(g.players[1].life, life_before - 2, "1 life lost per nonland milled");
 }
 
-/// CR 728.2 — a land milled by the rad action does NOT cost life or remove a
+/// CR 122.1i — a land milled by the rad action does NOT cost life or remove a
 /// rad counter, so the rad pool persists turn over turn until a nonland is hit.
 #[test]
 fn cr_728_2_rad_milling_a_land_keeps_the_counter() {
