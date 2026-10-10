@@ -3919,7 +3919,12 @@ impl Effect {
                     .target_slot_text(slot, mode)
                     .or_else(|| else_.target_slot_text(slot, mode));
             }
-            Effect::MayDo { body, .. } => return body.target_slot_text(slot, mode),
+            Effect::MayDo { body, .. }
+            | Effect::MayDoBy { body, .. }
+            | Effect::OptionalTargets { body, .. }
+            | Effect::CollectEvidence { then: body, .. }
+            | Effect::CollectEvidenceX { then: body } => return body.target_slot_text(slot, mode),
+            Effect::TargetPlayerThen { then, .. } if slot > 0 => return then.target_slot_text(slot, mode),
             _ => &[],
         };
         for child in children {
@@ -5904,6 +5909,12 @@ impl Effect {
             | Effect::MayDiscard { then: body, .. }
             | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
+            // Absolute-slot wrappers: Domineering Will's player slot 0 is
+            // required, its body's `OptionalTargets` says the rest aren't.
+            Effect::TargetPlayerThen { then: body, .. } => body.min_targets_in_mode(mode).map(|m| m.max(1)),
+            Effect::CollectEvidence { then: body, .. } | Effect::CollectEvidenceX { then: body } => {
+                body.min_targets_in_mode(mode)
+            }
             // The target walkers read these delayed bodies' slots as the
             // spell's own, so their "up to one" is too (Ride the Avalanche,
             // Season of the Bold).
@@ -5992,6 +6003,10 @@ impl Effect {
             | Effect::MayDiscard { then: body, .. }
             | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.target_slot_optional_x(slot, mode, x),
+            Effect::CollectEvidence { then: body, .. } | Effect::CollectEvidenceX { then: body } => {
+                body.target_slot_optional_x(slot, mode, x)
+            }
+            Effect::TargetPlayerThen { then, .. } => slot > 0 && then.target_slot_optional_x(slot, mode, x),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes
                     .get(m)
@@ -6026,6 +6041,38 @@ impl Effect {
                 .min_targets_in_mode(mode)
                 .is_some_and(|min| slot >= min),
         }
+    }
+
+    /// CR 601.2c — how many leading target slots a cast of this spell must
+    /// fill: every declared slot up to the first one the caster may decline
+    /// (or one past a paid {X} cap). `None` for a cast-time mode set
+    /// (`ChooseN`, Spree, …), whose slots depend on the modes picked.
+    pub fn required_target_slots(&self, mode: Option<usize>, x: u32, kicked: bool) -> Option<u8> {
+        let mode_set = |e: &Effect| {
+            matches!(
+                e,
+                Effect::ChooseN { .. }
+                    | Effect::ChooseModesCast { .. }
+                    | Effect::ChooseModesByPoints { .. }
+                    | Effect::Spree { .. }
+                    | Effect::Tiered { .. }
+                    | Effect::Escalate { .. }
+            )
+        };
+        if self.any_nested(&mode_set) {
+            return None;
+        }
+        // A bare `Target(0)` declares no filter, so the slot count is one past
+        // the last slot that does (Combat Tutorial's player, then its creature).
+        let slots = (0..32u8)
+            .rev()
+            .find(|&s| self.target_filter_for_slot_in_mode_kicked(s, mode, kicked).is_some())
+            .map_or(0, |s| s + 1);
+        Some(
+            (0..slots)
+                .take_while(|&s| !self.target_slot_optional_x(s, mode, x) && !self.slot_past_x_cap(s, x))
+                .count() as u8,
+        )
     }
 
     /// CR 115.3 — the count of mutually-distinct targets a *single* multi-target

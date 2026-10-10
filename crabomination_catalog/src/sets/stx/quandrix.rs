@@ -1706,7 +1706,7 @@ pub fn quandrix_pairweaver() -> CardDefinition {
         name: "Quandrix Pairweaver",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1723,7 +1723,7 @@ pub fn quandrix_pairweaver() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

@@ -174,3 +174,37 @@ fn cr_601_2c_a_fixed_target_count_is_a_minimum() {
     assert!(g.players[0].hand.iter().any(|c| c.id == charge), "the card stays in hand");
     cast(&mut g, vec![Target::Permanent(a), Target::Permanent(b)]).expect("two targets");
 }
+
+/// CR 601.2c — every required slot of a multi-slot spell is filled, not only
+/// an "N target" instance's: Prey Upon names its second creature or isn't
+/// cast, while Dissection Practice's two "up to one" creatures may be left out.
+#[test]
+fn cr_601_2c_every_required_slot_is_filled_and_up_to_slots_may_not_be() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let prey = g.add_card_to_hand(0, catalog::prey_upon());
+    let practice = g.add_card_to_hand(0, catalog::dissection_practice());
+    let cast = |g: &mut GameState, card, color, targets: Vec<Target>| {
+        g.players[0].mana_pool.add(color, 1);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: card,
+            target: targets.first().cloned(),
+            additional_targets: targets.into_iter().skip(1).collect(),
+            mode: None,
+            x_value: None,
+        })
+    };
+    use crabomination::mana::Color::{Black, Green};
+    assert!(cast(&mut g, prey, Green, vec![Target::Permanent(mine)]).is_err(), "Prey Upon's second creature is required");
+    assert!(g.players[0].hand.iter().any(|c| c.id == prey), "the card stays in hand");
+    cast(&mut g, prey, Green, vec![Target::Permanent(mine), Target::Permanent(theirs)]).expect("both creatures");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    cast(&mut g, practice, Black, vec![Target::Player(1)]).expect("the creature slots are up to one");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+}

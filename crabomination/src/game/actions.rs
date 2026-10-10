@@ -10671,12 +10671,20 @@ impl GameState {
             }
         }
 
-        // CR 601.2c — "N target …" needs N targets (Aether Gale's six): a
-        // multi-target instance whose printed minimum is two or more can't be
-        // cast with fewer. (A single required slot is checked where it binds.)
-        if let Some(m) = card.definition.effect.min_targets_in_mode(mode)
-            && m >= 2
-            && usize::from(target.is_some()) + additional_targets.len() < usize::from(m)
+        // CR 601.2c — "N target …" needs N targets (Aether Gale's six), and
+        // every required slot of a multi-slot spell is filled (Prey Upon's
+        // second creature): fewer can't be cast. (A lone required slot 0 is
+        // checked where it binds.)
+        let supplied = usize::from(target.is_some()) + additional_targets.len();
+        let eff = &card.definition.effect;
+        if eff.min_targets_in_mode(mode).is_some_and(|m| m >= 2 && supplied < usize::from(m))
+            // Slot 0 binds on its own; past it, only a cast that stops short of
+            // a declared slot can be missing one (one walk on the common path).
+            || u8::try_from(supplied).is_ok_and(|n| {
+                n >= 1
+                    && eff.target_filter_for_slot_in_mode_kicked(n, mode, kicked).is_some()
+                    && eff.required_target_slots(mode, x_value.unwrap_or(0), kicked).is_some_and(|r| n < r)
+            })
         {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);

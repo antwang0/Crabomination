@@ -4712,12 +4712,12 @@ pub fn honest_work() -> CardDefinition {
 }
 
 /// Allies at Last — {2}{G} Instant. Affinity for Allies. Up to two target
-/// creatures you control (slots 0/1) each deal damage equal to their power to
-/// target creature an opponent controls (slot 2).
+/// creatures you control (slots 1/2) each deal damage equal to their power to
+/// target creature an opponent controls (slot 0, the one required slot).
 pub fn allies_at_last() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     let opp_target = || Selector::TargetFiltered {
-        slot: 2,
+        slot: 0,
         filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
     };
     CardDefinition {
@@ -4731,15 +4731,8 @@ pub fn allies_at_last() -> CardDefinition {
                 per: 1,
             },
         }],
-        effect: Effect::Seq(vec![
-            Effect::DealDamageEqualToPower {
-                source: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                target: opp_target(),
-            },
+        // Slot 0 is the required opposing creature; the "up to two" sources follow.
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::DealDamageEqualToPower {
                 source: Selector::TargetFiltered {
                     slot: 1,
@@ -4748,7 +4741,15 @@ pub fn allies_at_last() -> CardDefinition {
                 },
                 target: opp_target(),
             },
-        ]),
+            Effect::DealDamageEqualToPower {
+                source: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                target: opp_target(),
+            },
+        ])) },
         ..Default::default()
     }
 }
@@ -4761,7 +4762,7 @@ pub fn earth_rumble() -> CardDefinition {
         name: "Earth Rumble",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::Earthbend { n: Value::Const(2) },
             Effect::Fight {
                 attacker: Selector::TargetFiltered {
@@ -4775,7 +4776,7 @@ pub fn earth_rumble() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByOpponent),
                 },
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

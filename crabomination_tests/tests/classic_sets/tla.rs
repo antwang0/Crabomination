@@ -3227,8 +3227,8 @@ fn allies_at_last_affinity_and_double_strike_damage() {
     g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1); // only {G} — affinity must cover the rest
     g.perform_action(GameAction::CastSpell {
         card_id: spell,
-        target: Some(Target::Permanent(a1)),
-        additional_targets: vec![Target::Permanent(a2), Target::Permanent(foe)],
+        target: Some(Target::Permanent(foe)),
+        additional_targets: vec![Target::Permanent(a1), Target::Permanent(a2)],
         mode: None, x_value: None,
     }).expect("cast at affinity-reduced cost");
     drain_stack(&mut g);

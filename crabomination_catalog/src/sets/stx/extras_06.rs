@@ -448,8 +448,8 @@ pub fn prismari_loot() -> CardDefinition {
 // ── Quandrix Counterspell ───────────────────────────────────────────────────
 
 /// Quandrix Counterspell — {G}{U}{U} Instant.
-/// "Counter target spell. Put a +1/+1 counter on target creature you
-/// control."
+/// "Counter target spell. Put a +1/+1 counter on up to one target creature
+/// you control."
 ///
 /// 3-mana hard counter + a body buff — Quandrix's growth payoff in a
 /// reactive shell. Wired as `Seq(CounterSpell + AddCounter on
@@ -459,7 +459,7 @@ pub fn quandrix_counterspell() -> CardDefinition {
         name: "Quandrix Counterspell",
         cost: cost(&[g(), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::CounterSpell {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
             },
@@ -472,7 +472,7 @@ pub fn quandrix_counterspell() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

@@ -736,7 +736,7 @@ pub fn render_speechless() -> CardDefinition {
         name: "Render Speechless",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             // Slot 0: target opponent reveals + chosen-discard.
             Effect::DiscardChosen {
                 from: target_filtered(SelectionRequirement::OpponentPlayer),
@@ -752,7 +752,7 @@ pub fn render_speechless() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -1029,7 +1029,7 @@ pub fn cost_of_brilliance() -> CardDefinition {
         name: "Cost of Brilliance",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             // Slot 0: target player draws 2 + loses 2 life.
             Effect::Draw {
                 who: target_filtered(SelectionRequirement::Player),
@@ -1049,7 +1049,7 @@ pub fn cost_of_brilliance() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -1456,7 +1456,7 @@ pub fn chelonian_tackle() -> CardDefinition {
         // AutoDecider fills both slots when an opp creature is on the
         // battlefield. With no opp creature, slot 1 is empty and Fight
         // no-ops — preserving the printed "up to one" semantics.
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1473,7 +1473,7 @@ pub fn chelonian_tackle() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByOpponent),
                 },
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

@@ -4619,7 +4619,7 @@ pub fn combat_tutorial() -> CardDefinition {
         name: "Combat Tutorial",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::Target(0),
                 amount: Value::Const(2),
@@ -4633,7 +4633,7 @@ pub fn combat_tutorial() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

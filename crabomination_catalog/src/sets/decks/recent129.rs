@@ -227,7 +227,7 @@ pub fn twisted_fealty() -> CardDefinition {
         name: "Twisted Fealty",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::GainControl {
                 what: target_filtered(R::Creature),
                 to: Some(PlayerRef::You),
@@ -249,7 +249,7 @@ pub fn twisted_fealty() -> CardDefinition {
                 },
                 definition: std::sync::Arc::new(wicked_role),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

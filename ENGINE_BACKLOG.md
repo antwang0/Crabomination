@@ -173,21 +173,18 @@ Benalia's Hope (Syr Gwyn, Arna), Battle Angels of Tyr (Niko, Shilgengar),
 Dream Devourer (Be'lakor, Zuko), Nicol Bolas, God-Pharaoh (Jodah, Bolas),
 Korlessa / Thrakkus / Sarkhan Unbroken (Miirym, Tiamat).
 
-**⚠ Open — the CR 601.2c census is taken** (`core_rules`'
-`unchecked_required_slots_census`, ignored): **206** non-permanent spells
-declare two or more target slots with no minimum, so the cast path's count
-check (`min >= 2` only) never sees them. By oracle text: **159** really
-require every slot (Prey Upon, Arc Trail — the strict check is right for
-them); **24** are modal (`ChooseN` / escalate — the per-mode count needs the
-chosen modes, not `mode: None`); **15** print "up to" / "any number" and would
-be rejected by a strict check until marked: Render Speechless, Vibrant
-Outburst, Cost of Brilliance, Dissection Practice, Homesickness, Burrog
-Barrage, Chelonian Tackle, Domineering Will, Waste Management, Shatterskull
-Smashing, Twisted Fealty, Bioshift, Allies at Last, Urgent Necropsy, Shower of
-Coals; 8 weren't in the oracle cache. The order is: mark the 15 with
-`OptionalTargets { min }`, teach the census the chosen modes, then tighten
-`actions.rs`'s check to `min_targets_in_mode(mode).unwrap_or(slots)`. Bot
-casts with a short target list then start failing — run a sweep after.
+**✅ Fixed 2026-10-10 (eighteenth Commander run) — CR 601.2c, every required
+slot.** The cast path now rejects a cast that stops short of a required slot
+of a multi-slot spell (`Effect::required_target_slots`: leading slots up to
+the first optional one, one past a paid-X cap; `None` under a cast-time mode
+set), not only an "N target" instance. The census's 15 "up to" rows were
+marked (Bioshift really requires both; Urgent Necropsy / Domineering Will
+needed `CollectEvidenceX` / `TargetPlayerThen` taught to the slot walkers),
+plus Read the Tides, Earth Rumble, Combat Tutorial and two synthesised STX
+spells; Allies at Last's required opposing creature moved to slot 0. The
+ignored census became the ratchet `spells_requiring_two_targets_print_no_optional_target`
+(oracle cache; reviewed: Fiery Justice). `target_slot_text` walks the same
+wrappers, so an `OptionalTargets` slot prompt names its slot.
 
 ## FIXED/OPEN 2026-10-10 (sixteenth Commander run, `01S495N5`) — "up to one target" modelled as required
 
@@ -210,7 +207,7 @@ closed the thirteenth run's open "~70 more" row:
   (an optional Solitude / Splash Lasher slot was never declined). Solitude's
   slot is now declared by its exile step, and no longer reads "an opponent
   controls". Golden traces and pod digests unchanged.
-- ⚠ **Open (census taken by the seventeenth run, above) — the cast path is laxer than CR 601.2c:** `actions.rs` checks a
+- ✅ **Fixed by the eighteenth run, above — the cast path was laxer than CR 601.2c:** `actions.rs` checks a
   target count only for a multi-target instance (`min_targets_in_mode >= 2`),
   so a spell's later *required* single slot can be omitted at cast and is
   skipped at resolution; the activation path is strict (Path to the World

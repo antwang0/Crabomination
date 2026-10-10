@@ -6018,7 +6018,6 @@ pub fn wild_mongrel() -> CardDefinition {
 /// for cube identity (a 4-mana mono-blue draw spell that doesn't
 /// require {U}{U} in the colored pips makes monoblue / splash decks
 /// happy).
-// (Real Oracle: `{3}{U}` Sorcery — Read the Tides is a 4-CMC 3-card draw.)
 /// Read the Tides — {5}{U} Sorcery. Choose one — draw three cards; or
 /// return up to two target creatures to their owners' hands.
 pub fn read_the_tides() -> CardDefinition {
@@ -6032,7 +6031,7 @@ pub fn read_the_tides() -> CardDefinition {
                 amount: Value::Const(3),
             },
             // "Return up to two target creatures to their owners' hands."
-            Effect::Seq(vec![
+            Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 0,
@@ -6047,7 +6046,7 @@ pub fn read_the_tides() -> CardDefinition {
                     },
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
                 },
-            ]),
+            ])) },
         ]),
         ..Default::default()
     }
@@ -32364,7 +32363,8 @@ pub fn shatterskull_smashing() -> CardDefinition {
         name: "Shatterskull Smashing",
         cost: cost(&[x(), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::If {
+        // "Up to two targets": zero is a legal choice (CR 601.2c).
+        effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::If {
             cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(6)),
             then: Box::new(Effect::DealDamageDivided {
                 retaliate_to_source: false,
@@ -32378,7 +32378,7 @@ pub fn shatterskull_smashing() -> CardDefinition {
                 filter,
                 max_targets: 2,
             }),
-        },
+        }) },
         back_face: Some(Box::new(znr_painland_back(
             "Shatterskull, the Hammer Pass",
             Color::Red,

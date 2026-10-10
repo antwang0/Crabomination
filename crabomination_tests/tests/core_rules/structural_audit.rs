@@ -1776,32 +1776,47 @@ fn a_parked_ask_names_the_seat_it_prompted() {
     assert!(bad.is_empty(), "{} parked ask(s) prompt a seat and name none:\n  {}", bad.len(), bad.join("\n  "));
 }
 
-/// CR 601.2c — the spells the cast path's target-count check doesn't see:
-/// two or more target slots and no declared minimum (`min_targets_in_mode`
-/// is `None`, so every slot reads as required) — the census ENGINE_BACKLOG
-/// asked for before tightening the check. Prints `name|mode|slots`.
-///
-/// Run: `cargo nextest run -p crabomination_tests --test core_rules \
-///   -E 'test(unchecked_required_slots)' --run-ignored all --no-capture`
+/// CR 601.2c — the cast path rejects a cast that leaves a required slot of a
+/// multi-slot spell empty (`Effect::required_target_slots`), so a spell that
+/// prints "up to N target" / "any number of target" must declare those slots
+/// optional or it can't be cast short. Ratchet over the oracle cache: no
+/// spell that requires two or more slots prints an optional target phrase,
+/// bar the reviewed rows where that phrase lies past the required slots.
 #[test]
-#[ignore = "census; prints, run manually with --run-ignored all --nocapture"]
-fn unchecked_required_slots_census() {
+fn spells_requiring_two_targets_print_no_optional_target() {
     use crabomination::effect::Effect;
+    /// Reviewed: a divided amount needs at least one target (CR 601.2d), so
+    /// "divided among any number of targets" plus a target opponent is two.
+    const REVIEWED: &[&str] = &["Fiery Justice"];
+    let raw = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../scripts/.scryfall_cache.json"))
+        .expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(&raw).expect("JSON object");
     let mut seen: HashSet<&'static str> = HashSet::new();
+    let (mut strict, mut bad) = (0usize, Vec::new());
     for factory in all_known_factories() {
         let def = factory();
         if !seen.insert(def.name) || def.is_permanent() {
             continue;
         }
+        let Some(text) = cache.get(def.name).and_then(|c| c.get("oracle_text")).and_then(|t| t.as_str()) else {
+            continue;
+        };
+        let text = text.to_lowercase();
+        let optional = text.contains("any number of target")
+            || text.match_indices("up to ").any(|(i, _)| text[i..].split('.').next().is_some_and(|c| c.contains("target")));
         let modes: Vec<Option<usize>> = match &def.effect {
             Effect::ChooseMode(m) => (0..m.len()).map(Some).collect(),
             _ => vec![None],
         };
         for mode in modes {
-            let slots = (0..32u8).take_while(|&s| def.effect.target_filter_for_slot_in_mode(s, mode).is_some()).count();
-            if slots >= 2 && def.effect.min_targets_in_mode(mode).is_none() {
-                println!("CENSUS|{}|{:?}|{slots}", def.name, mode);
+            if def.effect.required_target_slots(mode, 0, false).is_some_and(|r| r >= 2) {
+                strict += 1;
+                if optional && !REVIEWED.contains(&def.name) {
+                    bad.push(format!("{} (mode {mode:?})", def.name));
+                }
             }
         }
     }
+    assert!(strict >= 100, "only {strict} spells require two slots — the walk has gone vacuous");
+    assert!(bad.is_empty(), "{} spell(s) require every slot but print an optional target:\n  {}", bad.len(), bad.join("\n  "));
 }

@@ -344,7 +344,7 @@ pub fn dissection_practice() -> CardDefinition {
         name: "Dissection Practice",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             // Slot 0: target opponent loses 1, you gain 1.
             Effect::LoseLife {
                 who: target_filtered(SelectionRequirement::OpponentPlayer),
@@ -374,7 +374,7 @@ pub fn dissection_practice() -> CardDefinition {
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -859,7 +859,7 @@ pub fn vibrant_outburst() -> CardDefinition {
         name: "Vibrant Outburst",
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
                     SelectionRequirement::any_target(),
@@ -873,7 +873,7 @@ pub fn vibrant_outburst() -> CardDefinition {
                     filter: SelectionRequirement::Creature,
                 },
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -1126,7 +1126,7 @@ pub fn burrog_barrage() -> CardDefinition {
         name: "Burrog Barrage",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             Effect::If {
                 cond: Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
                     who: PlayerRef::You,
@@ -1154,7 +1154,7 @@ pub fn burrog_barrage() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByOpponent),
                 },
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }
@@ -1397,7 +1397,7 @@ pub fn homesickness() -> CardDefinition {
         name: "Homesickness",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
             // Slot 0: target player draws 2.
             Effect::Draw {
                 who: target_filtered(SelectionRequirement::Player),
@@ -1433,7 +1433,7 @@ pub fn homesickness() -> CardDefinition {
                 kind: CounterType::Stun,
                 amount: Value::Const(1),
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

@@ -36,11 +36,6 @@ REVIEWED = {
     "Relic Crush": "min 1 of 2 already (\"target ... and up to one other\")",
     "Return to Dust": "min 1 of 2 already",
     "Fiery Annihilation": "the Equipment is attached to the first target",
-    "Combat Tutorial": "a trailing spell slot is already omittable at cast",
-    "Vibrant Outburst": "a trailing spell slot is already omittable at cast",
-    "Cost of Brilliance": "a trailing spell slot is already omittable at cast",
-    "Render Speechless": "a trailing spell slot is already omittable at cast",
-    "Twisted Fealty": "a trailing spell slot is already omittable at cast",
 }
 
 
