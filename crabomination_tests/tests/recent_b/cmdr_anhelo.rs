@@ -538,6 +538,21 @@ fn waste_management_may_name_no_cards() {
     assert!(named(&g, 0, "Rogue").is_empty());
 }
 
+/// The bots' target picker spends Waste Management's optional "up to two"
+/// on an opponent's graveyard and, with only the caster's own cards there,
+/// declines rather than exile them (it took two of the caster's cards).
+#[test]
+fn waste_management_picker_spares_the_casters_graveyard() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    let eff = catalog::waste_management().effect;
+    assert_eq!(g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, None, None), (None, vec![]));
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    assert_eq!(g.auto_targets_for_effect_all_slots_x(&eff, 0, None, false, None, None).0, Some(Target::Permanent(theirs)));
+}
+
 /// Xander's Pact — cast an opponent's exiled top card for life.
 #[test]
 fn xanders_pact_steals_a_spell() {
