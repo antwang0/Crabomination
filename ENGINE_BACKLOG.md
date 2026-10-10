@@ -156,6 +156,23 @@ aborts. Five undecided: four the known Polyraptor + Marauding Raptor
 mandatory loop (CR 104.4b draw, deck 282), one a token explosion at the
 simulator's board cap (Rabble Rousing + Beastmaster Ascension, 8 seats).
 
+**The next seats, scanned** (`json.edhrec.com` average decks of EDHREC's 300
+most-built commanders that had no seat, against the catalog, 2026-10-10;
+rerun the scan rather than trusting the counts — the lists move daily).
+Missing cards per list: Tergrid 2 and Athreos, God of Passage 3 (both seated
+this run, 345-346); Anti-Venom 2 (Saving Grace's one-shot redirect is
+`RedirectYourDamageToChosen` over the enchanted creature; Martyrdom needs a
+granted "{0}: the next 1 damage to target … is dealt to this instead",
+`RedirectNextDamage` behind an EOT ability grant to one target); **4 each**:
+Iroh, Azlask, Lorehold the Historian, Ketramose, Niko, Jodah Archmage
+Eternal, Syr Gwyn, Terra (needs Tom Bombadil); **5-6**: Be'lakor, Child of
+Alara, Rakdos Lord of Riots, Kastral, Atreus // Kratos, Fire Lord Zuko,
+Thranduil, Eddie Brock, Kratos, Norin, Arna, Myrel. Shared gaps batch well:
+Flickering Hound (Ketramose, Niko), Senu (Ketramose, Kastral), Danitha,
+Benalia's Hope (Syr Gwyn, Arna), Battle Angels of Tyr (Niko, Shilgengar),
+Dream Devourer (Be'lakor, Zuko), Nicol Bolas, God-Pharaoh (Jodah, Bolas),
+Korlessa / Thrakkus / Sarkhan Unbroken (Miirym, Tiamat).
+
 **⚠ Open — the CR 601.2c census is taken** (`core_rules`'
 `unchecked_required_slots_census`, ignored): **206** non-permanent spells
 declare two or more target slots with no minimum, so the cast path's count
