@@ -148,6 +148,32 @@ closed the thirteenth run's open "~70 more" row:
   the scan's remaining `either` rows are friendly counters/pumps or
   per-player fan-outs.
 
+**The run's audit sweep** (seed 160002, every deck × 3/4/6/8 seats × 30 =
+8,760 games, `scripts/pod_sweep.py --classify`) flagged 6 blocks:
+
+- ✅ **OOM (SIGKILL) — `resolve_mill_two_repeat_sharing` never capped its
+  repeat** (its comment said it did): milled Colossi shuffle back, the library
+  never empties, and a bot look-ahead grew the event list to 4 GiB (seed
+  16000503 game 12). Capped at the starting library; caught with
+  `ulimit -v` + gdb, which turns the memcg kill into a backtrace.
+- ✅ **Stack bound — an optional free cast now stops at `recommend::STACK_GATE`**
+  (448 spells): Mizzix's Mastery overloaded into a storm Grapeshot (16000416
+  g1) now decides. Jadzi's magecraft under Thousand-Year Storm (16000293 g20)
+  still reaches the 512-spell `BoardCap` through the Storm's *copies* —
+  deliberately: `CopySpell` stops at `MAX_STACK` and that cap is what ends a
+  self-feeding copy chain (Venser + Replication Technique), whose passes the
+  play budget never counts. Classified as a sim bound.
+- ✅ **CR 712.4 — a melded permanent kept off the battlefield went to exile as
+  one object**, its commander half inside (16000432 game 8, 8 seats; the
+  commander invariant aborted): `place_card_in_dest`'s Containment Priest
+  branch exiled the Brisela shell whole. It now exiles the two cards
+  (`cmdr_gisela::a_meld_kept_off_the_battlefield_exiles_both_cards`). The
+  invariant names the zone a shell went to (found it in one replay).
+- Classified, not bugs: The Red Terror + Shalai and Hallar against Darksteel
+  Angel's "can't lose" (a mandatory CR 104.4b loop, action cap — the new
+  `CRAB_POD_TRACE` line names the can't-lose flag); Polyraptor + Marauding
+  Raptor ×2 (known CR 104.4b draws).
+
 ## FIXED/OPEN 2026-10-09 (thirteenth Commander run, `01Ug49mf`, late) — one search per "up to N", spells a Move can lift, and type-union scans
 
 - **CR 701.19 — an up-to-N search is ONE search** (`game/search_batch.rs`).
