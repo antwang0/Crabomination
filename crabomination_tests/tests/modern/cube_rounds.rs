@@ -1688,8 +1688,8 @@ fn loran_etb_spares_your_own_artifact_when_it_is_the_only_one() {
 #[test]
 fn hostile_up_to_one_etbs_spare_your_own_creature() {
     use crabomination::card::{CardDefinition, CounterType};
-    let cards: [(&str, fn() -> CardDefinition); 7] = [
-        ("Solitude", catalog::solitude),
+    let cards = [
+        ("Solitude", catalog::solitude as fn() -> CardDefinition),
         ("Faller's Faithful", catalog::fallers_faithful),
         ("Peerless Ropemaster", catalog::peerless_ropemaster),
         ("Werefox Bodyguard", catalog::werefox_bodyguard),
@@ -1734,8 +1734,8 @@ fn gold_rush_casts_on_an_empty_board() {
 #[test]
 fn graveyard_hate_up_to_one_spares_your_own_card() {
     use crabomination::card::CardDefinition;
-    let cards: [(&str, fn() -> CardDefinition); 3] = [
-        ("Raven Eagle", catalog::raven_eagle),
+    let cards = [
+        ("Raven Eagle", catalog::raven_eagle as fn() -> CardDefinition),
         ("Ambush Wolf", catalog::ambush_wolf),
         ("Sungold Sentinel", catalog::sungold_sentinel),
     ];
