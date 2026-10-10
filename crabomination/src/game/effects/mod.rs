@@ -23383,14 +23383,14 @@ impl GameState {
                         _ => None,
                     });
                 let Some(src_id) = source_id else { return Ok(()); };
-                // Simulator bound on a self-copying token (Scute Swarm on each
-                // land, Extravagant Replication each upkeep): past
-                // `BOARD_GATE` it mints nothing, so the doubling stops where
-                // the board is already won instead of ending the game as a
-                // `BoardCap` (every Desert Bloom pod cap was a Swarm board).
-                if Some(src_id) == ctx.source
-                    && self.battlefield.len() >= crate::recommend::BOARD_GATE
-                {
+                // Simulator bound on a copying fan-out (Scute Swarm on each
+                // land, Extravagant Replication each upkeep, sixteen Ocelot
+                // Prides each copying the turn's tokens): past `BOARD_GATE` it
+                // mints nothing, so the doubling stops where the board is
+                // already won instead of ending the game as a `BoardCap` (every
+                // Desert Bloom pod cap was a Swarm board; audit pod seed
+                // 16100355 game 1 was the Ocelots).
+                if self.battlefield.len() >= crate::recommend::BOARD_GATE {
                     return Ok(());
                 }
                 // Source def: battlefield first, then graveyard / exile so an

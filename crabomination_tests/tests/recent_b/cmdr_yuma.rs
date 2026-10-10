@@ -387,6 +387,42 @@ fn scute_swarm_stops_copying_at_the_board_gate() {
     assert_eq!(g.battlefield.len(), crabomination::recommend::BOARD_GATE);
 }
 
+/// The same bound on a copy of ANOTHER permanent (sixteen Ocelot Prides each
+/// copying the turn's tokens capped a three-seat audit pod, seed 16100355
+/// game 1): at `BOARD_GATE` a token copy mints nothing.
+#[test]
+fn a_token_copy_of_another_permanent_stops_at_the_board_gate() {
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    while g.battlefield.len() < crabomination::recommend::BOARD_GATE {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(
+        &Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: crabomination::card::Value::ONE,
+            source: Selector::Target(0),
+            extra_creature_types: vec![],
+            extra_card_types: vec![],
+            override_pt: None,
+            override_colors: None,
+            enters_tapped: false,
+            non_legendary: false,
+            legendary: false,
+            extra_keywords: vec![],
+            no_mana_cost: false,
+            enters_with_counters: None,
+            remove_keywords: vec![],
+        },
+        &ctx,
+    )
+    .expect("resolves");
+    assert_eq!(g.battlefield.len(), crabomination::recommend::BOARD_GATE, "no copy past the gate");
+}
+
 /// The auto-tapper pays {2}{R}{R} off two Painted Bluffs and two Mountains:
 /// each Bluffs taps for its {C}, not for the {1}-filter that eats the other's.
 #[test]
