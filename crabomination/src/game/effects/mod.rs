@@ -20367,7 +20367,7 @@ impl GameState {
             }
 
             Effect::BlockersPoisonedThisTurn { amount } => {
-                self.block_poison_this_turn = self.block_poison_this_turn.max(*amount);
+                self.block_poison_this_turn = self.block_poison_this_turn.max(u16::try_from(*amount).unwrap_or(u16::MAX));
                 Ok(())
             }
 

@@ -2063,7 +2063,7 @@ impl GameState {
                     .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
                     .count() as i32
             }
-            Value::UntappedLandsActivePlayerHadAtTurnStart => self.untapped_lands_at_turn_start as i32,
+            Value::UntappedLandsActivePlayerHadAtTurnStart => i32::from(self.untapped_lands_at_turn_start),
             Value::CardsExiledWithSourceCount => {
                 let Some(src) = ctx.source else { return 0; };
                 self.exile.iter().filter(|c| c.exiled_with == Some(src)).count() as i32

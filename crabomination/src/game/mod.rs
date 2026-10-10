@@ -2990,11 +2990,13 @@ pub struct GameState {
     pub(crate) cost_discarded_mana_value: Option<u32>,
     /// "Whenever a creature blocks this turn, its controller gets N poison
     /// counters" (Noxious Assault). Cleared at cleanup.
-    pub(crate) block_poison_this_turn: u32,
+    pub(crate) block_poison_this_turn: u16,
     /// Untapped lands the active player controlled as this turn began, before
-    /// its untap step (Power Surge's X). Stamped at `TurnStep::Untap`.
+    /// its untap step (Power Surge's X). Stamped at `TurnStep::Untap`. This and
+    /// `block_poison_this_turn` are `u16`s so the pair fits the four bytes one
+    /// `u32` took (`cow::game_state_stays_small`).
     #[serde(default)]
-    pub(crate) untapped_lands_at_turn_start: u32,
+    pub(crate) untapped_lands_at_turn_start: u16,
     /// Transient: power of the creature tapped to pay a Station ability's cost
     /// (CR 702.184a). Stamped by `Effect::WithTappedPower` at resolution; read
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.

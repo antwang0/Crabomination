@@ -3602,7 +3602,7 @@ impl GameState {
                     .battlefield_find(blocker_id)
                     .map(|c| c.controller);
                 if let Some(ctrl) = ctrl {
-                    let n = self.block_poison_this_turn;
+                    let n = u32::from(self.block_poison_this_turn);
                     self.add_poison(ctrl, n, &mut events);
                 }
             }

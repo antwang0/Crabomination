@@ -706,7 +706,8 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| c.controller == ap && !c.tapped && c.definition.is_land())
-                    .count() as u32;
+                    .count()
+                    .min(usize::from(u16::MAX)) as u16;
                 // CR 800.4m — "any continuous effects with durations that last
                 // until that player's next turn or until a specific point in
                 // that turn will last until that turn would have begun. They
