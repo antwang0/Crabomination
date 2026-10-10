@@ -3571,6 +3571,7 @@ impl crate::game::GameState {
                     {
                         return true;
                     }
+                    crate::effect::StaticEffect::SpellsAndAbilitiesCantBeCountered => return true,
                     crate::effect::StaticEffect::SpellsCantBeCounteredMatching { filter }
                         if crate::game::layers::requirement_matches_card(
                             filter,

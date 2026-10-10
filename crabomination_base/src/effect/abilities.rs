@@ -3361,6 +3361,11 @@ pub enum StaticEffect {
     /// copy protects every player's matching spells (Root Sliver's "Sliver
     /// spells can't be countered").
     SpellsCantBeCounteredMatching { filter: SelectionRequirement },
+    /// "Spells and abilities can't be countered" (Spider-Punk) — symmetric:
+    /// every spell is stamped uncounterable at cast, and an ability on the
+    /// stack survives every counter path (`abilities_uncounterable`),
+    /// including a ward trigger (CR 702.21a).
+    SpellsAndAbilitiesCantBeCountered,
     /// CR 614.x — "If a nontoken creature would enter the battlefield and it
     /// wasn't cast, exile it instead." Containment Priest. A global ETB
     /// replacement read off the battlefield in `place_card_in_dest`'s

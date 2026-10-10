@@ -17420,7 +17420,14 @@ impl GameState {
                     else {
                         continue;
                     };
-                    let Some(affected) = selector_to_affected(applies_to, card) else {
+                    // A live filter ("attacking Warriors you control" —
+                    // Gornog) resolves to ids per recompute, as PumpPT's and
+                    // GrantKeyword's do; `affected_from_requirement` drops it.
+                    let Some(affected) = self
+                        .eager_static_targets(card, applies_to)
+                        .map(AffectedPermanents::Specific)
+                        .or_else(|| selector_to_affected(applies_to, card))
+                    else {
                         continue;
                     };
                     let ctx = crate::game::effects::EffectContext::for_ability(
@@ -33866,6 +33873,7 @@ fn static_effect_to_effects(
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
             | StaticEffect::CreatureSpellsCantBeCountered
             | StaticEffect::SpellsCantBeCounteredMatching { .. }
+            | StaticEffect::SpellsAndAbilitiesCantBeCountered
             // BlockTaxToController — consulted in declare_blockers; no layer.
             | StaticEffect::BlockTaxToController { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no

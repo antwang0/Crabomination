@@ -24119,6 +24119,7 @@ impl GameState {
                         };
                         (p, *caster, true)
                     }
+                    (None, Some(_)) if self.abilities_uncounterable() => return Ok(()),
                     (None, Some(p)) => {
                         let StackItem::Trigger { controller, .. } = &self.stack[p] else {
                             unreachable!()
@@ -24344,6 +24345,9 @@ impl GameState {
                 // Counter target activated/triggered ability (Consign to Memory).
                 // The target is the ability's own id (CR 115.1); a bare source
                 // id (an unstamped fixture) names its topmost ability.
+                if self.abilities_uncounterable() {
+                    return Ok(());
+                }
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
@@ -24427,7 +24431,9 @@ impl GameState {
                             self.countered_spell_mana_value = Self::spell_mana_value(&card, x_value);
                             self.countered_spell_off_stack(*card, ctx.controller, events);
                         }
-                    } else if let Some(pos) = self.stack_ability_pos(cid, None) {
+                    } else if let Some(pos) = self.stack_ability_pos(cid, None)
+                        && !self.abilities_uncounterable()
+                    {
                         self.stack.remove(pos);
                     }
                 }

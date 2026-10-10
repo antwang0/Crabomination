@@ -16,11 +16,25 @@ use crate::game::{GameError, GameState};
 
 impl GameState {
     /// `Effect::CounterAllAbilitiesOf`.
+    /// "Spells and abilities can't be countered" is on the battlefield
+    /// (Spider-Punk): no counter path removes an ability from the stack.
+    pub(crate) fn abilities_uncounterable(&self) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::SpellsAndAbilitiesCantBeCountered))
+        })
+    }
+
     pub(super) fn counter_all_abilities_of(
         &mut self,
         who: &PlayerRef,
         ctx: &EffectContext,
     ) -> Result<(), GameError> {
+        if self.abilities_uncounterable() {
+            return Ok(());
+        }
         let seats = self.resolve_players(who, ctx);
         self.stack.retain(|si| !matches!(si, StackItem::Trigger { controller, .. } if seats.contains(controller)));
         Ok(())
