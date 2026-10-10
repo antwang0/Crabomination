@@ -97,6 +97,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::OpponentCausedYouToDiscard { .. } => bits!(K::OpponentCausedYouToDiscard),
         E::DungeonCompleted { .. } => bits!(K::DungeonCompleted),
         E::Proliferated { .. } => bits!(K::Proliferated),
+        E::SagaFinalChapterResolved { .. } => bits!(K::SagaFinalChapterResolved),
         E::Foraged { .. } => bits!(K::Foraged),
         E::Investigated { .. } | E::Exploited { .. } | E::Enlisted { .. } | E::DieResult { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
@@ -371,6 +372,7 @@ fn reference_event_kind_matches(
         ) => true,
         (EventKind::DungeonCompleted, GameEvent::DungeonCompleted { .. }) => true,
         (EventKind::Proliferated, GameEvent::Proliferated { .. }) => true,
+        (EventKind::SagaFinalChapterResolved, GameEvent::SagaFinalChapterResolved { .. }) => true,
         (EventKind::Foraged, GameEvent::Foraged { .. }) => true,
         (EventKind::Performed(act), e) => keyword_act_matches(*act, e),
         (EventKind::EvidenceCollected, GameEvent::EvidenceCollected { .. }) => true,
@@ -1410,6 +1412,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ScriedOrSurveiled { player, .. }
         | GameEvent::OpponentCausedYouToDiscard { player, .. }
         | GameEvent::Proliferated { player }
+        | GameEvent::SagaFinalChapterResolved { player, .. }
         | GameEvent::Foraged { player }
         | GameEvent::Investigated { player, .. }
         | GameEvent::EvidenceCollected { player }
@@ -1614,6 +1617,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::MonarchChanged { player }
         | GameEvent::PoisonAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::SagaFinalChapterResolved { saga, .. } => Some(EntityRef::Card(*saga)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoHandFromGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // Bind `Selector::TriggerSource` to the permanent that received the
@@ -1921,6 +1925,7 @@ mod tests {
             E::ScriedOrSurveiled { player: 0, surveil: false, looked_at: 1 },
             E::ScriedOrSurveiled { player: 0, surveil: true, looked_at: 1 },
             E::Proliferated { player: 0 },
+            E::SagaFinalChapterResolved { player: 0, saga: c, mana_value: 3 },
             E::Foraged { player: 0 },
             E::Investigated { player: 0, first_this_turn: true },
             E::Exploited { card_id: c, controller: 0 },
@@ -2087,6 +2092,7 @@ mod tests {
             K::Milled,
             K::DungeonCompleted,
             K::Proliferated,
+            K::SagaFinalChapterResolved,
             K::Foraged,
             K::Performed(crate::effect::KeywordAct::Investigated { first_only: true }),
             K::Performed(crate::effect::KeywordAct::Exploited),

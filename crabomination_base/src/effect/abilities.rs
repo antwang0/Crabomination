@@ -3003,11 +3003,6 @@ pub enum StaticEffect {
     /// Monolith grant, gated to its controller's turn. Shares
     /// `Player.zero_alt_cast_used_this_turn`.
     ZeroAlternativeCostOncePerYourTurn { filter: SelectionRequirement },
-    /// "Whenever the final chapter ability of a Saga you control resolves,
-    /// `body`" (Narci, Fable Singer). `saga_chapters_crossed` appends `body`
-    /// to the final chapter's effect, so it runs as that chapter resolves
-    /// (a countered chapter never resolves) with the Saga as its source.
-    SagaFinalChapterRider(Box<crate::effect::Effect>),
     /// CR 118.9 — "Once each turn, you may pay {0} rather than pay the mana
     /// cost for a spell you cast from exile" (Warped Space). Waives the
     /// pay-own-cost rider a `may_play_until` grant stamps on an exiled card;

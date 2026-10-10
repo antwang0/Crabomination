@@ -31410,6 +31410,7 @@ impl GameState {
             GameEvent::BecameMonstrous { n, .. } => *n,
             // Celeborn the Wise — "for each card looked at while scrying".
             GameEvent::ScriedOrSurveiled { looked_at, .. } => *looked_at,
+            GameEvent::SagaFinalChapterResolved { mana_value, .. } => *mana_value,
             // Nicanzil: 1 when a land was explored, 0 for a nonland.
             GameEvent::Explored { explored_land, .. } => *explored_land as u32,
             _ => event_amount(ev),
@@ -34238,8 +34239,6 @@ fn static_effect_to_effects(
             | StaticEffect::ZeroAlternativeCostOncePerTurn { .. }
             | StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters(_)
             | StaticEffect::ZeroAlternativeCostOncePerYourTurn { .. }
-            // Narci — appended to a Saga's final chapter by `saga_chapters_crossed`.
-            | StaticEffect::SagaFinalChapterRider(_)
             | StaticEffect::DiscardColorSharingCardAlternativeCost
             // Hunting Velociraptor — consulted by `effective_alternative_cost`.
             | StaticEffect::GrantProwlToSpells { .. }

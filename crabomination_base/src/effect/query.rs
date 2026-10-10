@@ -2379,6 +2379,7 @@ impl Effect {
             | Effect::OpponentsChooseSilenceOrSnitch { .. }
             | Effect::ChooseRandomOpponentNotAttackedLastCombat
             | Effect::ExileAllOtherSpellsCounterAllAbilities
+            | Effect::SagaFinalChapterResolved
             | Effect::EachPlayerKeepsPartySacrificesRest
             | Effect::LookTopTakeParty { .. }
             | Effect::StampTokenCopyExceptions { .. }

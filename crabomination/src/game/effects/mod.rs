@@ -14756,6 +14756,16 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::SagaFinalChapterResolved => {
+                if let Some(saga) = ctx.source {
+                    let mana_value = self
+                        .battlefield_find(saga)
+                        .or_else(|| self.find_card_anywhere(saga))
+                        .map_or(0, |c| c.printed_cmc());
+                    events.push(GameEvent::SagaFinalChapterResolved { player: ctx.controller, saga, mana_value });
+                }
+                Ok(())
+            }
             Effect::AddManaKeptThisTurnCount { who, color, amount } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;

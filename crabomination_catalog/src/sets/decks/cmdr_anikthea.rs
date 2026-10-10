@@ -505,27 +505,24 @@ pub fn narci_fable_singer() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Lifelink],
-        static_abilities: vec![StaticAbility {
-            description: "Whenever the final chapter ability of a Saga you control resolves, each opponent loses X life and you gain X life, where X is that Saga's mana value.",
-            effect: StaticEffect::SagaFinalChapterRider(Box::new(Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::ManaValueOf(Box::new(Selector::This)),
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::ManaValueOf(Box::new(Selector::This)),
-                },
-            ]))),
-        }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Enchantment,
-                }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
-        }],
+        triggered_abilities: vec![
+            // CR 714.2c — X is the Saga's mana value as its chapter resolved.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SagaFinalChapterResolved, EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::TriggerEventAmount,
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Enchantment }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
         ..creature(
             "Narci, Fable Singer",
             cost(&[generic(1), w(), b(), g()]),
