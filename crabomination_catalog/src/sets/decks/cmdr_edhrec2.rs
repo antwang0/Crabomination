@@ -2,7 +2,8 @@
 //! average deck and a complete pod seat, second file (`cmdr_edhrec` is the
 //! first). Henzie "Toolbox" Torre, Frodo, Adventurous Hobbit + Sam, Loyal
 //! Attendant, K'rrik, Son of Yawgmoth, Voja, Jaws of the Conclave, Choco, Seeker of
-//! Paradise, Light-Paws, Emperor's Voice, Yurlok of Scorch Thrash, and Rocco, Street Chef. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
+//! Paradise, Light-Paws, Emperor's Voice, Yurlok of Scorch Thrash, Rocco, Street Chef,
+//! Tinybones, Bauble Burglar and Indominus Rex, Alpha. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, EnchantmentSubtype, EquipBonus, EquipScale,
@@ -1424,6 +1425,461 @@ pub fn avatars_wrath() -> CardDefinition {
             ])),
         },
         exile_on_resolve: true,
+        ..Default::default()
+    }
+}
+
+fn each_opponent_discards(n: i32) -> Effect {
+    Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), random: false }
+}
+
+/// Aclazotz, Deepest Betrayal // Temple of the Dead — {3}{B}{B} 4/4 legendary
+/// Bat God, flying, lifelink. Attacks: each opponent discards a card; for each
+/// who can't, you draw. An opponent discarding a land card makes a 1/1 flying
+/// Bat. Dies: returns transformed and tapped. The Temple taps for {B} and
+/// transforms back for {2}{B}, {T} at sorcery speed while a player has one or
+/// fewer cards in hand.
+pub fn aclazotz_deepest_betrayal() -> CardDefinition {
+    let bat = crate::card::TokenDefinition {
+        name: "Bat".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: creature_types(vec![CreatureType::Bat]),
+        ..Default::default()
+    };
+    let temple = CardDefinition {
+        name: "Temple of the Dead",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Black),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), b()]),
+                sorcery_speed: true,
+                condition: Some(Predicate::ForAnyPlayer {
+                    who: PlayerRef::EachPlayer,
+                    pred: Box::new(Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::Triggerer), Value::ONE)),
+                }),
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![
+            on_attack(Effect::Seq(vec![
+                each_opponent_discards(1),
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Diff(Box::new(Value::OpponentCount), Box::new(Value::CardsDiscardedThisEffect)),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl)
+                    .with_filter(trigger_is(R::Land)),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(bat) },
+            },
+            on_dies(Effect::ReturnSelfTransformedTappedToOwner),
+        ],
+        back_face: Some(Box::new(temple)),
+        ..legend("Aclazotz, Deepest Betrayal", cost(&[generic(3), b(), b()]), vec![CreatureType::Bat, CreatureType::God], 4, 4)
+    }
+}
+
+/// Cunning Lethemancer — {2}{B} 2/2 Human Wizard. Your upkeep: each player
+/// discards a card.
+pub fn cunning_lethemancer() -> CardDefinition {
+    CardDefinition {
+        name: "Cunning Lethemancer",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Discard { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE, random: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fell Specter — {3}{B} 1/3 Specter, flying. Enters: target opponent
+/// discards a card. Whenever an opponent discards a card, that player loses 2
+/// life.
+pub fn fell_specter() -> CardDefinition {
+    CardDefinition {
+        name: "Fell Specter",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Specter]),
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::Discard {
+                who: crate::effect::shortcut::target_filtered(R::OpponentPlayer),
+                amount: Value::ONE,
+                random: false,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl),
+                effect: Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Raven Man — {1}{B} 2/1 legendary Human Wizard. Each end step, if a
+/// player discarded a card this turn: a 1/1 black flying Bird that can't
+/// block. {3}{B}, {T}: each opponent discards a card (sorcery speed).
+pub fn the_raven_man() -> CardDefinition {
+    let bird = crate::card::TokenDefinition {
+        name: "Bird".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: creature_types(vec![CreatureType::Bird]),
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                Predicate::ValueAtLeast(Value::CardsDiscardedThisTurn(PlayerRef::EachPlayer), Value::ONE),
+            ),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(bird) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            mana_cost: cost(&[generic(3), b()]),
+            effect: each_opponent_discards(1),
+            ..Default::default()
+        }],
+        ..legend("The Raven Man", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 1)
+    }
+}
+
+/// Tinybones, Pocket Nuisance — {2}{B} 2/1 legendary Skeleton Rogue. Enters:
+/// each opponent discards a card. Whenever a player discards one or more
+/// cards, it deals 1 damage to each opponent.
+pub fn tinybones_pocket_nuisance() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(each_opponent_discards(1)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DiscardedOneOrMore, EventScope::AnyPlayer),
+                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            },
+        ],
+        ..legend(
+            "Tinybones, Pocket Nuisance",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Skeleton, CreatureType::Rogue],
+            2,
+            1,
+        )
+    }
+}
+
+/// Tinybones, Trinket Thief — {1}{B} 1/2 legendary Skeleton Rogue. Each end
+/// step, if an opponent discarded a card this turn, you draw a card and lose
+/// 1 life. {4}{B}{B}: each opponent with no cards in hand loses 10 life.
+pub fn tinybones_trinket_thief() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                Predicate::ValueAtLeast(Value::CardsDiscardedThisTurn(PlayerRef::EachOpponent), Value::ONE),
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b(), b()]),
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::EachOpponent,
+                body: Box::new(Effect::If {
+                    cond: Predicate::HellbentActive { who: PlayerRef::You },
+                    then: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(10) }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Tinybones, Trinket Thief",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Skeleton, CreatureType::Rogue],
+            1,
+            2,
+        )
+    }
+}
+
+/// Arterial Flow — {1}{B}{B} Sorcery. Each opponent discards two cards; if
+/// you control a Vampire, each opponent loses 2 life and you gain 2 life.
+pub fn arterial_flow() -> CardDefinition {
+    CardDefinition {
+        name: "Arterial Flow",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            each_opponent_discards(2),
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: R::HasCreatureType(CreatureType::Vampire),
+                }),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mind Rake — {2}{B} Sorcery. Target player discards two cards. Overload
+/// {1}{B} (CR 702.96): each player discards two.
+pub fn mind_rake() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Rake",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Discard {
+            who: crate::effect::shortcut::target_filtered(R::Player),
+            amount: Value::Const(2),
+            random: false,
+        },
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(1), b()]),
+            effect_override: Some(Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(2),
+                random: false,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Vicious Rumors — {B} Sorcery. 1 damage to each opponent; each opponent
+/// discards a card, then mills a card; you gain 1 life.
+pub fn vicious_rumors() -> CardDefinition {
+    CardDefinition {
+        name: "Vicious Rumors",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            each_opponent_discards(1),
+            Effect::Mill { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Indominus Rex, Alpha — {1}{U/B}{U/B}{G}{G} 6/6 legendary Dinosaur Mutant.
+/// As it enters (CR 614.12), discard any number of creature cards; it enters
+/// with a counter of each listed keyword a discarded card has (CR 122.1b).
+/// Enters: draw a card for each counter on it.
+pub fn indominus_rex_alpha() -> CardDefinition {
+    use Keyword as K;
+    let kinds = [
+        K::Flying, K::FirstStrike, K::DoubleStrike, K::Deathtouch, K::Hexproof, K::Haste,
+        K::Indestructible, K::Lifelink, K::Menace, K::Reach, K::Trample, K::Vigilance,
+    ];
+    let mut as_enters = vec![Effect::DiscardAnyNumber {
+        who: Selector::You,
+        filter: R::Creature,
+        max: None,
+    }];
+    as_enters.extend(kinds.into_iter().map(|kw| Effect::If {
+        cond: Predicate::SelectorExists(Selector::DiscardedThisResolution { filter: R::HasKeyword(kw.clone()) }),
+        then: Box::new(Effect::AddKeywordCounter { what: Selector::This, keyword: kw, amount: Value::ONE }),
+        else_: Box::new(Effect::Noop),
+    }));
+    CardDefinition {
+        as_enters_effect: Some(Effect::Seq(as_enters)),
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::TotalCountersOn { what: Box::new(Selector::This) },
+        })],
+        ..legend(
+            "Indominus Rex, Alpha",
+            cost(&[
+                generic(1),
+                crate::mana::hybrid(Color::Blue, Color::Black),
+                crate::mana::hybrid(Color::Blue, Color::Black),
+                g(),
+                g(),
+            ]),
+            vec![CreatureType::Dinosaur, CreatureType::Mutant],
+            6,
+            6,
+        )
+    }
+}
+
+/// Gurmag Swiftwing — {1}{B} 1/2 Bat, flying, first strike, haste.
+pub fn gurmag_swiftwing() -> CardDefinition {
+    CardDefinition {
+        name: "Gurmag Swiftwing",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Bat]),
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Hit-Monkey — {3}{G} 3/3 legendary Monkey Assassin. Can't be countered;
+/// reach, vigilance, deathtouch, hexproof, haste.
+pub fn hit_monkey() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Reach,
+            Keyword::Vigilance,
+            Keyword::Deathtouch,
+            Keyword::Hexproof,
+            Keyword::Haste,
+        ],
+        ..legend("Hit-Monkey", cost(&[generic(3), g()]), vec![CreatureType::Monkey, CreatureType::Assassin], 3, 3)
+    }
+}
+
+/// Mirri the Cursed — {2}{B}{B} 3/2 legendary Vampire Cat, flying, first
+/// strike, haste. Combat damage to a creature puts a +1/+1 counter on her.
+pub fn mirri_the_cursed() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..legend("Mirri the Cursed", cost(&[generic(2), b(), b()]), vec![CreatureType::Vampire, CreatureType::Cat], 3, 2)
+    }
+}
+
+/// Morbius the Living Vampire — {2}{U}{B} 3/1 legendary Vampire Scientist
+/// Villain, flying, vigilance, lifelink. {U}{B}, exile it from your
+/// graveyard: look at the top three, one to hand, the rest on the bottom in
+/// any order.
+pub fn morbius_the_living_vampire() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::LookPickToHand(Box::new(LookPick { count: Value::Const(3), ..Default::default() })),
+                Effect::OrderLibraryBottom { who: PlayerRef::You, count: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Morbius the Living Vampire",
+            cost(&[generic(2), u(), b()]),
+            vec![CreatureType::Vampire, CreatureType::Scientist, CreatureType::Villain],
+            3,
+            1,
+        )
+    }
+}
+
+/// Nightveil Predator — {U}{U}{B}{B} 3/3 Vampire, flying, deathtouch,
+/// hexproof.
+pub fn nightveil_predator() -> CardDefinition {
+    CardDefinition {
+        name: "Nightveil Predator",
+        cost: cost(&[u(), u(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Vampire]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Hexproof],
+        ..Default::default()
+    }
+}
+
+/// Vengeful Reaper — {3}{B} 2/3 Angel Cleric, flying, deathtouch, haste.
+/// Foretell {1}{B} (CR 702.143).
+pub fn vengeful_reaper() -> CardDefinition {
+    CardDefinition {
+        name: "Vengeful Reaper",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Angel, CreatureType::Cleric]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Haste],
+        foretell_cost: Some(cost(&[generic(1), b()])),
+        ..Default::default()
+    }
+}
+
+/// Shadow of the Grave — {1}{B} Instant. Return to your hand every card in
+/// your graveyard you cycled or discarded this turn (cycling discards).
+pub fn shadow_of_the_grave() -> CardDefinition {
+    CardDefinition {
+        name: "Shadow of the Grave",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: R::DiscardedThisTurn,
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Luxior, Giada's Gift — {1} legendary Equipment. Equipped creature gets
+/// +1/+1 for each counter on it; the equipped permanent isn't a planeswalker
+/// and is a creature in addition to its other types (loyalty abilities still
+/// activate). Equip planeswalker {1}; equip {3}.
+pub fn luxior_giadas_gift() -> CardDefinition {
+    CardDefinition {
+        name: "Luxior, Giada's Gift",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equip_filtered_cost: Some((R::Planeswalker, cost(&[generic(1)]))),
+        equipped_bonus: Some(EquipBonus {
+            add_card_types: vec![CardType::Creature],
+            remove_card_types: vec![CardType::Planeswalker],
+            scale: Some(EquipScale {
+                filter: R::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_host_counters: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

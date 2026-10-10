@@ -1022,3 +1022,234 @@ fn ragost_makes_your_artifacts_food() {
     assert_eq!(g.players[0].life, life + 3);
     assert!(g.battlefield_find(ring).is_none());
 }
+
+// ── Tinybones, Bauble Burglar (seat 343) ─────────────────────────────────────
+
+/// Aclazotz's attack: an opponent with an empty hand can't discard, so you
+/// draw; a discarded land makes a flying Bat. Dying returns it as the Temple.
+#[test]
+fn aclazotz_punishes_empty_hands_and_returns_as_the_temple() {
+    let mut g = pod(3);
+    let acl = ready(&mut g, 0, catalog::aclazotz_deepest_betrayal());
+    g.add_card_to_hand(1, catalog::forest());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    connect(&mut g, acl);
+    assert_eq!(g.players[0].hand.len(), 1, "seat 2 couldn't discard");
+    assert_eq!(named(&g, "Bat"), 1, "seat 1 discarded a land");
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    g.step = TurnStep::PostCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder,
+        target: Some(Target::Permanent(acl)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("murder");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Temple of the Dead" && c.tapped));
+}
+
+/// Fell Specter: its own discard costs the opponent 2 life too.
+#[test]
+fn fell_specter_drains_on_each_opponent_discard() {
+    let mut g = pod(2);
+    g.add_card_to_hand(1, catalog::island());
+    let spec = g.add_card_to_hand(0, catalog::fell_specter());
+    flood(&mut g);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell { card_id: spec, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0);
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+/// Tinybones, Pocket Nuisance (CR 603.2c): its entry makes both opponents
+/// discard — one "one or more" event per player, so two triggers.
+#[test]
+fn tinybones_pocket_nuisance_pings_per_discard_batch() {
+    let mut g = pod(3);
+    for seat in 1..3 {
+        g.add_card_to_hand(seat, catalog::island());
+    }
+    let tb = g.add_card_to_hand(0, catalog::tinybones_pocket_nuisance());
+    flood(&mut g);
+    let life = g.players[1].life;
+    cast(&mut g, tb);
+    assert_eq!(g.players[1].life, life - 2, "two discard batches, 1 each");
+}
+
+/// The Raven Man makes a Bird at the end step only after a discard.
+#[test]
+fn the_raven_man_needs_a_discard() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_raven_man());
+    to_end_step(&mut g);
+    assert_eq!(named(&g, "Bird"), 0);
+    let mut g = pod(2);
+    let raven = ready(&mut g, 0, catalog::the_raven_man());
+    g.add_card_to_hand(1, catalog::island());
+    flood(&mut g);
+    activate(&mut g, raven, 0);
+    to_end_step(&mut g);
+    assert_eq!(named(&g, "Bird"), 1);
+}
+
+/// Tinybones, Trinket Thief: only opponents with empty hands lose 10.
+#[test]
+fn tinybones_trinket_thief_hits_empty_hands() {
+    let mut g = pod(3);
+    let tt = ready(&mut g, 0, catalog::tinybones_trinket_thief());
+    g.add_card_to_hand(2, catalog::island());
+    flood(&mut g);
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    activate(&mut g, tt, 0);
+    assert_eq!(g.players[1].life, life[1] - 10);
+    assert_eq!(g.players[2].life, life[2]);
+}
+
+/// Mind Rake overloaded (CR 702.96): each player — you too — discards two.
+#[test]
+fn mind_rake_overload_hits_every_player() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_hand(seat, catalog::island());
+        }
+    }
+    let rake = g.add_card_to_hand(0, catalog::mind_rake());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: rake,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("overload");
+    drain_stack(&mut g);
+    assert_eq!([g.players[0].hand.len(), g.players[1].hand.len()], [1, 1]);
+}
+
+/// Arterial Flow drains only with a Vampire.
+#[test]
+fn arterial_flow_drains_with_a_vampire() {
+    for (vampire, loss) in [(true, 2), (false, 0)] {
+        let mut g = pod(2);
+        if vampire {
+            ready(&mut g, 0, catalog::mirri_the_cursed());
+        }
+        let af = g.add_card_to_hand(0, catalog::arterial_flow());
+        flood(&mut g);
+        let life = g.players[1].life;
+        cast(&mut g, af);
+        assert_eq!(g.players[1].life, life - loss);
+    }
+}
+
+// ── Indominus Rex, Alpha (seat 344) ──────────────────────────────────────────
+
+/// Indominus Rex (CR 614.12, 122.1b): discarding Serra Angel (flying,
+/// vigilance) and Grizzly Bears as it enters gives it two keyword counters,
+/// and it draws two.
+#[test]
+fn indominus_rex_eats_keywords() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let rex = g.add_card_to_hand(0, catalog::indominus_rex_alpha());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![angel, bears])]));
+    cast(&mut g, rex);
+    let kw = g.computed_permanent(rex).unwrap().keywords().to_vec();
+    assert!(kw.contains(&crabomination::card::Keyword::Flying) && kw.contains(&crabomination::card::Keyword::Vigilance));
+    assert!(!kw.contains(&crabomination::card::Keyword::Trample));
+    assert_eq!(g.players[0].hand.len(), 2);
+}
+
+/// Mirri the Cursed grows from combat damage dealt to a creature.
+#[test]
+fn mirri_grows_on_creature_damage() {
+    let mut g = pod(2);
+    let mirri = ready(&mut g, 0, catalog::mirri_the_cursed());
+    let bear = ready(&mut g, 1, catalog::giant_spider());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: mirri, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, mirri)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(mirri).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// Morbius from the graveyard: exile it, look at three, keep one.
+#[test]
+fn morbius_digs_from_the_graveyard() {
+    let mut g = pod(2);
+    let morb = g.add_card_to_graveyard(0, catalog::morbius_the_living_vampire());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    flood(&mut g);
+    activate(&mut g, morb, 0);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert!(g.exile.iter().any(|c| c.id == morb));
+    assert_eq!(g.players[0].library.len(), 3);
+}
+
+/// Shadow of the Grave returns only the cards discarded this turn.
+#[test]
+fn shadow_of_the_grave_returns_this_turns_discards() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::island());
+    let kept = g.add_card_to_hand(0, catalog::forest());
+    // Seat 0 discards the Forest to its own Mind Rake.
+    let rake = g.add_card_to_hand(0, catalog::mind_rake());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rake,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("rake yourself");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == kept));
+    let sog = g.add_card_to_hand(0, catalog::shadow_of_the_grave());
+    flood(&mut g);
+    cast(&mut g, sog);
+    let hand: Vec<&str> = g.players[0].hand.iter().map(|c| c.definition.name).collect();
+    assert_eq!(hand, ["Forest"], "the old Island stays");
+}
+
+/// Luxior: equip planeswalker {1} makes it a creature, not a planeswalker,
+/// with +1/+1 per loyalty counter.
+#[test]
+fn luxior_turns_a_planeswalker_into_a_creature() {
+    let mut g = pod(2);
+    let lili = ready(&mut g, 0, catalog::liliana_of_the_veil());
+    let lux = ready(&mut g, 0, catalog::luxior_giadas_gift());
+    let loyalty = g.battlefield_find(lili).unwrap().counter_count(crabomination::card::CounterType::Loyalty) as i32;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: lux, target: lili }).expect("equip planeswalker {1}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lili).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(!cp.card_types().contains(&crabomination::card::CardType::Planeswalker));
+    assert_eq!(cp.power, loyalty);
+}

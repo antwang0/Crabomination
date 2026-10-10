@@ -2484,6 +2484,20 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ROCCO_EDHREC_COMMANDERS,
             main: decks::ROCCO_EDHREC_MAIN,
         },
+        // Seat 343: Tinybones, Bauble Burglar's EDHREC average deck.
+        // `--pod-decks 343`.
+        PodDeck {
+            name: "Tinybones, Bauble Burglar (B)",
+            commanders: decks::TINYBONES_EDHREC_COMMANDERS,
+            main: decks::TINYBONES_EDHREC_MAIN,
+        },
+        // Seat 344: Indominus Rex, Alpha's EDHREC average deck.
+        // `--pod-decks 344`.
+        PodDeck {
+            name: "Indominus Rex, Alpha (BGU)",
+            commanders: decks::INDOMINUS_EDHREC_COMMANDERS,
+            main: decks::INDOMINUS_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4507,6 +4521,8 @@ mod tests {
             ("Light-Paws, Emperor's Voice", [0x0A7A, 340, 9265]),
             ("Yurlok of Scorch Thrash", [0x0A7B, 341, 9266]),
             ("Rocco, Street Chef", [0x0A7C, 342, 9267]),
+            ("Tinybones, Bauble Burglar", [0x0A7D, 343, 9268]),
+            ("Indominus Rex, Alpha", [0x0A7E, 344, 9269]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

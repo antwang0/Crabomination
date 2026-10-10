@@ -10000,3 +10000,60 @@ pub const ROCCO_EDHREC_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
     mountain, mountain, plains, plains, plains, plains, plains,
 ];
+
+pub const TINYBONES_EDHREC_COMMANDERS: &[CardFactory] = &[tinybones_bauble_burglar];
+
+/// **Tinybones, Bauble Burglar**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 70 nonbasic cards + 29 Swamps = 99.
+/// Tinybones discard (B): every opponent discards, Tinybones stashes the cards and plays them,
+/// Fell Specter and Tinybones, Pocket Nuisance turn each discard into damage.
+pub const TINYBONES_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, entropic_battlecruiser, geths_grimoire, jet_medallion,
+    lightning_greaves, mind_stone, sol_ring, swiftfoot_boots, bojuka_bog, cabal_coffers,
+    cabal_stronghold, geier_reach_sanitarium, reliquary_tower, urborg_tomb_of_yawgmoth,
+    aclazotz_deepest_betrayal, burglar_rat, crypt_ghast, cunning_lethemancer,
+    elderfang_disciple, fell_specter, gray_merchant_of_asphodel, hecteyes, mindslicer,
+    necrogoyf, nezumi_informant, rankle_master_of_pranks, sangromancer, tergrid_god_of_fright,
+    the_raven_man, thieving_varmint, tinybones_pocket_nuisance, tinybones_trinket_thief,
+    tinybones_the_pickpocket, tourach_dread_cantor, virus_beetle, bandits_talent,
+    bottomless_pit, hopeless_nightmare, lilianas_caress, megrim, necrogen_mists, oppression,
+    painful_quandary, tinybones_joins_up, waste_not, dark_ritual, deadly_rollick, defile,
+    fake_your_own_death, go_for_the_throat, imps_mischief, infernal_grasp, withering_torment,
+    liliana_of_the_veil, arterial_flow, dark_deal, delirium_skeins, duress, feed_the_swarm,
+    lets_play_a_game, mind_rake, pilfer, rankles_prank, reanimate, sign_in_blood, syphon_mind,
+    thoughtseize, toxic_deluge, vicious_rumors,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const INDOMINUS_EDHREC_COMMANDERS: &[CardFactory] = &[indominus_rex_alpha];
+
+/// **Indominus Rex, Alpha**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 84 nonbasic cards + 6 Forests + 4 Islands + 5 Swamps = 99.
+/// Indominus Rex keyword soup (BGU): discard keyword creatures as it enters for counters and
+/// cards, Hit-Monkey, Nightveil Predator and Gurmag Swiftwing as the fodder.
+pub const INDOMINUS_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, luxior_giadas_gift, sol_ring, swiftfoot_boots,
+    the_ozolith, thought_vessel, breeding_pool, command_tower, dreamroot_cascade,
+    drowned_catacomb, exotic_orchard, hinterland_harbor, llanowar_wastes, misty_rainforest,
+    opulent_palace, overgrown_tomb, rejuvenating_springs, reliquary_tower, rogues_passage,
+    sunken_hollow, undergrowth_stadium, verdant_catacombs, watery_grave, woodland_cemetery,
+    yavimaya_coast, zagoth_triome, baleful_strix, birds_of_paradise, bontu_the_glorified,
+    carnage_tyrant, dragon_sniper, elder_gargaroth, end_raze_forerunners, glissa_sunslayer,
+    goldvein_hydra, gurmag_swiftwing, hit_monkey, kefnet_the_mindful, krang_utrom_warlord,
+    leyline_prowler, mirri_the_cursed, morbius_the_living_vampire, nighthawk_scavenger,
+    nightveil_predator, nullpriest_of_oblivion, qarsi_revenant, questing_beast,
+    rhonas_the_indomitable, sab_sunen_luxa_embodied, scavenged_brawler, sire_of_seven_deaths,
+    stonehoof_chieftain, sylvan_caryatid, the_warring_triad, triplicate_titan,
+    vampire_nighthawk, vengeful_reaper, venomthrope, weathered_sentinels,
+    wilson_refined_grizzly, animate_dead, garruks_uprising, oversold_cemetery,
+    phyrexian_reclamation, an_offer_you_cant_refuse, assassins_trophy, beast_within,
+    counterspell, dark_ritual, growth_spiral, heroic_intervention, negate, shadow_of_the_grave,
+    cultivate, farseek, kodamas_reach, living_death, natures_lore, rampant_growth, reanimate,
+    rise_of_the_dark_realms, three_visits, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp,
+];
