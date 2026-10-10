@@ -2616,6 +2616,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EDDIE_BROCK_COMMANDERS,
             main: decks::EDDIE_BROCK_MAIN,
         },
+        // Seat 363: Nicol Bolas, the Ravager's EDHREC average deck. `--pod-decks 363`.
+        PodDeck {
+            name: "Nicol Bolas, the Ravager (UBR)",
+            commanders: decks::BOLAS_RAVAGER_COMMANDERS,
+            main: decks::BOLAS_RAVAGER_MAIN,
+        },
     ]
 }
 
@@ -3282,6 +3288,7 @@ fn play_pod_game(
                 }
                 if c.definition.is_planeswalker()
                     && c.counter_count(crate::card::CounterType::Loyalty) == 0
+                    && !g.planeswalkers_survive_zero_loyalty(c.controller)
                     && g.computed_permanent(c.id).is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Planeswalker))
                 {
                     panic!(
@@ -4695,6 +4702,7 @@ mod tests {
             ("Atreus, Impulsive Son", [0x0A8E, 360, 9285]),
             ("Kratos, God of War", [0x0A8F, 361, 9286]),
             ("Eddie Brock", [0x0A90, 362, 9287]),
+            ("Nicol Bolas, the Ravager", [0x0A91, 363, 9288]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

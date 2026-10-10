@@ -6060,6 +6060,17 @@ impl GameState {
         }
     }
 
+    /// Sanctum Lurker — `seat`'s planeswalkers are exempt from CR 704.5i.
+    pub(crate) fn planeswalkers_survive_zero_loyalty(&self, seat: usize) -> bool {
+        self.battlefield.iter().any(|s| {
+            s.controller == seat
+                && s.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::YourPlaneswalkersSurviveZeroLoyalty))
+        })
+    }
+
     /// Stamp `seats`' [`Departure`](crate::player::Departure): this turn, and
     /// how many seats had left before this batch — shared by the batch, since
     /// its seats left at once. A seat already stamped keeps its stamp.
@@ -8177,20 +8188,12 @@ impl GameState {
         let pw_dead: Vec<CardId> = if !scan.planeswalker {
             Vec::new()
         } else {
-            let exempt = |seat: usize| {
-                self.battlefield.iter().any(|s| {
-                    s.controller == seat
-                        && s.definition.static_abilities.iter().any(|sa| {
-                            matches!(sa.effect, crate::effect::StaticEffect::YourPlaneswalkersSurviveZeroLoyalty)
-                        })
-                })
-            };
             self.battlefield
                 .iter()
                 .filter(|c| {
                     self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
                         && c.counter_count(crate::card::CounterType::Loyalty) == 0
-                        && !exempt(c.controller)
+                        && !self.planeswalkers_survive_zero_loyalty(c.controller)
                 })
                 .map(|c| c.id)
                 .collect()

@@ -10593,3 +10593,32 @@ pub const EDDIE_BROCK_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BOLAS_RAVAGER_COMMANDERS: &[CardFactory] = &[nicol_bolas_the_ravager];
+
+/// **Nicol Bolas, the Ravager**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 85 nonbasic cards + 5 Islands + 4 Mountains + 5 Swamps = 99.
+/// Nicol Bolas, the Ravager (UBR) superfriends Bolas: discard on entry, flip into the
+/// Arisen, and back it with every other Bolas planeswalker.
+pub const BOLAS_RAVAGER_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, dimir_signet, fellwar_stone, ichormoon_gauntlet,
+    izzet_signet, rakdos_signet, sol_ring, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, the_chain_veil, blood_crypt, bloodstained_mire, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard, karns_bastion,
+    luxury_suite, morphic_pool, polluted_delta, reliquary_tower, scalding_tarn, shipwreck_marsh,
+    smoldering_marsh, steam_vents, sulfur_falls, sunken_hollow, training_center, watery_grave,
+    xanders_lounge, baleful_strix, deepglow_skate, dreamtide_whale, flux_channeler,
+    jayas_phoenix, nicol_bolas, nightscape_familiar, notion_thief, sanctum_lurker,
+    silent_arbiter, solemn_simulacrum, spark_double, tekuthal_inquiry_dominus, the_locust_god,
+    the_scarab_god, thrummingbird, inexorable_tide, lilianas_talent, propaganda, rhystic_study,
+    the_eldest_reborn, waste_not, an_offer_you_cant_refuse, arcane_denial, bedevil, chaos_warp,
+    counterspell, cyclonic_rift, dark_ritual, mana_drain, negate, ripples_of_potential,
+    terminate, ashiok_dream_render, liliana_dreadhorde_general, narset_parter_of_veils,
+    nicol_bolas_dragon_god, nicol_bolas_god_pharaoh, nicol_bolas_planeswalker,
+    nicol_bolas_the_deceiver, vraska_betrayals_sting, blasphemous_act, cruel_ultimatum,
+    crux_of_fate, damnation, dark_intimations, deliver_unto_evil, demonic_tutor,
+    hour_of_devastation, tezzerets_gambit, torment_of_hailfire, toxic_deluge,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp,
+];
