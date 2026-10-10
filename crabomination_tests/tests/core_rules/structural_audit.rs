@@ -1775,3 +1775,33 @@ fn a_parked_ask_names_the_seat_it_prompted() {
     assert!(parked >= 40, "the scan found only {parked} parked asks — it has gone vacuous");
     assert!(bad.is_empty(), "{} parked ask(s) prompt a seat and name none:\n  {}", bad.len(), bad.join("\n  "));
 }
+
+/// CR 601.2c — the spells the cast path's target-count check doesn't see:
+/// two or more target slots and no declared minimum (`min_targets_in_mode`
+/// is `None`, so every slot reads as required) — the census ENGINE_BACKLOG
+/// asked for before tightening the check. Prints `name|mode|slots`.
+///
+/// Run: `cargo nextest run -p crabomination_tests --test core_rules \
+///   -E 'test(unchecked_required_slots)' --run-ignored all --no-capture`
+#[test]
+#[ignore = "census; prints, run manually with --run-ignored all --nocapture"]
+fn unchecked_required_slots_census() {
+    use crabomination::effect::Effect;
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) || def.is_permanent() {
+            continue;
+        }
+        let modes: Vec<Option<usize>> = match &def.effect {
+            Effect::ChooseMode(m) => (0..m.len()).map(Some).collect(),
+            _ => vec![None],
+        };
+        for mode in modes {
+            let slots = (0..32u8).take_while(|&s| def.effect.target_filter_for_slot_in_mode(s, mode).is_some()).count();
+            if slots >= 2 && def.effect.min_targets_in_mode(mode).is_none() {
+                println!("CENSUS|{}|{:?}|{slots}", def.name, mode);
+            }
+        }
+    }
+}

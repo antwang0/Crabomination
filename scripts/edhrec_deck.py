@@ -8,7 +8,7 @@ and — when none are missing — the pod seat's Rust lists.
 SLUG is the json.edhrec.com average-decks slug (`kotis-the-fangkeeper`).
 A card counts as present when a `pub fn <slug>() -> CardDefinition` exists
 under crabomination_catalog/src (accents folded, apostrophes dropped, a
-split / MDFC name by its front face). The list moves daily; build from a
+split card by both halves or its front face, an MDFC by its front face). The list moves daily; build from a
 fresh fetch and record the date in the seat's doc comment.
 """
 import glob
@@ -23,8 +23,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASICS = ("Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes")
 
 
-def slug(name):
-    name = name.split(" // ")[0]
+def slug(name, whole=False):
+    name = name.replace(" // ", " ") if whole else name.split(" // ")[0]
     folded = "".join(c for c in unicodedata.normalize("NFKD", name) if not unicodedata.combining(c))
     return re.sub(r"[^a-z0-9]+", "_", folded.lower().replace("'", "")).strip("_")
 
@@ -39,7 +39,10 @@ def factories():
 def report(page, fns):
     deck = page["deck"]
     rows = [tuple(x) for x in deck["commander_v2"]] + [tuple(x) for v in deck["cards"].values() for x in v]
-    missing = [n for n, _ in rows if n not in BASICS and slug(n) not in fns]
+    # A split card's factory is named for both halves (`spring_mind`), an
+    # MDFC's for its front face.
+    name_of = {n: (slug(n, True) if slug(n, True) in fns else slug(n)) for n, _ in rows}
+    missing = [n for n, _ in rows if n not in BASICS and name_of[n] not in fns]
     print(f"{sum(k for _, k in rows)} cards; {len(missing)} missing: {missing}")
     if missing:
         return
@@ -48,8 +51,8 @@ def report(page, fns):
         if n in BASICS:
             basics[n] = basics.get(n, 0) + k
         else:
-            main += [slug(n)] * k
-    print("commanders:", ", ".join(slug(n) for n, _ in deck["commander_v2"]))
+            main += [name_of[n]] * k
+    print("commanders:", ", ".join(name_of[n] for n, _ in deck["commander_v2"]))
     print(f"main ({len(main)} nonbasic + {sum(basics.values())} basics):")
     print(", ".join(main + [slug(b) for b, k in basics.items() for _ in range(k)]))
 
@@ -62,7 +65,9 @@ def main():
         return
     for s in args:
         url = f"https://json.edhrec.com/pages/average-decks/{s}.json"
-        with urllib.request.urlopen(url, timeout=30) as r:
+        # EDHREC answers urllib's default User-Agent with 403.
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (crabomination)"})
+        with urllib.request.urlopen(req, timeout=30) as r:
             print(f"== {s}")
             report(json.load(r), fns)
 
