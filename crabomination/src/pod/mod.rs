@@ -2539,6 +2539,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KASTRAL_EDHREC_COMMANDERS,
             main: decks::KASTRAL_EDHREC_MAIN,
         },
+        // Seat 351: Jodah, Archmage Eternal's EDHREC average deck.
+        // `--pod-decks 351`.
+        PodDeck {
+            name: "Jodah, Archmage Eternal (WUBRG)",
+            commanders: decks::JODAH_EDHREC_COMMANDERS,
+            main: decks::JODAH_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4570,6 +4577,7 @@ mod tests {
             ("Niko, Light of Hope", [0x0A82, 348, 9273]),
             ("Syr Gwyn, Hero of Ashvale", [0x0A83, 349, 9274]),
             ("Kastral, the Windcrested", [0x0A84, 350, 9275]),
+            ("Jodah, Archmage Eternal", [0x0A85, 351, 9276]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

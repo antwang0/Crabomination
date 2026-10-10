@@ -10231,3 +10231,34 @@ pub const KASTRAL_EDHREC_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const JODAH_EDHREC_COMMANDERS: &[CardFactory] = &[jodah_archmage_eternal];
+
+/// **Jodah, Archmage Eternal**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 87 nonbasic cards + 3 Forests + 3 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Jodah, Archmage Eternal big spells for WUBRG (5c): Jodah and Fist of Suns cast anything
+/// for five, cascade and free casts chain the seven-drops.
+pub const JODAH_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, chromatic_orrery, fellwar_stone, fist_of_suns,
+    lightning_greaves, sol_ring, swiftfoot_boots, timeless_lotus, blood_crypt, breeding_pool,
+    cascading_cataracts, command_tower, exotic_orchard, flooded_strand, godless_shrine,
+    hallowed_fountain, ketria_triome, mana_confluence, misty_rainforest, overgrown_tomb,
+    path_of_ancestry, reliquary_tower, sacred_foundry, steam_vents, stomping_ground,
+    temple_garden, the_world_tree, verdant_catacombs, watery_grave, windswept_heath,
+    wooded_foothills, zagoth_triome, apex_devastator, artisan_of_kozilek, atraxa_grand_unifier,
+    avacyn_angel_of_hope, birds_of_paradise, bloom_tender, bringer_of_the_black_dawn,
+    dryad_of_the_ilysian_grove, etali_primal_conqueror, etali_primal_storm, faeburrow_elder,
+    imoti_celebrant_of_bounty, jegantha_the_wellspring, jin_gitaxias_core_augur,
+    kozilek_butcher_of_truth, maelstrom_archangel, maelstrom_wanderer, nyxbloom_ancient,
+    primeval_spawn, progenitus, ramos_dragon_engine, sakura_tribe_elder,
+    ulamog_the_ceaseless_hunger, zacama_primal_calamity, leyline_immersion, leyline_of_mutation,
+    leyline_of_the_guildpact, omniscience, one_with_the_multiverse, rhystic_study,
+    smothering_tithe, sunbirds_invocation, counterspell, cyclonic_rift, growth_spiral,
+    heroic_intervention, path_to_exile, swords_to_plowshares, teferis_protection,
+    unite_the_coalition, nicol_bolas_god_pharaoh, conflux, cultivate, eerie_ultimatum,
+    emergent_ultimatum, farseek, genesis_ultimatum, in_garruks_wake, kodamas_reach,
+    natures_lore, rampant_growth, reshape_the_earth, ruinous_ultimatum, three_visits,
+    // Basics
+    forest, forest, forest, island, island, island, mountain, mountain, plains, plains, swamp,
+    swamp,
+];
