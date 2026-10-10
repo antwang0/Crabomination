@@ -10057,3 +10057,60 @@ pub const INDOMINUS_EDHREC_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const TERGRID_EDHREC_COMMANDERS: &[CardFactory] = &[tergrid_god_of_fright];
+
+/// **Tergrid, God of Fright**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Tergrid discard-and-sacrifice (B): every opponent's discard or sacrifice becomes Tergrid's;
+/// Pox and Liliana, Waker of the Dead feed her.
+pub const TERGRID_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, charcoal_diamond, geths_grimoire, jet_medallion,
+    lightning_greaves, mind_stone, sol_ring, swiftfoot_boots, thought_vessel, bojuka_bog,
+    cabal_coffers, cabal_stronghold, geier_reach_sanitarium, nykthos_shrine_to_nyx,
+    phyrexian_tower, urborg_tomb_of_yawgmoth, accursed_marauder, aclazotz_deepest_betrayal,
+    archfiend_of_depravity, braids_arisen_nightmare, burglar_rat, crypt_ghast, demons_disciple,
+    elderfang_disciple, fleshbag_marauder, gray_merchant_of_asphodel, mindslicer,
+    nezumi_informant, phyrexian_obliterator, plaguecrafter, rankle_master_of_pranks,
+    sangromancer, sheoldred_whispering_one, the_raven_man, tinybones_trinket_thief,
+    virus_beetle, bottomless_pit, grave_pact, lilianas_caress, necrogen_mists, oppression,
+    painful_quandary, phyrexian_arena, the_eldest_reborn, waste_not, cabal_ritual, dark_ritual,
+    flare_of_malice, imps_mischief, lilianas_triumph, sheoldreds_edict, soul_shatter,
+    vampiric_tutor, vonas_hunger, liliana_of_the_veil, liliana_waker_of_the_dead,
+    blasphemous_edict, dark_deal, death_cloud, demonic_tutor, feed_the_swarm, innocent_blood,
+    mire_in_misery, pox, rankles_prank, reanimate, sign_in_blood, smallpox, syphon_mind,
+    torment_of_hailfire, vicious_rumors,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const ATHREOS_GOP_EDHREC_COMMANDERS: &[CardFactory] = &[athreos_god_of_passage];
+
+/// **Athreos, God of Passage**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 77 nonbasic cards + 9 Plains + 13 Swamps = 99.
+/// Athreos, God of Passage Clerics (WB): Shadowborn Apostles fetch Demons, every creature death
+/// asks the table to pay 3 life or hand it back.
+pub const ATHREOS_GOP_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, orzhov_signet, phyrexian_altar, skullclamp, sol_ring, talisman_of_hierarchy,
+    thrumming_stone, bojuka_bog, cabal_coffers, caves_of_koilos, command_tower, fetid_heath,
+    godless_shrine, isolated_chapel, marsh_flats, orzhov_basilica, reliquary_tower,
+    shattered_sanctum, tainted_field, urborg_tomb_of_yawgmoth, vault_of_champions, blood_artist,
+    cruel_celebrant, edgewalker, elas_il_kor_sadistic_pilgrim, harvester_of_souls,
+    ob_nixilis_unshackled, pitiless_plunderer, razaketh_the_foulblooded, rune_scarred_demon,
+    shadowborn_apostle, shadowborn_apostle, shadowborn_apostle, shadowborn_apostle,
+    shadowborn_apostle, shadowborn_apostle, shadowborn_apostle, shadowborn_apostle,
+    shadowborn_apostle, shadowborn_apostle, shadowborn_apostle, shadowborn_apostle,
+    shadowborn_apostle, shadowborn_apostle, shadowborn_apostle, shadowborn_apostle,
+    shadowborn_apostle, shadowborn_apostle, shadowborn_apostle, shadowborn_apostle,
+    shadowborn_apostle, shadowborn_apostle, shadowborn_apostle, shadowborn_apostle,
+    shadowborn_apostle, taborax_hopes_demise, teysa_karlov, zulaport_cutthroat,
+    bastion_of_remembrance, black_market, dictate_of_erebos, grave_pact, phyrexian_arena,
+    remembrance, anguished_unmaking, dark_ritual, despark, path_to_exile, swords_to_plowshares,
+    village_rites, damn, demonic_tutor, echoing_return, immortal_servitude, raise_the_past,
+    secret_salvage, victimize,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

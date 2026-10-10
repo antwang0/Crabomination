@@ -1289,3 +1289,107 @@ fn tinybones_joins_up_hits_any_number_of_players() {
     cast(&mut g, tju);
     assert_eq!([g.players[1].hand.len(), g.players[2].hand.len()], [0, 0]);
 }
+
+// ── Tergrid (345) and Athreos, God of Passage (346) ─────────────────────────
+
+/// Liliana, Waker of the Dead +1: everyone discards; an opponent who can't
+/// loses 3, and you don't lose for your own empty hand.
+#[test]
+fn liliana_waker_plus_one_taxes_empty_handed_opponents() {
+    let mut g = pod(3);
+    let lili = ready(&mut g, 0, catalog::liliana_waker_of_the_dead());
+    g.battlefield_find_mut(lili).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 4);
+    g.add_card_to_hand(1, catalog::island());
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: lili, ability_index: 0, target: None, x_value: None })
+        .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0);
+    assert_eq!([g.players[0].life, g.players[1].life, g.players[2].life], [life[0], life[1], life[2] - 3]);
+}
+
+/// Pox: each step takes a third, rounded up — 20 life loses 7, three cards
+/// lose one, two creatures lose one.
+#[test]
+fn pox_takes_a_third_rounded_up() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let pox = g.add_card_to_hand(0, catalog::pox());
+    flood(&mut g);
+    let life = g.players[1].life;
+    cast(&mut g, pox);
+    assert_eq!(g.players[1].life, life - (life + 2) / 3);
+    assert_eq!(g.players[1].hand.len(), 2);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 1);
+}
+
+/// Shadowborn Apostle: six of them (CR 903.5b — a deck may hold any number)
+/// sacrifice to fetch a Demon.
+#[test]
+fn shadowborn_apostles_summon_a_demon() {
+    let mut g = pod(2);
+    let first = ready(&mut g, 0, catalog::shadowborn_apostle());
+    for _ in 0..5 {
+        ready(&mut g, 0, catalog::shadowborn_apostle());
+    }
+    g.add_card_to_library(0, catalog::taborax_hopes_demise());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    activate(&mut g, first, 0);
+    assert_eq!(named(&g, "Shadowborn Apostle"), 0);
+    assert_eq!(named(&g, "Taborax, Hope's Demise"), 1);
+}
+
+/// Taborax grows on a nontoken death, and a dying Cleric offers a card for 1
+/// life.
+#[test]
+fn taborax_grows_and_draws_off_clerics() {
+    let mut g = pod(2);
+    let tab = ready(&mut g, 0, catalog::taborax_hopes_demise());
+    let cleric = ready(&mut g, 0, catalog::shadowborn_apostle());
+    g.add_card_to_library(0, catalog::island());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder,
+        target: Some(Target::Permanent(cleric)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("murder");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tab).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].life, life - 1);
+}
+
+/// Secret Salvage exiles a card from your graveyard and tutors every copy of
+/// its name.
+#[test]
+fn secret_salvage_finds_every_copy() {
+    let mut g = pod(2);
+    let gy = g.add_card_to_graveyard(0, catalog::shadowborn_apostle());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::shadowborn_apostle());
+    }
+    g.add_card_to_library(0, catalog::island());
+    let ss = g.add_card_to_hand(0, catalog::secret_salvage());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ss,
+        target: Some(Target::Permanent(gy)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("salvage");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gy));
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Shadowborn Apostle").count(), 3);
+}

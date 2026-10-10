@@ -2498,6 +2498,20 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INDOMINUS_EDHREC_COMMANDERS,
             main: decks::INDOMINUS_EDHREC_MAIN,
         },
+        // Seat 345: Tergrid, God of Fright's EDHREC average deck.
+        // `--pod-decks 345`.
+        PodDeck {
+            name: "Tergrid, God of Fright (B)",
+            commanders: decks::TERGRID_EDHREC_COMMANDERS,
+            main: decks::TERGRID_EDHREC_MAIN,
+        },
+        // Seat 346: Athreos, God of Passage's EDHREC average deck (Athreos,
+        // Shroud-Veiled is seat 331). `--pod-decks 346`.
+        PodDeck {
+            name: "Athreos, God of Passage (WB)",
+            commanders: decks::ATHREOS_GOP_EDHREC_COMMANDERS,
+            main: decks::ATHREOS_GOP_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4523,6 +4537,8 @@ mod tests {
             ("Rocco, Street Chef", [0x0A7C, 342, 9267]),
             ("Tinybones, Bauble Burglar", [0x0A7D, 343, 9268]),
             ("Indominus Rex, Alpha", [0x0A7E, 344, 9269]),
+            ("Tergrid, God of Fright", [0x0A7F, 345, 9270]),
+            ("Athreos, God of Passage", [0x0A80, 346, 9271]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

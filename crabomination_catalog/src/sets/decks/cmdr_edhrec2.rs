@@ -1883,3 +1883,198 @@ pub fn luxior_giadas_gift() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Liliana, Waker of the Dead — {2}{B}{B} legendary Planeswalker, loyalty 4.
+/// +1: each player discards a card; each opponent who can't loses 3 life.
+/// −3: target creature gets -X/-X, X the cards in your graveyard. −7: an
+/// emblem — at the beginning of combat on your turn, put target creature card
+/// from a graveyard onto the battlefield under your control; it gains haste.
+pub fn liliana_waker_of_the_dead() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    let graveyard = Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Any };
+    CardDefinition {
+        name: "Liliana, Waker of the Dead",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana], ..Default::default() },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Discard { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE, random: false },
+                    Effect::EachPlayerDoes {
+                        who: PlayerRef::EachOpponent,
+                        body: Box::new(Effect::If {
+                            cond: Predicate::Not(Box::new(Predicate::DiscardedThisEffect { who: PlayerRef::You })),
+                            then: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }),
+                            else_: Box::new(Effect::Noop),
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::PumpPT {
+                    what: crate::effect::shortcut::target_filtered(R::Creature),
+                    power: Value::Negate(Box::new(graveyard.clone())),
+                    toughness: Value::Negate(Box::new(graveyard)),
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Liliana, Waker of the Dead".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+                        effect: Effect::Seq(vec![
+                            Effect::Move {
+                                what: crate::effect::shortcut::target_filtered(R::Creature.from_any_graveyard()),
+                                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            },
+                            Effect::GrantKeyword {
+                                what: Selector::LastMoved,
+                                keyword: Keyword::Haste,
+                                duration: crate::effect::Duration::Permanent,
+                            },
+                        ]),
+                    }],
+                    statics: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// "A third, rounded up" of `v` (Pox): `(v + 2) / 3`.
+fn third_up(v: Value) -> Value {
+    Value::DivDown(Box::new(Value::Sum(vec![v, Value::Const(2)])), 3)
+}
+
+/// Pox — {B}{B}{B} Sorcery. Each player loses a third of their life, then
+/// discards a third of their hand, then sacrifices a third of their creatures,
+/// then a third of their lands — each rounded up, each counted as that step
+/// begins, each player choosing what they sacrifice.
+pub fn pox() -> CardDefinition {
+    let each = |body: Effect| Effect::ForEach { selector: Selector::Player(PlayerRef::EachPlayer), body: Box::new(body) };
+    let theirs = |filter: R| Value::count(Selector::ControlledBy { who: PlayerRef::Triggerer, filter });
+    CardDefinition {
+        name: "Pox",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            each(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: third_up(Value::LifeOf(PlayerRef::Triggerer)),
+            }),
+            each(Effect::Discard {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: third_up(Value::HandSizeOf(PlayerRef::Triggerer)),
+                random: false,
+            }),
+            each(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Triggerer),
+                count: third_up(theirs(R::Creature)),
+                filter: R::Creature,
+            }),
+            each(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Triggerer),
+                count: third_up(theirs(R::Land)),
+                filter: R::Land,
+            }),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Shadowborn Apostle — {B} 1/1 Human Cleric. A deck can have any number of
+/// them (CR 903.5b). {B}, sacrifice six creatures named Shadowborn Apostle:
+/// search for a Demon creature card, put it onto the battlefield.
+pub fn shadowborn_apostle() -> CardDefinition {
+    CardDefinition {
+        name: "Shadowborn Apostle",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Cleric]),
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![crate::sets::deck_may_have_copies(None)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_other_filter: Some((R::Creature.and(R::HasName("Shadowborn Apostle".into())), 6)),
+            sac_other_may_be_source: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::HasCreatureType(CreatureType::Demon)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Taborax, Hope's Demise — {2}{B} 2/2 legendary Demon Cleric, flying;
+/// lifelink with five or more +1/+1 counters. Another nontoken creature of
+/// yours dying puts a +1/+1 counter on it; if that was a Cleric you may draw,
+/// losing 1 life if you do.
+pub fn taborax_hopes_demise() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Taborax has lifelink as long as it has five or more +1/+1 counters on it.".into(),
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Lifelink,
+                condition: R::WithCounterAtLeast(CounterType::PlusOnePlusOne, 5),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(trigger_is(R::Not(Box::new(R::IsToken)))),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Cleric),
+                    },
+                    then: Box::new(Effect::MayDo {
+                        description: "Draw a card and lose 1 life?".into(),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::Draw { who: Selector::You, amount: Value::ONE },
+                            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                        ])),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..legend("Taborax, Hope's Demise", cost(&[generic(2), b()]), vec![CreatureType::Demon, CreatureType::Cleric], 2, 2)
+    }
+}
+
+/// Secret Salvage — {3}{B}{B} Sorcery. Exile target nonland card from your
+/// graveyard; search for any number of cards with its name, reveal them, put
+/// them into your hand.
+pub fn secret_salvage() -> CardDefinition {
+    CardDefinition {
+        name: "Secret Salvage",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: crate::effect::shortcut::target_filtered(R::Nonland.and(R::InYourGraveyard)),
+                to: ZoneDest::Exile,
+            },
+            Effect::SearchAnyNumber { who: PlayerRef::You, filter: R::SameNameAsTarget, to: ZoneDest::Hand(PlayerRef::You) },
+        ]),
+        ..Default::default()
+    }
+}
