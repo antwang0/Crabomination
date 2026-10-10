@@ -173,6 +173,17 @@ the handoff.
   can't lose") is a genuine mandatory infinite loop, but life totals change
   every pass, so the no-progress digest never repeats. Open, low value: a
   CR 104.4b reading that ignores a seat's life while it can't lose.
+- **Fuzzed strict sweep** 185001 (same settings, 4,710 games): two aborts, one
+  class — `Effect::Move` recorded every selected card in `last_moved_cards`,
+  moved or not, so Tinybones' "exile it from their graveyard with a stash
+  counter" stashed and granted a play permission to a discarded commander its
+  owner had already sent home (Éowyn, four seats; Muldrotha, six — the CR 400.7
+  invariant). A card still in a command zone after a Move elsewhere is no
+  longer recorded. ⚠ The wider class is open: a `TriggerSource` that moved to
+  another zone than the command zone (a discarded card returned to hand before
+  the trigger resolves) is still moved and named; CR 400.7 says it is a new
+  object. Undecided: two token board caps (Myrel + Roaming Throne, Garruk's
+  Packleader), one simultaneous loss.
 
 ## FIXED/OPEN 2026-10-10 (seventeenth Commander run, `017yfeX4`) — eight EDHREC seats, eleven primitives, the CR 601.2c census
 
