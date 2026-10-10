@@ -3134,6 +3134,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-10 (Commander routine — sixteenth run, session `01S495N5`) — guardrail; optional slots, sweep fixes, seats 331-334
+
+Hot-path touch: `Value::Sum` / `Diff` / `Times` saturate (`fold(0, i32::saturating_add)`,
+`saturating_sub`, `saturating_mul`); `attached_combat_damage_doubling` also scans the
+recipient's attachments behind the same damage-scaler presence gate; an optional free
+cast reads `stack_spell_count` only after the board test. Release `bot_ladder` at
+`54eb51439`, Xeon @ 2.80 GHz (a sixteenth box: 4 cores, 15 GB).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split), thread_determinism ok;
+                 peak_rss 29.9 MiB; games_per_s 261.8 (single run, not a reading)
+audit pods       overflow profile + debug-assertions: seed 160002 (every deck x
+                 3/4/6/8 seats x 30, 8,760 games) and 161001 (8,820 games);
+                 `--a dflt` seed 162001 (4/6 seats x 10, 1,400 games). Finds:
+                 1 OOM (mill-two-repeat), 3 aborts (meld shell, Herald's Horn
+                 as-enters, counters sum overflow) — all fixed; undecided
+                 classified (CR 104.4b loops x6, Polyraptor x6, sim bounds x3)
+2-player         release, --a dflt --b dflt --seed 9301 x 300: cube 2,398 / 2
+                 draws, sos 1,500 / 0, sealed 3,600 / 0; 0 panics
+suite            24,723 / 0 / 5 strict at the closing tip; workspace clippy 0
+```
+
 ### 2026-10-09 (Commander routine — fifteenth run, session `01TW7nNh`) — guardrail; entry costs
 
 Hot-path touch: every battlefield entry (cast, move, land drop, token copy)
