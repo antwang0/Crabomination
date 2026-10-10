@@ -34327,6 +34327,7 @@ fn static_effect_to_effects(
             // damage/life-gain time; no layer effect.
             | StaticEffect::ReplaceDamageToYouWithCountersOnSource { .. }
             | StaticEffect::ReplaceDamageToYouWithGraveyardExile
+            | StaticEffect::PreventDamageToYouMillTwice
             | StaticEffect::LifeGainBecomesDraw
             | StaticEffect::MayReplaceDrawWithRevealUntilKind
             | StaticEffect::ControllerAssignsAttackersCombatDamage

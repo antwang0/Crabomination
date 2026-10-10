@@ -33151,10 +33151,25 @@ impl GameState {
                 // loss. Only this arm knows that order, so the ask carries the
                 // count: a headless seat answers it instead of giving up the
                 // board (`max`) or nothing at all.
-                let free = candidates
+                let mut free = candidates
                     .iter()
                     .take_while(|id| self.battlefield_find(**id).is_some_and(|c| c.is_token))
                     .count() as u32;
+                // Each sacrifice returning a creature card to the battlefield
+                // (Lich-Knights' Conquest) is worth a noncreature permanent
+                // while the graveyard has creatures to return.
+                let reanimates = per_each.any_nested(&|e| {
+                    matches!(e, Effect::Move { to: crate::effect::ZoneDest::Battlefield { .. }, .. })
+                });
+                if reanimates {
+                    let returnable =
+                        self.players[p].graveyard.iter().filter(|c| self.computed_is_creature(c)).count() as u32;
+                    let cheap = candidates
+                        .iter()
+                        .filter(|id| self.battlefield_find(**id).is_some_and(|c| c.is_token || !self.computed_is_creature(c)))
+                        .count() as u32;
+                    free = free.max(cheap.min(returnable));
+                }
                 let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Sacrifice how many?".to_string(),

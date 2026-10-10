@@ -3196,6 +3196,10 @@ pub enum StaticEffect {
     /// your graveyard instead. If you can't, you lose the game" (Nefarious
     /// Lich).
     ReplaceDamageToYouWithGraveyardExile,
+    /// CR 615 — "If damage would be dealt to you, prevent that damage and
+    /// mill twice that many cards" (Angel of Suffering). A prevention, so
+    /// "damage can't be prevented" switches it off.
+    PreventDamageToYouMillTwice,
     /// CR 614 — "If you would gain life, draw that many cards instead"
     /// (Nefarious Lich).
     LifeGainBecomesDraw,

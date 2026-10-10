@@ -796,6 +796,7 @@ fn card_has_damage_replacement_static(c: &CardInstance) -> bool {
                 | S::PlayerDamageBecomesExileFromLibrary
                 | S::ReplaceDamageToYouWithCountersOnSource { .. }
                 | S::ReplaceDamageToYouWithGraveyardExile
+                | S::PreventDamageToYouMillTwice
                 | S::RedirectControllerDamageToEquippedCreature
                 | S::RedirectDamageToSelf
         )

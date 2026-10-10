@@ -192,6 +192,31 @@ impl GameState {
             }
             return true;
         }
+        // CR 615 — Angel of Suffering: the damage is prevented and its
+        // controller mills twice that many (no prevention under a "damage
+        // can't be prevented" static).
+        if amount > 0
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::PreventDamageToYouMillTwice)
+                    })
+            })
+            && prevent_static_scan(self) & prevent_static::CANT_PREVENT == 0
+        {
+            for _ in 0..amount.saturating_mul(2) {
+                if self.players[p].library.is_empty() {
+                    break;
+                }
+                let card = self.players[p].library.remove(0);
+                let cid = card.id;
+                if !self.route_to_graveyard(card, events) {
+                    self.note_milled(p, cid);
+                    events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                }
+            }
+            return true;
+        }
         // CR 614 — Nefarious Lich: damage to its controller exiles
         // that many graveyard cards instead; failing that, they lose.
         if damage_statics
