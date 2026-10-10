@@ -10472,3 +10472,64 @@ pub const ARNA_KENNERUD_MAIN: &[CardFactory] = &[
     island, island, island, island, island, plains, plains, plains, plains, plains, plains,
     plains, plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const TERRA_ADEPT_COMMANDERS: &[CardFactory] = &[terra_magical_adept];
+
+/// **Terra, Magical Adept**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 89 nonbasic cards + 3 Forests + 2 Islands + 2 Mountains + 2 Plains + 1 Swamp = 99.
+/// Terra, Magical Adept (WUBRG through Esper Terra) Saga value: Terra copies and replays
+/// enchantments while Tom Bombadil chains each finished Saga into the next.
+pub const TERRA_ADEPT_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, power_conduit, sol_ring,
+    summoners_grimoire, arid_mesa, bloodstained_mire, breeding_pool, city_of_brass,
+    command_tower, exotic_orchard, flooded_strand, godless_shrine, hall_of_heliods_generosity,
+    hallowed_fountain, mana_confluence, marsh_flats, misty_rainforest, nesting_grounds,
+    overgrown_tomb, path_of_ancestry, polluted_delta, sacred_foundry, scalding_tarn,
+    starting_town, stomping_ground, temple_garden, verdant_catacombs, windswept_heath,
+    wooded_foothills, birds_of_paradise, eidolon_of_blossoms, garnet_princess_of_alexandria,
+    joshua_phoenixs_dominant, jukai_naturalist, narci_fable_singer, oaka_traveling_merchant,
+    rydia_summoner_of_mist, sanctum_weaver, setessan_champion, summon_anima, summon_bahamut,
+    summon_brynhildr, summon_esper_valigarmanda, summon_fenrir, summon_good_king_mog_xii,
+    summon_ixion, summon_knights_of_round, summon_kujata, summon_magus_sisters,
+    summon_primal_odin, summon_shiva, summon_titan, summon_valefor, summon_yojimbo,
+    sythis_harvests_hand, tom_bombadil, weaver_of_harmony, yuna_hope_of_spira,
+    binding_the_old_gods, enchantresss_presence, mystic_remora, rhystic_study, smothering_tithe,
+    starfield_of_nyx, sterling_grove, the_apprentices_folly, the_eldest_reborn, the_kami_war,
+    utopia_sprawl, wild_growth, an_offer_you_cant_refuse, counterspell, enlightened_tutor,
+    fierce_guardianship, heroic_intervention, moonmist, path_to_exile, swan_song,
+    swords_to_plowshares, clash_of_the_eikons, cultivate, demonic_tutor, esper_origins, farseek,
+    natures_lore, sevinnes_reclamation, three_visits,
+    // Basics
+    forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp,
+];
+
+pub const ATREUS_KRATOS_COMMANDERS: &[CardFactory] = &[atreus_impulsive_son, kratos_stoic_father];
+
+/// **Atreus, Impulsive Son + Kratos, Stoic Father**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 81 nonbasic cards + 5 Islands + 6 Mountains + 6 Plains = 98.
+/// Atreus, Impulsive Son + Kratos, Stoic Father (URW) father-and-son partners: experience
+/// counters, extra combats and burn.
+pub const ATREUS_KRATOS_MAIN: &[CardFactory] = &[
+    altar_of_the_pantheon, arcane_signet, fellwar_stone, lightning_greaves, sol_ring,
+    swiftfoot_boots, sword_of_truth_and_justice, talisman_of_conviction, talisman_of_creativity,
+    talisman_of_progress, the_reaver_cleaver, thought_vessel, urzas_incubator, adarkar_wastes,
+    battlefield_forge, clifftop_retreat, command_tower, exotic_orchard, glacial_fortress,
+    hallowed_fountain, karns_bastion, mystic_monastery, path_of_ancestry, raugrin_triome,
+    reliquary_tower, sacred_foundry, sea_of_clouds, shivan_reef, spectator_seating, steam_vents,
+    sulfur_falls, training_center, tyrite_sanctum, djeru_and_hazoret, ephara_god_of_the_polis,
+    god_eternal_oketra, heliod_god_of_the_sun, heliod_sun_crowned, ilharg_the_raze_boar,
+    iroas_god_of_victory, kalemne_disciple_of_iroas, katara_waterbending_master,
+    keranos_god_of_storms, kratos_god_of_war, laezel_vlaakiths_champion, metastatic_evangel,
+    norns_choirmaster, ojer_axonil_deepest_might, otharri_suns_glory, patrolling_peacemaker,
+    purphoros_bronze_blooded, purphoros_god_of_the_forge, reidane_god_of_the_worthy,
+    roaming_throne, surtr_fiery_jotun, thassa_god_of_the_sea, the_locust_god, thrummingbird,
+    venat_heart_of_hydaelyn, all_will_be_one, frostcliff_siege, inexorable_tide,
+    smothering_tithe, teferis_ageless_insight, training_grounds, akromas_will,
+    an_offer_you_cant_refuse, boros_charm, chaos_warp, counterspell, dovins_veto,
+    experimental_augury, path_to_exile, ripples_of_potential, swords_to_plowshares,
+    unbreakable_formation, blasphemous_act, contentious_plan, tezzerets_gambit, world_at_war,
+    wrath_of_god,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains,
+];
