@@ -2644,7 +2644,7 @@ pub const DIHADA_COMMANDERS: &[CardFactory] = &[dihada_binder_of_wills];
 
 /// **Legends' Legacy**, the Dominaria United Commander Mardu deck (DMC,
 /// 2022-09-09), exactly as MTGJSON's `LegendsLegacy_DMC` prints it: 83
-/// nonbasic cards + 6 Plainss + 5 Swamps + 5 Mountains = 99. Legends under Dihada, Binder of Wills, a
+/// nonbasic cards + 6 Plains + 5 Swamps + 5 Mountains = 99. Legends under Dihada, Binder of Wills, a
 /// planeswalker commander.
 pub const DIHADA_MAIN: &[CardFactory] = &[
     adriana_captain_of_the_guard, alesha_who_smiles_at_death, anafenza_kin_tree_spirit,
@@ -2789,7 +2789,7 @@ pub const BREENA_COMMANDERS: &[CardFactory] = &[breena_the_demagogue];
 
 /// **Silverquill Statement**, the Commander 2021 Strixhaven deck (C21,
 /// 2021-04-23), exactly as MTGJSON's `SilverquillStatement_C21` prints it:
-/// 75 nonbasic cards + 14 Plainss + 10 Swamps = 99. Orzhov politics and
+/// 75 nonbasic cards + 14 Plains + 10 Swamps = 99. Orzhov politics and
 /// Inklings under Breena, the Demagogue.
 pub const BREENA_MAIN: &[CardFactory] = &[
     gideon_champion_of_justice, felisa_fang_of_silverquill, combat_calligrapher,
@@ -2819,7 +2819,7 @@ pub const GUFF_COMMANDERS: &[CardFactory] = &[commodore_guff];
 
 /// **Planeswalker Party**, the Commander Masters Jeskai deck (CMM,
 /// 2023-08-04), exactly as MTGJSON's `PlaneswalkerParty_CMM` prints it: 81
-/// nonbasic cards + 7 Plainss + 7 Islands + 4 Mountains = 99. Superfriends under Commodore Guff, a
+/// nonbasic cards + 7 Plains + 7 Islands + 4 Mountains = 99. Superfriends under Commodore Guff, a
 /// planeswalker commander.
 pub const GUFF_MAIN: &[CardFactory] = &[
     leori_sparktouched_hunter, mangara_the_diplomat, gatewatch_beacon, onakke_oathkeeper,
@@ -3483,7 +3483,7 @@ pub const AMINATOU_COMMANDERS: &[CardFactory] = &[aminatou_the_fateshifter];
 
 /// **Subjective Reality**, the Commander 2018 Esper deck (C18,
 /// 2018-08-10), exactly as MTGJSON's `SubjectiveReality_C18` prints it: 83
-/// nonbasic cards + 8 Plainss + 5 Islands + 3 Swamps = 99. Esper top-of-library under Aminatou, the
+/// nonbasic cards + 8 Plains + 5 Islands + 3 Swamps = 99. Esper top-of-library under Aminatou, the
 /// Fateshifter, a planeswalker commander.
 pub const AMINATOU_MAIN: &[CardFactory] = &[
     enigma_sphinx, serra_avatar, adarkar_valkyrie, conundrum_sphinx, djinn_of_wishes,
@@ -3749,7 +3749,7 @@ pub const YUMA_COMMANDERS: &[CardFactory] = &[yuma_proud_protector];
 
 /// **Desert Bloom**, the Outlaws of Thunder Junction Commander deck (OTC,
 /// 2024-04-19), exactly as MTGJSON's `DesertBloom_OTC` prints it: 82
-/// nonbasic cards + 6 Plainss + 4 Mountains + 7 Forests = 99. Naya Deserts and lands-matter
+/// nonbasic cards + 6 Plains + 4 Mountains + 7 Forests = 99. Naya Deserts and lands-matter
 /// under Yuma, Proud Protector.
 pub const YUMA_MAIN: &[CardFactory] = &[
     kirri_talented_sprout, scavenger_grounds, sun_titan, omnath_locus_of_rage,
@@ -3867,7 +3867,7 @@ pub const QUINTORIUS_COMMANDERS: &[CardFactory] = &[quintorius_history_chaser];
 
 /// **Lorehold Spirit**, the Secrets of Strixhaven Commander deck (SOC,
 /// 2026-04-24), exactly as MTGJSON's `LoreholdSpirit_SOC` prints it: 82
-/// nonbasic cards + 11 Plainss + 6 Mountains = 99. Boros Spirits and graveyard
+/// nonbasic cards + 11 Plains + 6 Mountains = 99. Boros Spirits and graveyard
 /// departures under the planeswalker Quintorius, History Chaser.
 pub const QUINTORIUS_MAIN: &[CardFactory] = &[
     excava_the_risen_past, lorehold_archivist, augusta_order_returned, ceaseless_conflict,
@@ -4133,7 +4133,7 @@ pub const NALIA_COMMANDERS: &[CardFactory] = &[nalia_dearnise];
 
 /// **Party Time**, the Commander Legends: Battle for Baldur's Gate Commander
 /// deck (CLB, 2022-06-10), exactly as MTGJSON's `PartyTime_CLB` prints it:
-/// 79 nonbasic cards + 10 Plainss + 10 Swamps = 99. Orzhov parties under Nalia
+/// 79 nonbasic cards + 10 Plains + 10 Swamps = 99. Orzhov parties under Nalia
 /// de'Arnise.
 pub const NALIA_MAIN: &[CardFactory] = &[
     archpriest_of_iona, bygone_bishop, eight_and_a_half_tails, frontline_medic, galepowder_mage,
@@ -4756,7 +4756,7 @@ pub const CLOUD_FIC_COMMANDERS: &[CardFactory] = &[cloud_ex_soldier];
 
 /// **Limit Break**, the Final Fantasy VII Commander deck (FIC, 2025-06-13),
 /// exactly as MTGJSON's `LimitBreakFinalFantasyVii_FIC` prints it:
-/// 90 nonbasic cards + 3 Forests + 3 Mountains + 3 Plainss = 99. Naya Equipment and
+/// 90 nonbasic cards + 3 Forests + 3 Mountains + 3 Plains = 99. Naya Equipment and
 /// power-7 payoffs under Cloud, Ex-SOLDIER.
 pub const CLOUD_FIC_MAIN: &[CardFactory] = &[
     tifa_martial_artist, cid_freeflier_pilot, clouds_limit_break, elena_turk_recruit,
@@ -4847,7 +4847,7 @@ pub const TERRA_COMMANDERS: &[CardFactory] = &[terra_herald_of_hope];
 
 /// **Revival Trance**, the Final Fantasy VI Commander deck (FIC, 2025-06-13),
 /// exactly as MTGJSON's `RevivalTranceFinalFantasyVi_FIC` prints it:
-/// 89 nonbasic cards + 3 Mountains + 4 Plainss + 3 Swamps = 99. Mardu graveyard recursion
+/// 89 nonbasic cards + 3 Mountains + 4 Plains + 3 Swamps = 99. Mardu graveyard recursion
 /// under Terra, Herald of Hope.
 pub const TERRA_MAIN: &[CardFactory] = &[
     celes_rune_knight, coin_of_fate, cyan_vengeful_samurai, general_leo_cristophe,
@@ -5058,7 +5058,7 @@ pub const TCHALLA_COMMANDERS: &[CardFactory] = &[tchalla_the_black_panther];
 
 /// **Wakanda Forever**, the Marvel Super Heroes Commander deck (MSC,
 /// 2026-06-26), exactly as MTGJSON's `WakandaForever_MSC` prints it:
-/// 75 nonbasic cards + 12 Forests + 12 Plainss = 99. Selesnya artifacts, Vibranium
+/// 75 nonbasic cards + 12 Forests + 12 Plains = 99. Selesnya artifacts, Vibranium
 /// and the monarch under T'Challa, the Black Panther.
 pub const TCHALLA_MAIN: &[CardFactory] = &[
     dora_milaje_elite, everett_k_ross_hapless_attache, hatut_zeraze_strike_force,
@@ -5536,7 +5536,7 @@ pub const FOURTH_DOCTOR_MAIN: &[CardFactory] = &[
 pub const TENTH_DOCTOR_COMMANDERS: &[CardFactory] = &[the_tenth_doctor, rose_tyler];
 
 /// **Timey-Wimey**, the Doctor Who Commander deck (WHO, 2023-10-13), exactly
-/// as MTGJSON's `TimeyWimey_WHO` prints it: 89 nonbasic cards + 3 Plainss + 3 Islands + 3 Mountains
+/// as MTGJSON's `TimeyWimey_WHO` prints it: 89 nonbasic cards + 3 Plains + 3 Islands + 3 Mountains
 /// = 98. Jeskai time travel and suspend under The Tenth Doctor + Rose Tyler.
 pub const TENTH_DOCTOR_MAIN: &[CardFactory] = &[
     wilfred_mott, everybody_lives, everything_comes_to_dust, four_knocks, the_pandorica,
@@ -9762,4 +9762,152 @@ pub const KOTIS_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
     island, swamp, swamp, swamp, swamp,
+];
+
+pub const HENZIE_EDHREC_COMMANDERS: &[CardFactory] = &[henzie_toolbox_torre];
+
+/// **Henzie "Toolbox" Torre**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 86 nonbasic cards + 6 Forests + 3 Mountains + 4 Swamps = 99.
+/// Henzie "Toolbox" Torre blitz toolbox (BRG): big creatures cast for blitz and recurred,
+/// Birthing Pod / Birthing Ritual chains, Ojer Kaslem and Ancient Brass Dragon value hits.
+pub const HENZIE_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, birthing_pod, fellwar_stone, skullclamp, sol_ring, blood_crypt,
+    bloodstained_mire, cinder_glade, command_tower, dragonskull_summit, exotic_orchard,
+    karplusan_forest, llanowar_wastes, luxury_suite, overgrown_tomb, savage_lands,
+    smoldering_marsh, spire_garden, stomping_ground, sulfurous_springs, twilight_mire,
+    undergrowth_stadium, verdant_catacombs, wooded_foothills, woodland_cemetery,
+    ziatoras_proving_ground, ancient_brass_dragon, archon_of_cruelty, archpriest_of_shadows,
+    atsushi_the_blazing_sky, bane_of_progress, birds_of_paradise, bringer_of_the_last_gift,
+    chainer_nightmare_adept, delighted_halfling, disciple_of_bolas, druid_of_purification,
+    elves_of_deep_shadow, etali_primal_conqueror, etali_primal_storm, giant_adephage,
+    goreclaw_terror_of_qal_sisma, honest_rutstein, ignoble_hierarch, ilharg_the_raze_boar,
+    junji_the_midnight_sky, kogla_the_titan_ape, kokusho_the_evening_star, llanowar_elves,
+    massacre_wurm, mikaeus_the_unhallowed, noxious_gearhulk, ojer_kaslem_deepest_growth,
+    phyrexian_delver, primeval_herald, protean_hulk, rampant_rejuvenator, ravenous_chupacabra,
+    roxanne_starfall_savant, sakura_tribe_elder, seedguide_ash, solemn_simulacrum,
+    timeless_witness, treeshaker_chimera, woodfall_primus, ziatora_the_incinerator,
+    birthing_ritual, evolutionary_leap, garruks_uprising, greater_good, industrial_advancement,
+    riveteers_ascendancy, assassins_trophy, beast_within, chaos_warp, deadly_rollick,
+    malakir_rebirth, terminate, blasphemous_act, farseek, lifes_legacy, living_death,
+    natures_lore, rampant_growth, reanimate, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const FRODO_EDHREC_COMMANDERS: &[CardFactory] = &[frodo_adventurous_hobbit, sam_loyal_attendant];
+
+/// **Frodo, Adventurous Hobbit + Sam, Loyal Attendant**'s EDHREC average deck (fetched
+/// 2026-10-10), card for card: 84 nonbasic cards + 6 Forests + 5 Plains + 3 Swamps = 98.
+/// Frodo + Sam Food tokens (WBG): Bilbo's Treasure beside each Food, Belladonna Took's
+/// token-entry ladder, Bag End Banquet, sacrifice drains from the Sackville-Bagginses.
+pub const FRODO_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_end_banquet, chromatic_lantern, field_tested_frying_pan,
+    nuka_cola_vending_machine, sol_ring, the_one_ring, well_of_lost_dreams, access_tunnel,
+    brushland, canopy_vista, command_tower, evolving_wilds, exotic_orchard, fortified_village,
+    godless_shrine, graypelt_refuge, isolated_chapel, murmuring_bosk, necroblossom_snarl,
+    overgrown_tomb, path_of_ancestry, rogues_passage, sandsteppe_citadel, scattered_groves,
+    scoured_barrens, shineshadow_snarl, sunpetal_grove, the_shire, woodland_cemetery,
+    academy_manufactor, banquet_guests, belladonna_took, bilbo_birthday_celebrant,
+    bilbo_fellow_conspirator, birds_of_paradise, delighted_halfling, elanor_gardner,
+    essence_warden, farmer_cotton, feasting_hobbit, gilded_goose, gollum_obsessed_stalker,
+    gwaihir_greatest_of_the_eagles, lobelia_defender_of_bag_end, lotho_corrupt_shirriff,
+    meriadoc_brandybuck, merry_warden_of_isengard, mirkwood_bats, motivated_pony, peregrin_took,
+    pippin_warden_of_isengard, prize_pig, prosperous_innkeeper, rapacious_guest,
+    rosie_cotton_of_south_lane, samwise_gamgee, savvy_hunter, the_gaffer,
+    the_sackville_bagginses, tireless_provisioner, treebeard_gracious_host,
+    assemble_the_entmoot, call_of_the_ring, night_of_the_sweets_revenge, ninja_pizza,
+    of_herbs_and_stewed_rabbit, sanguine_bond, anguished_unmaking, assassins_trophy,
+    crypt_incursion, go_for_the_throat, heroic_intervention, mortify, path_to_exile,
+    swords_to_plowshares, cultivate, dusk_dawn, farseek, many_partings, nights_whisper,
+    revive_the_shire, the_battle_of_bywater, toxic_deluge,
+    // Basics
+    forest, forest, forest, forest, forest, forest, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp,
+];
+
+pub const KRRIK_EDHREC_COMMANDERS: &[CardFactory] = &[krrik_son_of_yawgmoth];
+
+/// **K'rrik, Son of Yawgmoth**'s EDHREC average deck (fetched 2026-10-10), card for
+/// card: 74 nonbasic cards + 25 Swamps = 99.
+/// K'rrik life-as-black-mana (B): Phyrexian-mana payoffs, Asmodeus's banked draws, Razaketh,
+/// Dark Petition and Beseech the Queen tutors into Exsanguinate-style finishers.
+pub const KRRIK_EDHREC_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, bolass_citadel, jet_medallion, lightning_greaves,
+    lotus_petal, mana_vault, mind_stone, senseis_divining_top, sol_ring, swiftfoot_boots,
+    wishclaw_talisman, ancient_tomb, bojuka_bog, cabal_coffers, cabal_stronghold,
+    nykthos_shrine_to_nyx, phyrexian_tower, reliquary_tower, urborg_tomb_of_yawgmoth,
+    asmodeus_the_archfiend, balthor_the_defiled, blood_artist, blood_celebrant, blood_pet,
+    chainer_dementia_master, crypt_ghast, dauthi_voidwalker, dimir_house_guard, fleshwrither,
+    gray_merchant_of_asphodel, hoarding_broodlord, necrotic_ooze, opposition_agent,
+    orcish_bowmasters, pontiff_of_blight, razaketh_the_foulblooded, sheoldred_the_apocalypse,
+    skirge_familiar, vile_entomber, vilis_broker_of_blood, vito_thorn_of_the_dusk_rose,
+    animate_dead, font_of_agonies, heartless_summoning, necropotence, phyrexian_arena,
+    sanguine_bond, cabal_ritual, culling_the_weak, dark_ritual, deadly_rollick, defile,
+    dismember, entomb, imps_mischief, sacrifice, saw_in_half, vampiric_tutor, professor_onyx,
+    beseech_the_mirror, beseech_the_queen, buried_alive, dark_petition, demonic_tutor,
+    diabolic_tutor, exsanguinate, feed_the_swarm, final_parting, grim_tutor,
+    peer_into_the_abyss, reanimate, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const VOJA_EDHREC_COMMANDERS: &[CardFactory] = &[voja_jaws_of_the_conclave];
+
+/// **Voja, Jaws of the Conclave**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 83 nonbasic cards + 8 Forests + 3 Mountains + 5 Plains = 99.
+/// Voja Elves and Wolves (GRW): Wolf token engines (Hollowhenge Overlord, Howling Moon),
+/// Elf mana, Bramblewood Paragon's counters and Cemetery Prowler's discounts.
+pub const VOJA_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, maskwood_nexus, sol_ring, swiftfoot_boots,
+    the_great_henge, bountiful_promenade, canopy_vista, cinder_glade, command_tower,
+    exotic_orchard, jetmirs_garden, jungle_shrine, path_of_ancestry, reliquary_tower,
+    rockfall_vale, rootbound_crag, sacred_foundry, spire_garden, stomping_ground,
+    sunpetal_grove, temple_garden, windswept_heath, wooded_foothills, yavimaya_cradle_of_growth,
+    anara_wolvid_familiar, arbor_elf, arwen_weaver_of_hope, beast_whisperer, bloom_tender,
+    bramblewood_paragon, cemetery_prowler, devoted_druid, druid_of_the_anima, elvish_archdruid,
+    elvish_mystic, elvish_warmaster, evolution_witness, fyndhorn_elves, gyre_sage,
+    hollowhenge_overlord, imperious_perfect, incubation_druid, leaf_crowned_visionary,
+    llanowar_elves, marwyn_the_nurturer, masked_vandal, mirror_entity, priest_of_titania,
+    realmwalker, reclamation_sage, rishkar_peema_renegade, roaming_throne,
+    selvala_heart_of_the_wilds, shalai_and_hallar, taurean_mauler, tolsimir_friend_to_wolves,
+    tolsimir_midnights_light, wolf_skull_shaman, wrens_run_packmaster, all_will_be_one,
+    annie_joins_up, branching_evolution, guardian_project, howling_moon, rhythm_of_the_wild,
+    rising_of_the_day, akromas_will, beast_within, boros_charm, flawless_maneuver,
+    generous_gift, heroic_intervention, inspiring_call, path_to_exile, swords_to_plowshares,
+    teferis_protection, blasphemous_act, cultivate, damning_verdict, farseek, natures_lore,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains,
+];
+
+pub const CHOCO_EDHREC_COMMANDERS: &[CardFactory] = &[choco_seeker_of_paradise];
+
+/// **Choco, Seeker of Paradise**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 82 nonbasic cards + 6 Forests + 5 Islands + 6 Plains = 99.
+/// Choco Birds (GWU): Birds and landfall, Tawnos's artifact copies, Gwaihir and The Lord of the
+/// Eagles cost-cut by the flock, Chocobo Camp's counters.
+pub const CHOCO_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, banner_of_kinship, chocobo_racetrack, heralds_horn, patchwork_banner,
+    sol_ring, breeding_pool, canopy_vista, chocobo_camp, command_tower, evolving_wilds,
+    exotic_orchard, flooded_strand, glacial_fortress, hallowed_fountain, hinterland_harbor,
+    misty_rainforest, path_of_ancestry, prairie_stream, rejuvenating_springs, reliquary_tower,
+    seaside_citadel, sparas_headquarters, sunpetal_grove, temple_garden, three_tree_city,
+    windswept_heath, ambrosia_whiteheart, aven_interrupter, aven_mindcensor, bartz_and_boko,
+    birds_of_paradise, derevi_empyrial_tactician, emeria_angel, empyrean_eagle,
+    esior_wardwing_familiar, gilded_goose, gwaihir_the_windlord, hermes_overseer_of_elpis,
+    ishai_ojutai_dragonspeaker, jackdaw_savior, judges_familiar, kangee_sky_warden,
+    kastral_the_windcrested, ledger_shredder, mockingbird, plumecreed_escort, sazh_katzroy,
+    sazhs_chocobo, summon_choco_mog, summon_fat_chocobo, tawnos_the_toymaker, the_goose_mother,
+    the_lord_of_the_eagles, traveling_chocobo, warden_of_evos_isle, watcher_of_the_spheres,
+    beastmaster_ascension, felidar_retreat, kindred_discovery, murmuration, ride_the_shoopuf,
+    sidequest_raise_a_chocobo, soulcatchers_aerie, counterspell, dazzling_denial,
+    flurry_of_wings, growth_spiral, heroic_intervention, path_to_exile, perch_protection,
+    swan_song, swords_to_plowshares, winged_portent, airborne_aid, chocobo_kick, cultivate,
+    farseek, gysahl_greens, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains,
 ];

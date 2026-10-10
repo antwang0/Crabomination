@@ -627,6 +627,9 @@ pub use webslinging::*;
 #[path = "../../../src/sets/decks/cmdr_edhrec.rs"]
 mod cmdr_edhrec;
 pub use cmdr_edhrec::*;
+#[path = "../../../src/sets/decks/cmdr_edhrec2.rs"]
+mod cmdr_edhrec2;
+pub use cmdr_edhrec2::*;
 #[path = "../../../src/sets/decks/cmdr_most_built.rs"]
 mod cmdr_most_built;
 pub use cmdr_most_built::*;

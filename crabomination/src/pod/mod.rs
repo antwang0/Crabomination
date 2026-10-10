@@ -2428,6 +2428,41 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KOTIS_COMMANDERS,
             main: decks::KOTIS_MAIN,
         },
+        // Seat 335: Henzie "Toolbox" Torre's EDHREC average deck (the
+        // Riveteers Rampage precon is an earlier seat). `--pod-decks 335`.
+        PodDeck {
+            name: "Henzie \"Toolbox\" Torre, EDHREC (BRG)",
+            commanders: decks::HENZIE_EDHREC_COMMANDERS,
+            main: decks::HENZIE_EDHREC_MAIN,
+        },
+        // Seat 336: Frodo + Sam's EDHREC average deck (the Food and
+        // Fellowship precon is an earlier seat). `--pod-decks 336`.
+        PodDeck {
+            name: "Frodo + Sam, EDHREC (WBG)",
+            commanders: decks::FRODO_EDHREC_COMMANDERS,
+            main: decks::FRODO_EDHREC_MAIN,
+        },
+        // Seat 337: K'rrik, Son of Yawgmoth's EDHREC average deck (mono-B).
+        // `--pod-decks 337`.
+        PodDeck {
+            name: "K'rrik, Son of Yawgmoth, EDHREC (B)",
+            commanders: decks::KRRIK_EDHREC_COMMANDERS,
+            main: decks::KRRIK_EDHREC_MAIN,
+        },
+        // Seat 338: Voja, Jaws of the Conclave's EDHREC average deck.
+        // `--pod-decks 338`.
+        PodDeck {
+            name: "Voja, Jaws of the Conclave (GRW)",
+            commanders: decks::VOJA_EDHREC_COMMANDERS,
+            main: decks::VOJA_EDHREC_MAIN,
+        },
+        // Seat 339: Choco, Seeker of Paradise's EDHREC average deck.
+        // `--pod-decks 339`.
+        PodDeck {
+            name: "Choco, Seeker of Paradise (GWU)",
+            commanders: decks::CHOCO_EDHREC_COMMANDERS,
+            main: decks::CHOCO_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4443,6 +4478,11 @@ mod tests {
             ("Rakdos, the Muscle", [0x0A72, 332, 9257]),
             ("Captain N'ghathrod, EDHREC", [0x0A73, 333, 9258]),
             ("Kotis, the Fangkeeper", [0x0A74, 334, 9259]),
+            ("Henzie \"Toolbox\" Torre, EDHREC", [0x0A75, 335, 9260]),
+            ("Frodo + Sam, EDHREC", [0x0A76, 336, 9261]),
+            ("K'rrik, Son of Yawgmoth, EDHREC", [0x0A77, 337, 9262]),
+            ("Voja, Jaws of the Conclave", [0x0A78, 338, 9263]),
+            ("Choco, Seeker of Paradise", [0x0A79, 339, 9264]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

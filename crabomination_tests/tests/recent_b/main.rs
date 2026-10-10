@@ -204,4 +204,5 @@ mod cmdr_homer;
 mod cmdr_edgar;
 mod cmdr_etali;
 mod cmdr_edhrec;
+mod cmdr_edhrec2;
 mod cmdr_most_built;
