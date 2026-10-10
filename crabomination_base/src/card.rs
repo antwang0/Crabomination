@@ -6208,6 +6208,11 @@ pub struct EquipBonus {
     /// only the granting Aura itself from the 704.5m shed.
     #[serde(default)]
     pub protection_keeps_self: bool,
+    /// CR 702.16k — "This effect doesn't remove Auras and Equipment you
+    /// control that are already attached to it" (Benevolent Blessing): the
+    /// 704.5m shed spares Auras sharing this one's controller.
+    #[serde(default)]
+    pub protection_keeps_yours: bool,
     /// Triggered abilities granted to the equipped creature (CR 702.6e). Each
     /// fires as though printed on the equipped creature — `EventScope::
     /// SelfSource` reads the creature, and a `DealsCombatDamageToPlayer` body

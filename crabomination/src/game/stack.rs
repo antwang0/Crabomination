@@ -8346,12 +8346,13 @@ impl GameState {
                 // CR 702.16k — Spectra Ward's "this effect doesn't remove
                 // Auras": a `protection_keeps_auras` Aura on the host makes
                 // the whole host immune to the protection shed.
+                // Benevolent Blessing's narrower form spares only Auras its
+                // own controller controls.
                 let keeps_auras = self.battlefield.iter().any(|a| {
                     a.attached_to == Some(host)
-                        && a.definition
-                            .equipped_bonus
-                            .as_ref()
-                            .is_some_and(|b| b.protection_keeps_auras)
+                        && a.definition.equipped_bonus.as_ref().is_some_and(|b| {
+                            b.protection_keeps_auras || (b.protection_keeps_yours && a.controller == c.controller)
+                        })
                 });
                 // CR 702.16k (narrow) — "this effect doesn't remove this
                 // Aura": the granting Aura exempts only itself.
