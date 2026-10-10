@@ -619,3 +619,116 @@ fn nasty_end_draws_more_for_a_legend() {
         assert_eq!(g.players[0].hand.len(), hand - 1 + if legendary { 3 } else { 2 });
     }
 }
+
+/// Cryptolith Fragment: its mana costs every player a life; at your upkeep
+/// with everyone at 10 or less it transforms (CR 701.28) into Aurora of
+/// Emrakul.
+#[test]
+fn cryptolith_fragment_bleeds_the_table_and_transforms() {
+    let mut g = pod(3);
+    let frag = ready(&mut g, 0, catalog::cryptolith_fragment());
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    activate(&mut g, frag, 0);
+    assert!(g.players.iter().zip(&lives).all(|(p, l)| p.life == l - 1));
+    for p in g.players.iter_mut() {
+        p.life = 9;
+    }
+    for seat in 0..3 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.battlefield_find_mut(frag).unwrap().tapped = false;
+    while !(g.step == TurnStep::Upkeep && g.active_player_idx == 0) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(frag).unwrap().definition.name, "Aurora of Emrakul");
+}
+
+/// Orcus, Prince of Undeath: X = 2 — the first mode shrinks every other
+/// creature by 2 and costs 2 life; the second returns creature cards worth
+/// at most 2 in total, hasted.
+#[test]
+fn orcus_withers_or_raises() {
+    let mut g = pod(2);
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let orcus = g.add_card_to_hand(0, catalog::orcus_prince_of_undeath());
+    flood(&mut g);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Mode(0)]));
+    let life = g.players[0].life;
+    cast_x(&mut g, orcus, Some(2));
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(theirs).is_none(), "a 2/2 at -2/-2 dies");
+    assert!(g.battlefield_find(orcus).is_some());
+    assert_eq!(g.players[0].life, life - 2);
+
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let orcus = g.add_card_to_hand(0, catalog::orcus_prince_of_undeath());
+    flood(&mut g);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Mode(1)]));
+    cast_x(&mut g, orcus, Some(2));
+    assert!(g.battlefield_find(bear).is_some(), "the bear fits X = 2");
+    assert!(g.battlefield_find(giant).is_none(), "the giant (4) doesn't");
+}
+
+/// Sanctum of Stone Fangs: at your precombat main, drain one per Shrine.
+#[test]
+fn sanctum_of_stone_fangs_drains_per_shrine() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::sanctum_of_stone_fangs());
+    for seat in 0..3 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!([g.players[0].life, g.players[1].life, g.players[2].life], [lives[0] + 1, lives[1] - 1, lives[2] - 1]);
+}
+
+/// Sarkhan's Unsealing: a power-4 creature spell bolts for 4; a power-7 one
+/// hits each opponent and everything they control for 4.
+#[test]
+fn sarkhans_unsealing_rewards_big_casts() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::sarkhans_unsealing());
+    let theirs = ready(&mut g, 1, catalog::hill_giant());
+    let giant = g.add_card_to_hand(0, catalog::craw_wurm());
+    flood(&mut g);
+    let life = g.players[1].life;
+    cast_x(&mut g, giant, None);
+    let dealt = (life - g.players[1].life) + i32::from(g.battlefield_find(theirs).is_none()) * 4;
+    assert_eq!(dealt, 4, "one 4-damage trigger off a 6/4");
+}
+
+/// Ob Nixilis, the Adversary: casualty X — sacrificing a 3-power creature
+/// copies it non-legendary with 3 starting loyalty (CR 702.153a), so both
+/// stay (no legend rule).
+#[test]
+fn ob_nixilis_casualty_copy_has_the_sacrificed_power_as_loyalty() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let ob = g.add_card_to_hand(0, catalog::ob_nixilis_the_adversary());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellCasualty {
+        card_id: ob,
+        sacrifice: giant,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("casualty cast");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    let walkers: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Ob Nixilis, the Adversary").collect();
+    assert_eq!(walkers.len(), 2, "the copy isn't legendary");
+    let copy = walkers.iter().find(|c| c.is_token).expect("the copy is a token");
+    assert_eq!(copy.counter_count(crabomination::card::CounterType::Loyalty), 3);
+}

@@ -1,8 +1,8 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
-//! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal and Child of
-//! Alara. Tests in
+//! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara
+//! and Rakdos, Lord of Riots. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -840,6 +840,253 @@ pub fn nasty_end() -> CardDefinition {
             then: Box::new(draw(3)),
             else_: Box::new(draw(2)),
         },
+        ..Default::default()
+    }
+}
+
+/// Cryptolith Fragment // Aurora of Emrakul — {3} artifact, enters tapped.
+/// {T}: one mana of any color, and each player loses 1 life. At the
+/// beginning of your upkeep, if each player has 10 or less life, transform
+/// it (CR 701.28) into Aurora of Emrakul, a 1/4 flying deathtouch Eldrazi
+/// Reflection whose attacks drain each opponent for 3.
+pub fn cryptolith_fragment() -> CardDefinition {
+    let aurora = CardDefinition {
+        name: "Aurora of Emrakul",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Reflection],
+            ..Default::default()
+        },
+        color_indicator: vec![Color::Black],
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(3) },
+        }],
+        ..Default::default()
+    };
+    let everyone_low = Predicate::ValueAtMost(Value::HighestLifeTotal, Value::Const(10));
+    CardDefinition {
+        name: "Cryptolith Fragment",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl)
+                .with_filter(everyone_low.clone()),
+            effect: Effect::If {
+                cond: everyone_low,
+                then: Box::new(Effect::Transform { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        back_face: Some(Box::new(aurora)),
+        ..Default::default()
+    }
+}
+
+/// Orcus, Prince of Undeath — {X}{2}{B}{R} 5/3 legendary Demon, flying,
+/// trample. On entry, choose one: each other creature gets -X/-X until end
+/// of turn and you lose X life; or return up to X target creature cards with
+/// total mana value X or less from your graveyard (CR 601.2c across the
+/// slots), and they gain haste until end of turn.
+pub fn orcus_prince_of_undeath() -> CardDefinition {
+    let minus_x = || Value::Times(Box::new(Value::Const(-1)), Box::new(Value::XFromCost));
+    let wither = Effect::Seq(vec![
+        Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
+            power: minus_x(),
+            toughness: minus_x(),
+            duration: Duration::EndOfTurn,
+        },
+        Effect::LoseLife { who: Selector::You, amount: Value::XFromCost },
+    ]);
+    let reanimate = Effect::WithX {
+        x: Value::XFromCost,
+        body: Box::new(Effect::ReflexiveTrigger {
+            body: Box::new(Effect::CapTargetsAt {
+                amount: Value::XFromCost,
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Creature.and(R::InYourGraveyard).and(R::SlotsTotalManaValueAtMostX),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                    ])),
+                }),
+            }),
+        }),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![wither, reanimate]))],
+        ..legend(
+            "Orcus, Prince of Undeath",
+            cost(&[x(), generic(2), b(), r()]),
+            vec![CreatureType::Demon],
+            5,
+            3,
+        )
+    }
+}
+
+/// Sanctum of Stone Fangs — {1}{B} legendary Shrine. At the beginning of
+/// your precombat main phase, each opponent loses X life and you gain X,
+/// X the number of Shrines you control.
+pub fn sanctum_of_stone_fangs() -> CardDefinition {
+    let shrines = || Value::count(Selector::EachPermanent(
+        R::HasEnchantmentSubtype(EnchantmentSubtype::Shrine).and(R::ControlledByYou),
+    ));
+    CardDefinition {
+        name: "Sanctum of Stone Fangs",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Shrine], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::PreCombatMain),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: shrines() },
+                Effect::GainLife { who: Selector::You, amount: shrines() },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sarkhan's Unsealing — {3}{R} enchantment. Casting a creature spell with
+/// power 4, 5 or 6 deals 4 damage to any target; with power 7 or greater, 4
+/// to each opponent and each creature and planeswalker they control.
+pub fn sarkhans_unsealing() -> CardDefinition {
+    let cast = |filter: R| {
+        EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellMatches(R::Creature.and(filter)))
+    };
+    CardDefinition {
+        name: "Sarkhan's Unsealing",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: cast(R::PowerAtLeast(4).and(R::PowerAtMost(6))),
+                effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(4) },
+            },
+            TriggeredAbility {
+                event: cast(R::PowerAtLeast(7)),
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(4) },
+                    Effect::DealDamage {
+                        to: Selector::EachPermanent(
+                            R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent),
+                        ),
+                        amount: Value::Const(4),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+fn devil() -> TokenDefinition {
+    TokenDefinition {
+        name: "Devil".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Red],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ob Nixilis, the Adversary — {1}{B}{R} legendary planeswalker, loyalty 3.
+/// Casualty X: the copy isn't legendary and starts with loyalty X, the
+/// sacrificed creature's power (CR 702.153a). +1: each opponent loses 2 life
+/// unless they discard a card; then with a Demon or Devil you gain 2. −2: a
+/// 1/1 red Devil with "when this dies, 1 damage to any target". −7: target
+/// player draws seven and loses 7 life.
+pub fn ob_nixilis_the_adversary() -> CardDefinition {
+    let fiend = R::HasCreatureType(CreatureType::Demon).or(R::HasCreatureType(CreatureType::Devil));
+    CardDefinition {
+        name: "Ob Nixilis, the Adversary",
+        cost: cost(&[generic(1), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Nixilis], ..Default::default() },
+        base_loyalty: 3,
+        keywords: vec![Keyword::Casualty(0)],
+        static_abilities: vec![StaticAbility {
+            description: "Casualty X. The copy isn't legendary and has starting loyalty X.",
+            effect: StaticEffect::CasualtyCopyLoyaltyFromSacrifice,
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::ForEachOpponent {
+                        body: Box::new(Effect::UnlessPlayerPays {
+                            who: PlayerRef::Triggerer,
+                            cost: crate::card::WardCost::Discard(1),
+                            then: Box::new(Effect::LoseLife {
+                                who: Selector::Player(PlayerRef::Triggerer),
+                                amount: Value::Const(2),
+                            }),
+                            if_paid: None,
+                        }),
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::count(Selector::EachPermanent(fiend.and(R::ControlledByYou))),
+                            Value::ONE,
+                        ),
+                        then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(devil()) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::TargetPlayerThen {
+                    filter: R::Player,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(7) },
+                        Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(7) },
+                    ])),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
