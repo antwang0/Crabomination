@@ -229,6 +229,16 @@ which the play budget never counts — `recommend::MAX_STACK_ITEMS` (8,192)
 now ends such a game as a `BoardCap`. The pod also asserts no attacked-
 permanent defender record outlives a turn (CR 511.3 / 508.5).
 
+Closing round: a pod **draw** now scores -50,000 units in `eval_material`
+(it was 0, above any losing board, so a seat behind cast Flame Rift into an
+all-lose table); the loop probe counts a loop that settles below its starting
+depth (Surgical Suite returning Gremlin Tamer under Secret Arcade) and gates
+**every** pod action but a pass / answer / combat declaration
+(`loop_hazard::action_starts_loop`). Sweeps 46001 (`dflt`, 4/6/8 × 6: 1,080
+games, 0 bad), 47002 (4/5/6 × 20: 4,080 games, 4 undecided — all
+Polyraptor + Marauding Raptor brought in by Atla Palani's Egg reveals or
+combat, not a bot choice) and 47003 (3/7 fuzzed: 3,160, 0 bad).
+
 Also this run: **CR 702.189a / 605.1b — firebending uses the stack** (2025
 ruling; it was resolved as a mana ability, so Isshin never doubled it and
 nothing could copy it), and **Firebender Ascension**'s quest-counter copy
