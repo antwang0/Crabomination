@@ -2891,7 +2891,8 @@ pub fn the_mechanist_aerial_artisan() -> CardDefinition {
 }
 
 /// Iroh, Tea Master — {1}{R}{W} 2/2 legendary Human Citizen Ally. When it
-/// enters, create a Food token. (The combat donate ability is dropped.)
+/// enters, create a Food token. At the beginning of combat on your turn, you
+/// may donate a permanent for a 1/1 Ally that grows per donated permanent.
 pub fn iroh_tea_master() -> CardDefinition {
     CardDefinition {
         name: "Iroh, Tea Master",

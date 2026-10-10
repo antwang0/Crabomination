@@ -3,6 +3,7 @@
 
 use crabomination::card::CardId;
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Effect, Selector};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -1044,4 +1045,174 @@ fn ardyn_makes_a_demon_copy_or_nothing() {
     let cp = g.computed_permanent(token.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
     assert_eq!(cp.subtypes().creature_types, vec![crabomination::card::CreatureType::Demon]);
+}
+
+/// Declare `attacks` (attacker, defending seat) for seat 0 and resolve the
+/// attack triggers, staying in combat.
+fn declare(g: &mut GameState, attacks: &[(CardId, usize)]) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let attacks = attacks.iter().map(|&(attacker, p)| Attack { attacker, target: AttackTarget::Player(p) }).collect();
+    g.perform_action(GameAction::DeclareAttackers(attacks)).expect("attack");
+    drain_stack(g);
+}
+
+fn begin_combat(g: &mut GameState) {
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(g);
+}
+
+/// Fire Nation Turret (Fire Lord Zuko's list): the combat trigger's +2/+0 and
+/// firebending 2 (CR 702.189a: two {R} on attack); fifty charge counters buy
+/// 50 damage.
+#[test]
+fn fire_nation_turret_lends_firebending_and_fires_at_fifty() {
+    let mut g = pod(2);
+    let turret = ready(&mut g, 0, catalog::fire_nation_turret());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    begin_combat(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+    declare(&mut g, &[(bear, 1)]);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
+    g.battlefield_find_mut(turret).unwrap().add_counters(crabomination::card::CounterType::Charge, 50);
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: turret,
+        ability_index: 1,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("remove fifty");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 50);
+    assert_eq!(g.battlefield_find(turret).unwrap().counter_count(crabomination::card::CounterType::Charge), 0);
+}
+
+/// Commander Liara Portyr (Fire Lord Zuko's list): attacking two players
+/// exiles two cards, castable this turn, and exile casts cost {2} less.
+#[test]
+fn commander_liara_portyr_scales_with_the_players_attacked() {
+    let mut g = pod(3);
+    let liara = ready(&mut g, 0, catalog::commander_liara_portyr());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ogres: Vec<CardId> = (0..3).map(|_| g.add_card_to_library(0, catalog::gray_ogre())).collect();
+    declare(&mut g, &[(liara, 1), (bear, 2)]);
+    let exiled: Vec<CardId> = ogres.iter().copied().filter(|id| g.exile.iter().any(|c| c.id == *id)).collect();
+    assert_eq!(exiled.len(), 2, "two players attacked");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    // Gray Ogre is {2}{R}: {2} less leaves {R}.
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    let cast = GameAction::CastFromZoneWithoutPaying {
+        card_id: exiled[0],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(cast).is_err(), "the {{R}} still has to be paid");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: exiled[0],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Ogre from exile for {R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(exiled[0]).is_some());
+}
+
+/// Fire Lord Ozai (Fire Lord Zuko's list): the attack sacrifice adds {R} per
+/// point of the victim's power; {6} exiles each opponent's top card and only
+/// one of them may be played.
+#[test]
+fn fire_lord_ozai_feeds_on_a_sacrifice_and_steals_one_card() {
+    let mut g = pod(3);
+    let ozai = ready(&mut g, 0, catalog::fire_lord_ozai());
+    let ogre = ready(&mut g, 0, catalog::gray_ogre());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    declare(&mut g, &[(ozai, 1)]);
+    assert!(g.battlefield_find(ogre).is_none(), "sacrificed");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
+
+    let mut g = pod(3);
+    let ozai = ready(&mut g, 0, catalog::fire_lord_ozai());
+    let a = g.add_card_to_library(1, catalog::grizzly_bears());
+    let b = g.add_card_to_library(2, catalog::grizzly_bears());
+    flood(&mut g);
+    activate(&mut g, ozai, 0);
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: a,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the first free cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).map(|c| c.controller), Some(0));
+    assert!(g
+        .perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: b,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(), "only one of those cards");
+}
+
+/// Iroh, Dragon of the West (Fire Lord Zuko's list): a creature with a
+/// counter gains firebending 2 at the beginning of combat; one without doesn't.
+#[test]
+fn iroh_dragon_of_the_west_lights_up_countered_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::iroh_dragon_of_the_west());
+    let grown = ready(&mut g, 0, catalog::grizzly_bears());
+    let plain = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(grown).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    begin_combat(&mut g);
+    declare(&mut g, &[(plain, 1)]);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0);
+    let mut g2 = pod(2);
+    ready(&mut g2, 0, catalog::iroh_dragon_of_the_west());
+    let grown = ready(&mut g2, 0, catalog::grizzly_bears());
+    g2.battlefield_find_mut(grown).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    begin_combat(&mut g2);
+    declare(&mut g2, &[(grown, 1)]);
+    assert_eq!(g2.players[0].mana_pool.amount(Color::Red), 2);
+}
+
+/// The Legend of Roku (Fire Lord Zuko's list): I exiles three to play, II
+/// adds a mana, III returns it as Avatar Roku (CR 714.2 / 712).
+#[test]
+fn the_legend_of_roku_becomes_avatar_roku() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    let saga = g.add_card_to_hand(0, catalog::the_legend_of_roku());
+    flood(&mut g);
+    cast_x(&mut g, saga, None);
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 3);
+    g.players[0].mana_pool = Default::default();
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    let roku = g.battlefield_find(saga).expect("returned transformed");
+    assert_eq!(roku.definition.name, "Avatar Roku");
 }
