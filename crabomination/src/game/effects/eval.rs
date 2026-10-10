@@ -6251,6 +6251,9 @@ impl GameState {
                     R::NameNotSharedWithYourPermanents => !self.battlefield.iter().any(|c| {
                         c.controller == controller && c.definition.name == card.definition.name
                     }),
+                    R::NameNotSharedWithYourTokens => !self.battlefield.iter().any(|c| {
+                        c.is_token && c.controller == controller && c.definition.name == card.definition.name
+                    }),
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
                     R::Colorless => color_set().is_empty(),
                     R::Monocolored => color_set().is_monocolored(),
@@ -7206,6 +7209,9 @@ impl GameState {
                 .any(|c| c.id != card.id && c.definition.name == card.definition.name),
             R::NameNotSharedWithYourPermanents => !self.battlefield.iter().any(|c| {
                 c.controller == controller && c.definition.name == card.definition.name
+            }),
+            R::NameNotSharedWithYourTokens => !self.battlefield.iter().any(|c| {
+                c.is_token && c.controller == controller && c.definition.name == card.definition.name
             }),
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
             R::Colorless => card.definition.printed_color_set().is_empty(),

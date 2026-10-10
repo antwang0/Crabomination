@@ -11138,8 +11138,14 @@ pub enum Effect {
     /// "Return a card of an opponent's choice matching `filter` from your
     /// graveyard to your hand" — untargeted (Tasigur, the Golden Fang). The
     /// choosing opponent is prompted when they want a UI; a bot chooser hands
-    /// back the lowest-mana-value match.
-    ReturnFromGraveyardOpponentChooses { filter: SelectionRequirement },
+    /// back the lowest-mana-value match. `chooser` names that opponent
+    /// ("defending player chooses" — O-Kagachi Made Manifest); `None` lets the
+    /// controller pick which opponent chooses. The card goes on `LastMoved`.
+    ReturnFromGraveyardOpponentChooses {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        chooser: Option<PlayerRef>,
+    },
 
     /// Menacing Ogre — every player secretly picks a number up to `max`, the
     /// picks are revealed at once, and each player who named the highest loses
@@ -13437,6 +13443,9 @@ pub enum LookExileGrant {
     /// Durnan of the Yawning Portal: you MAY exile a creature card, face up;
     /// cast it while it stays exiled, paying its cost.
     CreatureMayWhileExiled,
+    /// Djeru and Hazoret: you MAY exile a legendary creature card, face up;
+    /// cast it this turn without paying its mana cost.
+    LegendaryCreatureFreeThisTurn,
 }
 
 /// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).

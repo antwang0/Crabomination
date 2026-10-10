@@ -20373,6 +20373,7 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
                 },
                 Effect::ReturnFromGraveyardOpponentChooses {
                     filter: SelectionRequirement::Nonland,
+                    chooser: None,
                 },
             ]),
             once_per_turn: false,

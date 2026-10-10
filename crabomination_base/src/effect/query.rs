@@ -3809,6 +3809,14 @@ impl Effect {
     /// zone-blind".
     ///
     /// [`prefers_graveyard_target`]: Self::prefers_graveyard_target
+    /// CR 109.2 — whether a target slot filtered by `req` reaches cards off
+    /// the battlefield: its filter names the zone, or the effect moves its
+    /// target and the slot doesn't say "permanent". The one scope the
+    /// auto-picker, the enumerator and the cast-time check share.
+    pub fn offboard_target_scope(&self, req: &SelectionRequirement) -> bool {
+        req.mentions_offboard_zone() || (self.may_target_offboard_card() && !req.names_permanent())
+    }
+
     pub fn may_target_offboard_card(&self) -> bool {
         if self.prefers_graveyard_target() {
             return true;

@@ -1562,6 +1562,10 @@ pub enum StaticEffect {
     /// player-counter clause is approximated away); applied alongside
     /// `ExtraPlusOneCounters` before the `DoubleCounters` multiplier.
     ExtraCounterAllKinds,
+    /// `ExtraCounterAllKinds` over "a creature or planeswalker you control or
+    /// … yourself" (Lae'zel, Vlaakith's Champion): creatures and players as
+    /// the Constrictor, a noncreature planeswalker instead of an artifact.
+    ExtraCounterOnCreaturePlaneswalkerOrYou,
     /// CR 614 — "If you would get one or more {E}, you get that many plus
     /// `amount` instead." An energy-only gain bonus (Izzet Generatorium), unlike
     /// `ExtraCounterAllKinds` which boosts every counter kind.
@@ -1783,6 +1787,11 @@ pub enum StaticEffect {
     /// The creature-side sibling of `ReduceDamageToYouBy`; applied in
     /// `GameState::scale_damage_to` before the doublers.
     ReduceDamageToYourCreaturesBy(u32),
+    /// CR 615 — "If a source an opponent controls would deal damage to you or
+    /// a permanent you control, prevent N of that damage" (Valkmira,
+    /// Protector's Shield): a shave per damage event, read by the source's
+    /// controller in `GameState::scale_damage_to`.
+    ReduceOpponentDamageToYouAndYoursBy(u32),
     /// The filtered sibling of `ReduceDamageToYourCreaturesBy`: only creatures
     /// you control matching `filter` get the reduction (Daunting Defender's
     /// Clerics, Circle of Solace-style tribal shields).

@@ -27942,13 +27942,18 @@ impl GameState {
                     .filter(|c| match grant {
                         G::CastFreeNonland => !c.definition.is_land(),
                         G::CreatureMayWhileExiled => self.computed_is_creature(c),
+                        G::LegendaryCreatureFreeThisTurn => {
+                            self.computed_is_creature(c)
+                                && c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
+                        }
                         _ => true,
                     })
                     .collect();
                 let auto = eligible.iter().max_by_key(|c| c.definition.cost.cmc()).map(|c| c.id);
                 let candidates: Vec<(CardId, String)> =
                     eligible.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
-                let optional = matches!(grant, G::CastFreeNonland | G::CreatureMayWhileExiled);
+                let optional =
+                    matches!(grant, G::CastFreeNonland | G::CreatureMayWhileExiled | G::LegendaryCreatureFreeThisTurn);
                 let min = u32::from(!optional && !candidates.is_empty());
                 let mut cursor = 0;
                 let Some(picked) = self.ask_seat_cards_logged(
@@ -27975,7 +27980,7 @@ impl GameState {
                         G::AnyTypeWhileExiled | G::CreatureWhileExiled => {
                             (true, crate::card::MayPlayDuration::WhileExiled)
                         }
-                        G::PlayThisTurn | G::CastFreeNonland => {
+                        G::PlayThisTurn | G::CastFreeNonland | G::LegendaryCreatureFreeThisTurn => {
                             (false, crate::card::MayPlayDuration::EndOfThisTurn)
                         }
                         G::CreatureMayWhileExiled => (false, crate::card::MayPlayDuration::WhileExiled),
@@ -30666,7 +30671,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReturnFromGraveyardOpponentChooses { filter } => {
+            Effect::ReturnFromGraveyardOpponentChooses { filter, chooser } => {
                 let p = ctx.controller;
                 let mut matches: Vec<(CardId, String, u32)> = self.players[p]
                     .graveyard
@@ -30687,9 +30692,13 @@ impl GameState {
                 // A bot chooser hands back the least useful match (lowest MV);
                 // a UI opponent is prompted for real.
                 matches.sort_by_key(|(_, _, mv)| *mv);
-                let chooser = self
+                let named = chooser.as_ref().and_then(|who| self.resolve_player(who, ctx)).filter(|&c| c != p);
+                let chooser = match named {
+                    Some(c) => c,
+                    None => self
                         .choose_opponent_at_once(p, ctx.source.unwrap_or(CardId(0)), "Choose the opponent who picks")
-                        .unwrap_or(p);
+                        .unwrap_or(p),
+                };
                 let mut cursor = 0usize;
                 let candidates: Vec<(CardId, String)> =
                     matches.iter().map(|(id, n, _)| (*id, n.clone())).collect();
@@ -30710,6 +30719,7 @@ impl GameState {
                 self.clear_answer_log();
                 let id = picked.first().copied().unwrap_or(matches[0].0);
                 self.move_card_to(id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                self.scratch.last_moved_cards.push(id);
                 Ok(())
             }
 
