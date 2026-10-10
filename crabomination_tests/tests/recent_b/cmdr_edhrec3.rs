@@ -277,3 +277,127 @@ fn to_end_step(g: &mut GameState) {
     }
     drain_stack(g);
 }
+
+/// Axgard Armory: an Aura and an Equipment in one activation, each its own
+/// search (CR 701.23).
+#[test]
+fn axgard_armory_fetches_an_aura_and_an_equipment() {
+    let mut g = pod(2);
+    let armory = ready(&mut g, 0, catalog::axgard_armory());
+    let aura = g.add_card_to_library(0, catalog::pacifism());
+    let gear = g.add_card_to_library(0, catalog::bonesplitter());
+    g.add_card_to_library(0, catalog::island());
+    flood(&mut g);
+    activate(&mut g, armory, 1);
+    let hand: Vec<CardId> = g.players[0].hand.iter().map(|c| c.id).collect();
+    assert!(hand.contains(&aura) && hand.contains(&gear));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == armory), "sacrificed");
+}
+
+/// Tournament Grounds: its colored mana pays for a Knight (CR 106.6) and
+/// for nothing else.
+#[test]
+fn tournament_grounds_mana_only_casts_knights_and_equipment() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::tournament_grounds());
+    let b = ready(&mut g, 0, catalog::tournament_grounds());
+    let lions = g.add_card_to_hand(0, catalog::savannah_lions());
+    let knight = g.add_card_to_hand(0, catalog::knight_of_the_white_orchid());
+    for id in [a, b] {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 2,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap for W");
+    }
+    g.priority.player_with_priority = 0;
+    let lions_cast = g.perform_action(GameAction::CastSpell { card_id: lions, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(lions_cast.is_err() || g.players[0].hand.iter().any(|c| c.id == lions), "a Cat isn't a Knight");
+    cast_x(&mut g, knight, None);
+    assert!(g.battlefield_find(knight).is_some());
+}
+
+/// Danitha, Benalia's Hope: an Equipment from hand enters attached to her.
+#[test]
+fn danitha_benalias_hope_brings_her_own_gear() {
+    let mut g = pod(2);
+    let gear = g.add_card_to_hand(0, catalog::bonesplitter());
+    let danitha = g.add_card_to_hand(0, catalog::danitha_benalias_hope());
+    flood(&mut g);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    cast_x(&mut g, danitha, None);
+    assert_eq!(g.battlefield_find(gear).and_then(|c| c.attached_to), Some(danitha));
+    assert_eq!(g.computed_permanent(danitha).unwrap().power, 6, "Bonesplitter's +2/+0");
+}
+
+/// Merry: first strike only while equipped; a draw only when another
+/// legendary creature attacks beside it.
+#[test]
+fn merry_draws_beside_another_legend() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let merry = ready(&mut g, 0, catalog::merry_esquire_of_rohan());
+    let fs = |g: &GameState| g.computed_permanent(merry).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike);
+    assert!(!fs(&g));
+    let gear = ready(&mut g, 0, catalog::bonesplitter());
+    g.battlefield_find_mut(gear).unwrap().attached_to = Some(merry);
+    assert!(fs(&g), "equipped: first strike");
+
+    let isamaru = ready(&mut g, 0, catalog::isamaru_hound_of_konda());
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: merry, target: AttackTarget::Player(1) },
+        Attack { attacker: isamaru, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Scouting Hawk: Keen Sight's intervening "if" (CR 603.4) — behind on
+/// lands, a basic Plains enters tapped.
+#[test]
+fn scouting_hawk_catches_up_on_lands() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::island());
+    let plains = g.add_card_to_library(0, catalog::plains());
+    let hawk = g.add_card_to_hand(0, catalog::scouting_hawk());
+    flood(&mut g);
+    cast_x(&mut g, hawk, None);
+    assert!(g.battlefield_find(plains).is_some_and(|c| c.tapped));
+}
+
+/// Lofty Denial: {1} to keep the spell, {4} with a flier on your side —
+/// read as it resolves.
+#[test]
+fn lofty_denial_taxes_four_with_a_flier() {
+    for flier in [false, true] {
+        let mut g = pod(2);
+        if flier {
+            ready(&mut g, 0, catalog::battlefield_raptor());
+        }
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.players[1].mana_pool.add_colorless(2);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("bolt");
+        let denial = g.add_card_to_hand(0, catalog::lofty_denial());
+        flood(&mut g);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: denial, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("denial");
+        let life = g.players[0].life;
+        drain_stack(&mut g);
+        let expected = if flier { life } else { life - 3 };
+        assert_eq!(g.players[0].life, expected, "flier: {flier}");
+    }
+}

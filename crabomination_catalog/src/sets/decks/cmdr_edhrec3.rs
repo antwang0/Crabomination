@@ -1,6 +1,7 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
-//! second). Ketramose, the New Dawn and Niko, Light of Hope. Tests in
+//! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
+//! Ashvale and Kastral, the Windcrested. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -10,8 +11,8 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, TriggerZone, ZoneDest};
-use crate::mana::{cost, generic, u, w, x, Color};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, TriggerZone, ZoneDest};
+use crate::mana::{cost, generic, r, u, w, x, Color, SpendRestriction};
 use crabomination_base::tokens::treasure_token;
 use std::sync::Arc;
 
@@ -329,6 +330,190 @@ pub fn niko_aris() -> CardDefinition {
             },
             LoyaltyAbility { loyalty_cost: -1, effect: shards(Value::ONE), ..Default::default() },
         ],
+        ..Default::default()
+    }
+}
+
+fn aura_card() -> R {
+    R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+}
+
+fn equipment_card() -> R {
+    R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+}
+
+fn tap_for(pool: ManaPayload) -> ActivatedAbility {
+    ActivatedAbility { tap_cost: true, effect: Effect::AddMana { who: PlayerRef::You, pool }, ..Default::default() }
+}
+
+fn land(name: &'static str) -> CardDefinition {
+    CardDefinition { name, card_types: vec![CardType::Land], ..Default::default() }
+}
+
+/// Axgard Armory — Land, enters tapped (CR 614.1c). {T}: Add {W}.
+/// {1}{R}{R}{W}, {T}, sacrifice it: search for an Aura card and/or an
+/// Equipment card, reveal them, put them into your hand, then shuffle — one
+/// search per category, either of which may find nothing (CR 701.23b).
+pub fn axgard_armory() -> CardDefinition {
+    let to_hand = |filter: R| Effect::Search { who: PlayerRef::You, filter, to: ZoneDest::Hand(PlayerRef::You) };
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![
+            tap_for(ManaPayload::Colors(vec![Color::White])),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(1), r(), r(), w()]),
+                effect: Effect::Seq(vec![to_hand(aura_card()), to_hand(equipment_card())]),
+                ..Default::default()
+            },
+        ],
+        ..land("Axgard Armory")
+    }
+}
+
+/// Tournament Grounds — Land. {T}: Add {C}. {T}: Add {R}, {W}, or {B};
+/// spend it only to cast a Knight or Equipment spell (CR 106.6).
+pub fn tournament_grounds() -> CardDefinition {
+    let restricted = |c: Color| {
+        tap_for(ManaPayload::Restricted(
+            Box::new(ManaPayload::Colors(vec![c])),
+            SpendRestriction::KnightOrEquipmentSpells,
+        ))
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            tap_for(ManaPayload::Colorless(Value::ONE)),
+            restricted(Color::Red),
+            restricted(Color::White),
+            restricted(Color::Black),
+        ],
+        ..land("Tournament Grounds")
+    }
+}
+
+/// Danitha, Benalia's Hope — {4}{W} 4/4 legendary Human Knight, first strike,
+/// vigilance, lifelink. On entry you may put an Aura or Equipment card from
+/// your hand or graveyard onto the battlefield attached to it (CR 303.4f /
+/// 301.5c).
+pub fn danitha_benalias_hope() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance, Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Put an Aura or Equipment card from your hand or graveyard onto the battlefield attached to Danitha?".into(),
+            body: Box::new(Effect::PutOntoBattlefieldAttached {
+                zones: vec![crate::card::Zone::Hand, crate::card::Zone::Graveyard],
+                filter: aura_card().or(equipment_card()),
+                host: Some(Selector::This),
+                max: Some(Value::ONE),
+                creatures_only: false,
+                equipment_unattached: false,
+            }),
+        })],
+        ..legend(
+            "Danitha, Benalia's Hope",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            4,
+            4,
+        )
+    }
+}
+
+/// Merry, Esquire of Rohan — {R}{W} 2/2 legendary Halfling Knight, haste.
+/// First strike while equipped. Whenever you attack with it and another
+/// legendary creature, draw a card (one trigger per declaration, CR 508.1).
+pub fn merry_esquire_of_rohan() -> CardDefinition {
+    let other_legend_attacking = Value::count(Selector::EachPermanent(
+        R::Creature
+            .and(R::IsAttacking)
+            .and(R::ControlledByYou)
+            .and(R::OtherThanSource)
+            .and(R::HasSupertype(Supertype::Legendary)),
+    ));
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Merry has first strike as long as it's equipped.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SourceIsEquipped,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::ValueAtLeast(other_legend_attacking, Value::ONE)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..legend(
+            "Merry, Esquire of Rohan",
+            cost(&[r(), w()]),
+            vec![CreatureType::Halfling, CreatureType::Knight],
+            2,
+            2,
+        )
+    }
+}
+
+/// Battlefield Raptor — {W} 1/2 Bird, flying, first strike.
+pub fn battlefield_raptor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        ..creature("Battlefield Raptor", cost(&[w()]), vec![CreatureType::Bird], 1, 2)
+    }
+}
+
+/// Scouting Hawk — {2}{W} 1/1 Bird, flying. Keen Sight: on entry, if an
+/// opponent controls more lands than you (CR 603.4), search for a basic
+/// Plains and put it onto the battlefield tapped.
+pub fn scouting_hawk() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::OpponentControlsMoreLandsThanYou),
+            effect: Effect::If {
+                cond: Predicate::OpponentControlsMoreLandsThanYou,
+                then: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::IsBasicLand.and(R::HasLandType(crate::card::LandType::Plains)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Scouting Hawk", cost(&[generic(2), w()]), vec![CreatureType::Bird], 1, 1)
+    }
+}
+
+/// Lofty Denial — {1}{U} instant. Counter target spell unless its controller
+/// pays {1}, or {4} if you control a creature with flying (read on
+/// resolution).
+pub fn lofty_denial() -> CardDefinition {
+    let counter = |n: u32| Effect::CounterUnlessPaid {
+        what: target_filtered(R::IsSpellOnStack),
+        mana_cost: cost(&[generic(n)]),
+        exile: false,
+        extra_generic: None,
+        if_paid: None,
+    };
+    let flier = Value::count(Selector::EachPermanent(
+        R::Creature.and(R::ControlledByYou).and(R::HasKeyword(Keyword::Flying)),
+    ));
+    CardDefinition {
+        name: "Lofty Denial",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(flier, Value::ONE),
+            then: Box::new(counter(4)),
+            else_: Box::new(counter(1)),
+        },
         ..Default::default()
     }
 }
