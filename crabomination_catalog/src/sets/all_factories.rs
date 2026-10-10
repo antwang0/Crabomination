@@ -4931,6 +4931,7 @@ static DECKS: &[Factory] = &[
     super::decks::battlefield_raptor,
     super::decks::scouting_hawk,
     super::decks::lofty_denial,
+    super::decks::the_eagles_are_coming,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

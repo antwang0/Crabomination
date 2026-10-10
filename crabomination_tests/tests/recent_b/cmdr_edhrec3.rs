@@ -401,3 +401,34 @@ fn lofty_denial_taxes_four_with_a_flier() {
         assert_eq!(g.players[0].life, expected, "flier: {flier}");
     }
 }
+
+/// The Eagles Are Coming!: unkicked, one creature however many are named
+/// (CR 601.2c); kicked, all of them — and a 4/4 flying Bird Soldier for each
+/// at the next upkeep (CR 603.7), whoever's it is.
+#[test]
+fn the_eagles_are_coming_trades_creatures_for_birds() {
+    for kicked in [false, true] {
+        let mut g = pod(3);
+        let a = ready(&mut g, 0, catalog::grizzly_bears());
+        let b = ready(&mut g, 0, catalog::grizzly_bears());
+        let eagles = g.add_card_to_hand(0, catalog::the_eagles_are_coming());
+        flood(&mut g);
+        let (target, additional_targets) = (Some(Target::Permanent(a)), vec![Target::Permanent(b)]);
+        let action = if kicked {
+            GameAction::CastSpellKicked { card_id: eagles, target, additional_targets, mode: None, x_value: None }
+        } else {
+            GameAction::CastSpell { card_id: eagles, target, additional_targets, mode: None, x_value: None }
+        };
+        g.priority.player_with_priority = 0;
+        g.perform_action(action).expect("cast");
+        drain_stack(&mut g);
+        let returned = [a, b].iter().filter(|id| g.players[0].hand.iter().any(|c| c.id == **id)).count();
+        assert_eq!(returned, if kicked { 2 } else { 1 });
+        assert_eq!(named(&g, "Bird Soldier"), 0, "not yet");
+        while !(g.step == TurnStep::Upkeep && g.active_player_idx == 1) {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(&mut g);
+        assert_eq!(named(&g, "Bird Soldier"), returned, "the next upkeep is seat 1's");
+    }
+}

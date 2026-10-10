@@ -517,3 +517,60 @@ pub fn lofty_denial() -> CardDefinition {
         ..Default::default()
     }
 }
+
+fn bird_soldier() -> TokenDefinition {
+    TokenDefinition {
+        name: "Bird Soldier".into(),
+        power: 4,
+        toughness: 4,
+        colors: vec![Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird, CreatureType::Soldier], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// The Eagles Are Coming! — {1}{W} instant, kicker {2}{W}{W}. Return target
+/// creature you own — kicked, any number of them — to your hand; at the
+/// beginning of the next upkeep (CR 603.7), a 4/4 white flying Bird Soldier
+/// for each one that reached your hand. The cast offers the kicked ceiling;
+/// unkicked, `CapTargetsAt` keeps one (CR 601.2c). Each returned creature
+/// registers its own delayed Bird, so the tokens arrive at the same upkeep.
+pub fn the_eagles_are_coming() -> CardDefinition {
+    let cap = Value::Sum(vec![
+        Value::ONE,
+        Value::Times(Box::new(Value::OneIf(Box::new(Predicate::SpellWasKicked))), Box::new(Value::Const(99))),
+    ]);
+    CardDefinition {
+        name: "The Eagles Are Coming!",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), w(), w()]))],
+        effect: Effect::CapTargetsAt {
+            amount: cap,
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 1,
+                filter: R::Creature.and(R::OwnedByYou),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) },
+                    Effect::If {
+                        cond: Predicate::SelectorExists(Selector::LastMoved),
+                        then: Box::new(Effect::DelayUntil {
+                            kind: crate::effect::DelayedTriggerKind::NextUpkeep,
+                            body: Box::new(Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                                definition: Arc::new(bird_soldier()),
+                            }),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            }),
+        },
+        ..Default::default()
+    }
+}
