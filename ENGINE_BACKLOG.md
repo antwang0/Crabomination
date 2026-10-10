@@ -132,7 +132,10 @@ closed the thirteenth run's open "~70 more" row:
   activation unusable on an empty board (Gold Rush, Path to the World Tree,
   Heritage Reclamation's third mode).
 - **Engine:** `declines_own_side_pick` also spares a card in a same-team
-  graveyard (Raven Eagle exiled its controller's own card), and
+  graveyard when the slot EXILES it (`Effect::graveyard_slot_is_hostile` —
+  Raven Eagle exiled its controller's own card; a first cut that reused the
+  battlefield test declined every optional regrowth, 12 suite failures), and
+  `InYourGraveyard` reads as your own side, and
   `permanent_slot_is_hostile` counts `Exile`, `Tap` and stun counters
   (an optional Solitude / Splash Lasher slot was never declined). Solitude's
   slot is now declared by its exile step, and no longer reads "an opponent
@@ -169,6 +172,17 @@ closed the thirteenth run's open "~70 more" row:
   branch exiled the Brisela shell whole. It now exiles the two cards
   (`cmdr_gisela::a_meld_kept_off_the_battlefield_exiles_both_cards`). The
   invariant names the zone a shell went to (found it in one replay).
+- **Sweep 2 (seed 161001, 8,820 games) and a `--a dflt` sweep (162001, 4/6
+  seats × 10, 1,400 games):** ✅ CR 614.12 / 400.7 — Herald's Horn, Urza's
+  Incubator, Steely Resolve and Cover of Darkness chose their type in an ETB
+  *trigger* (two helpers the source-reading `audit_as_enters.py` can't see
+  through); destroyed in response, the choice was stamped on the graveyard
+  card and the invariant aborted. ✅ Value arithmetic saturates (Sum / Diff /
+  Times, and the counters-on-X total): a doubling board's counters passed
+  `i32::MAX` in a token's entering counters (dflt 16200250 g3). ✅ Every token
+  copy stops at `BOARD_GATE` (sixteen Ocelot Prides, 16100355 g1). Classified:
+  The Mindskinner + Syr Konrad + Kozilek and Sanguine Bond + Exquisite Blood
+  against a can't-lose seat (CR 104.4b loops), Polyraptor ×4.
 - Classified, not bugs: The Red Terror + Shalai and Hallar against Darksteel
   Angel's "can't lose" (a mandatory CR 104.4b loop, action cap — the new
   `CRAB_POD_TRACE` line names the can't-lose flag); Polyraptor + Marauding
