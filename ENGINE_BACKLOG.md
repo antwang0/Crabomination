@@ -173,6 +173,34 @@ Benalia's Hope (Syr Gwyn, Arna), Battle Angels of Tyr (Niko, Shilgengar),
 Dream Devourer (Be'lakor, Zuko), Nicol Bolas, God-Pharaoh (Jodah, Bolas),
 Korlessa / Thrakkus / Sarkhan Unbroken (Miirym, Tiamat).
 
+**Seated from that scan (347-353, `decks::cmdr_edhrec3`, 41 cards):** Ketramose,
+Niko, Syr Gwyn, Kastral, Jodah Archmage Eternal, Child of Alara, Rakdos Lord of
+Riots. Primitives, each with a card test in `recent_b::cmdr_edhrec3`:
+
+- `TriggerZone::WhileExiled` (Senu's "if this card is exiled", CR 113.6) —
+  `game/exile_triggers.rs`, behind a `CardPile::has_exile_trigger` lane.
+- `Effect::LinkLastMovedExilesToSource` (Unlicensed Hearse's count),
+  `Predicate::PlayerValueExceedsEachOther` (Battle Angels of Tyr),
+  `SpendRestriction::KnightOrEquipmentSpells` (Tournament Grounds),
+  `DelayedTriggerKind::NextUpkeep` + `Value::OneIf` (The Eagles Are Coming!'s
+  kicked target cap), `Effect::TapAnyNumberThenDraw` (Guild Summit),
+  `LookPick::rest_to_hand_if` (Nine-Fingers Keene),
+  `StaticEffect::CasualtyCopyLoyaltyFromSacrifice` (Ob Nixilis, the Adversary:
+  `game/casualty_copy.rs`).
+- ⚠ **A statically granted "when this leaves the battlefield" fired on bounce
+  and exile but never on death** (Candlekeep Sage's commander grant): the
+  snapshot pass paired it with `PermanentLeftBattlefield` only.
+
+**Still open from the scan:** Anti-Venom (Martyrdom, above); **Be'lakor** —
+Dream Devourer needs a hand-wide foretell grant (the granted-cost machinery is
+Ethereal Valkyrie's, `effects/foretell.rs`) plus a "whenever you foretell" event,
+Balor's "one or more — each mode a different player", Raphael a per-player
+"creature card put into your graveyard this turn" (the tally is
+`Player::creature_cards_to_graveyard_this_turn`); Azlask (Echoes of Eternity's
+trigger doubling for colorless sources); Iroh (Secret of Bloodbending — control
+another player); Lorehold (Goliath Daydreamer's dream counters, Invoke
+Calamity); Terra (Tom Bombadil, The Kami War).
+
 **✅ Fixed 2026-10-10 (eighteenth Commander run) — CR 601.2c, every required
 slot.** The cast path now rejects a cast that stops short of a required slot
 of a multi-slot spell (`Effect::required_target_slots`: leading slots up to
