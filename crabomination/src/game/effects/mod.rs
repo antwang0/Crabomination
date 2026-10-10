@@ -801,7 +801,7 @@ impl GameState {
     #[inline(never)]
     /// Phyrexian Dreadnought — "sacrifice this unless you sacrifice any number
     /// of `filter` with total power `total_power` or greater." The source is
-    /// never eligible fodder (CR 701.17a — it is what's being spared).
+    /// never eligible fodder (CR 701.21a — it is what's being spared).
     fn run_sacrifice_unless_total_power(
         &mut self,
         filter: &SelectionRequirement,
@@ -3578,7 +3578,7 @@ impl GameState {
     }
 
     pub fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
-        // CR 701.17a — a player can sacrifice only a permanent they control:
+        // CR 701.21a — a player can sacrifice only a permanent they control:
         // an opponent's copy of a "sacrifice this" trigger does nothing.
         if !self.can_be_sacrificed(id) || self.battlefield_find(id).is_some_and(|c| c.controller != who) {
             return;
@@ -8486,7 +8486,7 @@ impl GameState {
             } => {
                 // Reflexive sacrifice cost: ask yes/no (only when the
                 // controller actually has a legal sacrifice), then which ones
-                // (CR 701.17a — the sacrificing player chooses; a headless
+                // (CR 701.21a — the sacrificing player chooses; a headless
                 // seat takes the weakest non-source matches) and run `then`.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let source_id = ctx.source;
@@ -45092,7 +45092,7 @@ impl GameState {
     ) -> Result<(), GameError> {
         let Some(source) = ctx.source else { return Ok(()) };
         let p = ctx.controller;
-        // CR 701.17a — only the champion's controller can sacrifice it, and
+        // CR 701.21a — only the champion's controller can sacrifice it, and
         // once it has left, its leaves trigger is spent (CR 607.2a): exiling
         // then is a loss with nothing to avoid, so the controller declines.
         // (A copy under an opponent's control — Aboleth Spawn — or a champion
