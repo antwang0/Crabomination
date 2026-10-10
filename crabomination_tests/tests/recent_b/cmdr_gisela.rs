@@ -62,6 +62,26 @@ fn melded(g: &GameState) -> Option<CardId> {
     g.battlefield.iter().find(|c| c.definition.name == "Brisela, Voice of Nightmares").map(|c| c.id)
 }
 
+/// CR 712.4 / 701.37 — a melded permanent that a replacement keeps off the
+/// battlefield is its two cards: under an opponent's Containment Priest
+/// ("exiled instead" for a creature entering uncast) Gisela and Bruna go to
+/// exile one by one, and the commander half is an exiled card its owner can
+/// find (the shell went to exile whole, Gisela inside it — an eight-seat
+/// audit pod, seed 16000432 game 8).
+#[test]
+fn a_meld_kept_off_the_battlefield_exiles_both_cards() {
+    let mut g = main_phase(2);
+    g.add_card_to_battlefield(1, catalog::containment_priest());
+    let gisela = g.add_card_to_battlefield(0, catalog::gisela_the_broken_blade());
+    let bruna = g.add_card_to_battlefield(0, catalog::bruna_the_fading_light());
+    to_end_step(&mut g);
+    assert!(melded(&g).is_none(), "Brisela never entered");
+    for id in [gisela, bruna] {
+        assert!(g.exile.iter().any(|c| c.id == id), "{id:?} is its own card in exile");
+    }
+    assert!(g.exile.iter().all(|c| c.meld_parts.is_empty()), "no melded shell in exile");
+}
+
 /// CR 903.3 / 701.37 (Gisela's ruling) — melded with Bruna, the commander is
 /// Brisela: "if you control your commander" holds, Brisela's combat damage
 /// counts on Gisela's tally, and when Brisela dies only the commander card

@@ -2995,9 +2995,16 @@ impl GameState {
                     && self.nontoken_creature_etb_exile_active())
                     || Self::exiled_if_enters_uncast_or_free(&card)
                 {
-                    let cid = card.id;
-                    self.exile.push(card);
-                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    // CR 712.4 — a melded permanent that never reaches the
+                    // battlefield is its two cards (Gisela and Bruna melding
+                    // under a Containment Priest exiled the shell whole, its
+                    // commander half inside it).
+                    let parts = std::mem::take(&mut card.meld_parts);
+                    for card in if parts.is_empty() { vec![card] } else { parts } {
+                        let cid = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
                     return;
                 }
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);
