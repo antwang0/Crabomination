@@ -2658,11 +2658,13 @@ struct RepeatGuard {
 
 impl RepeatGuard {
     /// Count `action` for `seat`; `false` once it is past the per-turn cap.
-    /// `name` is the cast card's, when the action is a cast.
+    #[cfg(test)]
     fn admit(&mut self, turn: u32, seat: usize, action: &crate::game::GameAction) -> bool {
         self.admit_named(turn, seat, action, None)
     }
 
+    /// [`Self::admit`], with `name` the cast card's when the action is a
+    /// cast.
     fn admit_named(
         &mut self,
         turn: u32,
