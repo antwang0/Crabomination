@@ -4956,6 +4956,7 @@ static DECKS: &[Factory] = &[
     super::decks::rescue_retriever,
     super::decks::siege_veteran,
     super::decks::valiant_veteran,
+    super::decks::balor,
     super::decks::lozhan_dragons_legacy,
     super::decks::agent_of_the_iron_throne,
     super::decks::inspiring_leader,

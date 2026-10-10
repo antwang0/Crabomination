@@ -1392,3 +1392,31 @@ pub fn valiant_veteran() -> CardDefinition {
         ..creature("Valiant Veteran", cost(&[generic(1), w()]), vec![CreatureType::Kor, CreatureType::Soldier], 2, 2)
     }
 }
+
+/// Balor — {3}{R}{R} 5/5 Demon, flying. Whenever it attacks or dies, choose
+/// one or more, each mode targeting a different player (the Vindictive Lich
+/// shape: a mode with no fresh opponent does nothing): an opponent draws
+/// three then discards three at random; an opponent sacrifices a nontoken
+/// artifact; Balor deals an opponent damage equal to the cards in their hand.
+pub fn balor() -> CardDefinition {
+    let opponent = || target_filtered(R::Player.and(R::ControlledByOpponent));
+    let modes = || Effect::ChooseN {
+        picks: vec![2, 1, 0],
+        modes: vec![
+            Effect::Seq(vec![
+                Effect::Draw { who: opponent(), amount: Value::Const(3) },
+                Effect::Discard { who: opponent(), amount: Value::Const(3), random: true },
+            ]),
+            Effect::Sacrifice { who: opponent(), count: Value::ONE, filter: R::Artifact.and(R::NotToken) },
+            Effect::DealDamage { to: opponent(), amount: Value::HandSizeOf(PlayerRef::Target(0)) },
+        ],
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: modes() },
+            crate::effect::shortcut::on_dies(modes()),
+        ],
+        ..creature("Balor", cost(&[generic(3), r(), r()]), vec![CreatureType::Demon], 5, 5)
+    }
+}

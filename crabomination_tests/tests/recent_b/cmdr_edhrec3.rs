@@ -960,3 +960,36 @@ fn valiant_veteran_lords_and_rallies_from_the_grave() {
     assert_eq!(g.battlefield_find(siege).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(vet).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
 }
+
+/// Balor: its attack picks one or more modes, each at a different opponent —
+/// in a four-seat pod all three land, one per opponent; in a duel only one.
+#[test]
+fn balor_spreads_its_modes_over_different_opponents() {
+    for seats in [4, 2] {
+        let mut g = pod(seats);
+        let balor = ready(&mut g, 0, catalog::balor());
+        for seat in 1..seats {
+            for _ in 0..2 {
+                g.add_card_to_hand(seat, catalog::island());
+            }
+            for _ in 0..4 {
+                g.add_card_to_library(seat, catalog::island());
+            }
+            ready(&mut g, seat, catalog::sol_ring());
+        }
+        let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: balor, target: AttackTarget::Player(1) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        let burned = (1..seats).filter(|&s| g.players[s].life == lives[s] - 2).count();
+        let sacrificed = (1..seats).filter(|&s| !g.battlefield.iter().any(|c| c.controller == s)).count();
+        let wheeled = (1..seats).filter(|&s| g.players[s].graveyard.len() == 3).count();
+        if seats == 4 {
+            assert_eq!((burned, sacrificed, wheeled), (1, 1, 1), "one mode per opponent");
+        } else {
+            assert_eq!(burned + sacrificed + wheeled, 1, "a duel's one opponent takes one mode");
+        }
+    }
+}
