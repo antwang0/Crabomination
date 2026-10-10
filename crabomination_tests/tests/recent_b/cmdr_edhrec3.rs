@@ -706,13 +706,13 @@ fn sarkhans_unsealing_rewards_big_casts() {
     assert_eq!(dealt, 4, "one 4-damage trigger off a 6/4");
 }
 
-/// Ob Nixilis, the Adversary: casualty X — sacrificing a 3-power creature
-/// copies it non-legendary with 3 starting loyalty (CR 702.153a), so both
-/// stay (no legend rule).
+/// Ob Nixilis, the Adversary: casualty X — sacrificing a 2-power creature
+/// copies it non-legendary with 2 starting loyalty (CR 702.153a), so both
+/// stay (no legend rule); the original keeps its printed 3.
 #[test]
 fn ob_nixilis_casualty_copy_has_the_sacrificed_power_as_loyalty() {
     let mut g = pod(2);
-    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let giant = ready(&mut g, 0, catalog::grizzly_bears());
     let ob = g.add_card_to_hand(0, catalog::ob_nixilis_the_adversary());
     flood(&mut g);
     g.priority.player_with_priority = 0;
@@ -730,7 +730,9 @@ fn ob_nixilis_casualty_copy_has_the_sacrificed_power_as_loyalty() {
     let walkers: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Ob Nixilis, the Adversary").collect();
     assert_eq!(walkers.len(), 2, "the copy isn't legendary");
     let copy = walkers.iter().find(|c| c.is_token).expect("the copy is a token");
-    assert_eq!(copy.counter_count(crabomination::card::CounterType::Loyalty), 3);
+    assert_eq!(copy.counter_count(crabomination::card::CounterType::Loyalty), 2);
+    let original = walkers.iter().find(|c| !c.is_token).expect("the original");
+    assert_eq!(original.counter_count(crabomination::card::CounterType::Loyalty), 3);
 }
 
 /// Dream Devourer: a hand card without foretell can be foretold (CR

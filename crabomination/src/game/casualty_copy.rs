@@ -3,7 +3,7 @@
 //! stack, is rewritten from the sacrificed creature's power.
 
 use super::GameState;
-use crate::card::{CardDefinition, CardId, Supertype};
+use crate::card::{CardDefinition, CardId, CounterType, Supertype};
 use crate::effect::StaticEffect;
 use crate::game::types::StackItem;
 
@@ -30,5 +30,10 @@ impl GameState {
         let def = card.definition_make_mut();
         def.supertypes.retain(|t| *t != Supertype::Legendary);
         def.base_loyalty = power;
+        // The copy was minted with the printed loyalty; CR 306.5b's starting
+        // loyalty is the rewritten one.
+        let printed = card.counter_count(CounterType::Loyalty);
+        card.remove_counters(CounterType::Loyalty, printed);
+        card.add_counters(CounterType::Loyalty, power);
     }
 }
