@@ -847,7 +847,7 @@ pub fn nasty_end() -> CardDefinition {
 /// Cryptolith Fragment // Aurora of Emrakul — {3} artifact, enters tapped.
 /// {T}: one mana of any color, and each player loses 1 life. At the
 /// beginning of your upkeep, if each player has 10 or less life, transform
-/// it (CR 701.28) into Aurora of Emrakul, a 1/4 flying deathtouch Eldrazi
+/// it (CR 701.28) into Aurora of Emrakul, a colorless 1/4 flying deathtouch Eldrazi
 /// Reflection whose attacks drain each opponent for 3.
 pub fn cryptolith_fragment() -> CardDefinition {
     let aurora = CardDefinition {
@@ -857,7 +857,6 @@ pub fn cryptolith_fragment() -> CardDefinition {
             creature_types: vec![CreatureType::Eldrazi, CreatureType::Reflection],
             ..Default::default()
         },
-        color_indicator: vec![Color::Black],
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
