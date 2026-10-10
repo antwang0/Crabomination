@@ -147,6 +147,7 @@ mod entry_cost;
 mod entry_tally;
 // CR 120.3a — "damage doesn't cause you to lose life" (Archon of Coronation).
 mod damage_life;
+mod mana_burn;
 mod loss_exile;
 mod mystic_barrier;
 mod loyalty_copy;
@@ -2978,6 +2979,10 @@ pub struct GameState {
     /// "Whenever a creature blocks this turn, its controller gets N poison
     /// counters" (Noxious Assault). Cleared at cleanup.
     pub(crate) block_poison_this_turn: u32,
+    /// Untapped lands the active player controlled as this turn began, before
+    /// its untap step (Power Surge's X). Stamped at `TurnStep::Untap`.
+    #[serde(default)]
+    pub(crate) untapped_lands_at_turn_start: u32,
     /// Transient: power of the creature tapped to pay a Station ability's cost
     /// (CR 702.184a). Stamped by `Effect::WithTappedPower` at resolution; read
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.
@@ -4400,6 +4405,7 @@ impl Clone for GameState {
             last_revealed_from_hand: self.last_revealed_from_hand,
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
+            untapped_lands_at_turn_start: self.untapped_lands_at_turn_start,
             tapped_for_cost_power: self.tapped_for_cost_power,
             life_gain_punish_this_turn: self.life_gain_punish_this_turn,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
@@ -4614,6 +4620,7 @@ impl GameState {
             last_revealed_from_hand: None,
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
+            untapped_lands_at_turn_start: 0,
             tapped_for_cost_power: None,
             life_gain_punish_this_turn: 0,
             trigger_event_amount_scratch: 0,
@@ -17898,6 +17905,17 @@ impl GameState {
         // CR 702.189a — Firebending mana survives until end of combat; the
         // end-of-combat-step empty is where it finally clears (no re-seed).
         let end_of_combat = self.step == crate::game::types::TurnStep::EndCombat;
+        // Yurlok of Scorch Thrash — "a player losing unspent mana causes that
+        // player to lose that much life": the pool's total before and after.
+        let burn = self.battlefield.iter().find_map(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::PlayersLoseLifeForUnspentMana))
+                .then_some((c.id, c.controller))
+        });
+        let before: Vec<u32> =
+            if burn.is_some() { self.players.iter().map(|p| p.mana_pool.total()).collect() } else { Vec::new() };
         for (i, player) in self.players.iter_mut().enumerate() {
             // Read-only fast path. `Player` is a CoW handle, so the first
             // `&mut` field write below deep-copies the whole seat — and this
@@ -17979,6 +17997,9 @@ impl GameState {
                 player.mana_pool.absorb(&kept);
                 player.kept_mana_this_turn = kept;
             }
+        }
+        if let Some((src, ctrl)) = burn {
+            self.burn_unspent_mana(src, ctrl, &before);
         }
     }
 
@@ -34321,6 +34342,7 @@ fn static_effect_to_effects(
             | StaticEffect::UnspentManaBecomesColorless
             | StaticEffect::UnspentManaBecomesBlack
             | StaticEffect::UnspentManaBecomesRed
+            | StaticEffect::PlayersLoseLifeForUnspentMana
             // Consulted directly at the step/phase pool-empty sites.
             | StaticEffect::ManaPoolsNeverEmpty
             | StaticEffect::UnspentColorManaPersists(_)

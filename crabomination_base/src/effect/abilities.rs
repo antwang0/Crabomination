@@ -3302,6 +3302,9 @@ pub enum StaticEffect {
     UnspentManaBecomesBlack,
     /// "... becomes red instead" (Ozai, the Phoenix King); the same sites.
     UnspentManaBecomesRed,
+    /// "A player losing unspent mana causes that player to lose that much
+    /// life" (Yurlok of Scorch Thrash). Global; applied as pools empty.
+    PlayersLoseLifeForUnspentMana,
     /// CR 500.4 exception — "Players don't lose unspent mana as steps and
     /// phases end" (Upwelling). Every player's pool survives step/phase ends
     /// with its colors intact (it still empties at end of turn via cleanup's

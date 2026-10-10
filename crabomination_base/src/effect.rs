@@ -1437,6 +1437,9 @@ pub enum Value {
     /// source). Backs "as long as three or more cards are exiled with this
     /// creature" static thresholds (Veteran Survivor).
     CardsExiledWithSourceCount,
+    /// Untapped lands the active player controlled as this turn began
+    /// (Power Surge).
+    UntappedLandsActivePlayerHadAtTurnStart,
     /// Damage dealt to `who` this turn by artifact sources (Reverse Polarity).
     ArtifactDamageToPlayerThisTurn { who: PlayerRef },
     /// Half (rounded down) the damage dealt this turn by the highest-dealing

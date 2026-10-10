@@ -431,7 +431,15 @@ impl GameState {
 
         // MTG rule 500.4: mana pools empty at the end of each step and phase
         // (Kruphix converts to colorless instead, CR 106.4 override).
+        let (stack_before, asked_before) = (self.stack.len(), self.pending_decision.is_some());
         self.empty_mana_pools();
+        // CR 117.5 — mana burn's life loss (Yurlok) triggered something:
+        // players get priority before the step ends, as for the unblocked
+        // triggers below.
+        if self.stack.len() > stack_before || (!asked_before && self.pending_decision.is_some()) {
+            self.give_priority_to_active();
+            return Ok(Vec::new());
+        }
 
         // Auto-declare empty blockers if no one blocked.
         //
@@ -692,6 +700,13 @@ impl GameState {
                 // CR 615 — "until your next turn" damage locks (Kiora's +1)
                 // end as the granting player's turn begins.
                 let ap = self.active_player_idx;
+                // Power Surge's "untapped lands they controlled at the
+                // beginning of this turn", before anything untaps.
+                self.untapped_lands_at_turn_start = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ap && !c.tapped && c.definition.is_land())
+                    .count() as u32;
                 // CR 800.4m — "any continuous effects with durations that last
                 // until that player's next turn or until a specific point in
                 // that turn will last until that turn would have begun. They
