@@ -236,10 +236,20 @@ fn main() {
     let comments_only = args.iter().any(|a| a == "--comments-only");
     let structural_only = args.iter().any(|a| a == "--structural-only");
 
-    if !comments_only {
-        run_structural();
-    }
-    if !structural_only {
-        run_comment_scan();
-    }
+    // The serialized-tree walk recurses as deep as the catalog's deepest
+    // effect: a debug build overflowed the 8 MiB main thread. `bot_ladder`'s
+    // worker stack size.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(move || {
+            if !comments_only {
+                run_structural();
+            }
+            if !structural_only {
+                run_comment_scan();
+            }
+        })
+        .expect("spawn the audit thread")
+        .join()
+        .expect("audit thread");
 }
