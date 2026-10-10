@@ -2032,6 +2032,11 @@ pub enum Predicate {
     /// `who` controls strictly more `filter` permanents than each other player
     /// (Rivalry's land leader, Damping Engine's permanent leader).
     PlayerControlsMostOf { who: PlayerRef, filter: SelectionRequirement },
+    /// `value`, read with `PlayerRef::You` bound to `who`, is strictly
+    /// greater than the same value read for each other live player — "if
+    /// that player has more cards in hand / more life than each other
+    /// player" (Battle Angels of Tyr).
+    PlayerValueExceedsEachOther { who: PlayerRef, value: Value },
     /// True if any player matched by `who` has strictly less life than at least
     /// one of their opponents. Geyadrone Dihada's "if you have less life than
     /// an opponent" loyalty-reset rider.
@@ -4219,6 +4224,10 @@ pub enum TriggerZone {
     /// (`exiled_with` is its own id) and nowhere else: the ability Cosima,
     /// God of the Voyage "gains" as it exiles itself.
     WhileSelfExiled,
+    /// From exile, however the card got there, and nowhere else — "if this
+    /// card is exiled" (Senu, Keen-Eyed Protector). Gathered by the
+    /// dispatch's exile walk behind `CardPile::has_exile_trigger`.
+    WhileExiled,
 }
 
 impl TriggerZone {
@@ -4229,7 +4238,7 @@ impl TriggerZone {
     /// True if the trigger does *not* function from the battlefield: the
     /// command zone is the only place (Oloro), or exile while suspended.
     pub fn command_zone_only(self) -> bool {
-        matches!(self, Self::CommandZoneOnly | Self::WhileSuspended | Self::WhileSelfExiled)
+        matches!(self, Self::CommandZoneOnly | Self::WhileSuspended | Self::WhileSelfExiled | Self::WhileExiled)
     }
 }
 
@@ -7794,6 +7803,11 @@ pub enum Effect {
     /// return-when-the-source-leaves link — the effect that scheduled it owns
     /// the return (Legion's Initiative).
     ExileLinked { what: Selector },
+    /// Stamp `exiled_with = source` on each `Selector::LastMoved` card now in
+    /// exile, so `Value::CardsExiledWithSourceCount` counts it — "the number
+    /// of cards exiled with it" after an exile that picks at resolution
+    /// (Unlicensed Hearse after `ExileUpToNFromGraveyards`).
+    LinkLastMovedExilesToSource,
     /// Search the City — the trigger source is a card its controller just
     /// played. If a card exiled with this source shares its name, return one
     /// to its owner's hand; when that empties the pile, sacrifice this source

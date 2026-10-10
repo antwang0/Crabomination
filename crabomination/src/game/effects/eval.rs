@@ -2781,6 +2781,19 @@ impl GameState {
                         .all(|q| count(q) < mine)
                 })
             }
+            Predicate::PlayerValueExceedsEachOther { who, value } => {
+                let read = |p: usize| {
+                    let mut seat = ctx.clone();
+                    seat.controller = p;
+                    self.evaluate_value(value, &seat)
+                };
+                self.resolve_players(who, ctx).into_iter().any(|p| {
+                    let mine = read(p);
+                    (0..self.players.len())
+                        .filter(|&q| q != p && !self.players[q].eliminated)
+                        .all(|q| read(q) < mine)
+                })
+            }
             Predicate::PlayerHasLessLifeThanOpponent { who } => {
                 self.resolve_players(who, ctx).into_iter().any(|p| {
                     let my_life = self.effective_life(p);

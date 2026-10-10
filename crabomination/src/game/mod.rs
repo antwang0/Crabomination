@@ -148,6 +148,7 @@ mod entry_tally;
 // CR 120.3a — "damage doesn't cause you to lose life" (Archon of Coronation).
 mod damage_life;
 mod mana_burn;
+mod exile_triggers;
 mod loss_exile;
 mod mystic_barrier;
 mod loyalty_copy;
@@ -25467,8 +25468,14 @@ impl GameState {
                     continue;
                 }
                 for ev in events {
+                    // A *granted* "leaves the battlefield" (Candlekeep Sage's
+                    // commander grant) also fires off its own death: the
+                    // printed copy rides `remove_to_graveyard_with_triggers`,
+                    // which sees no static grants.
                     if lki_self_left
                         && !matches!(ev, GameEvent::PermanentLeftBattlefield { card_id, .. } if *card_id == snap.id)
+                        && !(is_granted
+                            && matches!(ev, GameEvent::CreatureDied { card_id } if *card_id == snap.id))
                     {
                         continue;
                     }
@@ -25846,6 +25853,7 @@ impl GameState {
                 }
             }
         }
+        self.gather_while_exiled_triggers(events, &mut candidates);
         // Walk every player's hand for `PutIntoHandFromGraveyard` SelfSource
         // triggers: the card has already been moved to hand by the time the
         // event dispatches, so it fires from there (Golgari Brownscale's "gain

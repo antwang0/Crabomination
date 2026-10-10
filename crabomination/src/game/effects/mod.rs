@@ -15231,6 +15231,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LinkLastMovedExilesToSource => {
+                let moved = self.scratch.last_moved_cards.clone();
+                for c in self.exile.iter_mut().filter(|c| moved.contains(&c.id)) {
+                    c.exiled_with = ctx.source;
+                }
+                Ok(())
+            }
+
             Effect::SearchTheCityReturn => {
                 let Some(source) = ctx.source else { return Ok(()) };
                 let played = match ctx.trigger_source {

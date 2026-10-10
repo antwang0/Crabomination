@@ -287,6 +287,16 @@ const PILE_LANE_TOKEN: u32 = 0;
 /// predicate, which a pile lane may hold: every `&mut` route into the cards
 /// (`push`, `DerefMut`) clears the whole word, unlike the battlefield's.
 const PILE_LANE_ENCODED: u32 = 2;
+/// A card here carries a `TriggerZone::WhileExiled` trigger ("if this card is
+/// exiled" — Senu, Keen-Eyed Protector). Definition-only.
+const PILE_LANE_EXILE_TRIGGER: u32 = 4;
+
+fn card_has_exile_trigger(c: &CardInstance) -> bool {
+    c.definition
+        .triggered_abilities
+        .iter()
+        .any(|t| t.event.zone == crate::effect::TriggerZone::WhileExiled)
+}
 
 impl CardPile {
     /// One lane's answer: a word load and two mask tests on a hit, the pile
@@ -323,6 +333,12 @@ impl CardPile {
     /// (PERF `(-218)`).
     pub fn has_encoded(&self) -> bool {
         self.lane(PILE_LANE_ENCODED, |c| c.encoded_on.is_some(), "encoded")
+    }
+
+    /// Does any card here carry a `TriggerZone::WhileExiled` trigger?
+    /// Memoized; read by every event dispatch in front of its exile walk.
+    pub fn has_exile_trigger(&self) -> bool {
+        self.lane(PILE_LANE_EXILE_TRIGGER, card_has_exile_trigger, "exile-trigger")
     }
 
     /// Append through [`CowBox::push`] so the unshare materializes with room

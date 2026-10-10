@@ -983,6 +983,7 @@ impl Effect {
             | Effect::EachPlayerRevealTopKeepIfNamed { .. }
             | Effect::SectorBlockLockThisTurn
             | Effect::SearchTheCityReturn
+            | Effect::LinkLastMovedExilesToSource
             | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
