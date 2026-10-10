@@ -4,6 +4,8 @@ and — when none are missing — the pod seat's Rust lists.
 
     python3 scripts/edhrec_deck.py SLUG [SLUG ...]          # fetch + report
     python3 scripts/edhrec_deck.py --file DECK.json         # a saved page
+    python3 scripts/edhrec_deck.py --file DECK.json --rust CONST "Commander" "theme"
+                                                            # the seat's Rust consts
 
 SLUG is the json.edhrec.com average-decks slug (`kotis-the-fangkeeper`).
 A card counts as present when a `pub fn <slug>() -> CardDefinition` exists
@@ -20,6 +22,9 @@ import unicodedata
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AVG_URL = "https://json.edhrec.com/pages/average-decks/{}.json"
+# EDHREC answers urllib's default User-Agent with 403.
+HEADERS = {"User-Agent": "Mozilla/5.0 (crabomination)"}
 BASICS = ("Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes")
 
 
@@ -75,16 +80,50 @@ def report(page, fns):
     print(", ".join(main + [slug(b) for b, k in basics.items() for _ in range(k)]))
 
 
+def rust(page, fns, const, name, theme):
+    """A pod seat's `CONST_COMMANDERS` / `CONST_MAIN` for `pod/decks.rs`."""
+    import textwrap
+    printed = by_printed_name()
+    resolve = lambda n: slug(n, True) if slug(n, True) in fns else slug(n) if slug(n) in fns else printed.get(n, slug(n))
+    deck = page["deck"]
+    cmd = [resolve(n) for n, _ in deck["commander_v2"]]
+    main, basics = [], {}
+    for n, k in (tuple(x) for v in deck["cards"].values() for x in v):
+        if n in BASICS:
+            basics[n] = basics.get(n, 0) + k
+        else:
+            main += [resolve(n)] * k
+    missing = [m for m in main + cmd if m not in fns]
+    if missing:
+        sys.exit(f"missing: {missing}")
+    plural = lambda n, k: f"{k} {n}" + ("" if k == 1 or n.endswith("s") else "s")
+    wrap = lambda t: textwrap.fill(t, 96, initial_indent="    ", subsequent_indent="    ")
+    doc = textwrap.fill(f"{name} {theme}", 92, initial_indent="/// ", subsequent_indent="/// ")
+    print(f"""
+pub const {const}_COMMANDERS: &[CardFactory] = &[{", ".join(cmd)}];
+
+/// **{name}**'s EDHREC average deck, card for card:
+/// {len(main)} nonbasic cards + {" + ".join(plural(n, k) for n, k in basics.items())} = {len(main) + sum(basics.values())}.
+{doc}
+pub const {const}_MAIN: &[CardFactory] = &[
+{wrap(", ".join(main))},
+    // Basics
+{wrap(", ".join(slug(b) for b, k in basics.items() for _ in range(k)))},
+];""")
+
+
 def main():
     fns = factories()
     args = sys.argv[1:]
+    if args[:1] == ["--file"] and args[2:3] == ["--rust"]:
+        rust(json.load(open(args[1], encoding="utf-8")), fns, *args[3:6])
+        return
     if args[:1] == ["--file"]:
         report(json.load(open(args[1], encoding="utf-8")), fns)
         return
     for s in args:
-        url = f"https://json.edhrec.com/pages/average-decks/{s}.json"
-        # EDHREC answers urllib's default User-Agent with 403.
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (crabomination)"})
+        url = AVG_URL.format(s)
+        req = urllib.request.Request(url, headers=HEADERS)
         with urllib.request.urlopen(req, timeout=30) as r:
             print(f"== {s}")
             report(json.load(r), fns)
