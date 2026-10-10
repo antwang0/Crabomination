@@ -4982,6 +4982,7 @@ impl GameState {
                         } else {
                             Some(g.double_creature_combat_damage(g.attached_combat_damage_doubling(
                                 Some(atk.id),
+                                Some(blocker_id),
                                 g.scale_damage_to(
                                     Some(atk.id),
                                     crate::game::effects::EntityRef::Permanent(blocker_id),
@@ -5195,6 +5196,7 @@ impl GameState {
                             let scaled = (power != 0).then(|| {
                                 g.double_creature_combat_damage(g.attached_combat_damage_doubling(
                                     Some(bid),
+                                    Some(atk.id),
                                     g.scale_damage_to(
                                         Some(bid),
                                         crate::game::effects::EntityRef::Permanent(atk.id),
@@ -5781,7 +5783,11 @@ impl GameState {
             AttackTarget::Planeswalker(pw) => EntityRef::Permanent(pw),
             AttackTarget::Battle(b) => EntityRef::Permanent(b),
         };
-        let scaled = self.attached_combat_damage_doubling(source, self.scale_damage_to(source, ent, amount));
+        let to = match target {
+            AttackTarget::Player(_) => None,
+            AttackTarget::Planeswalker(id) | AttackTarget::Battle(id) => Some(id),
+        };
+        let scaled = self.attached_combat_damage_doubling(source, to, self.scale_damage_to(source, ent, amount));
         // Jeska, Thrice Reborn — triple to one of the registrant's opponents.
         match (source, target) {
             (Some(src), AttackTarget::Player(p)) if !self.tripled_combat_damage_to_opponents.is_empty() => {

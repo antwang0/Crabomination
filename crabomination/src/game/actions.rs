@@ -5850,6 +5850,32 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::CreatureType;
         let p = self.priority.player_with_priority;
+        // Brokkos — mutate from the graveyard: hop into hand, cast, and put it
+        // back if the cast is refused (the graveyard alt-cast's shape).
+        if !self.players[p].has_in_hand(card_id)
+            && let Some(card) = self.players[p].graveyard.iter().find(|c| c.id == card_id)
+        {
+            if !card.definition.mutate_from_graveyard
+                || self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard)
+            {
+                return Err(GameError::CardNotInHand(card_id));
+            }
+            let card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            self.players[p].hand.push(card);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::Graveyard));
+            let mut r = self.cast_mutate(card_id, host, on_top, x_value);
+            self.casting_hop = None;
+            if r.is_err()
+                && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
+            {
+                self.players[p].send_to_graveyard(card);
+            }
+            if let Ok(evs) = &mut r {
+                self.note_left_graveyard(p, card_id, evs);
+            }
+            return r;
+        }
         let from_command = !self.players[p].has_in_hand(card_id)
             && self.players[p].commanders.contains(&card_id)
             && self.players[p].command.iter().any(|c| c.id == card_id);

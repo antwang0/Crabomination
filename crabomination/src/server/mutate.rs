@@ -1,7 +1,8 @@
 //! CR 702.140 — no bot built `GameAction::CastMutate`, so the Otrimi seat's
 //! mutate creatures only ever entered on their own. The bot now offers one
 //! mutate cast per mutate card in hand (and a mutate commander in the command
-//! zone, CR 903.8) onto its best host; `score_candidate` prices it against
+//! zone, CR 903.8; a Brokkos in the graveyard) onto its best host;
+//! `score_candidate` prices it against
 //! the plain cast. Commander games only, so two-player play is unchanged.
 
 use crate::card::{CardInstance, CreatureType};
@@ -32,6 +33,7 @@ pub(super) fn mutate_candidates(state: &GameState, seat: usize) -> Vec<GameActio
     p.hand
         .iter()
         .chain(p.command.iter().filter(|c| p.commanders.contains(&c.id)))
+        .chain(p.graveyard.iter().filter(|c| c.definition.mutate_from_graveyard))
         .filter(|c| c.definition.mutate.is_some())
         .map(|c| GameAction::CastMutate {
             card_id: c.id,

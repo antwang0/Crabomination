@@ -3964,23 +3964,38 @@ impl GameState {
     }
 
     /// CR 614.1a — The Sound of Drums: combat damage `source` deals, doubled
-    /// once per attachment on it carrying `AttachedDealsDoubleCombatDamage`.
-    /// Behind the damage-scaling presence gate, so a board without one pays a
-    /// memoized flag read.
-    pub(crate) fn attached_combat_damage_doubling(&self, source: Option<crate::card::CardId>, amount: u32) -> u32 {
+    /// once per attachment on it carrying `AttachedDealsDoubleCombatDamage`,
+    /// and once per attachment on the receiving creature `to` carrying
+    /// `AttachedTakesDoubleCombatDamage` (Inquisitor's Flail; "another
+    /// creature", so never the equipped creature's own damage). Behind the
+    /// damage-scaling presence gate, so a board without one pays a memoized
+    /// flag read.
+    pub(crate) fn attached_combat_damage_doubling(
+        &self,
+        source: Option<crate::card::CardId>,
+        to: Option<crate::card::CardId>,
+        amount: u32,
+    ) -> u32 {
+        use crate::effect::StaticEffect as SE;
         let Some(src) = source else { return amount };
         if amount == 0 || !self.battlefield.has_damage_scaler(crate::game::card_can_scale_damage) {
             return amount;
         }
+        let to = to.filter(|&t| t != src);
         let n: usize = self
             .battlefield
             .iter()
-            .filter(|c| c.attached_to == Some(src))
+            .filter(|c| c.attached_to.is_some() && (c.attached_to == Some(src) || c.attached_to == to))
             .map(|c| {
+                let on_src = c.attached_to == Some(src);
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::AttachedDealsDoubleCombatDamage))
+                    .filter(|sa| match sa.effect {
+                        SE::AttachedDealsDoubleCombatDamage => on_src,
+                        SE::AttachedTakesDoubleCombatDamage => !on_src,
+                        _ => false,
+                    })
                     .count()
             })
             .sum();

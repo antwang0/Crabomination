@@ -22956,6 +22956,11 @@ impl GameState {
         }) {
             reduction += self.computed_permanent(target).map_or(0, |c| c.power.max(0) as u32);
         }
+        if self.battlefield[equip_pos].definition.static_abilities.iter().any(|sa| {
+            matches!(sa.effect, crate::effect::StaticEffect::EquipCostReducedPerTargetColor)
+        }) {
+            reduction += self.computed_permanent(target).map_or(0, |c| c.colors.len());
+        }
         let conditional: Vec<(crate::effect::Predicate, u32)> = self.battlefield[equip_pos]
             .definition
             .static_abilities
@@ -32463,6 +32468,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::DoubleDamageToOpponentPlayers
         | SE::DoubleDamageToEnchantedPlayer
         | SE::AttachedDealsDoubleCombatDamage
+        | SE::AttachedTakesDoubleCombatDamage
         | SE::DoubleDamageToChosenPlayer
         | SE::DoubleDamageBetweenYouAndChosenPlayer
         | SE::HalveDamageToYou
@@ -33757,6 +33763,7 @@ fn static_effect_to_effects(
             // Read by `draw_one`, not a layer effect.
             | StaticEffect::ControllerDrawsFromBottom
             | StaticEffect::EquipCostReducedByTargetPower
+            | StaticEffect::EquipCostReducedPerTargetColor
             | StaticEffect::EquipCostReducedWhile { .. }
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
             // per artifact in `compute_battlefield`, not from a modification.
@@ -34212,6 +34219,7 @@ fn static_effect_to_effects(
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer
             | StaticEffect::AttachedDealsDoubleCombatDamage
+            | StaticEffect::AttachedTakesDoubleCombatDamage
             | StaticEffect::DoubleDamageToChosenPlayer
             | StaticEffect::DoubleDamageBetweenYouAndChosenPlayer
             | StaticEffect::OneNoncreatureSpellPerTurn

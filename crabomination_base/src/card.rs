@@ -5417,6 +5417,11 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub mutate: Option<crate::mana::ManaCost>,
+    /// "You may cast this card from your graveyard using its mutate ability"
+    /// (Brokkos, Apex of Forever): `CastMutate` also takes it from the
+    /// graveyard, through the same hop into hand as a graveyard cast.
+    #[serde(default)]
+    pub mutate_from_graveyard: bool,
     /// CR 701.67 — Waterbend. `Some` adds an "as an additional cost to cast
     /// this spell, waterbend {N}" rider (`GameAction::CastSpellWaterbend`).
     /// Each generic of the waterbend cost may be paid by tapping an untapped

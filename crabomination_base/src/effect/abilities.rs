@@ -1668,6 +1668,11 @@ pub enum StaticEffect {
     /// of Drums): one doubling per such attachment, at the combat funnels
     /// only (`GameState::attached_combat_damage_doubling`).
     AttachedDealsDoubleCombatDamage,
+    /// CR 614.1a — "If another creature would deal combat damage to equipped
+    /// creature, it deals double that damage to equipped creature instead"
+    /// (Inquisitor's Flail's second line): the receiving side of
+    /// `AttachedDealsDoubleCombatDamage`, at the same combat funnels.
+    AttachedTakesDoubleCombatDamage,
     /// CR 614.5 — "If a source would deal damage to the chosen player or a
     /// permanent they control, it deals double that damage instead" (Sawhorn
     /// Nemesis): the player this permanent chose as it entered
@@ -2258,6 +2263,10 @@ pub enum StaticEffect {
     /// where X is the power of the creature it targets", on the Equipment's
     /// own equip. Read by `GameState::equip`.
     EquipCostReducedByTargetPower,
+    /// Dragonfire Blade — "this ability costs {1} less to activate for each
+    /// color of the creature it targets", on the Equipment's own equip. Read
+    /// by `GameState::equip`.
+    EquipCostReducedPerTargetColor,
     /// "This ability costs {N} less to activate if [condition]" on its own
     /// equip (Crown of Gondor: {3} less while you're the monarch).
     EquipCostReducedWhile { condition: crate::effect::Predicate, amount: u32 },
