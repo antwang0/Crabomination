@@ -2546,6 +2546,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JODAH_EDHREC_COMMANDERS,
             main: decks::JODAH_EDHREC_MAIN,
         },
+        // Seat 352: Child of Alara's EDHREC average deck. `--pod-decks 352`.
+        PodDeck {
+            name: "Child of Alara (WUBRG)",
+            commanders: decks::CHILD_OF_ALARA_EDHREC_COMMANDERS,
+            main: decks::CHILD_OF_ALARA_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4578,6 +4584,7 @@ mod tests {
             ("Syr Gwyn, Hero of Ashvale", [0x0A83, 349, 9274]),
             ("Kastral, the Windcrested", [0x0A84, 350, 9275]),
             ("Jodah, Archmage Eternal", [0x0A85, 351, 9276]),
+            ("Child of Alara", [0x0A86, 352, 9277]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -10262,3 +10262,33 @@ pub const JODAH_EDHREC_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, mountain, mountain, plains, plains, swamp,
     swamp,
 ];
+
+pub const CHILD_OF_ALARA_EDHREC_COMMANDERS: &[CardFactory] = &[child_of_alara];
+
+/// **Child of Alara**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 87 nonbasic cards + 3 Forests + 2 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// Child of Alara Gates and wipes (WUBRG): a five-color Gate base fuels Guild Summit and
+/// Nine-Fingers Keene, and Child of Alara's death resets the board.
+pub const CHILD_OF_ALARA_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, commanders_sphere, darksteel_ingot, expedition_map,
+    navigation_orb, sol_ring, azorius_guildgate, baldurs_gate, basilisk_gate, black_dragon_gate,
+    boros_guildgate, citadel_gate, cliffgate, command_tower, dimir_guildgate, exotic_orchard,
+    gateway_plaza, golgari_guildgate, gond_gate, gruul_guildgate, heap_gate, high_market,
+    izzet_guildgate, manor_gate, mazes_end, orzhov_guildgate, path_of_ancestry,
+    rakdos_guildgate, reliquary_tower, sea_gate, selesnya_guildgate, simic_guildgate,
+    the_world_tree, thespians_stage, athreos_god_of_passage, athreos_shroud_veiled,
+    avacyn_angel_of_hope, azusa_lost_but_seeking, birds_of_paradise, district_guide,
+    dryad_of_the_ilysian_grove, elvish_mystic, eternal_witness, feather_the_redeemed,
+    gatecreeper_vine, karametra_god_of_harvests, keranos_god_of_storms, klothys_god_of_destiny,
+    kruphix_god_of_horizons, mogis_god_of_slaughter, nine_fingers_keene, oracle_of_mul_daya,
+    ramunap_excavator, tatyova_benthic_druid, xenagos_god_of_revels, exploration, guild_summit,
+    leyline_of_the_guildpact, rhystic_study, smothering_tithe, song_of_creation, spelunking,
+    counterspell, crop_rotation, growth_spiral, heroic_intervention, nasty_end, path_to_exile,
+    swan_song, swords_to_plowshares, teferis_protection, village_rites, elspeth_tirel,
+    blasphemous_act, circuitous_route, cultivate, diabolic_tutor, explore, farseek, harmonize,
+    kodamas_reach, natures_lore, open_the_gates, rampant_growth, sylvan_scrying,
+    tempt_with_discovery,
+    // Basics
+    forest, forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp,
+    swamp,
+];
