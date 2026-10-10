@@ -4,7 +4,7 @@
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
-//! War, Eddie Brock and Nicol Bolas, the Ravager. Tests in
+//! War, Eddie Brock, Nicol Bolas, the Ravager and Shilgengar. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -2851,6 +2851,199 @@ pub fn hour_of_devastation() -> CardDefinition {
                 amount: Value::Const(5),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── Shilgengar, Sire of Famine (WB) ─────────────────────────────────────────
+
+/// Angel of Suffering — {3}{B}{B} 5/3 Nightmare Angel, flying. Damage that
+/// would be dealt to you is prevented, and you mill twice that many (CR 615).
+pub fn angel_of_suffering() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If damage would be dealt to you, prevent that damage and mill twice that many cards.",
+            effect: StaticEffect::PreventDamageToYouMillTwice,
+        }],
+        ..creature(
+            "Angel of Suffering",
+            cost(&[generic(3), b(), b()]),
+            vec![CreatureType::Nightmare, CreatureType::Angel],
+            5,
+            3,
+        )
+    }
+}
+
+/// Firja, Judge of Valor — {2}{W}{B}{B} 2/4 flying, lifelink. Your second
+/// spell each turn: look at your top three, one to hand, the rest to your
+/// graveyard.
+pub fn firja_judge_of_valor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) }),
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: true,
+                ..Default::default()
+            })),
+        }],
+        ..legend(
+            "Firja, Judge of Valor",
+            cost(&[generic(2), w(), b(), b()]),
+            vec![CreatureType::Angel, CreatureType::Cleric],
+            2,
+            4,
+        )
+    }
+}
+
+/// Renegade Reaper — {2}{B} 2/3 Angel Berserker, flying. ETB: mill four; 4
+/// life if an Angel card was among them.
+pub fn renegade_reaper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CardsMilledThisEffectMatching { filter: R::HasCreatureType(CreatureType::Angel) },
+                    Value::ONE,
+                ),
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(4) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..creature(
+            "Renegade Reaper",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Angel, CreatureType::Berserker],
+            2,
+            3,
+        )
+    }
+}
+
+/// Sanctuary Warden — {4}{W}{W} 5/5 Angel Soldier, flying, enters with two
+/// shield counters. Entering or attacking, you may remove a counter from a
+/// creature or planeswalker you control to draw a card and make a 1/1
+/// green and white Citizen.
+pub fn sanctuary_warden() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::{choose_one_then, chosen_one};
+    let cash_in = || Effect::MayDo {
+        description: "Remove a counter to draw a card and make a Citizen?".into(),
+        body: Box::new(choose_one_then(
+            Selector::EachPermanent(R::Creature.or(R::Planeswalker).and(R::ControlledByYou).and(R::WithAnyCounter)),
+            PlayerRef::You,
+            Effect::Seq(vec![
+                Effect::RemoveCountersUpTo { what: chosen_one(), amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::CountersRemovedThisEffect, Value::ONE),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: Arc::new(TokenDefinition {
+                                name: "Citizen".into(),
+                                power: 1,
+                                toughness: 1,
+                                card_types: vec![CardType::Creature],
+                                colors: vec![Color::Green, Color::White],
+                                subtypes: Subtypes { creature_types: vec![CreatureType::Citizen], ..Default::default() },
+                                ..Default::default()
+                            }),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::Shield, Value::Const(2))),
+        triggered_abilities: vec![
+            etb(cash_in()),
+            TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: cash_in() },
+        ],
+        ..creature(
+            "Sanctuary Warden",
+            cost(&[generic(4), w(), w()]),
+            vec![CreatureType::Angel, CreatureType::Soldier],
+            5,
+            5,
+        )
+    }
+}
+
+/// Rampage of the Valkyries — {3}{W}{B} Enchantment. ETB: a 4/4 white flying,
+/// vigilant Angel. Whenever an Angel you control dies, each other player
+/// sacrifices a creature.
+pub fn rampage_of_the_valkyries() -> CardDefinition {
+    CardDefinition {
+        name: "Rampage of the Valkyries",
+        cost: cost(&[generic(3), w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition {
+                    name: "Angel".into(),
+                    power: 4,
+                    toughness: 4,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+                    keywords: vec![Keyword::Flying, Keyword::Vigilance],
+                    ..Default::default()
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Angel),
+                    },
+                ),
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachPlayerExceptControllerOf(Box::new(Selector::This))),
+                    count: Value::ONE,
+                    filter: R::Creature,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lich-Knights' Conquest — {4}{B} Sorcery. Sacrifice any number of
+/// artifacts, enchantments and/or tokens; return that many creature cards
+/// from your graveyard to the battlefield (one per sacrifice).
+pub fn lich_knights_conquest() -> CardDefinition {
+    use crate::effect::shortcut::{choose_one_then, chosen_one};
+    CardDefinition {
+        name: "Lich-Knights' Conquest",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SacrificeAnyNumber {
+            who: PlayerRef::You,
+            filter: R::Artifact.or(R::Enchantment).or(R::IsToken),
+            per_each: Box::new(choose_one_then(
+                Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: R::Creature },
+                PlayerRef::You,
+                Effect::Move {
+                    what: chosen_one(),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            )),
+        },
         ..Default::default()
     }
 }

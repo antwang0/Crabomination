@@ -1986,3 +1986,112 @@ fn hour_of_devastation_spares_only_bolas() {
     assert!(g.battlefield_find(bolas).is_some());
     assert!(g.battlefield_find(lili).is_none(), "3 loyalty, 5 damage");
 }
+
+/// Angel of Suffering (Shilgengar's list): CR 615 — damage to you is
+/// prevented and you mill twice as many cards.
+#[test]
+fn angel_of_suffering_turns_damage_into_mill() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::angel_of_suffering());
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life);
+    assert_eq!(g.players[0].library.len(), 4, "six cards milled");
+}
+
+/// Firja, Judge of Valor (Shilgengar's list): the second spell of a turn
+/// digs three: one to hand, two to the graveyard.
+#[test]
+fn firja_digs_on_the_second_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::firja_judge_of_valor());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    flood(&mut g);
+    let a = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_x(&mut g, a, None);
+    assert_eq!(g.players[0].library.len(), 3, "the first spell does nothing");
+    let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    cast_x(&mut g, b, None);
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, took one");
+    assert_eq!(g.players[0].graveyard.len(), 2);
+}
+
+/// Renegade Reaper (Shilgengar's list): milling an Angel gains 4 life.
+#[test]
+fn renegade_reaper_gains_for_a_milled_angel() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::serra_angel());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let life = g.players[0].life;
+    let reaper = g.add_card_to_hand(0, catalog::renegade_reaper());
+    flood(&mut g);
+    cast_x(&mut g, reaper, None);
+    assert_eq!(g.players[0].graveyard.len(), 4);
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Sanctuary Warden (Shilgengar's list): it enters with two shield counters
+/// and spends one to draw and make a Citizen.
+#[test]
+fn sanctuary_warden_cashes_in_a_shield_counter() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let warden = g.add_card_to_hand(0, catalog::sanctuary_warden());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    cast_x(&mut g, warden, None);
+    assert_eq!(g.battlefield_find(warden).unwrap().counter_count(CounterType::Shield), 1);
+    assert_eq!(g.players[0].hand.len(), hand, "cast it, drew one");
+    assert_eq!(named(&g, "Citizen"), 1);
+}
+
+/// Rampage of the Valkyries (Shilgengar's list): its Angel dying makes each
+/// other player sacrifice a creature.
+#[test]
+fn rampage_of_the_valkyries_punishes_angel_deaths() {
+    let mut g = pod(3);
+    let foes: Vec<CardId> = [1, 2].iter().map(|&s| ready(&mut g, s, catalog::grizzly_bears())).collect();
+    let rampage = g.add_card_to_hand(0, catalog::rampage_of_the_valkyries());
+    flood(&mut g);
+    cast_x(&mut g, rampage, None);
+    let angel = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Angel").map(|c| c.id).expect("angel");
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: murder, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("murder");
+    drain_stack(&mut g);
+    assert!(foes.iter().all(|f| g.battlefield_find(*f).is_none()));
+}
+
+/// Lich-Knights' Conquest (Shilgengar's list): each sacrificed artifact,
+/// enchantment or token returns a creature card.
+#[test]
+fn lich_knights_conquest_trades_permanents_for_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mind_stone());
+    ready(&mut g, 0, catalog::mind_stone());
+    let dead: Vec<CardId> = [catalog::serra_angel(), catalog::gray_ogre()].into_iter().map(|d| g.add_card_to_graveyard(0, d)).collect();
+    let conquest = g.add_card_to_hand(0, catalog::lich_knights_conquest());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    cast_x(&mut g, conquest, None);
+    assert_eq!(named(&g, "Mind Stone"), 0);
+    assert!(dead.iter().all(|id| g.battlefield_find(*id).is_some()), "one creature per sacrifice");
+}
