@@ -1333,3 +1333,110 @@ fn halvar_and_sword_of_the_realms() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "back to its owner's hand");
 }
+
+/// A Saga of seat 0's, cast and drained through chapter I.
+fn saga(g: &mut GameState, def: crabomination::card::CardDefinition) -> CardId {
+    let id = g.add_card_to_hand(0, def);
+    flood(g);
+    cast_x(g, id, None);
+    id
+}
+
+/// Tom Bombadil (Terra's list): four lore counters among your Sagas give him
+/// hexproof and indestructible; a Saga's final chapter (CR 714.2c) digs up the
+/// next Saga, once each turn.
+#[test]
+fn tom_bombadil_chains_sagas_once_a_turn() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let tom = ready(&mut g, 0, catalog::tom_bombadil());
+    let next = g.add_card_to_library(0, catalog::fable_of_the_mirror_breaker());
+    g.add_card_to_library(0, catalog::mountain());
+    let a = saga(&mut g, catalog::the_apprentices_folly());
+    let b = saga(&mut g, catalog::fable_of_the_mirror_breaker());
+    assert!(!g.computed_permanent(tom).unwrap().keywords().contains(&Keyword::Hexproof), "two lore counters");
+    g.saga_advance(b);
+    drain_stack(&mut g);
+    g.saga_advance(a);
+    drain_stack(&mut g);
+    let kw = g.computed_permanent(tom).unwrap().keywords().to_vec();
+    assert!(kw.contains(&Keyword::Hexproof) && kw.contains(&Keyword::Indestructible), "four lore counters");
+    g.saga_advance(a);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(next).is_some(), "the Folly's III found the Fable");
+    g.saga_advance(b);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 1, "once each turn: the Mountain stays put");
+}
+
+/// The Apprentice's Folly (Terra's list): a hasty, nonlegendary Reflection
+/// copy (CR 707.9b); a creature sharing a name with your token is no longer a
+/// legal target; III sacrifices every Reflection.
+#[test]
+fn the_apprentices_folly_reflects_then_shatters() {
+    use crabomination::card::{CreatureType, Keyword};
+    let mut g = pod(2);
+    let tom = ready(&mut g, 0, catalog::tom_bombadil());
+    let folly = saga(&mut g, catalog::the_apprentices_folly());
+    let copies: Vec<CardId> = g.battlefield.iter().filter(|c| c.is_token).map(|c| c.id).collect();
+    assert_eq!(copies.len(), 1);
+    let cp = g.computed_permanent(copies[0]).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Reflection));
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    assert!(g.battlefield_find(tom).is_some(), "not legendary: no legend-rule loss");
+    g.saga_advance(folly);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "Tom shares a token's name");
+    g.saga_advance(folly);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 0);
+}
+
+/// The Kami War (Terra's list): I exiles, II bounces and makes each opponent
+/// discard, III flips it; O-Kagachi's attack returns the defending player's
+/// pick and grows by its mana value.
+#[test]
+fn the_kami_war_becomes_o_kagachi() {
+    let mut g = pod(3);
+    let foe = ready(&mut g, 1, catalog::serra_angel());
+    for seat in [1, 2] {
+        g.add_card_to_hand(seat, catalog::island());
+    }
+    let war = saga(&mut g, catalog::the_kami_war());
+    assert!(g.exile.iter().any(|c| c.id == foe));
+    g.saga_advance(war);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty() && g.players[2].hand.is_empty(), "each opponent discarded");
+    assert!(g.exile.iter().any(|c| c.id == foe), "a slot saying \"permanent\" never reaches exile (CR 109.2)");
+    g.saga_advance(war);
+    drain_stack(&mut g);
+    let kagachi = g.battlefield_find(war).expect("returned transformed");
+    assert_eq!(kagachi.definition.name, "O-Kagachi Made Manifest");
+    g.clear_sickness(war);
+    let ogre = g.add_card_to_graveyard(0, catalog::gray_ogre());
+    g.add_card_to_graveyard(0, catalog::mountain());
+    declare(&mut g, &[(war, 2)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ogre), "the only nonland card");
+    assert_eq!(g.computed_permanent(war).unwrap().power, 9);
+}
+
+/// Moonmist (Terra's list): Humans transform (a modal DFC can't, CR
+/// 701.27c), and only Werewolves and Wolves deal combat damage (CR 615).
+#[test]
+fn moonmist_transforms_humans_and_fogs_the_rest() {
+    let mut g = pod(2);
+    let delver = ready(&mut g, 0, catalog::delver_of_secrets());
+    let esika = ready(&mut g, 0, catalog::esika_god_of_the_tree());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mist = g.add_card_to_hand(0, catalog::moonmist());
+    flood(&mut g);
+    cast_x(&mut g, mist, None);
+    assert!(g.battlefield_find(delver).unwrap().transformed, "Delver is a Human");
+    let mut events = vec![];
+    g.transform_permanent(esika, &mut events);
+    assert!(!g.battlefield_find(esika).unwrap().transformed, "a modal DFC doesn't transform");
+    let life = g.players[1].life;
+    connect(&mut g, bear);
+    assert_eq!(g.players[1].life, life, "the Bear's damage was prevented");
+}
+

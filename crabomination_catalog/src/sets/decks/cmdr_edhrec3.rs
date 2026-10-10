@@ -3,7 +3,8 @@
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
-//! Zuko and Arna Kennerüd. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
+//! Zuko, Arna Kennerüd and Terra, Magical Adept. Tests in
+//! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -1874,3 +1875,201 @@ pub fn halvar_god_of_battle() -> CardDefinition {
         ..legend("Halvar, God of Battle", cost(&[generic(2), w(), w()]), vec![CreatureType::God], 4, 4)
     }
 }
+
+// ── Terra, Magical Adept (RG, Esper Terra's WUBRG) ──────────────────────────
+
+fn saga() -> Subtypes {
+    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() }
+}
+
+/// Tom Bombadil — {W}{U}{B}{R}{G} 4/4 God Bard. Hexproof and indestructible
+/// while your Sagas hold four or more lore counters. Once each turn, when a
+/// Saga of yours finishes (CR 714.2c), reveal until a Saga card and put it
+/// onto the battlefield; the rest go to the bottom in a random order.
+pub fn tom_bombadil() -> CardDefinition {
+    use crate::card::CounterType;
+    let lore_at_least_four = || {
+        Predicate::ValueAtLeast(
+            Value::CountersOn {
+                what: Box::new(Selector::EachPermanent(
+                    R::HasEnchantmentSubtype(EnchantmentSubtype::Saga).and(R::ControlledByYou),
+                )),
+                kind: CounterType::Lore,
+            },
+            Value::Const(4),
+        )
+    };
+    let while_lore = |keyword: Keyword, description: &'static str| StaticAbility {
+        description,
+        effect: StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition: lore_at_least_four() },
+    };
+    CardDefinition {
+        static_abilities: vec![
+            while_lore(Keyword::Hexproof, "Tom Bombadil has hexproof while your Sagas have four or more lore counters."),
+            while_lore(
+                Keyword::Indestructible,
+                "Tom Bombadil has indestructible while your Sagas have four or more lore counters.",
+            ),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SagaFinalChapterResolved, EventScope::YourControl).once_per_turn(),
+            effect: Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: R::HasEnchantmentSubtype(EnchantmentSubtype::Saga),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                cap: Value::Const(100),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            },
+        }],
+        ..legend(
+            "Tom Bombadil",
+            cost(&[w(), u(), b(), r(), g()]),
+            vec![CreatureType::God, CreatureType::Bard],
+            4,
+            4,
+        )
+    }
+}
+
+/// The Apprentice's Folly — {2}{U}{R} Saga. I, II: a hasty, nonlegendary
+/// Reflection token copy of target nontoken creature you control that shares
+/// no name with a token you control. III: sacrifice all your Reflections.
+pub fn the_apprentices_folly() -> CardDefinition {
+    let copy = || Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        source: target_filtered(
+            R::Creature.and(R::ControlledByYou).and(R::IsToken.negate()).and(R::NameNotSharedWithYourTokens),
+        ),
+        extra_creature_types: vec![CreatureType::Reflection],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: true,
+        legendary: false,
+        extra_keywords: vec![Keyword::Haste],
+        no_mana_cost: false,
+        enters_with_counters: None,
+        remove_keywords: vec![],
+    };
+    CardDefinition {
+        name: "The Apprentice's Folly",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![
+            (1, copy()),
+            (2, copy()),
+            (
+                3,
+                Effect::SacrificeAllMatching {
+                    who: Selector::You,
+                    filter: R::HasCreatureType(CreatureType::Reflection),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// O-Kagachi Made Manifest — The Kami War's back face: a 6/6 flying, trample
+/// Dragon Spirit that is all colors. Attacking, the defending player picks a
+/// nonland card in your graveyard for your hand; it gets +X/+0 for its mana
+/// value.
+pub fn o_kagachi_made_manifest() -> CardDefinition {
+    CardDefinition {
+        name: "O-Kagachi Made Manifest",
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "O-Kagachi Made Manifest is all colors.",
+            effect: StaticEffect::GrantAllColors { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ReturnFromGraveyardOpponentChooses {
+                    filter: R::Nonland,
+                    chooser: Some(PlayerRef::DefendingPlayer),
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ManaValueOf(Box::new(Selector::LastMoved)),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Kami War — {1}{W}{U}{B}{R}{G} Saga. I: exile target nonland permanent
+/// an opponent controls. II: return up to one other target nonland permanent
+/// to its owner's hand, then each opponent discards a card. III: exile it and
+/// return it transformed (O-Kagachi Made Manifest).
+pub fn the_kami_war() -> CardDefinition {
+    CardDefinition {
+        name: "The Kami War",
+        cost: cost(&[generic(1), w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Exile {
+                    what: target_filtered(R::Permanent.and(R::Nonland).and(R::ControlledByOpponent)),
+                },
+            ),
+            (
+                2,
+                Effect::Seq(vec![
+                    Effect::ApplyToTargets {
+                        max_targets: 1,
+                        min_targets: 0,
+                        filter: R::Permanent.and(R::Nonland).and(R::OtherThanSource),
+                        effect: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                        }),
+                    },
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                ]),
+            ),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(o_kagachi_made_manifest())),
+        ..Default::default()
+    }
+}
+
+/// Moonmist — {1}{G} Instant. Transform all Humans (only transforming DFCs
+/// turn over, CR 701.27c). Prevent all combat damage this turn dealt by
+/// creatures other than Werewolves and Wolves (CR 615).
+pub fn moonmist() -> CardDefinition {
+    CardDefinition {
+        name: "Moonmist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Transform { what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Human)) },
+            Effect::PreventCombatDamageExceptDealtBy {
+                except: R::HasCreatureType(CreatureType::Werewolf).or(R::HasCreatureType(CreatureType::Wolf)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
