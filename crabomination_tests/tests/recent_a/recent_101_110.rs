@@ -1384,7 +1384,7 @@ mod recent110 {
     use crabomination::game::*;
     use crabomination::mana::Color;
 
-    /// CR 702.71 — Fortify attaches to a land you control and the bonus applies.
+    /// CR 702.67 — Fortify attaches to a land you control and the bonus applies.
     #[test]
     fn cr_702_71_fortify_attaches_and_grants_indestructible() {
         let mut g = two_player_game();
@@ -1400,7 +1400,7 @@ mod recent110 {
         assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible));
     }
 
-    /// CR 702.71c — fortify only targets lands; a creature is rejected.
+    /// CR 702.67c — fortify only targets lands; a creature is rejected.
     #[test]
     fn cr_702_71_fortify_rejects_creature() {
         let mut g = two_player_game();

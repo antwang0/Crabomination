@@ -51,7 +51,7 @@ fn cr_702_32_kicker_provenance() {
     assert_eq!(g.players[1].life, life - 3, "kicked: 3 damage");
 }
 
-/// CR 702.9 — Affinity reduces a spell's generic cost by the number of
+/// CR 702.41 — Affinity reduces a spell's generic cost by the number of
 /// matching permanents. Argivian Phalanx ({5}{W}) drops {1} per creature.
 #[test]
 fn cr_702_9_affinity_reduces_cost() {

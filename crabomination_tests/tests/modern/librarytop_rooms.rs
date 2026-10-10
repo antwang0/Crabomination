@@ -1710,7 +1710,7 @@ fn ghosts_of_the_innocent_halves_combat_damage() {
     assert_eq!(g.players[1].life, 19, "2 halved to 1");
 }
 
-// ── CR 702.41 — Entwine (Tooth and Nail) ────────────────────────────────────
+// ── CR 702.42 — Entwine (Tooth and Nail) ────────────────────────────────────
 
 /// Plain cast runs only the chosen mode (mode 1: put creatures from hand).
 #[test]

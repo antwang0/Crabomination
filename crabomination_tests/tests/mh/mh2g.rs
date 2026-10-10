@@ -112,7 +112,7 @@ fn obsidian_charmaw_discount() {
     assert_eq!(depots, 2, "ETB destroyed one nonbasic");
 }
 
-/// CR 702.29 — echo: pay at upkeep (mana) or sacrifice.
+/// CR 702.30 — echo: pay at upkeep (mana) or sacrifice.
 #[test]
 fn cr_702_29_echo_mana_pays_or_sacrifices() {
     let mut g = two_player_game();
@@ -138,7 +138,7 @@ fn cr_702_29_echo_mana_pays_or_sacrifices() {
     assert!(g.battlefield_find(broke).is_none(), "unpaid echo sacrifices");
 }
 
-/// CR 702.29b — Echo—Discard a card (Rakdos Headliner).
+/// CR 702.30b — Echo—Discard a card (Rakdos Headliner).
 #[test]
 fn cr_702_29b_echo_discard() {
     let mut g = two_player_game();

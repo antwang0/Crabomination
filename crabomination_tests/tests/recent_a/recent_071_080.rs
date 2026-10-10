@@ -1273,7 +1273,7 @@ mod recent78 {
 
     #[test]
     fn cr_702_15_mountainwalk_unblockable_with_a_mountain() {
-        // CR 702.15 — landwalk: the attacker can't be blocked while the defending
+        // CR 702.14 — landwalk: the attacker can't be blocked while the defending
         // player controls a land of the named type (enforced in declare_blockers).
         let mut g = two_player_game();
         let yeti = g.add_card_to_battlefield(0, catalog::mountain_yeti());

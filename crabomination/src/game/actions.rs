@@ -15047,7 +15047,7 @@ impl GameState {
             card.impending_counters = alt.impending;
         }
         if alt.marks_kicked {
-            // CR 702.108 — Surge: stamp the spell kicked so "if its surge
+            // CR 702.117 — Surge: stamp the spell kicked so "if its surge
             // cost was paid" ETB riders fire via `SpellWasKicked`.
             card.kicked = true;
         }
@@ -21247,7 +21247,7 @@ impl GameState {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
-        // CR 702.56 — Forecast / other hand-activated "once each turn"
+        // CR 702.57 — Forecast / other hand-activated "once each turn"
         // abilities (the card stays in hand). The hand instance's
         // per-turn budget rides the global `triggered_once_per_turn_used`
         // set, which is cleared at turn cleanup.

@@ -45081,7 +45081,7 @@ impl GameState {
                 Ok(())
             }
 
-    /// CR 702.77 — Champion a [filter]: exile another matching permanent you
+    /// CR 702.72 — Champion a [filter]: exile another matching permanent you
     /// control linked to the source (returned by `return_linked_exiles` when
     /// the source leaves), or sacrifice the source if nothing was exiled.
     fn resolve_champion(

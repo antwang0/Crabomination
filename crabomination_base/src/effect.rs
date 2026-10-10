@@ -2198,7 +2198,7 @@ pub enum Predicate {
     /// Activate only if you've paid or lost four or more {E} this turn").
     EnergyPaidThisTurnAtLeast { who: PlayerRef, n: u32 },
     /// True if a creature `who` controlled dealt combat damage to a player
-    /// this turn (CR 702.179 — Freerunning's alt-cost gate). Backed by
+    /// this turn (CR 702.173 — Freerunning's alt-cost gate). Backed by
     /// `Player.dealt_combat_damage_to_player_this_turn`.
     DealtCombatDamageToPlayerThisTurn { who: PlayerRef },
     /// True if a creature other than the predicate's source entered the
@@ -7566,7 +7566,7 @@ pub enum Effect {
     /// `Value::DistinctCardTypesExiledWith`. Keen-Eyed Curator's
     /// "{1}: Exile target card from a graveyard."
     ExileTaggedWithSource { what: Selector },
-    /// CR 702.76 — Hideaway N. Look at the top `count` cards of the controller's
+    /// CR 702.75 — Hideaway N. Look at the top `count` cards of the controller's
     /// library, exile one face down stamped `exiled_with = source`, then put the
     /// rest on the bottom in a random order. The hidden card is later played via
     /// `CastWithoutPayingImmediate { what: Selector::CardExiledWithSource }`.
@@ -9540,7 +9540,7 @@ pub enum Effect {
     /// at random, then create a tapped token that's a copy of it. If the
     /// exiled card was a land, repeat (bounded by the graveyard size).
     ExileRandomGraveyardCopyTapped { who: PlayerRef },
-    /// CR 701.32 — Populate: `who` creates a token that's a copy of a creature
+    /// CR 701.36 — Populate: `who` creates a token that's a copy of a creature
     /// token they control (their choice; AutoDecider keeps the highest-power
     /// one). No-op if they control no creature token.
     Populate { who: PlayerRef },
@@ -10209,7 +10209,7 @@ pub enum Effect {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         filter: Option<SelectionRequirement>,
     },
-    /// CR 702.20 — Ripple N. The source spell's cast trigger: reveal the top N
+    /// CR 702.60 — Ripple N. The source spell's cast trigger: reveal the top N
     /// cards of your library; you may cast any with the same name as the source
     /// for free; put the rest on the bottom. Cast-from-library recursion (a
     /// rippled copy ripples again) falls out of the cast path naturally — the
@@ -11006,7 +11006,7 @@ pub enum Effect {
     /// auto-picks one land per basic type (Plains/Island/Swamp/Mountain/
     /// Forest), preferring an opponent's land, and destroys the union.
     DestroyLandOfEachBasicType,
-    /// CR 702.77 — Champion a [filter]: exile another matching permanent you
+    /// CR 702.72 — Champion a [filter]: exile another matching permanent you
     /// control linked to the source (returns when the source leaves), or
     /// sacrifice the source if you exile nothing. Mistbind Clique,
     /// Changeling Hero.

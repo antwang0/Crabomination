@@ -704,7 +704,7 @@ fn cr_508_1g_archangel_attack_tax_needs_it_untapped() {
     }
 }
 
-// ── CR 702.46 — Cipher ────────────────────────────────────────────────────────
+// ── CR 702.99 — Cipher ────────────────────────────────────────────────────────
 
 /// A Cipher spell exiles encoded on a creature; when that creature deals combat
 /// damage to a player, its controller casts a free copy.
@@ -781,7 +781,7 @@ fn cr_614_9_palisade_giant_redirects_combat_damage_to_player() {
     assert_eq!(g.battlefield_find(giant).unwrap().damage, 6, "giant took the hit");
 }
 
-// ── CR 702.103 — Jump-start ───────────────────────────────────────────────────
+// ── CR 702.133 — Jump-start ───────────────────────────────────────────────────
 
 /// Jump-start casts from the graveyard for the card's own cost plus a
 /// discard, and exiles after resolving.
@@ -1482,7 +1482,7 @@ fn cr_602_2b_blood_token_discard_is_a_cost() {
     );
 }
 
-/// CR 702.47a — Soulshift returns a Spirit from YOUR graveyard, never an
+/// CR 702.46a — Soulshift returns a Spirit from YOUR graveyard, never an
 /// opponent's.
 #[test]
 fn cr_702_47a_soulshift_only_fetches_own_graveyard() {
@@ -3171,7 +3171,7 @@ fn cr_702_13_intimidate_blockable_only_by_artifact_or_shared_color() {
     assert_block(catalog::ornithopter(), true, "artifact creature can block Intimidate");
 }
 
-/// CR 702.72a — Skulk: an attacker can't be blocked by a creature with greater
+/// CR 702.118a — Skulk: an attacker can't be blocked by a creature with greater
 /// power (computed, so anthem-pumped power counts).
 #[test]
 fn cr_702_72_skulk_blocked_only_by_equal_or_lesser_power() {
@@ -3924,7 +3924,7 @@ fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
         "a shadow creature can't block a non-shadow attacker");
 }
 
-// ── CR 702.12 — Defender ─────────────────────────────────────────────────────
+// ── CR 702.3 — Defender ─────────────────────────────────────────────────────
 
 /// CR 702.12b/702.12c — a creature with defender can't attack, but a static
 /// ability may let it attack anyway while a condition holds (Drowsing
@@ -4019,7 +4019,7 @@ fn cr_702_11e_hexproof_from_black_blocks_only_black() {
     assert!(g.battlefield_find(knight).is_none(), "white Swords exiled it");
 }
 
-// ── CR 702.165 — Gift ─────────────────────────────────────────────────────────
+// ── CR 702.174 — Gift ─────────────────────────────────────────────────────────
 
 /// CR 702.165 — promising a Gift bestows the gift on the opponent *before* the
 /// spell's other (enhanced) effects, and broadens the resolution accordingly.
@@ -4647,7 +4647,7 @@ fn cr_701_13_investigate_makes_a_clue() {
     );
 }
 
-// ── CR 702.166 — Offspring ────────────────────────────────────────────────────
+// ── CR 702.175 — Offspring ────────────────────────────────────────────────────
 
 /// CR 702.166 — paying a creature's Offspring cost makes a 1/1 token copy of it
 /// enter when the creature itself enters.
@@ -5754,7 +5754,7 @@ fn descend_8_grants_unblockable_only_at_eight_permanent_cards() {
     );
 }
 
-// ── CR 702.169 — Craft ────────────────────────────────────────────────────────
+// ── CR 702.167 — Craft ────────────────────────────────────────────────────────
 
 /// Craft (CR 702.167) is a sorcery-speed activated ability that exiles the
 /// source and other objects, returning the source transformed.
@@ -5831,7 +5831,7 @@ fn cr_701_57_discover_digs_and_casts() {
     assert!(found, "discovered card moved out of the library (cast or to hand)");
 }
 
-/// CR 702.56 — Forecast: a hand-activated ability usable only during the
+/// CR 702.57 — Forecast: a hand-activated ability usable only during the
 /// owner's upkeep, only once each turn. Pride of the Clouds mints a Bird.
 #[test]
 fn cr_702_56_forecast_once_per_turn_in_upkeep() {
@@ -7685,7 +7685,7 @@ fn cr_704_5c_ten_poison_counters_loses() {
     assert!(g.players[1].eliminated, "ten poison counters loses the game (CR 704.5c)");
 }
 
-// ── CR 702.180c — Toxic adds poison equal to its value on combat damage ──────
+// ── CR 702.164c — Toxic adds poison equal to its value on combat damage ──────
 
 /// A toxic-4 attacker dealing combat damage to a player gives four poison
 /// counters (Tyrranax Rex).
@@ -8185,7 +8185,7 @@ fn cr_119_life_lock_prevents_combat_damage_loss() {
     assert_eq!(g.players[0].life, before, "locked life total unchanged by the 2 combat damage");
 }
 
-// ── CR 702.92 — Battle cry ───────────────────────────────────────────────────
+// ── CR 702.91 — Battle cry ───────────────────────────────────────────────────
 
 /// CR 702.92a — "Whenever this creature attacks, each other attacking creature
 /// gets +1/+0 until end of turn." Granted mid-turn (Reckless Pyrosurfer's
@@ -8781,7 +8781,7 @@ fn cr_117_7c_cost_reduction_is_generic_only() {
     }).expect("castable for just {U} — the generic {3} is fully reduced");
 }
 
-// ── CR 702.90 — Exalted stacks once per instance ─────────────────────────────
+// ── CR 702.83 — Exalted stacks once per instance ─────────────────────────────
 
 /// CR 702.90b — each Exalted instance triggers separately when a creature
 /// attacks alone. Two Exalted sources pump the lone attacker +2/+2.
@@ -10307,7 +10307,7 @@ fn cr_702_93_undying_returns_only_without_counter() {
     );
 }
 
-/// CR 702.180 — Toxic N adds N poison counters when a creature deals combat
+/// CR 702.164 — Toxic N adds N poison counters when a creature deals combat
 /// damage to a player, on top of the normal life loss.
 #[test]
 fn cr_702_180_toxic_adds_poison_on_combat_damage() {
@@ -10330,7 +10330,7 @@ fn cr_702_180_toxic_adds_poison_on_combat_damage() {
     assert_eq!(g.players[1].life, life - 2, "and still deals its 2 combat damage");
 }
 
-/// CR 702.71 — Wither: combat damage to a creature is dealt as -1/-1 counters,
+/// CR 702.80 — Wither: combat damage to a creature is dealt as -1/-1 counters,
 /// but combat damage to a player is normal life loss (no poison, unlike Infect).
 #[test]
 fn cr_702_71_wither_creatures_as_counters_players_as_life() {
@@ -10643,7 +10643,7 @@ fn cr_115_7_bolt_bend_repoints_a_spell() {
     assert_eq!(g.players[1].life, 17, "the bolt was redirected to its caster");
 }
 
-// ── CR 702.72 — Deathtouch: any nonzero combat damage is lethal ─────────────
+// ── CR 702.2 — Deathtouch: any nonzero combat damage is lethal ─────────────
 /// A 1/1 deathtoucher kills a 5/6 blocker with a single point of combat damage
 /// (CR 702.2e — SBA marks it destroyed).
 #[test]
@@ -10705,7 +10705,7 @@ fn cr_601_2d_distribute_counters_then_double_on_all_targets() {
     assert_eq!((n(a), n(b)), (4, 2), "distributed 2/1 then doubled to 4/2");
 }
 
-/// CR 702.17 — Flash lets a permanent be cast any time you could cast an instant
+/// CR 702.8 — Flash lets a permanent be cast any time you could cast an instant
 /// (here, during the opponent's turn); a creature without Flash can't.
 #[test]
 fn cr_702_17_flash_permanent_castable_at_instant_speed() {

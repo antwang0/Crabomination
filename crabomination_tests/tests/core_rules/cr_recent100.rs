@@ -220,7 +220,7 @@ fn cr_702_39_a_detained_provoked_creature_is_not_able() {
         .expect("and so it is not able, and blocking with nobody is legal");
 }
 
-/// CR 702.15 — landwalk is a *pair* rule the two-creature check cannot see,
+/// CR 702.14 — landwalk is a *pair* rule the two-creature check cannot see,
 /// because it reads the defending player's board. A provoked creature that
 /// cannot legally block its provoker is not able.
 #[test]

@@ -178,7 +178,7 @@ pub struct CardSnapshot {
     /// back-compat.
     #[serde(default)]
     pub exiled_with: Option<crate::card::CardId>,
-    /// CR 702.46 — Cipher: creature this exiled card is encoded on.
+    /// CR 702.99 — Cipher: creature this exiled card is encoded on.
     #[serde(default)]
     pub encoded_on: Option<crate::card::CardId>,
     /// CR 603.4 — turn this permanent entered (Shaile's EnteredThisTurn).

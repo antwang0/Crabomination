@@ -51,6 +51,10 @@ def main():
     roots = {n: forms(h) for n, h in header.items() if n.startswith("701.") and " " not in h}
     stem = {n: h[:5] for n, h in header.items() if n.startswith("701.")}
     verb_after = re.compile(r"CR (701\.[0-9]+)[a-z]? (?:—|-|:) ([^.;)]{0,50})")
+    # "CR 702.N — Name …": the text right after the citation starts with
+    # another keyword's exact header ("CR 702.46 — Cipher", Cipher is 702.99).
+    name_after = re.compile(r"CR (70[12]\.[0-9]+)[a-z]? (?:—|-|:) ([A-Za-z][^.;:(]{0,40})")
+    names = sorted(((h, n) for h, n in by_name.items() if len(h) > 3), key=lambda t: -len(t[0]))
     misnamed = []
     cited, where = Counter(), {}
     for d in DIRS:
@@ -64,6 +68,14 @@ def main():
                         right = by_name.get(name.lower())
                         if right and right != num and header.get(num) != name.lower():
                             misnamed.append(f"{os.path.relpath(path, ROOT)}:{i}  {name} cites {num}, the rule is {right}")
+                    for num, after in name_after.findall(line):
+                        own = header.get(num, "~")
+                        if own.split()[0][:5] in line.lower():
+                            continue
+                        for h, n in names:
+                            if n != num and n[:3] == num[:3] and re.match(re.escape(h) + r"\b", after.lower()):
+                                misnamed.append(f"{os.path.relpath(path, ROOT)}:{i}  CR {num} ({own}) names {h}, the rule is {n}")
+                                break
                     for num, after in verb_after.findall(line):
                         words = re.findall(r"[a-z]+", after.lower())
                         own = roots.get(num)

@@ -648,7 +648,7 @@ fn cr_701_32_support_two_puts_a_counter_on_each_of_two_targets() {
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-/// CR 701.32a — support is "each of **up to** N target creatures": with no
+/// CR 701.41a — support is "each of **up to** N target creatures": with no
 /// creature on the battlefield the spell is still castable (and still draws).
 #[test]
 fn cr_701_32a_support_with_no_creature_is_castable() {

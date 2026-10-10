@@ -810,7 +810,7 @@ pub struct PlayerData {
     #[serde(default)]
     pub creatures_attacked_this_turn: u32,
     /// True once a creature this player controlled dealt combat damage to a
-    /// player this turn (CR 702.179 — Freerunning). Set in
+    /// player this turn (CR 702.173 — Freerunning). Set in
     /// `fire_combat_damage_to_player_triggers`, reset at the turn boundary.
     #[serde(default)]
     pub dealt_combat_damage_to_player_this_turn: bool,

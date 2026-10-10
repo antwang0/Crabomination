@@ -1,6 +1,6 @@
 //! CR conformance for this run's engine work:
 //! - CR 705.1 — "flip a coin until you lose a flip".
-//! - CR 702.15 — Landwalk keys on the defending player's lands.
+//! - CR 702.14 — Landwalk keys on the defending player's lands.
 //! - CR 702.34a / 601.2b — flashback-only additional costs.
 //! - CR 611.2b — an indefinite continuous effect outlives its source.
 

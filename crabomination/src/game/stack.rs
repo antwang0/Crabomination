@@ -928,7 +928,7 @@ impl GameState {
                 // CR 702.24 — cumulative upkeep: age counter + pay-or-sacrifice.
                 let mut cu = self.process_cumulative_upkeep();
                 events.append(&mut cu);
-                // CR 702.29 — echo: pay-or-sacrifice on the first upkeep.
+                // CR 702.30 — echo: pay-or-sacrifice on the first upkeep.
                 let mut echo = self.process_echo();
                 events.append(&mut echo);
                 // CR 702.50a — Epic spells copy at the controller's upkeep.
@@ -1024,7 +1024,7 @@ impl GameState {
                         .build(),
                     );
                 }
-                // CR 702.183 — Impending time counters tick at the beginning of
+                // CR 702.176 — Impending time counters tick at the beginning of
                 // the controller's end step; the permanent becomes a creature
                 // when the last is gone.
                 let mut imp = self.process_impending();
@@ -3069,7 +3069,7 @@ impl GameState {
                     // CR 701.28 — a spell cast converted (More Than Meets the
                     // Eye) enters with its back face up.
                     self.apply_cast_converted_etb(card_id, &mut events);
-                    // CR 702.183 — Impending: a permanent cast for its impending
+                    // CR 702.176 — Impending: a permanent cast for its impending
                     // cost enters with N time counters (and isn't a creature
                     // until they tick off).
                     self.apply_impending_etb(card_id, &mut events);
@@ -5132,7 +5132,7 @@ impl GameState {
             pl.nontoken_sacrificed_this_turn = 0;
             pl.foods_sacrificed_this_turn = 0;
             pl.artifacts_or_creatures_sacrificed_this_turn = 0;
-            // CR 702.179 — Freerunning's combat-damage gate is per-turn.
+            // CR 702.173 — Freerunning's combat-damage gate is per-turn.
             pl.dealt_combat_damage_to_player_this_turn = false;
             // Quest for Pure Flame's turn-scoped source-damage doubling.
             pl.double_your_source_damage_this_turn = false;

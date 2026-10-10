@@ -57,7 +57,7 @@ fn cr_702_16b_protection_from_chosen_color() {
         "has protection from the chosen color");
 }
 
-/// CR 702.107 — Replicate copies the spell once per replicate payment. Siege of
+/// CR 702.56 — Replicate copies the spell once per replicate payment. Siege of
 /// Towers cast with one replicate payment puts the original plus one copy on the
 /// stack.
 #[test]

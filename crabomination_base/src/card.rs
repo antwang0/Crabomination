@@ -1811,7 +1811,7 @@ pub enum Keyword {
     /// exclusive with `Keyword::Flashback(_)` in practice (a card has
     /// one Flashback variant or the other).
     FlashbackTap { count: u32, filter: Option<Box<SelectionRequirement>> },
-    /// CR 702.103 — Jump-start: cast from the graveyard for the card's own
+    /// CR 702.133 — Jump-start: cast from the graveyard for the card's own
     /// mana cost plus discarding a card; exiles after resolving (rides the
     /// flashback cast path). Chemister's Insight, Radical Idea.
     JumpStart,
@@ -1835,11 +1835,11 @@ pub enum Keyword {
     /// instead of the graveyard as it resolves. Cast via
     /// `GameAction::CastSpellBuyback`.
     Buyback(crate::mana::ManaCost),
-    /// CR 702.41 — Entwine. An optional additional cost on a modal spell;
+    /// CR 702.42 — Entwine. An optional additional cost on a modal spell;
     /// if paid, every mode runs in order instead of one. Cast via
     /// `GameAction::CastSpellEntwine`. Tooth and Nail.
     Entwine(crate::mana::ManaCost),
-    /// CR 702.176 — Bargain. An optional additional cost: as you cast the
+    /// CR 702.166 — Bargain. An optional additional cost: as you cast the
     /// spell you may sacrifice an artifact, enchantment, or token. If you do,
     /// the spell is "bargained" (`Predicate::SpellWasBargained` gates the
     /// bonus). Cast via `GameAction::CastSpellBargain`.
@@ -1897,7 +1897,7 @@ pub enum Keyword {
     /// `SelectionRequirement`/`Effect` sizes and deep debug-build recursion).
     Typecycling(Box<(crate::mana::ManaCost, SelectionRequirement)>),
     Echo(crate::mana::ManaCost),
-    /// CR 702.29b — Echo with a non-mana cost: "Echo—Discard a card"
+    /// CR 702.30b — Echo with a non-mana cost: "Echo—Discard a card"
     /// (Rakdos Headliner). Processed by the same `process_echo` turn-based
     /// check as `Echo`.
     EchoDiscard,
@@ -1908,18 +1908,18 @@ pub enum Keyword {
     /// of its controller's upkeep, remove a fade counter from it; if you
     /// can't, sacrifice it.
     Fading(u32),
-    /// CR 702.62 — Vanishing N. Enters with N time counters. At the
+    /// CR 702.63 — Vanishing N. Enters with N time counters. At the
     /// beginning of its controller's upkeep, remove a time counter from it;
     /// when the last is removed, sacrifice it.
     Vanishing(u32),
-    /// CR 702.183 — Impending N—[cost]. May be cast for its impending cost;
+    /// CR 702.176 — Impending N—[cost]. May be cast for its impending cost;
     /// if so it enters with N time counters and isn't a creature while it has
     /// one. At the beginning of its controller's end step, remove a time
     /// counter (no sacrifice — it just turns into a creature when the last
     /// comes off). The impending mana cost rides `AlternativeCost.impending`.
     Impending(u32),
     Retrace,
-    /// CR 702.139 — Escape. Cast this card from your graveyard by paying
+    /// CR 702.138 — Escape. Cast this card from your graveyard by paying
     /// its escape mana cost plus exiling N other cards from your
     /// graveyard. `Escape(cost, n)`. Instants/sorceries resolve to the
     /// graveyard normally (re-escapable); permanents enter the
@@ -2025,7 +2025,7 @@ pub enum Keyword {
     /// CR 702.77 — Reinforce N—[cost]. "[cost], Discard this card: Put N +1/+1
     /// counters on target creature." An activated ability usable from the hand.
     Reinforce(u32, crate::mana::ManaCost),
-    /// CR 702.166 — Disguise. Like Morph, but the face-down permanent is a 2/2
+    /// CR 702.168 — Disguise. Like Morph, but the face-down permanent is a 2/2
     /// with ward {2}; turn it face up for this cost. Casts face down for {3}.
     Disguise(crate::mana::ManaCost),
     /// CR 702.146 — Disturb. Cast this card from your graveyard transformed
@@ -2412,7 +2412,7 @@ pub enum Keyword {
         #[serde(default)]
         exclude_self: bool,
     },
-    /// CR 702.166 — Offspring [cost]. An optional additional cast cost; if
+    /// CR 702.175 — Offspring [cost]. An optional additional cast cost; if
     /// paid, the creature's ETB mints a 1/1 token copy of it. Reuses the
     /// Kicker pipeline (`has_kicker` returns this cost, `SpellWasKicked` gates
     /// the ETB token-copy). Thundertrap Trainer.
@@ -2422,7 +2422,7 @@ pub enum Keyword {
     /// payment (`Value::SquadCount` reads `CardInstance.squad_count`). Cast via
     /// `GameAction::CastSpellSquad`.
     Squad(crate::mana::ManaCost),
-    /// CR 702.107 — Replicate [cost]. An optional additional cast cost on an
+    /// CR 702.56 — Replicate [cost]. An optional additional cast cost on an
     /// instant/sorcery payable any number of times; when cast, the spell is
     /// copied once per payment (copies may choose new targets). Cast via
     /// `GameAction::CastSpellReplicate`.
@@ -5407,7 +5407,7 @@ pub struct CardDefinition {
     /// Reuses the [`Adventure`] shape (name/cost/types/effect).
     #[serde(default)]
     pub omen: Option<Box<Adventure>>,
-    /// CR 702.165 — Gift. When `Some`, as the spell is cast its controller may
+    /// CR 702.174 — Gift. When `Some`, as the spell is cast its controller may
     /// promise a gift to an opponent (`GameAction::CastGift`); if promised, the
     /// opponent receives the gift and the spell resolves its enhanced
     /// `gifted_effect` instead of the printed base `effect`.
@@ -5600,7 +5600,7 @@ pub struct DiscardActivated {
     pub effect: crate::effect::Effect,
 }
 
-/// CR 702.165 — Gift. The printed spell's base resolution lives in the parent
+/// CR 702.174 — Gift. The printed spell's base resolution lives in the parent
 /// [`CardDefinition::effect`]; when the gift is promised, the spell resolves
 /// `gifted_effect` (which itself bestows the promised gift on the opponent
 /// before its other effects). `label` is the gift's printed name, for the
@@ -6888,7 +6888,7 @@ pub struct AlternativeCost {
     /// reduction). Elder Deep-Fiend, Wretched Gryff, Distended Mindbender.
     #[serde(default)]
     pub emerge: Option<SelectionRequirement>,
-    /// CR 702.183 — Impending N. When non-zero, casting via this alternative
+    /// CR 702.176 — Impending N. When non-zero, casting via this alternative
     /// cost stamps the resolving permanent with N time counters
     /// (`CardInstance.impending_counters`), so it enters as a non-creature
     /// that turns into a creature once the counters tick off.
@@ -9951,7 +9951,7 @@ pub struct CardData {
     /// creature"). Unlike `exiled_by`, the card never returns — this is a
     /// pure association used by counting effects. `None` for ordinary exile.
     pub exiled_with: Option<CardId>,
-    /// CR 702.46 — Cipher. While this card is exiled "encoded on" a creature,
+    /// CR 702.99 — Cipher. While this card is exiled "encoded on" a creature,
     /// `encoded_on` holds that creature's id. Whenever the encoded creature
     /// deals combat damage to a player, the controller may cast a free copy of
     /// this card. `None` for ordinary exile.

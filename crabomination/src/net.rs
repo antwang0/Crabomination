@@ -1717,7 +1717,7 @@ pub struct ExileCardView {
     /// a "returns when X leaves" tether. `None` for plain exile.
     #[serde(default)]
     pub exiled_by: Option<CardId>,
-    /// CR 702.46 — Cipher: if this exiled card is encoded on a creature, that
+    /// CR 702.99 — Cipher: if this exiled card is encoded on a creature, that
     /// creature's `CardId`. Lets the client badge it "encoded on X" and tether
     /// it to the carrier. `None` for plain exile.
     #[serde(default)]

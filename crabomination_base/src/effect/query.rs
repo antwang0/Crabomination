@@ -5872,7 +5872,7 @@ impl Effect {
             | Effect::PreventNextDamageDivided { .. }
             | Effect::DealDamageDividedEvenly { .. }
             | Effect::DistributeCounters { .. } => Some(1),
-            // CR 701.32a — support N is "each of **up to** N target
+            // CR 701.41a — support N is "each of **up to** N target
             // creatures": zero is a legal choice (Lead by Example with no
             // creature in play was uncastable).
             Effect::SupportCounters { .. } => Some(0),

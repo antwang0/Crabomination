@@ -230,7 +230,7 @@ fn connect(g: &mut GameState, attacker: CardId, defender: usize) {
     }
 }
 
-/// CR 702.111 — renown, then the Equipment search.
+/// CR 702.112 — renown, then the Equipment search.
 #[test]
 fn relic_seeker_finds_equipment_when_it_becomes_renowned() {
     let mut g = main_phase(2);
