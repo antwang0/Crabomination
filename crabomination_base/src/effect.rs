@@ -3504,6 +3504,11 @@ pub enum EventKind {
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
     ScriedOrSurveiled,
+    /// CR 714.2c — the final chapter ability of a Saga resolved (Narci, Fable
+    /// Singer; Tom Bombadil). The Saga is the subject and its mana value the
+    /// event amount, read as the chapter resolved (CR 714.4 sacrifices it
+    /// before any trigger resolves).
+    SagaFinalChapterResolved,
     /// CR 701.22 — "whenever you scry" only (Flamespeaker Adept); the same
     /// event as `ScriedOrSurveiled`, narrowed by its `surveil` flag.
     Scried,
@@ -7269,6 +7274,10 @@ pub enum Effect {
     /// A triggered ability that uses the stack (CR 605.1b: it triggers on an
     /// attack, not on mana), so it can be copied or countered.
     Firebend { amount: Value },
+    /// Engine-appended to a Saga's final chapter ability (never printed):
+    /// emits `GameEvent::SagaFinalChapterResolved` as the chapter resolves,
+    /// so a countered chapter emits nothing (CR 714.2c).
+    SagaFinalChapterResolved,
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },
@@ -11129,8 +11138,14 @@ pub enum Effect {
     /// "Return a card of an opponent's choice matching `filter` from your
     /// graveyard to your hand" — untargeted (Tasigur, the Golden Fang). The
     /// choosing opponent is prompted when they want a UI; a bot chooser hands
-    /// back the lowest-mana-value match.
-    ReturnFromGraveyardOpponentChooses { filter: SelectionRequirement },
+    /// back the lowest-mana-value match. `chooser` names that opponent
+    /// ("defending player chooses" — O-Kagachi Made Manifest); `None` lets the
+    /// controller pick which opponent chooses. The card goes on `LastMoved`.
+    ReturnFromGraveyardOpponentChooses {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        chooser: Option<PlayerRef>,
+    },
 
     /// Menacing Ogre — every player secretly picks a number up to `max`, the
     /// picks are revealed at once, and each player who named the highest loses
@@ -13428,6 +13443,9 @@ pub enum LookExileGrant {
     /// Durnan of the Yawning Portal: you MAY exile a creature card, face up;
     /// cast it while it stays exiled, paying its cost.
     CreatureMayWhileExiled,
+    /// Djeru and Hazoret: you MAY exile a legendary creature card, face up;
+    /// cast it this turn without paying its mana cost.
+    LegendaryCreatureFreeThisTurn,
 }
 
 /// Serde default for `LookTopExileOneMayPlay.who` (Gonti's target opponent).

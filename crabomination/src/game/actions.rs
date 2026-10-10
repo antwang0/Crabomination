@@ -15509,7 +15509,7 @@ impl GameState {
         offboard
             && !names_an_ability()
             && !zoned
-            && (exiled || !effect.may_target_offboard_card())
+            && (exiled || !effect.may_target_offboard_card() || filter.is_some_and(|f| f.names_permanent()))
     }
 
     /// Validate that a target is legally targetable by the given controller.

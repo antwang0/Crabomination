@@ -2,8 +2,9 @@
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
-//! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive and Fire
-//! Lord Zuko. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
+//! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
+//! Zuko, Arna Kennerüd, Terra, Magical Adept and Atreus // Kratos. Tests in
+//! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -1671,6 +1672,583 @@ pub fn the_legend_of_roku() -> CardDefinition {
             (3, Effect::ExileSelfReturnTransformed),
         ],
         back_face: Some(Box::new(avatar_roku())),
+        ..Default::default()
+    }
+}
+
+// ── Arna Kennerüd, Skycaptain (WUB) ─────────────────────────────────────────
+
+fn equipment(name: &'static str, mana: crate::mana::ManaCost, equip: crate::mana::ManaCost) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(equip)],
+        ..Default::default()
+    }
+}
+
+/// Arna Kennerüd, Skycaptain — {2}{W}{U}{B} 4/4 flying, lifelink, ward—
+/// discard a card. Whenever a modified creature you control attacks, double
+/// each kind of counter on it (CR 701.10), then copy each nontoken permanent
+/// attached to it, the copy entering attached to that creature (CR 707.2).
+pub fn arna_kennerud_skycaptain() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Lifelink,
+            Keyword::Ward(crate::card::WardCost::Discard(1)),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::IsModified),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::DoubleAllCountersOn { what: Selector::TriggerSource },
+                // Inside the walk `TriggerSource` is the attachment, so its
+                // host is the attacker; the list is fixed before any copy.
+                Effect::ForEach {
+                    selector: Selector::AttachedToMe(Box::new(Selector::TriggerSource)),
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsToken.negate() },
+                        then: Box::new(Effect::CreateTokenCopyOfAttachedToEach {
+                            source: Selector::TriggerSource,
+                            hosts: Selector::AttachedTo(Box::new(Selector::TriggerSource)),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            ]),
+        }],
+        ..legend(
+            "Arna Kennerüd, Skycaptain",
+            cost(&[generic(2), w(), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            4,
+            4,
+        )
+    }
+}
+
+/// Assassin Gauntlet — {2}{U} Equipment. ETB: attach it to up to one target
+/// creature you control, and tap all creatures target opponent controls.
+/// Equipped +1/+1 and loots on combat damage to a player. Equip {2}.
+pub fn assassin_gauntlet() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::ForEach {
+                        selector: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                        body: Box::new(Effect::Tap { what: Selector::TriggerSource }),
+                    }),
+                },
+                Effect::Attach {
+                    what: Selector::This,
+                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou) },
+                },
+            ])),
+        })],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+            }],
+            ..Default::default()
+        }),
+        ..equipment("Assassin Gauntlet", cost(&[generic(2), u()]), cost(&[generic(2)]))
+    }
+}
+
+/// Biorganic Carapace — {2}{W}{U} Equipment. ETB: attach it to target
+/// creature you control. Equipped +2/+2 and, on combat damage to a player,
+/// draws a card per modified creature you control (CR 700.9). Equip {2}.
+pub fn biorganic_carapace() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        })],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::IsModified),
+                    ))),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..equipment("Biorganic Carapace", cost(&[generic(2), w(), u()]), cost(&[generic(2)]))
+    }
+}
+
+/// Ardenn, Intrepid Archaeologist — {2}{W} 2/2, partner. At the beginning of
+/// combat on your turn, you may attach any number of Auras and Equipment you
+/// control to target permanent or player — narrowed to a creature: no Curse
+/// sits in a target deck, and an Equipment can only hold a creature (CR 301.5c).
+pub fn ardenn_intrepid_archaeologist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Partner],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::AttachAnyNumberTo {
+                what: Selector::EachPermanent(
+                    R::ControlledByYou.and(
+                        R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+                    ),
+                ),
+                to: target_filtered(R::Creature),
+            },
+        }],
+        ..legend(
+            "Ardenn, Intrepid Archaeologist",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Kor, CreatureType::Scout],
+            2,
+            2,
+        )
+    }
+}
+
+/// Halvar, God of Battle // Sword of the Realms — {2}{W}{W} 4/4 God. Your
+/// enchanted or equipped creatures have double strike; at the beginning of
+/// each combat you may move an Aura or Equipment from one of your creatures
+/// to another. The back ({1}{W} legendary Equipment): +2/+0 and vigilance,
+/// and the equipped creature returns to its owner's hand when it dies.
+pub fn halvar_god_of_battle() -> CardDefinition {
+    let sword = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::Vigilance],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..equipment("Sword of the Realms", cost(&[generic(1), w()]), cost(&[generic(1), w()]))
+    };
+    let mine = || R::Creature.and(R::ControlledByYou);
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control that are enchanted or equipped have double strike.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(mine().and(R::IsEnchanted.or(R::IsEquipped))),
+                keyword: Keyword::DoubleStrike,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), EventScope::AnyPlayer),
+            effect: Effect::MayDo {
+                description: "Move an Aura or Equipment to another creature you control?".into(),
+                body: Box::new(Effect::Attach {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))
+                            .and(R::AttachedToCreatureYouControl),
+                    },
+                    to: Selector::TargetFiltered { slot: 1, filter: mine() },
+                }),
+            },
+        }],
+        back_face: Some(Box::new(sword)),
+        ..legend("Halvar, God of Battle", cost(&[generic(2), w(), w()]), vec![CreatureType::God], 4, 4)
+    }
+}
+
+// ── Terra, Magical Adept (RG, Esper Terra's WUBRG) ──────────────────────────
+
+fn saga() -> Subtypes {
+    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() }
+}
+
+/// Tom Bombadil — {W}{U}{B}{R}{G} 4/4 God Bard. Hexproof and indestructible
+/// while your Sagas hold four or more lore counters. Once each turn, when a
+/// Saga of yours finishes (CR 714.2c), reveal until a Saga card and put it
+/// onto the battlefield; the rest go to the bottom in a random order.
+pub fn tom_bombadil() -> CardDefinition {
+    use crate::card::CounterType;
+    let lore_at_least_four = || {
+        Predicate::ValueAtLeast(
+            Value::CountersOn {
+                what: Box::new(Selector::EachPermanent(
+                    R::HasEnchantmentSubtype(EnchantmentSubtype::Saga).and(R::ControlledByYou),
+                )),
+                kind: CounterType::Lore,
+            },
+            Value::Const(4),
+        )
+    };
+    let while_lore = |keyword: Keyword, description: &'static str| StaticAbility {
+        description,
+        effect: StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition: lore_at_least_four() },
+    };
+    CardDefinition {
+        static_abilities: vec![
+            while_lore(Keyword::Hexproof, "Tom Bombadil has hexproof while your Sagas have four or more lore counters."),
+            while_lore(
+                Keyword::Indestructible,
+                "Tom Bombadil has indestructible while your Sagas have four or more lore counters.",
+            ),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SagaFinalChapterResolved, EventScope::YourControl).once_per_turn(),
+            effect: Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: R::HasEnchantmentSubtype(EnchantmentSubtype::Saga),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                cap: Value::Const(100),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            },
+        }],
+        ..legend(
+            "Tom Bombadil",
+            cost(&[w(), u(), b(), r(), g()]),
+            vec![CreatureType::God, CreatureType::Bard],
+            4,
+            4,
+        )
+    }
+}
+
+/// The Apprentice's Folly — {2}{U}{R} Saga. I, II: a hasty, nonlegendary
+/// Reflection token copy of target nontoken creature you control that shares
+/// no name with a token you control. III: sacrifice all your Reflections.
+pub fn the_apprentices_folly() -> CardDefinition {
+    let copy = || Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        source: target_filtered(
+            R::Creature.and(R::ControlledByYou).and(R::IsToken.negate()).and(R::NameNotSharedWithYourTokens),
+        ),
+        extra_creature_types: vec![CreatureType::Reflection],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: true,
+        legendary: false,
+        extra_keywords: vec![Keyword::Haste],
+        no_mana_cost: false,
+        enters_with_counters: None,
+        remove_keywords: vec![],
+    };
+    CardDefinition {
+        name: "The Apprentice's Folly",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![
+            (1, copy()),
+            (2, copy()),
+            (
+                3,
+                Effect::SacrificeAllMatching {
+                    who: Selector::You,
+                    filter: R::HasCreatureType(CreatureType::Reflection),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// O-Kagachi Made Manifest — The Kami War's back face: a 6/6 flying, trample
+/// Dragon Spirit that is all colors. Attacking, the defending player picks a
+/// nonland card in your graveyard for your hand; it gets +X/+0 for its mana
+/// value.
+pub fn o_kagachi_made_manifest() -> CardDefinition {
+    CardDefinition {
+        name: "O-Kagachi Made Manifest",
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "O-Kagachi Made Manifest is all colors.",
+            effect: StaticEffect::GrantAllColors { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ReturnFromGraveyardOpponentChooses {
+                    filter: R::Nonland,
+                    chooser: Some(PlayerRef::DefendingPlayer),
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ManaValueOf(Box::new(Selector::LastMoved)),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Kami War — {1}{W}{U}{B}{R}{G} Saga. I: exile target nonland permanent
+/// an opponent controls. II: return up to one other target nonland permanent
+/// to its owner's hand, then each opponent discards a card. III: exile it and
+/// return it transformed (O-Kagachi Made Manifest).
+pub fn the_kami_war() -> CardDefinition {
+    CardDefinition {
+        name: "The Kami War",
+        cost: cost(&[generic(1), w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Exile {
+                    what: target_filtered(R::Permanent.and(R::Nonland).and(R::ControlledByOpponent)),
+                },
+            ),
+            (
+                2,
+                Effect::Seq(vec![
+                    Effect::ApplyToTargets {
+                        max_targets: 1,
+                        min_targets: 0,
+                        filter: R::Permanent.and(R::Nonland).and(R::OtherThanSource),
+                        effect: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                        }),
+                    },
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                ]),
+            ),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(o_kagachi_made_manifest())),
+        ..Default::default()
+    }
+}
+
+/// Moonmist — {1}{G} Instant. Transform all Humans (only transforming DFCs
+/// turn over, CR 701.27c). Prevent all combat damage this turn dealt by
+/// creatures other than Werewolves and Wolves (CR 615).
+pub fn moonmist() -> CardDefinition {
+    CardDefinition {
+        name: "Moonmist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Transform { what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Human)) },
+            Effect::PreventCombatDamageExceptDealtBy {
+                except: R::HasCreatureType(CreatureType::Werewolf).or(R::HasCreatureType(CreatureType::Wolf)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Atreus, Impulsive Son // Kratos, Stoic Father (URW) ─────────────────────
+
+/// Djeru and Hazoret — {2}{R}{R}{W} 5/4 Human God. Vigilance and haste with
+/// one or fewer cards in hand. Attacking, look at your top six; you may exile
+/// a legendary creature card to cast free this turn; the rest go to the
+/// bottom in a random order.
+pub fn djeru_and_hazoret() -> CardDefinition {
+    let hellbent = || Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::ONE);
+    let while_hellbent = |keyword: Keyword, description: &'static str| StaticAbility {
+        description,
+        effect: StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition: hellbent() },
+    };
+    CardDefinition {
+        static_abilities: vec![
+            while_hellbent(Keyword::Vigilance, "Djeru and Hazoret has vigilance with one or fewer cards in your hand."),
+            while_hellbent(Keyword::Haste, "Djeru and Hazoret has haste with one or fewer cards in your hand."),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::LookTopExileOneMayPlay {
+                count: Value::Const(6),
+                who: PlayerRef::You,
+                grant: crate::effect::LookExileGrant::LegendaryCreatureFreeThisTurn,
+            },
+        }],
+        ..legend(
+            "Djeru and Hazoret",
+            cost(&[generic(2), r(), r(), w()]),
+            vec![CreatureType::Human, CreatureType::God],
+            5,
+            4,
+        )
+    }
+}
+
+/// Katara, Waterbending Master — {1}{U} 1/3. Casting a spell during an
+/// opponent's turn gets you an experience counter; attacking, you may draw one
+/// per experience counter, then discard a card.
+pub fn katara_waterbending_master() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+                effect: Effect::AddExperience(Value::ONE),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Draw a card per experience counter, then discard a card?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ControllerExperience },
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    ])),
+                },
+            },
+        ],
+        ..legend(
+            "Katara, Waterbending Master",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            1,
+            3,
+        )
+    }
+}
+
+/// Lae'zel, Vlaakith's Champion — {2}{W} 3/3 Gith Warrior. Counters put on a
+/// creature or planeswalker you control or on you come one more of each kind
+/// (CR 614.16). Choose a Background.
+pub fn laezel_vlaakiths_champion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::ChooseABackground],
+        static_abilities: vec![StaticAbility {
+            description: "If you would put one or more counters on a creature or planeswalker you control or on yourself, put that many plus one of each of those kinds instead.",
+            effect: StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou,
+        }],
+        ..legend(
+            "Lae'zel, Vlaakith's Champion",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Gith, CreatureType::Warrior],
+            3,
+            3,
+        )
+    }
+}
+
+/// Reidane, God of the Worthy // Valkmira, Protector's Shield — {2}{W} 2/3
+/// flying, vigilance: opponents' snow lands enter tapped, their noncreature
+/// spells of mana value 4+ cost {2} more. Back ({3}{W} legendary artifact):
+/// opponents' sources deal you and yours 1 less damage, and you and your other
+/// permanents have ward {1} against them (CR 702.21).
+pub fn reidane_god_of_the_worthy() -> CardDefinition {
+    let ward = || crate::card::WardCost::Mana(cost(&[generic(1)]));
+    let valkmira = CardDefinition {
+        name: "Valkmira, Protector's Shield",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If a source an opponent controls would deal damage to you or a permanent you control, prevent 1 of that damage.",
+                effect: StaticEffect::ReduceOpponentDamageToYouAndYoursBy(1),
+            },
+            StaticAbility {
+                description: "Whenever you or another permanent you control becomes the target of a spell or ability an opponent controls, counter that spell or ability unless its controller pays {1}.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::ControlledByYou.and(R::OtherThanSource)),
+                    keyword: Keyword::Ward(ward()),
+                },
+            },
+            StaticAbility { description: "You have ward {1}.", effect: StaticEffect::ControllerHasWard(ward()) },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Snow lands your opponents control enter tapped.",
+                effect: StaticEffect::EntersTapped {
+                    applies_to: Selector::EachPermanent(R::ControlledByOpponent.and(R::Land).and(R::IsSnow)),
+                },
+            },
+            StaticAbility {
+                description: "Noncreature spells your opponents cast with mana value 4 or greater cost {2} more to cast.",
+                effect: StaticEffect::OpponentSpellsCostMore {
+                    filter: R::Noncreature.and(R::ManaValueAtLeast(4)),
+                    amount: 2,
+                },
+            },
+        ],
+        back_face: Some(Box::new(valkmira)),
+        ..legend("Reidane, God of the Worthy", cost(&[generic(2), w()]), vec![CreatureType::God], 2, 3)
+    }
+}
+
+/// Surtr, Fiery Jötun — {3}{R}{R} 5/5 trample. Casting a historic spell (CR
+/// 700.6) deals 3 damage to any target.
+pub fn surtr_fiery_jotun() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::historic())),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+        }],
+        ..legend(
+            "Surtr, Fiery Jötun",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Giant, CreatureType::God, CreatureType::Warrior],
+            5,
+            5,
+        )
+    }
+}
+
+/// World at War — {3}{R}{R} Sorcery, rebound. After the second main phase
+/// this turn, an additional combat and main phase (CR 500.8: a combat banked
+/// in the first main phase still follows the scheduled one); at the start of
+/// that combat, untap every creature that attacked this turn.
+pub fn world_at_war() -> CardDefinition {
+    CardDefinition {
+        name: "World at War",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::Seq(vec![
+            Effect::AdditionalCombatPhaseAfterMain { count: Value::ONE },
+            Effect::AtTheAddedCombat {
+                body: Box::new(Effect::Untap {
+                    what: Selector::EachPermanent(R::Creature.and(R::AttackedThisTurn)),
+                    up_to: None,
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

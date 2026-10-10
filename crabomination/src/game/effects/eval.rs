@@ -6251,6 +6251,9 @@ impl GameState {
                     R::NameNotSharedWithYourPermanents => !self.battlefield.iter().any(|c| {
                         c.controller == controller && c.definition.name == card.definition.name
                     }),
+                    R::NameNotSharedWithYourTokens => !self.battlefield.iter().any(|c| {
+                        c.is_token && c.controller == controller && c.definition.name == card.definition.name
+                    }),
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
                     R::Colorless => color_set().is_empty(),
                     R::Monocolored => color_set().is_monocolored(),
@@ -7207,6 +7210,9 @@ impl GameState {
             R::NameNotSharedWithYourPermanents => !self.battlefield.iter().any(|c| {
                 c.controller == controller && c.definition.name == card.definition.name
             }),
+            R::NameNotSharedWithYourTokens => !self.battlefield.iter().any(|c| {
+                c.is_token && c.controller == controller && c.definition.name == card.definition.name
+            }),
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
             R::Colorless => card.definition.printed_color_set().is_empty(),
             R::Monocolored => card.definition.printed_color_set().is_monocolored(),
@@ -7342,6 +7348,10 @@ impl GameState {
                 .attached_to
                 .and_then(|h| self.battlefield_find(h))
                 .is_some_and(|h| self.computed_is_creature(h)),
+            R::AttachedToCreatureYouControl => card
+                .attached_to
+                .and_then(|h| self.battlefield_find(h))
+                .is_some_and(|h| h.controller == controller && self.computed_is_creature(h)),
             R::HasConvoke => {
                 card.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
                     || self.convoke_granted_spells.contains(&card.id)

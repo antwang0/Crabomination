@@ -2586,6 +2586,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FIRE_LORD_ZUKO_COMMANDERS,
             main: decks::FIRE_LORD_ZUKO_MAIN,
         },
+        // Seat 358: Arna Kennerüd, Skycaptain's EDHREC average deck. `--pod-decks 358`.
+        PodDeck {
+            name: "Arna Kennerüd, Skycaptain (WUB)",
+            commanders: decks::ARNA_KENNERUD_COMMANDERS,
+            main: decks::ARNA_KENNERUD_MAIN,
+        },
+        // Seat 359: Terra, Magical Adept's EDHREC average deck. `--pod-decks 359`.
+        PodDeck {
+            name: "Terra, Magical Adept (WUBRG)",
+            commanders: decks::TERRA_ADEPT_COMMANDERS,
+            main: decks::TERRA_ADEPT_MAIN,
+        },
+        // Seat 360: Atreus, Impulsive Son's EDHREC average deck. `--pod-decks 360`.
+        PodDeck {
+            name: "Atreus, Impulsive Son + Kratos, Stoic Father (URW)",
+            commanders: decks::ATREUS_KRATOS_COMMANDERS,
+            main: decks::ATREUS_KRATOS_MAIN,
+        },
     ]
 }
 
@@ -4660,6 +4678,9 @@ mod tests {
             ("Be'lakor, the Dark Master", [0x0A89, 355, 9280]),
             ("Anti-Venom, Horrifying Healer", [0x0A8A, 356, 9281]),
             ("Fire Lord Zuko", [0x0A8B, 357, 9282]),
+            ("Arna Kennerüd, Skycaptain", [0x0A8C, 358, 9283]),
+            ("Terra, Magical Adept", [0x0A8D, 359, 9284]),
+            ("Atreus, Impulsive Son", [0x0A8E, 360, 9285]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

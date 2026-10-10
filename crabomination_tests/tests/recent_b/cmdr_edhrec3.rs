@@ -1216,3 +1216,404 @@ fn the_legend_of_roku_becomes_avatar_roku() {
     let roku = g.battlefield_find(saga).expect("returned transformed");
     assert_eq!(roku.definition.name, "Avatar Roku");
 }
+
+fn attach(g: &mut GameState, gear: CardId, host: CardId) {
+    g.battlefield_find_mut(gear).unwrap().attached_to = Some(host);
+}
+
+fn attached(g: &GameState, host: CardId, name: &str) -> usize {
+    g.battlefield.iter().filter(|c| c.attached_to == Some(host) && c.definition.name == name).count()
+}
+
+/// Arna Kennerüd (Arna's list): a modified attacker's counters double (CR
+/// 701.10) and its nontoken Equipment is copied onto it (CR 707.2); an
+/// unmodified attacker gets nothing.
+#[test]
+fn arna_doubles_counters_and_copies_attachments() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::arna_kennerud_skycaptain());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let plain = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    let gear = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    attach(&mut g, gear, bear);
+    declare(&mut g, &[(bear, 1), (plain, 1)]);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 4);
+    assert_eq!(attached(&g, bear, "Bonesplitter"), 2, "the original and a token copy");
+    assert!(g.battlefield.iter().all(|c| c.attached_to != Some(plain)));
+}
+
+/// Assassin Gauntlet (Arna's list): the ETB taps the opponent's team and
+/// attaches to your creature; a connecting host loots.
+#[test]
+fn assassin_gauntlet_taps_a_board_and_loots() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let foes: Vec<CardId> = (0..2).map(|_| ready(&mut g, 1, catalog::grizzly_bears())).collect();
+    g.add_card_to_library(0, catalog::island());
+    let gauntlet = g.add_card_to_hand(0, catalog::assassin_gauntlet());
+    flood(&mut g);
+    cast_x(&mut g, gauntlet, None);
+    assert!(foes.iter().all(|f| g.battlefield_find(*f).unwrap().tapped));
+    assert_eq!(g.battlefield_find(gauntlet).unwrap().attached_to, Some(bear));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    let hand = g.players[0].hand.len();
+    connect(&mut g, bear);
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// Biorganic Carapace (Arna's list): it attaches as it enters, and a hit
+/// draws one card per modified creature you control (CR 700.9).
+#[test]
+fn biorganic_carapace_draws_per_modified_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let other = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(other).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let carapace = g.add_card_to_hand(0, catalog::biorganic_carapace());
+    flood(&mut g);
+    cast_x(&mut g, carapace, None);
+    let host = g.battlefield_find(carapace).unwrap().attached_to.expect("attached on entry");
+    let hand = g.players[0].hand.len();
+    connect(&mut g, host);
+    let want = if host == other { 1 } else { 2 };
+    assert_eq!(g.players[0].hand.len(), hand + want, "the host and the countered Bear are modified");
+}
+
+/// Ardenn (Arna's list): at the beginning of combat your Equipment gathers
+/// on the target creature.
+#[test]
+fn ardenn_gathers_equipment_on_one_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ardenn_intrepid_archaeologist());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::serra_angel());
+    let s1 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let s2 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    attach(&mut g, s1, a);
+    begin_combat(&mut g);
+    let hosts: Vec<Option<CardId>> = [s1, s2].iter().map(|s| g.battlefield_find(*s).unwrap().attached_to).collect();
+    assert!(hosts.iter().all(|h| h.is_some()), "{hosts:?}");
+    assert_eq!(hosts[0], hosts[1], "both on one creature");
+}
+
+/// Halvar, God of Battle (Arna's list): equipped creatures have double
+/// strike; Sword of the Realms (the MDFC back) returns its dead host to hand.
+#[test]
+fn halvar_and_sword_of_the_realms() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::halvar_god_of_battle());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gear = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    attach(&mut g, gear, bear);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
+
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sword = g.add_card_to_hand(0, catalog::halvar_god_of_battle());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellBack { card_id: sword, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the Sword");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 4);
+    assert!(c.keywords().contains(&Keyword::Vigilance));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.perform_action(GameAction::CastSpell { card_id: murder, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("murder");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "back to its owner's hand");
+}
+
+/// A Saga of seat 0's, cast and drained through chapter I.
+fn saga(g: &mut GameState, def: crabomination::card::CardDefinition) -> CardId {
+    let id = g.add_card_to_hand(0, def);
+    flood(g);
+    cast_x(g, id, None);
+    id
+}
+
+/// Tom Bombadil (Terra's list): four lore counters among your Sagas give him
+/// hexproof and indestructible; a Saga's final chapter (CR 714.2c) digs up the
+/// next Saga, once each turn.
+#[test]
+fn tom_bombadil_chains_sagas_once_a_turn() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let tom = ready(&mut g, 0, catalog::tom_bombadil());
+    let next = g.add_card_to_library(0, catalog::fable_of_the_mirror_breaker());
+    g.add_card_to_library(0, catalog::mountain());
+    let a = saga(&mut g, catalog::the_apprentices_folly());
+    let b = saga(&mut g, catalog::fable_of_the_mirror_breaker());
+    assert!(!g.computed_permanent(tom).unwrap().keywords().contains(&Keyword::Hexproof), "two lore counters");
+    g.saga_advance(b);
+    drain_stack(&mut g);
+    g.saga_advance(a);
+    drain_stack(&mut g);
+    let kw = g.computed_permanent(tom).unwrap().keywords().to_vec();
+    assert!(kw.contains(&Keyword::Hexproof) && kw.contains(&Keyword::Indestructible), "four lore counters");
+    g.saga_advance(a);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(next).is_some(), "the Folly's III found the Fable");
+    g.saga_advance(b);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 1, "once each turn: the Mountain stays put");
+}
+
+/// The Apprentice's Folly (Terra's list): a hasty, nonlegendary Reflection
+/// copy (CR 707.9b); a creature sharing a name with your token is no longer a
+/// legal target; III sacrifices every Reflection.
+#[test]
+fn the_apprentices_folly_reflects_then_shatters() {
+    use crabomination::card::{CreatureType, Keyword};
+    let mut g = pod(2);
+    let tom = ready(&mut g, 0, catalog::tom_bombadil());
+    let folly = saga(&mut g, catalog::the_apprentices_folly());
+    let copies: Vec<CardId> = g.battlefield.iter().filter(|c| c.is_token).map(|c| c.id).collect();
+    assert_eq!(copies.len(), 1);
+    let cp = g.computed_permanent(copies[0]).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Reflection));
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    assert!(g.battlefield_find(tom).is_some(), "not legendary: no legend-rule loss");
+    g.saga_advance(folly);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "Tom shares a token's name");
+    g.saga_advance(folly);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 0);
+}
+
+/// The Kami War (Terra's list): I exiles, II bounces and makes each opponent
+/// discard, III flips it; O-Kagachi's attack returns the defending player's
+/// pick and grows by its mana value.
+#[test]
+fn the_kami_war_becomes_o_kagachi() {
+    let mut g = pod(3);
+    let foe = ready(&mut g, 1, catalog::serra_angel());
+    for seat in [1, 2] {
+        g.add_card_to_hand(seat, catalog::island());
+    }
+    let war = saga(&mut g, catalog::the_kami_war());
+    assert!(g.exile.iter().any(|c| c.id == foe));
+    g.saga_advance(war);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty() && g.players[2].hand.is_empty(), "each opponent discarded");
+    assert!(g.exile.iter().any(|c| c.id == foe), "a slot saying \"permanent\" never reaches exile (CR 109.2)");
+    g.saga_advance(war);
+    drain_stack(&mut g);
+    let kagachi = g.battlefield_find(war).expect("returned transformed");
+    assert_eq!(kagachi.definition.name, "O-Kagachi Made Manifest");
+    g.clear_sickness(war);
+    let ogre = g.add_card_to_graveyard(0, catalog::gray_ogre());
+    g.add_card_to_graveyard(0, catalog::mountain());
+    declare(&mut g, &[(war, 2)]);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ogre), "the only nonland card");
+    assert_eq!(g.computed_permanent(war).unwrap().power, 9);
+}
+
+/// Moonmist (Terra's list): Humans transform (a modal DFC can't, CR
+/// 701.27c), and only Werewolves and Wolves deal combat damage (CR 615).
+#[test]
+fn moonmist_transforms_humans_and_fogs_the_rest() {
+    let mut g = pod(2);
+    let delver = ready(&mut g, 0, catalog::delver_of_secrets());
+    let esika = ready(&mut g, 0, catalog::esika_god_of_the_tree());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mist = g.add_card_to_hand(0, catalog::moonmist());
+    flood(&mut g);
+    cast_x(&mut g, mist, None);
+    assert!(g.battlefield_find(delver).unwrap().transformed, "Delver is a Human");
+    let mut events = vec![];
+    g.transform_permanent(esika, &mut events);
+    assert!(!g.battlefield_find(esika).unwrap().transformed, "a modal DFC doesn't transform");
+    let life = g.players[1].life;
+    connect(&mut g, bear);
+    assert_eq!(g.players[1].life, life, "the Bear's damage was prevented");
+}
+
+/// Djeru and Hazoret (Atreus's list): hellbent vigilance and haste; the attack
+/// exiles a legendary creature card from the top six to cast free this turn.
+#[test]
+fn djeru_and_hazoret_finds_a_free_legend() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let djeru = ready(&mut g, 0, catalog::djeru_and_hazoret());
+    let legend = g.add_card_to_library(0, catalog::surtr_fiery_jotun());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    g.add_card_to_hand(0, catalog::mountain());
+    let kw = g.computed_permanent(djeru).unwrap().keywords().to_vec();
+    assert!(kw.contains(&Keyword::Haste) && kw.contains(&Keyword::Vigilance), "one card in hand");
+    g.add_card_to_hand(0, catalog::mountain());
+    assert!(!g.computed_permanent(djeru).unwrap().keywords().contains(&Keyword::Haste));
+    declare(&mut g, &[(djeru, 1)]);
+    assert!(g.exile.iter().any(|c| c.id == legend));
+    assert_eq!(g.players[0].library.len(), 3, "the rest went to the bottom");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: legend,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(legend).is_some());
+}
+
+/// Katara, Waterbending Master (Atreus's list): a spell on an opponent's turn
+/// is an experience counter; the attack loots one card per counter.
+#[test]
+fn katara_waterbending_master_banks_experience() {
+    let mut g = pod(2);
+    let katara = ready(&mut g, 0, catalog::katara_waterbending_master());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.active_player_idx = 1;
+    flood(&mut g);
+    cast_x(&mut g, opt, None);
+    assert_eq!(g.players[0].experience, 1);
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    declare(&mut g, &[(katara, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
+}
+
+/// Lae'zel (Atreus's list): CR 614.16 — one more of each kind on a creature
+/// or planeswalker you control and on you; an artifact gets none.
+#[test]
+fn laezel_adds_one_counter_of_each_kind() {
+    use crabomination::card::CounterType;
+    use crabomination::effect::Value;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::laezel_vlaakiths_champion());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let rock = ready(&mut g, 0, catalog::mind_stone());
+    let jace = ready(&mut g, 0, catalog::jace_the_mind_sculptor());
+    let loyalty = g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty);
+    for (what, kind) in [(bear, CounterType::PlusOnePlusOne), (rock, CounterType::Charge), (jace, CounterType::Loyalty)] {
+        run(&mut g, Effect::AddCounter { what: Selector::ExactObjects(vec![what]), kind, amount: Value::ONE });
+    }
+    let n = |g: &GameState, id, k| g.battlefield_find(id).unwrap().counter_count(k);
+    assert_eq!(n(&g, bear, CounterType::PlusOnePlusOne), 2);
+    assert_eq!(n(&g, rock, CounterType::Charge), 1, "an artifact isn't Lae'zel's");
+    assert_eq!(n(&g, jace, CounterType::Loyalty), loyalty + 2);
+    run(&mut g, Effect::AddExperience(Value::ONE));
+    assert_eq!(g.players[0].experience, 2, "you get one more too");
+}
+
+/// Resolve `effect` as seat 0's.
+fn run(g: &mut GameState, effect: Effect) {
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&effect, &ctx).expect("effect");
+}
+
+/// Reidane // Valkmira (Atreus's list): an opponent's noncreature spell of
+/// mana value 4+ costs {2} more; Valkmira shaves 1 off an opponent's damage
+/// to you (CR 615).
+#[test]
+fn reidane_taxes_and_valkmira_shields() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::reidane_god_of_the_worthy());
+    let opp_walker = g.add_card_to_hand(1, catalog::jace_the_mind_sculptor());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.players[1].mana_pool.add_colorless(2);
+    let cast = |id| GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(cast(opp_walker)).is_err(), "{{2}}{{U}}{{U}} + {{2}}");
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(cast(opp_walker)).expect("with the tax paid");
+
+    let mut g = pod(2);
+    let valkmira = g.add_card_to_hand(0, catalog::reidane_god_of_the_worthy());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellBack { card_id: valkmira, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Valkmira");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    bolt_player_zero(&mut g);
+    assert_eq!(g.players[0].life, life - 2);
+}
+
+/// Seat 1 bolts seat 0, paying the ward {1} Valkmira may demand.
+fn bolt_player_zero(g: &mut GameState) {
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(g);
+}
+
+/// Surtr, Fiery Jötun (Atreus's list): a historic spell (CR 700.6) is 3
+/// damage; a plain creature spell isn't.
+#[test]
+fn surtr_burns_on_historic_spells() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::surtr_fiery_jotun());
+    flood(&mut g);
+    let life = g.players[1].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_x(&mut g, bear, None);
+    assert_eq!(g.players[1].life, life);
+    let rock = g.add_card_to_hand(0, catalog::mind_stone());
+    cast_x(&mut g, rock, None);
+    assert_eq!(g.players[1].life, life - 3);
+}
+
+/// World at War (Atreus's list): CR 500.8 — cast in the first main phase, the
+/// added combat follows the second main phase, and it untaps the creatures
+/// that attacked.
+#[test]
+fn world_at_war_attacks_again_after_the_second_main() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let war = g.add_card_to_hand(0, catalog::world_at_war());
+    flood(&mut g);
+    cast_x(&mut g, war, None);
+    let life = g.players[1].life;
+    let mut combats = Vec::new();
+    for _ in 0..60 {
+        if g.step == TurnStep::DeclareAttackers && combats.last() != Some(&g.combat_phases_this_turn) {
+            combats.push(g.combat_phases_this_turn);
+            assert!(!g.battlefield_find(bear).unwrap().tapped, "combat {}", g.combat_phases_this_turn);
+            g.priority.player_with_priority = 0;
+            g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+                .expect("attack");
+        }
+        if g.step == TurnStep::End {
+            break;
+        }
+        g.priority.player_with_priority = g.active_player_idx;
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(combats, vec![1, 2]);
+    assert_eq!(g.players[1].life, life - 4, "the Bear connected twice");
+}

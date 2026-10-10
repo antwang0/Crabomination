@@ -2840,6 +2840,8 @@ pub enum GameEventWire {
     ScriedOrSurveiled { player: usize, surveil: bool },
     /// Wire mirror of `GameEvent::Proliferated` (CR 701.34).
     Proliferated { player: usize },
+    /// Wire mirror of `GameEvent::SagaFinalChapterResolved` (CR 714.2c).
+    SagaFinalChapterResolved { player: usize, saga: CardId },
     /// Wire mirror of `GameEvent::Foraged` (CR 701.61).
     Foraged { player: usize },
     /// Wire mirror of `GameEvent::Investigated` (CR 701.16a).
@@ -3115,6 +3117,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::Proliferated { player } => {
                 GameEventWire::Proliferated { player: *player }
+            }
+            GameEvent::SagaFinalChapterResolved { player, saga, .. } => {
+                GameEventWire::SagaFinalChapterResolved { player: *player, saga: *saga }
             }
             GameEvent::Foraged { player } => GameEventWire::Foraged { player: *player },
             GameEvent::Investigated { player, .. } => GameEventWire::Investigated { player: *player },
@@ -3527,6 +3532,8 @@ impl GameEventWire {
             | E::CardPutIntoGraveyardFromHand { .. } => String::new(),
             E::NthCardDrawnThisTurn { .. } => String::new(),
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
+            // The chapter's own resolution row already narrates it.
+            E::SagaFinalChapterResolved { .. } => String::new(),
             E::Foraged { player } => format!("{} forages", pn(*player)),
             E::Investigated { player } => format!("{} investigates", pn(*player)),
             E::EvidenceCollected { player } => format!("{} collects evidence", pn(*player)),

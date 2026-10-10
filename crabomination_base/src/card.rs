@@ -178,7 +178,7 @@ pub enum CreatureType {
     Armadillo, Nautilus,
     Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Orgg, Shaman, Druid,
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek, Nomad,
-    Balloon,
+    Balloon, Gith,
     Mystic,
     Doctor, TimeLord,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
@@ -3340,6 +3340,10 @@ pub enum SelectionRequirement {
     /// The candidate is attached to a creature on the battlefield — "each
     /// Aura you control that's attached to a creature" (Sage's Reverie).
     AttachedToCreature,
+    /// [`Self::AttachedToCreature`] whose host the evaluating player controls
+    /// — "target Aura or Equipment attached to a creature you control"
+    /// (Halvar, God of Battle).
+    AttachedToCreatureYouControl,
     /// CR 702.51 — a spell that has convoke: printed, granted by a static
     /// (Chief Engineer) or by a one-shot "next spell" grant (Wand of the
     /// Worldsoul). Kasla, Joyful Stormsculptor, Saint Traft and Rem Karolus.
@@ -3640,6 +3644,10 @@ pub enum SelectionRequirement {
     /// (Central Elevator's "a Room card that doesn't have the same name as a
     /// Room you control").
     NameNotSharedWithYourPermanents,
+    /// No token the evaluating player controls shares this card's name (The
+    /// Apprentice's Folly's "doesn't have the same name as a token you
+    /// control").
+    NameNotSharedWithYourTokens,
     /// Shares a colour with the most common colour among all permanents, or a
     /// colour tied for most common (Barrin's Unmaking, Tsabo's Assassin).
     /// Never matches a colourless object.
@@ -4210,6 +4218,18 @@ impl SelectionRequirement {
             Self::And(a, b) | Self::Or(a, b) => {
                 a.mentions_offboard_zone() || b.mentions_offboard_zone()
             }
+            _ => false,
+        }
+    }
+
+    /// CR 109.2 / 110.1 — the filter says "permanent" (not "permanent card"):
+    /// every branch of it requires `Permanent`, so off the battlefield it
+    /// names nothing ("return up to one other target nonland permanent").
+    pub fn names_permanent(&self) -> bool {
+        match self {
+            Self::Permanent => true,
+            Self::And(a, b) => a.names_permanent() || b.names_permanent(),
+            Self::Or(a, b) => a.names_permanent() && b.names_permanent(),
             _ => false,
         }
     }
@@ -6997,6 +7017,14 @@ impl CardDefinition {
                 || face.activated_abilities.iter().any(|a| a.effect.any_nested(&turns))
                 || face.effect.any_nested(&turns)
         })
+    }
+
+    /// CR 712.1b — a *modal* double-faced card: its back face has a mana cost
+    /// of its own (it is cast, CR 712.12), or is a land no ability turns over
+    /// (the pathway / God // land backs). CR 701.27c: it can't transform.
+    pub fn is_modal_dfc(&self) -> bool {
+        let Some(back) = self.back_face.as_deref() else { return false };
+        !back.cost.symbols.is_empty() || (back.card_types.contains(&CardType::Land) && !self.is_transforming_dfc())
     }
 
     /// CR 123.1 / 707.2 — this definition's copiable values: itself, or, on a

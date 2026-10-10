@@ -2885,6 +2885,9 @@ pub enum GameEvent {
     /// `surveil` distinguishes the two for surveil-only / scry-only payoffs;
     /// `looked_at` is the trigger amount ("for each card looked at").
     ScriedOrSurveiled { player: usize, surveil: bool, looked_at: u32 },
+    /// CR 714.2c — the final chapter ability of `player`'s Saga `saga`
+    /// resolved; `mana_value` is the Saga's, read as the chapter resolved.
+    SagaFinalChapterResolved { player: usize, saga: CardId, mana_value: u32 },
     /// CR 701.34 — `player` proliferated (once per proliferate instance;
     /// a doubled proliferate emits two events).
     Proliferated { player: usize },

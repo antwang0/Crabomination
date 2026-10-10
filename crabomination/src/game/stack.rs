@@ -2086,23 +2086,13 @@ impl GameState {
         chapters.sort_by_key(|(n, _)| *n);
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for (n, mut effect) in chapters {
-            // Narci, Fable Singer — its rider runs as the final chapter resolves.
+            // CR 714.2c — the final chapter announces its own resolution, for
+            // "whenever the final chapter ability of a Saga you control
+            // resolves" (Narci, Fable Singer; Tom Bombadil).
             if n == final_ch {
-                let riders: Vec<Effect> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == controller)
-                    .flat_map(|c| c.definition.static_abilities.iter())
-                    .filter_map(|sa| match &sa.effect {
-                        crate::effect::StaticEffect::SagaFinalChapterRider(body) => {
-                            Some((**body).clone())
-                        }
-                        _ => None,
-                    })
-                    .collect();
-                if !riders.is_empty() {
-                    effect = Effect::Seq(std::iter::once(effect).chain(riders).collect());
-                }
+                // First, so the mana value is the Saga's before the chapter
+                // can exile or flip it (Esper Terra's IV returns as Terra).
+                effect = Effect::Seq(vec![Effect::SagaFinalChapterResolved, effect]);
             }
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {

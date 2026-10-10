@@ -4907,6 +4907,10 @@ impl GameState {
     pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         let Some(c) = self.battlefield_find_mut(id) else { return };
         if !c.transformed {
+            // CR 701.27c — a modal DFC isn't a transforming permanent.
+            if c.definition.is_modal_dfc() {
+                return;
+            }
             let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) else { return };
             if back.is_instant() || back.is_sorcery() {
                 return;
@@ -8035,13 +8039,11 @@ impl GameState {
             }
         }
         // CR 614.16 — Winding Constrictor reaches "an artifact or creature you
-        // control"; `scaled_counter_count` adds it for a creature, so a
-        // noncreature artifact takes it here (before any doubler, as there).
-        if base > 0 && !is_creature {
-            let adders = self.extra_any_kind_adders_for(ctrl);
-            if adders > 0 && self.source_is_artifact(cid) {
-                base = base.saturating_add(adders);
-            }
+        // control", Lae'zel "a creature or planeswalker"; `scaled_counter_count`
+        // adds both for a creature, so a noncreature artifact or planeswalker
+        // takes its own here (before any doubler, as there).
+        if base > 0 && !is_creature && self.extra_any_kind_adders_for(ctrl) > 0 {
+            base = base.saturating_add(self.extra_noncreature_adders_for(ctrl, cid));
         }
         let mut n = self.scaled_counter_count(ctrl, kind, base, is_creature);
         // Loading Zone — a doubler scoped to the receiving permanent.
@@ -8168,9 +8170,10 @@ impl GameState {
             .sum()
     }
 
-    /// Number of `StaticEffect::ExtraCounterAllKinds` permanents `seat`
-    /// controls — each adds one to a placement of *any* counter kind onto one
-    /// of `seat`'s creatures (Winding Constrictor). Additive, before doubling.
+    /// Number of all-kinds "that many plus one" statics `seat` controls that
+    /// reach its creatures and itself — Winding Constrictor's
+    /// `ExtraCounterAllKinds` and Lae'zel's
+    /// `ExtraCounterOnCreaturePlaneswalkerOrYou`. Additive, before doubling.
     pub fn extra_any_kind_adders_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
         self.battlefield
@@ -8180,10 +8183,38 @@ impl GameState {
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| matches!(sa.effect, StaticEffect::ExtraCounterAllKinds))
+                    .filter(|sa| {
+                        matches!(
+                            sa.effect,
+                            StaticEffect::ExtraCounterAllKinds | StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou
+                        )
+                    })
                     .count() as u32
             })
             .sum()
+    }
+
+    /// The noncreature half of those adders for permanent `cid` of `seat`'s:
+    /// the Constrictor reaches an artifact, Lae'zel a planeswalker.
+    fn extra_noncreature_adders_for(&self, seat: usize, cid: CardId) -> u32 {
+        use crate::effect::StaticEffect;
+        let (artifact, walker) = match self.computed_permanent(cid) {
+            Some(cp) => (
+                cp.card_types().contains(&crate::card::CardType::Artifact),
+                cp.card_types().contains(&crate::card::CardType::Planeswalker),
+            ),
+            None => (self.source_is_artifact(cid), false),
+        };
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| match sa.effect {
+                StaticEffect::ExtraCounterAllKinds => artifact,
+                StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou => walker,
+                _ => false,
+            })
+            .count() as u32
     }
 
     /// CR 614 — total energy-gain bonus for `seat` from `EnergyGainBonus`
@@ -10070,6 +10101,13 @@ impl GameState {
                                 && source_info
                                     .as_ref()
                                     .is_some_and(|(_, cs)| cs.contains(color)) =>
+                        {
+                            amount = amount.saturating_sub(*n);
+                        }
+                        // Valkmira — either side of you, from an opponent's source.
+                        StaticEffect::ReduceOpponentDamageToYouAndYoursBy(n)
+                            if c.controller == p
+                                && source_info.as_ref().is_some_and(|(s, _)| !self.same_team(*s, p)) =>
                         {
                             amount = amount.saturating_sub(*n);
                         }
@@ -31410,6 +31448,7 @@ impl GameState {
             GameEvent::BecameMonstrous { n, .. } => *n,
             // Celeborn the Wise — "for each card looked at while scrying".
             GameEvent::ScriedOrSurveiled { looked_at, .. } => *looked_at,
+            GameEvent::SagaFinalChapterResolved { mana_value, .. } => *mana_value,
             // Nicanzil: 1 when a land was explored, 0 for a nonland.
             GameEvent::Explored { explored_land, .. } => *explored_land as u32,
             _ => event_amount(ev),
@@ -32652,6 +32691,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::ReduceDamageToYouBy(_)
         | SE::ReduceColorDamageToYouBy { .. }
         | SE::ReduceDamageToYourCreaturesBy(_)
+        | SE::ReduceOpponentDamageToYouAndYoursBy(_)
         | SE::ReduceDamageToYourMatchingCreaturesBy { .. }
         | SE::CapDamageToYourOtherMatchingCreatures { .. }
         // Source-scoped.
@@ -33555,6 +33595,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExtraPlusOneCountersMatching { .. }
             | StaticEffect::ExtraPlusOneCounterOnSelf
             | StaticEffect::ExtraCounterAllKinds
+            | StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou
             // Energy-gain bonus — read at AddEnergy time via
             // `GameState::energy_gain_bonus_for`; no layer effect.
             | StaticEffect::EnergyGainBonus { .. }
@@ -33640,6 +33681,7 @@ fn static_effect_to_effects(
             | StaticEffect::ReduceColorDamageToYouBy { .. }
             | StaticEffect::ControllerMaxHandSizeReduced(_)
             | StaticEffect::ReduceDamageToYourCreaturesBy(_)
+            | StaticEffect::ReduceOpponentDamageToYouAndYoursBy(_)
             | StaticEffect::ReduceDamageToYourMatchingCreaturesBy { .. }
             | StaticEffect::CapDamageToYourOtherMatchingCreatures { .. }
             | StaticEffect::AddDamageToOpponents { .. }
@@ -34238,8 +34280,6 @@ fn static_effect_to_effects(
             | StaticEffect::ZeroAlternativeCostOncePerTurn { .. }
             | StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters(_)
             | StaticEffect::ZeroAlternativeCostOncePerYourTurn { .. }
-            // Narci — appended to a Saga's final chapter by `saga_chapters_crossed`.
-            | StaticEffect::SagaFinalChapterRider(_)
             | StaticEffect::DiscardColorSharingCardAlternativeCost
             // Hunting Velociraptor — consulted by `effective_alternative_cost`.
             | StaticEffect::GrantProwlToSpells { .. }

@@ -552,7 +552,7 @@ impl GameState {
         // `mentions_offboard_zone` the filter half, which is the gate the
         // `ChooseCards` modal path already takes. See ENGINE_BACKLOG's "the
         // target enumerator is zone-blind".
-        if !eff.may_target_offboard_card() && !req.mentions_offboard_zone() {
+        if !eff.offboard_target_scope(req) {
             return None;
         }
         // The picks `avoid` holds beyond the source stay avoided here too: a
@@ -571,6 +571,10 @@ impl GameState {
             {
                 return Some(c);
             }
+        }
+        // Exile only when the filter names it (`target_out_of_zone`).
+        if !req.mentions_offboard_zone() {
+            return None;
         }
         if let Some(c) = self
             .exile
@@ -661,7 +665,7 @@ impl GameState {
         // Same scope gate as the auto-picker's off-board fallback, so the
         // enumerated set and the picked target can't disagree about which
         // zones the effect reaches.
-        let offboard = eff.may_target_offboard_card() || req.mentions_offboard_zone();
+        let offboard = eff.offboard_target_scope(req);
         self.legal_targets_for_filter_scoped(
             req,
             // See the picker's note: a player-only slot 0 is a player slot
@@ -813,10 +817,13 @@ impl GameState {
                 }
             }
         }
-        for c in &self.exile {
-            let t = Target::Permanent(c.id);
-            if is_legal(&t) {
-                out.push(t);
+        // Exile only when the filter names it (`target_out_of_zone`).
+        if req.mentions_offboard_zone() {
+            for c in &self.exile {
+                let t = Target::Permanent(c.id);
+                if is_legal(&t) {
+                    out.push(t);
+                }
             }
         }
         out
@@ -1231,7 +1238,7 @@ impl GameState {
                 // single-slot picker is (CR 109.2): a board slot ("destroy
                 // target creature") has no graveyard fallback, or Doom Blade
                 // was aimed at a creature card that had already died.
-                if found.is_none() && (eff.may_target_offboard_card() || req.mentions_offboard_zone()) {
+                if found.is_none() && eff.offboard_target_scope(req) {
                     found = best_graveyard_card(
                         self,
                         controller,
