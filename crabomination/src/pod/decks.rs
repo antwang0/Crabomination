@@ -10622,3 +10622,32 @@ pub const BOLAS_RAVAGER_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const SHILGENGAR_COMMANDERS: &[CardFactory] = &[shilgengar_sire_of_famine];
+
+/// **Shilgengar, Sire of Famine**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 80 nonbasic cards + 11 Plains + 8 Swamps = 99.
+/// Shilgengar, Sire of Famine (WB) Angels and sacrifice: Blood tokens feed Shilgengar,
+/// which turns its dead into Angels and its Angels into a Wrath.
+pub const SHILGENGAR_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, glass_cast_heart, inspiring_statuary, lightning_greaves,
+    mind_stone, orzhov_signet, sol_ring, talisman_of_hierarchy, bojuka_bog, caves_of_koilos,
+    command_tower, fetid_heath, godless_shrine, isolated_chapel, nesting_grounds,
+    orzhov_basilica, seraph_sanctuary, shadowy_backstreet, shattered_sanctum, shineshadow_snarl,
+    tainted_field, temple_of_silence, vault_of_champions, vault_of_the_archangel,
+    angel_of_despair, angel_of_indemnity, angel_of_suffering, angel_of_the_ruins,
+    archangel_of_tithes, avacyn_angel_of_hope, avacyn_angel_of_horror, battle_angels_of_tyr,
+    bishop_of_wings, bruna_the_fading_light, drana_and_linvala, exalted_sunborn,
+    firemane_commando, firja_judge_of_valor, giada_font_of_hope, gisela_the_broken_blade,
+    herald_of_the_host, inspiring_overseer, liesa_forgotten_archangel, lyra_dawnbringer,
+    mirkwood_bats, ob_nixilis_the_ascended, renegade_reaper, resplendent_angel,
+    righteous_valkyrie, sanctuary_warden, sephara_skys_blade, serra_paragon, serras_emissary,
+    starnheim_aspirant, thief_of_blood, wojek_investigator, youthful_valkyrie,
+    black_market_connections, firjas_retribution, phyrexian_arena, rampage_of_the_valkyries,
+    ripples_of_undeath, solemnity, anguished_unmaking, dark_ritual, despark, eerie_interlude,
+    entomb, generous_gift, ghostway, path_to_exile, swords_to_plowshares, buried_alive, damn,
+    lich_knights_conquest, pointed_discussion, reanimate, toxic_deluge, victimize,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

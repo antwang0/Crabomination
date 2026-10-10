@@ -2622,6 +2622,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BOLAS_RAVAGER_COMMANDERS,
             main: decks::BOLAS_RAVAGER_MAIN,
         },
+        // Seat 364: Shilgengar, Sire of Famine's EDHREC average deck. `--pod-decks 364`.
+        PodDeck {
+            name: "Shilgengar, Sire of Famine (WB)",
+            commanders: decks::SHILGENGAR_COMMANDERS,
+            main: decks::SHILGENGAR_MAIN,
+        },
     ]
 }
 
@@ -4703,6 +4709,7 @@ mod tests {
             ("Kratos, God of War", [0x0A8F, 361, 9286]),
             ("Eddie Brock", [0x0A90, 362, 9287]),
             ("Nicol Bolas, the Ravager", [0x0A91, 363, 9288]),
+            ("Shilgengar, Sire of Famine", [0x0A92, 364, 9289]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
