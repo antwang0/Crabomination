@@ -2477,6 +2477,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YURLOK_EDHREC_COMMANDERS,
             main: decks::YURLOK_EDHREC_MAIN,
         },
+        // Seat 342: Rocco, Street Chef's EDHREC average deck.
+        // `--pod-decks 342`.
+        PodDeck {
+            name: "Rocco, Street Chef (GRW)",
+            commanders: decks::ROCCO_EDHREC_COMMANDERS,
+            main: decks::ROCCO_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4499,6 +4506,7 @@ mod tests {
             ("Choco, Seeker of Paradise", [0x0A79, 339, 9264]),
             ("Light-Paws, Emperor's Voice", [0x0A7A, 340, 9265]),
             ("Yurlok of Scorch Thrash", [0x0A7B, 341, 9266]),
+            ("Rocco, Street Chef", [0x0A7C, 342, 9267]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

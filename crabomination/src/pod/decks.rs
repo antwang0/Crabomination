@@ -9969,3 +9969,34 @@ pub const YURLOK_EDHREC_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
     mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ROCCO_EDHREC_COMMANDERS: &[CardFactory] = &[rocco_street_chef];
+
+/// **Rocco, Street Chef**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 82 nonbasic cards + 6 Forests + 6 Mountains + 5 Plains = 99.
+/// Rocco impulse table (GRW): every player exiles and plays off the top; Rocco, Pia Nalaar and
+/// Quintorius Kand pay off each play from exile, Urabrask and Avatar's Wrath bend the table.
+pub const ROCCO_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, idol_of_oblivion, inspiring_statuary, nuka_cola_vending_machine, sol_ring,
+    swiftfoot_boots, uba_mask, battlefield_forge, bountiful_promenade, canopy_vista,
+    cinder_glade, clifftop_retreat, command_tower, exotic_orchard, jetmirs_garden,
+    jungle_shrine, karplusan_forest, mosswort_bridge, rockfall_vale, rootbound_crag,
+    sacred_foundry, spectator_seating, spire_garden, stomping_ground, sunpetal_grove,
+    temple_garden, academy_manufactor, aerial_extortionist, banquet_guests, basking_broodscale,
+    baylen_the_haymaker, bilbo_fellow_conspirator, birds_of_paradise, dusk_legion_duelist,
+    etali_primal_storm, evolution_witness, faldorn_dread_wolf_herald, feasting_hobbit,
+    gilded_goose, herd_baloth, incubation_druid, jaheira_friend_of_the_forest,
+    kami_of_whispered_hopes, laelia_the_blade_reforged, party_thrasher, peregrin_took,
+    pia_nalaar_consul_of_revival, plargg_and_nassari, ragost_deft_gastronaut,
+    reckless_fireweaver, rosie_cotton_of_south_lane, samwise_gamgee, savvy_trader,
+    urabrask_heretic_praetor, weftstalker_ardent, wild_magic_sorcerer, yotian_dissident,
+    annie_joins_up, charred_foyer_warped_space, doubling_season, hardened_scales,
+    night_of_the_sweets_revenge, ninja_pizza, passionate_archaeologist, share_the_spoils,
+    beast_within, delayed_blast_fireball, generous_gift, guff_rewrites_history,
+    heroic_intervention, inspiring_call, path_to_exile, swords_to_plowshares, quintorius_kand,
+    avatars_wrath, blasphemous_act, cultivate, escape_to_the_wilds, farseek, jeskas_will,
+    natures_lore, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains,
+];

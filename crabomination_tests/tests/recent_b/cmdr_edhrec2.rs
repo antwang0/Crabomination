@@ -787,3 +787,152 @@ fn umbral_mantle_grants_an_untap_pump() {
     assert!(!b.tapped);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
 }
+
+/// Exile `def` for `seat` with a may-play permission this turn.
+fn exiled_playable(g: &mut GameState, seat: usize, def: crabomination::card::CardDefinition) -> CardId {
+    let id = g.add_card_to_exile(seat, def);
+    let turn = g.turn_number;
+    let c = g.exile.iter_mut().find(|c| c.id == id).unwrap();
+    c.may_play_until = Some(crabomination::card::MayPlayPermission {
+        player: seat,
+        granted_turn: turn,
+        duration: crabomination::card::MayPlayDuration::EndOfThisTurn,
+        exile_after: false,
+        miracle: false,
+        pay_life: false,
+        cast_only: false,
+        locks_further_casts: false,
+        one_cast_group: None,
+        bottom_after: false,
+        undaunted: false,
+    });
+    id
+}
+
+/// Rocco: at your end step every player exiles their top card and may play
+/// it until Rocco's controller's next end step — an opponent's window is
+/// bound to seat 0, not to their own end step.
+#[test]
+fn rocco_exiles_for_each_player_until_your_next_end_step() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::rocco_street_chef());
+    for seat in 0..3 {
+        g.add_card_to_library(seat, catalog::lightning_bolt());
+    }
+    to_end_step(&mut g);
+    for seat in 0..3 {
+        let c = g.exile.iter().find(|c| c.owner == seat).expect("exiled");
+        let p = c.may_play_until.expect("playable");
+        assert_eq!(p.player, seat);
+        assert_eq!(p.duration, crabomination::card::MayPlayDuration::UntilSeatsNextEndStep { seat: 0 });
+    }
+}
+
+/// Rocco's payoff: an opponent casting a spell from exile still feeds you a
+/// +1/+1 counter and a Food.
+#[test]
+fn rocco_pays_off_an_opponents_cast_from_exile() {
+    let mut g = pod(2);
+    let rocco = ready(&mut g, 0, catalog::rocco_street_chef());
+    let bolt = exiled_playable(&mut g, 1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt from exile");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Food"), 1);
+    assert_eq!(g.battlefield_find(rocco).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// Pia Nalaar: a land played from exile makes a Thopter; one from hand
+/// doesn't.
+#[test]
+fn pia_nalaar_rewards_a_land_played_from_exile() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::pia_nalaar_consul_of_revival());
+    let land = exiled_playable(&mut g, 0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land from exile");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Thopter"), 1);
+    g.players[0].lands_played_this_turn = 0;
+    let hand_land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(hand_land)).expect("land from hand");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Thopter"), 1);
+}
+
+/// Urabrask: an opponent's upkeep turns their draw-step draw into an exile
+/// they may play this turn (CR 121.2a).
+#[test]
+fn urabrask_turns_an_opponents_draw_into_an_impulse() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::urabrask_heretic_praetor());
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.step = TurnStep::End;
+    while !(g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].hand.len(), 0, "the draw was replaced");
+    let c = g.exile.iter().find(|c| c.owner == 1).expect("exiled instead");
+    assert_eq!(c.may_play_until.unwrap().player, 1);
+}
+
+/// Avatar's Wrath spares its target, airbends the rest, and locks opponents
+/// out of casting from outside their hands until your next turn.
+#[test]
+fn avatars_wrath_spares_one_and_locks_non_hand_casts() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::avatars_wrath());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wrath,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("wrath");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some());
+    assert!(g.battlefield_find(theirs).is_none());
+    assert!(g.exile.iter().any(|c| c.id == wrath), "Exile Avatar's Wrath");
+    let def = catalog::lightning_bolt();
+    assert!(g.cast_from_zone_blocked(1, &def, crabomination::card::Zone::Exile));
+    assert!(!g.cast_from_zone_blocked(0, &def, crabomination::card::Zone::Exile));
+    assert!(!g.cast_from_zone_blocked(1, &def, crabomination::card::Zone::Hand));
+}
+
+/// Quintorius Kand: a spell cast from exile drains each opponent for 2.
+#[test]
+fn quintorius_kand_drains_on_casts_from_exile() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::quintorius_kand());
+    let bolt = exiled_playable(&mut g, 0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt from exile");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life[0] + 2);
+    assert_eq!(g.players[1].life, life[1] - 5);
+    assert_eq!(g.players[2].life, life[2] - 2);
+}

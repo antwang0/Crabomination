@@ -2,7 +2,7 @@
 //! average deck and a complete pod seat, second file (`cmdr_edhrec` is the
 //! first). Henzie "Toolbox" Torre, Frodo, Adventurous Hobbit + Sam, Loyal
 //! Attendant, K'rrik, Son of Yawgmoth, Voja, Jaws of the Conclave, Choco, Seeker of
-//! Paradise, Light-Paws, Emperor's Voice, and Yurlok of Scorch Thrash. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
+//! Paradise, Light-Paws, Emperor's Voice, Yurlok of Scorch Thrash, and Rocco, Street Chef. Tests in `tests/recent_b/cmdr_edhrec2.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, EnchantmentSubtype, EquipBonus, EquipScale,
@@ -1167,6 +1167,263 @@ pub fn power_surge() -> CardDefinition {
                 amount: Value::UntappedLandsActivePlayerHadAtTurnStart,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// "Whenever [scope] plays a land from exile or casts a spell from exile" —
+/// the land half reads a *played* land (event amount ≥ 1) that came from
+/// exile, the spell half the cast's own flag.
+fn from_exile_triggers(scope: EventScope, effect: Effect) -> Vec<TriggeredAbility> {
+    vec![
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, scope.clone()).with_filter(Predicate::All(vec![
+                Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::ONE),
+                trigger_is(R::EnteredFromExileThisTurn),
+            ])),
+            effect: effect.clone(),
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, scope).with_filter(Predicate::CastSpellFromExile),
+            effect,
+        },
+    ]
+}
+
+/// Rocco, Street Chef — {R}{G}{W} 2/4 legendary Elf Druid. Your end step:
+/// each player exiles their top card and may play it until *your* next end
+/// step (`UntilSeatsNextEndStep`). Whenever a player plays a land or casts a
+/// spell from exile, you put a +1/+1 counter on target creature and create a
+/// Food.
+pub fn rocco_street_chef() -> CardDefinition {
+    let payoff = Effect::Seq(vec![
+        Effect::AddCounter {
+            what: crate::effect::shortcut::target_filtered(R::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(food_token()) },
+    ]);
+    let mut triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+        effect: Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            body: Box::new(Effect::Seq(vec![
+                // Each seat's grant names only that seat's card.
+                Effect::ClearLastMoved,
+                Effect::Move {
+                    what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                    to: ZoneDest::Exile,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: MayPlayDuration::UntilSeatsNextEndStep { seat: 0 },
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+            ])),
+        },
+    }];
+    triggered_abilities.extend(from_exile_triggers(EventScope::AnyPlayer, payoff));
+    CardDefinition {
+        triggered_abilities,
+        ..legend("Rocco, Street Chef", cost(&[r(), g(), w()]), vec![CreatureType::Elf, CreatureType::Druid], 2, 4)
+    }
+}
+
+/// Pia Nalaar, Consul of Revival — {R}{W} 2/3 legendary Human Artificer.
+/// Thopters you control have haste; whenever you play a land or cast a spell
+/// from exile, create a 1/1 flying Thopter artifact creature token.
+pub fn pia_nalaar_consul_of_revival() -> CardDefinition {
+    let thopter = crate::card::TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Thopter]),
+        ..Default::default()
+    };
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Thopters you control have haste.".into(),
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::HasCreatureType(CreatureType::Thopter)).and(R::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        triggered_abilities: from_exile_triggers(
+            EventScope::YourControl,
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(thopter) },
+        ),
+        ..legend(
+            "Pia Nalaar, Consul of Revival",
+            cost(&[r(), w()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            2,
+            3,
+        )
+    }
+}
+
+/// Urabrask, Heretic Praetor — {3}{R}{R} 4/4 legendary Phyrexian Praetor,
+/// haste. Your upkeep: exile your top card, playable this turn. Each
+/// opponent's upkeep: their next draw this turn exiles their top card
+/// instead, playable this turn (CR 121.2a).
+pub fn urabrask_heretic_praetor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::OpponentControl),
+                effect: Effect::NextDrawThisTurnBecomesImpulse { who: PlayerRef::ActivePlayer },
+            },
+        ],
+        ..legend(
+            "Urabrask, Heretic Praetor",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Phyrexian, CreatureType::Praetor],
+            4,
+            4,
+        )
+    }
+}
+
+/// Yotian Dissident — {G}{W} 1/1 Human Artificer. Whenever an artifact you
+/// control enters, put a +1/+1 counter on target creature you control.
+pub fn yotian_dissident() -> CardDefinition {
+    CardDefinition {
+        name: "Yotian Dissident",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: creature_types(vec![CreatureType::Human, CreatureType::Artificer]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(trigger_is(R::Artifact)),
+            effect: Effect::AddCounter {
+                what: crate::effect::shortcut::target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quintorius Kand — {3}{R}{W} legendary Planeswalker, loyalty 4. Whenever
+/// you cast a spell from exile, it deals 2 damage to each opponent and you
+/// gain 2 life. +1: a 3/2 red and white Spirit. −3: discover 4. −6: exile any
+/// number of target cards from your graveyard, add {R} for each, and you may
+/// play them this turn.
+pub fn quintorius_kand() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    let spirit = crate::card::TokenDefinition {
+        name: "Spirit".into(),
+        power: 3,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        subtypes: creature_types(vec![CreatureType::Spirit]),
+        ..Default::default()
+    };
+    let exiled = || Selector::ExiledThisResolution { filter: R::Any };
+    CardDefinition {
+        name: "Quintorius Kand",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Quintorius], ..Default::default() },
+        base_loyalty: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellFromExile),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(spirit) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Discover { n: Value::Const(4), filter: None },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::Seq(vec![
+                    Effect::ApplyToTargets {
+                        max_targets: 16,
+                        min_targets: 0,
+                        filter: R::InYourGraveyard,
+                        effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+                    },
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::OfColor(Color::Red, Value::count(exiled())),
+                    },
+                    Effect::GrantMayPlay {
+                        what: exiled(),
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Avatar's Wrath — {2}{W}{W} Sorcery. Choose up to one target creature,
+/// then airbend every other creature (CR 701.65). Until your next turn, your
+/// opponents can't cast spells from anywhere but their hands. Exile Avatar's
+/// Wrath.
+pub fn avatars_wrath() -> CardDefinition {
+    CardDefinition {
+        name: "Avatar's Wrath",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                // Declares the spared creature's slot; a friendly verb, so
+                // the picker spares its own best creature.
+                Effect::PumpPT {
+                    what: crate::effect::shortcut::target_filtered(R::Creature),
+                    power: Value::Const(0),
+                    toughness: Value::Const(0),
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+                Effect::Airbend { what: Selector::EachPermanentExceptTargets(R::Creature) },
+                Effect::OpponentsCantCastFromNonHandUntilYourNextTurn,
+            ])),
+        },
+        exile_on_resolve: true,
         ..Default::default()
     }
 }
