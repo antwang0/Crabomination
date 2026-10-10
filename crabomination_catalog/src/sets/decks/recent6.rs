@@ -547,10 +547,9 @@ pub fn priest_of_forgotten_gods() -> CardDefinition {
 }
 
 /// Spawn of Mayhem — {2}{B}{B} 4/4 Demon. Spectacle {1}{B}{B}. Flying, trample.
-/// At the beginning of your upkeep, this creature deals 1 damage to each player.
-/// Whenever you cast a spell that targets only a single creature, put a +1/+1
-/// counter on this creature. (The targets-a-single-creature pump rider is
-/// dropped — the headline upkeep ping + Spectacle are modeled.)
+/// At the beginning of your upkeep, this creature deals 1 damage to each
+/// player; then if you have 10 or less life, put a +1/+1 counter on it
+/// (current Oracle text).
 pub fn spawn_of_mayhem() -> CardDefinition {
     use crate::card::AlternativeCost;
     use crate::game::TurnStep;
