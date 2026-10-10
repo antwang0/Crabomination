@@ -674,7 +674,7 @@ pub fn thor_asgards_avenger() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If another source you control would deal damage to an opponent or a permanent an opponent \
                           controls, it deals that much damage plus 1 instead.",
-            effect: StaticEffect::AddDamageToOpponents { source_color: None, amount: 1, other: true },
+            effect: StaticEffect::AddDamageToOpponents { source_color: None, amount: 1, other: true, or_artifact: false },
         }],
         ..creature(
             "Thor, Asgard's Avenger",

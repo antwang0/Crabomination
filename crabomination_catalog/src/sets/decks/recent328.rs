@@ -546,6 +546,7 @@ pub fn artists_talent() -> CardDefinition {
                         source_color: None,
                         amount: 2,
                         other: false,
+                        or_artifact: false,
                     }),
                 },
             },

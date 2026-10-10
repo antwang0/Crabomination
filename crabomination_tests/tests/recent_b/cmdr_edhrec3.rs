@@ -2095,3 +2095,110 @@ fn lich_knights_conquest_trades_permanents_for_creatures() {
     assert_eq!(named(&g, "Mind Stone"), 0);
     assert!(dead.iter().all(|id| g.battlefield_find(*id).is_some()), "one creature per sacrifice");
 }
+
+/// Raphael and Slash (Norin's list): alliance pings — 1 to a target
+/// opponent, 2 to each — and Slash's attack makes a Mutant.
+#[test]
+fn raphael_and_slash_ping_on_alliance() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::raphael_tough_turtle());
+    let slash = ready(&mut g, 0, catalog::slash_reptile_rampager());
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g);
+    cast_x(&mut g, bear, None);
+    assert_eq!(l1 + l2 - g.players[1].life - g.players[2].life, 2 + 2 + 1);
+    declare(&mut g, &[(slash, 1)]);
+    assert_eq!(named(&g, "Mutant"), 1);
+}
+
+/// Mechanized Warfare (Norin's list): CR 614.5 — a red source and an
+/// artifact source each deal 1 more to an opponent; a green one doesn't.
+#[test]
+fn mechanized_warfare_boosts_red_and_artifact_sources() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mechanized_warfare());
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4);
+    // Steel Overseer is a 1/1 artifact creature: 1 + 1.
+    let overseer = ready(&mut g, 0, catalog::steel_overseer());
+    let life = g.players[1].life;
+    connect(&mut g, overseer);
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+/// CR 120.8 / 614.7a — a source that would deal 0 damage deals none, so an
+/// increase has nothing to replace: a 0/1 artifact under Mechanized Warfare
+/// deals nothing.
+#[test]
+fn cr_120_8_zero_damage_is_not_increased() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mechanized_warfare());
+    let myr = ready(&mut g, 0, catalog::darksteel_myr());
+    let life = g.players[1].life;
+    connect(&mut g, myr);
+    assert_eq!(g.players[1].life, life);
+}
+
+/// Powerbalance (Norin's list): an opponent's spell lets you cast your top
+/// card free when the mana values match; a mismatch stays on top.
+#[test]
+fn powerbalance_matches_mana_values() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::powerbalance());
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: opp, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("opponent's bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).is_some_and(|c| c.controller == 0), "mana value 2 for 2");
+}
+
+/// Wild Magic Surge (Norin's list): the destroyed creature is replaced by the
+/// next permanent card sharing a type from its controller's library.
+#[test]
+fn wild_magic_surge_replaces_what_it_destroys() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    g.add_card_to_library(1, catalog::island());
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    let surge = g.add_card_to_hand(0, catalog::wild_magic_surge());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: surge, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("surge");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none());
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(1), "the Island was passed over");
+}
+
+/// Wheel of Misfortune (Norin's list): with the controller picking 1 and the
+/// opponent 0, the controller takes 1 and wheels; the opponent keeps its hand.
+#[test]
+fn wheel_of_misfortune_wheels_the_high_pickers() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..8 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.add_card_to_hand(1, catalog::island());
+    let wheel = g.add_card_to_hand(0, catalog::wheel_of_misfortune());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1), DecisionAnswer::Amount(0)]));
+    let life = g.players[0].life;
+    cast_x(&mut g, wheel, None);
+    assert_eq!(g.players[0].life, life - 1);
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.players[1].hand.len(), 1);
+}

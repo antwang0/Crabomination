@@ -9744,6 +9744,7 @@ pub fn torbran_thane_of_red_fell() -> CardDefinition {
                 source_color: Some(Color::Red),
                 amount: 2,
                 other: false,
+                or_artifact: false,
             },
         }],
         ..Default::default()

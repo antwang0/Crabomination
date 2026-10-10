@@ -4,7 +4,7 @@
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
-//! War, Eddie Brock, Nicol Bolas, the Ravager and Shilgengar. Tests in
+//! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar and Norin. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -3044,6 +3044,147 @@ pub fn lich_knights_conquest() -> CardDefinition {
                 },
             )),
         },
+        ..Default::default()
+    }
+}
+
+// ── Norin the Wary (R) ──────────────────────────────────────────────────────
+
+/// Alliance — "whenever another creature you control enters, `effect`".
+fn alliance(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+        effect,
+    }
+}
+
+/// Raphael, Tough Turtle — {1}{R} 1/3 Mutant Ninja Turtle. Alliance: 1 damage
+/// to target opponent.
+pub fn raphael_tough_turtle() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![alliance(Effect::DealDamage {
+            to: target_filtered(R::OpponentPlayer),
+            amount: Value::ONE,
+        })],
+        ..legend(
+            "Raphael, Tough Turtle",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle],
+            1,
+            3,
+        )
+    }
+}
+
+/// Slash, Reptile Rampager — {3}{R}{R} 7/5. Alliance: 2 damage to each
+/// opponent. Attacking, it makes a 2/2 red Mutant.
+pub fn slash_reptile_rampager() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            alliance(Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(TokenDefinition {
+                        name: "Mutant".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Red],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Mutant], ..Default::default() },
+                        ..Default::default()
+                    }),
+                },
+            },
+        ],
+        ..legend(
+            "Slash, Reptile Rampager",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Mutant, CreatureType::Berserker, CreatureType::Turtle],
+            7,
+            5,
+        )
+    }
+}
+
+/// Mechanized Warfare — {1}{R}{R} Enchantment. A red or artifact source you
+/// control deals 1 more damage to an opponent or their permanent (CR 614.5).
+pub fn mechanized_warfare() -> CardDefinition {
+    CardDefinition {
+        name: "Mechanized Warfare",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If a red or artifact source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead.",
+            effect: StaticEffect::AddDamageToOpponents {
+                source_color: Some(Color::Red),
+                amount: 1,
+                other: false,
+                or_artifact: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Powerbalance — {R}{R} Enchantment. Whenever an opponent casts a spell,
+/// you may reveal your top card and cast it free if its mana value matches
+/// that spell's; otherwise it stays on top.
+pub fn powerbalance() -> CardDefinition {
+    CardDefinition {
+        name: "Powerbalance",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+            effect: Effect::WithX {
+                x: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                body: Box::new(Effect::RevealTopMayCastFreeKeepOnTop { filter: R::ManaValueExactlyXFromCost }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wild Magic Surge — {R}{R} Instant. Destroy target permanent an opponent
+/// controls; its controller reveals until a permanent card sharing a card
+/// type with it, puts that onto the battlefield, and bottoms the rest
+/// randomly.
+pub fn wild_magic_surge() -> CardDefinition {
+    CardDefinition {
+        name: "Wild Magic Surge",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Permanent.and(R::ControlledByOpponent)) },
+            Effect::RevealUntilFind {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                find: R::PermanentCard.and(R::SharesCardTypeWithTarget),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+                cap: Value::Const(100),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wheel of Misfortune — {2}{R} Sorcery. Secret numbers: the highest takes
+/// that much damage, and everyone who didn't pick the lowest wheels for
+/// seven.
+pub fn wheel_of_misfortune() -> CardDefinition {
+    CardDefinition {
+        name: "Wheel of Misfortune",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::WheelOfMisfortune { max: 20 },
         ..Default::default()
     }
 }
