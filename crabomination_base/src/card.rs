@@ -5114,6 +5114,10 @@ pub struct CardDefinition {
     /// (Rottenmouth Viper). Generic-only, clamped by the caller.
     #[serde(default)]
     pub self_cost_reduction_per_sacrificed: bool,
+    /// The per-sacrifice amount of that discount when it isn't {1} (Dargo, the
+    /// Shipwrecker's {2}); `0` reads as `{1}`.
+    #[serde(default)]
+    pub self_cost_reduction_per_sacrificed_amount: u32,
     /// "This spell costs `{amount}` less to cast if you've cast another spell
     /// this turn" (Rally the Monastery). Generic-only, clamped by the caller.
     /// Reads `Player.spells_cast_this_game_turn`, which does not yet count the

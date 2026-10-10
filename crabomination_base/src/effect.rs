@@ -1664,6 +1664,9 @@ pub enum Value {
     /// Number of permanents `who` has sacrificed so far this turn. Backed by
     /// `Player.permanents_sacrificed_this_turn`.
     PermanentsSacrificedThisTurn(PlayerRef),
+    /// Artifacts and/or creatures `who` has sacrificed this turn. Backed by
+    /// `Player.artifacts_or_creatures_sacrificed_this_turn` (Dargo).
+    ArtifactsOrCreaturesSacrificedThisTurn(PlayerRef),
     /// Number of creatures that died this turn across **every** player.
     /// Sums `Player.creatures_died_this_turn` over all seats. Powers
     /// table-wide aristocrat scaling, mirroring

@@ -11164,7 +11164,8 @@ impl GameState {
         // "…costs {1} less for each permanent sacrificed this way" — the
         // announced sacrifice count rides the cast's X (Rottenmouth Viper).
         if card.definition.self_cost_reduction_per_sacrificed {
-            reduction = reduction.saturating_add(x_value.unwrap_or(0));
+            let each = card.definition.self_cost_reduction_per_sacrificed_amount.max(1);
+            reduction = reduction.saturating_add(x_value.unwrap_or(0).saturating_mul(each));
         }
         if reduction > 0 {
             cost.reduce_generic(reduction);

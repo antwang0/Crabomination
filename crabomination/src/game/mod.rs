@@ -24535,6 +24535,10 @@ impl GameState {
                         .died_card_snapshots
                         .get(card_id)
                         .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Artifact));
+                    let was_creature = self
+                        .died_card_snapshots
+                        .get(card_id)
+                        .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Creature));
                     let was_token = self.died_card_snapshots.get(card_id).is_some_and(|c| c.is_token);
                     let was_food = self.died_card_snapshots.get(card_id).is_some_and(|c| {
                         c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Food)
@@ -24551,6 +24555,10 @@ impl GameState {
                         }
                         if was_food {
                             pl.foods_sacrificed_this_turn = pl.foods_sacrificed_this_turn.saturating_add(1);
+                        }
+                        if was_artifact || was_creature {
+                            pl.artifacts_or_creatures_sacrificed_this_turn =
+                                pl.artifacts_or_creatures_sacrificed_this_turn.saturating_add(1);
                         }
                     }
                     if !was_token && *who == self.active_player_idx {
