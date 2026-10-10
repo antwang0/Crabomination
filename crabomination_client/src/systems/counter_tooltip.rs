@@ -662,7 +662,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
-    // CR 702.183 — Impending countdown: not a creature until the last time
+    // CR 702.176 — Impending countdown: not a creature until the last time
     // counter comes off (one per controller's end step).
     if let Some(n) = p.impending_counters
         && n > 0
