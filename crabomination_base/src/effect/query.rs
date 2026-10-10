@@ -3506,6 +3506,22 @@ impl Effect {
         self.slot_owner(slot, mode).is_some_and(hostile)
     }
 
+    /// True when slot `slot`'s card, if it is a graveyard card, is exiled —
+    /// graveyard hate (Raven Eagle). Returning one to hand or to the
+    /// battlefield is the friendly reading, so only an exile counts.
+    pub fn graveyard_slot_is_hostile(&self, slot: u8, mode: Option<usize>) -> bool {
+        fn exiles(e: &Effect) -> bool {
+            match e {
+                Effect::Exile { .. } => true,
+                Effect::Move { to, .. } => matches!(to, ZoneDest::Exile),
+                Effect::ApplyToTargets { effect, .. } => exiles(effect),
+                Effect::Seq(v) => v.iter().any(exiles),
+                _ => false,
+            }
+        }
+        self.slot_owner(slot, mode).is_some_and(exiles)
+    }
+
     pub fn prefers_friendly_target(&self) -> bool {
         match self {
             Effect::PumpPT {

@@ -4236,7 +4236,9 @@ impl SelectionRequirement {
     /// if both arms do.
     pub fn excludes_opponents_side(&self) -> bool {
         match self {
-            Self::ControlledByYou => true,
+            // A card in your own graveyard is your side (Anikthea's "from your
+            // graveyard" copy is friendly, not graveyard hate).
+            Self::ControlledByYou | Self::InYourGraveyard => true,
             Self::And(a, b) => a.excludes_opponents_side() || b.excludes_opponents_side(),
             Self::Or(a, b) => a.excludes_opponents_side() && b.excludes_opponents_side(),
             _ => false,

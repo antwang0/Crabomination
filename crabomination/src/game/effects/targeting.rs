@@ -130,13 +130,21 @@ impl GameState {
     /// target card from a graveyard" took the last resort's own card.
     fn declines_own_side_pick(&self, eff: &Effect, controller: usize, t: &Target) -> bool {
         let Target::Permanent(tid) = t else { return false };
-        eff.target_slot_optional(0, None)
-            && eff.permanent_slot_is_hostile(0, None)
-            && eff.target_filter_for_slot(0).is_some_and(|f| !f.excludes_opponents_side())
+        if !eff.target_slot_optional(0, None)
+            || !eff.target_filter_for_slot(0).is_some_and(|f| !f.excludes_opponents_side())
+        {
+            return false;
+        }
+        if let Some(c) = self.battlefield_find(*tid) {
+            return eff.permanent_slot_is_hostile(0, None) && self.same_team(c.controller, controller);
+        }
+        // A graveyard card: only an exile is hostile (a return to hand is a
+        // regrowth, not a bounce).
+        eff.graveyard_slot_is_hostile(0, None)
             && self
-                .battlefield_find(*tid)
-                .map(|c| c.controller)
-                .or_else(|| self.players.iter().position(|p| p.graveyard.iter().any(|c| c.id == *tid)))
+                .players
+                .iter()
+                .position(|p| p.graveyard.iter().any(|c| c.id == *tid))
                 .is_some_and(|side| self.same_team(side, controller))
     }
 

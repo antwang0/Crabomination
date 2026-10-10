@@ -1565,11 +1565,9 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
 #[test]
 fn startled_relic_sloth_combat_step_exiles_graveyard_card() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // Move bear to graveyard.
-    let card = g.battlefield.iter().position(|c| c.id == bear).unwrap();
-    let bear_card = g.battlefield.remove(card);
-    g.players[0].graveyard.push(bear_card);
+    // The opponent's graveyard: "up to one" spares its controller's own card
+    // (CR 601.2c, `declines_own_side_pick`).
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
 
     let sloth = g.add_card_to_battlefield(0, catalog::startled_relic_sloth());
     let view = g.computed_permanent(sloth).unwrap();
