@@ -3578,7 +3578,9 @@ impl GameState {
     }
 
     pub fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
-        if !self.can_be_sacrificed(id) {
+        // CR 701.17a — a player can sacrifice only a permanent they control:
+        // an opponent's copy of a "sacrifice this" trigger does nothing.
+        if !self.can_be_sacrificed(id) || self.battlefield_find(id).is_some_and(|c| c.controller != who) {
             return;
         }
         // Stamp the resolution scratch so `Value::Sacrificed*` and the

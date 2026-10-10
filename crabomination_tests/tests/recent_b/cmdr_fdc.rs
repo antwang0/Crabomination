@@ -2452,6 +2452,12 @@ fn cr_701_17a_a_copied_champion_trigger_cannot_sacrifice_anothers_champion() {
     cast(&mut g, pm, &[]);
     assert!(g.battlefield_find(pm).is_some(), "the Packmaster stays");
     assert!(g.exile.iter().any(|c| c.id == elf), "its own trigger championed the Elf");
+    // The rule itself, for every "sacrifice it" path: seat 1 can't sacrifice it.
+    let mut events = Vec::new();
+    g.sacrifice_one(pm, 1, &mut events);
+    assert!(g.battlefield_find(pm).is_some(), "only its controller sacrifices it");
+    g.sacrifice_one(pm, 0, &mut events);
+    assert!(g.battlefield_find(pm).is_none());
 }
 
 // ── Grave Danger (Gisa and Geralf, SCD) ─────────────────────────────────────
