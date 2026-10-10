@@ -1440,3 +1440,180 @@ fn moonmist_transforms_humans_and_fogs_the_rest() {
     assert_eq!(g.players[1].life, life, "the Bear's damage was prevented");
 }
 
+/// Djeru and Hazoret (Atreus's list): hellbent vigilance and haste; the attack
+/// exiles a legendary creature card from the top six to cast free this turn.
+#[test]
+fn djeru_and_hazoret_finds_a_free_legend() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let djeru = ready(&mut g, 0, catalog::djeru_and_hazoret());
+    let legend = g.add_card_to_library(0, catalog::surtr_fiery_jotun());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    g.add_card_to_hand(0, catalog::mountain());
+    let kw = g.computed_permanent(djeru).unwrap().keywords().to_vec();
+    assert!(kw.contains(&Keyword::Haste) && kw.contains(&Keyword::Vigilance), "one card in hand");
+    g.add_card_to_hand(0, catalog::mountain());
+    assert!(!g.computed_permanent(djeru).unwrap().keywords().contains(&Keyword::Haste));
+    declare(&mut g, &[(djeru, 1)]);
+    assert!(g.exile.iter().any(|c| c.id == legend));
+    assert_eq!(g.players[0].library.len(), 3, "the rest went to the bottom");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: legend,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(legend).is_some());
+}
+
+/// Katara, Waterbending Master (Atreus's list): a spell on an opponent's turn
+/// is an experience counter; the attack loots one card per counter.
+#[test]
+fn katara_waterbending_master_banks_experience() {
+    let mut g = pod(2);
+    let katara = ready(&mut g, 0, catalog::katara_waterbending_master());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.active_player_idx = 1;
+    flood(&mut g);
+    cast_x(&mut g, opt, None);
+    assert_eq!(g.players[0].experience, 1);
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    declare(&mut g, &[(katara, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
+}
+
+/// Lae'zel (Atreus's list): CR 614.16 — one more of each kind on a creature
+/// or planeswalker you control and on you; an artifact gets none.
+#[test]
+fn laezel_adds_one_counter_of_each_kind() {
+    use crabomination::card::CounterType;
+    use crabomination::effect::Value;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::laezel_vlaakiths_champion());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let rock = ready(&mut g, 0, catalog::mind_stone());
+    let jace = ready(&mut g, 0, catalog::jace_the_mind_sculptor());
+    let loyalty = g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty);
+    for (what, kind) in [(bear, CounterType::PlusOnePlusOne), (rock, CounterType::Charge), (jace, CounterType::Loyalty)] {
+        run(&mut g, Effect::AddCounter { what: Selector::ExactObjects(vec![what]), kind, amount: Value::ONE });
+    }
+    let n = |g: &GameState, id, k| g.battlefield_find(id).unwrap().counter_count(k);
+    assert_eq!(n(&g, bear, CounterType::PlusOnePlusOne), 2);
+    assert_eq!(n(&g, rock, CounterType::Charge), 1, "an artifact isn't Lae'zel's");
+    assert_eq!(n(&g, jace, CounterType::Loyalty), loyalty + 2);
+    run(&mut g, Effect::AddExperience(Value::ONE));
+    assert_eq!(g.players[0].experience, 2, "you get one more too");
+}
+
+/// Resolve `effect` as seat 0's.
+fn run(g: &mut GameState, effect: Effect) {
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&effect, &ctx).expect("effect");
+}
+
+/// Reidane // Valkmira (Atreus's list): an opponent's noncreature spell of
+/// mana value 4+ costs {2} more; Valkmira shaves 1 off an opponent's damage
+/// to you (CR 615).
+#[test]
+fn reidane_taxes_and_valkmira_shields() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::reidane_god_of_the_worthy());
+    let opp_walker = g.add_card_to_hand(1, catalog::jace_the_mind_sculptor());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.players[1].mana_pool.add_colorless(2);
+    let cast = |id| GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(cast(opp_walker)).is_err(), "{{2}}{{U}}{{U}} + {{2}}");
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(cast(opp_walker)).expect("with the tax paid");
+
+    let mut g = pod(2);
+    let valkmira = g.add_card_to_hand(0, catalog::reidane_god_of_the_worthy());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellBack { card_id: valkmira, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Valkmira");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    bolt_player_zero(&mut g);
+    assert_eq!(g.players[0].life, life - 2);
+}
+
+/// Seat 1 bolts seat 0, paying the ward {1} Valkmira may demand.
+fn bolt_player_zero(g: &mut GameState) {
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(g);
+}
+
+/// Surtr, Fiery Jötun (Atreus's list): a historic spell (CR 700.6) is 3
+/// damage; a plain creature spell isn't.
+#[test]
+fn surtr_burns_on_historic_spells() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::surtr_fiery_jotun());
+    flood(&mut g);
+    let life = g.players[1].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast_x(&mut g, bear, None);
+    assert_eq!(g.players[1].life, life);
+    let rock = g.add_card_to_hand(0, catalog::mind_stone());
+    cast_x(&mut g, rock, None);
+    assert_eq!(g.players[1].life, life - 3);
+}
+
+/// World at War (Atreus's list): CR 500.8 — cast in the first main phase, the
+/// added combat follows the second main phase, and it untaps the creatures
+/// that attacked.
+#[test]
+fn world_at_war_attacks_again_after_the_second_main() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let war = g.add_card_to_hand(0, catalog::world_at_war());
+    flood(&mut g);
+    cast_x(&mut g, war, None);
+    let life = g.players[1].life;
+    let mut combats = Vec::new();
+    for _ in 0..60 {
+        if g.step == TurnStep::DeclareAttackers && combats.last() != Some(&g.combat_phases_this_turn) {
+            combats.push(g.combat_phases_this_turn);
+            assert!(!g.battlefield_find(bear).unwrap().tapped, "combat {}", g.combat_phases_this_turn);
+            g.priority.player_with_priority = 0;
+            g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+                .expect("attack");
+        }
+        if g.step == TurnStep::End {
+            break;
+        }
+        g.priority.player_with_priority = g.active_player_idx;
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(combats, vec![1, 2]);
+    assert_eq!(g.players[1].life, life - 4, "the Bear connected twice");
+}

@@ -3,7 +3,7 @@
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
-//! Zuko, Arna Kennerüd and Terra, Magical Adept. Tests in
+//! Zuko, Arna Kennerüd, Terra, Magical Adept and Atreus // Kratos. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -2073,3 +2073,182 @@ pub fn moonmist() -> CardDefinition {
     }
 }
 
+// ── Atreus, Impulsive Son // Kratos, Stoic Father (URW) ─────────────────────
+
+/// Djeru and Hazoret — {2}{R}{R}{W} 5/4 Human God. Vigilance and haste with
+/// one or fewer cards in hand. Attacking, look at your top six; you may exile
+/// a legendary creature card to cast free this turn; the rest go to the
+/// bottom in a random order.
+pub fn djeru_and_hazoret() -> CardDefinition {
+    let hellbent = || Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::ONE);
+    let while_hellbent = |keyword: Keyword, description: &'static str| StaticAbility {
+        description,
+        effect: StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition: hellbent() },
+    };
+    CardDefinition {
+        static_abilities: vec![
+            while_hellbent(Keyword::Vigilance, "Djeru and Hazoret has vigilance with one or fewer cards in your hand."),
+            while_hellbent(Keyword::Haste, "Djeru and Hazoret has haste with one or fewer cards in your hand."),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::LookTopExileOneMayPlay {
+                count: Value::Const(6),
+                who: PlayerRef::You,
+                grant: crate::effect::LookExileGrant::LegendaryCreatureFreeThisTurn,
+            },
+        }],
+        ..legend(
+            "Djeru and Hazoret",
+            cost(&[generic(2), r(), r(), w()]),
+            vec![CreatureType::Human, CreatureType::God],
+            5,
+            4,
+        )
+    }
+}
+
+/// Katara, Waterbending Master — {1}{U} 1/3. Casting a spell during an
+/// opponent's turn gets you an experience counter; attacking, you may draw one
+/// per experience counter, then discard a card.
+pub fn katara_waterbending_master() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+                effect: Effect::AddExperience(Value::ONE),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Draw a card per experience counter, then discard a card?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ControllerExperience },
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    ])),
+                },
+            },
+        ],
+        ..legend(
+            "Katara, Waterbending Master",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            1,
+            3,
+        )
+    }
+}
+
+/// Lae'zel, Vlaakith's Champion — {2}{W} 3/3 Gith Warrior. Counters put on a
+/// creature or planeswalker you control or on you come one more of each kind
+/// (CR 614.16). Choose a Background.
+pub fn laezel_vlaakiths_champion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::ChooseABackground],
+        static_abilities: vec![StaticAbility {
+            description: "If you would put one or more counters on a creature or planeswalker you control or on yourself, put that many plus one of each of those kinds instead.",
+            effect: StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou,
+        }],
+        ..legend(
+            "Lae'zel, Vlaakith's Champion",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Gith, CreatureType::Warrior],
+            3,
+            3,
+        )
+    }
+}
+
+/// Reidane, God of the Worthy // Valkmira, Protector's Shield — {2}{W} 2/3
+/// flying, vigilance: opponents' snow lands enter tapped, their noncreature
+/// spells of mana value 4+ cost {2} more. Back ({3}{W} legendary artifact):
+/// opponents' sources deal you and yours 1 less damage, and you and your other
+/// permanents have ward {1} against them (CR 702.21).
+pub fn reidane_god_of_the_worthy() -> CardDefinition {
+    let ward = || crate::card::WardCost::Mana(cost(&[generic(1)]));
+    let valkmira = CardDefinition {
+        name: "Valkmira, Protector's Shield",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If a source an opponent controls would deal damage to you or a permanent you control, prevent 1 of that damage.",
+                effect: StaticEffect::ReduceOpponentDamageToYouAndYoursBy(1),
+            },
+            StaticAbility {
+                description: "Whenever you or another permanent you control becomes the target of a spell or ability an opponent controls, counter that spell or ability unless its controller pays {1}.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::ControlledByYou.and(R::OtherThanSource)),
+                    keyword: Keyword::Ward(ward()),
+                },
+            },
+            StaticAbility { description: "You have ward {1}.", effect: StaticEffect::ControllerHasWard(ward()) },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Snow lands your opponents control enter tapped.",
+                effect: StaticEffect::EntersTapped {
+                    applies_to: Selector::EachPermanent(R::ControlledByOpponent.and(R::Land).and(R::IsSnow)),
+                },
+            },
+            StaticAbility {
+                description: "Noncreature spells your opponents cast with mana value 4 or greater cost {2} more to cast.",
+                effect: StaticEffect::OpponentSpellsCostMore {
+                    filter: R::Noncreature.and(R::ManaValueAtLeast(4)),
+                    amount: 2,
+                },
+            },
+        ],
+        back_face: Some(Box::new(valkmira)),
+        ..legend("Reidane, God of the Worthy", cost(&[generic(2), w()]), vec![CreatureType::God], 2, 3)
+    }
+}
+
+/// Surtr, Fiery Jötun — {3}{R}{R} 5/5 trample. Casting a historic spell (CR
+/// 700.6) deals 3 damage to any target.
+pub fn surtr_fiery_jotun() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::historic())),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+        }],
+        ..legend(
+            "Surtr, Fiery Jötun",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Giant, CreatureType::God, CreatureType::Warrior],
+            5,
+            5,
+        )
+    }
+}
+
+/// World at War — {3}{R}{R} Sorcery, rebound. After the second main phase
+/// this turn, an additional combat and main phase (CR 500.8: a combat banked
+/// in the first main phase still follows the scheduled one); at the start of
+/// that combat, untap every creature that attacked this turn.
+pub fn world_at_war() -> CardDefinition {
+    CardDefinition {
+        name: "World at War",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::Seq(vec![
+            Effect::AdditionalCombatPhaseAfterMain { count: Value::ONE },
+            Effect::AtTheAddedCombat {
+                body: Box::new(Effect::Untap {
+                    what: Selector::EachPermanent(R::Creature.and(R::AttackedThisTurn)),
+                    up_to: None,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
