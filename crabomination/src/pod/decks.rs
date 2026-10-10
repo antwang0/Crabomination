@@ -10442,3 +10442,33 @@ pub const FIRE_LORD_ZUKO_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains, plains,
     plains, plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const ARNA_KENNERUD_COMMANDERS: &[CardFactory] = &[arna_kennerud_skycaptain];
+
+/// **Arna Kennerüd, Skycaptain**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 82 nonbasic cards + 5 Islands + 8 Plains + 4 Swamps = 99.
+/// Arna Kennerüd, Skycaptain (WUB) modified-creature voltron: Equipment, Auras and counters
+/// on fliers, doubled and copied every time a modified creature attacks.
+pub const ARNA_KENNERUD_MAIN: &[CardFactory] = &[
+    arcane_signet, assassin_gauntlet, assimilation_aegis, azorius_signet, biorganic_carapace,
+    buster_sword, cranial_plating, dimir_signet, fellwar_stone, hammer_of_nazahn, nettlecyst,
+    orzhov_signet, sol_ring, swiftfoot_boots, sword_of_feast_and_famine, sword_of_fire_and_ice,
+    sword_of_the_animist, talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress,
+    thran_power_suit, adarkar_wastes, arcane_sanctum, caves_of_koilos, command_tower,
+    exotic_orchard, flooded_strand, glacial_fortress, godless_shrine, hallowed_fountain,
+    isolated_chapel, polluted_delta, prairie_stream, raffines_tower, reliquary_tower,
+    rogues_passage, sea_of_clouds, sunken_hollow, vault_of_champions, watery_grave,
+    alela_artful_provocateur, ardenn_intrepid_archaeologist, armored_skyhunter, baleful_strix,
+    cloud_midgar_mercenary, codsworth_handy_helper, danitha_capashen, danitha_benalias_hope,
+    envoy_of_the_ancestors, esper_sentinel, etherium_sculptor, halvar_god_of_battle,
+    kappa_cannoneer, lion_sash, mondrak_glory_dominus, pearl_ear_imperial_advisor,
+    puresteel_paladin, sram_senior_edificer, starnheim_courser, stoneforge_mystic,
+    all_that_glitters, combat_research, curiosity, ethereal_armor, forge_anew,
+    mantle_of_the_ancients, nerd_rage, sages_reverie, sheltered_by_ghosts, sigardas_aid,
+    staggering_insight, an_offer_you_cant_refuse, anguished_unmaking, counterspell, dovins_veto,
+    path_to_exile, swords_to_plowshares, void_rend, damn, open_the_armory, steelshapers_gift,
+    winds_of_rath,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp,
+];
