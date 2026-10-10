@@ -44833,16 +44833,21 @@ impl GameState {
     ) -> Result<(), GameError> {
         use crate::effect::MillShareAxis;
         // Mill two; repeat while the pair shares the axis. Capped at the
-        // library size so a degenerate loop always terminates.
+        // library size the effect started with: a milled card that shuffles
+        // back (Darksteel Colossus, CR 614.6) kept the library from ever
+        // emptying, and the loop grew its event list until a bot's look-ahead
+        // was OOM-killed. That loop is CR 104.4b's; the cap ends it.
         for ent in self.resolve_selector(who, ctx) {
             let EntityRef::Player(p) = ent else { continue };
+            let mut budget = self.players[p].library.len();
             loop {
                 let mut colors: Vec<Vec<crate::mana::Color>> = Vec::new();
                 let mut types: Vec<Vec<crate::card::CardType>> = Vec::new();
                 for _ in 0..2 {
-                    if self.players[p].library.is_empty() {
+                    if self.players[p].library.is_empty() || budget == 0 {
                         break;
                     }
+                    budget -= 1;
                     let card = self.players[p].library.remove(0);
                     if !card.definition.is_land() || axis == MillShareAxis::AnyColor {
                         colors.push(card.definition.cost.colors());
@@ -44865,7 +44870,7 @@ impl GameState {
                 if repeat && draw_on_repeat {
                     self.draw_one_or_deck(p, events);
                 }
-                if !repeat || self.players[p].library.is_empty() {
+                if !repeat || self.players[p].library.is_empty() || budget == 0 {
                     break;
                 }
             }

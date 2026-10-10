@@ -1645,6 +1645,28 @@ fn sphinxs_tutelage_repeats_on_shared_color() {
     assert_eq!(g.players[1].graveyard.len(), 4, "two bolts, repeat, two islands, stop");
 }
 
+/// CR 104.4b / 614.6 — "mill two, repeat if they share a type" over a library
+/// of cards that shuffle back instead of reaching the graveyard never empties
+/// it: the repeat is capped at the library the effect started with, so the
+/// resolution ends (it looped until a pod bot's look-ahead was OOM-killed).
+#[test]
+fn mill_two_repeat_ends_when_the_milled_cards_shuffle_back() {
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::darksteel_colossus());
+    g.add_card_to_library(1, catalog::blightsteel_colossus());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &crabomination::effect::Effect::MillTwoRepeatSharing {
+            who: crabomination::effect::Selector::Player(crabomination::effect::PlayerRef::EachOpponent),
+            axis: crabomination::effect::MillShareAxis::CardType,
+            draw_on_repeat: false,
+        },
+        &ctx,
+    )
+    .expect("terminates");
+    assert_eq!(g.players[1].library.len(), 2, "both shuffled back");
+}
+
 /// Processor Assault wants an opponent-owned exile card as fuel.
 #[test]
 fn processor_assault_processes_exile_card() {
