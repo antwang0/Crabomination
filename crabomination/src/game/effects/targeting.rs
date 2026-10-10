@@ -138,6 +138,13 @@ impl GameState {
         if let Some(c) = self.battlefield_find(*tid) {
             return eff.permanent_slot_is_hostile(0, None) && self.same_team(c.controller, controller);
         }
+        // A spell on the stack: a hostile slot spares your own side's (Subtlety).
+        if let Some(caster) = self.stack.iter().find_map(|si| match si {
+            crate::game::types::StackItem::Spell { card, caster, .. } if card.id == *tid => Some(*caster),
+            _ => None,
+        }) {
+            return eff.permanent_slot_is_hostile(0, None) && self.same_team(caster, controller);
+        }
         // A graveyard card: only an exile is hostile (a return to hand is a
         // regrowth, not a bounce).
         eff.graveyard_slot_is_hostile(0, None)

@@ -465,9 +465,9 @@ pub fn fury() -> CardDefinition {
 }
 
 /// Subtlety — {2}{U}{U} Creature — Elemental Incarnation, 3/3, Flash, Flying.
-/// Evoke—exile a blue card from hand. ETB: counter target spell on the stack;
-/// its owner puts it on top or bottom of their library. (Printed restriction
-/// to creature/planeswalker spells is widened to any spell.)
+/// Evoke—exile a blue card from hand. ETB: up to one target creature or
+/// planeswalker spell goes to the top or bottom of its owner's library; the
+/// picker spares its own side's spells (`declines_own_side_pick`).
 pub fn subtlety() -> CardDefinition {
     use crate::effect::CounteredSpellZone;
     CardDefinition {
@@ -483,9 +483,16 @@ pub fn subtlety() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::MoveSpellToZone {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
+            // "Up to one target creature spell or planeswalker spell."
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::MoveSpellToZone {
+                    what: target_filtered(SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::HasCardType(CardType::Creature)
+                            .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+                    )),
+                    zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
+                }),
             },
         }],
         alternative_cost: Some(AlternativeCost {

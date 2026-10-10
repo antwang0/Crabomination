@@ -3497,7 +3497,10 @@ impl Effect {
                 | Effect::GainControlWhileSourceRemains { .. }
                 | Effect::GainControlWhileYouControlSource { .. }
                 | Effect::GainControlWhileSourceTapped { .. }
-                | Effect::GainControlWhileMatches { .. } => true,
+                | Effect::GainControlWhileMatches { .. }
+                // A stack slot (Subtlety) — the spell's caster loses it.
+                | Effect::CounterSpell { .. }
+                | Effect::MoveSpellToZone { .. } => true,
                 Effect::Move { to, .. } => {
                     !matches!(to, ZoneDest::Battlefield { .. } | ZoneDest::BattlefieldAttached { .. })
                 }

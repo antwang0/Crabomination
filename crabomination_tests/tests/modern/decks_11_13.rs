@@ -117,6 +117,36 @@ fn subtlety_etb_bounces_a_spell_to_top_of_library() {
         "the countered spell is on top of its owner's library");
 }
 
+/// Subtlety's printed "up to one target creature spell or planeswalker spell":
+/// a noncreature spell isn't a legal pick, and the picker declines its own
+/// creature spell rather than bottoming it (the slot is optional).
+#[test]
+fn subtlety_spares_its_own_creature_spell_and_ignores_noncreature_spells() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("own bears on the stack");
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent's Bolt on the stack");
+    g.priority.player_with_priority = 0;
+    let sub = g.add_card_to_hand(0, catalog::subtlety());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sub, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Subtlety flashed in");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bears), "the own creature spell resolved");
+    assert_eq!(g.players[0].life, 17, "Bolt, a noncreature spell, was no legal pick");
+}
+
 #[test]
 fn endurance_etb_shuffles_opponent_graveyard_into_library() {
     let mut g = two_player_game();
