@@ -2559,6 +2559,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAKDOS_RIOTS_EDHREC_COMMANDERS,
             main: decks::RAKDOS_RIOTS_EDHREC_MAIN,
         },
+        // Seat 354: Myrel, Shield of Argive's EDHREC average deck.
+        // `--pod-decks 354`.
+        PodDeck {
+            name: "Myrel, Shield of Argive (W)",
+            commanders: decks::MYREL_EDHREC_COMMANDERS,
+            main: decks::MYREL_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4629,6 +4636,7 @@ mod tests {
             ("Jodah, Archmage Eternal", [0x0A85, 351, 9276]),
             ("Child of Alara", [0x0A86, 352, 9277]),
             ("Rakdos, Lord of Riots", [0x0A87, 353, 9278]),
+            ("Myrel, Shield of Argive", [0x0A88, 354, 9279]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

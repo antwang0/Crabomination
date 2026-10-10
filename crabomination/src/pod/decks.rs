@@ -10321,3 +10321,33 @@ pub const RAKDOS_RIOTS_EDHREC_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const MYREL_EDHREC_COMMANDERS: &[CardFactory] = &[myrel_shield_of_argive];
+
+/// **Myrel, Shield of Argive**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Myrel, Shield of Argive Soldiers (W): artifact Soldiers and token makers under a
+/// commander that shuts off opponents' combat-step plays and musters Soldiers as it
+/// attacks.
+pub const MYREL_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, halo_fountain, heralds_horn, horn_of_gondor, horn_of_valhalla,
+    lightning_greaves, patchwork_banner, pearl_medallion, skullclamp, sol_ring, swiftfoot_boots,
+    vanquishers_banner, emeria_the_sky_ruin, minas_tirith, nykthos_shrine_to_nyx,
+    path_of_ancestry, rogues_passage, three_tree_city, war_room, windbrisk_heights,
+    baird_steward_of_argive, ballyrush_banneret, bastion_protector, boromir_warden_of_the_tower,
+    captain_of_the_watch, catapult_master, cathar_commando, cosmogrand_zenith,
+    darien_king_of_kjeldor, daru_warchief, esper_sentinel, field_marshal, firemane_commando,
+    goldnight_commander, haliya_guided_by_light, keeper_of_the_accord, mentor_of_the_meek,
+    mondrak_glory_dominus, odric_master_tactician, ojer_taq_deepest_foundation,
+    prava_of_the_steel_legion, preeminent_captain, rescue_retriever, resolute_reinforcements,
+    roaming_throne, siege_veteran, thalia_heretic_cathar, valiant_veteran, anointed_procession,
+    cathars_crusade, flowering_of_the_white_tree, intangible_virtue, land_tax,
+    renewed_solidarity, smothering_tithe, tocasias_welcome, akromas_will, call_the_coppercoats,
+    flare_of_fortitude, flawless_maneuver, generous_gift, path_to_exile, swords_to_plowshares,
+    teferis_protection, unbreakable_formation, elspeth_storm_slayer, elspeth_suns_champion,
+    deploy_to_the_front, farewell, finale_of_glory, martial_coup,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
