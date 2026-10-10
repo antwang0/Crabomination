@@ -523,6 +523,8 @@ pub enum PlaneswalkerSubtype {
     Sivitri, Elminster, Tasha,
     // Venser, the Sojourner (Brago's EDHREC deck).
     Venser,
+    // Niko Aris (Niko, Light of Hope's EDHREC deck).
+    Niko,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
