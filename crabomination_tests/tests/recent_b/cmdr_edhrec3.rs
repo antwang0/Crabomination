@@ -732,3 +732,112 @@ fn ob_nixilis_casualty_copy_has_the_sacrificed_power_as_loyalty() {
     let copy = walkers.iter().find(|c| c.is_token).expect("the copy is a token");
     assert_eq!(copy.counter_count(crabomination::card::CounterType::Loyalty), 3);
 }
+
+/// Dream Devourer: a hand card without foretell can be foretold (CR
+/// 702.143), which pumps the Devourer; the {2}-cheaper cost stays with the
+/// card, so it's cast for {1}{R} on a later turn even after the Devourer is
+/// gone.
+#[test]
+fn dream_devourer_foretells_anything_for_two_less() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let devourer = ready(&mut g, 0, catalog::dream_devourer());
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Foretell { card_id: giant }).expect("foretell a hand card");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == giant && c.face_down));
+    assert_eq!(g.computed_permanent(devourer).unwrap().power, 2, "+2/+0 for the foretell");
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![devourer]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    while g.active_player_idx == 0 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    while !(g.step == TurnStep::PreCombatMain && g.active_player_idx == 0) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastForetold { card_id: giant, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast for {1}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some());
+}
+
+/// Raphael: other fiends get +1/+1 and lifelink; at the end step after a
+/// creature card hit your graveyard, a Devil.
+#[test]
+fn raphael_pumps_fiends_and_makes_devils() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    ready(&mut g, 0, catalog::raphael_fiendish_savior());
+    let devourer = ready(&mut g, 0, catalog::dream_devourer());
+    let cp = g.computed_permanent(devourer).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 4));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Lifelink));
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![bear]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    to_end_step(&mut g);
+    assert_eq!(named(&g, "Devil"), 1);
+}
+
+/// Varragoth: boast only after attacking (CR 702.142), once a turn.
+#[test]
+fn varragoth_boasts_a_tutor_to_the_top() {
+    let mut g = pod(2);
+    let varragoth = ready(&mut g, 0, catalog::varragoth_bloodsky_sire());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    flood(&mut g);
+    let boast = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: varragoth,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(boast(&mut g).is_err(), "it hasn't attacked");
+    g.battlefield_find_mut(varragoth).unwrap().attacked_this_turn = true;
+    boast(&mut g).expect("boast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), 2, "the card went back on top");
+    assert!(boast(&mut g).is_err(), "once each turn");
+}
+
+/// Burning-Rune Demon: two different names, never itself; the opponent's
+/// pick goes to hand, the other to the graveyard (its "may" body, resolved
+/// as the bot plays it).
+#[test]
+fn burning_rune_demon_splits_two_cards() {
+    let mut g = pod(2);
+    let other = g.add_card_to_library(0, catalog::burning_rune_demon());
+    g.add_card_to_library(0, catalog::hill_giant());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let demon = ready(&mut g, 0, catalog::burning_rune_demon());
+    let body = match &catalog::burning_rune_demon().triggered_abilities[0].effect {
+        Effect::MayDo { body, .. } => (**body).clone(),
+        other => panic!("expected a may body, got {other:?}"),
+    };
+    let ctx = EffectContext::for_ability(demon, 0, None);
+    let evs = g.resolve_effect(&body, &ctx).expect("search");
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].graveyard.len(), 1);
+    assert!(g.players[0].library.iter().any(|c| c.id == other), "never a second Burning-Rune Demon");
+}

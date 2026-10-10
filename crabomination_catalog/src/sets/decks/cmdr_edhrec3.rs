@@ -1089,3 +1089,131 @@ pub fn ob_nixilis_the_adversary() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dream Devourer — {1}{B} 0/3 Demon Cleric. Each nonland card in your hand
+/// without foretell has foretell, at its mana cost less {2} (CR 702.143;
+/// the cost stays with a card foretold this way). Whenever you foretell a
+/// card, it gets +2/+0 until end of turn.
+pub fn dream_devourer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each nonland card in your hand without foretell has foretell. Its foretell cost is equal to its mana cost reduced by {2}.",
+            effect: StaticEffect::HandNonlandCardsHaveForetell { reduce: 2 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardExiled, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::OwnedByYou.and(R::ForetoldThisTurn),
+            }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Dream Devourer", cost(&[generic(1), b()]), vec![CreatureType::Demon, CreatureType::Cleric], 0, 3)
+    }
+}
+
+/// Raphael, Fiendish Savior — {3}{B}{R} 4/4 legendary Devil Noble, flying.
+/// Other Demons, Devils, Imps and Tieflings you control get +1/+1 and have
+/// lifelink. At the beginning of each end step, if a creature card was put
+/// into your graveyard from anywhere this turn (CR 603.4), create a 1/1 red
+/// Devil with "when this dies, 1 damage to any target".
+pub fn raphael_fiendish_savior() -> CardDefinition {
+    let fiends = [CreatureType::Demon, CreatureType::Devil, CreatureType::Imp, CreatureType::Tiefling]
+        .into_iter()
+        .map(R::HasCreatureType)
+        .reduce(|a, b| a.or(b))
+        .expect("four types");
+    let fed = Predicate::ValueAtLeast(Value::CreatureCardsPutIntoGraveyardThisTurn(PlayerRef::You), Value::ONE);
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Other Demons, Devils, Imps, and Tieflings you control get +1/+1 and have lifelink.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: fiends.and(R::Creature).and(R::ControlledByYou).and(R::OtherThanSource),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Lifelink],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(fed.clone()),
+            effect: Effect::If {
+                cond: fed,
+                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(devil()) }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..legend(
+            "Raphael, Fiendish Savior",
+            cost(&[generic(3), b(), r()]),
+            vec![CreatureType::Devil, CreatureType::Noble],
+            4,
+            4,
+        )
+    }
+}
+
+/// Varragoth, Bloodsky Sire — {2}{B} 2/3 legendary Demon Rogue, deathtouch.
+/// Boast — {1}{B}: target player searches their library for a card, then
+/// shuffles and puts it on top (CR 702.142: only if it attacked this turn,
+/// once each turn).
+pub fn varragoth_bloodsky_sire() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![crate::effect::shortcut::boast(
+            cost(&[generic(1), b()]),
+            Effect::TargetPlayerThen {
+                filter: R::Player,
+                then: Box::new(Effect::Search {
+                    who: PlayerRef::Target(0),
+                    filter: R::Any,
+                    to: ZoneDest::Library { who: PlayerRef::Target(0), pos: crate::effect::LibraryPosition::Top },
+                }),
+            },
+        )],
+        ..legend(
+            "Varragoth, Bloodsky Sire",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Demon, CreatureType::Rogue],
+            2,
+            3,
+        )
+    }
+}
+
+/// Burning-Rune Demon — {4}{B}{B} 6/6 Demon Berserker, flying. On entry you
+/// may search for two cards not named Burning-Rune Demon with different
+/// names; an opponent picks one for your hand and the other goes to your
+/// graveyard (the Gifts Ungiven split).
+pub fn burning_rune_demon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for two cards with different names?".into(),
+            body: Box::new(Effect::SearchSplitOpponentChooses {
+                opponent: Selector::None,
+                count: 2,
+                opponent_picks: 1,
+                chosen_to: ZoneDest::Hand(PlayerRef::You),
+                rest_to: ZoneDest::Graveyard,
+                filter: Some(R::Not(Box::new(R::HasName("Burning-Rune Demon".into())))),
+            }),
+        })],
+        ..creature(
+            "Burning-Rune Demon",
+            cost(&[generic(4), b(), b()]),
+            vec![CreatureType::Demon, CreatureType::Berserker],
+            6,
+            6,
+        )
+    }
+}
