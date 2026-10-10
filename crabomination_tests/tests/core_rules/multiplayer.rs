@@ -1337,6 +1337,31 @@ fn cr_800_4a_a_departed_players_cards_leave_every_zone_and_phasing() {
     assert_eq!(back.controller, 0, "control reverts to the owner");
 }
 
+/// CR 800.4a — a card the departed seat controls without an effect under it
+/// is exiled, and exiling a phasing holder ends its hold; the departed seat's
+/// own permanents it held must already be gone (an exiled Out of Time phased
+/// Tergrid and Lightning Greaves back in under a seat that had left —
+/// four-seat audit pod, seed 17100384 game 9).
+#[test]
+fn cr_800_4a_a_departed_players_phased_out_cards_stay_gone() {
+    let mut g = multi_player_game(3);
+    // Seat 0's card, under seat 2's control with no effect behind it.
+    let holder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(holder).unwrap().controller = 2;
+    let held = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let mut card = g.battlefield.iter().find(|c| c.id == held).unwrap().clone();
+    card.phased_out_by = Some(holder);
+    g.battlefield.retain(|c| c.id != held);
+    g.phased_out.push(card);
+
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+
+    assert!(g.exile.iter().any(|c| c.id == holder), "no effect under it: exiled");
+    assert!(g.find_card_anywhere(held).is_none(), "left with its owner");
+    assert!(g.battlefield.iter().all(|c| c.owner != 2));
+}
+
 /// A control-changing effect's hold, as `change_control` leaves it: the
 /// permanent remembers who it was taken from (CR 800.4a reverts it there).
 fn steal(g: &mut GameState, id: crabomination::card::CardId, to: usize) {
