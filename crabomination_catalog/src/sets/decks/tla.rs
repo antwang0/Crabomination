@@ -4187,7 +4187,7 @@ pub fn wan_shi_tong_librarian() -> CardDefinition {
                     amount: Value::HalfDown(Box::new(Value::XFromCost)),
                 },
             ])),
-            // CR 701.19 — "Whenever an opponent searches their library, put a
+            // CR 701.23 — "Whenever an opponent searches their library, put a
             // +1/+1 counter on him and draw a card." Same rail as Ob Nixilis,
             // Unshackled.
             TriggeredAbility {

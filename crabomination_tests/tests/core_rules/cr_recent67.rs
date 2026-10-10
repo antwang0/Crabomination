@@ -2,7 +2,7 @@
 //! - CR 100 — deck construction: sideboard size and the combined four-of.
 //! - CR 119 — life gain punished into a loss, without re-punishing the loss.
 //! - CR 509.1b — a block restriction keyed to the defender's biggest tribe.
-//! - CR 701.19a — a search whose picker and whose library differ.
+//! - CR 701.23a — a search whose picker and whose library differ.
 
 use crabomination::card::CardDefinition;
 use crabomination::catalog;
@@ -126,7 +126,7 @@ fn cr_509_1b_block_gated_on_the_defenders_tribe() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(a, grax)])).is_ok());
 }
 
-/// CR 701.19a — Head Games searches the *opponent's* library, but the caster
+/// CR 701.23a — Head Games searches the *opponent's* library, but the caster
 /// makes the picks.
 #[test]
 fn cr_701_19a_searcher_and_library_can_differ() {

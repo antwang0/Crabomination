@@ -2584,7 +2584,7 @@ fn indulgent_tormentor_punishes_only_the_targeted_opponent_at_four_seats() {
     assert_eq!(g.players[paid[0]].life, life[paid[0]] - 3, "and they paid 3");
 }
 
-/// CR 701.16 — "sacrifice this enchantment" is a sacrifice: Solitary
+/// CR 701.21 — "sacrifice this enchantment" is a sacrifice: Solitary
 /// Confinement sacrificed at upkeep (no card to discard) triggers Mayhem
 /// Devil's "whenever a player sacrifices a permanent".
 #[test]

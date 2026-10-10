@@ -502,7 +502,7 @@ pub enum Decision {
         mode_texts: Vec<String>,
     },
 
-    /// CR 701.45 — Learn. The player may reveal a Lesson from their
+    /// CR 701.48 — Learn. The player may reveal a Lesson from their
     /// sideboard (`lessons`) and put it into hand, discard a card from
     /// `hand` to draw a card, or decline. Only surfaced when `lessons` is
     /// non-empty (with no Lessons, the engine takes the legacy `Draw 1`
@@ -695,7 +695,7 @@ pub enum DecisionAnswer {
     DamageOrder(Vec<CardId>),
     /// CR 700.2d — the chosen distinct mode indices for a "choose N" spell.
     Modes(Vec<u8>),
-    /// CR 701.45 — the chosen Learn action.
+    /// CR 701.48 — the chosen Learn action.
     Learn(LearnChoice),
     /// CR 603.3b — same-controller trigger stack-push order. Ids omitted
     /// from a partial answer keep their original relative order at the end;

@@ -9084,7 +9084,7 @@ fn cr_608_2h_path_to_exile_on_a_stolen_creature_pays_its_controller() {
     }
 }
 
-/// CR 701.19 — one search is one "searched their library" event, even for a
+/// CR 701.23 — one search is one "searched their library" event, even for a
 /// prompting seat whose pick suspends the resolution: the event was pushed
 /// before the ask, and the re-run pushed it again (River Song's Spoilers
 /// fired twice off The World Tree).

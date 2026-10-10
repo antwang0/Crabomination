@@ -1,4 +1,4 @@
-//! CR 701.10g — exchanging power between two creatures (Serene Master).
+//! CR 701.12g — exchanging power between two creatures (Serene Master).
 
 use super::EffectContext;
 use crate::card::CardId;

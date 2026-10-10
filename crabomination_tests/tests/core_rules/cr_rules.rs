@@ -3606,7 +3606,7 @@ fn cr_605_1a_painland_damage_rider_is_still_a_mana_ability() {
     assert!(g.battlefield_find(spell).is_some(), "bear cast off the painland's mana");
 }
 
-// ── CR 701.19 — Searching (multi-card) ────────────────────────────────────────
+// ── CR 701.23 — Searching (multi-card) ────────────────────────────────────────
 /// Deathbellow War Cry searches for up to four Minotaurs; the count-search
 /// chains single picks, and a non-matching card is never offered.
 #[test]
@@ -3632,7 +3632,7 @@ fn cr_701_19_search_up_to_n_picks_matches_only() {
         "the non-Minotaur stays in the library");
 }
 
-// ── CR 701.19c — a searched library is shuffled, found or not ─────────────────
+// ── CR 701.23 — a searched library is shuffled, found or not ─────────────────
 /// Declining every pick still counts as searching, so the library must be
 /// shuffled afterward (with 30 cards, an unchanged order is a ~1/30! fluke).
 #[test]
@@ -4621,9 +4621,9 @@ fn cr_601_2f_rides_end_target_conditional_reduction() {
     );
 }
 
-// ── CR 701.13 — Investigate ───────────────────────────────────────────────────
+// ── CR 701.16 — Investigate ───────────────────────────────────────────────────
 
-/// CR 701.13 — Hostile Investigator's "whenever a player discards, investigate"
+/// CR 701.16 — Hostile Investigator's "whenever a player discards, investigate"
 /// (once each turn) creates a Clue artifact token.
 #[test]
 fn cr_701_13_investigate_makes_a_clue() {
@@ -4930,7 +4930,7 @@ fn cr_702_148_cleave_removes_bracketed_clause() {
     assert!(g.battlefield_find(big).is_none(), "cleave wipes all creatures");
 }
 
-// ── CR 701.16 — Sacrifice as a reflexive cost ────────────────────────────────
+// ── CR 701.21 — Sacrifice as a reflexive cost ────────────────────────────────
 
 /// `Effect::MaySacrifice` ("you may sacrifice X; if you do, …") declined leaves
 /// the board untouched and skips the payoff.
@@ -5435,8 +5435,8 @@ fn cr_611_2_deafening_silence_locks_only_noncreature_spells() {
     }).expect("creature spell unaffected by Deafening Silence");
 }
 
-// ── CR 701.16 — targeted sacrifice fires sacrifice + death triggers ─────────
-/// CR 701.16 — Effect::SacrificePermanent is a genuine sacrifice: a creature
+// ── CR 701.21 — targeted sacrifice fires sacrifice + death triggers ─────────
+/// CR 701.21 — Effect::SacrificePermanent is a genuine sacrifice: a creature
 /// sacrificed this way fires CreatureDied, so a death payoff (Harvester of
 /// Souls) sees it. Footsteps of the Goryo sacrifices its reanimated creature
 /// at the end step.
@@ -5926,7 +5926,7 @@ fn cr_615_7_prevent_all_damage_from_chosen_source() {
     assert_eq!(g.players[0].life, life1, "the chosen source's damage was prevented");
 }
 
-/// CR 701.40 — Explore via a Map token: sacrifice the Map to explore a
+/// CR 701.44 — Explore via a Map token: sacrifice the Map to explore a
 /// creature; a land reveal goes to hand.
 #[test]
 fn cr_701_40_map_token_explore() {
@@ -9860,9 +9860,9 @@ fn cr_613_4_animated_vehicle_keeps_artifact_type() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact), "still an artifact (additive)");
 }
 
-// ── CR 701.42 — Surveil ──────────────────────────────────────────────────────
+// ── CR 701.25 — Surveil ──────────────────────────────────────────────────────
 
-/// CR 701.42a — a surveiled card the player declines to keep on top goes to the
+/// CR 701.25a — a surveiled card the player declines to keep on top goes to the
 /// graveyard (not the bottom of the library, as scry would).
 #[test]
 fn cr_701_42_surveil_routes_declined_card_to_graveyard() {
@@ -11116,7 +11116,7 @@ fn cr_202_3b_x_cost_is_zero_in_graveyard() {
 
 // ── CR 701.5g / 709.3 / 608.2h (this run's DIS gap wave) ─────────────────────
 
-/// CR 701.5g — a countered spell is put into its owner's graveyard. Swift
+/// CR 701.6a — a countered spell is put into its owner's graveyard. Swift
 /// Silence counters every other spell on the stack; the countered card lands
 /// in the graveyard (not exile).
 #[test]
@@ -11410,9 +11410,9 @@ fn cr_702_16e_protection_from_own_colors_blocks_same_color_blockers() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(artifact, attacker)])).is_ok());
 }
 
-// ── CR 701.7 — destroying a permanent ───────────────────────────────────────
+// ── CR 701.8 — destroying a permanent ───────────────────────────────────────
 
-/// CR 701.7a — "destroy" by a spell or ability an opponent controls is a
+/// CR 701.8a — "destroy" by a spell or ability an opponent controls is a
 /// distinct event from a combat/SBA death, and only the cross-team case fires
 /// the watcher (Karmic Justice).
 #[test]
@@ -11447,7 +11447,7 @@ fn cr_701_7a_opponent_destroy_fires_the_retaliation_watcher() {
     assert!(g.battlefield_find(theirs).is_none());
 }
 
-/// CR 701.7a — destroying your *own* permanent emits no cross-team event, so
+/// CR 701.8a — destroying your *own* permanent emits no cross-team event, so
 /// the watcher stays quiet.
 #[test]
 fn cr_701_7a_self_destroy_does_not_fire_the_watcher() {

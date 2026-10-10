@@ -1438,7 +1438,7 @@ fn cr_400_7_a_spell_countered_into_the_library_forgets_its_kicker() {
     assert!(!c.kicked);
 }
 
-/// CR 701.8a — "you may discard a card. If you do, …" (Pia, Aether Ascetic):
+/// CR 701.9a — "you may discard a card. If you do, …" (Pia, Aether Ascetic):
 /// the discarding player picks the card, not the engine's highest-mana-value
 /// default.
 #[test]

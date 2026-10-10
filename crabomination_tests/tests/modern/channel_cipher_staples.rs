@@ -26,7 +26,7 @@ fn boseiju_channel_destroys_nonbasic() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == boseiju), "Boseiju discarded to channel");
 }
 
-/// CR 701.19a — an opponent-owned search ("that player may search") routes
+/// CR 701.23a — an opponent-owned search ("that player may search") routes
 /// the pick to the searched player's seat, not the caster's.
 #[test]
 fn boseiju_opponent_search_routes_to_the_searched_seat() {

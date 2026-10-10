@@ -3348,7 +3348,7 @@ fn play_pod_game(
             }
         }
         // CR 704.5m / 800.4a — an Aura on a player is on one still in the
-        // game; CR 701.37 — a melded permanent's halves were exiled into it,
+        // game; CR 701.42 — a melded permanent's halves were exiled into it,
         // so they hold no battlefield state of their own. Debug-only.
         #[cfg(debug_assertions)]
         if !g.is_game_over() {

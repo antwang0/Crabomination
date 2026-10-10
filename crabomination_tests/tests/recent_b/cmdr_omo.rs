@@ -113,7 +113,7 @@ fn every_creature_type_survives_losing_all_abilities() {
     assert!(g.computed_permanent(mimic).is_some_and(|c| c.keywords().contains(&Keyword::Changeling)));
 }
 
-/// CR 701.5 — Summary Dismissal exiles the other spell (to exile, not the
+/// CR 701.13 — Summary Dismissal exiles the other spell (to exile, not the
 /// graveyard) and counters an activated ability on the stack.
 #[test]
 fn cr_701_5_summary_dismissal_clears_the_stack() {

@@ -3342,7 +3342,7 @@ pub enum EventKind {
     PermanentSacrificed,
     /// Any permanent left the battlefield.
     PermanentLeavesBattlefield,
-    /// CR 701.7 — a permanent was destroyed by a spell or ability (not by
+    /// CR 701.8 — a permanent was destroyed by a spell or ability (not by
     /// combat damage or a state-based action). The event's actor is the
     /// destroying effect's controller, so `EventScope::YourControl` with
     /// `actor_is_opponent` reads "a spell or ability an opponent controls
@@ -3407,7 +3407,7 @@ pub enum EventKind {
     /// CR 509.3e — the attacker-side mirror: "whenever this creature becomes
     /// blocked by N or more creatures".
     BecomesBlockedByNOrMore(u32),
-    /// CR 701.15 — "whenever this creature regenerates" (Skeleton
+    /// CR 701.19 — "whenever this creature regenerates" (Skeleton
     /// Scavengers' counter rider). Fires whenever a regeneration shield is
     /// applied, whatever granted it.
     Regenerated,
@@ -3507,9 +3507,9 @@ pub enum EventKind {
     /// CR 701.22 — "whenever you scry" only (Flamespeaker Adept); the same
     /// event as `ScriedOrSurveiled`, narrowed by its `surveil` flag.
     Scried,
-    /// CR 701.42 — "whenever you surveil" only (Mirko, Dimir Spybug).
+    /// CR 701.25 — "whenever you surveil" only (Mirko, Dimir Spybug).
     Surveilled,
-    /// CR 701.13 — the literal "mills" wording only ("whenever a player mills
+    /// CR 701.17 — the literal "mills" wording only ("whenever a player mills
     /// one or more creature cards" — Zellix; "cards are milled" — Mirelurk
     /// Queen). `CardMilled` is the wider "put into a graveyard from a
     /// library" family, which a surveil also fires (Narcomoeba, Unshakable
@@ -3681,7 +3681,7 @@ pub enum EventKind {
     /// trigger is controlled by the seat that *lost* control, not by the
     /// permanent's new controller.
     LostControlOfThis,
-    /// CR 701.40 — a permanent explored (Wildgrowth Walker, Tishana's
+    /// CR 701.44 — a permanent explored (Wildgrowth Walker, Tishana's
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.
     Explored,
@@ -3816,7 +3816,7 @@ pub enum EventKind {
     /// Alchemist, Longhorn Sharpshooter). Modeled as a `SelfSource` trigger
     /// dispatched directly by `plot_card`.
     BecomesPlotted,
-    /// CR 701.19 — a player searched their own library. The searcher is the
+    /// CR 701.23 — a player searched their own library. The searcher is the
     /// event subject; pair with `EventScope::OpponentControl` ("whenever an
     /// opponent searches their library" — Ob Nixilis, Unshackled). Fires once
     /// per search, whether or not a card was found. Matched to
@@ -3833,7 +3833,7 @@ pub enum EventKind {
     /// CR 605 — a permanent was tapped to pay a mana ability's `{T}` cost.
     /// The tapped permanent is the event subject (Extraplanar Lens).
     TappedForMana,
-    /// CR 701.5 — a spell on the stack was countered. The event's actor is the
+    /// CR 701.6 — a spell on the stack was countered. The event's actor is the
     /// player who controlled the countering spell or ability (so
     /// `EventScope::YourControl` reads "a spell or ability you control counters
     /// a spell" — Lullmage Mentor); the subject is the countered spell's card.
@@ -5420,7 +5420,7 @@ pub enum Effect {
 
     // ── Cards / draw / discard / mill ────────────────────────────────────────
     Draw    { who: Selector, amount: Value },
-    /// CR 701.45 — Learn. `who` may reveal a Lesson card they own from their
+    /// CR 701.48 — Learn. `who` may reveal a Lesson card they own from their
     /// sideboard ("outside the game") and put it into their hand, or discard
     /// a card to draw a card. Resolved via `Decision::Learn`. When `who`'s
     /// sideboard holds no Lesson, falls back to the legacy `Draw 1`
@@ -5716,11 +5716,11 @@ pub enum Effect {
         take: Value,
         filter: SelectionRequirement,
     },
-    /// CR 701.31 — *monstrosity N*. If the source isn't already monstrous,
+    /// CR 701.37 — *monstrosity N*. If the source isn't already monstrous,
     /// put N +1/+1 counters on it and it becomes monstrous (emitting
     /// `GameEvent::BecameMonstrous`). Once monstrous, this is a no-op.
     Monstrosity { n: Value },
-    /// CR 701.38 — *goad* each creature `what` resolves to: the resolving
+    /// CR 701.15 — *goad* each creature `what` resolves to: the resolving
     /// effect's controller is added to the creature's `goaded_by` list.
     /// Goaded creatures attack each combat if able and attack a player other
     /// than a goader if able, until that goader's next turn. Disrupt Decorum
@@ -5852,7 +5852,7 @@ pub enum Effect {
     /// chosen color" (Sudden Demise). The engine picks the color that kills
     /// the most opposing value net of the caster's own.
     DamageEachCreatureOfChosenColor { amount: Value },
-    /// CR 701.10g — "exchange its power and the power of `b`" (Serene
+    /// CR 701.12g — "exchange its power and the power of `b`" (Serene
     /// Master): each gets the other's current power as a layer-7b set for
     /// `duration`. Nothing happens unless both are creatures on the battlefield.
     ExchangePower { a: Selector, b: Selector, duration: Duration },
@@ -6246,7 +6246,7 @@ pub enum Effect {
     /// it to block this combat's source attacker if able. Sets the target's
     /// `must_block` to the effect source. Used by `shortcut::provoke`.
     Provoke { what: Selector },
-    /// CR 701.40 — each permanent `who` resolves to *explores*: its
+    /// CR 701.44 — each permanent `who` resolves to *explores*: its
     /// controller reveals the top card of their library. If it's a land,
     /// it goes to hand; otherwise the exploring permanent gets a +1/+1
     /// counter and the revealed card stays on top (the optional
@@ -6939,7 +6939,7 @@ pub enum Effect {
     /// them into `to`, then shuffle" (Ugin, Eye of the Storms). The picker
     /// keeps choosing until they decline; every moved card is visible to
     /// `Selector::ExiledThisResolution` / `Selector::LastMoved` for a chained
-    /// rider. CR 701.19c — the library is shuffled even on an empty pick.
+    /// rider. CR 701.24c — the library is shuffled even on an empty pick.
     SearchAnyNumber { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Transmute Artifact — search your library for an artifact card; if its
     /// mana value is at most the sacrificed artifact's it enters, otherwise
@@ -6982,11 +6982,11 @@ pub enum Effect {
     /// Deathbellow War Cry (Minotaurs → battlefield). The "different names"
     /// rider is not enforced.
     SearchUpToN { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest, count: Value },
-    /// CR 701.19a — `picker` searches `who`'s library: the pick decision
+    /// CR 701.23a — `picker` searches `who`'s library: the pick decision
     /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
     /// "search target opponent's library ... exile that card").
     SearchPickedBy { who: PlayerRef, picker: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
-    /// CR 701.19 — "Search your library for any number of [`filter`] cards,
+    /// CR 701.23 — "Search your library for any number of [`filter`] cards,
     /// exile them, then create that many tokens. Then shuffle." (Myr
     /// Incubator.) The auto-picker takes every match.
     SearchExileThenTokensPerCard {
@@ -7313,7 +7313,7 @@ pub enum Effect {
     /// heal damage instead of dying). Powers "{cost}: Regenerate this
     /// creature" activated abilities (Drudge Skeletons, River Boa, Korlash).
     Regenerate { what: Selector },
-    /// CR 701.15 — "Regenerate `what`. You gain control of that creature if it
+    /// CR 701.19 — "Regenerate `what`. You gain control of that creature if it
     /// regenerates this way" (Debt of Loyalty). The shield carries the
     /// resolving controller in `CardInstance.regeneration_control_grant`; the
     /// control change happens when — and only when — the shield is consumed.
@@ -7491,7 +7491,7 @@ pub enum Effect {
     /// attachments). One-way; no-op on a permanent already flipped or without a
     /// flip face. Emits `Flipped` so "when this flips" triggers can react.
     Flip { what: Selector },
-    /// CR 701.37 — Meld. If the source's controller both owns and controls
+    /// CR 701.42 — Meld. If the source's controller both owns and controls
     /// the source and a permanent named `partner`, exile both, then put the
     /// melded card (resolved from the registry by `into`) onto the
     /// battlefield under their control. The two component cards ride in
@@ -10344,7 +10344,7 @@ pub enum Effect {
     /// Sacrifice each permanent `what` resolves to, by its own controller
     /// (CR 701.16). The targeted sibling of `SacrificeAllMatching`.
     SacrificeSelected { what: Selector },
-    /// CR 701.16 — "Each player sacrifices all [`filter`] they control except
+    /// CR 701.21 — "Each player sacrifices all [`filter`] they control except
     /// for `keep`" (Keldon Firebombers). Each player keeps their `keep`
     /// highest-mana-value matches; the rest go.
     EachPlayerSacrificesDownTo { filter: SelectionRequirement, keep: Value },
@@ -10964,11 +10964,11 @@ pub enum Effect {
     /// tapped" (The Gitrog, Ravenous Ride).
     PutLandsFromHandOntoBattlefieldTapped { count: Value },
 
-    /// CR 701.34 — Manifest: put the top `amount` cards of `who`'s library
+    /// CR 701.40 — Manifest: put the top `amount` cards of `who`'s library
     /// onto the battlefield face down as 2/2 creatures (the real card is
     /// stashed and can be turned face up for its mana cost if it's a creature).
     Manifest { who: PlayerRef, amount: Value },
-    /// CR 701.34 — "Exile all [filter] cards from [who]'s graveyard in a
+    /// CR 701.13 — "Exile all [filter] cards from [who]'s graveyard in a
     /// face-down pile, shuffle that pile, then manifest those cards" under
     /// the resolving controller (Ghastly Conscription).
     ManifestFromGraveyard { who: PlayerRef, filter: SelectionRequirement },
@@ -12445,7 +12445,7 @@ pub enum Effect {
     /// `creature_attack_lures`.
     LureTargetToSourceNextTurn { what: Selector },
 
-    /// CR 701.16 — "[source's controller] sacrifices [the source] unless they
+    /// CR 701.21 — "[source's controller] sacrifices [the source] unless they
     /// pay {X}, where X is its mana value." The pay-or-sacrifice threat used by
     /// Soul Tithe (granted to the enchanted permanent via its Aura). Reads the
     /// source permanent's live mana value; the controller keeps it by paying
@@ -12688,7 +12688,7 @@ pub enum Effect {
     /// every damage event and dropped at the controller's next untap step.
     PreventDamageToAndByUntilYourNextTurn { target: Selector },
 
-    /// CR 701.5 — counter target spell only if a card exiled with the source
+    /// CR 701.6 — counter target spell only if a card exiled with the source
     /// shares its name (Mindreaver). A no-op when nothing matches.
     CounterSpellIfNameExiledWithSource { what: Selector },
 
@@ -12867,7 +12867,7 @@ pub enum Effect {
     /// of them (`OneCastAmongGranted`), paying life rather than mana for a
     /// spell (Nashi, Moon Sage's Scion).
     ExileTopOfEachLibraryMayPlayForLife,
-    /// CR 701.34 — manifest the top card of `who`'s library under your
+    /// CR 701.40 — manifest the top card of `who`'s library under your
     /// control (Thieving Amalgam, Orochi Soul-Reaver).
     ManifestTopOfLibraryUnderYou { who: PlayerRef },
     /// Counter every triggered or activated ability on the stack controlled by

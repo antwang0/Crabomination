@@ -1,6 +1,6 @@
 //! CR conformance for rules exercised by this run's WAR batch-9 wave:
 //! CR 509.1c (Menace — a menacing attacker can't be blocked by exactly one
-//! creature; here menace is *granted* by Angrath's anthem), CR 701.43e (Amass —
+//! creature; here menace is *granted* by Angrath's anthem), CR 701.47a (Amass —
 //! amassing again grows the same Army rather than minting a second), and
 //! CR 120.10 (excess damage over lethal is tracked for a resolution).
 
@@ -36,10 +36,10 @@ fn cr_509_1c_granted_menace_requires_two_blockers() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)])).is_ok(), "two blockers is legal");
 }
 
-/// CR 701.43e — if you already control an Army, Amass adds counters to it
+/// CR 701.47a — if you already control an Army, Amass adds counters to it
 /// instead of minting a second Army; the Army also gains the amassed type.
 #[test]
-fn cr_701_43e_amass_grows_existing_army() {
+fn cr_701_47a_amass_grows_existing_army() {
     let mut g = two_player_game();
     let ctx = EffectContext::for_ability(g.add_card_to_battlefield(0, catalog::grizzly_bears()), 0, None);
     let amass2 = Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: Some(CreatureType::Zombie) };

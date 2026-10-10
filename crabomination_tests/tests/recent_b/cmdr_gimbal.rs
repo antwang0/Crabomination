@@ -357,7 +357,7 @@ fn skyclave_relic_kicked_makes_three() {
     assert_eq!(relics.iter().filter(|&&id| g.battlefield_find(id).unwrap().tapped).count(), 2);
 }
 
-/// CR 701.5 — Spell Swindle counters and pays out the spell's mana value.
+/// CR 701.6 — Spell Swindle counters and pays out the spell's mana value.
 #[test]
 fn spell_swindle_counters_for_treasure() {
     let mut g = pod(2);

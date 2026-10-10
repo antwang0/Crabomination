@@ -1,6 +1,6 @@
 //! "You may discard N cards. If you do, …" (`Effect::MayDiscard` /
 //! `MayDiscardMatching`): a prompting seat names the cards it discards
-//! (CR 701.8a — a player discards cards they choose). A headless seat keeps
+//! (CR 701.9a — a player discards cards they choose). A headless seat keeps
 //! the old pick, the highest mana values (least castable), so two-player
 //! play is unchanged.
 

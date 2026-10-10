@@ -4864,7 +4864,7 @@ impl GameState {
     /// untapping — run even when the untap step is skipped (see `do_untap`).
     pub(crate) fn begin_turn_resets(&mut self) {
         let p = self.active_player_idx;
-        // CR 701.38 — goad lasts "until your next turn." When the goader's
+        // CR 701.15 — goad lasts "until your next turn." When the goader's
         // (= active player p's) turn begins, drop their goad on every
         // creature so the must-attack requirement lifts. CR 800.4m — a
         // departed goader's turn "would have begun" at this boundary, so

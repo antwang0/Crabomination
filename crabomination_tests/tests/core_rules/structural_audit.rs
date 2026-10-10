@@ -1413,7 +1413,7 @@ fn a_fan_out_player_ref_naming_one_seat_resolves_singularly() {
 ///
 /// ⚠ **The phrase table is the precision.** Only phrasings whose "may" is a
 /// resolution choice belong in it. "you may pay" (kicker / ward / multikicker
-/// reminder text), "you may search" (CR 701.19c — a hidden-zone search may
+/// reminder text), "you may search" (CR 701.23c — a hidden-zone search may
 /// always fail to find, so the engine's `Decision::SearchLibrary` already
 /// models it), "you may sacrifice" / "you may exile" / "you may return"
 /// (additional and alternative *costs*) and "you may mill" (dredge reminder

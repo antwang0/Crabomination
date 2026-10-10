@@ -21867,7 +21867,7 @@ impl GameState {
         // `ChooseTarget` and replay the activation with the pick. Bots,
         // multi-sacrifice (count > 1), and "no real choice" keep the
         // lowest-power auto-pick (so the activator keeps better creatures).
-        // CR 701.16 — a permanent that can't be sacrificed can't pay a
+        // CR 701.21 — a permanent that can't be sacrificed can't pay a
         // "Sacrifice this" cost (Assault Suit's equipped creature).
         if ability.sac_cost && !self.can_be_sacrificed(card_id) {
             return Err(GameError::SelectionRequirementViolated);
@@ -22330,7 +22330,7 @@ impl GameState {
         };
         // "Put a [filter] card exiled with this into its owner's graveyard:"
         // (Shelob) — a real cost, so no such card means no activation.
-        // CR 701.13b — "Mill N cards" can't be paid with fewer in the library.
+        // CR 701.17b — "Mill N cards" can't be paid with fewer in the library.
         if ability.mill_cost as usize > self.players[p].library.len() {
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -23503,7 +23503,7 @@ impl GameState {
                     // until the ability resolves (scoped in `resolve_stack_item`).
                     self.leaves_bf_lki.insert(card_id, snap);
                 }
-                // CR 701.16 — emit the sacrifice-specific event first.
+                // CR 701.21 — emit the sacrifice-specific event first.
                 events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id });
             } else if let Some(snap) = self.battlefield_find(card_id).cloned() {

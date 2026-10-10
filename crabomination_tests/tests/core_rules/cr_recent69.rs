@@ -1,7 +1,7 @@
 //! CR conformance for this run's engine work:
 //! - CR 705.2 — "each player flips a coin": one flip per seat, each seat's
 //!   own branch.
-//! - CR 701.19 — searching a zone: the multi-zone search, and the fact that a
+//! - CR 701.23 — searching a zone: the multi-zone search, and the fact that a
 //!   hand/graveyard-only search is not a library search at all.
 //! - CR 804.2 — the deploy creatures option.
 //! - CR 707.2 — "enters as a copy" now asks the controller which permanent.
@@ -72,7 +72,7 @@ fn cr_705_2_each_player_flips_their_own_coin() {
     assert!(g.battlefield_find(theirs).is_none(), "tails sacrificed");
 }
 
-// ── CR 701.19 — searching a zone ────────────────────────────────────────────
+// ── CR 701.23 — searching a zone ────────────────────────────────────────────
 
 /// A hand/graveyard/library search finds the card wherever it lives — here,
 /// in hand, a zone a plain `Search` would never see.
@@ -92,7 +92,7 @@ fn cr_701_19_multi_zone_search_reaches_the_hand() {
     assert!(!g.players[0].hand.iter().any(|c| c.id == scion));
 }
 
-/// CR 701.19a — a search that names no library is not a library search:
+/// CR 701.23a — a search that names no library is not a library search:
 /// Shadow of Doubt's "no player may search a library" doesn't stop it, and
 /// `searched_library_this_turn` stays clear.
 #[test]

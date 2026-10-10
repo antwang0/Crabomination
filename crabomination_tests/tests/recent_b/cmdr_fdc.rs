@@ -1696,7 +1696,7 @@ fn regal_sliver_crowns_then_pumps() {
     assert_eq!(pt(&g, r), (4, 4));
 }
 
-/// CR 701.38 — each Sliver of yours entering goads an opposing creature.
+/// CR 701.15 — each Sliver of yours entering goads an opposing creature.
 #[test]
 fn cr_701_38_taunting_sliver_goads_on_entry() {
     let mut g = main_phase();

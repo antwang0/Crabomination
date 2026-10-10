@@ -1203,7 +1203,7 @@ impl Effect {
             Effect::TapUpToValue { .. } => false,
             // CR 702.55 — the haunted creature is auto-picked at resolution.
             Effect::HauntCreature { .. } => false,
-            // CR 701.31 — voting is untargeted; choices happen at resolution.
+            // CR 701.38 — voting is untargeted; choices happen at resolution.
             Effect::WillOfTheCouncilExile { .. } => false,
             // CR 701.38 votes are untargeted; the chosen option's body may
             // target, but it's chosen at resolution.

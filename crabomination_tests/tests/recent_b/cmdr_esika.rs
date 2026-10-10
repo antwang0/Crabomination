@@ -113,7 +113,7 @@ fn garruk_relentless_becomes_veil_cursed() {
 }
 
 /// Jace, Vryn's Prodigy loots and, with five cards in the graveyard, comes
-/// back as Jace, Telepath Unbound (CR 701.28 — exiled and returned).
+/// back as Jace, Telepath Unbound (CR 701.27 — exiled and returned transformed).
 #[test]
 fn jace_flips_with_five_in_the_graveyard() {
     let mut g = main_phase();

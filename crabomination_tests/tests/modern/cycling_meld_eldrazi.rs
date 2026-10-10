@@ -551,7 +551,7 @@ fn meld_without_partner_is_noop() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Urza, Planeswalker"));
 }
 
-/// CR 701.37b — an opponent-owned partner can't meld ("you both own and
+/// CR 701.42b — an opponent-owned partner can't meld ("you both own and
 /// control").
 #[test]
 fn meld_requires_owning_both() {

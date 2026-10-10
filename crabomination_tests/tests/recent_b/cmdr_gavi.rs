@@ -225,7 +225,7 @@ fn tectonic_reformation_cycles_lands_into_badgersaur_treasure() {
     assert_eq!(g.battlefield_find(badger).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-/// CR 701.14 — a discarded noncreature, nonland card has Surly Badgersaur
+/// CR 701.9 — a discarded noncreature, nonland card has Surly Badgersaur
 /// fight up to one creature an opponent controls.
 #[test]
 fn surly_badgersaur_fights_on_a_spell_discard() {

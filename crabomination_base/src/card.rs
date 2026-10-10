@@ -2106,7 +2106,7 @@ pub enum Keyword {
     /// or a transient grant from a pump spell (Duel Tactics, Volley
     /// Veteran). Enforced inside `declare_blockers` — any blocker
     /// declaration involving a creature with this keyword is rejected.
-    /// CR 701.16 — "can't be sacrificed" (Assault Suit's equipped creature).
+    /// CR 701.21 — "can't be sacrificed" (Assault Suit's equipped creature).
     /// Read by the sacrifice funnels: effect candidates, `sacrifice_one`, and
     /// the activation-cost sacrifice walkers.
     CantBeSacrificed,
@@ -4834,7 +4834,7 @@ pub struct CardDefinition {
     /// the stack and can be responded to.
     #[serde(default)]
     pub as_enters_effect: Option<crate::effect::Effect>,
-    /// CR 701.28 — "As this permanent transforms into [this face], [effect]."
+    /// CR 701.27 — "As this permanent transforms into [this face], [effect]."
     /// Held on the *back* face and resolved inside the face swap, before the
     /// `Transformed` event, so nothing can happen between the flip and the
     /// effect (Sephiroth, One-Winged Angel's Super Nova emblem).
@@ -8456,7 +8456,7 @@ pub struct CardCold {
     /// Two colors chosen as this permanent entered (Tablet of the Guilds).
     /// Empty until an `Effect::ChooseTwoColorsForSource` stamps them.
     pub chosen_colors: Vec<crate::mana::Color>,
-    /// CR 701.38 — players who have goaded this creature. A goaded creature
+    /// CR 701.15 — players who have goaded this creature. A goaded creature
     /// attacks each combat if able and attacks a player other than a goader
     /// if able, until that goader's next turn. Each goader's entry is
     /// cleared when their turn begins (`do_untap`). Empty for the vast

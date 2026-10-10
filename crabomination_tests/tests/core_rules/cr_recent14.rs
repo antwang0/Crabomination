@@ -75,7 +75,7 @@ fn cr_615_indentured_oaf_prevents_only_red() {
     assert_eq!(g.battlefield_find(green).unwrap().damage, 2, "Oaf hits non-red");
 }
 
-/// CR 701.10 — exchanging control is permanent (no duration): Spawnbroker's
+/// CR 701.12 — exchanging control is permanent (no duration): Spawnbroker's
 /// swap sticks after the effect resolves.
 #[test]
 fn cr_701_10_exchange_control_is_permanent() {

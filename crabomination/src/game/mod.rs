@@ -3536,7 +3536,7 @@ pub struct GameState {
     pub acted_on_own_turn_mask: u64,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
-    /// CR 701.19 — "search for up to N cards" is one search: the picks
+    /// CR 701.23 — "search for up to N cards" is one search: the picks
     /// `SearchUpToN` runs share its prohibitions, tax and event. See
     /// `game/search_batch.rs`.
     #[serde(skip)]
@@ -11179,7 +11179,7 @@ impl GameState {
         counterer: usize,
         events: &mut Vec<crate::game::GameEvent>,
     ) {
-        // CR 701.5 — "a spell or ability you control counters a spell"
+        // CR 701.6 — "a spell or ability you control counters a spell"
         // (Lullmage Mentor) plus the Summoning Trap per-turn tally, both keyed
         // on the counterer rather than the countered spell's caster.
         events.push(crate::game::GameEvent::SpellCountered { card_id: card.id, player: counterer });
@@ -29117,7 +29117,7 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = vec![];
-                // CR 701.19c — a searched library is shuffled whether or not
+                // CR 701.23 — a searched library is shuffled whether or not
                 // anything was found (declines included). Shuffling first is
                 // safe: the pick is extracted by id below. Library
                 // destinations (Goblin Recruiter's "shuffle, then put them on
