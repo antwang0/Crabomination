@@ -10351,3 +10351,33 @@ pub const MYREL_EDHREC_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const BELAKOR_EDHREC_COMMANDERS: &[CardFactory] = &[belakor_the_dark_master];
+
+/// **Be'lakor, the Dark Master**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 83 nonbasic cards + 4 Islands + 5 Mountains + 7 Swamps = 99.
+/// Be'lakor, the Dark Master Demons (UBR): every Demon entering draws and pings off
+/// Be'lakor, Dream Devourer discounts the hand, Raphael and Balor punish the table.
+pub const BELAKOR_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, dimir_signet, heralds_horn, panharmonicon, rakdos_signet,
+    sol_ring, talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence,
+    urzas_incubator, whip_of_erebos, blood_crypt, bloodstained_mire, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard,
+    foreboding_ruins, luxury_suite, morphic_pool, path_of_ancestry, polluted_delta,
+    reliquary_tower, smoldering_marsh, steam_vents, sulfur_falls, sunken_hollow,
+    training_center, watery_grave, xanders_lounge, archfiend_of_depravity, archfiend_of_despair,
+    ardyn_the_usurper, balor, bloodcrusher_of_khorne, bloodletter_of_aclazotz, bloodthirster,
+    burning_rune_demon, chaos_defiler, dream_devourer, great_unclean_one, gyruda_doom_of_depths,
+    harvester_of_souls, herald_of_slaanesh, kardur_doomscourge, lord_xander_the_collector,
+    lord_of_change, plague_drone, rakdos_lord_of_riots, rakdos_patron_of_chaos,
+    rakdos_the_showstopper, raphael_fiendish_savior, roaming_throne, rune_scarred_demon,
+    sower_of_discord, varragoth_bloodsky_sire, vilis_broker_of_blood, heartless_summoning,
+    lilianas_contract, molten_echoes, reflections_of_littjara, unholy_annex_ritual_chamber,
+    warstorm_surge, bedevil, brainstorm, chaos_warp, counterspell, cyclonic_rift, dark_ritual,
+    essence_flux, ghostly_flicker, mana_drain, terminate, blasphemous_act, demonic_counsel,
+    demonic_tutor, feed_the_swarm, kindred_dominance, patriarchs_bidding, reanimate,
+    rite_of_replication,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
