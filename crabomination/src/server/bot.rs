@@ -3258,11 +3258,15 @@ impl Bot for HeuristicBot {
     /// of the same action (see [`Bot::next_action_settled`]).
     fn next_action_settled(&mut self, state: &GameState, seat: usize) -> Option<BotStep> {
         let step = state.with_frozen_layers(|state| self.next_action_inner(state, seat))?;
-        Some(if stacks_onto_own_activation(state, seat, &step.action) {
-            BotStep::plain(GameAction::PassPriority)
-        } else {
-            step
-        })
+        Some(
+            if stacks_onto_own_activation(state, seat, &step.action)
+                || super::loop_hazard::action_starts_loop(state, seat, &step, &self.weights)
+            {
+                BotStep::plain(GameAction::PassPriority)
+            } else {
+                step
+            },
+        )
     }
 }
 

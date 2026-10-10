@@ -135,9 +135,9 @@ pub(super) fn watch(state: &GameState, seat: usize) -> bool {
 }
 
 /// Passes per seat the resolution probe may spend.
-const PROBE_PASSES_PER_SEAT: usize = 48;
+const PROBE_PASSES_PER_SEAT: usize = 72;
 /// Board growth that, with the stack never draining, reads as a loop.
-const PROBE_GROWTH: usize = 16;
+const PROBE_GROWTH: usize = 24;
 
 /// What resolving a stack to empty showed.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -154,7 +154,7 @@ enum Probe {
 /// Resolve `g` in place with every seat passing and each ask answered by the
 /// asked seat's policy.
 fn resolve_probe(g: &mut GameState, w: &super::bot::EvalWeights) -> Probe {
-    let (board0, depth0) = (g.battlefield.len(), g.stack.len());
+    let board0 = g.battlefield.len();
     for _ in 0..PROBE_PASSES_PER_SEAT * g.players.len() {
         if g.is_game_over() {
             return if matches!(g.game_over, Some(None)) { Probe::Loop } else { Probe::Drained };
@@ -173,7 +173,9 @@ fn resolve_probe(g: &mut GameState, w: &super::bot::EvalWeights) -> Probe {
             return Probe::Unknown;
         }
     }
-    if g.stack.len() >= depth0 && g.battlefield.len() >= board0 + PROBE_GROWTH { Probe::Loop } else { Probe::Unknown }
+    // Not "no shallower than it began": a loop under a Room spell and two
+    // cast triggers settles at depth 2 below their 3 (seed 4600500 game 4).
+    if !g.stack.is_empty() && g.battlefield.len() >= board0 + PROBE_GROWTH { Probe::Loop } else { Probe::Unknown }
 }
 
 /// Resolve `post` (an action's settled state): a loop already running — Polyraptor cast beside Marauding Raptor, a Room door
@@ -230,6 +232,41 @@ pub(super) fn sets_up_loop(pre: &GameState, post: &GameState, seat: usize, w: &s
             }
         }
     }
+}
+
+/// The last gate on any pod action but a pass, an answer or a combat
+/// declaration: one that starts or primes a mandatory loop is declined. The
+/// finalist and Room pickers ask first; this catches the rest — Marina's
+/// door flip or a sink's activation priming Secret Arcade under Ghostly
+/// Dancers (seed 4600500).
+pub(super) fn action_starts_loop(
+    state: &GameState,
+    seat: usize,
+    step: &super::bot::BotStep,
+    w: &super::bot::EvalWeights,
+) -> bool {
+    if matches!(
+        step.action,
+        GameAction::PassPriority
+            | GameAction::SubmitDecision(_)
+            | GameAction::DeclareAttackers(_)
+            | GameAction::DeclareBlockers(_)
+    ) || !watch(state, seat)
+    {
+        return false;
+    }
+    let owned;
+    let post = match step.settled.as_deref() {
+        Some(g) => g,
+        None => match GameState::accept_on(state, step.action.clone()) {
+            Some(g) => {
+                owned = g;
+                &owned
+            }
+            None => return false,
+        },
+    };
+    starts_loop(state, post, seat) || sets_up_loop(state, post, seat, w)
 }
 
 /// Whether taking the action that settled `pre` into `post` starts (or sets
