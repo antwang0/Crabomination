@@ -3151,7 +3151,10 @@ audit pods       overflow profile + debug-assertions: seed 160002 (every deck x
                  `--a dflt` seed 162001 (4/6 seats x 10, 1,400 games). Finds:
                  1 OOM (mill-two-repeat), 3 aborts (meld shell, Herald's Horn
                  as-enters, counters sum overflow) — all fixed; undecided
-                 classified (CR 104.4b loops x6, Polyraptor x6, sim bounds x3)
+                 classified (CR 104.4b loops x6, Polyraptor x6, sim bounds x3);
+                 closing tip seed 163001: 8,820 games, 0 panics, 5 undecided
+                 (3 CR 104.4a simultaneous losses, Polyraptor, a token cap);
+                 `--bench` re-run there: byte-identical
 2-player         release, --a dflt --b dflt --seed 9301 x 300: cube 2,398 / 2
                  draws, sos 1,500 / 0, sealed 3,600 / 0; 0 panics
 suite            24,723 / 0 / 5 strict at the closing tip; workspace clippy 0
