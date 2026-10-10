@@ -2604,6 +2604,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ATREUS_KRATOS_COMMANDERS,
             main: decks::ATREUS_KRATOS_MAIN,
         },
+        // Seat 361: Kratos, God of War's EDHREC average deck. `--pod-decks 361`.
+        PodDeck {
+            name: "Kratos, God of War (R)",
+            commanders: decks::KRATOS_GOD_OF_WAR_COMMANDERS,
+            main: decks::KRATOS_GOD_OF_WAR_MAIN,
+        },
     ]
 }
 
@@ -4681,6 +4687,7 @@ mod tests {
             ("Arna Kennerüd, Skycaptain", [0x0A8C, 358, 9283]),
             ("Terra, Magical Adept", [0x0A8D, 359, 9284]),
             ("Atreus, Impulsive Son", [0x0A8E, 360, 9285]),
+            ("Kratos, God of War", [0x0A8F, 361, 9286]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

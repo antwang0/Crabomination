@@ -10533,3 +10533,33 @@ pub const ATREUS_KRATOS_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, mountain,
     mountain, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const KRATOS_GOD_OF_WAR_COMMANDERS: &[CardFactory] = &[kratos_god_of_war];
+
+/// **Kratos, God of War**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Kratos, God of War (R) Warriors and forced attacks: every creature has haste, and Kratos
+/// burns each player for every creature that sat the turn out.
+pub const KRATOS_GOD_OF_WAR_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, commanders_plate, crawlspace, dolmen_gate,
+    lightning_greaves, mithril_coat, mjolnir_storm_hammer, ruby_medallion, shadowspear,
+    sol_ring, swiftfoot_boots, sword_of_the_animist, the_reaver_cleaver, throne_of_eldraine,
+    arena_of_glory, nykthos_shrine_to_nyx, rogues_passage, tyrite_sanctum,
+    valakut_the_molten_pinnacle, war_room, alexios_deimos_of_kosmos, archetype_of_aggression,
+    clive_ifrits_dominant, combat_celebrant, etali_primal_storm, fiendish_duo,
+    frontier_warmonger, gornog_the_red_reaper, grenzo_havoc_raiser, karlach_fury_of_avernus,
+    kazuul_tyrant_of_the_cliffs, kediss_emberclaw_familiar, knuckles_the_echidna,
+    neheb_the_eternal, professional_face_breaker, ragavan_nimble_pilferer, silent_arbiter,
+    solphim_mayhem_dominus, spider_punk, torbran_thane_of_red_fell, twinflame_tyrant,
+    urabrask_the_hidden, varchild_betrayer_of_kjeldor, city_on_fire, curse_of_opulence,
+    fiery_emancipation, gratuitous_violence, maximum_carnage, pyrohemia, sulfuric_vortex,
+    uphill_battle, abrade, big_score, chaos_warp, deflecting_swat, lightning_bolt,
+    return_the_favor, seething_song, thrill_of_possibility, untimely_malfunction,
+    blasphemous_act, disrupt_decorum, faithless_looting, gamble, jeskas_will, mana_geyser,
+    rite_of_flame, vandalblast, world_at_war,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
