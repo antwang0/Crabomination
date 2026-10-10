@@ -10381,3 +10381,32 @@ pub const BELAKOR_EDHREC_MAIN: &[CardFactory] = &[
     island, island, island, island, mountain, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+
+pub const ANTI_VENOM_EDHREC_COMMANDERS: &[CardFactory] = &[anti_venom_horrifying_healer];
+
+/// **Anti-Venom, Horrifying Healer**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Anti-Venom, Horrifying Healer damage soak (W): redirect the table's damage onto a
+/// commander that turns it into +1/+1 counters (Pariah, Saving Grace, Martyrdom).
+pub const ANTI_VENOM_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, basilisk_collar, buster_sword, champions_helm,
+    commanders_plate, dawnsire_sunstar_dreadnought, haunted_cloak, inquisitors_flail,
+    marble_diamond, mithril_coat, nemesis_mask, pariahs_shield, pearl_medallion, shadowspear,
+    sol_ring, swiftfoot_boots, the_ozolith, eiganjo_seat_of_the_empire, emeria_the_sky_ruin,
+    hall_of_heliods_generosity, ishgard_the_holy_see, nykthos_shrine_to_nyx, rogues_passage,
+    war_room, bastion_protector, codsworth_handy_helper, danitha_capashen, esper_sentinel,
+    giver_of_runes, gold_myr, grand_abolisher, knight_of_the_white_orchid,
+    loran_of_the_third_path, mangara_the_diplomat, mother_of_runes, phyrexian_vindicator,
+    puresteel_paladin, solemn_simulacrum, spectacular_spider_man, sram_senior_edificer,
+    stoneforge_mystic, stuffy_doll, sun_titan, brave_the_sands, entangler, ghostly_prison,
+    guilty_conscience, land_tax, pariah, saving_grace, sigardas_aid, smothering_tithe,
+    super_state, with_great_power, enlightened_tutor, generous_gift, gideons_sacrifice,
+    martyrdom, path_to_exile, rebuff_the_wicked, reprieve, restoration_magic,
+    stroke_of_midnight, swords_to_plowshares, valor_made_real, open_the_armory, ravnica_at_war,
+    repentance, steelshapers_gift, wave_of_reckoning,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];

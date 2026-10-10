@@ -2573,6 +2573,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BELAKOR_EDHREC_COMMANDERS,
             main: decks::BELAKOR_EDHREC_MAIN,
         },
+        // Seat 356: Anti-Venom, Horrifying Healer's EDHREC average deck.
+        // `--pod-decks 356`.
+        PodDeck {
+            name: "Anti-Venom, Horrifying Healer (W)",
+            commanders: decks::ANTI_VENOM_EDHREC_COMMANDERS,
+            main: decks::ANTI_VENOM_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4645,6 +4652,7 @@ mod tests {
             ("Rakdos, Lord of Riots", [0x0A87, 353, 9278]),
             ("Myrel, Shield of Argive", [0x0A88, 354, 9279]),
             ("Be'lakor, the Dark Master", [0x0A89, 355, 9280]),
+            ("Anti-Venom, Horrifying Healer", [0x0A8A, 356, 9281]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
