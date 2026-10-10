@@ -4687,8 +4687,8 @@ pub fn malamet_war_scribe() -> CardDefinition {
 }
 
 /// In the Presence of Ages — {2}{G} Instant. Reveal the top four cards; put a
-/// creature and/or a land from among them into your hand, rest to graveyard.
-/// (Modeled as taking up to two of the matching cards.)
+/// creature and/or a land from among them into your hand, rest to graveyard
+/// (`one_each`: at most one of each).
 pub fn in_the_presence_of_ages() -> CardDefinition {
     CardDefinition {
         name: "In the Presence of Ages",
@@ -4700,8 +4700,9 @@ pub fn in_the_presence_of_ages() -> CardDefinition {
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
             take: Some(Value::Const(2)),
-    ..Default::default()
-})),
+            one_each: vec![SelectionRequirement::Creature, SelectionRequirement::Land],
+            ..Default::default()
+        })),
         ..Default::default()
     }
 }

@@ -1017,6 +1017,7 @@ fn card_has_draw_static(c: &CardInstance) -> bool {
                 | S::MayReplaceDrawWithRevealUntilKind
                 | S::ReplaceDrawWithLookN { .. }
                 | S::ReplaceDrawWithImpulse { .. }
+                | S::ReplaceDrawWithExileFaceDownWithSource
                 | S::ChainsOfMephistopheles
                 | S::EmptyHandDrawBonus { .. }
                 | S::DrawsRevealedTaxed { .. }

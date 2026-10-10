@@ -664,6 +664,9 @@ pub enum StaticEffect {
     /// — a value-scaled controller-wide reduction (Rakdos, Lord of Riots
     /// reads the life your opponents have lost this turn). Generic-only.
     CostReductionByValue { filter: SelectionRequirement, amount: crate::effect::Value },
+    /// "Spells you cast cost {1} less to cast for each card type they share
+    /// with cards exiled with this creature" (Cemetery Prowler; CR 601.2f).
+    CostReductionPerTypeSharedWithExiled,
     /// Generic cost reduction equal to the source permanent's computed power,
     /// for spells matching `filter` (Golden-Tail Trainer — "Aura and Equipment
     /// spells you cast cost {X} less, where X is this creature's power").
@@ -3012,6 +3015,11 @@ pub enum StaticEffect {
     /// your library instead. You may play those cards this turn" (Eruth,
     /// Tormented Prophet).
     ReplaceDrawWithImpulse { count: u32 },
+    /// CR 121.2a — "If you would draw a card, exile the top card of your
+    /// library face down instead", the card exiled with the source (Asmodeus
+    /// the Archfiend's Binding Contract; `Selector::CardExiledWithSource`
+    /// cashes them in). Mandatory; an empty library exiles nothing.
+    ReplaceDrawWithExileFaceDownWithSource,
     /// CR 121.2a — "If a player would draw a card, instead they draw a card
     /// and reveal it. If it matches `filter`, that player discards it unless
     /// they pay `life` life" (Breathstealer's Crypt). Global.
@@ -3057,6 +3065,11 @@ pub enum StaticEffect {
     /// time by `GameState::named_token_replacement`, which also peels a Class
     /// level gate.
     TokenNamedBecomes { name: String, into: crate::card::TokenDefinition },
+    /// CR 614.1a — "If you would create a [name] token, instead create a
+    /// [name] token and [also]" (Bilbo, Fellow Conspirator's Food → Food +
+    /// Treasure). Applied at the mint funnel; the extra isn't re-replaced
+    /// (CR 614.5).
+    TokenNamedAlsoMints { name: String, also: crate::card::TokenDefinition },
     /// CR 508.1a — Mystic Barrier: "Each player may attack only the nearest
     /// opponent in the last chosen direction and planeswalkers controlled by
     /// that opponent." The direction is the source's `Effect::

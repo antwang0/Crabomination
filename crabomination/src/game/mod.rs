@@ -10996,6 +10996,18 @@ impl GameState {
             }
             self.in_token_replacement = false;
         }
+        // CR 614.1a — Bilbo: a named mint also mints another token; the
+        // extra isn't re-replaced (CR 614.5).
+        if !self.in_token_replacement {
+            let extras = self.named_token_extras(ctrl, minted_name);
+            if !extras.is_empty() {
+                self.in_token_replacement = true;
+                for extra in extras {
+                    self.mint_token_onto_battlefield(crabomination_base::tokens::token_card_arc(&extra), ctrl, tapped, events);
+                }
+                self.in_token_replacement = false;
+            }
+        }
         id
     }
 
@@ -21857,6 +21869,23 @@ impl GameState {
         })
     }
 
+    /// CR 121.2a — the source of the exile-face-down draw replacement `p`
+    /// controls (Asmodeus the Archfiend).
+    fn exile_with_source_instead_of_drawing(&self, p: usize) -> Option<CardId> {
+        self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::ReplaceDrawWithExileFaceDownWithSource)
+                    )
+                })
+                .then_some(c.id)
+        })
+    }
+
     /// True while `seat`'s library top is public because a one-shot effect
     /// revealed it (Aven Windreader) — the reveal lasts only as long as that
     /// card stays on top.
@@ -22092,6 +22121,9 @@ impl GameState {
             }
             if self.impulse_instead_of_drawing(p).is_some() {
                 applicable.push(DrawDig::Impulse);
+            }
+            if self.exile_with_source_instead_of_drawing(p).is_some() {
+                applicable.push(DrawDig::ExileWithSource);
             }
             if self.player_may_tutor_instead_of_drawing(p) {
                 applicable.push(DrawDig::Tutor);
@@ -22434,6 +22466,28 @@ impl GameState {
                         max_mana_value: None,
                         pay_own_cost: true,
                         uncast_penalty: None,
+                    },
+                    &ctx,
+                ) {
+                    events.append(&mut evs);
+                }
+                true
+            }
+            // Asmodeus — "exile the top card of your library face down
+            // instead", exiled with Asmodeus. Mandatory; an empty library
+            // replaces the draw with nothing (no CR 104.3c loss).
+            DrawDig::ExileWithSource => {
+                let Some(src) = self.exile_with_source_instead_of_drawing(p) else { return false };
+                let ctx = crate::game::effects::EffectContext::for_ability(src, p, None);
+                if let Ok(mut evs) = self.resolve_effect_driven(
+                    &crate::effect::Effect::ExileFaceDown {
+                        body: Box::new(crate::effect::Effect::Move {
+                            what: crate::effect::Selector::TopOfLibrary {
+                                who: crate::effect::PlayerRef::Seat(p),
+                                count: crate::effect::Value::ONE,
+                            },
+                            to: crate::effect::ZoneDest::ExileWithSourceStamp,
+                        }),
                     },
                     &ctx,
                 ) {
@@ -29067,7 +29121,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, rest_on_top, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, source } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, rest_on_top, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, one_each, source } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -29079,11 +29133,32 @@ impl GameState {
                 // the remaining eligible revealed cards (AutoDecider /
                 // empty pick keeps the top-down fill).
                 let mut picks: Vec<CardId> = Vec::with_capacity(take);
+                // `one_each` — the categories each revealed card can fill; a
+                // pick is kept only while the picks still fill distinct ones.
+                let category_mask = |id: CardId| -> u32 {
+                    one_each.iter().enumerate().fold(0, |m, (i, f)| {
+                        let hit = self.evaluate_requirement_static(f, &crate::game::types::Target::Permanent(id), player, source);
+                        if hit { m | (1 << i) } else { m }
+                    })
+                };
+                let mut masks: Vec<u32> = Vec::new();
+                let mut fits = |id: CardId| -> bool {
+                    if one_each.is_empty() {
+                        return true;
+                    }
+                    masks.push(category_mask(id));
+                    let ok = crate::game::effects::distinct_categories(&masks, 0);
+                    if !ok {
+                        masks.pop();
+                    }
+                    ok
+                };
                 match answer {
                     DecisionAnswer::Search(chosen_id) => {
                         if let Some(id) = *chosen_id
                             && revealed.contains(&id)
                             && is_eligible(&id)
+                            && fits(id)
                         {
                             picks.push(id);
                         }
@@ -29093,7 +29168,7 @@ impl GameState {
                             if picks.len() >= take {
                                 break;
                             }
-                            if revealed.contains(id) && is_eligible(id) && !picks.contains(id) {
+                            if revealed.contains(id) && is_eligible(id) && !picks.contains(id) && fits(*id) {
                                 picks.push(*id);
                             }
                         }
@@ -29112,7 +29187,7 @@ impl GameState {
                         if picks.len() >= take {
                             break;
                         }
-                        if is_eligible(&id) && !picks.contains(&id) {
+                        if is_eligible(&id) && !picks.contains(&id) && fits(id) {
                             picks.push(id);
                         }
                     }
@@ -33699,6 +33774,7 @@ fn static_effect_to_effects(
             // Read at the untap step's stun replacement.
             | StaticEffect::OpponentsStunCountersStay
             | StaticEffect::TokenNamedBecomes { .. }
+            | StaticEffect::TokenNamedAlsoMints { .. }
             // Read at `attack_left_right_defender` (Mystic Barrier).
             | StaticEffect::AttackOnlyNearestOpponentInChosenDirection
             | StaticEffect::TokenCreationAddsTokenPerToken { .. }
@@ -34016,6 +34092,7 @@ fn static_effect_to_effects(
             // CostReductionByValue (Rakdos) — read in `extra_cost_for_spell`;
             // no layer effect.
             | StaticEffect::CostReductionByValue { .. }
+            | StaticEffect::CostReductionPerTypeSharedWithExiled
             | StaticEffect::UntapAllYoursEachUntapStep
             // UntapYoursEachUntapStepFiltered (Prophet of Kruphix) — consulted
             // by `do_untap`; no layer effect.
@@ -34073,6 +34150,7 @@ fn static_effect_to_effects(
             // `draw_one`; no layer effect.
             | StaticEffect::ReplaceDrawWithLookN { .. }
             | StaticEffect::ReplaceDrawWithImpulse { .. }
+            | StaticEffect::ReplaceDrawWithExileFaceDownWithSource
             | StaticEffect::DrawsRevealedTaxed { .. }
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
             // layer effect.
@@ -35286,6 +35364,8 @@ pub(crate) enum DrawDig {
     LookN,
     /// Eruth, Tormented Prophet — exile the top N, playable this turn.
     Impulse,
+    /// Asmodeus the Archfiend — exile the top card face down with it.
+    ExileWithSource,
     /// Archmage Ascension — search your library instead.
     Tutor,
     /// Abundance — reveal until a land/nonland of your choice.
@@ -35300,6 +35380,7 @@ impl DrawDig {
             DrawDig::ExilePile => "Take the top card of your exiled pile",
             DrawDig::LookN => "Look at the top cards and keep one",
             DrawDig::Impulse => "Exile the top cards and play them this turn",
+            DrawDig::ExileWithSource => "Exile the top card face down",
             DrawDig::Tutor => "Search your library for a card",
             DrawDig::RevealUntilKind => "Reveal until a land or nonland card",
             DrawDig::CounterOnSource => "Put a counter on it instead",

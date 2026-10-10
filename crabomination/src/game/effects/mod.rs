@@ -337,6 +337,22 @@ pub(crate) fn map_effect_duration(
     }
 }
 
+/// True when each of `masks` (one per pick, a bit per category it fits) can
+/// take a distinct category not in `used` — `LookPick::one_each`'s "a
+/// creature card and/or a land card". Backtracking; the lists are tiny.
+pub(crate) fn distinct_categories(masks: &[u32], used: u32) -> bool {
+    let Some((&first, rest)) = masks.split_first() else { return true };
+    let mut free = first & !used;
+    while free != 0 {
+        let bit = free & free.wrapping_neg();
+        if distinct_categories(rest, used | bit) {
+            return true;
+        }
+        free &= !bit;
+    }
+    false
+}
+
 /// The basic land type that produces `c`. Basics map 1:1 onto colours, which is
 /// why every "choose a basic land type" rides `Decision::ChooseColor`; four
 /// sites spelled this table out by hand.
@@ -27129,6 +27145,7 @@ impl GameState {
                     then_if_not_picked,
                     picked_matching_to_battlefield,
                     battlefield_haste,
+                    one_each,
                 } = &**lp;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -27218,6 +27235,7 @@ impl GameState {
                     then_if_not_picked: then_if_not_picked.clone(),
                     picked_matching_to_battlefield: picked_matching_to_battlefield.clone(),
                     battlefield_haste: *battlefield_haste,
+                    one_each: one_each.clone(),
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -27289,6 +27307,7 @@ impl GameState {
                     then_if_not_picked: None,
                     picked_matching_to_battlefield: None,
                     battlefield_haste: false,
+                    one_each: Vec::new(),
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -27343,6 +27362,7 @@ impl GameState {
                     then_if_not_picked: None,
                     picked_matching_to_battlefield: None,
                     battlefield_haste: false,
+                    one_each: Vec::new(),
                     source: ctx.source,
                 };
                 if self.seat_prompts(p) {
@@ -36187,7 +36207,9 @@ impl GameState {
                 self.secret_council_permanent_vote(filter, on_most, Some(on_none), effect, ctx, events)
             }
 
-            Effect::CopySpellAsOneOneSpirit { what } | Effect::CopySpellNotLegendary { what } => {
+            Effect::CopySpellAsOneOneSpirit { what }
+            | Effect::CopySpellNotLegendary { what }
+            | Effect::CopySpellAddingTypes { what, .. } => {
                 let ids: Vec<CardId> = match what {
                     Selector::TriggerSource => ctx
                         .trigger_source
@@ -36210,6 +36232,8 @@ impl GameState {
                 for cid in ids {
                     if spirit {
                         self.copy_spell_as_one_one_spirit(cid, events);
+                    } else if let Effect::CopySpellAddingTypes { types, .. } = effect {
+                        self.copy_spell_adding_types(cid, ctx.controller, types, events);
                     } else {
                         self.copy_spell_not_legendary(cid, ctx.controller, events);
                     }

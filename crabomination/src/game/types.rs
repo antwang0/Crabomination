@@ -2314,6 +2314,9 @@ pub enum PendingEffectState {
         /// Battlefield-routed picks gain haste until end of turn (Break Out).
         #[serde(default)]
         battlefield_haste: bool,
+        /// `LookPick::one_each` — each pick fills a distinct filter.
+        #[serde(default)]
+        one_each: Vec<crate::card::SelectionRequirement>,
         /// Source of the originating `LookPickToHand`, for `then_if_picked`.
         #[serde(default)]
         source: Option<CardId>,

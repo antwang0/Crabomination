@@ -9833,6 +9833,10 @@ pub enum Effect {
     /// the spell is legendary" (Double Major); the token it resolves into
     /// keeps the exception.
     CopySpellNotLegendary { what: Selector },
+    /// CR 707.9b — copy the spell `what` once, "except the copy is [types] in
+    /// addition to its other types" (Tawnos, the Toymaker's artifact copy);
+    /// the token it resolves into keeps the exception.
+    CopySpellAddingTypes { what: Selector, types: Vec<crate::card::CardType> },
     /// CR 701.50 — each permanent `what` names connives `amount`: its
     /// controller draws that many, discards that many, and it gets a +1/+1
     /// counter per nonland card discarded *this way* (Kamiz, Change of
@@ -13498,6 +13502,11 @@ pub struct LookPick {
     /// (Break Out).
     #[serde(default)]
     pub battlefield_haste: bool,
+    /// "A creature card and/or a land card" (Ojer Kaslem, In the Presence of
+    /// Ages): each pick fills a distinct category, so `take` is at most one
+    /// card per filter. Empty = no per-category limit.
+    #[serde(default)]
+    pub one_each: Vec<SelectionRequirement>,
 }
 
 impl Default for LookPick {
@@ -13520,6 +13529,7 @@ impl Default for LookPick {
             rest_on_top: false,
             picked_matching_to_battlefield: None,
             battlefield_haste: false,
+            one_each: Vec::new(),
         }
     }
 }
@@ -13696,6 +13706,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::CostReduction { .. }
         | SE::CostReductionBySourcePower { .. }
         | SE::CostReductionByValue { .. }
+        | SE::CostReductionPerTypeSharedWithExiled
         | SE::CostReductionDuringOpponentsTurn { .. }
         | SE::CostReductionFirstCreatureSpell { .. }
         | SE::CostReductionFirstInstantOrSorcery { .. }

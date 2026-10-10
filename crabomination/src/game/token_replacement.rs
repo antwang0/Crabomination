@@ -104,6 +104,21 @@ impl GameState {
         }
     }
 
+    /// CR 614.1a — the extra tokens a `name` mint also creates under `ctrl`
+    /// (Bilbo, Fellow Conspirator's Treasure beside each Food). Empty, and
+    /// unallocated, when nothing applies.
+    pub(crate) fn named_token_extras(&self, ctrl: usize, name: &str) -> Vec<crate::card::TokenDefinition> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == ctrl)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::TokenNamedAlsoMints { name: n, also } if n == name => Some(also.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// The token `ctrl` gets instead of `def` under a `TokenNamedBecomes`
     /// static they control (a Class's gated level counts only once reached).
     /// Chained, since a Shark made in place of a Fish is then a Shark being

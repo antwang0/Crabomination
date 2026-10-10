@@ -2250,6 +2250,17 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     ctx.trigger_source = Some(crate::game::effects::EntityRef::Card(card.id));
                     reduction += state.evaluate_value(amount, &ctx).max(0) as u32;
                 }
+                StaticEffect::CostReductionPerTypeSharedWithExiled if src.controller == caster => {
+                    let linked = |c: &CardInstance| {
+                        c.exiled_with == Some(src.id) || c.exiled_by.as_ref().is_some_and(|l| l.source == src.id)
+                    };
+                    reduction += card
+                        .definition
+                        .card_types
+                        .iter()
+                        .filter(|t| state.exile.iter().any(|c| linked(c) && c.definition.card_types.contains(t)))
+                        .count() as u32;
+                }
                 StaticEffect::FirstMatchingSpellEachTurnCostsLessPerCounter { filter, kind }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster)
