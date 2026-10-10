@@ -196,6 +196,10 @@ the handoff.
   reveal-until-creature finding Polyraptor — 188001, decks 74/268/82 game 28)
   has no pick to decline, and the watch doesn't read libraries: extending it
   there turns the probe on for most pods, for one game in ~10,000.
+- **Plain sweep** 188001 (9,450 games, the tip with every fix above): 0
+  aborts; 4 undecided — the forced-reveal Polyraptor above, a simultaneous
+  loss, and two token board caps from seat 354 (Myrel, Shield of Argive: X
+  Soldiers per attack, X = Soldiers you control, doubles each swing).
 
 ## FIXED/OPEN 2026-10-10 (seventeenth Commander run, `017yfeX4`) — eight EDHREC seats, eleven primitives, the CR 601.2c census
 
