@@ -10172,3 +10172,62 @@ pub const NIKO_EDHREC_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const SYR_GWYN_EDHREC_COMMANDERS: &[CardFactory] = &[syr_gwyn_hero_of_ashvale];
+
+/// **Syr Gwyn, Hero of Ashvale**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 84 nonbasic cards + 4 Mountains + 7 Plains + 4 Swamps = 99.
+/// Syr Gwyn, Hero of Ashvale Knights and Equipment (RWB): equip costs paid in nothing,
+/// every attacking equipped creature draws a card, Knights pile on gear.
+pub const SYR_GWYN_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, argentum_armor, blackblade_reforged, boros_signet, colossus_hammer,
+    embercleave, hammer_of_nazahn, kaldra_compleat, lightning_greaves, loxodon_warhammer,
+    masterwork_of_ingenuity, orzhov_signet, shadowspear, sol_ring, sunforger, swiftfoot_boots,
+    sword_of_feast_and_famine, sword_of_fire_and_ice, sword_of_hearth_and_home,
+    sword_of_vengeance, sword_of_the_animist, talisman_of_conviction, talisman_of_hierarchy,
+    the_circle_of_loyalty, the_reaver_cleaver, arid_mesa, axgard_armory, battlefield_forge,
+    blood_crypt, caves_of_koilos, clifftop_retreat, command_tower, dragonskull_summit,
+    evolving_wilds, exotic_orchard, godless_shrine, isolated_chapel, nomad_outpost,
+    path_of_ancestry, rogues_passage, sacred_foundry, savai_triome, spectator_seating,
+    tournament_grounds, vault_of_champions, acclaimed_contender, akiri_fearless_voyager,
+    armored_skyhunter, aryel_knight_of_windgrace, balan_wandering_knight, danitha_capashen,
+    danitha_benalias_hope, dion_bahamuts_dominant, fervent_champion, freya_crescent,
+    guardian_of_faith, inspiring_veteran, kinsbaile_cavalier, knight_exemplar,
+    knight_of_the_white_orchid, leonin_shikari, merry_esquire_of_rohan, murderous_rider,
+    puresteel_paladin, sram_senior_edificer, stoneforge_mystic, valiant_knight,
+    wintermoor_commander, fighter_class, forge_anew, knights_charge, sigardas_aid, akromas_will,
+    anguished_unmaking, boros_charm, despark, mortify, path_to_exile, swords_to_plowshares,
+    blasphemous_act, open_the_armory, ruinous_ultimatum, single_combat, steelshapers_gift,
+    // Basics
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp,
+];
+
+pub const KASTRAL_EDHREC_COMMANDERS: &[CardFactory] = &[kastral_the_windcrested];
+
+/// **Kastral, the Windcrested**'s EDHREC average deck (fetched 2026-10-10), card for card:
+/// 79 nonbasic cards + 10 Islands + 10 Plains = 99.
+/// Kastral, the Windcrested Birds (WU): a flock of fliers connects, each hit brings back a
+/// Bird, pumps the flock or draws.
+pub const KASTRAL_EDHREC_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, bident_of_thassa, heralds_horn, patchwork_banner, sol_ring,
+    swiftfoot_boots, talisman_of_progress, thought_vessel, adarkar_wastes, command_tower,
+    deserted_beach, glacial_fortress, hallowed_fountain, lilypad_village, lupinflower_village,
+    path_of_ancestry, port_town, prairie_stream, reliquary_tower, restless_anchorage,
+    skycloud_expanse, temple_of_enlightenment, aerial_extortionist, aven_interrupter,
+    aven_mindcensor, battlefield_raptor, cartographers_hawk, empyrean_eagle,
+    esior_wardwing_familiar, gwaihir_the_windlord, harrier_strix, healers_hawk,
+    ishai_ojutai_dragonspeaker, jackdaw_savior, jubilant_skybonder, judges_familiar,
+    kangees_lieutenant, kangee_sky_warden, ledger_shredder, lifecreed_duo, mockingbird,
+    plumecreed_escort, scouting_hawk, senu_keen_eyed_protector, sephara_skys_blade,
+    shrike_force, skycat_sovereign, steel_plume_marshal, stormscape_familiar,
+    the_lord_of_the_eagles, thrummingbird, warden_of_evos_isle, watcher_of_the_spheres,
+    wingmate_roc, favorable_winds, gravitational_shift, kindred_discovery, murmuration,
+    reconnaissance_mission, reflections_of_littjara, soulcatchers_aerie, counterspell,
+    dawns_truce, dazzling_denial, generous_gift, lofty_denial, path_to_exile, perch_protection,
+    rally_of_wings, swan_song, swords_to_plowshares, the_eagles_are_coming, airborne_aid,
+    battle_screech, distant_melody, migratory_route, raise_the_palisade, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

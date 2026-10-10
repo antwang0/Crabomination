@@ -2525,6 +2525,20 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NIKO_EDHREC_COMMANDERS,
             main: decks::NIKO_EDHREC_MAIN,
         },
+        // Seat 349: Syr Gwyn, Hero of Ashvale's EDHREC average deck.
+        // `--pod-decks 349`.
+        PodDeck {
+            name: "Syr Gwyn, Hero of Ashvale (RWB)",
+            commanders: decks::SYR_GWYN_EDHREC_COMMANDERS,
+            main: decks::SYR_GWYN_EDHREC_MAIN,
+        },
+        // Seat 350: Kastral, the Windcrested's EDHREC average deck.
+        // `--pod-decks 350`.
+        PodDeck {
+            name: "Kastral, the Windcrested (WU)",
+            commanders: decks::KASTRAL_EDHREC_COMMANDERS,
+            main: decks::KASTRAL_EDHREC_MAIN,
+        },
     ]
 }
 
@@ -4554,6 +4568,8 @@ mod tests {
             ("Athreos, God of Passage", [0x0A80, 346, 9271]),
             ("Ketramose, the New Dawn", [0x0A81, 347, 9272]),
             ("Niko, Light of Hope", [0x0A82, 348, 9273]),
+            ("Syr Gwyn, Hero of Ashvale", [0x0A83, 349, 9274]),
+            ("Kastral, the Windcrested", [0x0A84, 350, 9275]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
