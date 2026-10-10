@@ -1343,7 +1343,7 @@ fn saga(g: &mut GameState, def: crabomination::card::CardDefinition) -> CardId {
 }
 
 /// Tom Bombadil (Terra's list): four lore counters among your Sagas give him
-/// hexproof and indestructible; a Saga's final chapter (CR 714.2c) digs up the
+/// hexproof and indestructible; a Saga's final chapter (CR 714.2e) digs up the
 /// next Saga, once each turn.
 #[test]
 fn tom_bombadil_chains_sagas_once_a_turn() {
@@ -1420,21 +1420,19 @@ fn the_kami_war_becomes_o_kagachi() {
     assert_eq!(g.computed_permanent(war).unwrap().power, 9);
 }
 
-/// Moonmist (Terra's list): Humans transform (a modal DFC can't, CR
-/// 701.27c), and only Werewolves and Wolves deal combat damage (CR 615).
+/// Moonmist (Terra's list): Humans transform (CR 701.27c: a single-faced
+/// one doesn't), and only Werewolves and Wolves deal combat damage (CR 615).
 #[test]
 fn moonmist_transforms_humans_and_fogs_the_rest() {
     let mut g = pod(2);
     let delver = ready(&mut g, 0, catalog::delver_of_secrets());
-    let esika = ready(&mut g, 0, catalog::esika_god_of_the_tree());
+    let human = ready(&mut g, 0, catalog::elite_vanguard());
     let bear = ready(&mut g, 0, catalog::grizzly_bears());
     let mist = g.add_card_to_hand(0, catalog::moonmist());
     flood(&mut g);
     cast_x(&mut g, mist, None);
     assert!(g.battlefield_find(delver).unwrap().transformed, "Delver is a Human");
-    let mut events = vec![];
-    g.transform_permanent(esika, &mut events);
-    assert!(!g.battlefield_find(esika).unwrap().transformed, "a modal DFC doesn't transform");
+    assert!(!g.battlefield_find(human).unwrap().transformed);
     let life = g.players[1].life;
     connect(&mut g, bear);
     assert_eq!(g.players[1].life, life, "the Bear's damage was prevented");
@@ -1765,4 +1763,118 @@ fn rhythm_of_the_wild_protects_only_its_controllers_creatures() {
     .expect("counterspell");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "countered");
+}
+
+/// Eddie Brock (Eddie's list): the ETB reanimates a mana value 1 creature;
+/// {3}{B}{R}{G} transforms him, and Venom's attack trades a creature for X
+/// cards and a permanent of mana value X or less from hand.
+#[test]
+fn eddie_brock_becomes_venom() {
+    let mut g = pod(2);
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let eddie = g.add_card_to_hand(0, catalog::eddie_brock());
+    flood(&mut g);
+    cast_x(&mut g, eddie, None);
+    assert!(g.battlefield_find(elf).is_some(), "mana value 1 came back");
+    g.clear_sickness(eddie);
+    activate(&mut g, eddie, 0);
+    assert_eq!(g.battlefield_find(eddie).unwrap().definition.name, "Venom, Lethal Protector");
+    let ogre = ready(&mut g, 0, catalog::gray_ogre());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.clear_sickness(eddie);
+    let hand = g.players[0].hand.len();
+    declare(&mut g, &[(eddie, 1)]);
+    let sacrificed = g.battlefield_find(ogre).is_none() || g.battlefield_find(elf).is_none();
+    assert!(sacrificed);
+    assert!(g.players[0].hand.len() + usize::from(g.battlefield_find(bears).is_some()) > hand, "drew");
+}
+
+/// Carnage, Crimson Chaos (Eddie's list): the reanimated creature must attack
+/// and is sacrificed once it connects.
+#[test]
+fn carnage_returns_a_suicidal_attacker() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let ogre = g.add_card_to_graveyard(0, catalog::gray_ogre());
+    let carnage = g.add_card_to_hand(0, catalog::carnage_crimson_chaos());
+    flood(&mut g);
+    cast_x(&mut g, carnage, None);
+    assert!(g.computed_permanent(ogre).unwrap().keywords().contains(&Keyword::MustAttack));
+    g.clear_sickness(ogre);
+    connect(&mut g, ogre);
+    assert!(g.battlefield_find(ogre).is_none(), "sacrificed after connecting");
+}
+
+/// Gwenom, Remorseless (Eddie's list): attacking opens the library top for
+/// the turn, paying life instead of mana (CR 401.6).
+#[test]
+fn gwenom_plays_off_the_top_for_life() {
+    let mut g = pod(2);
+    let gwenom = ready(&mut g, 0, catalog::gwenom_remorseless());
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    declare(&mut g, &[(gwenom, 1)]);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    g.players[0].mana_pool = Default::default();
+    let life = g.players[0].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast off the top");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).is_some());
+    assert_eq!(g.players[0].life, life - 2, "two life for a mana value 2 spell");
+}
+
+/// Venom, Deadly Devourer (Eddie's list): exiling a graveyard creature grows
+/// a Symbiote by its toughness.
+#[test]
+fn venom_deadly_devourer_feeds_on_graveyards() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let venom = ready(&mut g, 0, catalog::venom_deadly_devourer());
+    let angel = g.add_card_to_graveyard(1, catalog::serra_angel());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: venom,
+        ability_index: 0,
+        target: Some(Target::Permanent(angel)),
+        additional_targets: vec![Target::Permanent(venom)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == angel));
+    assert_eq!(g.battlefield_find(venom).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+/// Behold the Sinister Six! (Eddie's list): up to six creature cards come
+/// back from your graveyard.
+#[test]
+fn behold_the_sinister_six_reanimates_a_team() {
+    let mut g = pod(2);
+    let dead: Vec<CardId> = [catalog::grizzly_bears(), catalog::gray_ogre(), catalog::serra_angel()]
+        .into_iter()
+        .map(|d| g.add_card_to_graveyard(0, d))
+        .collect();
+    let six = g.add_card_to_hand(0, catalog::behold_the_sinister_six());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: six,
+        target: Some(Target::Permanent(dead[0])),
+        additional_targets: vec![Target::Permanent(dead[1]), Target::Permanent(dead[2])],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(dead.iter().all(|id| g.battlefield_find(*id).is_some()));
 }

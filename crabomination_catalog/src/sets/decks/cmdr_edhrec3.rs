@@ -3,8 +3,8 @@
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
-//! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos and Kratos, God
-//! of War. Tests in
+//! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
+//! War and Eddie Brock. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -1885,7 +1885,7 @@ fn saga() -> Subtypes {
 
 /// Tom Bombadil — {W}{U}{B}{R}{G} 4/4 God Bard. Hexproof and indestructible
 /// while your Sagas hold four or more lore counters. Once each turn, when a
-/// Saga of yours finishes (CR 714.2c), reveal until a Saga card and put it
+/// Saga of yours finishes (CR 714.2e), reveal until a Saga card and put it
 /// onto the battlefield; the rest go to the bottom in a random order.
 pub fn tom_bombadil() -> CardDefinition {
     use crate::card::CounterType;
@@ -2056,7 +2056,7 @@ pub fn the_kami_war() -> CardDefinition {
     }
 }
 
-/// Moonmist — {1}{G} Instant. Transform all Humans (only transforming DFCs
+/// Moonmist — {1}{G} Instant. Transform all Humans (only double-faced ones
 /// turn over, CR 701.27c). Prevent all combat damage this turn dealt by
 /// creatures other than Werewolves and Wolves (CR 615).
 pub fn moonmist() -> CardDefinition {
@@ -2409,6 +2409,184 @@ pub fn maximum_carnage() -> CardDefinition {
                 Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(5) },
             ),
         ],
+        ..Default::default()
+    }
+}
+
+// ── Eddie Brock // Venom, Lethal Protector (BRG) ────────────────────────────
+
+/// Venom, Lethal Protector — Eddie Brock's back face, 5/5 menace, trample,
+/// haste. Attacking, you may sacrifice another creature to draw X, then you
+/// may put a permanent card of mana value X or less from your hand onto the
+/// battlefield (X = the sacrificed creature's mana value).
+pub fn venom_lethal_protector() -> CardDefinition {
+    CardDefinition {
+        // The face prints {3}{B}{R}{G}; carried as its colors, since the
+        // catalog tells a nonmodal DFC by a back face with no cost (CR 712.2,
+        // `cr_712_transforming_and_modal_dfcs_are_told_apart`). Its mana
+        // value is the front's anyway (CR 712.8e).
+        color_indicator: vec![Color::Black, Color::Red, Color::Green],
+        keywords: vec![Keyword::Menace, Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Sacrifice another creature to draw cards and put a permanent onto the battlefield?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::SacrificeAndRemember { who: PlayerRef::You, filter: R::Creature.and(R::OtherThanSource) },
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Draw { who: Selector::You, amount: Value::SacrificedManaValue },
+                            Effect::PutFromHandOntoBattlefield {
+                                who: PlayerRef::You,
+                                filter: R::PermanentCard.and(R::ManaValueAtMostSacrificedPlus(0)),
+                                count: Value::ONE,
+                                tapped: false,
+                                haste: false,
+                                sacrifice_eot: false,
+                                return_eot: false,
+                                then: None,
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
+        }],
+        ..legend(
+            "Venom, Lethal Protector",
+            crate::mana::ManaCost::default(),
+            vec![CreatureType::Symbiote, CreatureType::Hero, CreatureType::Villain],
+            5,
+            5,
+        )
+    }
+}
+
+/// Eddie Brock — {2}{B} 3/3. ETB: return target creature card with mana
+/// value 1 or less from your graveyard to the battlefield. {3}{B}{R}{G}:
+/// transform (sorcery speed) into Venom, Lethal Protector.
+pub fn eddie_brock() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(R::Creature.and(R::ManaValueAtMost(1)).from_your_graveyard()),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b(), r(), g()]),
+            sorcery_speed: true,
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(venom_lethal_protector())),
+        ..legend(
+            "Eddie Brock",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Human, CreatureType::Hero, CreatureType::Villain],
+            3,
+            3,
+        )
+    }
+}
+
+/// Carnage, Crimson Chaos — {2}{B}{R} 4/3 trample. ETB: return target
+/// creature card with mana value 3 or less from your graveyard; it attacks
+/// each combat if able and is sacrificed when it deals combat damage to a
+/// player. Mayhem {B}{R}.
+pub fn carnage_crimson_chaos() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Mayhem(cost(&[b(), r()]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::ManaValueAtMost(3)).from_your_graveyard()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::MustAttack, duration: Duration::Permanent },
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                    effect: Effect::SacrificeSource,
+                }),
+                duration: Duration::Permanent,
+            },
+        ]))],
+        ..legend(
+            "Carnage, Crimson Chaos",
+            cost(&[generic(2), b(), r()]),
+            vec![CreatureType::Symbiote, CreatureType::Villain],
+            4,
+            3,
+        )
+    }
+}
+
+/// Gwenom, Remorseless — {3}{B}{B} 4/4 deathtouch, lifelink. Attacking, until
+/// end of turn you may play cards from the top of your library, a spell cast
+/// this way costing life equal to its mana value (CR 401.6).
+pub fn gwenom_remorseless() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantPlayFromTopPayLifeThisTurn,
+        }],
+        ..legend(
+            "Gwenom, Remorseless",
+            cost(&[generic(3), b(), b()]),
+            vec![CreatureType::Symbiote, CreatureType::Spider, CreatureType::Hero],
+            4,
+            4,
+        )
+    }
+}
+
+/// Venom, Deadly Devourer — {2}{B}{G} 4/4 vigilance, menace. {3}: exile
+/// target creature card from a graveyard; when you do, put +1/+1 counters
+/// equal to its toughness on target Symbiote (both targets chosen up front).
+pub fn venom_deadly_devourer() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: target_filtered(R::Creature.from_any_graveyard()) },
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered { slot: 1, filter: R::HasCreatureType(CreatureType::Symbiote) },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Venom, Deadly Devourer",
+            cost(&[generic(2), b(), g()]),
+            vec![CreatureType::Symbiote, CreatureType::Villain],
+            4,
+            4,
+        )
+    }
+}
+
+/// Behold the Sinister Six! — {6}{B} Sorcery. Return up to six target
+/// creature cards with different names from your graveyard to the
+/// battlefield (a singleton Commander graveyard holds no two names alike).
+pub fn behold_the_sinister_six() -> CardDefinition {
+    CardDefinition {
+        name: "Behold the Sinister Six!",
+        cost: cost(&[generic(6), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 6,
+            min_targets: 0,
+            filter: R::Creature.from_your_graveyard(),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+        },
         ..Default::default()
     }
 }
