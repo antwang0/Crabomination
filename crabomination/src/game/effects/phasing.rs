@@ -33,6 +33,15 @@ impl GameState {
         while i < self.phased_out.len() {
             if self.phased_out[i].phased_out_by == Some(source) {
                 let mut c = self.phased_out.remove(i);
+                // CR 800.4a — a departed owner's card leaves the game rather
+                // than phase in: the departure pass exiled a permanent the
+                // departing seat controlled but didn't own, and its leaving
+                // phased in that seat's own Etali (held by Out of Time) before
+                // the phased-out list was cleared (six-seat audit pod, seed
+                // 172001). `return_linked_exiles` has the exile twin.
+                if !self.players.get(c.owner).is_some_and(|pl| pl.is_alive()) {
+                    continue;
+                }
                 c.phased_out_by = None;
                 phased_in.push(c.id);
                 self.phase_in_card(c);
@@ -69,5 +78,43 @@ mod tests {
         g.phase_in_held_by(src, &mut Vec::new());
         assert!(g.battlefield_find(id).is_some());
         assert!(g.board_instance_keywords, "the flying counter re-arms the gate");
+    }
+
+    /// CR 800.4a — a departed owner's card leaves the game; it does not phase
+    /// in when its holder lets go (an Etali held by Out of Time, six-seat
+    /// audit pod seed 172001).
+    #[test]
+    fn cr_800_4a_a_departed_owners_card_does_not_phase_in() {
+        let mut g = crate::game::two_player_game();
+        let src = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let id = g.add_card_to_battlefield(1, crate::catalog::hill_giant());
+        let mut c = g.battlefield.take_by_id(id).unwrap();
+        c.phased_out_by = Some(src);
+        g.phased_out.push(c);
+        g.players[1].eliminated = true;
+        g.phase_in_held_by(src, &mut Vec::new());
+        assert!(g.battlefield_find(id).is_none());
+        assert!(g.phased_out.is_empty());
+    }
+
+    /// CR 800.4a — a phased-out permanent the departing seat controlled stops
+    /// being theirs before the departure's control reverts run: exiling a
+    /// stolen holder phases its held cards in, and a stolen Kate Stewart came
+    /// back still under the departed seat (six-seat audit pod seed 172001).
+    #[test]
+    fn cr_800_4a_a_held_permanent_does_not_phase_in_under_a_departed_seat() {
+        let mut g = crate::game::two_player_game();
+        // p0's cards, both under p1's control with no effect under it.
+        let holder = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let id = g.add_card_to_battlefield(0, crate::catalog::hill_giant());
+        g.battlefield_find_mut(holder).unwrap().controller = 1;
+        let mut c = g.battlefield.take_by_id(id).unwrap();
+        c.controller = 1;
+        c.phased_out_by = Some(holder);
+        g.phased_out.push(c);
+        g.players[1].eliminated = true;
+        g.objects_leave_with_player(1, &mut Vec::new());
+        assert!(g.battlefield.iter().all(|c| c.controller != 1), "nothing stays under the departed seat");
+        assert!(g.phased_out.iter().all(|c| c.controller != 1));
     }
 }

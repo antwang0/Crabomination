@@ -30457,9 +30457,27 @@ impl GameState {
             }
 
             Effect::ShuffleSelfIntoLibrary => {
-                // Flag the post-resolution routing (resolve_spell) to send the
-                // resolving spell to its owner's library + shuffle, rather than
-                // the graveyard. No-op for non-spell sources.
+                // A triggered ability's source is a card on the battlefield
+                // (Fblthp, the Lost) or in a graveyard (Serra Avatar, Vigor):
+                // move it. Only a resolving spell — popped off the stack, so
+                // in neither zone — flags the post-resolution routing
+                // (resolve_spell) instead. Flagging from a trigger moved
+                // nothing and shuffled away the NEXT spell to resolve (a
+                // kicked Rite of Replication after a Serra Avatar died,
+                // audit pod seed 172001).
+                let Some(src) = ctx.source else { return Ok(()) };
+                let in_zone = self.battlefield.find_by_id(src).is_some()
+                    || self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == src));
+                if in_zone {
+                    return self.run_effect(
+                        &Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Library { who: PlayerRef::OwnerOf(Box::new(Selector::This)), pos: crate::effect::LibraryPosition::Shuffled },
+                        },
+                        ctx,
+                        events,
+                    );
+                }
                 self.shuffle_resolving_spell_into_library = true;
                 Ok(())
             }

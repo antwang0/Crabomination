@@ -6167,6 +6167,42 @@ impl GameState {
             self.note_left_without_dying(c, events);
         }
         self.battlefield.retain(|c| c.owner != p);
+        // The departed seat's phased-out permanents first (CR 702.26a — still
+        // on the battlefield): the control reverts below exile a permanent it
+        // held with no effect under it, and that leaving phases in what the
+        // permanent held — a stolen Kate Stewart, phased out by Out of Time
+        // under the departing seat's control, came back still under it
+        // (six-seat audit pod, seed 172001).
+        if self.phased_out.iter().any(|c| c.owner == p || c.controller == p) {
+            self.phased_out.retain(|c| c.owner != p);
+            // The battlefield's rule below: an effect's hold ends, a hold
+            // with no effect under it is exiled.
+            let mut exiled = Vec::new();
+            for c in self.phased_out.iter_mut() {
+                if c.controller == p {
+                    match c.pre_effect_controller.map(usize::from).filter(|&q| q != p) {
+                        Some(q) if self.players.get(q).is_some_and(|pl| pl.is_alive()) => c.controller = q,
+                        Some(_) => c.controller = c.owner,
+                        None => exiled.push(c.id),
+                    }
+                }
+            }
+            for id in exiled {
+                if let Some(pos) = self.phased_out.iter().position(|c| c.id == id) {
+                    let mut card = self.phased_out.remove(pos);
+                    card.controller = card.owner;
+                    // CR 400.7 — a new object in exile: no phasing hold, no
+                    // battlefield state (Birgi, held by p4's card under p3's
+                    // control, kept the hold — six-seat audit pod, seed
+                    // 3141116 game 11).
+                    card.phased_out_by = None;
+                    card.tapped = false;
+                    card.leave_battlefield_state();
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                    self.exile.push(card);
+                }
+            }
+        }
         // A recorded steal hands the permanent to whoever the effect under it
         // gives (another stealer whose effect still holds), not straight to
         // the owner; this also drops the departed seat's entries so a later
@@ -6237,12 +6273,11 @@ impl GameState {
         self.exile.retain(|c| c.owner != p);
         // CR 800.4a — "all objects OWNED by that player leave": also their
         // cards in another seat's hand, library or graveyard (a stolen card
-        // taken into hand was cast after its owner left — Ruinous Ultimatum),
-        // and their phased-out permanents, which live off the battlefield
-        // list and phased back in later (Benthic Biomancer) — before the
+        // taken into hand was cast after its owner left — Ruinous Ultimatum).
+        // Their phased-out permanents, which live off the battlefield list and
+        // phased back in later (Benthic Biomancer), went above — before the
         // "until this leaves" returns below, which phased a departed seat's
-        // own commander back in. A phased-out permanent they controlled
-        // reverts to its owner.
+        // own commander back in.
         for q in 0..self.players.len() {
             if q == p {
                 continue;
@@ -6258,36 +6293,6 @@ impl GameState {
             }
             if g {
                 self.players[q].graveyard.retain(|c| c.owner != p);
-            }
-        }
-        if self.phased_out.iter().any(|c| c.owner == p || c.controller == p) {
-            self.phased_out.retain(|c| c.owner != p);
-            // The battlefield's rule above: an effect's hold ends, a hold
-            // with no effect under it is exiled.
-            let mut exiled = Vec::new();
-            for c in self.phased_out.iter_mut() {
-                if c.controller == p {
-                    match c.pre_effect_controller.map(usize::from).filter(|&q| q != p) {
-                        Some(q) if self.players.get(q).is_some_and(|pl| pl.is_alive()) => c.controller = q,
-                        Some(_) => c.controller = c.owner,
-                        None => exiled.push(c.id),
-                    }
-                }
-            }
-            for id in exiled {
-                if let Some(pos) = self.phased_out.iter().position(|c| c.id == id) {
-                    let mut card = self.phased_out.remove(pos);
-                    card.controller = card.owner;
-                    // CR 400.7 — a new object in exile: no phasing hold, no
-                    // battlefield state (Birgi, held by p4's card under p3's
-                    // control, kept the hold — six-seat audit pod, seed
-                    // 3141116 game 11).
-                    card.phased_out_by = None;
-                    card.tapped = false;
-                    card.leave_battlefield_state();
-                    events.push(GameEvent::PermanentExiled { card_id: id });
-                    self.exile.push(card);
-                }
             }
         }
         if !leave_triggers.is_empty() {

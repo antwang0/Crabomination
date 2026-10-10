@@ -9899,6 +9899,19 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             }
             _ => m,
         });
+    // Mana spendable as though it were any color (Chromatic Orrery, Mycosynth
+    // Lattice; Agatha's Soul Cauldron for a creature's ability) makes a
+    // coloured pip a generic one — the same three statics `activate_ability`
+    // reads (a six-seat audit pod, seed 172001, asserted on Incubation Druid's
+    // {3}{G}{G} with one Forest untapped beside the Cauldron).
+    let (any_color, any_color_creatures) = state.battlefield.iter().flat_map(|c| {
+        c.definition.static_abilities.iter().map(move |sa| (c.controller, &sa.effect))
+    }).fold((false, false), |(all, creatures), (ctl, e)| match e {
+        crate::effect::StaticEffect::PlayersMaySpendManaAsAnyColor => (true, creatures),
+        crate::effect::StaticEffect::YouMaySpendManaAsAnyColor if ctl == seat => (true, creatures),
+        crate::effect::StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities if ctl == seat => (all, true),
+        _ => (all, creatures),
+    });
     let mut gy_ability_grant = false;
     // A static that makes artifacts Equipment (Bludgeon Brawl, Arterial
     // Alchemy): the per-card memo answers "is one out" without a walk.
@@ -9945,6 +9958,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
                 )
             });
         let printed = def.activated_abilities.len();
+        let pips_free = any_color || (any_color_creatures && state.computed_is_creature(c));
         for (idx, ab) in usable_abilities(state, c, &scan) {
             // An ability whose *colour* pips this board cannot cover can never
             // be activated, so it must not light its sink bit: the gate is
@@ -9968,6 +9982,7 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             // a six-seat strict debug pod asserted on its stolen sacrifice
             // ability, seed 55001).
             if idx < printed
+                && !pips_free
                 && ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
                 && !restricted_floating
                 && !colors_coverable_paying_life(&ab.mana_cost, have.get(), life_pips)

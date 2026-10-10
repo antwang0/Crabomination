@@ -101,6 +101,28 @@ fn serra_avatar_is_your_life_total() {
     assert_eq!((cp.power, cp.toughness), (7, 7));
 }
 
+/// Serra Avatar's "put into a graveyard from anywhere" trigger shuffles the
+/// Avatar itself into its library — and only it: the next spell to resolve
+/// goes to the graveyard. The trigger once flagged "the resolving spell"
+/// instead, which left the Avatar where it was and shuffled the following
+/// spell away (a kicked Rite of Replication, audit pod seed 172001).
+#[test]
+fn serra_avatar_shuffles_itself_not_the_next_spell() {
+    let mut g = two_player_game();
+    let avatar = g.add_card_to_battlefield(0, catalog::serra_avatar());
+    let blade = g.add_card_to_hand(1, catalog::doom_blade());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    cast(&mut g, blade, Some(Target::Permanent(avatar)));
+    assert!(g.players[0].library.iter().any(|c| c.id == avatar), "the Avatar shuffled in");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == avatar));
+    g.priority.player_with_priority = 0;
+    let soil = g.add_card_to_hand(0, catalog::acidic_soil());
+    mana(&mut g, 0);
+    cast(&mut g, soil, None);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == soil), "the next spell resolves to the graveyard");
+}
+
 /// Treefolk Seedlings keeps its printed power and counts Forests for toughness.
 #[test]
 fn treefolk_seedlings_toughness_is_your_forests() {
