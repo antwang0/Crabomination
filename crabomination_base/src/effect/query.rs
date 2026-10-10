@@ -2149,7 +2149,10 @@ impl Effect {
                 sel_has_target(what) || sel_has_target(source)
             }
             Effect::AmendCopy { what, .. } => sel_has_target(what),
-            Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
+            Effect::Attach { what, to }
+            | Effect::AttachAnyNumberTo { what, to }
+            | Effect::AttachDistinctToEach { what, to } => sel_has_target(what) || sel_has_target(to),
+            Effect::AttachEachToCreatureYouControl { what } => sel_has_target(what),
             Effect::TargetPlayerThen { .. } => true,
             Effect::CopySpell { what, count }
             | Effect::CopySpellWithRiders { what, count, .. }
@@ -2375,9 +2378,6 @@ impl Effect {
             | Effect::EachPlayerMayCounterThenGoad { .. }
             | Effect::OpponentsChooseSilenceOrSnitch { .. }
             | Effect::ChooseRandomOpponentNotAttackedLastCombat
-            | Effect::AttachAnyNumberTo { .. }
-            | Effect::AttachEachToCreatureYouControl { .. }
-            | Effect::AttachDistinctToEach { .. }
             | Effect::ExileAllOtherSpellsCounterAllAbilities
             | Effect::EachPlayerKeepsPartySacrificesRest
             | Effect::LookTopTakeParty { .. }
@@ -2832,7 +2832,9 @@ impl Effect {
                 const F: SelectionRequirement = SelectionRequirement::IsSpellOnStack;
                 Some(&F)
             }
-            Effect::Attach { what, to } => sel_filter(what).or_else(|| sel_filter(to)),
+            Effect::Attach { what, to }
+            | Effect::AttachAnyNumberTo { what, to }
+            | Effect::AttachDistinctToEach { what, to } => sel_filter(what).or_else(|| sel_filter(to)),
             Effect::TargetPlayerThen { filter, .. } => Some(filter),
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.
@@ -3615,6 +3617,9 @@ impl Effect {
             // arm the wrapper read hostile and an optional slot of a friendly
             // body (Silkguard's counters) was never spent on the caster's side.
             Effect::ApplyToTargets { effect, .. } => effect.prefers_friendly_target(),
+            // Gathering your own Auras and Equipment onto a target is a
+            // self-buff (Ardenn, Intrepid Archaeologist).
+            Effect::AttachAnyNumberTo { .. } | Effect::AttachDistinctToEach { .. } => true,
             // "TARGET player draws a card" is a gift — aim slot 0 at the
             // caster (Shadrix Silverquill's draw mode is the mode you take
             // yourself in the canonical two-pick line). A non-targeted
@@ -5526,7 +5531,10 @@ impl Effect {
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::RevealUntilLandDamage { to, .. }
                 | Effect::RevealUntilNonlandDamage { to } => sel_find(to, slot),
-                Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
+                Effect::Attach { what, to }
+                | Effect::AttachAnyNumberTo { what, to }
+                | Effect::AttachDistinctToEach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
+                Effect::AttachEachToCreatureYouControl { what } => sel_find(what, slot),
                 Effect::TargetPlayerThen { filter, then } => (slot == 0)
                     .then_some(filter)
                     .or_else(|| eff_find(then, slot, mode, kicked)),

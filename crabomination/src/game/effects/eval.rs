@@ -7342,6 +7342,10 @@ impl GameState {
                 .attached_to
                 .and_then(|h| self.battlefield_find(h))
                 .is_some_and(|h| self.computed_is_creature(h)),
+            R::AttachedToCreatureYouControl => card
+                .attached_to
+                .and_then(|h| self.battlefield_find(h))
+                .is_some_and(|h| h.controller == controller && self.computed_is_creature(h)),
             R::HasConvoke => {
                 card.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
                     || self.convoke_granted_spells.contains(&card.id)

@@ -3340,6 +3340,10 @@ pub enum SelectionRequirement {
     /// The candidate is attached to a creature on the battlefield — "each
     /// Aura you control that's attached to a creature" (Sage's Reverie).
     AttachedToCreature,
+    /// [`Self::AttachedToCreature`] whose host the evaluating player controls
+    /// — "target Aura or Equipment attached to a creature you control"
+    /// (Halvar, God of Battle).
+    AttachedToCreatureYouControl,
     /// CR 702.51 — a spell that has convoke: printed, granted by a static
     /// (Chief Engineer) or by a one-shot "next spell" grant (Wand of the
     /// Worldsoul). Kasla, Joyful Stormsculptor, Saint Traft and Rem Karolus.
