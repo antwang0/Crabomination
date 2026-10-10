@@ -37,7 +37,7 @@ def slug(name, whole=False):
 def factories():
     out = set()
     for p in glob.glob(os.path.join(ROOT, "crabomination_catalog", "src", "**", "*.rs"), recursive=True):
-        out.update(re.findall(r"pub fn (\w+)\(\) -> CardDefinition", open(p, encoding="utf-8").read()))
+        out.update(re.findall(r"pub fn (\w+)\(\) -> (?:crate::card::)?CardDefinition", open(p, encoding="utf-8").read()))
     return out
 
 
@@ -48,7 +48,7 @@ def by_printed_name():
     out = {}
     for p in glob.glob(os.path.join(ROOT, "crabomination_catalog", "src", "**", "*.rs"), recursive=True):
         text = open(p, encoding="utf-8").read()
-        for m in re.finditer(r"pub fn (\w+)\(\) -> CardDefinition \{(.*?)\n\}", text, re.S):
+        for m in re.finditer(r"pub fn (\w+)\(\) -> (?:crate::card::)?CardDefinition \{(.*?)\n\}", text, re.S):
             lit = re.search(r'"((?:[^"\\]|\\.)*)"', m.group(2))
             if lit:
                 out.setdefault(lit.group(1), m.group(1))

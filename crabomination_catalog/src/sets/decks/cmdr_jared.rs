@@ -395,7 +395,7 @@ pub fn surrak_dragonclaw() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Creature spells you control can't be countered.",
-                effect: StaticEffect::CreatureSpellsCantBeCountered,
+                effect: StaticEffect::SpellsUncounterable { filter: R::Creature },
             },
             StaticAbility {
                 description: "Other creatures you control have trample.",

@@ -3,7 +3,8 @@
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
-//! Zuko, Arna Kennerüd, Terra, Magical Adept and Atreus // Kratos. Tests in
+//! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos and Kratos, God
+//! of War. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -2249,6 +2250,165 @@ pub fn world_at_war() -> CardDefinition {
                 }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── Kratos, God of War (R) ──────────────────────────────────────────────────
+
+/// Mjölnir, Storm Hammer — {4} legendary Equipment. ETB: attach it to target
+/// legendary creature you control. Whenever the equipped creature attacks, tap
+/// target creature the defending player controls and stun it, then deal each
+/// opponent damage equal to the tapped creatures they control. Equip {4}.
+pub fn mjolnir_storm_hammer() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou).and(R::HasSupertype(Supertype::Legendary))),
+        })],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)) },
+                    Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+                    Effect::ForEachOpponent {
+                        body: Box::new(Effect::DealDamage {
+                            to: Selector::Player(PlayerRef::Triggerer),
+                            amount: Value::CountOf(Box::new(Selector::ControlledBy {
+                                who: PlayerRef::Triggerer,
+                                filter: R::Creature.and(R::Tapped),
+                            })),
+                        }),
+                    },
+                ]),
+            }],
+            ..Default::default()
+        }),
+        ..equipment("Mjölnir, Storm Hammer", cost(&[generic(4)]), cost(&[generic(4)]))
+    }
+}
+
+/// Gornog, the Red Reaper — {2}{R} 2/3 haste. Cowards can't block Warriors.
+/// When Warriors of yours attack a player, target creature that player
+/// controls becomes a Coward (overwriting its creature types, no duration —
+/// the rulings). Attacking Warriors you control get +1/+0 per Coward your
+/// opponents control.
+pub fn gornog_the_red_reaper() -> CardDefinition {
+    let warrior = || R::HasCreatureType(CreatureType::Warrior);
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Cowards can't block Warriors.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Coward)),
+                    keyword: Keyword::CantBlockCreatureType(CreatureType::Warrior),
+                },
+            },
+            StaticAbility {
+                description: "Attacking Warriors you control get +X/+0, where X is the number of Cowards your opponents control.",
+                effect: StaticEffect::PumpPTByValue {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::IsAttacking).and(warrior()),
+                    ),
+                    power: Value::CountOf(Box::new(Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Coward).and(R::ControlledByOpponent),
+                    ))),
+                    toughness: Value::Const(0),
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: warrior().and(R::IsAttackingOpponentPlayer),
+                })
+                .once_per_batch_per_defender(),
+            effect: Effect::BecomeCreatureType {
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
+                creature_types: vec![CreatureType::Coward],
+                duration: Duration::Permanent,
+            },
+        }],
+        ..legend(
+            "Gornog, the Red Reaper",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Minotaur, CreatureType::Warrior],
+            2,
+            3,
+        )
+    }
+}
+
+/// Spider-Punk — {1}{R} 2/1 Spider Human Hero, riot; other Spiders you
+/// control have riot (CR 702.136). Spells and abilities can't be countered;
+/// damage can't be prevented.
+pub fn spider_punk() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Riot],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Spiders you control have riot.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Spider).and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
+                    keyword: Keyword::Riot,
+                },
+            },
+            StaticAbility {
+                description: "Spells and abilities can't be countered.",
+                effect: StaticEffect::SpellsAndAbilitiesCantBeCountered,
+            },
+            StaticAbility { description: "Damage can't be prevented.", effect: StaticEffect::DamageCantBePrevented },
+        ],
+        ..legend(
+            "Spider-Punk",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            2,
+            1,
+        )
+    }
+}
+
+/// Maximum Carnage — {4}{R} Saga. I: until your next turn, every creature
+/// attacks each combat if able and attacks a player other than you if able —
+/// goad (CR 701.15b) on every creature, those entering later too. II: {R}{R}{R}.
+/// III: 5 damage to each opponent.
+pub fn maximum_carnage() -> CardDefinition {
+    CardDefinition {
+        name: "Maximum Carnage",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::Goad { what: Selector::EachPermanent(R::Creature) },
+                    Effect::WheneverCreatureEntersUntilYourNextTurn {
+                        filter: R::Creature,
+                        body: Box::new(Effect::Goad { what: Selector::TriggerSource }),
+                    },
+                ]),
+            ),
+            (
+                2,
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Red, Color::Red, Color::Red]),
+                },
+            ),
+            (
+                3,
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(5) },
+            ),
+        ],
         ..Default::default()
     }
 }

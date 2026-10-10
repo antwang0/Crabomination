@@ -972,15 +972,18 @@ pub fn quest_for_renewal() -> crate::card::CardDefinition {
     }
 }
 
-/// Kazuul, Tyrant of the Cliffs — {3}{R}{R} 5/4 Ogre Warrior. Attacking him
-/// costs {3} or gives him a 3/3 Ogre.
+/// Kazuul, Tyrant of the Cliffs — {3}{R}{R} 5/4 Ogre Warrior. Whenever an
+/// opponent's creature attacks you, you get a 3/3 Ogre unless that
+/// creature's controller pays {3}.
 pub fn kazuul_tyrant_of_the_cliffs() -> crate::card::CardDefinition {
     crate::card::CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
             effect: Effect::UnlessPlayerPays {
-                who: PlayerRef::Target(0),
+                // The attacker's controller — a bare `Target(0)` named no one
+                // and minted the Ogre without ever asking.
+                who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                 cost: WardCost::Mana(cost(&[generic(3)])),
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,

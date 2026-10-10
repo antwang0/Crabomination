@@ -1617,3 +1617,152 @@ fn world_at_war_attacks_again_after_the_second_main() {
     assert_eq!(combats, vec![1, 2]);
     assert_eq!(g.players[1].life, life - 4, "the Bear connected twice");
 }
+
+/// Mjölnir, Storm Hammer (Kratos's list): it attaches to a legend as it
+/// enters; the attack taps and stuns a defender's creature, then each
+/// opponent takes 1 per tapped creature they control.
+#[test]
+fn mjolnir_storm_hammer_stuns_and_strikes() {
+    use crabomination::card::CounterType;
+    let mut g = pod(3);
+    let legend = ready(&mut g, 0, catalog::surtr_fiery_jotun());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let other = ready(&mut g, 2, catalog::grizzly_bears());
+    g.battlefield_find_mut(other).unwrap().tapped = true;
+    let hammer = g.add_card_to_hand(0, catalog::mjolnir_storm_hammer());
+    flood(&mut g);
+    cast_x(&mut g, hammer, None);
+    assert_eq!(g.battlefield_find(hammer).unwrap().attached_to, Some(legend));
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    declare(&mut g, &[(legend, 1)]);
+    let bear = g.battlefield_find(foe).unwrap();
+    assert!(bear.tapped);
+    assert_eq!(bear.counter_count(CounterType::Stun), 1);
+    assert_eq!((g.players[1].life, g.players[2].life), (l1 - 1, l2 - 1));
+}
+
+/// Gornog, the Red Reaper (Kratos's list): a Warrior's attack turns a
+/// defender's creature into a Coward (types overwritten, no duration); a
+/// Coward can't block Warriors, and each one pumps attacking Warriors.
+#[test]
+fn gornog_makes_cowards_that_cant_block_warriors() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    let gornog = ready(&mut g, 0, catalog::gornog_the_red_reaper());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    declare(&mut g, &[(gornog, 1)]);
+    let types = g.computed_permanent(foe).unwrap().subtypes().creature_types.clone();
+    assert_eq!(types, vec![CreatureType::Coward]);
+    assert_eq!(g.computed_permanent(gornog).unwrap().power, 3, "+1/+0 per Coward");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(foe, gornog)])).is_err(), "a Coward can't block a Warrior");
+}
+
+/// Kazuul, Tyrant of the Cliffs (Kratos's list): the attacker's controller
+/// is asked for {3}; unpaid, Kazuul's controller gets a 3/3 Ogre.
+#[test]
+fn kazuul_taxes_attackers_or_makes_ogres() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::kazuul_tyrant_of_the_cliffs());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Ogre"), 1, "no mana to pay the {{3}}");
+}
+
+/// Spider-Punk (Kratos's list): spells and abilities can't be countered — a
+/// Counterspell finds nothing to counter and a ward trigger lets the ability
+/// through (CR 702.21a) — and damage can't be prevented.
+#[test]
+fn spider_punk_stops_spell_and_ability_counters() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::spider_punk());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("bear");
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Counterspell");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the Bear resolved");
+
+    // An ability: Stifle on Elvish Visionary's enters trigger.
+    g.add_card_to_library(0, catalog::island());
+    let elf = g.add_card_to_battlefield(0, catalog::elvish_visionary());
+    g.fire_self_etb_triggers(elf, 0);
+    let draw = g.top_ability_of(elf).expect("the Visionary's draw is on the stack");
+    let hand = g.players[0].hand.len();
+    let stifle = g.add_card_to_hand(1, catalog::stifle());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: stifle,
+        target: Some(Target::Permanent(draw)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Stifle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the trigger resolved and drew");
+}
+
+/// Maximum Carnage (Kratos's list): I goads every creature (CR 701.15b), II
+/// adds {R}{R}{R}, III deals 5 to each opponent.
+#[test]
+fn maximum_carnage_runs_its_chapters() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let carnage = saga(&mut g, catalog::maximum_carnage());
+    assert!(g.goaded_by_player(g.battlefield_find(bear).unwrap(), 0));
+    g.players[0].mana_pool = Default::default();
+    g.saga_advance(carnage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3);
+    let (l0, l1, l2) = (g.players[0].life, g.players[1].life, g.players[2].life);
+    g.saga_advance(carnage);
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (l0, l1 - 5, l2 - 5));
+}
+
+/// Rhythm of the Wild says "creature spells YOU control": an opponent's
+/// creature spell stays counterable (Leyline of Lifeforce's symmetric static
+/// was the wrong one).
+#[test]
+fn rhythm_of_the_wild_protects_only_its_controllers_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::rhythm_of_the_wild());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("bear");
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counterspell");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "countered");
+}

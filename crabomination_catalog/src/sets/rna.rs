@@ -5311,7 +5311,9 @@ pub fn rhythm_of_the_wild() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Creature spells you control can't be countered.",
-                effect: StaticEffect::CreatureSpellsCantBeCountered,
+                // "You control" — the caster's own, not Leyline of Lifeforce's
+                // every player's.
+                effect: StaticEffect::SpellsUncounterable { filter: R::Creature },
             },
             StaticAbility {
                 description: "Nontoken creatures you control have riot.",
