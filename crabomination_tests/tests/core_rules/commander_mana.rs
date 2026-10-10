@@ -669,7 +669,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy
-                | AuraOrEquipmentSpells | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
+                | AuraOrEquipmentSpells | KnightOrEquipmentSpells | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
                 | SpellsOnly | TypeSpellOrItsAbility(_) => {}
             }
@@ -705,6 +705,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             InstantSorceryUncounterable,
             EquipmentOnly,
             AuraOrEquipmentSpells,
+            KnightOrEquipmentSpells,
             PilotOrVehicleSpells,
             MountOrVehicleSpells,
             CreatureCastCounter,

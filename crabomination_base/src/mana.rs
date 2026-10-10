@@ -848,6 +848,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast Aura and/or Equipment spells."
     /// (Codsworth, Handy Helper.) Spells only — an equip ability is not one.
     AuraOrEquipmentSpells,
+    /// "Spend this mana only to cast a Knight or Equipment spell."
+    /// (Tournament Grounds.) A Kindred Knight or a changeling counts.
+    KnightOrEquipmentSpells,
     /// "Spend this mana only to cast Mount or Vehicle spells." (Intrepid
     /// Stablemaster.) Spells only; a changeling spell is a Mount.
     MountOrVehicleSpells,
@@ -909,6 +912,7 @@ impl SpendRestriction {
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
+            SpendRestriction::KnightOrEquipmentSpells => "only Knight and Equipment spells",
             SpendRestriction::MountOrVehicleSpells => "only Mount and Vehicle spells",
             SpendRestriction::PilotOrVehicleSpells => "only Pilot and Vehicle spells",
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(..) => {
@@ -1031,6 +1035,12 @@ impl SpendRestriction {
             SpendRestriction::EquipmentOnly => kind.equipment,
             SpendRestriction::AuraOrEquipmentSpells => {
                 !kind.activating_ability && (kind.equipment || kind.aura)
+            }
+            SpendRestriction::KnightOrEquipmentSpells => {
+                !kind.activating_ability
+                    && (kind.equipment
+                        || kind.changeling
+                        || kind.creature_types.contains(&crate::card::CreatureType::Knight))
             }
             SpendRestriction::MountOrVehicleSpells => {
                 !kind.activating_ability
