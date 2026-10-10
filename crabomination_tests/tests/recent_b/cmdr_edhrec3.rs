@@ -1216,3 +1216,120 @@ fn the_legend_of_roku_becomes_avatar_roku() {
     let roku = g.battlefield_find(saga).expect("returned transformed");
     assert_eq!(roku.definition.name, "Avatar Roku");
 }
+
+fn attach(g: &mut GameState, gear: CardId, host: CardId) {
+    g.battlefield_find_mut(gear).unwrap().attached_to = Some(host);
+}
+
+fn attached(g: &GameState, host: CardId, name: &str) -> usize {
+    g.battlefield.iter().filter(|c| c.attached_to == Some(host) && c.definition.name == name).count()
+}
+
+/// Arna Kennerüd (Arna's list): a modified attacker's counters double (CR
+/// 701.10) and its nontoken Equipment is copied onto it (CR 707.2); an
+/// unmodified attacker gets nothing.
+#[test]
+fn arna_doubles_counters_and_copies_attachments() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::arna_kennerud_skycaptain());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let plain = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    let gear = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    attach(&mut g, gear, bear);
+    declare(&mut g, &[(bear, 1), (plain, 1)]);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 4);
+    assert_eq!(attached(&g, bear, "Bonesplitter"), 2, "the original and a token copy");
+    assert!(g.battlefield.iter().all(|c| c.attached_to != Some(plain)));
+}
+
+/// Assassin Gauntlet (Arna's list): the ETB taps the opponent's team and
+/// attaches to your creature; a connecting host loots.
+#[test]
+fn assassin_gauntlet_taps_a_board_and_loots() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let foes: Vec<CardId> = (0..2).map(|_| ready(&mut g, 1, catalog::grizzly_bears())).collect();
+    g.add_card_to_library(0, catalog::island());
+    let gauntlet = g.add_card_to_hand(0, catalog::assassin_gauntlet());
+    flood(&mut g);
+    cast_x(&mut g, gauntlet, None);
+    assert!(foes.iter().all(|f| g.battlefield_find(*f).unwrap().tapped));
+    assert_eq!(g.battlefield_find(gauntlet).unwrap().attached_to, Some(bear));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    let hand = g.players[0].hand.len();
+    connect(&mut g, bear);
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// Biorganic Carapace (Arna's list): it attaches as it enters, and a hit
+/// draws one card per modified creature you control (CR 700.9).
+#[test]
+fn biorganic_carapace_draws_per_modified_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let other = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(other).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let carapace = g.add_card_to_hand(0, catalog::biorganic_carapace());
+    flood(&mut g);
+    cast_x(&mut g, carapace, None);
+    let host = g.battlefield_find(carapace).unwrap().attached_to.expect("attached on entry");
+    let hand = g.players[0].hand.len();
+    connect(&mut g, host);
+    let want = if host == other { 1 } else { 2 };
+    assert_eq!(g.players[0].hand.len(), hand + want, "the host and the countered Bear are modified");
+}
+
+/// Ardenn (Arna's list): at the beginning of combat your Equipment gathers
+/// on the target creature.
+#[test]
+fn ardenn_gathers_equipment_on_one_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::ardenn_intrepid_archaeologist());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::serra_angel());
+    let s1 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let s2 = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    attach(&mut g, s1, a);
+    begin_combat(&mut g);
+    let hosts: Vec<Option<CardId>> = [s1, s2].iter().map(|s| g.battlefield_find(*s).unwrap().attached_to).collect();
+    assert!(hosts.iter().all(|h| h.is_some()), "{hosts:?}");
+    assert_eq!(hosts[0], hosts[1], "both on one creature");
+}
+
+/// Halvar, God of Battle (Arna's list): equipped creatures have double
+/// strike; Sword of the Realms (the MDFC back) returns its dead host to hand.
+#[test]
+fn halvar_and_sword_of_the_realms() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::halvar_god_of_battle());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gear = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    attach(&mut g, gear, bear);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
+
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sword = g.add_card_to_hand(0, catalog::halvar_god_of_battle());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpellBack { card_id: sword, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the Sword");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 4);
+    assert!(c.keywords().contains(&Keyword::Vigilance));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.perform_action(GameAction::CastSpell { card_id: murder, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("murder");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "back to its owner's hand");
+}

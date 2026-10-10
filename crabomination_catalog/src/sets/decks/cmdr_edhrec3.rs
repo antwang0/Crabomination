@@ -2,8 +2,8 @@
 //! average deck and a complete pod seat, third file (`cmdr_edhrec2` is the
 //! second). Ketramose, the New Dawn, Niko, Light of Hope, Syr Gwyn, Hero of
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
-//! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive and Fire
-//! Lord Zuko. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
+//! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
+//! Zuko and Arna Kennerüd. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -1672,5 +1672,205 @@ pub fn the_legend_of_roku() -> CardDefinition {
         ],
         back_face: Some(Box::new(avatar_roku())),
         ..Default::default()
+    }
+}
+
+// ── Arna Kennerüd, Skycaptain (WUB) ─────────────────────────────────────────
+
+fn equipment(name: &'static str, mana: crate::mana::ManaCost, equip: crate::mana::ManaCost) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(equip)],
+        ..Default::default()
+    }
+}
+
+/// Arna Kennerüd, Skycaptain — {2}{W}{U}{B} 4/4 flying, lifelink, ward—
+/// discard a card. Whenever a modified creature you control attacks, double
+/// each kind of counter on it (CR 701.10), then copy each nontoken permanent
+/// attached to it, the copy entering attached to that creature (CR 707.2).
+pub fn arna_kennerud_skycaptain() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Lifelink,
+            Keyword::Ward(crate::card::WardCost::Discard(1)),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::IsModified),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::DoubleAllCountersOn { what: Selector::TriggerSource },
+                // Inside the walk `TriggerSource` is the attachment, so its
+                // host is the attacker; the list is fixed before any copy.
+                Effect::ForEach {
+                    selector: Selector::AttachedToMe(Box::new(Selector::TriggerSource)),
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsToken.negate() },
+                        then: Box::new(Effect::CreateTokenCopyOfAttachedToEach {
+                            source: Selector::TriggerSource,
+                            hosts: Selector::AttachedTo(Box::new(Selector::TriggerSource)),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            ]),
+        }],
+        ..legend(
+            "Arna Kennerüd, Skycaptain",
+            cost(&[generic(2), w(), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            4,
+            4,
+        )
+    }
+}
+
+/// Assassin Gauntlet — {2}{U} Equipment. ETB: attach it to up to one target
+/// creature you control, and tap all creatures target opponent controls.
+/// Equipped +1/+1 and loots on combat damage to a player. Equip {2}.
+pub fn assassin_gauntlet() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::ForEach {
+                        selector: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                        body: Box::new(Effect::Tap { what: Selector::TriggerSource }),
+                    }),
+                },
+                Effect::Attach {
+                    what: Selector::This,
+                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou) },
+                },
+            ])),
+        })],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+            }],
+            ..Default::default()
+        }),
+        ..equipment("Assassin Gauntlet", cost(&[generic(2), u()]), cost(&[generic(2)]))
+    }
+}
+
+/// Biorganic Carapace — {2}{W}{U} Equipment. ETB: attach it to target
+/// creature you control. Equipped +2/+2 and, on combat damage to a player,
+/// draws a card per modified creature you control (CR 700.9). Equip {2}.
+pub fn biorganic_carapace() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        })],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::IsModified),
+                    ))),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..equipment("Biorganic Carapace", cost(&[generic(2), w(), u()]), cost(&[generic(2)]))
+    }
+}
+
+/// Ardenn, Intrepid Archaeologist — {2}{W} 2/2, partner. At the beginning of
+/// combat on your turn, you may attach any number of Auras and Equipment you
+/// control to target permanent or player — narrowed to a creature: no Curse
+/// sits in a target deck, and an Equipment can only hold a creature (CR 301.5c).
+pub fn ardenn_intrepid_archaeologist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Partner],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::AttachAnyNumberTo {
+                what: Selector::EachPermanent(
+                    R::ControlledByYou.and(
+                        R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+                    ),
+                ),
+                to: target_filtered(R::Creature),
+            },
+        }],
+        ..legend(
+            "Ardenn, Intrepid Archaeologist",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Kor, CreatureType::Scout],
+            2,
+            2,
+        )
+    }
+}
+
+/// Halvar, God of Battle // Sword of the Realms — {2}{W}{W} 4/4 God. Your
+/// enchanted or equipped creatures have double strike; at the beginning of
+/// each combat you may move an Aura or Equipment from one of your creatures
+/// to another. The back ({1}{W} legendary Equipment): +2/+0 and vigilance,
+/// and the equipped creature returns to its owner's hand when it dies.
+pub fn halvar_god_of_battle() -> CardDefinition {
+    let sword = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::Vigilance],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..equipment("Sword of the Realms", cost(&[generic(1), w()]), cost(&[generic(1), w()]))
+    };
+    let mine = || R::Creature.and(R::ControlledByYou);
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control that are enchanted or equipped have double strike.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(mine().and(R::IsEnchanted.or(R::IsEquipped))),
+                keyword: Keyword::DoubleStrike,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), EventScope::AnyPlayer),
+            effect: Effect::MayDo {
+                description: "Move an Aura or Equipment to another creature you control?".into(),
+                body: Box::new(Effect::Attach {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))
+                            .and(R::AttachedToCreatureYouControl),
+                    },
+                    to: Selector::TargetFiltered { slot: 1, filter: mine() },
+                }),
+            },
+        }],
+        back_face: Some(Box::new(sword)),
+        ..legend("Halvar, God of Battle", cost(&[generic(2), w(), w()]), vec![CreatureType::God], 4, 4)
     }
 }
