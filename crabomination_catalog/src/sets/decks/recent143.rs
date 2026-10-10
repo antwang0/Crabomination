@@ -151,12 +151,13 @@ pub fn gumdrop_poisoner() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        triggered_abilities: vec![etb(Effect::PumpPT {
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::PumpPT {
             what: target_filtered(R::Creature),
             power: minus_x(),
             toughness: minus_x(),
             duration: Duration::EndOfTurn,
-        })],
+        }) })],
         adventure: Some(Box::new(Adventure {
             name: "Tempt with Treats",
             cost: cost(&[b()]),

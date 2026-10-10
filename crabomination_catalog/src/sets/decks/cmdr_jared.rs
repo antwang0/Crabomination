@@ -296,7 +296,8 @@ pub fn path_to_the_world_tree() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), w(), u(), b(), r(), g()]),
             sac_cost: true,
-            effect: Effect::Seq(vec![
+            // "Up to one target creature": slot 1 is optional (CR 601.2c).
+            effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
                 Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
                 draw(2),
                 Effect::LoseLife {
@@ -308,7 +309,7 @@ pub fn path_to_the_world_tree() -> CardDefinition {
                     amount: Value::Const(2),
                 },
                 mint(token("Bear", vec![Color::Green], CreatureType::Bear, 2, 2, vec![])),
-            ]),
+            ])) },
             ..Default::default()
         }],
         ..Default::default()

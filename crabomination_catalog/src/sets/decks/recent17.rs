@@ -217,10 +217,11 @@ pub fn ambush_wolf() -> CardDefinition {
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::Move {
+        // "Up to one": optional, so it never takes its controller's own card (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::Move {
             what: target_filtered(SelectionRequirement::Any.from_any_graveyard()),
             to: ZoneDest::Exile,
-        })],
+        }) })],
         ..Default::default()
     }
 }

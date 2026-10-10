@@ -352,16 +352,20 @@ pub fn solitude() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             // "That creature's controller gains life equal to its power" —
-            // read before the exile, as Swords to Plowshares does.
-            effect: Effect::Seq(vec![
+            // read before the exile, as Swords to Plowshares does. "Up to one
+            // other target creature": any side, optional (CR 601.2c).
+            effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                 Effect::GainLife {
                     who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
-                    amount: Value::PowerOf(Box::new(target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                    ))),
+                    amount: Value::PowerOf(Box::new(Selector::Target(0))),
                 },
-                Effect::Exile { what: Selector::Target(0) },
-            ]),
+                // The exile declares the slot, so it reads hostile.
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                    ),
+                },
+            ])) },
         }],
         alternative_cost: Some(AlternativeCost {
             awaken: false,

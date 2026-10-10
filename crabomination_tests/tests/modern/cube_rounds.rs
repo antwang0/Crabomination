@@ -1679,6 +1679,93 @@ fn loran_etb_spares_your_own_artifact_when_it_is_the_only_one() {
     assert!(g.battlefield_find(my_ring).is_some(), "your own Sol Ring survives");
 }
 
+/// CR 601.2c / 603.3d — an ETB's hostile "up to one target …" may name
+/// none. With only its controller's own (tapped) Bears in reach, each of
+/// these leaves them where they were: on the battlefield, untapped state
+/// unchanged, no stun counter. Modelled as required slots, Solitude
+/// skipped your side only by an invented "an opponent controls", and the
+/// others exiled, destroyed, bounced or stunned your own creature.
+#[test]
+fn hostile_up_to_one_etbs_spare_your_own_creature() {
+    use crabomination::card::{CardDefinition, CounterType};
+    let cards: [(&str, fn() -> CardDefinition); 7] = [
+        ("Solitude", catalog::solitude),
+        ("Faller's Faithful", catalog::fallers_faithful),
+        ("Peerless Ropemaster", catalog::peerless_ropemaster),
+        ("Werefox Bodyguard", catalog::werefox_bodyguard),
+        ("Splash Lasher", catalog::splash_lasher),
+        ("Fear of Immobility", catalog::fear_of_immobility),
+        ("Aang's Iceberg", catalog::aangs_iceberg),
+    ];
+    for (name, card) in cards {
+        let mut g = two_player_game();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(bears).unwrap().tapped = true;
+        g.move_card_to_battlefield_for_test(0, card());
+        drain_stack(&mut g);
+        let b = g.battlefield_find(bears).unwrap_or_else(|| panic!("{name} took your own Bears"));
+        assert!(b.tapped, "{name}: still tapped (Ropemaster bounces a tapped creature)");
+        assert_eq!(b.counter_count(CounterType::Stun), 0, "{name}: no stun counter");
+    }
+}
+
+/// CR 601.2c — Gold Rush's "up to one target creature" is its only slot, and
+/// optional: with no creature on the battlefield it is still cast for its
+/// Treasure (the required slot made it uncastable). A trailing optional slot
+/// (Combat Tutorial's) was already omittable at cast.
+#[test]
+fn gold_rush_casts_on_an_empty_board() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gold_rush());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("castable with no creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"));
+}
+
+/// CR 601.2c / 603.3d — "exile up to one target card from a graveyard" may
+/// name none: with only its controller's own creature card in any graveyard,
+/// the ETB leaves it (the walk's last resort exiled it — your own Reanimate
+/// target, gone).
+#[test]
+fn graveyard_hate_up_to_one_spares_your_own_card() {
+    use crabomination::card::CardDefinition;
+    let cards: [(&str, fn() -> CardDefinition); 3] = [
+        ("Raven Eagle", catalog::raven_eagle),
+        ("Ambush Wolf", catalog::ambush_wolf),
+        ("Sungold Sentinel", catalog::sungold_sentinel),
+    ];
+    for (name, card) in cards {
+        let mut g = two_player_game();
+        let mine = g.add_card_to_graveyard(0, catalog::serra_angel());
+        g.move_card_to_battlefield_for_test(0, card());
+        drain_stack(&mut g);
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == mine), "{name} took your own card");
+    }
+}
+
+/// CR 601.2c — Heritage Reclamation's third mode exiles *up to one* target
+/// card: it is cast over empty graveyards for the draw alone.
+#[test]
+fn heritage_reclamation_draws_over_empty_graveyards() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::heritage_reclamation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+    })
+    .expect("mode 3 castable with nothing to exile");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+}
+
 // ── New cube/Modern additions ─────────────────────────────────────────────────
 
 /// Reanimate puts a creature card from a graveyard onto the battlefield

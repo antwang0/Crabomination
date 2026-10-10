@@ -70,10 +70,11 @@ pub fn peerless_ropemaster() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Move {
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::Move {
             what: target_filtered(R::Creature.and(R::Tapped)),
             to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-        })],
+        }) })],
         ..Default::default()
     }
 }

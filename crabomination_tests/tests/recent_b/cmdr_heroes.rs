@@ -331,6 +331,19 @@ fn pizzasaur_destroys_up_to_your_counter_count() {
     assert!(g.battlefield_find(big).is_some(), "mana value 5 > 2 counters");
 }
 
+/// CR 601.2c / 603.7c — Pizzasaur's reflexive "destroy up to one target
+/// creature" may name none: with only its controller's creatures in reach,
+/// its own countered Bears survive (a required slot destroyed them).
+#[test]
+fn pizzasaur_spares_your_own_creature_when_no_opponent_has_one() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pizza = g.add_card_to_hand(0, catalog::dimension_x_pizzasaur());
+    cast_as(&mut g, 0, pizza, &[]).expect("cast");
+    assert_eq!(plus(&g, mine), 2);
+    assert!(g.battlefield_find(mine).is_some(), "your own Bears survive");
+}
+
 // ── Cards ────────────────────────────────────────────────────────────────────
 
 /// Donatello: a token creation of yours adds a Mutagen, which grows a

@@ -508,10 +508,11 @@ pub fn immersturm_predator() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-                effect: Effect::Move {
+                // "Up to one": optional, so it never takes its controller's own card (CR 601.2c).
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Move {
                     what: target_filtered(R::InGraveyard),
                     to: ZoneDest::Exile,
-                },
+                }) },
             },
         ],
         activated_abilities: vec![ActivatedAbility {

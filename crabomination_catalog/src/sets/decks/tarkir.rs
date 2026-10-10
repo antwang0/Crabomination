@@ -1820,8 +1820,8 @@ pub fn winternight_stories() -> CardDefinition {
 // ── TDM batch 12: Mobilize / Equipment / modal / landfall enchantment ─────
 
 /// Heritage Reclamation — {1}{G} Instant. Choose one — destroy target artifact;
-/// or destroy target enchantment; or exile target card from a graveyard, then
-/// draw a card.
+/// or destroy target enchantment; or exile up to one target card from a
+/// graveyard, then draw a card.
 pub fn heritage_reclamation() -> CardDefinition {
     CardDefinition {
         name: "Heritage Reclamation",
@@ -1834,7 +1834,9 @@ pub fn heritage_reclamation() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Enchantment),
             },
-            Effect::Seq(vec![
+            // "Exile up to one target card": optional, so the mode is castable
+            // over empty graveyards and never takes your own card (CR 601.2c).
+            Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(SelectionRequirement::InGraveyard),
                     to: ZoneDest::Exile,
@@ -1843,7 +1845,7 @@ pub fn heritage_reclamation() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 },
-            ]),
+            ])) },
         ]),
         ..Default::default()
     }

@@ -187,11 +187,15 @@ pub fn constable_of_the_realm() -> CardDefinition {
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                     EventScope::SelfSource,
                 ),
-                effect: Effect::ExileUntilSourceLeaves {
-                    what: target_filtered(
-                        R::Permanent.and(R::Land.negate()).and(R::OtherThanSource),
-                    ),
-                    return_to: crate::card::ExileReturnZone::Battlefield,
+                // "Up to one": optional, so it never exiles its controller's own.
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::ExileUntilSourceLeaves {
+                        what: target_filtered(
+                            R::Permanent.and(R::Land.negate()).and(R::OtherThanSource),
+                        ),
+                        return_to: crate::card::ExileReturnZone::Battlefield,
+                    }),
                 },
             },
         ],

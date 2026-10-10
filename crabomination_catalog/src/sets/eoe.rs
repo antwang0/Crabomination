@@ -4650,7 +4650,8 @@ pub fn fallers_faithful() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::Seq(vec![
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             // Check the damage state before the creature is destroyed.
             Effect::If {
                 cond: Predicate::Not(Box::new(Predicate::EntityMatches {
@@ -4668,7 +4669,7 @@ pub fn fallers_faithful() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
                 ),
             },
-        ]))],
+        ])) })],
         ..Default::default()
     }
 }

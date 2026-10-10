@@ -2397,6 +2397,18 @@ mod recent {
             "returns when the enchantment leaves");
     }
 
+    /// CR 601.2c / 603.3d — the ETB's "exile up to one target artifact or
+    /// creature" may name none: its controller's own Sol Ring stays when no
+    /// opponent has one (a required slot exiled it).
+    #[test]
+    fn touch_the_spirit_realm_spares_your_own_artifact() {
+        let mut g = two_player_game();
+        let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+        g.move_card_to_battlefield_for_test(0, catalog::touch_the_spirit_realm());
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(ring).is_some(), "your own Sol Ring stays");
+    }
+
     /// **Channel — {1}{W}, Discard this card: exile target artifact or
     /// creature; it comes back at the next end step.**
     ///

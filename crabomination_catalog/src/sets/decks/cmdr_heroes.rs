@@ -464,9 +464,13 @@ pub fn dimension_x_pizzasaur() -> CardDefinition {
         },
         triggered_abilities: vec![etb(Effect::Seq(vec![
             plus(target_filtered(R::Creature), Value::Const(2)),
+            // "Destroy up to one": optional, so it never kills its controller's own.
             Effect::ReflexiveTrigger {
-                body: Box::new(Effect::Destroy {
-                    what: target_filtered(R::Creature.and(R::ManaValueAtMostCountersAmongYours)),
+                body: Box::new(Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Destroy {
+                        what: target_filtered(R::Creature.and(R::ManaValueAtMostCountersAmongYours)),
+                    }),
                 }),
             },
         ]))],

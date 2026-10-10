@@ -109,14 +109,15 @@ pub fn werefox_bodyguard() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::ExileUntilSourceLeaves {
             what: target_filtered(
                 R::Creature
                     .and(R::OtherThanSource)
                     .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Fox)))),
             ),
             return_to: ExileReturnZone::Battlefield,
-        })],
+        }) })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             sac_cost: true,

@@ -187,10 +187,10 @@ pub fn gearbane_orangutan() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            Effect::Destroy {
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![Effect::OptionalTargets { min: 0, body: Box::new(Effect::Destroy {
                 what: target_filtered(R::Artifact),
-            },
+            }) },
             Effect::MaySacrifice {
                 description: "Sacrifice an artifact for two +1/+1 counters?".into(),
                 filter: R::Artifact,

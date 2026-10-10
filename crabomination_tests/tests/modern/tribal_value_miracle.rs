@@ -2557,6 +2557,23 @@ fn space_marine_devastator_etb_destroys_enchantment() {
     assert!(g.battlefield_find(ench).is_none(), "ETB destroyed the enchantment");
 }
 
+/// CR 601.2c / 603.3d — Devastator's "destroy up to one target artifact or
+/// enchantment" may name none: its controller's own Sol Ring survives when
+/// no opponent has one (a required slot destroyed it).
+#[test]
+fn space_marine_devastator_spares_your_own_artifact() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::space_marine_devastator());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Space Marine Devastator");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_some(), "your own Sol Ring survives");
+}
+
 /// Gary Clone's attack trigger pumps every Gary Clone you control +1/+0.
 #[test]
 fn gary_clone_attack_pumps_all_garys() {

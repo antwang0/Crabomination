@@ -27,9 +27,10 @@ pub fn baseball_bat() -> CardDefinition {
             toughness: 1,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Tap {
+                // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+                effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Tap {
                     what: target_filtered(R::Creature),
-                },
+                }) },
             }],
             ..Default::default()
         }),

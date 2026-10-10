@@ -83,7 +83,8 @@ pub fn fear_of_immobility() -> CardDefinition {
     CardDefinition {
         name: "Fear of Immobility",
         cost: cost(&[generic(4), w()]),
-        triggered_abilities: vec![etb(Effect::Seq(vec![
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
@@ -99,7 +100,7 @@ pub fn fear_of_immobility() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
-        ]))],
+        ])) })],
         ..nightmare(4, 4)
     }
 }

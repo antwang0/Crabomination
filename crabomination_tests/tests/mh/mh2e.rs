@@ -157,6 +157,31 @@ fn constable_exile_until_leaves() {
     assert!(g.battlefield_find(theirs).is_some(), "exiled bear returns");
 }
 
+/// CR 601.2c / 603.3d — Constable's "exile up to one other target nonland
+/// permanent" may name none: with only its controller's own Sol Ring in
+/// reach, the counter trigger leaves it (a required slot exiled it).
+#[test]
+fn constable_spares_your_own_permanent() {
+    let mut g = two_player_game();
+    let constable = g.add_card_to_battlefield(0, catalog::constable_of_the_realm());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Permanent(constable)];
+    let events = g
+        .resolve_effect(
+            &crabomination::effect::Effect::AddCounter {
+                what: crabomination::effect::Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: crabomination::effect::Value::Const(1),
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_some(), "your own Sol Ring stays");
+}
+
 /// Goblin Traprunner's three flips mint a Goblin per win.
 #[test]
 fn goblin_traprunner_flips() {

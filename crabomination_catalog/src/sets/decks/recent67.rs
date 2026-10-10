@@ -79,7 +79,8 @@ pub fn gold_rush() -> CardDefinition {
         name: "Gold Rush",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
+        // "Up to one target creature": the Treasure comes either way (CR 601.2c).
+        effect: Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -94,7 +95,7 @@ pub fn gold_rush() -> CardDefinition {
                 ),
                 duration: Duration::EndOfTurn,
             },
-        ]),
+        ])) },
         ..Default::default()
     }
 }

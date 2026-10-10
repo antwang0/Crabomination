@@ -600,14 +600,15 @@ pub fn aangs_iceberg() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::ExileUntilSourceLeaves {
             what: target_filtered(
                 SelectionRequirement::Permanent
                     .and(SelectionRequirement::Nonland)
                     .and(SelectionRequirement::OtherThanSource),
             ),
             return_to: ExileReturnZone::Battlefield,
-        })],
+        }) })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(3)]),
             waterbend: true,

@@ -5463,8 +5463,8 @@ pub fn fatal_fissure() -> CardDefinition {
 /// to one target card from a graveyard; if a creature was exiled, investigate.
 /// Whenever you draw your second card each turn, drain 1.
 pub fn raven_eagle() -> CardDefinition {
-    let exile_and_maybe_clue = || {
-        Effect::Seq(vec![
+    // "Up to one": optional, so it never takes its controller's own card (CR 601.2c).
+    let exile_and_maybe_clue = || Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
@@ -5482,8 +5482,7 @@ pub fn raven_eagle() -> CardDefinition {
                 then: Box::new(investigate(1)),
                 else_: Box::new(Effect::Noop),
             },
-        ])
-    };
+        ])) };
     CardDefinition {
         name: "Raven Eagle",
         cost: cost(&[generic(2), b()]),

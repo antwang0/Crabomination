@@ -131,14 +131,14 @@ pub fn dawnhart_mentor() -> CardDefinition {
 /// color" sub-clause is approximated as blanket hexproof + unblockable.)
 pub fn sungold_sentinel() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    // "up to one" is honored by the target being optional at resolution.
-    let exile_gy = Effect::Move {
+    // "Up to one": optional, so it never takes its controller's own card (CR 601.2c).
+    let exile_gy = Effect::OptionalTargets { min: 0, body: Box::new(Effect::Move {
         what: Selector::TargetFiltered {
             slot: 0,
             filter: SelectionRequirement::InGraveyard,
         },
         to: ZoneDest::Exile,
-    };
+    }) };
     CardDefinition {
         name: "Sungold Sentinel",
         cost: cost(&[generic(1), w()]),
@@ -7446,9 +7446,13 @@ pub fn touch_the_spirit_realm() -> CardDefinition {
         name: "Touch the Spirit Realm",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: target_filtered(artifact_or_creature()),
-            return_to: ExileReturnZone::Battlefield,
+        // "Up to one": optional, so it never exiles its controller's own.
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::ExileUntilSourceLeaves {
+                what: target_filtered(artifact_or_creature()),
+                return_to: ExileReturnZone::Battlefield,
+            }),
         })],
         // Channel — {1}{W}, Discard this card: exile target artifact or
         // creature and give it back at the next end step. The card's second

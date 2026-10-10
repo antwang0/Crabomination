@@ -35148,7 +35148,8 @@ pub fn splash_lasher() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Offspring(cost(&[generic(1), u()]))],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
+        // "Up to one": optional, so it never hits its controller's own (CR 601.2c).
+        triggered_abilities: vec![etb(Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
@@ -35157,7 +35158,7 @@ pub fn splash_lasher() -> CardDefinition {
                 kind: CounterType::Stun,
                 amount: Value::Const(1),
             },
-        ]))],
+        ])) })],
         ..Default::default()
     }
 }
@@ -40806,10 +40807,13 @@ pub fn space_marine_devastator() -> CardDefinition {
         keywords: vec![Keyword::Squad(cost(&[generic(2)]))],
         triggered_abilities: vec![
             crate::effect::shortcut::squad_etb(),
-            etb(Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-                ),
+            etb(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                }),
             }),
         ],
         ..Default::default()

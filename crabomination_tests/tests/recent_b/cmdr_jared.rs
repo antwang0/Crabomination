@@ -233,3 +233,30 @@ fn cr_700_2d_unite_the_coalition_repeats_a_mode_at_one_target() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 10);
 }
+
+/// CR 601.2c — Path to the World Tree's "2 damage to up to one target
+/// creature" is optional: with no creature on the board the sacrifice is still
+/// activated against the opponent alone (a required slot 1 blocked it).
+#[test]
+fn path_to_the_world_tree_activates_with_no_creature_to_hit() {
+    let mut g = pod(2);
+    let path = g.add_card_to_battlefield(0, catalog::path_to_the_world_tree());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    flood(&mut g, 0);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: path,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activates with slot 1 empty");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(named(&g, "Bear").len(), 1);
+}
+
