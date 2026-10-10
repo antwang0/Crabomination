@@ -150,6 +150,7 @@ mod damage_life;
 mod mana_burn;
 mod exile_triggers;
 mod casualty_copy;
+mod prevent_attacking;
 mod loss_exile;
 mod mystic_barrier;
 mod loyalty_copy;
@@ -9585,6 +9586,7 @@ impl GameState {
                     self.self_static_prevents_all_damage_active(&sa.effect, c)
                 })
         }) || self.damage_sealed_by_aura(tgt, true)
+            || self.attacking_damage_shielded(tgt)
     }
 
     pub(crate) fn damage_sealed_by_aura(&self, who: crate::card::CardId, incoming: bool) -> bool {
@@ -33567,6 +33569,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllCombatDamageToAndFromEnchanted
             | StaticEffect::PreventAllCombatDamageToMatching { .. }
+            | StaticEffect::PreventAllDamageToAttackingMatching { .. }
             | StaticEffect::PreventAllDamageToThis
             | StaticEffect::PlayersCantCycle
             | StaticEffect::MorphCostsMore { .. }

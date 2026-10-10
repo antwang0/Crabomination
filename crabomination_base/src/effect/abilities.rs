@@ -1604,6 +1604,11 @@ pub enum StaticEffect {
     /// the filter read with the source's controller as "you" (Losheel,
     /// Clockwork Scholar's "attacking artifact creatures you control").
     PreventAllCombatDamageToMatching { filter: crate::card::SelectionRequirement },
+    /// CR 615 — "prevent all damage that would be dealt to other attacking
+    /// [filter] you control" (Rescue Retriever's Soldiers): combat and
+    /// noncombat, read only while the damaged permanent is attacking, with
+    /// the source's controller as "you".
+    PreventAllDamageToAttackingMatching { filter: crate::card::SelectionRequirement },
     /// "Prevent all damage that would be dealt to this permanent" — the
     /// combat+noncombat superset of `PreventAllCombatDamageToThis`, consulted
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
