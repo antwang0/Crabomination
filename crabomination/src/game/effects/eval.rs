@@ -1287,7 +1287,7 @@ impl GameState {
                         .or_else(|| self.exile.iter().find(|c| c.id == cid))
                         // CR 901.7 — a face-up plane can carry counters.
                         .or_else(|| self.command_card(cid))
-                        .map(|c| c.counter_count(*kind) as i32)
+                        .map(|c| c.counter_count(*kind).min(i32::MAX as u32) as i32)
                 })
                 // CR-spec: "the number of [counter type] on X" returns the
                 // total across all entities X resolves to. Single-entity
@@ -1296,7 +1296,9 @@ impl GameState {
                 // — unblocking "total +1/+1 counters across all creatures
                 // you control" cards (Reflective Anatomy). Lock-in test:
                 // `tests::stx::reflective_anatomy_pumps_target_by_total_counters`.
-                .sum(),
+                // Saturating: a doubling board's counters passed `i32::MAX`
+                // (`--a dflt` audit pod seed 16200250 game 3).
+                .fold(0i32, i32::saturating_add),
             Value::ForetoldCardsOwnedInExile(who) => {
                 let seats = self.resolve_players(who, ctx);
                 self.exile
@@ -1353,9 +1355,12 @@ impl GameState {
                 .and_then(|c| c.chosen_number)
                 .unwrap_or(0) as i32,
             Value::NonlandCardsExiledThisEffect => self.nonland_cards_exiled_this_effect as i32,
-            Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
-            Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
-            Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),
+            // Saturating: a runaway board (a doubled-again counter count, a
+            // huge X) summed past i32 and aborted an audit pod's attack
+            // look-ahead (seed 16200250 game 3, `--a dflt`).
+            Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).fold(0i32, i32::saturating_add),
+            Value::Diff(a, b) => self.evaluate_value(a, ctx).saturating_sub(self.evaluate_value(b, ctx)),
+            Value::Times(a, b) => self.evaluate_value(a, ctx).saturating_mul(self.evaluate_value(b, ctx)),
             Value::Min(a, b) => self.evaluate_value(a, ctx).min(self.evaluate_value(b, ctx)),
             Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
@@ -7409,5 +7414,24 @@ impl GameState {
     fn shares_card_type_with_first_sacrificed(&self, types: &[crate::card::CardType]) -> bool {
         let theirs = &self.scratch.first_sacrificed_types;
         types.iter().any(|t| theirs.contains(t))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::card::Value;
+    use crate::game::effects::EffectContext;
+
+    /// Value arithmetic saturates instead of overflowing: a runaway board's
+    /// counters summed past `i32` and aborted a `--a dflt` audit pod inside
+    /// the bot's attack look-ahead (seed 16200250 game 3).
+    #[test]
+    fn value_arithmetic_saturates() {
+        let g = crate::game::two_player_game();
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        let big = || Box::new(Value::Const(i32::MAX));
+        assert_eq!(g.evaluate_value(&Value::Sum(vec![Value::Const(i32::MAX), Value::Const(5)]), &ctx), i32::MAX);
+        assert_eq!(g.evaluate_value(&Value::Times(big(), Box::new(Value::Const(3))), &ctx), i32::MAX);
+        assert_eq!(g.evaluate_value(&Value::Diff(Box::new(Value::Const(i32::MIN)), big()), &ctx), i32::MIN);
     }
 }

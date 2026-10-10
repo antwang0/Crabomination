@@ -408,3 +408,4 @@ fn cr_700_2_hullbreaker_declines_to_bounce_its_own_permanent() {
         }
     }
 }
+
