@@ -6186,6 +6186,15 @@ impl Effect {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),
             },
+            // A conditional body's instance is still one instance (Shower of
+            // Coals' threshold `If` named one opponent three times).
+            Effect::If { then, else_, .. } => {
+                then.distinct_target_count(mode).or_else(|| else_.distinct_target_count(mode))
+            }
+            Effect::OptionalTargets { body, .. }
+            | Effect::CollectEvidence { then: body, .. }
+            | Effect::CollectEvidenceX { then: body }
+            | Effect::PayEnergy { then: body, .. } => body.distinct_target_count(mode),
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
