@@ -291,29 +291,25 @@ pub fn rakdos_joins_up() -> CardDefinition {
     }
 }
 
-/// Tinybones Joins Up — {B} legendary enchantment. ETB: target player discards
-/// a card. Whenever a legendary creature you control enters, target player
-/// mills a card and loses 1 life. ("Any number of target players" is modeled
-/// as one target.)
+/// Tinybones Joins Up — {B} legendary enchantment. ETB: any number of target
+/// players each discard a card. Whenever a legendary creature you control
+/// enters, any number of target players each mill a card and lose 1 life
+/// (CR 601.2c — `ApplyToTargets` over players, no minimum).
 pub fn tinybones_joins_up() -> CardDefinition {
+    let any_players = |effect: Effect| Effect::ApplyToTargets {
+        max_targets: 8,
+        min_targets: 0,
+        filter: R::Player,
+        effect: Box::new(effect),
+    };
     joins_up(
         "Tinybones Joins Up",
         cost(&[b()]),
-        Effect::Discard {
-            who: target_filtered(R::Player),
-            amount: Value::ONE,
-            random: false,
-        },
-        Some(legend_enters(Effect::Seq(vec![
-            Effect::Mill {
-                who: target_filtered(R::Player),
-                amount: Value::ONE,
-            },
-            Effect::LoseLife {
-                who: Selector::Target(0),
-                amount: Value::ONE,
-            },
-        ]))),
+        any_players(Effect::Discard { who: Selector::Target(0), amount: Value::ONE, random: false }),
+        Some(legend_enters(any_players(Effect::Seq(vec![
+            Effect::Mill { who: Selector::Target(0), amount: Value::ONE },
+            Effect::LoseLife { who: Selector::Target(0), amount: Value::ONE },
+        ])))),
     )
 }
 
@@ -1432,24 +1428,20 @@ pub fn kaervek_the_punisher() -> CardDefinition {
 }
 
 /// Tinybones, the Pickpocket — {B} 1/1 Skeleton Rogue with deathtouch. Combat
-/// damage to a player lets you cast a nonland permanent card from their
-/// graveyard. (Modeled as a free cast rather than "pay its cost with any
-/// mana".)
+/// damage to a player: you may cast target nonland permanent card from that
+/// player's graveyard, spending mana of any type (CR 609.4b).
 pub fn tinybones_the_pickpocket() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::CastWithoutPayingImmediate {
-                reduce_generic: 0,
-                                pay_own_cost: false,
+            effect: Effect::CastImmediateAnyManaType {
                 what: target_filtered(
                     R::PermanentCard
                         .and(R::Not(Box::new(R::Land)))
-                        .and(R::InGraveyard),
+                        .and(R::InGraveyard)
+                        .and(R::ControlledByTriggerPlayer),
                 ),
                 source_zone: crate::card::Zone::Graveyard,
-                exile_after: false,
-                copy: false,
             },
         }],
         ..legend(

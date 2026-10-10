@@ -1253,3 +1253,39 @@ fn luxior_turns_a_planeswalker_into_a_creature() {
     assert!(!cp.card_types().contains(&crabomination::card::CardType::Planeswalker));
     assert_eq!(cp.power, loyalty);
 }
+
+/// Liliana of the Veil −6: you split the target player's permanents into two
+/// piles; they sacrifice the pile they choose, and keep the other.
+#[test]
+fn liliana_of_the_veil_ultimate_splits_into_piles() {
+    let mut g = pod(2);
+    let lili = ready(&mut g, 0, catalog::liliana_of_the_veil());
+    g.battlefield_find_mut(lili).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 3);
+    for _ in 0..4 {
+        ready(&mut g, 1, catalog::grizzly_bears());
+    }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lili,
+        ability_index: 2,
+        target: Some(Target::Player(1)),
+        x_value: None,
+    })
+    .expect("-6");
+    drain_stack(&mut g);
+    let left = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert!(left > 0 && left < 4, "one pile sacrificed, the other kept: {left} left");
+}
+
+/// Tinybones Joins Up: "any number of target players" — both opponents
+/// discard.
+#[test]
+fn tinybones_joins_up_hits_any_number_of_players() {
+    let mut g = pod(3);
+    for seat in 1..3 {
+        g.add_card_to_hand(seat, catalog::island());
+    }
+    let tju = g.add_card_to_hand(0, catalog::tinybones_joins_up());
+    flood(&mut g);
+    cast(&mut g, tju);
+    assert_eq!([g.players[1].hand.len(), g.players[2].hand.len()], [0, 0]);
+}

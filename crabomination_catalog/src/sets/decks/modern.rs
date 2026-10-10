@@ -29068,8 +29068,8 @@ pub fn narset_parter_of_veils() -> CardDefinition {
 
 /// Liliana of the Veil — {1}{B}{B} Legendary Planeswalker. 3 loyalty.
 /// **+1**: Each player discards a card. **−2**: Target player sacrifices a
-/// creature. **−6**: target player sacrifices half their permanents (the
-/// printed two-pile split is approximated by `SacrificeHalf`).
+/// creature. **−6**: you separate the permanents target player controls into
+/// two piles; they sacrifice the pile of their choice (`SeparateIntoPiles`).
 pub fn liliana_of_the_veil() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     CardDefinition {
@@ -29104,10 +29104,13 @@ pub fn liliana_of_the_veil() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -6,
-                effect: Effect::SacrificeHalf {
-                    who: Selector::Player(PlayerRef::Target(0)),
-                    filter: SelectionRequirement::Permanent,
-                    rounded_up: false,
+                // You split; that player sacrifices the pile they choose.
+                effect: Effect::SeparateIntoPiles {
+                    what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: SelectionRequirement::Permanent },
+                    splitter: PlayerRef::You,
+                    chooser: PlayerRef::Target(0),
+                    chosen: Box::new(Effect::SacrificeSelected { what: Selector::SeparatedPile { chosen: true } }),
+                    other: Box::new(Effect::Noop),
                 },
             },
         ],

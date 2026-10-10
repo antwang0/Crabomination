@@ -759,12 +759,14 @@ fn kaervek_recasts_a_black_graveyard_card_on_a_crime() {
     assert!(g.players[0].life < 20, "paid life for the recast copy");
 }
 
-/// Tinybones steals a permanent card out of the player he hit.
+/// Tinybones steals a permanent card out of the player he hit, paying its cost
+/// with mana of any type (CR 609.4b): {U}{U} casts a {1}{G} Grizzly Bears.
 #[test]
 fn tinybones_the_pickpocket_casts_from_their_graveyard() {
     let mut g = main_phase();
     let bones = g.add_card_to_battlefield(0, catalog::tinybones_the_pickpocket());
     let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     swing(&mut g, bones);
     assert_eq!(
@@ -772,6 +774,7 @@ fn tinybones_the_pickpocket_casts_from_their_graveyard() {
         Some(0),
         "cast from their graveyard, under your control"
     );
+    assert_eq!(g.players[0].mana_pool.total(), 0, "paid, not free");
 }
 
 /// The Key to the Vault digs as deep as the damage and hands you a free cast.
