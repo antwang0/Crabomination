@@ -6371,6 +6371,19 @@ pub(crate) fn rank_library_search(
 ///   then anyone else's.
 /// - **Graveyards**: exile every offered card an opponent owns, up to `max`;
 ///   a `Gain` pick over our own graveyard takes the biggest.
+#[cfg(test)]
+pub(crate) fn decide_choose_cards_for_test(
+    w: &EvalWeights,
+    state: &GameState,
+    seat: usize,
+    value: crate::decision::PickValue,
+    candidates: &[(crate::card::CardId, String)],
+    min: u32,
+    max: u32,
+) -> crate::decision::DecisionAnswer {
+    decide_choose_cards(w, state, seat, value, candidates, min, max)
+}
+
 fn decide_choose_cards(
     w: &EvalWeights,
     state: &GameState,
@@ -6446,11 +6459,14 @@ fn decide_choose_cards(
     let in_a_library = |id: crate::card::CardId| state.players.iter().find_map(|p| p.library.iter().find(|c| c.id == id));
     let all_in_library = !candidates.is_empty() && candidates.iter().all(|(id, _)| in_a_library(*id).is_some());
     if all_in_library && gain {
+        // CR 104.4b — a card whose arrival starts a mandatory loop stays put
+        // (Gishath revealing Polyraptor beside Marauding Raptor drew pods).
         let mut ranked: Vec<(crate::card::CardId, i32, i32)> = candidates
             .iter()
             .filter_map(|(id, _)| {
                 let c = in_a_library(*id)?;
                 Some((*id, c.definition.cost.cmc() as i32, c.definition.power))
+                    .filter(|_| !super::loop_hazard::entry_starts_loop(state, seat, &c.definition.arc(), w))
             })
             .collect();
         ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));

@@ -239,6 +239,37 @@ pub(super) fn sets_up_loop(pre: &GameState, post: &GameState, seat: usize, w: &s
     }
 }
 
+/// Whether putting `def` onto the battlefield under `seat` (a "put any
+/// number of them onto the battlefield" pick — Gishath's reveal) starts or
+/// primes a mandatory loop: Polyraptor beside Marauding Raptor. Commander
+/// seats only; the probe runs only when the card or the seat could feed one.
+pub(super) fn entry_starts_loop(
+    state: &GameState,
+    seat: usize,
+    def: &std::sync::Arc<crate::card::CardDefinition>,
+    w: &super::bot::EvalWeights,
+) -> bool {
+    thread_local! {
+        /// The probe answers its own asks with the bot policy, which picks
+        /// through here again: one level deep only.
+        static PROBING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    if PROBING.get()
+        || state.players[seat].commanders.is_empty()
+        || !(makes_tokens_repeatably(def) || watch(state, seat))
+    {
+        return false;
+    }
+    let mut h = state.clone();
+    let mut events = Vec::new();
+    h.mint_token_onto_battlefield(def.clone(), seat, false, &mut events);
+    h.dispatch_triggers_for_events(&events);
+    PROBING.set(true);
+    let looped = sets_up_loop(state, &h, seat, w);
+    PROBING.set(false);
+    looped
+}
+
 /// The last gate on any pod action but a pass, an answer or a combat
 /// declaration: one that starts or primes a mandatory loop is declined. The
 /// finalist and Room pickers ask first; this catches the rest — Marina's
@@ -409,6 +440,25 @@ mod tests {
         let w = crate::server::bot::EvalWeights::default();
         let up = crate::server::bot::BotStep::plain(GameAction::TurnFaceUp { card_id: dancers });
         assert!(action_starts_loop(&g, 0, &up, &w));
+    }
+
+    /// CR 104.4b — a Polyraptor put onto the battlefield beside Marauding
+    /// Raptor (Gishath's "any number of Dinosaur cards" reveal) loops; the
+    /// bot's library pick leaves it out, a plain Dinosaur goes in.
+    #[test]
+    fn a_revealed_polyraptor_beside_marauding_raptor_stays_in_the_library() {
+        let (mut g, _) = arcade_game();
+        g.add_card_to_battlefield(0, crate::catalog::marauding_raptor());
+        let w = crate::server::bot::EvalWeights::default();
+        let poly = std::sync::Arc::new(crate::catalog::polyraptor());
+        let bear = std::sync::Arc::new(crate::catalog::grizzly_bears());
+        assert!(entry_starts_loop(&g, 0, &poly, &w));
+        assert!(!entry_starts_loop(&g, 0, &bear, &w));
+        let p = g.add_card_to_library(0, crate::catalog::polyraptor());
+        let b = g.add_card_to_library(0, crate::catalog::grizzly_bears());
+        let cands = vec![(p, "Polyraptor".to_string()), (b, "Grizzly Bears".to_string())];
+        let answer = crate::server::bot::decide_choose_cards_for_test(&w, &g, 0, crate::decision::PickValue::Gain, &cands, 0, 2);
+        assert_eq!(answer, crate::decision::DecisionAnswer::Cards(vec![b]));
     }
 
     /// CR 104.4b — unlocking Secret Arcade under a Gremlin Tamer sets the loop
