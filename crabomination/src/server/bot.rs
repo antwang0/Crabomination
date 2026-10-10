@@ -9891,32 +9891,23 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     // Agatha's Soul Cauldron — a creature of yours activates with mana of any
     // color, so its pips are no gate either (an eight-seat fuzzed strict pod,
     // seed 18400204 game 2, asserted on Emperor of Bones' {1}{B} with two
-    // Plains). Same pass.
-    let (life_pips, any_color_creature_abilities): (u8, bool) = state
+    // Plains; a six-seat audit pod, seed 172001, on Incubation Druid's
+    // {3}{G}{G} with one Forest). Nor are any ability's under Chromatic
+    // Orrery or anyone's Mycosynth Lattice — the three statics
+    // `activate_ability` reads. Same pass.
+    let (life_pips, any_color, any_color_creatures): (u8, bool, bool) = state
         .battlefield
         .iter()
-        .filter(|c| c.controller == seat)
-        .flat_map(|c| c.definition.static_abilities.iter())
-        .fold((0, false), |(m, any), sa| match sa.effect {
-            crate::effect::StaticEffect::PhyrexianPipsForAllSpells { color } => {
-                (m | 1 << crate::game::actions::color_index(color), any)
+        .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.controller == seat, &sa.effect)))
+        .fold((0, false, false), |(m, all, creatures), (mine, e)| match *e {
+            crate::effect::StaticEffect::PhyrexianPipsForAllSpells { color } if mine => {
+                (m | 1 << crate::game::actions::color_index(color), all, creatures)
             }
-            crate::effect::StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities => (m, true),
-            _ => (m, any),
+            crate::effect::StaticEffect::PlayersMaySpendManaAsAnyColor => (m, true, creatures),
+            crate::effect::StaticEffect::YouMaySpendManaAsAnyColor if mine => (m, true, creatures),
+            crate::effect::StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities if mine => (m, all, true),
+            _ => (m, all, creatures),
         });
-    // Mana spendable as though it were any color (Chromatic Orrery, Mycosynth
-    // Lattice; Agatha's Soul Cauldron for a creature's ability) makes a
-    // coloured pip a generic one — the same three statics `activate_ability`
-    // reads (a six-seat audit pod, seed 172001, asserted on Incubation Druid's
-    // {3}{G}{G} with one Forest untapped beside the Cauldron).
-    let (any_color, any_color_creatures) = state.battlefield.iter().flat_map(|c| {
-        c.definition.static_abilities.iter().map(move |sa| (c.controller, &sa.effect))
-    }).fold((false, false), |(all, creatures), (ctl, e)| match e {
-        crate::effect::StaticEffect::PlayersMaySpendManaAsAnyColor => (true, creatures),
-        crate::effect::StaticEffect::YouMaySpendManaAsAnyColor if ctl == seat => (true, creatures),
-        crate::effect::StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities if ctl == seat => (all, true),
-        _ => (all, creatures),
-    });
     let mut gy_ability_grant = false;
     // A static that makes artifacts Equipment (Bludgeon Brawl, Arterial
     // Alchemy): the per-card memo answers "is one out" without a walk.
@@ -9990,7 +9981,6 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
                 && !pips_free
                 && ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
                 && !restricted_floating
-                && !(any_color_creature_abilities && state.computed_is_creature(c))
                 && !colors_coverable_paying_life(&ab.mana_cost, have.get(), life_pips)
             {
                 continue;
