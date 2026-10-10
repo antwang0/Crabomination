@@ -1652,7 +1652,7 @@ impl GameState {
         self.players[caster]
             .hand
             .iter()
-            .filter(|c| c.definition.foretell_cost.is_some())
+            .filter(|c| c.definition.foretell_cost.is_some() || self.hand_foretell_grant(caster, c).is_some())
             .map(|c| c.id)
             .filter(|&id| Self::would_accept_on(template, GameAction::Foretell { card_id: id }))
             .collect()

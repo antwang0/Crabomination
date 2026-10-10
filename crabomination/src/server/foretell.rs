@@ -14,7 +14,7 @@ pub(super) fn pick_foretell(state: &GameState, seat: usize) -> Option<GameAction
     state.players[seat]
         .hand
         .iter()
-        .filter(|c| c.definition.foretell_cost.is_some())
+        .filter(|c| c.definition.foretell_cost.is_some() || state.hand_foretell_grant(seat, c).is_some())
         .max_by_key(|c| c.definition.cost.cmc())
         .map(|c| GameAction::Foretell { card_id: c.id })
         .filter(|a| state.would_accept(a.clone()))

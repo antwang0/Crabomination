@@ -2937,6 +2937,9 @@ pub enum SelectionRequirement {
     /// CR 702.143 — a card with foretell (Niko Defies Destiny's "return target
     /// card with foretell from your graveyard").
     HasForetell,
+    /// CR 702.143 — a card foretold this turn (face down in exile): Dream
+    /// Devourer's "whenever you foretell a card", read off the exile event.
+    ForetoldThisTurn,
     /// A creature whose printed power or toughness is `n` — "creature you
     /// control with base power or toughness 1" (Sword of the Squeak). Reads
     /// the definition, which is the token's for a token.

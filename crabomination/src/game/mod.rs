@@ -33446,6 +33446,7 @@ fn static_effect_to_effects(
             | StaticEffect::OthersEnterWithSourceTapState
             | StaticEffect::SpellCopiesPlusOne
             | StaticEffect::CasualtyCopyLoyaltyFromSacrifice
+            | StaticEffect::HandNonlandCardsHaveForetell { .. }
             | StaticEffect::GrantConspireToSpells { .. }
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn

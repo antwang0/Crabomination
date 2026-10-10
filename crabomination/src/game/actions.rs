@@ -8443,13 +8443,13 @@ impl GameState {
     /// `cast_foretold`.
     pub(crate) fn foretell_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let has_foretell = self.players[p]
+        let (printed, granted) = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .map(|c| c.definition.foretell_cost.is_some())
+            .map(|c| (c.definition.foretell_cost.is_some(), self.hand_foretell_grant(p, c)))
             .ok_or(GameError::CardNotInHand(card_id))?;
-        if !has_foretell {
+        if !printed && granted.is_none() {
             return Err(GameError::CardNotInHand(card_id));
         }
         if !self.on_active_team(p) {
@@ -8469,6 +8469,11 @@ impl GameState {
         card.face_down = true;
         self.exile.push(card);
         self.foretold_this_turn.insert(card_id);
+        // Dream Devourer's foretell cost stays with the card once exiled.
+        if let Some(cost) = granted {
+            self.granted_foretell_costs.retain(|(c, _)| *c != card_id);
+            self.granted_foretell_costs.push((card_id, cost));
+        }
         self.note_exiled_from_hand_or_by(p);
         events.push(GameEvent::PermanentExiled { card_id });
         Ok(events)

@@ -17,6 +17,29 @@ impl GameState {
         self.granted_foretell_costs.iter().find(|(c, _)| *c == id).map(|(_, m)| m)
     }
 
+    /// Dream Devourer's grant: the foretell cost `seat`'s hand card `c` has
+    /// from a `HandNonlandCardsHaveForetell` static they control — a nonland
+    /// card without printed foretell, its mana cost less the static's
+    /// generic reduction (the cheapest grant when several apply).
+    pub(crate) fn hand_foretell_grant(&self, seat: usize, c: &CardInstance) -> Option<ManaCost> {
+        if c.definition.foretell_cost.is_some() || c.definition.is_land() {
+            return None;
+        }
+        let reduce = self
+            .battlefield
+            .iter()
+            .filter(|p| p.controller == seat)
+            .flat_map(|p| p.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::HandNonlandCardsHaveForetell { reduce } => Some(reduce),
+                _ => None,
+            })
+            .max()?;
+        let mut cost = c.definition.cost.clone();
+        cost.reduce_generic(reduce);
+        Some(cost)
+    }
+
     /// CR 702.143 — `c` (in exile) is foretold: face down with a foretell
     /// cost, printed or granted.
     pub(crate) fn is_foretold(&self, c: &CardInstance) -> bool {

@@ -743,6 +743,11 @@ pub enum StaticEffect {
     /// is made, X being the sacrificed creature's power. No battlefield
     /// effect.
     CasualtyCopyLoyaltyFromSacrifice,
+    /// "Each nonland card in your hand without foretell has foretell. Its
+    /// foretell cost is equal to its mana cost reduced by {`reduce`}" (Dream
+    /// Devourer, CR 702.143). A card foretold this way keeps that cost once
+    /// exiled (`GameState::granted_foretell_costs`).
+    HandNonlandCardsHaveForetell { reduce: u32 },
     /// "[filter] spells you cast have conspire" (Wort, the Raidmother, CR
     /// 702.78) — consulted with the printed keyword by the conspire cast path.
     /// `from_exile`: only spells cast from exile (Rassilon, the War

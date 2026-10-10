@@ -1739,6 +1739,12 @@ impl GameState {
                 })
                 .max()
                 .unwrap_or(0),
+            Value::CreatureCardsPutIntoGraveyardThisTurn(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| self.players[p].creature_cards_to_graveyard_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::CardsPutIntoGraveyardThisTurn(who) => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -5756,6 +5762,7 @@ impl GameState {
                     R::WithAnyCounter => card.has_any_counter(),
                     R::HasNoCounters => !card.has_any_counter(),
                     R::HasForetell => card.definition.foretell_cost.is_some(),
+                    R::ForetoldThisTurn => card.face_down && self.foretold_this_turn.contains(&card.id),
                     R::BasePowerOrToughnessIs(n) => {
                         let (p, t) = self.base_pt_of(card);
                         self.computed_is_creature(card) && (p == *n || t == *n)
@@ -7308,6 +7315,7 @@ impl GameState {
             R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
             R::HasNoCounters => !card.has_any_counter(),
             R::HasForetell => card.definition.foretell_cost.is_some(),
+            R::ForetoldThisTurn => card.face_down && self.foretold_this_turn.contains(&card.id),
             R::BasePowerOrToughnessIs(n) => {
                 let (p, t) = self.base_pt_of(card);
                 self.computed_is_creature(card) && (p == *n || t == *n)
