@@ -964,6 +964,9 @@ pub struct PlayerData {
     /// `library_top_playable` and the top-revealed view.
     #[serde(default)]
     pub play_from_top_this_turn: bool,
+    /// `play_from_top_this_turn`'s spells cost life, not mana (Gwenom).
+    #[serde(default)]
+    pub play_from_top_pay_life_this_turn: bool,
     /// CR 603.3d-adjacent — set once this player casts/plays a card from the
     /// top of their library under a `PlayFromLibraryTopOncePerTurn` grant
     /// (Johann, Apprentice Sorcerer). Cleared at end of turn. Read by
@@ -1707,6 +1710,7 @@ impl Player {
             steals_opponent_tokens_this_turn: false,
             lost_life_this_turn: false,
             play_from_top_this_turn: false,
+            play_from_top_pay_life_this_turn: false,
             cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Default::default(),

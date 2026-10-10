@@ -3504,7 +3504,7 @@ pub enum EventKind {
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
     ScriedOrSurveiled,
-    /// CR 714.2c — the final chapter ability of a Saga resolved (Narci, Fable
+    /// CR 714.2e — the final chapter ability of a Saga resolved (Narci, Fable
     /// Singer; Tom Bombadil). The Saga is the subject and its mana value the
     /// event amount, read as the chapter resolved (CR 714.4 sacrifices it
     /// before any trigger resolves).
@@ -7276,7 +7276,7 @@ pub enum Effect {
     Firebend { amount: Value },
     /// Engine-appended to a Saga's final chapter ability (never printed):
     /// emits `GameEvent::SagaFinalChapterResolved` as the chapter resolves,
-    /// so a countered chapter emits nothing (CR 714.2c).
+    /// so a countered chapter emits nothing (CR 714.2e).
     SagaFinalChapterResolved,
 
     // ── Permanent mutations ──────────────────────────────────────────────────
@@ -11195,6 +11195,10 @@ pub enum Effect {
     /// of your library." Sets `Player.play_from_top_this_turn` for the
     /// effect's controller (The Belligerent's attack trigger).
     GrantPlayFromTopThisTurn,
+    /// `GrantPlayFromTopThisTurn` whose spells cost life equal to their mana
+    /// value rather than their mana cost — Bolas's Citadel for a turn
+    /// (Gwenom, Remorseless).
+    GrantPlayFromTopPayLifeThisTurn,
 
     /// "You may cast up to `count` spells from among face-up cards your
     /// opponents own from exile this turn without paying their mana costs."

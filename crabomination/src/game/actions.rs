@@ -7274,7 +7274,7 @@ impl GameState {
         if card.id != card_id || card.definition.is_land() {
             return None;
         }
-        let covered = self.battlefield.iter().any(|c| {
+        let covered = self.players[p].play_from_top_pay_life_this_turn || self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| matches!(
                     &sa.effect,

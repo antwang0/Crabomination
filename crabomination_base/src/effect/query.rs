@@ -1348,7 +1348,7 @@ impl Effect {
             Effect::EnlistThen { then } => then.requires_target(),
             Effect::StudyTopCard { .. } => false,
             Effect::ExileTopWithCounters { .. } => false,
-            Effect::GrantPlayFromTopThisTurn => false,
+            Effect::GrantPlayFromTopThisTurn | Effect::GrantPlayFromTopPayLifeThisTurn => false,
             Effect::HoneFromHand { .. } => false,
             Effect::PutFromHandOntoBattlefield { .. }
             | Effect::PutFromHandOrCommandZoneOntoBattlefield { .. }

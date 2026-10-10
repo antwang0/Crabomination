@@ -31074,6 +31074,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantPlayFromTopPayLifeThisTurn => {
+                self.players[ctx.controller].play_from_top_this_turn = true;
+                self.players[ctx.controller].play_from_top_pay_life_this_turn = true;
+                Ok(())
+            }
             Effect::GrantPlayFromTopThisTurn => {
                 self.players[ctx.controller].play_from_top_this_turn = true;
                 Ok(())
