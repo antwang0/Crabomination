@@ -4,7 +4,7 @@
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
-//! War and Eddie Brock. Tests in
+//! War, Eddie Brock and Nicol Bolas, the Ravager. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -2587,6 +2587,270 @@ pub fn behold_the_sinister_six() -> CardDefinition {
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             }),
         },
+        ..Default::default()
+    }
+}
+
+// ── Nicol Bolas, the Ravager (UBR) ──────────────────────────────────────────
+
+fn bolas_walker(name: &'static str, mana: crate::mana::ManaCost, loyalty: u32, abilities: Vec<LoyaltyAbility>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Bolas], ..Default::default() },
+        base_loyalty: loyalty,
+        loyalty_abilities: abilities,
+        ..Default::default()
+    }
+}
+
+fn loyalty(cost: i32, effect: Effect) -> LoyaltyAbility {
+    LoyaltyAbility { loyalty_cost: cost, effect, ..Default::default() }
+}
+
+/// CR 701.71a — "empower Jace N": with no Jace planeswalker token, create a
+/// blue one with 0 loyalty, "[−1]: Surveil 1" and "[−3]: Draw a card"; then
+/// put N loyalty counters on a Jace token you control.
+fn empower_jace(n: i32) -> Effect {
+    use crate::card::CounterType;
+    let jace_token = || R::IsToken.and(R::HasPlaneswalkerType(PlaneswalkerSubtype::Jace)).and(R::ControlledByYou);
+    Effect::Seq(vec![
+        Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::CountOf(Box::new(Selector::EachPermanent(jace_token()))),
+                Value::Const(0),
+            ),
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition {
+                    name: "Jace".into(),
+                    card_types: vec![CardType::Planeswalker],
+                    colors: vec![Color::Blue],
+                    subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace], ..Default::default() },
+                    loyalty_abilities: vec![
+                        loyalty(-1, Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }),
+                        loyalty(-3, Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    ],
+                    ..Default::default()
+                }),
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+        Effect::AddCounter {
+            what: Selector::GreatestPowerTopN { filter: jace_token(), count: Value::ONE },
+            kind: CounterType::Loyalty,
+            amount: Value::Const(n),
+        },
+    ])
+}
+
+/// Sanctum Lurker — {2}{B} 3/2 Horror. ETB: empower Jace 1. Your
+/// planeswalkers survive 0 loyalty (CR 704.5i) and have "[+2]: 1 damage to
+/// each opponent and you gain 1 life."
+pub fn sanctum_lurker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(empower_jace(1))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty.",
+                effect: StaticEffect::YourPlaneswalkersSurviveZeroLoyalty,
+            },
+            StaticAbility {
+                description: "Planeswalkers you control have \"[+2]: This planeswalker deals 1 damage to each opponent and you gain 1 life.\"",
+                effect: StaticEffect::PlaneswalkersHaveLoyaltyAbilities {
+                    abilities: vec![loyalty(
+                        2,
+                        Effect::Seq(vec![
+                            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                        ]),
+                    )],
+                },
+            },
+        ],
+        ..creature("Sanctum Lurker", cost(&[generic(2), b()]), vec![CreatureType::Horror], 3, 2)
+    }
+}
+
+/// Liliana's Talent — {B}{B} Aura, enchant planeswalker. It has "[−8]: Put
+/// all creature cards from all graveyards onto the battlefield under your
+/// control." A creature dealing damage to it is destroyed.
+pub fn lilianas_talent() -> CardDefinition {
+    CardDefinition {
+        name: "Liliana's Talent",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Planeswalker) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted planeswalker has \"[−8]: Put all creature cards from all graveyards onto the battlefield under your control.\"",
+            effect: StaticEffect::AttachedPlaneswalkerHasLoyaltyAbilities {
+                abilities: vec![loyalty(
+                    -8,
+                    Effect::Move {
+                        what: Selector::EachMatching {
+                            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::EachPlayer),
+                            filter: R::Creature,
+                        },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                )],
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::EnchantedBySource),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::LastDamagerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
+                    filter: R::Creature,
+                },
+                then: Box::new(Effect::Destroy {
+                    what: Selector::LastDamagerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nicol Bolas, Planeswalker — {4}{U}{B}{B}{R}, loyalty 5. +3: destroy target
+/// noncreature permanent. −2: gain control of target creature. −9: 7 damage
+/// to target player or planeswalker; that player (or its controller) discards
+/// seven cards, then sacrifices seven permanents.
+pub fn nicol_bolas_planeswalker() -> CardDefinition {
+    let victim = || PlayerRef::ControllerOf(Box::new(Selector::Target(0)));
+    bolas_walker(
+        "Nicol Bolas, Planeswalker",
+        cost(&[generic(4), u(), b(), b(), r()]),
+        5,
+        vec![
+            loyalty(3, Effect::Destroy { what: target_filtered(R::Permanent.and(R::Noncreature)) }),
+            loyalty(
+                -2,
+                Effect::GainControl { what: target_filtered(R::Creature), to: None, duration: Duration::Permanent },
+            ),
+            loyalty(
+                -9,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: target_filtered(R::Player.or(R::Planeswalker)), amount: Value::Const(7) },
+                    Effect::Discard { who: Selector::Player(victim()), amount: Value::Const(7), random: false },
+                    Effect::Sacrifice { who: Selector::Player(victim()), count: Value::Const(7), filter: R::Permanent },
+                ]),
+            ),
+        ],
+    )
+}
+
+/// Nicol Bolas, the Deceiver — {5}{U}{B}{R}, loyalty 5. +3: each opponent
+/// loses 3 life unless they sacrifice a nonland permanent or discard a card.
+/// −3: destroy target creature, draw a card. −11: 7 damage to each opponent,
+/// you draw seven.
+pub fn nicol_bolas_the_deceiver() -> CardDefinition {
+    bolas_walker(
+        "Nicol Bolas, the Deceiver",
+        cost(&[generic(5), u(), b(), r()]),
+        5,
+        vec![
+            loyalty(
+                3,
+                Effect::Punisher {
+                    chooser: Selector::Player(PlayerRef::EachOpponent),
+                    options: vec![
+                        Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Permanent.and(R::Nonland) },
+                    ],
+                    otherwise: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::Const(3),
+                    }),
+                },
+            ),
+            loyalty(
+                -3,
+                Effect::Seq(vec![
+                    Effect::Destroy { what: target_filtered(R::Creature) },
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ]),
+            ),
+            loyalty(
+                -11,
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(7) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+                ]),
+            ),
+        ],
+    )
+}
+
+/// Dark Intimations — {2}{U}{B}{R} Sorcery. Each opponent sacrifices a
+/// creature or planeswalker, then discards a card; you return a creature or
+/// planeswalker card from your graveyard to hand, then draw. From your
+/// graveyard: casting a Bolas planeswalker spell exiles it, and that
+/// planeswalker enters with an additional loyalty counter.
+pub fn dark_intimations() -> CardDefinition {
+    use crate::card::CounterType;
+    let creature_or_walker = || R::Creature.or(R::Planeswalker);
+    CardDefinition {
+        name: "Dark Intimations",
+        cost: cost(&[generic(2), u(), b(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: creature_or_walker(),
+            },
+            Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE, random: false },
+            Effect::ReturnGraveyardCardsToHand { filter: creature_or_walker(), max: Value::ONE },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Planeswalker.and(R::HasPlaneswalkerType(PlaneswalkerSubtype::Bolas)),
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: Selector::This },
+                Effect::SpellEntersWithCounters {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::Loyalty,
+                    amount: Value::ONE,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hour of Devastation — {3}{R}{R} Sorcery. Creatures lose indestructible
+/// until end of turn; 5 damage to each creature and each non-Bolas
+/// planeswalker.
+pub fn hour_of_devastation() -> CardDefinition {
+    CardDefinition {
+        name: "Hour of Devastation",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseKeyword {
+                what: Selector::EachPermanent(R::Creature),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    R::Creature.or(R::Planeswalker.and(R::HasPlaneswalkerType(PlaneswalkerSubtype::Bolas).negate())),
+                ),
+                amount: Value::Const(5),
+            },
+        ]),
         ..Default::default()
     }
 }

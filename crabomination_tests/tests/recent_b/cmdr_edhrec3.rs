@@ -1878,3 +1878,111 @@ fn behold_the_sinister_six_reanimates_a_team() {
     drain_stack(&mut g);
     assert!(dead.iter().all(|id| g.battlefield_find(*id).is_some()));
 }
+
+fn set_loyalty(g: &mut GameState, id: CardId, n: u32) {
+    use crabomination::card::CounterType;
+    let c = g.battlefield_find_mut(id).unwrap();
+    let have = c.counter_count(CounterType::Loyalty);
+    c.add_counters(CounterType::Loyalty, n);
+    c.remove_counters(CounterType::Loyalty, have);
+}
+
+/// Sanctum Lurker (Bolas's list): CR 701.71a — empower Jace 1 makes a Jace
+/// token with one loyalty; a planeswalker at 0 loyalty stays (CR 704.5i is
+/// waived) and has the granted +2.
+#[test]
+fn sanctum_lurker_empowers_jace_and_keeps_walkers() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let lurker = g.add_card_to_hand(0, catalog::sanctum_lurker());
+    flood(&mut g);
+    cast_x(&mut g, lurker, None);
+    let jace = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Jace").map(|c| c.id).expect("a Jace token");
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 1);
+    loyalty(&mut g, jace, 0, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(jace).is_some(), "0 loyalty, still here");
+    g.battlefield_find_mut(jace).unwrap().loyalty_uses_this_turn = 0;
+    let life = g.players[1].life;
+    loyalty(&mut g, jace, 2, None);
+    assert_eq!(g.players[1].life, life - 1, "the granted +2");
+}
+
+/// Liliana's Talent (Bolas's list): the enchanted planeswalker's granted −8
+/// puts every graveyard's creature cards onto the battlefield under you.
+#[test]
+fn lilianas_talent_grants_a_mass_reanimation() {
+    let mut g = pod(3);
+    let bolas = ready(&mut g, 0, catalog::nicol_bolas_the_deceiver());
+    set_loyalty(&mut g, bolas, 8);
+    let a = g.add_card_to_graveyard(1, catalog::serra_angel());
+    let b = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    let talent = g.add_card_to_hand(0, catalog::lilianas_talent());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: talent, target: Some(Target::Permanent(bolas)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("talent");
+    drain_stack(&mut g);
+    loyalty(&mut g, bolas, 3, None);
+    for id in [a, b] {
+        assert_eq!(g.battlefield_find(id).map(|c| c.controller), Some(0));
+    }
+}
+
+/// Nicol Bolas, Planeswalker (Bolas's list): +3 destroys a noncreature
+/// permanent; −2 steals a creature.
+#[test]
+fn nicol_bolas_planeswalker_destroys_and_steals() {
+    let mut g = pod(2);
+    let bolas = ready(&mut g, 0, catalog::nicol_bolas_planeswalker());
+    let rock = ready(&mut g, 1, catalog::mind_stone());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    loyalty(&mut g, bolas, 0, Some(Target::Permanent(rock)));
+    assert!(g.battlefield_find(rock).is_none());
+    g.battlefield_find_mut(bolas).unwrap().loyalty_uses_this_turn = 0;
+    loyalty(&mut g, bolas, 1, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+}
+
+/// Nicol Bolas, the Deceiver (Bolas's list): −3 destroys a creature and draws.
+#[test]
+fn nicol_bolas_the_deceiver_kills_and_draws() {
+    let mut g = pod(2);
+    let bolas = ready(&mut g, 0, catalog::nicol_bolas_the_deceiver());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    loyalty(&mut g, bolas, 1, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Dark Intimations (Bolas's list): from the graveyard, casting a Bolas
+/// planeswalker exiles it and the planeswalker enters with one more loyalty.
+#[test]
+fn dark_intimations_feeds_a_bolas_walker() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let dark = g.add_card_to_graveyard(0, catalog::dark_intimations());
+    let bolas = g.add_card_to_hand(0, catalog::nicol_bolas_the_deceiver());
+    flood(&mut g);
+    cast_x(&mut g, bolas, None);
+    assert!(g.exile.iter().any(|c| c.id == dark));
+    assert_eq!(g.battlefield_find(bolas).unwrap().counter_count(CounterType::Loyalty), 6);
+}
+
+/// Hour of Devastation (Bolas's list): indestructible creatures die, a
+/// non-Bolas planeswalker takes 5, a Bolas one is spared.
+#[test]
+fn hour_of_devastation_spares_only_bolas() {
+    let mut g = pod(2);
+    let myr = ready(&mut g, 1, catalog::darksteel_myr());
+    let bolas = ready(&mut g, 0, catalog::nicol_bolas_the_deceiver());
+    let lili = ready(&mut g, 1, catalog::liliana_of_the_veil());
+    let hour = g.add_card_to_hand(0, catalog::hour_of_devastation());
+    flood(&mut g);
+    cast_x(&mut g, hour, None);
+    assert!(g.battlefield_find(myr).is_none(), "lost indestructible");
+    assert!(g.battlefield_find(bolas).is_some());
+    assert!(g.battlefield_find(lili).is_none(), "3 loyalty, 5 damage");
+}
