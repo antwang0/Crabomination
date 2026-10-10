@@ -184,6 +184,14 @@ the handoff.
   the trigger resolves) is still moved and named; CR 400.7 says it is a new
   object. Undecided: two token board caps (Myrel + Roaming Throne, Garruk's
   Packleader), one simultaneous loss.
+- **Plain sweep** 187001 (every deck × 3/4/6/8 × 30 = 9,420 games): 0 aborts;
+  Polyraptor + Marauding Raptor was 3 of 5 undecided, every one a Gishath
+  reveal putting Polyraptor in beside the Raptor. ✅ Gishath's printed "put
+  **any number** of Dinosaur creature cards" was an engine "all"; it is the
+  controller's pick now (default all), and the bot's library Gain pick drops a
+  card whose arrival starts a mandatory loop (`loop_hazard::entry_starts_loop`,
+  one level deep — the probe answers its own asks with the same policy). A
+  fuzzed Polyraptor cast (184001/186001) is the fuzzer's, not the bot's.
 
 ## FIXED/OPEN 2026-10-10 (seventeenth Commander run, `017yfeX4`) — eight EDHREC seats, eleven primitives, the CR 601.2c census
 
