@@ -192,6 +192,10 @@ the handoff.
   card whose arrival starts a mandatory loop (`loop_hazard::entry_starts_loop`,
   one level deep — the probe answers its own asks with the same policy). A
   fuzzed Polyraptor cast (184001/186001) is the fuzzer's, not the bot's.
+  Left: a *forced* reveal (Atla Palani's Egg dying to Marauding Raptor, the
+  reveal-until-creature finding Polyraptor — 188001, decks 74/268/82 game 28)
+  has no pick to decline, and the watch doesn't read libraries: extending it
+  there turns the probe on for most pods, for one game in ~10,000.
 
 ## FIXED/OPEN 2026-10-10 (seventeenth Commander run, `017yfeX4`) — eight EDHREC seats, eleven primitives, the CR 601.2c census
 
