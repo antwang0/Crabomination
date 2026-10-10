@@ -6272,6 +6272,9 @@ pub struct EquipBonus {
     /// addition to its other types" (Transmogrifying Licid).
     #[serde(default)]
     pub add_card_types: Vec<CardType>,
+    /// Card types the host loses (layer 4) — Luxior's "isn't a planeswalker".
+    #[serde(default)]
+    pub remove_card_types: Vec<CardType>,
     /// Land types the host's type line becomes (the "is a Forest land" auras —
     /// Song of the Dryads). Pairs with `set_card_types: Some([Land])` so the
     /// intrinsic basic-land mana ability follows the granted type.
@@ -6375,6 +6378,11 @@ pub struct EquipScale {
     /// Equipment attached to it"), rather than a controlled-permanent count.
     #[serde(default)]
     pub count_host_attachments: Option<SelectionRequirement>,
+    /// When true, the count is every counter on the *host*, keyword
+    /// counters included (Luxior, Giada's Gift — "+1/+1 for each counter on
+    /// it").
+    #[serde(default)]
+    pub count_host_counters: bool,
     /// When true, the attached host is excluded from the `filter` count —
     /// the printed "for each **other** creature you control" (Bravado).
     #[serde(default)]

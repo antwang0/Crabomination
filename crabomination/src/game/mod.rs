@@ -13898,7 +13898,12 @@ impl GameState {
                     .battlefield
                     .find_by_id(target)
                     .map(|c| c.controller);
-                let n = if let Some(att_filter) = &scale.count_host_attachments {
+                let n = if scale.count_host_counters {
+                    // "+1/+1 for each counter on it" (Luxior) — every kind.
+                    self.battlefield.find_by_id(target).map_or(0, |h| {
+                        (h.counters.values().sum::<u32>() + h.keyword_counters.values().sum::<u32>()) as i32
+                    })
+                } else if let Some(att_filter) = &scale.count_host_attachments {
                     // "+1/+0 for each Equipment attached to it" (Golem-Skin
                     // Gauntlets) — count the host's own attachments.
                     let gates = crate::game::effects::PrintedGates::default();
@@ -14181,6 +14186,10 @@ impl GameState {
             for ct in &bonus.add_card_types {
                 push_mod(&mut all_effects, Layer::L4Type, None,
                     Modification::AddCardType(ct.clone()));
+            }
+            for ct in &bonus.remove_card_types {
+                push_mod(&mut all_effects, Layer::L4Type, None,
+                    Modification::RemoveCardType(ct.clone()));
             }
             if let Some(types) = &bonus.set_land_types {
                 push_mod(&mut all_effects, Layer::L4Type, None,
@@ -23114,9 +23123,17 @@ impl GameState {
         } else {
             crate::card::CardType::Creature
         };
-        let target_ok = self
-            .computed_permanent(target)
-            .is_some_and(|c| c.controller == p && c.card_types().contains(&wanted));
+        // "Equip planeswalker {1}" (Luxior, Giada's Gift): a filtered equip
+        // cost that names a planeswalker reaches one.
+        let filtered_walker = fortify.is_none()
+            && self.battlefield[equip_pos].definition.equip_filtered_cost.as_ref().is_some_and(|(f, _)| {
+                self.evaluate_requirement_static(f, &Target::Permanent(target), p, None)
+            });
+        let target_ok = self.computed_permanent(target).is_some_and(|c| {
+            c.controller == p
+                && (c.card_types().contains(&wanted)
+                    || (filtered_walker && c.card_types().contains(&crate::card::CardType::Planeswalker)))
+        });
         if !target_ok {
             return Err(GameError::InvalidTarget);
         }
