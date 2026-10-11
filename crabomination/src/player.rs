@@ -714,6 +714,11 @@ pub struct PlayerData {
     /// the player's `do_untap`. Defaults to false for snapshot back-compat.
     #[serde(default)]
     pub permanent_left_battlefield_this_turn: bool,
+    /// The creature subset of `permanent_left_battlefield_this_turn` ("if a
+    /// creature left the battlefield under your control this turn" — Tale of
+    /// Momo), read last-known before the creature left. Reset with it.
+    #[serde(default)]
+    pub creature_left_battlefield_this_turn: bool,
     /// True if this player has been dealt damage so far this turn. Set in
     /// `deal_damage_to_from`'s player branch (combat or non-combat, incl.
     /// infect/poison), reset for *all* players at the active player's
@@ -1696,6 +1701,7 @@ impl Player {
             dungeons_completed: 0,
             pending_creature_etb_counters: Default::default(),
             permanent_left_battlefield_this_turn: false,
+            creature_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,
             greatest_hit_this_turn: 0,

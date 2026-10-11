@@ -4123,6 +4123,9 @@ impl GameState {
             Predicate::RevoltActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
+            Predicate::CreatureLeftBattlefieldThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].creature_left_battlefield_this_turn),
             // CR 800.4a — a departed seat controls nothing and is no player.
             Predicate::AnyPlayerControlsNoCreatures => self.living_seats().any(|seat| {
                 !self.battlefield.iter().any(|c| c.controller == seat && self.computed_is_creature(c))

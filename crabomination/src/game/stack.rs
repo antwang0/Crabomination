@@ -5214,6 +5214,7 @@ impl GameState {
             }
             if pl.permanent_left_battlefield_this_turn {
                 pl.permanent_left_battlefield_this_turn = false;
+                pl.creature_left_battlefield_this_turn = false;
             }
             if pl.cards_exiled_this_turn != 0 || pl.cards_discarded_this_turn != 0 {
                 pl.cards_exiled_this_turn = 0;
@@ -8824,6 +8825,9 @@ impl GameState {
                         ))
                 })
             });
+        // A creature leaving, read before it goes (CR 608.2h last-known
+        // information): an animated land counts (Tale of Momo).
+        let was_creature = self.battlefield.find_by_id(id).is_some_and(|c| self.computed_is_creature(c));
         if let Some(mut card) = self.battlefield.take_by_id(id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
@@ -9014,6 +9018,7 @@ impl GameState {
             // controller this turn.
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
+                self.players[card.controller].creature_left_battlefield_this_turn |= was_creature;
             }
             // EOE Void — a nonland permanent left the battlefield this turn.
             if !card.definition.is_land() {
@@ -9095,6 +9100,9 @@ impl GameState {
     /// the source (`ActivatedAbility::bounce_self_cost` — Magosi).
     pub fn remove_from_battlefield_to_hand(&mut self, id: CardId) -> Vec<GameEvent> {
         let mut events = Vec::new();
+        // A creature leaving, read before it goes (CR 608.2h last-known
+        // information): an animated land counts (Tale of Momo).
+        let was_creature = self.battlefield.find_by_id(id).is_some_and(|c| self.computed_is_creature(c));
         let Some(mut card) = self.battlefield.take_by_id(id) else {
             return events;
         };
@@ -9115,6 +9123,7 @@ impl GameState {
         card.leave_battlefield_state();
         if card.controller < self.players.len() {
             self.players[card.controller].permanent_left_battlefield_this_turn = true;
+            self.players[card.controller].creature_left_battlefield_this_turn |= was_creature;
         }
         if !card.definition.is_land() {
             self.nonland_permanent_left_bf_this_turn = true;
@@ -9139,6 +9148,9 @@ impl GameState {
     }
 
     pub fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
+        // A creature leaving, read before it goes (CR 608.2h last-known
+        // information): an animated land counts (Tale of Momo).
+        let was_creature = self.battlefield.find_by_id(id).is_some_and(|c| self.computed_is_creature(c));
         if let Some(mut card) = self.battlefield.take_by_id(id) {
             // CR 400.7 / 607 — the permanent's old exile links (a card cast
             // out of an exile pile) are not the new exile's.
@@ -9160,6 +9172,7 @@ impl GameState {
             // CR 702.139 — Revolt: a permanent left the battlefield this turn.
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
+                self.players[card.controller].creature_left_battlefield_this_turn |= was_creature;
             }
             // EOE Void — a nonland permanent left the battlefield this turn.
             if !card.definition.is_land() {

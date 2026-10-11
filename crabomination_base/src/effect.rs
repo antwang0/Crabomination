@@ -2139,6 +2139,10 @@ pub enum Predicate {
     /// control this turn. Backed by
     /// `Player.permanent_left_battlefield_this_turn`.
     RevoltActive { who: PlayerRef },
+    /// A creature left the battlefield under `who`'s control this turn (Tale
+    /// of Momo's cost reduction). Backed by
+    /// `Player.creature_left_battlefield_this_turn`.
+    CreatureLeftBattlefieldThisTurn { who: PlayerRef },
     /// EOE Void — true if a nonland permanent left the battlefield this turn
     /// (any controller) or `who` cast a spell for its warp cost this turn.
     /// Backed by `GameState.nonland_permanent_left_bf_this_turn` +

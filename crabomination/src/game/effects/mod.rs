@@ -19712,17 +19712,34 @@ impl GameState {
             }
 
             Effect::Airbend { what } => {
-                // CR 701.13a — exile each object; while exiled its owner may
+                // CR 701.65a — exile each object; while exiled its owner may
                 // cast it for {2} rather than its mana cost (a never-expiring
                 // WhileExiled may-play grant + a {2} alt-cast cost).
-                let ids: Vec<CardId> = self
-                    .resolve_selector(what, ctx)
+                let resolved = self.resolve_selector(what, ctx);
+                // CR 701.65a — a spell is airbent off the stack (Aang, Swift
+                // Savior: "airbend up to one other target creature or spell").
+                let spells: Vec<CardId> = resolved
+                    .iter()
+                    .filter_map(|e| e.as_card_id())
+                    .filter(|cid| self.stack.iter().any(|si| matches!(si, StackItem::Spell { card, .. } if card.id == *cid)))
+                    .collect();
+                let mut ids: Vec<CardId> = resolved
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
+                    .filter(|cid| !spells.contains(cid))
                     .collect();
+                if !spells.is_empty() {
+                    self.run_effect(
+                        &Effect::MoveSpellToZone { what: what.clone(), zone: crate::effect::CounteredSpellZone::Exile },
+                        ctx,
+                        events,
+                    )?;
+                }
                 let turn = self.turn_number;
-                for cid in ids {
-                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                for cid in spells.iter().copied().chain(std::mem::take(&mut ids)) {
+                    if !spells.contains(&cid) {
+                        self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    }
                     if let Some(card) = self.exile.iter_mut().find(|c| c.id == cid) {
                         let owner = card.owner;
                         card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
