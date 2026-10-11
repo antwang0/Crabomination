@@ -149,7 +149,8 @@ the handoff.
   any-number move).
 - **Open (INCOMPLETE_CARDS):** Mikey & Don's extra counter keys on any library-top cast; Scuttlemutt
   names one color; Shelob's and Supper for Spiders' Foods enter as creatures first; Myojin of Cryptic
-  keyword-counter `Duration`).
+  Dreams' counter is an ETB trigger. (Minas Morgul's shadow-counter Wraith: fixed,
+  `Duration::WhileHasKeywordCounter`.)
 
 ## FIXED/OPEN 2026-10-11 (Commander run, `01Lnhgw3`) — ten EDHREC seats, CR 723.2, and five bug classes the sweeps and seats found
 
