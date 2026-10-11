@@ -2920,6 +2920,9 @@ pub enum SelectionRequirement {
     /// battlefield (Chainer's "if you didn't cast it from your hand").
     /// False for anything that entered without being cast.
     WasCastFromHand,
+    /// The library-top sibling: a permanent cast from the top of its owner's
+    /// library on its way to the battlefield (Mikey & Don's extra counter).
+    WasCastFromLibrary,
     /// The card shares a card type with a card exiled by the evaluating
     /// source (`exiled_with == source`) — Holistic Wisdom's return gate.
     SharesCardTypeWithExiledBySource,
@@ -6950,6 +6953,10 @@ pub struct AlternativeCost {
     /// caster controls fewer than N matches.
     #[serde(default)]
     pub return_to_hand: Option<(SelectionRequirement, u32)>,
+    /// CR 702.190 — this is a sneak cost: the permanent spell enters tapped
+    /// and attacking what the returned creature was attacking (702.190b).
+    #[serde(default)]
+    pub sneak: bool,
     /// Optional additional cost: sacrifice N permanents the caster controls
     /// matching the filter. Powers free spells whose alt cost is a sacrifice
     /// (Fireblast "sacrifice two Mountains", Snuff Out, Disappear). Rejected

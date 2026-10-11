@@ -3851,6 +3851,9 @@ impl GameState {
         if !self.attacking.is_empty() {
             self.attacking.clear();
         }
+        if !self.sneak_defenders.is_empty() {
+            self.sneak_defenders.clear();
+        }
         // CR 508.5 — the record outlives its attackers only to the end of
         // combat: a combat whose attackers all died before it ended left it
         // standing, and a later attack on the same planeswalker kept the old

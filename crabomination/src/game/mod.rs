@@ -1722,6 +1722,11 @@ pub struct ColdState {
     /// permanent "enters tapped". Read as it enters; cleared at each untap.
     #[serde(default)]
     pub(crate) graveyard_cast_enters_tapped: crate::game::types::IdSet<CardId>,
+    /// CR 702.190b — a permanent spell cast for its sneak cost, with the
+    /// player, planeswalker or battle the creature returned to pay it was
+    /// attacking. Consumed as the permanent enters; dropped as combat ends.
+    #[serde(default)]
+    pub(crate) sneak_defenders: Vec<(CardId, crate::game::types::AttackTarget)>,
     /// Permanents that entered the battlefield directly from exile (not via a
     /// cast) this turn. Set in the exile→battlefield move path; read by
     /// `Predicate::EnteredFromExile` (Fire Lord Zuko's "whenever a permanent

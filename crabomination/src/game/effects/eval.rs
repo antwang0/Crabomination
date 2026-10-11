@@ -5813,6 +5813,7 @@ impl GameState {
                         card.definition.madness_cost().is_some() || self.granted_madness(card.owner, card).is_some()
                     }
                     R::WasCastFromHand => !card.is_token && card.cast_from_hand,
+                    R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
                     // CR 613 — **every** P/T leaf below reads the *computed*
@@ -7018,6 +7019,7 @@ impl GameState {
                 card.definition.madness_cost().is_some() || self.granted_madness(card.owner, card).is_some()
             }
             R::WasCastFromHand => !card.is_token && card.cast_from_hand,
+            R::WasCastFromLibrary => !card.is_token && card.cast_from_library,
             // No source context in the on-card evaluator; the exile-linked
             // share check only resolves through `evaluate_requirement_static`.
             R::SharesCardTypeWithExiledBySource => false,

@@ -15513,6 +15513,14 @@ impl GameState {
             }
         }
 
+        // CR 702.190b — note what the returned creature was attacking before
+        // it leaves combat; the permanent this spell becomes attacks it.
+        if alt.sneak
+            && let Some(target) =
+                return_picks.first().and_then(|r| self.attacking.iter().find(|a| a.attacker == *r)).map(|a| a.target)
+        {
+            self.sneak_defenders.push((card_id, target));
+        }
         // Return-to-hand additional cost: bounce the picked permanents to
         // their owners' hands now that mana/life are paid. Reuses the full
         // `move_card_to` battlefield-exit path (combat removal, continuous-

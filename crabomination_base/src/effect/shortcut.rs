@@ -153,6 +153,7 @@ pub fn sneak(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
         flash: true,
         condition: Some(Predicate::CurrentStepIs(crate::turn_step::TurnStep::DeclareBlockers)),
         return_to_hand: Some((R::Creature.and(R::IsUnblocked).and(R::ControlledByYou), 1)),
+        sneak: true,
         ..Default::default()
     }
 }

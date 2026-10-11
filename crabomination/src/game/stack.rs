@@ -2915,6 +2915,15 @@ impl GameState {
                             c.tapped = true;
                         }
                     }
+                    // CR 702.190b — a sneaked permanent enters tapped and
+                    // attacking what the returned creature was attacking.
+                    if let Some(i) = self.sneak_defenders.iter().position(|(id, _)| *id == card_id) {
+                        let (_, target) = self.sneak_defenders.swap_remove(i);
+                        if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
+                            c.tapped = true;
+                        }
+                        self.put_into_combat_attacking(card_id, target);
+                    }
                     // CR 707.5 — an as-enters copy (The Mimeoplasm) enters with
                     // the copied card's "when this enters" abilities, not its own.
                     if let (Some(before), Some(c)) = (name_before, self.battlefield.find_by_id(card_id))
