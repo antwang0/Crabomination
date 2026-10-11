@@ -1405,6 +1405,7 @@ pub fn armament_master() -> CardDefinition {
                 attachment_filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
                 per_power: 2,
                 per_toughness: 2,
+                each_counts_its_own: false,
             },
         }],
         ..creature(

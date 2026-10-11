@@ -23808,6 +23808,24 @@ impl GameState {
                 self.exiled_for_cost_card = Some(cid);
             }
         }
+        // "Unattach an Equipment from [this]" as a cost: the greatest mana
+        // value one goes, and its MV rides `Value::ExiledForCostManaValue`.
+        if ability.unattach_equipment_cost {
+            let pick = self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to == Some(card_id) && c.definition.is_equipment())
+                .max_by_key(|c| (c.definition.cost.cmc(), std::cmp::Reverse(c.id)))
+                .map(|c| (c.id, c.definition.cost.cmc() as i32));
+            let Some((eq, mv)) = pick else { return Err(GameError::SelectionRequirementViolated) };
+            if let Some(c) = self.battlefield.find_by_id_mut(eq)
+                && let Some(host) = c.attached_to.take()
+            {
+                let (id, def, ctrl) = (c.id, std::sync::Arc::clone(&c.definition), c.controller);
+                self.note_unattached(id, &def, ctrl, host);
+            }
+            self.exiled_for_cost_mana_value = Some(mv);
+        }
 
         // "Sacrifice all [filter] you control" as a cost (Tomb of Urami) —
         // folded into the same payment loop as `sac_other_filter`. The source

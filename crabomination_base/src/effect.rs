@@ -1229,7 +1229,8 @@ pub enum Value {
     /// Bargain ("gain life equal to the sacrificed permanent's mana value").
     SacrificedManaValue,
     /// Mana value of the permanent exiled to pay this activation's
-    /// `ActivatedAbility::exile_permanent_cost` (Food Chain).
+    /// `ActivatedAbility::exile_permanent_cost` (Food Chain), or of the
+    /// Equipment its `unattach_equipment_cost` detached (Captain America).
     ExiledForCostManaValue,
     /// Number of cards in *every* graveyard sharing the resolving source's
     /// name (Accumulated Knowledge).

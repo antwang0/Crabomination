@@ -531,6 +531,7 @@ pub fn rabid_wombat() -> CardDefinition {
                 attachment_filter: R::Enchantment,
                 per_power: 2,
                 per_toughness: 2,
+                each_counts_its_own: false,
             },
         }],
         ..creature("Rabid Wombat", cost(&[generic(2), g(), g()]), vec![CreatureType::Wombat], 0, 1)

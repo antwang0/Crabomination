@@ -3719,6 +3719,10 @@ pub enum SelectionRequirement {
     /// `ResolutionScratch::trigger_subject`, stamped as the trigger is
     /// targeted and again as it resolves (`mentions_trigger_subject`).
     OtherThanTriggerSubject,
+    /// Toughness less than the trigger's subject's — last known, read off the
+    /// dying creature (Colfenor, the Last Yew's "creature card with lesser
+    /// toughness"). Same stamp as `OtherThanTriggerSubject`.
+    ToughnessLessThanTriggerSubject,
     /// Excludes the permanent stamped on the source's `chosen_permanent` slot
     /// — the "creatures other than this and the chosen creature" half of an
     /// ETB choose-a-creature rider (Zenos yae Galvus).
@@ -4358,7 +4362,7 @@ impl SelectionRequirement {
     /// (`OtherThanTriggerSubject`), so the trigger paths stamp it first.
     pub fn mentions_trigger_subject(&self) -> bool {
         match self {
-            Self::OtherThanTriggerSubject => true,
+            Self::OtherThanTriggerSubject | Self::ToughnessLessThanTriggerSubject => true,
             Self::And(a, b) | Self::Or(a, b) => a.mentions_trigger_subject() || b.mentions_trigger_subject(),
             Self::Not(a) => a.mentions_trigger_subject(),
             _ => false,

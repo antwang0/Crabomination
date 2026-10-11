@@ -4459,6 +4459,32 @@ impl GameState {
     }
 
     /// No other chosen slot names a card with `target`'s name (CR 201.2).
+    /// The trigger subject's toughness, last known: the dying creature's
+    /// battlefield snapshot when the dispatch still holds it, else the card's
+    /// own (graveyard) toughness.
+    pub(crate) fn trigger_subject_toughness(&self) -> Option<i32> {
+        let id = self.scratch.trigger_subject?;
+        if let Some(cp) = self.computed_permanent(id) {
+            return Some(cp.toughness);
+        }
+        self.died_card_snapshots
+            .get(&id)
+            .or_else(|| self.leaves_bf_lki.get(&id))
+            .or_else(|| self.find_card_anywhere(id))
+            .map(|c| self.card_toughness_anywhere(c))
+    }
+
+    /// A card's toughness off the battlefield: its printed toughness plus its
+    /// +1/+1 and -1/-1 counters (a Skullbriar keeps them).
+    pub(crate) fn card_toughness_anywhere(&self, c: &crate::card::CardInstance) -> i32 {
+        if let Some(cp) = self.computed_permanent(c.id) {
+            return cp.toughness;
+        }
+        c.definition.toughness
+            + c.counter_count(crate::card::CounterType::PlusOnePlusOne) as i32
+            - c.counter_count(crate::card::CounterType::MinusOneMinusOne) as i32
+    }
+
     fn name_differs_from_other_targets(&self, target: &Target, slots: &[Option<Target>]) -> bool {
         let name = |t: &Target| match t {
             Target::Permanent(cid) => self.find_card_anywhere(*cid).map(|c| c.definition.name),
@@ -4943,6 +4969,10 @@ impl GameState {
             R::IsAttackingTriggerPlayer => Some(self.attacking_trigger_player(cid)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
             R::OtherThanTriggerSubject => Some(self.scratch.trigger_subject != Some(cid)),
+            R::ToughnessLessThanTriggerSubject => {
+                let t = self.find_card_anywhere(cid).map(|c| self.card_toughness_anywhere(c));
+                Some(t.zip(self.trigger_subject_toughness()).is_some_and(|(t, s)| t < s))
+            }
             R::IsSource => Some(source == Some(cid)),
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
             R::HasSuspend => Some(self.find_card_anywhere(cid).is_some_and(crate::card::CardInstance::has_suspend)),
@@ -6370,6 +6400,10 @@ impl GameState {
                         None => true,
                     },
                     R::OtherThanTriggerSubject => self.scratch.trigger_subject != Some(*cid),
+                    R::ToughnessLessThanTriggerSubject => {
+                        let t = self.find_card_anywhere(*cid).map(|c| self.card_toughness_anywhere(c));
+                        t.zip(self.trigger_subject_toughness()).is_some_and(|(t, s)| t < s)
+                    }
                     // CR 601.2c — "**another** target": the battlefield walker
                     // reads the same stamp the cast/activation validator
                     // leaves, so the UI's candidate list and the picker agree
@@ -7327,6 +7361,9 @@ impl GameState {
             // battlefield).
             R::OtherThanSource => true,
             R::OtherThanTriggerSubject => self.scratch.trigger_subject != Some(card.id),
+            R::ToughnessLessThanTriggerSubject => {
+                self.trigger_subject_toughness().is_some_and(|s| self.card_toughness_anywhere(card) < s)
+            }
             // Source-less path: no `chosen_permanent` slot to consult.
             R::NotSourcesChosenPermanent => true,
             // A card in another zone is never the battlefield source.

@@ -485,6 +485,11 @@ pub enum StaticEffect {
         attachment_filter: SelectionRequirement,
         per_power: i32,
         per_toughness: i32,
+        /// Count the attachments on each affected creature instead of on the
+        /// source — "each creature you control gets +2/+0 for each Equipment
+        /// attached to it" (Bruenor Battlehammer).
+        #[serde(default)]
+        each_counts_its_own: bool,
     },
     /// "As long as this has `n` or more `kind` counters on it, it's an
     /// (artifact) creature." War Balloon (3+ fire counters). Emits a layer-4
@@ -4093,6 +4098,12 @@ pub struct ActivatedAbility {
     /// (Sunforger). Paid alongside `sac_cost` in `activate_ability`.
     #[serde(default)]
     pub unattach_cost: bool,
+    /// "Unattach an Equipment from [this creature]" as a cost (Captain
+    /// America, First Avenger's Throw): the greatest-mana-value Equipment on
+    /// the source detaches, and `Value::ExiledForCostManaValue` reads its MV.
+    /// Gate the ability's `condition` on one being attached.
+    #[serde(default)]
+    pub unattach_equipment_cost: bool,
     /// "Exile [this Equipment]" as an activation cost, for an ability the
     /// Equipment *grants to its bearer* — the cost exiles the attachment, not
     /// the creature paying it (The Dominion Bracelet).

@@ -15392,24 +15392,27 @@ impl GameState {
                         attachment_filter,
                         per_power,
                         per_toughness,
+                        each_counts_its_own,
                     } = &sa.effect
                     else {
                         continue;
                     };
-                    let count = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.attached_to == Some(card.id)
-                                && self.evaluate_requirement_static_on(
-                                    attachment_filter,
-                                    c,
-                                    card.controller,
-                                    Some(card.id),
-                                )
-                        })
-                        .count() as i32;
-                    if count == 0 {
+                    let attachments_on = |host: CardId| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.attached_to == Some(host)
+                                    && self.evaluate_requirement_static_on(
+                                        attachment_filter,
+                                        c,
+                                        card.controller,
+                                        Some(card.id),
+                                    )
+                            })
+                            .count() as i32
+                    };
+                    let source_count = if *each_counts_its_own { 0 } else { attachments_on(card.id) };
+                    if !*each_counts_its_own && source_count == 0 {
                         continue;
                     }
                     for target in &self.battlefield {
@@ -15421,6 +15424,10 @@ impl GameState {
                                 Some(card.id),
                             )
                         {
+                            continue;
+                        }
+                        let count = if *each_counts_its_own { attachments_on(target.id) } else { source_count };
+                        if count == 0 {
                             continue;
                         }
                         all_effects.push(ContinuousEffect {
