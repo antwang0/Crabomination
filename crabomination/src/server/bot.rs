@@ -12820,7 +12820,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool, leader_target
         let mut dmg: smallvec::SmallVec<[i32; 16]> =
             raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).collect();
         dmg.sort_unstable_by(|a, b| b.cmp(a));
-        let through: i32 = dmg.iter().skip(opp_blockers.len()).sum();
+        let through: i32 = dmg.iter().skip(opp_blockers.len()).fold(0, |a, &d| a.saturating_add(d));
         through >= opp_life
     };
     let has_ground_deathtouch = opp_blockers.iter().any(|b| {
@@ -15960,7 +15960,7 @@ fn chump_block_candidates(
     let total: i32 = incoming.iter().fold(0i32, |a, (_, p)| a.saturating_add(*p));
     // Two clean swings from dead is where a chump starts buying the
     // turn that matters; above that, the card is worth more.
-    if total <= 0 || total * 2 < state.effective_life(seat) {
+    if total <= 0 || total.saturating_mul(2) < state.effective_life(seat) {
         return Vec::new();
     }
     incoming.sort_by_key(|&(_, p)| std::cmp::Reverse(p));
@@ -29476,6 +29476,26 @@ mod stack_response_tests {
         g.players[0].life = 15;
         let calm = block_candidates_for_mcts(&g, 0, &EvalWeights::chump_blocks_on());
         assert_eq!(calm, vec![Vec::new()], "at 15 life the desperation gate holds");
+    }
+
+    /// A pod sweep (`--a dflt`, seed 30200304) aborted here: the incoming
+    /// power total saturates at `i32::MAX`, and doubling it overflowed.
+    #[test]
+    fn a_saturated_attack_total_still_offers_the_chump() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareBlockers;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let mut giant = catalog::serra_angel();
+        giant.power = i32::MAX;
+        let giant = g.add_card_to_battlefield(1, giant);
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.attacking = vec![crate::game::types::Attack {
+            attacker: giant,
+            target: crate::game::types::AttackTarget::Player(0),
+        }];
+        let on = block_candidates_for_mcts(&g, 0, &EvalWeights::chump_blocks_on());
+        assert!(on.contains(&vec![(bears, giant)]), "{on:?}");
     }
 
     /// Converge-aware land drops: holding a converge card, a land of a

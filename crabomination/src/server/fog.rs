@@ -59,14 +59,15 @@ fn danger(state: &GameState, seat: usize) -> Option<Vec<CardId>> {
         }
         let Some(c) = state.battlefield_find(a.attacker) else { continue };
         let power = state.computed_permanent(c.id).map_or(c.power(), |cp| cp.power).max(0);
-        total += power;
+        // Saturating: a power is bounded by nothing (doublers, X pumps).
+        total = total.saturating_add(power);
         if let Some(cmd) = state.commander_card_of(c.id) {
             let dealt = state.commander_damage.get(&(seat, cmd)).copied().unwrap_or(0);
-            cmd_lethal |= dealt + power as u32 >= 21;
+            cmd_lethal |= dealt.saturating_add(power as u32) >= 21;
         }
         incoming.push(c.id);
     }
-    (total >= life || cmd_lethal || (total >= 6 && total * 3 >= life)).then_some(incoming)
+    (total >= life || cmd_lethal || (total >= 6 && total.saturating_mul(3) >= life)).then_some(incoming)
 }
 
 /// Cast a held fog, or flash Prismatic Strands back by tapping a white
