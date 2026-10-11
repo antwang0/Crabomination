@@ -1629,3 +1629,148 @@ fn storm_the_vault_becomes_the_vault() {
     activate(&mut g, storm, 1).expect("tap for blue");
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 5);
 }
+
+/// Demonic Taskmaster eats another creature each upkeep; Lord of the Pit
+/// with nothing to eat bites its controller for 7.
+#[test]
+fn upkeep_demons_feed_or_bite() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::demonic_taskmaster());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::lord_of_the_pit());
+    let life = g.players[0].life;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 7);
+}
+
+/// Evil Eye of Urborg: your other creatures can't attack, and its blocker is
+/// destroyed.
+#[test]
+fn evil_eye_of_urborg_locks_and_kills_its_blocker() {
+    let mut g = pod(2);
+    let eye = ready(&mut g, 0, catalog::evil_eye_of_urborg());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert!(has_kw(&g, bear, Keyword::CantAttack));
+    assert!(!has_kw(&g, eye, Keyword::CantAttack));
+    let wall = ready(&mut g, 1, catalog::wall_of_wood());
+    attack_with(&mut g, &[eye]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, eye)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_none());
+}
+
+/// Plague Reaver: its end step clears your other creatures; sacrificed for
+/// two discards, it returns under the target opponent's control at their next
+/// upkeep.
+#[test]
+fn plague_reaver_sweeps_then_moves_house() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let reaver = ready(&mut g, 0, catalog::plague_reaver());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    run_to(&mut g, 0, TurnStep::End);
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(reaver).is_some());
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let reaver = ready(&mut g, 0, catalog::plague_reaver());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility { card_id: reaver, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(reaver).is_none());
+    run_to(&mut g, 1, TurnStep::Draw);
+    assert_eq!(g.battlefield_find(reaver).map(|c| c.controller), Some(1));
+}
+
+/// Exchange of Words swaps two creatures' text boxes.
+#[test]
+fn exchange_of_words_swaps_text() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ex = g.add_card_to_hand(0, catalog::exchange_of_words());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: ex, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(has_kw(&g, bear, Keyword::Flying) ^ has_kw(&g, angel, Keyword::Flying));
+}
+
+/// Wrong Turn and Fateful Handoff give a creature away; Modify Memory swaps
+/// two opponents' creatures and draws three.
+#[test]
+fn donations_move_control() {
+    let mut g = pod(3);
+    stock_libraries(&mut g, 10);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wt = g.add_card_to_hand(0, catalog::wrong_turn());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: wt, target: Some(Target::Player(2)), additional_targets: vec![Target::Permanent(bear)], mode: None, x_value: None })
+        .expect("wrong turn");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 2);
+
+    let lions = ready(&mut g, 0, catalog::serra_angel());
+    let fh = g.add_card_to_hand(0, catalog::fateful_handoff());
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, fh, Some(Target::Permanent(lions)));
+    assert_ne!(g.battlefield_find(lions).unwrap().controller, 0);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 5, "Serra Angel's mana value");
+
+    let a = ready(&mut g, 1, catalog::llanowar_elves());
+    let mm = g.add_card_to_hand(0, catalog::modify_memory());
+    let hand = g.players[0].hand.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: mm, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(bear)], mode: None, x_value: None })
+        .expect("modify memory");
+    drain_stack(&mut g);
+    assert_eq!((g.battlefield_find(a).unwrap().controller, g.battlefield_find(bear).unwrap().controller), (2, 1));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3);
+}
+
+/// CR 601.2c — Modify Memory's two creatures must have different controllers:
+/// two of one player's creatures are not a legal pair.
+#[test]
+fn modify_memory_wants_different_controllers() {
+    let mut g = pod(3);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::llanowar_elves());
+    let mm = g.add_card_to_hand(0, catalog::modify_memory());
+    flood(&mut g);
+    assert!(g
+        .perform_action(GameAction::CastSpell { card_id: mm, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None })
+        .is_err());
+}
+
+/// Flesh Reaver hits back only off damage to a creature or an opponent: the
+/// damage it deals its own controller doesn't retrigger it (with Spirit Loop
+/// on it that was a mandatory loop, pod seed 38801 game 8).
+#[test]
+fn flesh_reaver_does_not_retrigger_off_its_controller() {
+    let mut g = pod(2);
+    let reaver = ready(&mut g, 0, catalog::flesh_reaver());
+    let lp = g.add_card_to_hand(0, catalog::spirit_loop());
+    flood(&mut g);
+    cast_at(&mut g, lp, Some(Target::Permanent(reaver)));
+    let (me, them) = (g.players[0].life, g.players[1].life);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(&Effect::DealDamageFrom { source: Selector::ExactObjects(vec![reaver]), to: Selector::Player(crabomination::effect::PlayerRef::Seat(1)), amount: Value::Const(4) }, &ctx)
+        .expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.stack.is_empty());
+    assert_eq!(g.players[1].life, them - 4);
+    // 4 back to its controller, and Spirit Loop's 4 + 4 life.
+    assert_eq!(g.players[0].life, me - 4 + 8);
+}

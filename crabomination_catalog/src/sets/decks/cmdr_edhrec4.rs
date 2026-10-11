@@ -2643,3 +2643,173 @@ pub fn storm_the_vault() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Jon Irenicus, Shattered One's EDHREC gaps ───────────────────────────────
+
+fn upkeep(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl), effect }
+}
+
+fn sacrifice_another() -> Effect {
+    Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature.and(R::OtherThanSource) }
+}
+
+/// Demonic Taskmaster — {2}{B} 4/3 Demon, flying. At your upkeep, sacrifice a
+/// creature other than this one.
+pub fn demonic_taskmaster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![upkeep(sacrifice_another())],
+        ..creature("Demonic Taskmaster", cost(&[generic(2), b()]), vec![CreatureType::Demon], 4, 3)
+    }
+}
+
+/// Lord of the Pit — {4}{B}{B}{B} 7/7 Demon, flying, trample. At your upkeep,
+/// sacrifice another creature; if you can't, it deals 7 damage to you.
+pub fn lord_of_the_pit() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![upkeep(Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+            )),
+            then: Box::new(sacrifice_another()),
+            else_: Box::new(Effect::DealDamage { to: Selector::You, amount: Value::Const(7) }),
+        })],
+        ..creature("Lord of the Pit", cost(&[generic(4), b(), b(), b()]), vec![CreatureType::Demon], 7, 7)
+    }
+}
+
+/// Evil Eye of Urborg — {4}{B} 6/3 Eye. Your non-Eye creatures can't attack;
+/// a creature blocking it is destroyed.
+pub fn evil_eye_of_urborg() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Non-Eye creatures you control can't attack.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::HasCreatureType(CreatureType::Eye).negate()),
+                ),
+                keyword: Keyword::CantAttack,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::Destroy { what: Selector::CreaturesBlockingTriggerSource },
+        }],
+        ..creature("Evil Eye of Urborg", cost(&[generic(4), b()]), vec![CreatureType::Eye], 6, 3)
+    }
+}
+
+/// Plague Reaver — {2}{B} 6/5 Beast. At your end step, sacrifice each other
+/// creature you control. Discard two cards, sacrifice it: choose target
+/// opponent; it returns under their control at their next upkeep.
+pub fn plague_reaver() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::SacrificeAllMatching {
+                who: Selector::You,
+                filter: R::Creature.and(R::OtherThanSource),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 2)),
+            sac_cost: true,
+            effect: Effect::TargetPlayerThen {
+                filter: R::OpponentPlayer,
+                then: Box::new(Effect::DelayUntil {
+                    kind: DelayedTriggerKind::TargetsNextUpkeep,
+                    body: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::Target(0), tapped: false },
+                    }),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Plague Reaver", cost(&[generic(2), b()]), vec![CreatureType::Beast], 6, 5)
+    }
+}
+
+/// Exchange of Words — {1}{U}{U} Enchantment. Entering, exchange the text
+/// boxes of two target creatures.
+pub fn exchange_of_words() -> CardDefinition {
+    CardDefinition {
+        name: "Exchange of Words",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExchangeTextBoxes {
+            a: target_filtered(R::Creature),
+            b: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0)) },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Wrong Turn — {2}{U} Instant. Target opponent gains control of target
+/// creature.
+pub fn wrong_turn() -> CardDefinition {
+    CardDefinition {
+        name: "Wrong Turn",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::GainControl {
+                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                to: Some(PlayerRef::Target(0)),
+                duration: Duration::Permanent,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fateful Handoff — {3}{B} Sorcery. Draw cards equal to the mana value of
+/// target artifact or creature you control; an opponent gains control of it.
+pub fn fateful_handoff() -> CardDefinition {
+    CardDefinition {
+        name: "Fateful Handoff",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(target_filtered(R::Artifact.or(R::Creature).and(R::ControlledByYou)))),
+            },
+            Effect::ChooseOpponentThen {
+                then: Box::new(Effect::GainControl {
+                    what: Selector::Target(0),
+                    to: Some(PlayerRef::ChosenPlayerOfSource),
+                    duration: Duration::Permanent,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Modify Memory — {4}{U} Sorcery. Exchange control of two target creatures
+/// controlled by different players; if you control neither, draw three.
+pub fn modify_memory() -> CardDefinition {
+    let mine = |slot: u8| Predicate::EntityMatches { what: Selector::Target(slot), filter: R::ControlledByYou };
+    CardDefinition {
+        name: "Modify Memory",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::Any(vec![mine(0), mine(1)]))),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::ExchangeControl {
+                a: target_filtered(R::Creature),
+                b: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::DifferentControllerFromTargetSlot(0)) },
+            },
+        ]),
+        ..Default::default()
+    }
+}
