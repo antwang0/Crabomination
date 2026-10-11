@@ -157,6 +157,49 @@ the handoff.
   abilities (no `AbilityActivated` for them); Ardenn's attach is creature-only;
   Behold the Sinister Six! doesn't check distinct names; Venom, Deadly
   Devourer's reflexive target is chosen up front.
+## FIXED 2026-10-11 (Commander run, `01Mwhi27`, concurrent with `017yfeX4` and `01Vk2K6g`) — a 90-minute pod, ten target-deck residuals, seven seats
+
+- **Fuzzed strict sweep** 192001 (3/4/6/8 × 30, on the pushed tip of the
+  morning): **0 aborts**; five undecided (Polyraptor/Marauding Raptor,
+  Jadzi's 512-spell bound, Goldnight Commander's board cap, a CR 104.4a
+  simultaneous loss) — and **one block that ran 90 minutes**: Golgari
+  Grave-Troll read a cast X it has no way to have, entered as a 0/0 and died;
+  Out of the Tombs replaced each draw from the empty library by reanimating
+  it and Moldervine Reclamation drew again, gaining a life each pass, so the
+  board never repeated and the loop watch could not call it. The only stop
+  left was the 200-passes-per-play backstop (1.6 M actions in 8 seats).
+  Fixed twice: the Troll counts creature cards in your graveyard, and
+  `PASS_STREAK_CAP` (`pod/mod.rs`) calls 50,000 passes with no play an
+  action cap (test `a_progressing_mandatory_loop_stops_at_the_pass_streak_cap`).
+- **Answer log:** `AddCountersUpTo` kept a prompting seat's count past its
+  resolution (strict sweep 191001); fixed beside the concurrent Gishath fix,
+  `cr_recent118::cr_608_2_a_reveal_pick_and_a_counter_count_spend_their_answers`.
+- **Residuals closed** (pod_residuals 365 → 374 clean before the concurrent
+  Toph seat): Rydia's Summon, Xu-Ifit's Skeleton-with-no-abilities, Garnet's
+  "any number of Sagas", Summoner's Grimoire's tapped-and-attacking
+  enchantment, Haste Magic's stale doc, Berserk's "only before the combat
+  damage step" (a cast condition; ⚠ SOS pool), Rielle's "first time each
+  turn", Summon: Brynhildr's lore-counter play window
+  (`MayPlayDuration::TurnsLoreCounterPutOnSource`), Tibalt's Trickery's
+  different-name cascade and random 1-3 (and now an uncounterable spell's
+  controller still cascades), Secret Tunnel's two shared-type targets
+  (`SharesCreatureTypeWithTargetSlot`), Eladamri's tap-two activation and
+  private look, Insidious Fungus's land drop.
+- **Seats** 369-371 (Shroofus, Miirym, Tiamat) and 376-378 (Wolverine,
+  Captain Howler, Magda) — the concurrent sessions landed the Mycotyrant,
+  Thranduil, Maralen and Najeela seats the same hour; duplicates were dropped
+  in the rebase. Primitives: `Predicate::ExcessDamagedPermanentThisTurn`
+  (planeswalker excess too, CR 120.4a), the Jade Orb / Scaled Nurturer /
+  Tecutlan mana riders, `Effect::SpellGainsTrigger`,
+  `AdditionalCastCost::BeholdPower` (CR 701.4a), `NewDamageHealsOldDamage`,
+  `AttachedDealsDoubleDamage`, `SourceDamagedAnotherCreatureThisTurn`,
+  Storied (`game/storied.rs`), `CounterType::{Spore, Bore}`.
+- **Open:** The Soul Stone's "harnessed" is a charge counter (needs a
+  designation on the permanent, like a Case's `case_solved`); Etali's
+  sticker stand-in; Elrond, Moon-Reader's trigger should count a creature's
+  *mana* abilities too (ruling 2026-06-29) — mana activations emit no
+  `AbilityActivated` event today, and adding one is a hot-path change to
+  price first.
 
 ## FIXED 2026-10-11 (Commander run, `017yfeX4` second firing) — answer-log leaks, mana burn's SBA, optional loops
 

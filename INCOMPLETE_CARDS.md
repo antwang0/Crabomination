@@ -692,11 +692,12 @@ Wolf, Leonin of the Lost Pride and Break Ties were the same shape.
   candidate lists out of `players[*].graveyard`, so no filter can aim them at
   the battlefield.
 
-⚠ **One row is handed to `audit_incomplete`, not fixed** (Rydia's Summon shipped 2026-10-11): the clause is not
+⚠ **Two rows are handed to `audit_incomplete`, not fixed** (Rydia's Summon shipped 2026-10-11; Elrond's mana-ability gap filed the same day): the clause is not
 modelled at all, so there is no filter to correct.
 
 | Card | Residual |
 | --- | --- |
+| Elrond, Moon-Reader | 🟡 "whenever you activate an ability of a creature" counts a creature's **mana** abilities too (ruling 2026-06-29), but a mana activation emits no `AbilityActivated` event, so tapping an Elf for mana never draws. Adding the event is a hot-path change (every mana tap); price it on `--bench` first. |
 | Jeska, Thrice Reborn / Tasha, the Witch Queen | 🟡 a multi-target loyalty ability's extra slots — Jeska's −X "each of up to three targets", Tasha's +1 "for each opponent … up to one target": `GameAction::ActivateLoyaltyAbility` carries one target, so slots past the first are `auto_extra_targets_for`'s pick, which fills permanents only and stops at the first player it prefers (Tasha's graveyard cards past the first are not filled). |
 
 Three approximations the fixes left standing, each documented at its variant:
