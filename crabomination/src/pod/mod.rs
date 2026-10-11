@@ -2789,6 +2789,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OBEKA_COMMANDERS,
             main: decks::OBEKA_MAIN,
         },
+        // Seat 390: Captain America, First Avenger's EDHREC average deck. `--pod-decks 390`.
+        PodDeck {
+            name: "Captain America, First Avenger (WUR)",
+            commanders: decks::CAPTAIN_AMERICA_FIRST_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_FIRST_MAIN,
+        },
+        // Seat 391: Doran, Besieged by Time's EDHREC average deck. `--pod-decks 391`.
+        PodDeck {
+            name: "Doran, Besieged by Time (WBG)",
+            commanders: decks::DORAN_BESIEGED_COMMANDERS,
+            main: decks::DORAN_BESIEGED_MAIN,
+        },
     ]
 }
 
@@ -4925,6 +4937,8 @@ mod tests {
             ("Iron Man, Titan of Innovation", [0x0AA9, 387, 9312]),
             ("Jon Irenicus, Shattered One", [0x0AAA, 388, 9313]),
             ("Obeka, Splitter of Seconds", [0x0AAB, 389, 9314]),
+            ("Captain America, First Avenger", [0x0AAC, 390, 9315]),
+            ("Doran, Besieged by Time", [0x0AAD, 391, 9316]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

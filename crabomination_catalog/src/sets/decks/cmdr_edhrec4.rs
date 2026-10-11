@@ -3193,15 +3193,17 @@ pub fn the_mighty_thor_jane_foster() -> CardDefinition {
 
 /// Super-Soldier Serum — {1}{W} Aura. The enchanted creature gets +2/+2, first
 /// strike and vigilance, and is a legendary Soldier; whenever it attacks or
-/// blocks, attach any number of Equipment you control to it (chosen as the
-/// trigger resolves).
+/// blocks, attach any number of target Equipment you control to it (sixteen
+/// target slots, the catalog's cap for "any number of target").
 pub fn super_soldier_serum() -> CardDefinition {
     use crate::card::{EnchantmentSubtype, EquipBonus};
     let attach = || TriggeredAbility {
         event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-        effect: Effect::AttachAnyNumberTo {
-            what: Selector::EachPermanent(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou)),
-            to: Selector::This,
+        effect: Effect::ApplyToTargets {
+            max_targets: 16,
+            min_targets: 0,
+            filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
+            effect: Box::new(Effect::Attach { what: Selector::Target(0), to: Selector::This }),
         },
     };
     let mut blocks = attach();

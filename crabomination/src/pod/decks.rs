@@ -11387,3 +11387,62 @@ pub const OBEKA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, mountain, mountain, mountain,
     mountain, mountain, swamp, swamp, swamp, swamp,
 ];
+
+pub const CAPTAIN_AMERICA_FIRST_COMMANDERS: &[CardFactory] = &[captain_america_first_avenger];
+
+/// **Captain America, First Avenger**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 85 nonbasic cards + 4 Islands + 4 Mountains + 6 Plains = 99.
+/// Captain America, First Avenger equipment
+pub const CAPTAIN_AMERICA_FIRST_MAIN: &[CardFactory] = &[
+    arcane_signet, argentum_armor, basilisk_collar, buster_sword, caduceus_staff_of_hermes,
+    captain_americas_shield, colossus_hammer, commanders_plate, embercleave,
+    excalibur_sword_of_eden, hammer_of_nazahn, kaldra_compleat, leyline_axe,
+    masterwork_of_ingenuity, mithril_coat, mjolnir_hammer_of_thor, mjolnir_storm_hammer,
+    shadowspear, sol_ring, sunforger, swiftfoot_boots, sword_of_feast_and_famine,
+    sword_of_war_and_peace, sword_of_the_animist, talisman_of_conviction, talisman_of_progress,
+    the_reaver_cleaver, academy_ruins, adarkar_wastes, arid_mesa, battlefield_forge,
+    clifftop_retreat, command_tower, exotic_orchard, flooded_strand, glacial_fortress,
+    hallowed_fountain, inventors_fair, mystic_monastery, raugrin_triome, rogues_passage,
+    sacred_foundry, scalding_tarn, sea_of_clouds, spectator_seating, steam_vents, sulfur_falls,
+    training_center, akiri_fearless_voyager, ardenn_intrepid_archaeologist,
+    bruenor_battlehammer, bureau_headmaster, cloud_midgar_mercenary, codsworth_handy_helper,
+    dalakos_crafter_of_wonders, danitha_capashen, esper_sentinel, jhoira_weatherlight_captain,
+    kellan_the_fae_blooded, puresteel_paladin, sram_senior_edificer, stoneforge_mystic,
+    stonehewer_giant, the_mighty_thor_jane_foster, zirda_the_dawnwaker, fighter_class,
+    forge_anew, rhystic_study, sigardas_aid, super_soldier_serum, training_grounds, boros_charm,
+    counterspell, deflecting_swat, enlightened_tutor, fierce_guardianship, flawless_maneuver,
+    inventory_management, path_to_exile, swords_to_plowshares, teferis_protection,
+    blasphemous_act, fabricate, open_the_armory, steelshapers_gift,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const DORAN_BESIEGED_COMMANDERS: &[CardFactory] = &[doran_besieged_by_time];
+
+/// **Doran, Besieged by Time**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 81 nonbasic cards + 8 Forests + 5 Plains + 5 Swamps = 99.
+/// Doran, Besieged by Time treefolk toughness
+pub const DORAN_BESIEGED_MAIN: &[CardFactory] = &[
+    arcane_signet, bark_of_doran, captain_americas_shield, colfenors_urn, sol_ring,
+    swiftfoot_boots, access_tunnel, bojuka_bog, canopy_vista, command_tower, evolving_wilds,
+    exotic_orchard, godless_shrine, indatha_triome, isolated_chapel, murmuring_bosk,
+    overgrown_farmland, overgrown_tomb, path_of_ancestry, sandsteppe_citadel, sunpetal_grove,
+    temple_garden, undergrowth_stadium, woodland_cemetery, ancient_adamantoise,
+    ancient_lumberknot, arbor_adherent, arboreal_grazer, baldin_century_herdmaster,
+    bedrock_tortoise, betor_kin_to_all, bosk_banneret, colfenor_the_last_yew,
+    crashing_drawbridge, crystal_barricade, doran_the_siege_tower, faeburrow_elder,
+    fangorn_tree_shepherd, fecund_greenshell, felothar_the_steadfast, ghalta_the_immovable,
+    great_forest_druid, ikra_shidiqi_the_usurper, indomitable_ancients, nyx_fleece_ram,
+    ohran_frostfang, sapling_of_colfenor, sinister_gnarlbark, sylvan_caryatid,
+    walls_of_ba_sing_se, timber_protector, tree_of_perdition, tree_of_redemption,
+    treebeard_gracious_host, treefolk_harbinger, wall_of_blossoms, weathered_sentinels,
+    assault_formation, brave_the_sands, jaws_of_defeat, primal_rage, sapling_nursery, stoneskin,
+    unnatural_growth, anguished_unmaking, assassins_trophy, beast_within, despark,
+    heroic_intervention, path_to_exile, swords_to_plowshares, tower_defense, cultivate, farseek,
+    fell_the_mighty, last_march_of_the_ents, natures_lore, rampant_growth, reunion_of_the_house,
+    slaughter_the_strong, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp, swamp,
+];
