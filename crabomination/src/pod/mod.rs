@@ -4919,7 +4919,9 @@ mod tests {
             ("Galadriel, Light of Valinor", [0x0AA5, 383, 9308]),
             ("Skullbriar, the Walking Grave", [0x0AA6, 384, 9309]),
             ("Aragorn, the Uniter", [0x0AA7, 385, 9310]),
-            ("Ragost, Deft Gastronaut", [0x0AA8, 386, 9311]),
+            // 9311 is a CR 104.4a draw: Descent into Avernus drops both
+            // survivors to 0 in one upkeep. The seat test wants a winner.
+            ("Ragost, Deft Gastronaut", [0x0AA8, 386, 9411]),
             ("Iron Man, Titan of Innovation", [0x0AA9, 387, 9312]),
             ("Jon Irenicus, Shattered One", [0x0AAA, 388, 9313]),
             ("Obeka, Splitter of Seconds", [0x0AAB, 389, 9314]),
@@ -4944,7 +4946,13 @@ mod tests {
                         assert_eq!(t.players[0].library.len(), 100 - precon.commanders.len());
                         let pilots = vec![Pilot::default(); 4];
                         let o = play_one_pod_game(&t, &pilots, 50_000, seed);
-                        assert!(o.winner.is_some(), "{name} seed {seed} left the pod undecided");
+                        assert!(
+                            o.winner.is_some(),
+                            "{name} seed {seed} left the pod undecided ({:?}, turn {}, {} actions)",
+                            o.stop,
+                            o.turns,
+                            o.actions
+                        );
                         assert!(o.turns > 0);
                     }
                 });
