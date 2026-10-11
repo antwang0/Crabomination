@@ -2,11 +2,12 @@
 //! average deck and a complete pod seat, fifth file (`cmdr_edhrec4` is the
 //! fourth). Lord of the Nazgûl's Wraiths and Ring spells; Leonardo and
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
-//! connive and mayhem; Reaper King's Scarecrows. Tests in
+//! connive and mayhem; Reaper King's Scarecrows; Sauron, the Dark Lord's
+//! Orc Armies. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    ArtifactSubtype, CardDefinition, EnchantmentSubtype, CardType, CounterType, CreatureType, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, WardCost,
 };
@@ -1051,6 +1052,249 @@ pub fn personify() -> CardDefinition {
                 },
             },
             shapeshifter(1, 1),
+        ]),
+    )
+}
+
+// ── Sauron, the Dark Lord (UBR) ──────────────────────────────────────────────
+
+/// Amass Orcs `n` (CR 701.47).
+fn amass(count: Value) -> Effect {
+    Effect::Amass { who: PlayerRef::You, count, extra_type: Some(CreatureType::Orc) }
+}
+
+fn orc_kin() -> R {
+    R::HasCreatureType(CreatureType::Army)
+        .or(R::HasCreatureType(CreatureType::Goblin))
+        .or(R::HasCreatureType(CreatureType::Orc))
+}
+
+/// Barad-dûr — legendary land: tapped unless you control a legendary
+/// creature; {T}: {B}; {X}{X}{B}, {T}: amass Orcs X once a creature died
+/// this turn.
+pub fn barad_dur() -> CardDefinition {
+    CardDefinition {
+        name: "Barad-dûr",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "Barad-dûr enters tapped unless you control a legendary creature.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(yours(
+                    R::Creature.and(R::HasSupertype(Supertype::Legendary)),
+                ))),
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::OfColor(Color::Black, Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[x(), x(), b()]),
+                tap_cost: true,
+                condition: Some(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
+                effect: amass(Value::XFromCost),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gothmog, Morgul Lieutenant — {3}{B} 3/3. Amass Orcs 1 on entry; your
+/// creature tokens have deathtouch.
+pub fn gothmog_morgul_lieutenant() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![grant(
+            "Creature tokens you control have deathtouch.",
+            yours(R::Creature.and(R::IsToken)),
+            Keyword::Deathtouch,
+        )],
+        triggered_abilities: vec![etb(amass(Value::ONE))],
+        ..legend(
+            "Gothmog, Morgul Lieutenant",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            3,
+            3,
+        )
+    }
+}
+
+/// Mauhúr, Uruk-hai Captain — {B}{R} 2/2 menace. +1/+1 counters on your
+/// Armies, Goblins and Orcs come one extra.
+pub fn mauhur_uruk_hai_captain() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more +1/+1 counters would be put on an Army, Goblin, or Orc you control, that many \
+                          plus one +1/+1 counters are put on it instead.",
+            effect: StaticEffect::ExtraPlusOneCountersMatching { filter: yours(orc_kin()) },
+        }],
+        ..legend("Mauhúr, Uruk-hai Captain", cost(&[b(), r()]), vec![CreatureType::Orc, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// The Great Goblin — {1}{B/R}{B/R} 3/2. Counters you put on your Goblins,
+/// Orcs and Armies deal 2 to an opponent; another of them dying impulses the
+/// top card until the end of your next turn.
+pub fn the_great_goblin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YouPutCounters)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: yours(orc_kin()) }),
+                effect: Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: orc_kin().and(R::OtherThanSource) },
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::ExileTopOfLibrary {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        link_to_source: false,
+                        face_down: false,
+                    },
+                    Effect::GrantMayPlay {
+                        what: Selector::ExiledThisResolution { filter: R::Any },
+                        duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ]),
+            },
+        ],
+        ..legend("The Great Goblin", cost(&[generic(1), br(), br()]), vec![CreatureType::Goblin, CreatureType::Noble], 3, 2)
+    }
+}
+
+/// Warg Rider — {4}{B} 4/3 menace. Your other Orcs and Goblins have menace;
+/// at the beginning of combat on your turn, amass Orcs 2.
+pub fn warg_rider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![grant(
+            "Other Orcs and Goblins you control have menace.",
+            yours(
+                R::Creature
+                    .and(R::HasCreatureType(CreatureType::Orc).or(R::HasCreatureType(CreatureType::Goblin)))
+                    .and(R::OtherThanSource),
+            ),
+            Keyword::Menace,
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: amass(Value::Const(2)),
+        }],
+        ..creature("Warg Rider", cost(&[generic(4), b()]), vec![CreatureType::Orc, CreatureType::Warrior], 4, 3)
+    }
+}
+
+/// March from the Black Gate — {1}{B} enchantment. Amass Orcs 1 on entry and
+/// whenever an Army you control attacks.
+pub fn march_from_the_black_gate() -> CardDefinition {
+    CardDefinition {
+        name: "March from the Black Gate",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(amass(Value::ONE)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Army),
+                }),
+                effect: amass(Value::ONE),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// One Ring to Rule Them All — {2}{B}{B} Saga. I: the Ring tempts you, then
+/// each player mills your Ring-bearer's power. II: destroy all nonlegendary
+/// creatures. III: each opponent loses 1 per creature card in their graveyard.
+pub fn one_ring_to_rule_them_all() -> CardDefinition {
+    CardDefinition {
+        name: "One Ring to Rule Them All",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    tempt(),
+                    Effect::Mill {
+                        who: Selector::Player(PlayerRef::EachPlayer),
+                        amount: Value::PowerOf(Box::new(Selector::RingBearerOf(PlayerRef::You))),
+                    },
+                ]),
+            ),
+            (
+                2,
+                Effect::Destroy {
+                    what: Selector::EachPermanent(R::Creature.and(R::HasSupertype(Supertype::Legendary).negate())),
+                },
+            ),
+            (
+                3,
+                // Each opponent counts their own graveyard ("that player's").
+                Effect::EachPlayerDoes {
+                    who: PlayerRef::EachOpponent,
+                    body: Box::new(Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Orcish Medicine — {1}{B} instant. A creature gains lifelink or
+/// indestructible (your choice) until end of turn; amass Orcs 1.
+pub fn orcish_medicine() -> CardDefinition {
+    let gains = |keyword| Effect::GrantKeyword {
+        what: target_filtered(R::Creature),
+        keyword,
+        duration: Duration::EndOfTurn,
+    };
+    spell(
+        "Orcish Medicine",
+        cost(&[generic(1), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::ChooseMode(vec![gains(Keyword::Lifelink), gains(Keyword::Indestructible)]),
+            amass(Value::ONE),
+        ]),
+    )
+}
+
+/// Foray of Orcs — {3}{R} sorcery. Amass Orcs 2, then the Army deals damage
+/// equal to its power to a creature an opponent controls.
+pub fn foray_of_orcs() -> CardDefinition {
+    spell(
+        "Foray of Orcs",
+        cost(&[generic(3), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            amass(Value::Const(2)),
+            Effect::DealDamage {
+                to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                // The amassed Army: the only one a player normally controls.
+                amount: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(
+                    R::HasCreatureType(CreatureType::Army),
+                ))),
+            },
         ]),
     )
 }

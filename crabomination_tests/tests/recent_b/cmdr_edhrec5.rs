@@ -719,3 +719,114 @@ fn personify_and_wild_field_scarecrow() {
     assert_eq!(g.players[0].hand.len(), 2);
     assert!(g.players[0].hand.iter().all(|c| c.definition.is_land()));
 }
+
+fn army_power(g: &GameState) -> Option<i32> {
+    let army = g.battlefield.iter().find(|c| {
+        c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)
+    })?;
+    Some(g.computed_permanent(army.id).unwrap().power)
+}
+
+fn run(g: &mut GameState, effect: &crabomination::effect::Effect) {
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// Mauhúr adds one to each +1/+1 placement on an Army (amass 1 makes a 2/2);
+/// The Great Goblin's counter trigger deals 2 to an opponent, and another Orc
+/// kin dying exiles the top card playable until your next turn ends.
+#[test]
+fn mauhur_and_the_great_goblin_feed_the_army() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::mauhur_uruk_hai_captain());
+    ready(&mut g, 0, catalog::the_great_goblin());
+    let gothmog = g.add_card_to_hand(0, catalog::gothmog_morgul_lieutenant());
+    cast(&mut g, 0, gothmog, None).expect("Gothmog");
+    assert_eq!(army_power(&g), Some(2), "amass 1, plus Mauhúr's one");
+    assert_eq!(g.players[1].life, 18, "counters on an Army");
+    let army = g.battlefield.iter().find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Army)).unwrap().id;
+    assert!(g.computed_permanent(army).unwrap().keywords().contains(&Keyword::Deathtouch), "Gothmog: a creature token");
+    let lib = g.players[0].library.len();
+    let mut evs = Vec::new();
+    g.destroy_permanent(army, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "impulse");
+    assert!(g.exile.iter().any(|c| c.may_play_until.is_some()));
+}
+
+/// Barad-dûr enters tapped without a legendary creature; its amass needs a
+/// creature to have died this turn.
+#[test]
+fn barad_dur_gates() {
+    let mut g = pod(2);
+    let land = g.add_card_to_hand(0, catalog::barad_dur());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    assert!(g.battlefield_find(land).unwrap().tapped);
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_great_goblin());
+    let land = g.add_card_to_hand(0, catalog::barad_dur());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "a legend in play");
+    flood(&mut g, 0);
+    let amass = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: Some(1),
+            mode: None,
+        })
+    };
+    assert!(amass(&mut g).is_err(), "nothing died");
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
+    g.priority.player_with_priority = 0;
+    amass(&mut g).expect("a creature died");
+    drain_stack(&mut g);
+    assert_eq!(army_power(&g), Some(1));
+}
+
+/// One Ring to Rule Them All: II spares legends; III drains each opponent by
+/// the creature cards in their own graveyard.
+#[test]
+fn one_ring_to_rule_them_all_chapters() {
+    let mut g = pod(3);
+    let legend = ready(&mut g, 0, catalog::the_great_goblin());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let def = catalog::one_ring_to_rule_them_all();
+    run(&mut g, &def.saga_chapters[1].1);
+    assert!(on_bf(&g, legend) && !on_bf(&g, bear));
+    g.add_card_to_graveyard(2, catalog::hill_giant());
+    g.add_card_to_graveyard(2, catalog::hill_giant());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    run(&mut g, &def.saga_chapters[2].1);
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (20, 19, 18));
+}
+
+/// Foray of Orcs: amass 2, then the Army's power in damage; Warg Rider
+/// amasses 2 as combat begins and gives other Orcs menace.
+#[test]
+fn foray_of_orcs_and_warg_rider() {
+    let mut g = pod(2);
+    let maw = ready(&mut g, 1, catalog::colossal_dreadmaw());
+    let foray = g.add_card_to_hand(0, catalog::foray_of_orcs());
+    cast(&mut g, 0, foray, Some(Target::Permanent(maw))).expect("Foray");
+    assert_eq!(g.battlefield_find(maw).unwrap().damage, 2);
+    ready(&mut g, 0, catalog::warg_rider());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(army_power(&g), Some(4));
+    let army = g.battlefield.iter().find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Army)).unwrap().id;
+    assert!(g.computed_permanent(army).unwrap().keywords().contains(&Keyword::Menace), "an Orc Army");
+}
