@@ -166,7 +166,7 @@ the handoff.
   abilities (no `AbilityActivated` for them); Ardenn's attach is creature-only;
   Behold the Sinister Six! doesn't check distinct names; Venom, Deadly
   Devourer's reflexive target is chosen up front.
-## FIXED 2026-10-11 (Commander run, `01Mwhi27`, concurrent with `017yfeX4` and `01Vk2K6g`) — a 90-minute pod, ten target-deck residuals, seven seats
+## FIXED 2026-10-11 (Commander run, `01Mwhi27`, concurrent with `017yfeX4` and `01Vk2K6g`) — a 90-minute pod, seventeen target-deck residuals, seven seats
 
 - **Fuzzed strict sweep** 192001 (3/4/6/8 × 30, on the pushed tip of the
   morning): **0 aborts**; five undecided (Polyraptor/Marauding Raptor,
@@ -203,6 +203,21 @@ the handoff.
   `AdditionalCastCost::BeholdPower` (CR 701.4a), `NewDamageHealsOldDamage`,
   `AttachedDealsDoubleDamage`, `SourceDamagedAnotherCreatureThisTurn`,
   Storied (`game/storied.rs`), `CounterType::{Spore, Bore}`.
+- **Afternoon residuals** (pod_residuals 371 → 374): Behold the Sinister
+  Six's "different names" (`R::NameDiffersFromOtherTargets`, CR 601.2c),
+  Toph, Hardheaded Teacher's Lesson counter, Bumi, Unleashed's land-creature-
+  only extra combat (`AtTheAddedCombat` + a `CantAttack` grant), Maralen's
+  cast-time cap (`Effect::CapGrantedCastsAtCast`, a `TurnRegistries` table
+  read at the may-play cast check — the grant's own `max_mana_value` is read
+  at exile), Venom, Deadly Devourer's Symbiote as a reflexive trigger's
+  target, Echoes of Eternity's spell and dies triggers
+  (`DoubleControllerTriggersMatching.include_spells`; a just-dead source is
+  read off `died_card_snapshots`, so Delney now doubles a small creature's
+  dies trigger too — CR 603.10a; self-cast triggers and the destroy-path dies
+  triggers now consult `ally_trigger_extra_fires`).
+- **Fuzzed strict sweep 291001** (3/4/6/8 × 15, audit binary at `407aacc84`
+  + Tibalt): 4,980 games, **0 aborts, 0 stalls**; 2 undecided, both draws by
+  rule (a CR 104.4a simultaneous loss; Polyraptor + Marauding Raptor).
 - **Open:** The Soul Stone's "harnessed" is a charge counter (needs a
   designation on the permanent, like a Case's `case_solved`); Etali's
   sticker stand-in; Elrond, Moon-Reader's trigger should count a creature's
