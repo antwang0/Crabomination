@@ -2634,6 +2634,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NORIN_COMMANDERS,
             main: decks::NORIN_MAIN,
         },
+        // Seat 366: Katara, the Fearless's EDHREC average deck. `--pod-decks 366`.
+        PodDeck {
+            name: "Katara, the Fearless (GWU)",
+            commanders: decks::KATARA_THE_FEARLESS_COMMANDERS,
+            main: decks::KATARA_THE_FEARLESS_MAIN,
+        },
     ]
 }
 
@@ -4717,6 +4723,7 @@ mod tests {
             ("Nicol Bolas, the Ravager", [0x0A91, 363, 9288]),
             ("Shilgengar, Sire of Famine", [0x0A92, 364, 9289]),
             ("Norin the Wary", [0x0A93, 365, 9290]),
+            ("Katara, the Fearless", [0x0A94, 366, 9291]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

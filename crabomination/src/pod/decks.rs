@@ -10681,3 +10681,33 @@ pub const NORIN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const KATARA_THE_FEARLESS_COMMANDERS: &[CardFactory] = &[katara_the_fearless];
+
+/// **Katara, the Fearless**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 81 nonbasic cards + 5 Forests + 6 Islands + 7 Plains = 99.
+/// Katara, the Fearless (GWU) Ally go-wide: Katara makes every Ally trigger fire twice
+/// while Ally makers, anthems and both Appas swarm the board.
+pub const KATARA_THE_FEARLESS_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, heralds_horn, panharmonicon, patchwork_banner, sol_ring,
+    swiftfoot_boots, white_lotus_tile, abandoned_air_temple, agna_qela, ally_encampment,
+    breeding_pool, canopy_vista, command_tower, exotic_orchard, glacial_fortress,
+    hallowed_fountain, hinterland_harbor, jasmine_dragon_tea_shop, path_of_ancestry,
+    prairie_stream, seaside_citadel, secret_tunnel, sparas_headquarters, sunpetal_grove,
+    temple_garden, aang_and_katara, aang_airbending_master, aang_swift_savior,
+    aang_at_the_crossroads, appa_steadfast_guardian, appa_the_vigilant, avatar_enthusiasts,
+    earth_kings_lieutenant, earth_kingdom_jailer, earth_kingdom_protectors, great_divide_guide,
+    hada_freeblade, hakoda_selfless_commander, harabaz_druid, haru_hidden_talent,
+    hermitic_herbalist, invasion_reinforcements, jwari_shapeshifter, kabira_evangel,
+    katara_bending_prodigy, katara_water_tribes_hope, master_piandao, ondu_cleric,
+    sea_gate_loremaster, sokka_lateral_strategist, south_pole_voyager, suki_courageous_rescuer,
+    suki_kyoshi_warrior, the_earth_king, ty_lee_chi_blocker, white_lotus_reinforcements,
+    airbender_ascension, allied_teamwork, invasion_tactics, kindred_discovery, sokkas_charge,
+    tale_of_katara_and_toph, waterbender_ascension, airbenders_reversal, airbending_lesson,
+    allies_at_last, counterspell, cycle_of_renewal, heroic_intervention, itll_quench_ya,
+    origin_of_metalbending, path_to_exile, swords_to_plowshares, avatars_wrath, cultivate,
+    farseek, shared_roots, spirit_water_revival, tale_of_momo, united_front,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains,
+];
