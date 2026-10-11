@@ -11730,3 +11730,33 @@ pub const TOM_BOMBADIL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp,
     swamp,
 ];
+
+pub const EDWARD_KENWAY_COMMANDERS: &[CardFactory] = &[edward_kenway];
+
+/// **Edward Kenway**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 82 nonbasic cards + 7 Islands + 5 Mountains + 5 Swamps = 99.
+/// Edward Kenway (UBR) Pirates and Vehicles
+pub const EDWARD_KENWAY_MAIN: &[CardFactory] = &[
+    adrestia, arcane_signet, fell_flagship, hoard_hauler, imposter_mech, jackdaw,
+    lifecraft_engine, magmatic_galleon, nautiloid_ship, skysovereign_consul_flagship,
+    smugglers_copter, sol_ring, subterranean_schooner, talisman_of_creativity,
+    talisman_of_dominance, the_belligerent, the_indomitable, time_sieve, weatherlight,
+    blood_crypt, command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb,
+    exotic_orchard, path_of_ancestry, reliquary_tower, rogues_passage, secluded_courtyard,
+    shivan_reef, smoldering_marsh, steam_vents, stormcarved_coast, sulfur_falls, sunken_hollow,
+    training_center, unclaimed_territory, watery_grave, xanders_lounge, admiral_beckett_brass,
+    admiral_brass_unsinkable, adewale_breaker_of_chains, basim_ibn_ishaq,
+    breeches_brazen_plunderer, breeches_eager_pillager, captain_lannery_storm,
+    captain_storm_cosmium_raider, coercive_recruiter, corsair_captain, cosima_god_of_the_voyage,
+    deadeye_quartermaster, don_andres_the_renegade, fearless_swashbuckler,
+    forerunner_of_the_coalition, gemcutter_buccaneer, hostage_taker, kitesail_larcenist,
+    malcolm_alluring_scoundrel, malcolm_keen_eyed_navigator, mary_read_and_anne_bonny,
+    port_razer, ragavan_nimble_pilferer, ramirez_depietro_pillager, siren_stormtamer,
+    zara_renegade_recruiter, black_market_connections, coastal_piracy, cover_of_darkness,
+    double_down, revel_in_riches, an_offer_you_cant_refuse, arcane_denial, chaos_warp,
+    counterspell, deadly_dispute, desynchronization, terminate, back_in_town, blasphemous_act,
+    blood_money, feed_the_swarm, march_of_the_drowned,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp,
+];
