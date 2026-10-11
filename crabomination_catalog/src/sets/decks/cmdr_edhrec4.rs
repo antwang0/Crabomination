@@ -2472,15 +2472,11 @@ pub fn ugins_nexus() -> CardDefinition {
 pub fn iron_man_bleeding_edge() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(R::Artifact))
-                .once_per_turn(),
-            effect: Effect::MayDo {
-                description: "Copy that artifact spell (the copy isn't legendary)?".into(),
-                body: Box::new(Effect::CopySpellNonLegendary { what: Selector::TriggerSource }),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::CastSpellMatches(R::Artifact)),
+            "Copy that artifact spell (the copy isn't legendary)?",
+            Effect::CopySpellNonLegendary { what: Selector::TriggerSource },
+        )],
         ..CardDefinition {
             card_types: vec![CardType::Artifact, CardType::Creature],
             ..legend("Iron Man, Bleeding Edge", cost(&[generic(3), u(), u()]), vec![CreatureType::Human, CreatureType::Hero], 3, 5)

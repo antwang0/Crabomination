@@ -1591,6 +1591,20 @@ fn iron_man_bleeding_edge_and_shuri_double_up_artifacts() {
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, second);
     assert_eq!(named(&g, "Prized Statue"), 3, "once each turn");
+
+    // A declined copy spends nothing: the next artifact spell may still copy.
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::iron_man_bleeding_edge());
+    {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
+    }
+    for n in [1, 3] {
+        let statue = g.add_card_to_hand(0, catalog::prized_statue());
+        g.players[0].mana_pool.add_colorless(2);
+        cast(&mut g, statue);
+        assert_eq!(named(&g, "Prized Statue"), n);
+    }
 }
 
 /// Tony Stark digs an artifact, then becomes The Invincible Iron Man, which
