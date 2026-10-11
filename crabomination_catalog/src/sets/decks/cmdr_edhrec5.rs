@@ -4,7 +4,8 @@
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
 //! connive and mayhem; Reaper King's Scarecrows; Sauron, the Dark Lord's
 //! Orc Armies; Saruman, the White Hand's spells; Kibo's Apes and Monkeys;
-//! Shelob's Spiders; Marvo's clash spells; Tom Bombadil's Sagas. Tests in
+//! Shelob's Spiders; Marvo's clash spells; Tom Bombadil's Sagas; Edward
+//! Kenway's Pirates and Vehicles. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
@@ -2703,5 +2704,346 @@ pub fn war_of_the_last_alliance() -> CardDefinition {
         "War of the Last Alliance",
         cost(&[generic(3), w()]),
         vec![(1, legend_tutor()), (2, legend_tutor()), (3, Effect::Seq(vec![team_eot(Keyword::DoubleStrike), tempt()]))],
+    )
+}
+
+// ── Edward Kenway (UBR) ──────────────────────────────────────────────────────
+
+fn vehicle(name: &'static str, mana: ManaCost, p: i32, t: i32, crew: u32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: p,
+        toughness: t,
+        keywords: vec![Keyword::Crew(crew)],
+        ..Default::default()
+    }
+}
+
+fn pirate() -> R {
+    R::HasCreatureType(CreatureType::Pirate)
+}
+
+fn on_combat_damage_to_player(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource), effect }
+}
+
+/// "Whenever a Vehicle you control deals combat damage to a player".
+fn vehicle_hits(scope: EventScope, effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, scope).with_filter(Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: R::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+        }),
+        effect,
+    }
+}
+
+/// Edward Kenway — {2}{U}{B}{R} 5/5. At your end step, a Treasure per tapped
+/// Assassin, Pirate or Vehicle you control; a Vehicle of yours hitting a
+/// player exiles their top card face down, playable while it stays exiled.
+pub fn edward_kenway() -> CardDefinition {
+    let crew = R::HasCreatureType(CreatureType::Assassin)
+        .or(pirate())
+        .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle));
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::PermanentCountControlledByMatching(PlayerRef::You, crew.and(R::Tapped)),
+                    definition: Arc::new(treasure_token()),
+                },
+            },
+            vehicle_hits(
+                EventScope::YourControl,
+                Effect::Seq(vec![
+                    Effect::ExileTopOfLibrary {
+                        who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                        amount: Value::ONE,
+                        link_to_source: false,
+                        face_down: true,
+                    },
+                    Effect::GrantMayPlay {
+                        what: Selector::ExiledThisResolution { filter: R::Any },
+                        duration: crate::card::MayPlayDuration::WhileExiled,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ]),
+            ),
+        ],
+        ..legend(
+            "Edward Kenway",
+            cost(&[generic(2), u(), b(), r()]),
+            vec![CreatureType::Human, CreatureType::Assassin, CreatureType::Pirate],
+            5,
+            5,
+        )
+    }
+}
+
+/// Adrestia — {3} legendary Vehicle 4/3, islandwalk, crew 1. Attacking after
+/// an Assassin crewed it this turn: draw, and it's an Assassin this turn.
+pub fn adrestia() -> CardDefinition {
+    let mut v = vehicle("Adrestia", cost(&[generic(3)]), 4, 3, 1);
+    v.keywords.push(Keyword::Landwalk(crate::card::LandType::Island));
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::CrewedThisTurnByMatching(Box::new(R::HasCreatureType(CreatureType::Assassin))),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::AddCreatureTypes {
+                    what: Selector::This,
+                    creature_types: vec![CreatureType::Assassin],
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..v
+    }
+}
+
+/// Fell Flagship — {3} Vehicle 3/3, crew 3. Your Pirates get +1/+0; its
+/// combat damage makes that player discard.
+pub fn fell_flagship() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Pirates you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(yours(R::Creature.and(pirate()))),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![on_combat_damage_to_player(Effect::Discard {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::ONE,
+            random: false,
+        })],
+        ..vehicle("Fell Flagship", cost(&[generic(3)]), 3, 3, 3)
+    }
+}
+
+/// Hoard Hauler — {3}{R} Vehicle 5/5 trample, crew 3; its combat damage makes
+/// a Treasure per artifact that player controls.
+pub fn hoard_hauler() -> CardDefinition {
+    let mut v = vehicle("Hoard Hauler", cost(&[generic(3), r()]), 5, 5, 3);
+    v.keywords.push(Keyword::Trample);
+    CardDefinition {
+        triggered_abilities: vec![on_combat_damage_to_player(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::PermanentCountControlledByMatching(PlayerRef::Target(0), R::Artifact),
+            definition: Arc::new(treasure_token()),
+        })],
+        ..v
+    }
+}
+
+/// Jackdaw — {1}{U}{R} legendary Vehicle 4/4, crew 3. Its combat damage lets
+/// you discard your hand to draw one per artifact you control.
+pub fn jackdaw() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![on_combat_damage_to_player(Effect::MayDo {
+            description: "Discard your hand to draw a card for each artifact you control?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::PermanentCountControlledByMatching(PlayerRef::You, R::Artifact),
+                },
+            ])),
+        })],
+        ..vehicle("Jackdaw", cost(&[generic(1), u(), r()]), 4, 4, 3)
+    }
+}
+
+/// Nautiloid Ship — {4} Vehicle 5/5 flying, crew 3. Entering exiles a
+/// player's graveyard; its combat damage may put a creature card exiled with
+/// it onto the battlefield under your control.
+pub fn nautiloid_ship() -> CardDefinition {
+    let mut v = vehicle("Nautiloid Ship", cost(&[generic(4)]), 5, 5, 3);
+    v.keywords.push(Keyword::Flying);
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::TargetPlayerThen {
+                filter: R::Player,
+                then: Box::new(Effect::ExileWithSource {
+                    what: Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Graveyard(PlayerRef::Target(0)),
+                        filter: R::Any,
+                    },
+                }),
+            }),
+            on_combat_damage_to_player(Effect::MayDo {
+                description: "Put a creature card exiled with this onto the battlefield?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::take_priciest(
+                        Selector::MatchingAmong { inner: Box::new(Selector::CardExiledWithSource), filter: R::Creature },
+                        Value::ONE,
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            }),
+        ],
+        ..v
+    }
+}
+
+/// Adéwalé, Breaker of Chains — {1}{U}{B} 4/1. Entering digs six for an
+/// Assassin, Pirate or Vehicle; a Vehicle of yours hitting a player may
+/// return it from your graveyard to your hand.
+pub fn adewale_breaker_of_chains() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(6),
+                pick_filter: Some(
+                    R::HasCreatureType(CreatureType::Assassin)
+                        .or(pirate())
+                        .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                ),
+                rest_bottom_random: true,
+                ..Default::default()
+            }))),
+            vehicle_hits(
+                EventScope::FromYourGraveyard,
+                Effect::MayDo {
+                    description: "Return Adéwalé from your graveyard to your hand?".into(),
+                    body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+                },
+            ),
+        ],
+        ..legend(
+            "Adéwalé, Breaker of Chains",
+            cost(&[generic(1), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Assassin, CreatureType::Pirate],
+            4,
+            1,
+        )
+    }
+}
+
+/// Basim Ibn Ishaq — {U}{B} 2/2. The first historic spell you cast each turn
+/// draws a card and makes it unblockable this turn; its combat damage to a
+/// player adds a +1/+1 counter.
+pub fn basim_ibn_ishaq() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::historic() })
+                    .once_per_turn(),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+                ]),
+            },
+            on_combat_damage_to_player(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+        ],
+        ..legend("Basim Ibn Ishaq", cost(&[u(), b()]), vec![CreatureType::Human, CreatureType::Assassin], 2, 2)
+    }
+}
+
+/// Breeches, Eager Pillager — {2}{R} 3/3 first strike. Each Pirate of yours
+/// attacking picks a mode not yet chosen this turn: a Treasure, a creature
+/// that can't block, or an impulse draw for this turn.
+pub fn breeches_eager_pillager() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: pirate() }),
+            effect: Effect::ChooseUnchosenModeThisTurn {
+                modes: vec![
+                    treasure(false),
+                    Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+                    Effect::Seq(vec![
+                        Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::ONE, link_to_source: false, face_down: false },
+                        Effect::GrantMayPlay {
+                            what: Selector::ExiledThisResolution { filter: R::Any },
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            to_owner: false,
+                            exile_after: false,
+                            pay_own_cost: true,
+                            any_color: false,
+                        },
+                    ]),
+                ],
+            },
+        }],
+        ..legend("Breeches, Eager Pillager", cost(&[generic(2), r()]), vec![CreatureType::Goblin, CreatureType::Pirate], 3, 3)
+    }
+}
+
+/// Deadeye Quartermaster — {3}{U} 2/2. Entering may tutor an Equipment or
+/// Vehicle card.
+pub fn deadeye_quartermaster() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for an Equipment or Vehicle card?".into(),
+            body: Box::new(tutor(
+                R::HasArtifactSubtype(ArtifactSubtype::Equipment).or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+            )),
+        })],
+        ..creature("Deadeye Quartermaster", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Pirate], 2, 2)
+    }
+}
+
+/// Forerunner of the Coalition — {2}{B} 2/2. Entering may put a Pirate card
+/// from your library on top; another Pirate of yours entering drains each
+/// opponent 1.
+pub fn forerunner_of_the_coalition() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::MayDo {
+                description: "Search for a Pirate card to put on top?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: pirate(),
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: pirate() }),
+                effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            },
+        ],
+        ..creature("Forerunner of the Coalition", cost(&[generic(2), b()]), vec![CreatureType::Human, CreatureType::Pirate], 2, 2)
+    }
+}
+
+/// March of the Drowned — {B} sorcery. Choose one: a creature card from your
+/// graveyard to hand, or two Pirate cards.
+pub fn march_of_the_drowned() -> CardDefinition {
+    spell(
+        "March of the Drowned",
+        cost(&[b()]),
+        CardType::Sorcery,
+        Effect::ChooseMode(vec![
+            Effect::Move { what: target_filtered(R::Creature.from_your_graveyard()), to: ZoneDest::Hand(PlayerRef::You) },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 2,
+                filter: pirate().from_your_graveyard(),
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+            },
+        ]),
     )
 }

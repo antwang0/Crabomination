@@ -1324,3 +1324,96 @@ fn historians_boon_and_smaug() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 14);
 }
+
+fn crew(g: &mut GameState, vehicle: CardId, crew: &[CardId]) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle, crew_creatures: crew.to_vec() }).expect("crew");
+    drain_stack(g);
+}
+
+/// Edward Kenway: a Vehicle of yours hitting a player exiles their top card
+/// face down for you to play; at your end step, a Treasure per tapped
+/// Assassin, Pirate or Vehicle. Adrestia crewed by an Assassin draws as it
+/// attacks.
+#[test]
+fn edward_kenway_plunders_with_vehicles() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let top = g.add_card_to_library(1, catalog::lightning_bolt());
+    let edward = ready(&mut g, 0, catalog::edward_kenway());
+    let adrestia = ready(&mut g, 0, catalog::adrestia());
+    let basim = ready(&mut g, 0, catalog::basim_ibn_ishaq());
+    crew(&mut g, adrestia, &[basim]);
+    let hand = g.players[0].hand.len();
+    attack(&mut g, 0, &[adrestia], 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "an Assassin crewed it");
+    combat_damage(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("their top card");
+    assert!(exiled.may_play_until.is_some());
+    end_step(&mut g);
+    let _ = edward;
+    // Adrestia (a tapped Vehicle, attacked) and Basim (tapped to crew): two.
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 2);
+}
+
+/// Hoard Hauler makes a Treasure per artifact the damaged player controls;
+/// Nautiloid Ship exiles a graveyard on entry and may reanimate a creature
+/// card from it on a hit.
+#[test]
+fn hoard_hauler_and_nautiloid_ship() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::sol_ring());
+    ready(&mut g, 1, catalog::sol_ring());
+    let hauler = ready(&mut g, 0, catalog::hoard_hauler());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    crew(&mut g, hauler, &[giant]);
+    attack(&mut g, 0, &[hauler], 1);
+    combat_damage(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 2);
+
+    let mut g = pod(2);
+    let maw = g.add_card_to_graveyard(1, catalog::colossal_dreadmaw());
+    let ship = g.add_card_to_hand(0, catalog::nautiloid_ship());
+    cast(&mut g, 0, ship, Some(Target::Player(1))).expect("Nautiloid Ship");
+    assert!(g.exile.iter().any(|c| c.id == maw));
+    g.clear_sickness(ship);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    crew(&mut g, ship, &[giant]);
+    attack(&mut g, 0, &[ship], 1);
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 15, "the ship hit");
+    // The headless decider declines the "may"; the body, run as the ship
+    // would, takes the creature card exiled with it.
+    let ctx = EffectContext::for_ability(ship, 0, None);
+    let body = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::take_priciest(
+            crabomination::effect::Selector::MatchingAmong {
+                inner: Box::new(crabomination::effect::Selector::CardExiledWithSource),
+                filter: crabomination::card::SelectionRequirement::Creature,
+            },
+            crabomination::card::Value::ONE,
+        ),
+        to: crabomination::effect::ZoneDest::Battlefield { controller: crabomination::effect::PlayerRef::You, tapped: false },
+    };
+    g.resolve_effect(&body, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(maw).map(|c| c.controller), Some(0));
+}
+
+/// Breeches: each attacking Pirate takes a mode not yet chosen this turn.
+#[test]
+fn breeches_picks_a_new_mode_per_pirate() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let breeches = ready(&mut g, 0, catalog::breeches_eager_pillager());
+    let edward = ready(&mut g, 0, catalog::edward_kenway());
+    let ade = ready(&mut g, 0, catalog::adewale_breaker_of_chains());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    attack(&mut g, 0, &[breeches, edward, ade], 1);
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    let impulses = g.exile.iter().filter(|c| c.may_play_until.is_some()).count();
+    assert!(treasures <= 1 && impulses <= 1, "no mode twice: {treasures} {impulses}");
+}
