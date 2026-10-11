@@ -1983,6 +1983,5 @@ library-exile event.
 | Card | Residual | Why |
 |---|---|---|
 | 🟡 Ardenn, Intrepid Archaeologist | the combat attach targets a creature only, not "permanent or player" | no Curse sits in a target deck and an Equipment can only hold a creature (CR 301.5c); attaching to a player needs a player-host attach path |
-| 🟡 Venom, Deadly Devourer | the reflexive "when you do" Symbiote target is chosen up front with the graveyard card | reflexive triggers with their own target slot aren't split from the activation's targets |
 | 🟡 Echoes of Eternity | a colorless *spell's* triggered ability and a leaves-the-battlefield trigger of a colorless permanent don't fire an additional time | the trigger doubler reads its source live on the battlefield; a spell source or last-known source isn't consulted |
 | 🟡 Elrond, Moon-Reader | activating a creature's *mana* ability doesn't draw | mana abilities emit no `AbilityActivated` event (the engine's CR 605.1 carve-out for "whenever an opponent activates" cards) |

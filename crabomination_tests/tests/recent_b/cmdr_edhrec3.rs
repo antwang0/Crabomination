@@ -1832,7 +1832,8 @@ fn gwenom_plays_off_the_top_for_life() {
 }
 
 /// Venom, Deadly Devourer (Eddie's list): exiling a graveyard creature grows
-/// a Symbiote by its toughness.
+/// a Symbiote by its toughness. CR 603.12 — the Symbiote is the reflexive
+/// trigger's target, picked once the card is exiled, not at activation.
 #[test]
 fn venom_deadly_devourer_feeds_on_graveyards() {
     use crabomination::card::CounterType;
@@ -1845,13 +1846,16 @@ fn venom_deadly_devourer_feeds_on_graveyards() {
         card_id: venom,
         ability_index: 0,
         target: Some(Target::Permanent(angel)),
-        additional_targets: vec![Target::Permanent(venom)],
+        additional_targets: vec![],
         x_value: None,
         mode: None,
     })
     .expect("activate");
-    drain_stack(&mut g);
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
     assert!(g.exile.iter().any(|c| c.id == angel));
+    assert_eq!(g.stack.len(), 1, "the reflexive \"when you do\" trigger waits on the stack");
+    drain_stack(&mut g);
     assert_eq!(g.battlefield_find(venom).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
 }
 

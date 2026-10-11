@@ -2546,19 +2546,27 @@ pub fn gwenom_remorseless() -> CardDefinition {
 
 /// Venom, Deadly Devourer — {2}{B}{G} 4/4 vigilance, menace. {3}: exile
 /// target creature card from a graveyard; when you do, put +1/+1 counters
-/// equal to its toughness on target Symbiote (both targets chosen up front).
+/// equal to its toughness on target Symbiote — a reflexive trigger (CR
+/// 603.12) that picks the Symbiote as it triggers.
 pub fn venom_deadly_devourer() -> CardDefinition {
     use crate::card::CounterType;
+    let exiled = || Selector::ExiledThisResolution { filter: R::Any };
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Menace],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Seq(vec![
                 Effect::Exile { what: target_filtered(R::Creature.from_any_graveyard()) },
-                Effect::AddCounter {
-                    what: Selector::TargetFiltered { slot: 1, filter: R::HasCreatureType(CreatureType::Symbiote) },
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                Effect::If {
+                    cond: Predicate::SelectorExists(exiled()),
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::AddCounter {
+                            what: target_filtered(R::HasCreatureType(CreatureType::Symbiote)),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::ToughnessOf(Box::new(exiled())),
+                        }),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
             ..Default::default()
