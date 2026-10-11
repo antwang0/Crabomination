@@ -11699,3 +11699,34 @@ pub const MARVO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const TOM_BOMBADIL_COMMANDERS: &[CardFactory] = &[tom_bombadil];
+
+/// **Tom Bombadil**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 87 nonbasic cards + 4 Forests + 2 Islands + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Tom Bombadil (WUBRG) Sagas
+pub const TOM_BOMBADIL_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, power_conduit, sol_ring, breeding_pool,
+    canopy_vista, command_tower, evolving_wilds, exotic_orchard, godless_shrine,
+    hall_of_heliods_generosity, hallowed_fountain, indatha_triome, jetmirs_garden,
+    jungle_shrine, ketria_triome, misty_rainforest, nesting_grounds, overgrown_tomb,
+    path_of_ancestry, sandsteppe_citadel, seaside_citadel, sparas_headquarters, stomping_ground,
+    temple_garden, the_world_tree, windswept_heath, zagoth_triome, barbara_wright,
+    dryad_of_the_ilysian_grove, eidolon_of_blossoms, faeburrow_elder,
+    garnet_princess_of_alexandria, goldberry_river_daughter, jukai_naturalist,
+    narci_fable_singer, oaka_traveling_merchant, sanctum_weaver, satsuki_the_living_lore,
+    scholar_of_new_horizons, setessan_champion, sigurd_jarl_of_ravensthorpe, summon_bahamut,
+    summon_fenrir, summon_knights_of_round, summon_primal_odin, summon_titan, summon_yojimbo,
+    sythis_harvests_hand, terra_magical_adept, weaver_of_harmony, azusas_many_journeys,
+    binding_the_old_gods, birth_of_the_imperium, elspeth_conquers_death, enchantresss_presence,
+    historians_boon, in_the_darkness_bind_them, jugan_defends_the_temple,
+    kiora_bests_the_sea_god, one_ring_to_rule_them_all, scroll_of_isildur, song_of_earendil,
+    starfield_of_nyx, sterling_grove, the_akroan_war, the_bath_song, the_cruelty_of_gix,
+    the_eldest_reborn, the_first_iroan_games, the_horus_heresy, the_kami_war,
+    the_weatherseed_treaty, there_and_back_again, war_of_the_last_alliance, clockspinning,
+    flicker_of_fate, heroic_intervention, path_to_exile, swords_to_plowshares, cultivate,
+    dance_of_the_manse, farseek, natures_lore, rampant_growth, resurgent_belief,
+    // Basics
+    forest, forest, forest, forest, island, island, mountain, mountain, plains, plains, swamp,
+    swamp,
+];

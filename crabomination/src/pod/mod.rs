@@ -2856,6 +2856,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MARVO_COMMANDERS,
             main: decks::MARVO_MAIN,
         },
+        // Seat 401: Tom Bombadil's EDHREC average deck. `--pod-decks 401`.
+        PodDeck {
+            name: "Tom Bombadil (WUBRG)",
+            commanders: decks::TOM_BOMBADIL_COMMANDERS,
+            main: decks::TOM_BOMBADIL_MAIN,
+        },
     ]
 }
 
@@ -5014,6 +5020,7 @@ mod tests {
             ("Kibo, Uktabi Prince", [0x0AB4, 398, 9323]),
             ("Shelob, Child of Ungoliant", [0x0AB5, 399, 9324]),
             ("Marvo, Deep Operative", [0x0AB6, 400, 9325]),
+            ("Tom Bombadil", [0x0AB7, 401, 9326]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
