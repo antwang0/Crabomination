@@ -276,3 +276,187 @@ fn saurons_ransom_splits_four() {
     assert_eq!(g.players[0].library.len(), 2);
     assert_eq!(g.players[0].ring_temptations, 1);
 }
+
+fn sneak(g: &mut GameState, attacker: CardId, defender: usize, card: CardId) {
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(defender) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    flood(g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: card,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("sneak");
+    drain_stack(g);
+}
+
+fn counters(g: &GameState, id: CardId) -> u32 {
+    g.battlefield_find(id).map_or(0, |c| c.counter_count(crabomination::card::CounterType::PlusOnePlusOne))
+}
+
+fn mutagens(g: &GameState) -> usize {
+    g.battlefield.iter().filter(|c| c.definition.name == "Mutagen").count()
+}
+
+/// CR 702.190b — a permanent spell cast for its sneak cost enters tapped and
+/// attacking the player the returned creature was attacking (seat 2 here, not
+/// the first opponent); Raphael's attackers have double strike.
+#[test]
+fn cr_702_190b_a_sneaked_raphael_enters_attacking_the_returned_creatures_defender() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let raph = g.add_card_to_hand(0, catalog::raphael_the_nightwatcher());
+    sneak(&mut g, bear, 2, raph);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the bear paid the cost");
+    let r = g.battlefield_find(raph).expect("Raphael entered");
+    assert!(r.tapped);
+    assert!(
+        g.attacking.iter().any(|a| a.attacker == raph && a.target == AttackTarget::Player(2)),
+        "attacking seat 2"
+    );
+    assert!(g.computed_permanent(raph).unwrap().keywords().contains(&Keyword::DoubleStrike));
+}
+
+/// A sneaked Dark Leo & Shredder hits: a Ninja token; at five Ninjas the
+/// player hit loses half their life, rounded up.
+#[test]
+fn dark_leo_and_shredder_halve_a_player_at_five_ninjas() {
+    let mut g = pod(2);
+    let leo = ready(&mut g, 0, catalog::dark_leo_and_shredder());
+    attack(&mut g, 0, &[leo], 1);
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 19, "fewer than five Ninjas");
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::ninja_of_the_deep_hours());
+    }
+    g.battlefield_find_mut(leo).unwrap().tapped = false;
+    g.attacking.clear();
+    attack(&mut g, 0, &[leo], 1);
+    combat_damage(&mut g);
+    // 1 damage (19 -> 18); the token makes five Ninjas; half of 18 is 9.
+    assert_eq!(g.players[1].life, 9);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Ninja").count(), 2);
+}
+
+/// The Ooze: a creature of yours leaving with +1/+1 counters leaves that many
+/// Mutagens (CR 603.10a — read as it last existed); {T} exiles a graveyard
+/// card for one more. Mutagen Man makes X and cuts their activation to {0}.
+#[test]
+fn the_ooze_and_mutagen_man_brew_mutagen() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_ooze());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    let plain = ready(&mut g, 0, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
+    g.destroy_permanent(plain, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(mutagens(&g), 2, "two counters; the plain bear none");
+
+    let mut g = pod(2);
+    let man = g.add_card_to_hand(0, catalog::mutagen_man_living_ooze());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: man, target: None, additional_targets: vec![], mode: None, x_value: Some(3) })
+        .expect("X = 3");
+    drain_stack(&mut g);
+    assert_eq!(mutagens(&g), 3);
+    g.players[0].mana_pool = Default::default();
+    let m = g.battlefield.iter().find(|c| c.definition.name == "Mutagen").unwrap().id;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m,
+        ability_index: 0,
+        target: Some(Target::Permanent(man)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{1} less: free");
+    drain_stack(&mut g);
+    assert_eq!(counters(&g, man), 1);
+}
+
+/// Michelangelo, Weirdness to 11 adds one to each +1/+1 counter placement;
+/// Mikey & Leo draws on the first counter you put each turn only.
+#[test]
+fn weirdness_and_mikey_and_leo_on_counters() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::michelangelo_weirdness_to_11());
+    ready(&mut g, 0, catalog::mikey_and_leo_chaos_and_order());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let put = crabomination::effect::Effect::AddCounter {
+        what: crabomination::effect::Selector::ExactObjects(vec![bear]),
+        kind: crabomination::card::CounterType::PlusOnePlusOne,
+        amount: crabomination::card::Value::ONE,
+    };
+    for _ in 0..2 {
+        let evs = g.resolve_effect(&put, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert_eq!(counters(&g, bear), 4, "one plus one, twice");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "once each turn");
+}
+
+/// Mikey & Don: a Turtle off the top enters with an extra +1/+1 counter; a
+/// non-Turtle spell on top stays put.
+#[test]
+fn mikey_and_don_cast_turtles_from_the_top() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mikey_and_don_party_planners());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(g
+        .perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None
+        })
+        .is_err());
+    g.players[0].library.clear();
+    let turtle = g.add_card_to_library(0, catalog::leonardo_the_balance());
+    cast(&mut g, 0, turtle, None).expect("a Turtle off the top");
+    assert_eq!(counters(&g, turtle), 1);
+    let hand_bff = g.add_card_to_hand(0, catalog::michelangelo_mutant_bff());
+    cast(&mut g, 0, hand_bff, None).expect("from hand");
+    assert_eq!(counters(&g, hand_bff), 0, "not cast this way");
+}
+
+/// Splinter doubles a Ninja's triggers (Michelangelo, Mutant BFF's entry
+/// makes two Mutagens), and its {1}{U} makes a Ninja unblockable.
+#[test]
+fn splinter_doubles_ninja_triggers() {
+    let mut g = pod(2);
+    let splinter = ready(&mut g, 0, catalog::splinter_radical_rat());
+    let bff = g.add_card_to_hand(0, catalog::michelangelo_mutant_bff());
+    cast(&mut g, 0, bff, None).expect("BFF");
+    assert_eq!(mutagens(&g), 2);
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: splinter,
+        ability_index: 0,
+        target: Some(Target::Permanent(bff)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("unblockable");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bff).unwrap().keywords().contains(&Keyword::Unblockable));
+}

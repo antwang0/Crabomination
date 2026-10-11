@@ -1,15 +1,19 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, fifth file (`cmdr_edhrec4` is the
-//! fourth). Lord of the Nazgûl's Wraiths and Ring spells. Tests in
+//! fourth). Lord of the Nazgûl's Wraiths and Ring spells; Leonardo and
+//! Michelangelo's Turtles, Ninjas and Mutagen. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, sneak, target_filtered};
 use crate::effect::{ActivatedAbility, DelayedTriggerKind, Duration, Effect, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, generic, u, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
+use crabomination_base::tokens::mutagen_token;
+use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -290,4 +294,262 @@ pub fn sams_desperate_rescue() -> CardDefinition {
             tempt(),
         ]),
     )
+}
+
+// ── Leonardo, the Balance // Michelangelo, the Heart (WG) ───────────────────
+
+/// A Mutant, Ninja or Turtle.
+fn tmnt() -> R {
+    R::HasCreatureType(CreatureType::Mutant)
+        .or(R::HasCreatureType(CreatureType::Ninja))
+        .or(R::HasCreatureType(CreatureType::Turtle))
+}
+
+fn yours(filter: R) -> R {
+    filter.and(R::ControlledByYou)
+}
+
+fn mutagens(count: Value) -> Effect {
+    Effect::CreateToken { who: PlayerRef::You, count, definition: Arc::new(mutagen_token()) }
+}
+
+fn grant(description: &'static str, filter: R, keyword: Keyword) -> StaticAbility {
+    StaticAbility {
+        description,
+        effect: StaticEffect::GrantKeyword { applies_to: Selector::EachPermanent(filter), keyword },
+    }
+}
+
+fn turtle(name: &'static str, mana: ManaCost, p: i32, t: i32) -> CardDefinition {
+    legend(name, mana, vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle], p, t)
+}
+
+/// The Ooze — {2} legendary artifact. A creature of yours leaving with
+/// +1/+1 counters leaves that many Mutagens; {T}: exile a card from a
+/// graveyard and make a Mutagen.
+pub fn the_ooze() -> CardDefinition {
+    CardDefinition {
+        name: "The Ooze",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            // CR 603.10a — the counters are read as it last existed.
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                },
+            ),
+            effect: mutagens(Value::CountersOn {
+                what: Box::new(Selector::TriggerSource),
+                kind: CounterType::PlusOnePlusOne,
+            }),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Move { what: target_filtered(R::Any.from_any_graveyard()), to: ZoneDest::Exile },
+                mutagens(Value::ONE),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dark Leo & Shredder — {W}{B} 1/3, sneak {W}{B}. Attacking Ninjas you
+/// control have deathtouch; combat damage to a player makes a 1/1 Ninja, then
+/// at five Ninjas that player loses half their life, rounded up.
+pub fn dark_leo_and_shredder() -> CardDefinition {
+    let ninjas = || yours(R::Creature.and(R::HasCreatureType(CreatureType::Ninja)));
+    CardDefinition {
+        keywords: vec![Keyword::Sneak(cost(&[w(), b()]))],
+        alternative_cost: Some(sneak(cost(&[w(), b()]))),
+        static_abilities: vec![grant(
+            "Attacking Ninjas you control have deathtouch.",
+            ninjas().and(R::IsAttacking),
+            Keyword::Deathtouch,
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(TokenDefinition {
+                        name: "Ninja".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Ninja], ..Default::default() },
+                        ..Default::default()
+                    }),
+                },
+                Effect::If {
+                    cond: Predicate::SelectorCountAtLeast { sel: Selector::EachPermanent(ninjas()), n: Value::Const(5) },
+                    then: Box::new(Effect::LoseHalfLife { who: Selector::Player(PlayerRef::Target(0)), rounded_up: true }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..legend(
+            "Dark Leo & Shredder",
+            cost(&[w(), b()]),
+            vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle, CreatureType::Human],
+            1,
+            3,
+        )
+    }
+}
+
+/// Michelangelo, Mutant BFF — {2}{G}{G} 4/4. Your creatures with counters
+/// can't be blocked by more than one creature; entering or attacking makes a
+/// Mutagen.
+pub fn michelangelo_mutant_bff() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![grant(
+            "Each creature you control with a counter on it can't be blocked by more than one creature.",
+            yours(R::Creature.and(R::WithAnyCounter)),
+            Keyword::CantBeBlockedByMoreThanOne,
+        )],
+        triggered_abilities: vec![etb(mutagens(Value::ONE)), on_attack(mutagens(Value::ONE))],
+        ..turtle("Michelangelo, Mutant BFF", cost(&[generic(2), g(), g()]), 4, 4)
+    }
+}
+
+/// Michelangelo, Weirdness to 11 — {1}{G} 1/1. A Mutagen on entry; +1/+1
+/// counters on your creatures come one extra (the Hardened Scales rider).
+pub fn michelangelo_weirdness_to_11() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If one or more +1/+1 counters would be put on a creature you control, that many plus one \
+                          +1/+1 counters are put on it instead.",
+            effect: StaticEffect::ExtraPlusOneCounters,
+        }],
+        triggered_abilities: vec![etb(mutagens(Value::ONE))],
+        ..turtle("Michelangelo, Weirdness to 11", cost(&[generic(1), g()]), 1, 1)
+    }
+}
+
+/// Mikey & Don, Party Planners — {2}{G/U}{G/U} 3/3, ward {2}. Look at the top
+/// of your library; play lands and cast Mutant, Ninja or Turtle spells from
+/// it; a creature cast that way enters with an extra +1/+1 counter.
+pub fn mikey_and_don_party_planners() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(WardCost::generic(2))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may play lands and cast Mutant, Ninja, or Turtle spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::Land.or(tmnt()) },
+            },
+            StaticAbility {
+                description: "If you cast a creature spell this way, that creature enters with an additional +1/+1 \
+                              counter on it.",
+                effect: StaticEffect::MatchingEntersWithExtraCounters {
+                    filter: R::Creature.and(tmnt()).and(R::WasCastFromLibrary),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: 1,
+                },
+            },
+        ],
+        ..turtle(
+            "Mikey & Don, Party Planners",
+            cost(&[generic(2), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+            3,
+            3,
+        )
+    }
+}
+
+/// Mikey & Leo, Chaos & Order — {G/W}{G/W} 2/2. Putting a counter on a
+/// creature you control draws a card, once each turn.
+pub fn mikey_and_leo_chaos_and_order() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            // CR 122.6 — keyed on who put the counter.
+            event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YouPutCounters)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: yours(R::Creature) })
+                .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..turtle(
+            "Mikey & Leo, Chaos & Order",
+            cost(&[hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+            2,
+            2,
+        )
+    }
+}
+
+/// Mutagen Man, Living Ooze — {X}{G}{G} 2/3 trample. Your artifact tokens'
+/// activated abilities cost {1} less; enters with X Mutagens.
+pub fn mutagen_man_living_ooze() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of artifact tokens you control cost {1} less to activate.",
+            effect: StaticEffect::MatchingActivatedAbilitiesCostLess { filter: R::Artifact.and(R::IsToken), amount: 1 },
+        }],
+        triggered_abilities: vec![etb(mutagens(Value::XFromCost))],
+        ..legend(
+            "Mutagen Man, Living Ooze",
+            cost(&[x(), g(), g()]),
+            vec![CreatureType::Ooze, CreatureType::Mutant],
+            2,
+            3,
+        )
+    }
+}
+
+/// Raphael, the Nightwatcher — {2}{R}{R} 2/3, sneak {1}{R}{R}. Attacking
+/// creatures you control have double strike.
+pub fn raphael_the_nightwatcher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Sneak(cost(&[generic(1), r(), r()]))],
+        alternative_cost: Some(sneak(cost(&[generic(1), r(), r()]))),
+        static_abilities: vec![grant(
+            "Attacking creatures you control have double strike.",
+            yours(R::Creature.and(R::IsAttacking)),
+            Keyword::DoubleStrike,
+        )],
+        ..turtle("Raphael, the Nightwatcher", cost(&[generic(2), r(), r()]), 2, 3)
+    }
+}
+
+/// Splinter, Radical Rat — {1}{W/B}{W/B} 2/4. Your Ninjas' triggered
+/// abilities trigger an additional time; {1}{U}: a Ninja can't be blocked
+/// this turn.
+pub fn splinter_radical_rat() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If a triggered ability of a Ninja creature you control triggers, that ability triggers an \
+                          additional time.",
+            effect: StaticEffect::DoubleControllerTriggersOfType {
+                types: vec![CreatureType::Ninja],
+                exclude_source: false,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Ninja))),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Splinter, Radical Rat",
+            cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+            vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Rat],
+            2,
+            4,
+        )
+    }
 }
