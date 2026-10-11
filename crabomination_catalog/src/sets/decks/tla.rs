@@ -4292,9 +4292,9 @@ pub fn the_fire_nation_drill() -> CardDefinition {
 }
 
 /// Iroh, Grand Lotus — {3}{G}{U}{R} 5/5 legendary Human Noble Ally. Firebending
-/// 2. Each instant/sorcery card in your graveyard has flashback for its mana
-/// cost. (The "during your turn" gate and the cheaper Lesson flashback {1} are
-/// approximated to Lier's always-on grant.)
+/// 2. During your turn, each non-Lesson instant and sorcery card in your
+/// graveyard has flashback equal to its mana cost, and each Lesson card
+/// flashback {1}.
 pub fn iroh_grand_lotus() -> CardDefinition {
     CardDefinition {
         name: "Iroh, Grand Lotus",
@@ -4308,10 +4308,29 @@ pub fn iroh_grand_lotus() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Firebending(2)],
-        static_abilities: vec![StaticAbility {
-            description: "Each instant and sorcery card in your graveyard has flashback equal to its mana cost.",
-            effect: StaticEffect::GraveyardInstantsSorceriesHaveFlashback,
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, each non-Lesson instant and sorcery card in your graveyard has \
+                              flashback equal to its mana cost.",
+                effect: StaticEffect::WhileYourTurn {
+                    inner: Box::new(StaticEffect::GraveyardMatchingHaveFlashback {
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                            .and(SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson).negate()),
+                        cost: None,
+                    }),
+                },
+            },
+            StaticAbility {
+                description: "During your turn, each Lesson card in your graveyard has flashback {1}.",
+                effect: StaticEffect::WhileYourTurn {
+                    inner: Box::new(StaticEffect::GraveyardMatchingHaveFlashback {
+                        filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                        cost: Some(cost(&[generic(1)])),
+                    }),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

@@ -2443,6 +2443,39 @@ fn iroh_grand_lotus_flashbacks_graveyard_spells() {
     assert_eq!(g.players[1].life, 17, "flashed-back Bolt dealt 3");
     assert!(g.exile.iter().any(|c| c.id == bolt), "flashback exiles the spell");
 }
+/// Iroh, Grand Lotus: a Lesson's flashback costs {1}, and neither grant works
+/// on an opponent's turn ("during your turn").
+#[test]
+fn iroh_grand_lotus_lessons_cost_one_and_only_on_your_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::iroh_grand_lotus());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let lesson = g.add_card_to_graveyard(0, catalog::introduction_to_prophecy());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastFlashback {
+            card_id: bolt, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "not during an opponent's turn"
+    );
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: lesson, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("a Lesson flashes back for {1}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == lesson));
+}
 /// Razor Rings deals 4 to an attacking creature and gains life = excess damage.
 #[test]
 fn razor_rings_burns_attacker_for_excess_life() {
