@@ -6,8 +6,8 @@
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
 //! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin, Katara, the
 //! Fearless, Azlask, the Swelling Scourge, The Mycotyrant, Thranduil, the
-//! Elvenking, Maralen, Fae Ascendant, Najeela, the Blade-Blossom and Toph, the First
-//! Metalbender. Tests in
+//! Elvenking, Maralen, Fae Ascendant, Najeela, the Blade-Blossom, Toph, the First
+//! Metalbender and Avatar Aang. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -4371,6 +4371,225 @@ pub fn earthshape() -> CardDefinition {
             },
             Effect::PlayerHexproofThisTurn { who: Selector::You },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── Avatar Aang (RGWU) ──────────────────────────────────────────────────────
+
+/// Aang, Master of Elements — the back of Avatar Aang: a 6/6 flying Avatar
+/// Ally. Spells you cast cost {W}{U}{B}{R}{G} less (an unmatched colored pip
+/// takes a generic one). At the beginning of each upkeep, you may transform
+/// him: if you do, gain 4 life, draw four, four +1/+1 counters on him, and 4
+/// damage to each opponent.
+pub fn aang_master_of_elements() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        color_indicator: vec![Color::White, Color::Blue, Color::Red, Color::Green],
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast cost {W}{U}{B}{R}{G} less to cast.",
+            effect: StaticEffect::ColoredCostReduction { filter: R::Any, less: cost(&[w(), u(), b(), r(), g()]) },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::MayDo {
+                description: "Transform Aang, Master of Elements?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Transform { what: Selector::This },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::Const(4),
+                    },
+                    Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(4) },
+                ])),
+            },
+        }],
+        ..legend(
+            "Aang, Master of Elements",
+            crate::mana::ManaCost::default(),
+            vec![CreatureType::Avatar, CreatureType::Ally],
+            6,
+            6,
+        )
+    }
+}
+
+/// Avatar Aang // Aang, Master of Elements — {R}{G}{W}{U} 4/4 legendary Human
+/// Avatar Ally. Flying, firebending 2. Whenever you waterbend, earthbend,
+/// firebend or airbend, draw a card; then if you've done all four this turn,
+/// transform him.
+pub fn avatar_aang() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Firebending(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::Performed(crate::effect::KeywordAct::Bent(None)),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::BentAllFourThisTurn { who: PlayerRef::You },
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(aang_master_of_elements())),
+        ..legend(
+            "Avatar Aang",
+            cost(&[r(), g(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Avatar, CreatureType::Ally],
+            4,
+            4,
+        )
+    }
+}
+
+/// Mai and Zuko — {1}{U}{B}{R} 3/5 legendary Human Noble Ally. Firebending 3.
+/// You may cast Ally spells and artifact spells as though they had flash.
+pub fn mai_and_zuko() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Firebending(3)],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast Ally spells and artifact spells as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash {
+                filter: R::HasCreatureType(CreatureType::Ally).or(R::Artifact),
+            },
+        }],
+        ..legend(
+            "Mai and Zuko",
+            cost(&[generic(1), u(), b(), r()]),
+            vec![CreatureType::Human, CreatureType::Noble, CreatureType::Ally],
+            3,
+            5,
+        )
+    }
+}
+
+/// Monk Gyatso — {3}{W} 3/3 legendary Human Monk. Whenever another creature
+/// you control becomes the target of a spell or ability, you may airbend it.
+pub fn monk_gyatso() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::OtherThanSource },
+            ),
+            effect: Effect::MayDo {
+                description: "Airbend that creature?".into(),
+                body: Box::new(Effect::Airbend { what: Selector::TriggerSource }),
+            },
+        }],
+        ..legend("Monk Gyatso", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Monk], 3, 3)
+    }
+}
+
+/// Avatar Kuruk — the back of The Legend of Kuruk: a 4/3 legendary Avatar.
+/// Whenever you cast a spell, a 1/1 colorless Spirit that can't block or be
+/// blocked by non-Spirit creatures. Exhaust — Waterbend {20}: take an extra
+/// turn after this one.
+pub fn avatar_kuruk() -> CardDefinition {
+    CardDefinition {
+        color_indicator: vec![Color::Blue],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition {
+                    name: "Spirit".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+                    keywords: vec![
+                        Keyword::CantBlockMatching(Box::new(R::HasCreatureType(CreatureType::Spirit).negate())),
+                        Keyword::CantBeBlockedExceptBy(Box::new(R::HasCreatureType(CreatureType::Spirit))),
+                    ],
+                    ..Default::default()
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(20)]),
+            waterbend: true,
+            exhaust: true,
+            effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+            ..Default::default()
+        }],
+        ..legend("Avatar Kuruk", crate::mana::ManaCost::default(), vec![CreatureType::Avatar], 4, 3)
+    }
+}
+
+/// The Legend of Kuruk — {2}{U}{U} Saga. I, II: scry 2, then draw a card.
+/// III: exile it, return it transformed (Avatar Kuruk).
+pub fn the_legend_of_kuruk() -> CardDefinition {
+    let look = || {
+        Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ])
+    };
+    CardDefinition {
+        name: "The Legend of Kuruk",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![(1, look()), (2, look()), (3, Effect::ExileSelfReturnTransformed)],
+        back_face: Some(Box::new(avatar_kuruk())),
+        ..Default::default()
+    }
+}
+
+/// Avatar Yangchen — the back of The Legend of Yangchen: a 4/5 flying
+/// legendary Avatar. Whenever you cast your second spell each turn, airbend up
+/// to one other target nonland permanent.
+pub fn avatar_yangchen() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        color_indicator: vec![Color::White],
+        triggered_abilities: vec![crate::effect::shortcut::flurry(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: R::Nonland.and(R::OtherThanSource),
+            effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+        })],
+        ..legend("Avatar Yangchen", crate::mana::ManaCost::default(), vec![CreatureType::Avatar], 4, 5)
+    }
+}
+
+/// The Legend of Yangchen — {3}{W}{W} Saga. I: starting with you, each player
+/// chooses up to one permanent with mana value 3 or greater among permanents
+/// your opponents control; exile those. II: you may have target opponent draw
+/// three cards; if you do, draw three. III: exile it, return it transformed
+/// (Avatar Yangchen).
+pub fn the_legend_of_yangchen() -> CardDefinition {
+    CardDefinition {
+        name: "The Legend of Yangchen",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![
+            (1, Effect::EachPlayerChoosesOpponentPermanentExile { filter: R::ManaValueAtLeast(3) }),
+            (
+                2,
+                Effect::MayDo {
+                    description: "Have target opponent draw three cards, then draw three?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw {
+                            who: target_filtered(R::Player.and(R::OpponentPlayer)),
+                            amount: Value::Const(3),
+                        },
+                        Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    ])),
+                },
+            ),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(avatar_yangchen())),
         ..Default::default()
     }
 }

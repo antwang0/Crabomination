@@ -3097,3 +3097,140 @@ fn earthshape_shields_the_small() {
     assert!(!kw(angel));
     assert_eq!(land_creature_power(&g, forest), Some(3));
 }
+
+// ── Avatar Aang's list ──────────────────────────────────────────────────────
+
+/// Avatar Aang: each bend draws (CR 701.66b earthbend, 701.65b airbend,
+/// 701.67c waterbend, 702.189b firebend); the fourth kind in a turn
+/// transforms him into Aang, Master of Elements.
+#[test]
+fn avatar_aang_draws_per_bend_and_transforms_after_all_four() {
+    let mut g = pod(2);
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let aang = ready(&mut g, 0, catalog::avatar_aang());
+    let forest = ready(&mut g, 0, catalog::forest());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    // Earthbend.
+    let shape = g.add_card_to_hand(0, catalog::earthshape());
+    flood(&mut g);
+    cast_on(&mut g, shape, Some(Target::Permanent(forest)));
+    assert_eq!(g.players[0].hand.len(), 1, "one draw for the earthbend");
+    // Airbend (Aang, Swift Savior's entry, aimed at the bear).
+    let swift = g.add_card_to_hand(0, catalog::aang_swift_savior());
+    flood(&mut g);
+    cast_on(&mut g, swift, None);
+    assert!(g.battlefield_find(bear).is_none(), "airbent");
+    assert_eq!(g.players[0].hand.len(), 2);
+    // Waterbend (his {8} transform).
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: swift, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("waterbend {8}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 3);
+    assert!(!g.battlefield_find(aang).unwrap().transformed, "three kinds so far");
+    // Firebend (his own firebending 2 on the attack).
+    attack_with(&mut g, &[aang]);
+    assert!(g.battlefield_find(aang).unwrap().transformed, "all four this turn");
+}
+
+/// Aang, Master of Elements: spells cost {W}{U}{B}{R}{G} less, an unmatched
+/// pip taking a generic one (CR 601.2f) — Aang, Swift Savior ({1}{W}{U}) is
+/// free.
+#[test]
+fn aang_master_of_elements_makes_spells_cheaper() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::aang_master_of_elements());
+    let swift = g.add_card_to_hand(0, catalog::aang_swift_savior());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: swift, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("free");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(swift).is_some());
+}
+
+/// Mai and Zuko: an artifact spell at instant speed, on an opponent's turn
+/// (CR 702.8a).
+#[test]
+fn mai_and_zuko_give_artifacts_flash() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mai_and_zuko());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.active_player_idx = 1;
+    flood(&mut g);
+    cast_on(&mut g, ring, None);
+    assert!(g.battlefield_find(ring).is_some());
+}
+
+/// Monk Gyatso: another creature of yours becoming a target may be airbent
+/// out of the way (CR 701.65a); the Bolt then has no legal target.
+#[test]
+fn monk_gyatso_airbends_a_targeted_ally() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::monk_gyatso());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("airbent");
+    assert!(exiled.may_play_until.is_some());
+}
+
+/// The Legend of Kuruk: chapter I scries 2 and draws; Avatar Kuruk makes a
+/// Spirit per spell cast.
+#[test]
+fn the_legend_of_kuruk_and_avatar_kuruk() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let saga = g.add_card_to_hand(0, catalog::the_legend_of_kuruk());
+    flood(&mut g);
+    cast_on(&mut g, saga, None);
+    assert_eq!(g.players[0].hand.len(), 1);
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::avatar_kuruk());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    cast_on(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(named(&g, "Spirit"), 1);
+}
+
+/// The Legend of Yangchen chapter I: you pick the Angel; the opponent, who
+/// won't name its own, passes; the Angel is exiled and the bear (mana value
+/// 2) was never eligible.
+#[test]
+fn the_legend_of_yangchen_exiles_what_the_table_names() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let saga = g.add_card_to_hand(0, catalog::the_legend_of_yangchen());
+    flood(&mut g);
+    cast_on(&mut g, saga, None);
+    assert!(g.battlefield_find(angel).is_none());
+    assert!(g.exile.iter().any(|c| c.id == angel));
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Avatar Yangchen: the second spell in a turn airbends a nonland permanent.
+#[test]
+fn avatar_yangchen_airbends_on_the_second_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::avatar_yangchen());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        flood(&mut g);
+        cast_on(&mut g, bolt, Some(Target::Player(1)));
+    }
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}
