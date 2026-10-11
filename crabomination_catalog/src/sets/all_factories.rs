@@ -4969,6 +4969,7 @@ static DECKS: &[Factory] = &[
     super::decks::toph_earthbending_master,
     super::decks::toph_greatest_earthbender,
     super::decks::the_legend_of_kyoshi,
+    super::decks::avatar_kyoshi,
     super::decks::earthshape,
     super::decks::wolverine_best_there_is,
     super::decks::mjolnir_hammer_of_thor,
