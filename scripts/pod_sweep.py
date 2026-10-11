@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Audit-build pod sweep: every deck in shuffled `--pod-decks` groups.
 
-    scripts/pod_sweep.py BIN SEED SEATS GAMES [--jobs N] [--a PROFILE] [--env K=V ...]
+    scripts/pod_sweep.py BIN SEED SEATS GAMES [--jobs N] [--a PROFILE] [--env K=V ...] [--decks LO-HI]
 
 SEATS is a comma list (`4,6,8`); each seat count shuffles every target deck
 into groups of that size (topped up at random) and plays GAMES a group with
@@ -10,7 +10,8 @@ leaves a game undecided is printed with its replay command, and with
 `--classify` each undecided game is replayed under `CRAB_POD_TRACE=0` and
 named by the last 60 actions' stack tops (a loop names its triggers). Build
 BIN as NEXT's audit build; `--a dflt` is the production pilot (~10x slower
-than the default `baseline`).
+than the default `baseline`). `--decks LO-HI` sweeps only that range of target
+decks (1-based, inclusive) — the newest seats, say, where recent code lives.
 """
 import argparse, collections, os, random, re, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
@@ -19,6 +20,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('bin'); ap.add_argument('seed', type=int); ap.add_argument('seats'); ap.add_argument('games', type=int)
 ap.add_argument('--jobs', type=int, default=1); ap.add_argument('--a'); ap.add_argument('--env', nargs='*', default=[])
 ap.add_argument('--classify', action='store_true')
+ap.add_argument('--decks', help='LO-HI: sweep only these target decks (1-based, inclusive)')
 a = ap.parse_args()
 env = dict(os.environ, **dict(kv.split('=', 1) for kv in a.env))
 probe = subprocess.run([a.bin, '--commander', '--pod-decks', '99999,1', '--games', '1'], capture_output=True, text=True)
@@ -26,10 +28,12 @@ ndecks = int(re.findall(r'1\.\.=(\d+)', probe.stdout + probe.stderr)[-1])
 extra = ['--a', a.a] if a.a else []
 rng = random.Random(a.seed)
 work = []
+lo, hi = (map(int, a.decks.split('-')) if a.decks else (1, ndecks))
+hi = min(hi, ndecks)
 for k in map(int, a.seats.split(',')):
-    decks = list(range(1, ndecks + 1)); rng.shuffle(decks)
+    decks = list(range(lo, hi + 1)); rng.shuffle(decks)
     while len(decks) % k:
-        decks.append(rng.randint(1, ndecks))
+        decks.append(rng.randint(lo, hi))
     for g in range(0, len(decks), k):
         work.append((k, ','.join(map(str, decks[g:g + k])), a.seed * 100 + k * 7 + g))
 
