@@ -899,6 +899,10 @@ pub enum Value {
     /// Distinct card types among cards in `who`'s graveyard (the delirium
     /// count as a number — Lucid Dreams' "draw X").
     CardTypesInGraveyard(PlayerRef),
+    /// Distinct *permanent* types (artifact, battle, creature, enchantment,
+    /// land, planeswalker — CR 110.4a) among cards in `who`'s graveyard
+    /// (Matzalantli, the Great Door's transform gate).
+    PermanentTypesInGraveyard(PlayerRef),
     /// Distinct card types among permanents `who` controls and cards in
     /// their graveyard, together (Happily Ever After's "six or more card
     /// types among permanents you control and/or cards in your graveyard").

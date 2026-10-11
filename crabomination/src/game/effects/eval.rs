@@ -1670,6 +1670,10 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .map(|p| self.distinct_card_types_in_graveyard(p) as i32)
                 .unwrap_or(0),
+            Value::PermanentTypesInGraveyard(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| self.distinct_permanent_types_in_graveyard(p) as i32)
+                .unwrap_or(0),
             Value::CardTypesInAllGraveyards => {
                 self.distinct_card_types_in_all_graveyards() as i32
             }

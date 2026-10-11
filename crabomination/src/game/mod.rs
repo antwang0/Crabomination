@@ -17661,6 +17661,24 @@ impl GameState {
         kinds.len()
     }
 
+    /// Distinct permanent types (CR 110.4a) among cards in `seat`'s
+    /// graveyard (`Value::PermanentTypesInGraveyard`, Matzalantli).
+    pub fn distinct_permanent_types_in_graveyard(&self, seat: usize) -> usize {
+        const PERMANENT: [CardType; 6] = [
+            CardType::Artifact,
+            CardType::Battle,
+            CardType::Creature,
+            CardType::Enchantment,
+            CardType::Land,
+            CardType::Planeswalker,
+        ];
+        let gy = &self.players[seat].graveyard;
+        PERMANENT
+            .iter()
+            .filter(|t| gy.iter().any(|c| !c.is_token && c.definition.card_types.contains(t)))
+            .count()
+    }
+
     /// CR 700.11 — the number of permanent cards in `seat`'s graveyard
     /// ("descend" count, the threshold for Descend N gates).
     pub fn descend_count(&self, seat: usize) -> usize {
