@@ -105,8 +105,8 @@ pub fn sphinx_of_lost_truths() -> CardDefinition {
 }
 
 /// Rielle, the Everwise — {1}{U}{R} 0/3 Human Wizard. Gets +1/+0 for each
-/// instant/sorcery card in your graveyard. (The first-discard-each-turn "draw
-/// that many" trigger is dropped.)
+/// instant/sorcery card in your graveyard. Whenever you discard one or more
+/// cards for the first time each turn, draw that many cards.
 pub fn rielle_the_everwise() -> CardDefinition {
     CardDefinition {
         name: "Rielle, the Everwise",
@@ -120,13 +120,16 @@ pub fn rielle_the_everwise() -> CardDefinition {
         power: 0,
         toughness: 3,
         dynamic_pt: Some(DynamicPt::InstantsSorceriesInControllerGraveyard { base_t: 3 }),
-        // "Whenever you discard one or more cards for the first time each
-        // turn, draw that many cards." Absent; the card was a vanilla
-        // dynamic-P/T body. `DiscardedOneOrMore` fires once per resolution
-        // and carries the count, and `once_per_turn` is the "first time each
-        // turn" clause.
+        // `DiscardedOneOrMore` fires once per resolution and carries the
+        // count. "For the first time each turn" is this batch being every
+        // discard you've made this turn — not merely Rielle's first trigger
+        // (a discard before she entered still counts).
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DiscardedOneOrMore, EventScope::YourControl)
+                .with_filter(Predicate::ValueAtMost(
+                    Value::CardsDiscardedThisTurn(PlayerRef::You),
+                    Value::TriggerEventAmount,
+                ))
                 .once_per_turn(),
             effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
         }],

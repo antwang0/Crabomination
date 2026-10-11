@@ -12,6 +12,7 @@ use crate::effect::{
     CounteredSpellZone, DelayedTriggerKind, Duration, ManaPayload, PlayerRef, Predicate, Selector,
     Value, ZoneDest,
 };
+use crate::game::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, w, x};
 
 /// Akroma's Will — {3}{W} Instant. "Choose one. If you control a commander
@@ -263,13 +264,26 @@ pub fn awaken_the_woods() -> CardDefinition {
 /// turn, where X is its power. At the beginning of the next end step,
 /// destroy that creature if it attacked this turn."
 ///
-/// The cast-timing restriction ("only before the combat damage step") is
-/// not modeled — cast legality follows normal instant timing.
+/// The timing restriction is a cast condition: no combat damage step (a
+/// first-strike one included, CR 510.4) or anything after it this turn.
 pub fn berserk() -> CardDefinition {
     CardDefinition {
         name: "Berserk",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
+        cast_condition: Some(Predicate::Not(Box::new(Predicate::Any(
+            [
+                TurnStep::FirstStrikeDamage,
+                TurnStep::CombatDamage,
+                TurnStep::EndCombat,
+                TurnStep::PostCombatMain,
+                TurnStep::End,
+                TurnStep::Cleanup,
+            ]
+            .into_iter()
+            .map(Predicate::CurrentStepIs)
+            .collect(),
+        )))),
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),

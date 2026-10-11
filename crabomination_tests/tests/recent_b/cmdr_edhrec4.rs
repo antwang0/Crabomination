@@ -609,3 +609,43 @@ fn magdas_dwarves_and_vehicles() {
     activate(&mut g, robber, 0).expect("exile the Bear");
     assert_eq!(named(&g, "Treasure"), 1);
 }
+
+/// Berserk can't be cast once a combat damage step has begun (its printed
+/// timing restriction); Rielle draws only on the turn's FIRST discard batch,
+/// even one made before she entered.
+#[test]
+fn berserk_timing_and_rielles_first_discard() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.step = TurnStep::CombatDamage;
+    let berserk = g.add_card_to_hand(0, catalog::berserk());
+    g.priority.player_with_priority = 0;
+    assert!(g
+        .perform_action(GameAction::CastSpell { card_id: berserk, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .is_err());
+    g.step = TurnStep::DeclareBlockers;
+    cast_at(&mut g, berserk, Some(Target::Permanent(bear)));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let discard_one = |g: &mut GameState| {
+        g.add_card_to_hand(0, catalog::island());
+        let ctx = EffectContext::for_spell(0, None, 0, 0);
+        let evs = g
+            .resolve_effect(&Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }, &ctx)
+            .expect("discard");
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    };
+    discard_one(&mut g);
+    ready(&mut g, 0, catalog::rielle_the_everwise());
+    discard_one(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "not the first discard this turn");
+    advance_to_turn_of(&mut g, 1);
+    advance_to_turn_of(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    discard_one(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a new turn's first discard draws one");
+}
