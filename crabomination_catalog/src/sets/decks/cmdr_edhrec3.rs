@@ -3792,7 +3792,7 @@ pub fn elrond_moon_reader() -> CardDefinition {
 /// exile the top two cards of target opponent's library. Once each turn, you
 /// may cast a spell with mana value at most your Elves and Faeries from among
 /// cards exiled with Maralen this turn without paying its mana cost. The cap
-/// is read as the cards are exiled.
+/// is read as the spell is cast (CR 601.2).
 pub fn maralen_fae_ascendant() -> CardDefinition {
     let kin = || elf().or(R::HasCreatureType(CreatureType::Faerie));
     CardDefinition {
@@ -3806,11 +3806,15 @@ pub fn maralen_fae_ascendant() -> CardDefinition {
                     count: Value::Const(2),
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     pay_any_color: false,
-                    max_mana_value: Some(Value::CountOf(Box::new(yours(R::Creature.and(kin()))))),
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
                 },
                 Effect::OneCastPerTurnAmongGranted { what: Selector::ExiledThisResolution { filter: R::Any } },
+                Effect::CapGrantedCastsAtCast {
+                    what: Selector::ExiledThisResolution { filter: R::Any },
+                    max_mana_value: Value::CountOf(Box::new(yours(R::Creature.and(kin())))),
+                },
             ]),
         }],
         ..legend(

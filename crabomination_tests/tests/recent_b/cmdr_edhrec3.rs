@@ -2663,6 +2663,36 @@ fn maralen_casts_one_exiled_spell_a_turn() {
     );
 }
 
+/// Maralen: CR 601.2 — the mana-value cap is your Elves and Faeries as the
+/// spell is cast. A 2-drop exiled while Maralen is alone can't be cast;
+/// once a second Elf arrives, it can.
+#[test]
+fn maralen_reads_its_cap_as_the_spell_is_cast() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::shock());
+    let maralen = g.add_card_to_hand(0, catalog::maralen_fae_ascendant());
+    flood(&mut g);
+    cast_on(&mut g, maralen, None);
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    g.players[0].mana_pool.empty();
+    let free = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: bears,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(free(&mut g).is_err(), "one Elf/Faerie: mana value 2 is over the cap");
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    free(&mut g).expect("two Elves/Faeries now");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some_and(|c| c.controller == 0));
+}
+
 /// Thranduil's Company: a second land drop only beside another Elf (CR
 /// 305.2), and landfall puts two counters on a creature of yours.
 #[test]
