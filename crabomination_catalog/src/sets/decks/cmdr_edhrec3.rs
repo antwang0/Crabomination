@@ -4,8 +4,8 @@
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
-//! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin and Katara,
-//! the Fearless. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
+//! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin, Katara, the
+//! Fearless and Azlask, the Swelling Scourge. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -3412,6 +3412,98 @@ pub fn tale_of_momo() -> CardDefinition {
             filter: R::Creature.and(R::HasCreatureType(CreatureType::Ally)),
             to: ZoneDest::Hand(PlayerRef::You),
         },
+        ..Default::default()
+    }
+}
+
+// ── Azlask, the Swelling Scourge (C) ────────────────────────────────────────
+
+fn spawns(n: i32) -> Effect {
+    Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(n),
+        definition: Arc::new(crabomination_base::tokens::eldrazi_spawn_token()),
+    }
+}
+
+/// Emrakul's Hatcher — {4}{R} 3/3 Eldrazi Drone. ETB three 0/1 Eldrazi Spawn
+/// tokens with "Sacrifice this token: Add {C}."
+pub fn emrakuls_hatcher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(spawns(3))],
+        ..creature("Emrakul's Hatcher", cost(&[generic(4), r()]), vec![CreatureType::Eldrazi, CreatureType::Drone], 3, 3)
+    }
+}
+
+/// Brood Birthing — {1}{R} Sorcery. Three Eldrazi Spawn if you control an
+/// Eldrazi Spawn, otherwise one (checked on resolution).
+pub fn brood_birthing() -> CardDefinition {
+    CardDefinition {
+        name: "Brood Birthing",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(
+                R::HasCreatureType(CreatureType::Eldrazi)
+                    .and(R::HasCreatureType(CreatureType::Spawn))
+                    .and(R::ControlledByYou),
+            )),
+            then: Box::new(spawns(3)),
+            else_: Box::new(spawns(1)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Minthara, Merciless Soul — {2}{W}{B} 2/2 legendary Elf Cleric. Ward {X}, X
+/// = your experience counters. At the beginning of your end step, if a
+/// permanent you controlled left the battlefield this turn, you get an
+/// experience counter. Creatures you control get +1/+0 per experience counter.
+pub fn minthara_merciless_soul() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(crate::card::WardCost::GenericControllerExperience)],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+0 for each experience counter you have.",
+            effect: StaticEffect::PumpPTByValue {
+                applies_to: yours(R::Creature),
+                power: Value::ControllerExperience,
+                toughness: Value::Const(0),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::RevoltActive { who: PlayerRef::You }),
+            effect: Effect::AddExperience(Value::ONE),
+        }],
+        ..legend("Minthara, Merciless Soul", cost(&[generic(2), w(), b()]), vec![CreatureType::Elf, CreatureType::Cleric], 2, 2)
+    }
+}
+
+/// Echoes of Eternity — {3}{C}{C}{C} Kindred Enchantment — Eldrazi. A
+/// triggered ability of another colorless permanent you control triggers an
+/// additional time; whenever you cast a colorless spell, copy it (new targets
+/// allowed; a permanent spell's copy becomes a token).
+pub fn echoes_of_eternity() -> CardDefinition {
+    CardDefinition {
+        name: "Echoes of Eternity",
+        cost: crate::mana::ManaCost::new(vec![
+            crate::mana::ManaSymbol::Generic(3),
+            crate::mana::ManaSymbol::Colorless(3),
+        ]),
+        card_types: vec![CardType::Kindred, CardType::Enchantment],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "If a triggered ability of a colorless spell you control or another colorless permanent \
+                          you control triggers, that ability triggers an additional time.",
+            effect: StaticEffect::DoubleControllerTriggersMatching { filter: R::Colorless.and(R::OtherThanSource) },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Colorless,
+            }),
+            effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
+        }],
         ..Default::default()
     }
 }

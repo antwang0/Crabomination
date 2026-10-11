@@ -2359,3 +2359,81 @@ fn tale_of_momo_discounts_after_a_creature_leaves() {
     cast_on(&mut g, momo, None);
     assert!(g.players[0].hand.iter().any(|c| c.id == ally));
 }
+
+// ── Azlask, the Swelling Scourge's list ─────────────────────────────────────
+
+/// Emrakul's Hatcher: three Eldrazi Spawn on entry (CR 603.6a).
+#[test]
+fn emrakuls_hatcher_brings_three_spawn() {
+    let mut g = pod(2);
+    let hatcher = g.add_card_to_hand(0, catalog::emrakuls_hatcher());
+    flood(&mut g);
+    cast_on(&mut g, hatcher, None);
+    assert_eq!(named(&g, "Eldrazi Spawn"), 3);
+}
+
+/// Brood Birthing: one Spawn on an empty board, three once a Spawn is there
+/// (the condition is read on resolution, CR 608.2c).
+#[test]
+fn brood_birthing_scales_with_a_spawn() {
+    let mut g = pod(2);
+    let first = g.add_card_to_hand(0, catalog::brood_birthing());
+    let second = g.add_card_to_hand(0, catalog::brood_birthing());
+    flood(&mut g);
+    cast_on(&mut g, first, None);
+    assert_eq!(named(&g, "Eldrazi Spawn"), 1);
+    cast_on(&mut g, second, None);
+    assert_eq!(named(&g, "Eldrazi Spawn"), 4);
+}
+
+/// Minthara, Merciless Soul: a permanent of yours leaving earns an experience
+/// counter at your end step (CR 603.4 intervening if), which pumps your
+/// creatures +1/+0 (CR 613.4c) and raises her ward: with two counters an
+/// opponent's Murder that can't pay {2} is countered (CR 702.21a).
+#[test]
+fn minthara_earns_experience_and_wards_with_it() {
+    let mut g = pod(2);
+    let minthara = ready(&mut g, 0, catalog::minthara_merciless_soul());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    cast_on(&mut g, murder, Some(Target::Permanent(bear)));
+    to_end_step(&mut g);
+    assert_eq!(g.players[0].experience, 1);
+    let v = g.compute_battlefield();
+    assert_eq!(v.iter().find(|c| c.id == minthara).unwrap().power, 3);
+
+    let mut g = pod(2);
+    let minthara = ready(&mut g, 0, catalog::minthara_merciless_soul());
+    g.players[0].experience = 2;
+    let kill = g.add_card_to_hand(1, catalog::murder());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: kill, target: Some(Target::Permanent(minthara)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("murder");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(minthara).is_some(), "ward {{2}} went unpaid");
+}
+
+/// Echoes of Eternity: a colorless spell is copied (a permanent spell's copy
+/// becomes a token, CR 707.10f), and another colorless permanent's trigger
+/// fires an additional time (CR 603.2d): Ichor Wellspring and its token copy
+/// each draw twice on entry.
+#[test]
+fn echoes_of_eternity_copies_and_doubles_colorless() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::echoes_of_eternity());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    flood(&mut g);
+    cast_on(&mut g, ring, None);
+    assert_eq!(named(&g, "Sol Ring"), 2);
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let well = g.add_card_to_hand(0, catalog::ichor_wellspring());
+    flood(&mut g);
+    cast_on(&mut g, well, None);
+    assert_eq!(named(&g, "Ichor Wellspring"), 2);
+    assert_eq!(g.players[0].hand.len(), 4);
+}
