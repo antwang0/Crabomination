@@ -463,11 +463,13 @@ pub fn hydroelectric_specimen() -> CardDefinition {
     }
 }
 
-/// Eladamri, Korvecdal — {1}{G}{G} 3/3 Elf Warrior. Play with the top card of
-/// your library revealed and cast creature spells from the top of your library.
-/// (The {G},{T},tap-two: reveal-and-drop-a-creature activated ability is
-/// omitted for want of a tap-two-creatures cost.)
+/// Eladamri, Korvecdal — {1}{G}{G} 3/3 Elf Warrior. You may look at the top
+/// card of your library any time and cast creature spells from it. {G}, {T},
+/// tap two untapped creatures you control: reveal a card from your hand or
+/// the top card of your library; a creature card revealed this way enters the
+/// battlefield. Your turn only. (The hand-or-top pick is the mode.)
 pub fn eladamri_korvecdal() -> CardDefinition {
+    let top = || Selector::TopOfLibrary { who: crate::effect::PlayerRef::You, count: Value::ONE };
     CardDefinition {
         name: "Eladamri, Korvecdal",
         cost: cost(&[generic(1), g(), g()]),
@@ -481,8 +483,8 @@ pub fn eladamri_korvecdal() -> CardDefinition {
         toughness: 3,
         static_abilities: vec![
             StaticAbility {
-                description: "Play with the top card of your library revealed.",
-                effect: StaticEffect::TopOfLibraryRevealed,
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
             },
             StaticAbility {
                 description: "You may cast creature spells from the top of your library.",
@@ -491,6 +493,36 @@ pub fn eladamri_korvecdal() -> CardDefinition {
                 },
             },
         ],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            tap_n_filter: Some((R::Creature.and(R::OtherThanSource), 2)),
+            condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
+            effect: Effect::ChooseMode(vec![
+                Effect::PutFromHandOntoBattlefield {
+                    who: crate::effect::PlayerRef::You,
+                    filter: R::Creature,
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                    return_eot: false,
+                    then: None,
+                },
+                Effect::If {
+                    cond: crate::effect::Predicate::EntityMatches { what: top(), filter: R::Creature },
+                    then: Box::new(Effect::Move {
+                        what: top(),
+                        to: crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::You,
+                            tapped: false,
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

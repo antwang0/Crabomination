@@ -693,3 +693,30 @@ fn secret_tunnel_needs_a_shared_creature_type() {
     drain_stack(&mut g);
     assert!(has_kw(&g, bear, Keyword::Unblockable) && has_kw(&g, other_bear, Keyword::Unblockable));
 }
+
+/// Eladamri, Korvecdal: {G}, {T} and two more untapped creatures put a
+/// creature card from hand (mode 0) or the library's top (mode 1) onto the
+/// battlefield; a noncreature top card stays put.
+#[test]
+fn eladamri_drops_a_creature_from_hand_or_top() {
+    let mut g = pod(2);
+    let eladamri = ready(&mut g, 0, catalog::eladamri_korvecdal());
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::grizzly_bears());
+    }
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eladamri,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: Some(0),
+    })
+    .expect("{G}, {T}, tap two");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_some(), "the Angel from hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.tapped).count(), 3, "Eladamri and both Bears");
+}
