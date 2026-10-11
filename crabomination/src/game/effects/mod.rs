@@ -45915,6 +45915,16 @@ impl GameState {
                             .unwrap_or(0);
                         self.pay_generic(payer, n)
                     }
+                    // The warded permanent's controller's experience counters
+                    // (Minthara, Merciless Soul).
+                    WardCost::GenericControllerExperience => {
+                        let n = ctx
+                            .source
+                            .and_then(|sid| self.battlefield_find(sid))
+                            .map(|c| self.players[c.controller].experience)
+                            .unwrap_or(0);
+                        self.pay_generic(payer, n)
+                    }
                     // Essence Leak — the printed cost of the permanent this Aura is
                     // attached to.
                     WardCost::ManaCostOfAttached => {

@@ -311,7 +311,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::SacrificeMatchingN(_, n) => *n == 0,
         // "{X}" is only free when the declared X was 0, which the caller
         // can't see here.
-        WardCost::GenericXFromCost | WardCost::GenericCountersOnSource(_) => false,
+        WardCost::GenericXFromCost | WardCost::GenericCountersOnSource(_) | WardCost::GenericControllerExperience => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
         WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,

@@ -1029,6 +1029,10 @@ pub enum WardCost {
     /// Generic mana equal to the number of `CounterType` counters on the
     /// ability's source (Primordial Ooze's escalating upkeep).
     GenericCountersOnSource(CounterType),
+    /// Generic mana equal to the experience counters the source's controller
+    /// has — "ward {X}, where X is the number of experience counters you
+    /// have" (Minthara, Merciless Soul).
+    GenericControllerExperience,
     Life(u32),
     /// Compound "Ward—{cost}, Pay N life" (Ovika, Enigma Goliath; Gisa, the
     /// Hellraiser). Both halves must be paid or the spell/ability is countered.
@@ -1149,6 +1153,7 @@ impl WardCost {
             W::GenericCountersOnSource(kind) => {
                 format!("Ward—{{X}} (this permanent's {kind:?} counters)")
             }
+            W::GenericControllerExperience => "Ward—{X} (your experience counters)".to_string(),
             W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
             W::RemoveCounterFromPermanent => {
                 "Ward—remove a counter from a permanent".to_string()
