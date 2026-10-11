@@ -1593,3 +1593,182 @@ pub fn secret_of_bloodbending() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Galadriel, Light of Valinor's EDHREC gaps ───────────────────────────────
+
+/// Aragorn and Arwen, Wed — {4}{G}{W} 3/6 vigilance. Entering or attacking: a
+/// +1/+1 counter on each other creature you control, then 1 life per other
+/// creature you control.
+pub fn aragorn_and_arwen_wed() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    let others = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource));
+    let body = || {
+        Effect::Seq(vec![
+            Effect::AddCounter { what: others(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::GainLife { who: Selector::You, amount: Value::count(others()) },
+        ])
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(body()), on_attack(body())],
+        ..legend(
+            "Aragorn and Arwen, Wed",
+            cost(&[generic(4), g(), w()]),
+            vec![CreatureType::Human, CreatureType::Elf, CreatureType::Noble],
+            3,
+            6,
+        )
+    }
+}
+
+/// Arwen Undómiel — {G}{U} 2/2. Whenever you scry, a +1/+1 counter on target
+/// creature. {4}{G}{U}: Scry 2.
+pub fn arwen_undomiel() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Scried, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g(), u()]),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..legend("Arwen Undómiel", cost(&[g(), u()]), vec![CreatureType::Elf, CreatureType::Noble], 2, 2)
+    }
+}
+
+/// Elrond, Master of Healing — {2}{G}{U} 4/4. Whenever you scry, a +1/+1
+/// counter on each of up to X target creatures, X the cards looked at; a
+/// countered creature of yours targeted by an opponent may draw you a card.
+pub fn elrond_master_of_healing() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Scried, EventScope::YourControl),
+                // CR 603.3d — X is the scry's `looked_at`, bound as the
+                // trigger is put on the stack.
+                effect: Effect::CapTargetsAt {
+                    amount: Value::TriggerEventAmount,
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: R::Creature,
+                        effect: Box::new(Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        }),
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::YourPermanentTargetedByOpponent)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                    }),
+                effect: Effect::MayDo {
+                    description: "Elrond: draw a card?".into(),
+                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                },
+            },
+        ],
+        ..legend(
+            "Elrond, Master of Healing",
+            cost(&[generic(2), g(), u()]),
+            vec![CreatureType::Elf, CreatureType::Noble],
+            4,
+            4,
+        )
+    }
+}
+
+/// Galadriel of Lothlórien — {1}{G}{U} 3/3. The Ring tempting you onto another
+/// bearer scries 3; whenever you scry, reveal the top card and a land enters
+/// tapped.
+pub fn galadriel_of_lothlorien() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::RingTempted, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::OtherThanSource },
+                ),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Scried, EventScope::YourControl),
+                effect: Effect::RevealTopDeployIfMatch {
+                    filter: R::Land,
+                    haste: false,
+                    sacrifice_at_next_end_step: false,
+                    miss_to_graveyard: false,
+                    tapped: true,
+                },
+            },
+        ],
+        ..legend(
+            "Galadriel of Lothlórien",
+            cost(&[generic(1), g(), u()]),
+            vec![CreatureType::Elf, CreatureType::Noble],
+            3,
+            3,
+        )
+    }
+}
+
+/// Arboreal Alliance — {X}{G}{G} Enchantment. ETB: an X/X green Treefolk.
+/// Whenever you attack with one or more Elves, populate.
+pub fn arboreal_alliance() -> CardDefinition {
+    let treefolk = Arc::new(TokenDefinition {
+        name: "Treefolk".into(),
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        dynamic_pt: Some((Value::XFromCost, Value::XFromCost)),
+        ..Default::default()
+    });
+    CardDefinition {
+        name: "Arboreal Alliance",
+        cost: cost(&[x(), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: treefolk }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
+                    Predicate::AttackedWithCreatureMatching { who: PlayerRef::You, filter: R::HasCreatureType(CreatureType::Elf) },
+                ),
+                effect: Effect::Populate { who: PlayerRef::You },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Galadriel's Dismissal — {W} Instant, kicker {2}{W}. Target creature phases
+/// out; kicked, each creature target player controls phases out instead (the
+/// kicked cast targets only the player).
+pub fn galadriels_dismissal() -> CardDefinition {
+    CardDefinition {
+        name: "Galadriel's Dismissal",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), w()]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::TargetPlayerThen {
+                filter: R::Player,
+                then: Box::new(Effect::PhaseOut {
+                    what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                    until_source_leaves: false,
+                }),
+            }),
+            else_: Box::new(Effect::PhaseOut { what: target_filtered(R::Creature), until_source_leaves: false }),
+        },
+        ..Default::default()
+    }
+}

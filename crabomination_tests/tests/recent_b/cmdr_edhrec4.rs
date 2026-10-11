@@ -1022,3 +1022,91 @@ fn secret_of_bloodbending_controls_a_combat_or_a_turn() {
         assert!(g.exile.iter().any(|c| c.id == secret), "exiled on resolution");
     }
 }
+
+fn counters(g: &GameState, id: CardId) -> u32 {
+    g.battlefield_find(id).map_or(0, |c| c.counter_count(CounterType::PlusOnePlusOne))
+}
+
+/// Aragorn and Arwen, Wed: entering puts a counter on each OTHER creature of
+/// yours and gains a life per other creature.
+#[test]
+fn aragorn_and_arwen_counters_and_life_for_the_others() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::llanowar_elves());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let wed = g.add_card_to_hand(0, catalog::aragorn_and_arwen_wed());
+    flood(&mut g);
+    let life = g.players[0].life;
+    cast(&mut g, wed);
+    let wed = g.battlefield.iter().find(|c| c.definition.name == "Aragorn and Arwen, Wed").unwrap().id;
+    assert_eq!((counters(&g, a), counters(&g, b), counters(&g, wed), counters(&g, theirs)), (1, 1, 0, 0));
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Arwen Undómiel + Elrond, Master of Healing: one scry 2 is one counter from
+/// Arwen and two from Elrond (X = the cards looked at); a one-card library
+/// makes Elrond's X 1 (2023-06-16 ruling).
+#[test]
+fn arwen_and_elrond_count_the_cards_scried() {
+    for (library, total) in [(5, 3), (1, 2)] {
+        let mut g = pod(2);
+        for _ in 0..library {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let arwen = ready(&mut g, 0, catalog::arwen_undomiel());
+        let elrond = ready(&mut g, 0, catalog::elrond_master_of_healing());
+        flood(&mut g);
+        activate(&mut g, arwen, 0).expect("scry 2");
+        assert_eq!(counters(&g, arwen) + counters(&g, elrond), total, "library {library}");
+    }
+}
+
+/// Galadriel of Lothlórien: a scry reveals the top card and a land enters tapped.
+#[test]
+fn galadriel_of_lothlorien_deploys_a_scried_land_tapped() {
+    let mut g = pod(2);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let arwen = ready(&mut g, 0, catalog::arwen_undomiel());
+    ready(&mut g, 0, catalog::galadriel_of_lothlorien());
+    flood(&mut g);
+    activate(&mut g, arwen, 0).expect("scry 2");
+    let forests: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Forest").collect();
+    assert_eq!(forests.len(), 1);
+    assert!(forests[0].tapped);
+}
+
+/// Arboreal Alliance: X = 3 is a 3/3 Treefolk.
+#[test]
+fn arboreal_alliance_makes_an_x_x_treefolk() {
+    let mut g = pod(2);
+    let aa = g.add_card_to_hand(0, catalog::arboreal_alliance());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: aa, target: None, additional_targets: vec![], mode: None, x_value: Some(3) })
+        .expect("cast");
+    drain_stack(&mut g);
+    let tf = g.battlefield.iter().find(|c| c.definition.name == "Treefolk").expect("token").id;
+    let cp = g.computed_permanent(tf).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+/// Galadriel's Dismissal: unkicked, one creature phases out; kicked, every
+/// creature the target player controls does.
+#[test]
+fn galadriels_dismissal_one_creature_or_a_whole_side() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::serra_angel());
+    let gd = g.add_card_to_hand(0, catalog::galadriels_dismissal());
+    flood(&mut g);
+    cast_at(&mut g, gd, Some(Target::Permanent(a)));
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_some());
+    let gd = g.add_card_to_hand(0, catalog::galadriels_dismissal());
+    g.perform_action(GameAction::CastSpellKicked { card_id: gd, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b).is_none());
+    assert_eq!(g.phased_out.len(), 2);
+}
