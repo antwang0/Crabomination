@@ -8977,11 +8977,9 @@ pub fn summon_fenrir() -> CardDefinition {
 }
 
 /// Summon: Brynhildr — {1}{R} Enchantment Creature — Saga Knight 2/1.
-/// I — Chain — exile the top card of your library; you may play it while it
-/// remains exiled. II, III — Gestalt Mode — your next creature spell this turn
-/// enters with haste.
-/// (Approximation: chapter I's "during any turn you put a lore counter" play
-/// window is modeled as the broader `WhileExiled`.)
+/// I — Chain — exile the top card of your library; during any turn you put a
+/// lore counter on this Saga, you may play it. II, III — Gestalt Mode — your
+/// next creature spell this turn enters with haste.
 pub fn summon_brynhildr() -> CardDefinition {
     use crate::card::MayPlayDuration;
     CardDefinition {
@@ -9001,7 +8999,7 @@ pub fn summon_brynhildr() -> CardDefinition {
                 Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    duration: MayPlayDuration::WhileExiled,
+                    duration: MayPlayDuration::TurnsLoreCounterPutOnSource { holder: 0, source: crate::card::CardId(0) },
                     pay_any_color: false,
                     max_mana_value: None,
                     pay_own_cost: true,

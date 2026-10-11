@@ -187,14 +187,15 @@ pub fn jasmine_dragon_tea_shop() -> CardDefinition {
     }
 }
 
-/// Secret Tunnel — Land — Cave. `{T}: Add {C}.` `{4}, {T}: Target creature you
-/// control can't be blocked this turn.` (The printed "two creatures that share a
-/// type" is collapsed to a single target; the flavorful "this land can't be
-/// blocked" is dropped — lands don't attack.)
+/// Secret Tunnel — Land — Cave. This land can't be blocked (it matters once
+/// animated). `{T}: Add {C}.` `{4}, {T}: Two target creatures you control that
+/// share a creature type can't be blocked this turn` (CR 601.2c, a cross-slot
+/// filter).
 pub fn secret_tunnel() -> CardDefinition {
     CardDefinition {
         name: "Secret Tunnel",
         card_types: vec![CardType::Land],
+        keywords: vec![Keyword::Unblockable],
         subtypes: Subtypes {
             land_types: vec![LandType::Cave],
             ..Default::default()
@@ -211,11 +212,24 @@ pub fn secret_tunnel() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(4)]),
-                effect: Effect::GrantKeyword {
-                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
-                    keyword: Keyword::Unblockable,
-                    duration: Duration::EndOfTurn,
-                },
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        keyword: Keyword::Unblockable,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TargetFiltered {
+                            slot: 1,
+                            filter: R::Creature
+                                .and(R::ControlledByYou)
+                                .and(R::OtherThanTargetSlot(0))
+                                .and(R::SharesCreatureTypeWithTargetSlot(0)),
+                        },
+                        keyword: Keyword::Unblockable,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
                 ..Default::default()
             },
         ],

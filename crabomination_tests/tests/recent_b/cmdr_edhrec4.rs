@@ -649,3 +649,47 @@ fn berserk_timing_and_rielles_first_discard() {
     discard_one(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "a new turn's first discard draws one");
 }
+
+/// Summon: Brynhildr's chapter I card is playable only during a turn a lore
+/// counter goes on the Saga: this turn, not the next until chapter II.
+#[test]
+fn brynhildrs_chain_card_wakes_with_each_lore_counter() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let saga = g.add_card_to_hand(0, catalog::summon_brynhildr());
+    flood(&mut g);
+    cast(&mut g, saga);
+    let playable = |g: &GameState| g.exile.iter().any(|c| c.may_play_until.is_some_and(|p| p.player == 0));
+    assert!(playable(&g), "chapter I's turn");
+    advance_to_turn_of(&mut g, 1);
+    assert!(!playable(&g), "parked on a turn with no lore counter");
+    advance_to_turn_of(&mut g, 0);
+    assert!(playable(&g), "chapter II's lore counter wakes it");
+}
+
+/// Secret Tunnel's second target must share a creature type with the first
+/// (CR 601.2c): two Bears may tunnel, a Bear and a Wall may not.
+#[test]
+fn secret_tunnel_needs_a_shared_creature_type() {
+    let mut g = pod(2);
+    let tunnel = ready(&mut g, 0, catalog::secret_tunnel());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wall = ready(&mut g, 0, catalog::wall_of_wood());
+    let other_bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    let go = |g: &mut GameState, second: CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: tunnel,
+            ability_index: 1,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![Target::Permanent(second)],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(go(&mut g, wall).is_err(), "a Wall shares no type with a Bear");
+    go(&mut g, other_bear).expect("two Bears");
+    drain_stack(&mut g);
+    assert!(has_kw(&g, bear, Keyword::Unblockable) && has_kw(&g, other_bear, Keyword::Unblockable));
+}

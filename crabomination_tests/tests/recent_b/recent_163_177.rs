@@ -397,16 +397,23 @@ mod recent166 {
         assert_eq!(allies, 1, "one Ally token");
     }
 
-    /// Secret Tunnel's {4},{T} makes a creature you control unblockable.
+    /// Secret Tunnel's {4},{T} makes two creatures you control that share a
+    /// creature type unblockable (both slots are required, CR 601.2c).
     #[test]
     fn secret_tunnel_grants_unblockable() {
         let mut g = two_player_game();
         let land = g.add_card_to_battlefield(0, catalog::secret_tunnel());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.players[0].mana_pool.add_colorless(4);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
+            card_id: land,
+            ability_index: 1,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![Target::Permanent(bear2)],
+            x_value: None,
+            mode: None,
         })
         .expect("{4},{T}: unblockable");
         drain_stack(&mut g);

@@ -931,29 +931,33 @@ fn evendo_brushrazer_opens_its_exiles_on_your_turn_after_a_sacrifice() {
     assert!(!live(&g, first), "gone with Evendo");
 }
 
-/// Tibalt's Trickery counters, mills the random count (a scripted d3 = 2),
-/// then casts the next nonland card for free and bottoms the passed-over land.
+/// Tibalt's Trickery counters, mills a random 1-3 (a random choice, not a die
+/// roll), then casts the next nonland card with a different name than the
+/// countered spell for free — passing over a second Lightning Bolt — and
+/// bottoms what it passed over.
 #[test]
 fn tibalts_trickery_counters_then_cascades_its_controller() {
     let mut g = b_main_phase();
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
     }
+    let twin = g.add_card_to_library(0, catalog::lightning_bolt());
     let bear = g.add_card_to_library(0, catalog::grizzly_bears());
     b_flood(&mut g, 0);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     let trick = g.add_card_to_hand(0, catalog::tibalts_trickery());
     b_cast_by(&mut g, 0, bolt, Some(Target::Player(1)));
     b_cast_by(&mut g, 0, trick, Some(Target::Permanent(bolt)));
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(2), DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].life, 20, "the Bolt was countered");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt));
     let milled = g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count();
-    assert_eq!(milled, 2, "the die milled two");
-    assert!(g.battlefield_find(bear).is_some(), "the next nonland card was cast for free");
-    assert_eq!(g.players[0].library.len(), 1, "the exiled Island went to the bottom");
+    assert!((1..=3).contains(&milled), "milled {milled}");
+    assert!(g.battlefield_find(bear).is_some(), "the next differently named nonland card was cast for free");
+    assert!(g.players[0].library.iter().any(|c| c.id == twin), "the same-named Bolt was passed over and bottomed");
+    assert_eq!(g.players[0].library.len(), 4 - milled, "every passed-over card went to the bottom");
 }
 
 /// Delayed Blast Fireball deals 2 from hand and 5 when foretold (cast from

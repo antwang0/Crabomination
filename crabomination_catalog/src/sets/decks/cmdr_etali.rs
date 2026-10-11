@@ -1056,13 +1056,10 @@ pub fn evendo_brushrazer() -> CardDefinition {
 /// they put the exiled cards on the bottom of their library in a random order.
 ///
 /// After the counter, `EachPlayerDoes(CounteredSpellController)` runs the rest
-/// as that player (Fold into Aether's player ref). The random 1-3 is a d3
-/// `RollDie` feeding `Mill`. The exile-until / may-cast-free / bottom-the-rest
-/// sequence is exactly `Cascade` with no mana-value cap.
-/// Approximation: "with a different name than that spell" is dropped, so a
-/// nonland card sharing the countered spell's name stops the exile too.
-/// Approximation: the random choice is a die roll, so it fires "whenever you
-/// roll a die" payoffs.
+/// as that player (Fold into Aether's player ref). The random 1-3 is a
+/// `ChooseModeAtRandom` over three mills (a choice, not a die roll). The
+/// exile-until / may-cast-free / bottom-the-rest sequence is `Cascade` with no
+/// mana-value cap, skipping cards named like the countered spell.
 /// Approximation: if the target spell can't be countered,
 /// `CounteredSpellController` stays unset and the mill/cascade half is
 /// skipped. The printed card still has that player mill and cascade.
@@ -1077,16 +1074,8 @@ pub fn tibalts_trickery() -> CardDefinition {
             Effect::EachPlayerDoes {
                 who: PlayerRef::CounteredSpellController,
                 body: Box::new(Effect::Seq(vec![
-                    Effect::RollDie {
-                        sides: 3,
-                        count: Value::ONE,
-                        modifier: Value::Const(0),
-                        reroll_at_most: 0,
-                        results: vec![(1, 1, mill(1)), (2, 2, mill(2)), (3, 3, mill(3))],
-                        ignore_lowest: 0,
-                        on_doubles: None,
-                    },
-                    Effect::Cascade { max_mv: Value::Const(1000), filter: None },
+                    Effect::ChooseModeAtRandom(vec![mill(1), mill(2), mill(3)]),
+                    Effect::Cascade { max_mv: Value::Const(1000), filter: Some(R::SameNameAsTarget.negate()) },
                 ])),
             },
         ]),
