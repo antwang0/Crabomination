@@ -3160,6 +3160,8 @@ re-gate          at `6b53c0ec0` (seats 401-402 + three audit fixes): suite
                  fixed and re-run green); clippy 0; release-fast clean;
                  --bench 27.64 / 613.0, determinism + thread_determinism ok,
                  peak_rss 30.6 MiB (games/s not read: contended run)
+audit pods 2     overflow + debug-assertions over seats 401-402 (3/4/6/8 x 30):
+                 plain 414001, fuzzed strict 414002 — 240 games, 0 bad
 ```
 
 ### 2026-10-11 (Commander run, `01EvCQ72`) — guardrail; harness, attach legality, tapless mana activations, stickers
