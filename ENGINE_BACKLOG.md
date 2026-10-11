@@ -151,6 +151,12 @@ the handoff.
   repeat guard missed (a free Equip, Puresteel Paladin: 401 equips; the
   guard now counts Equip / Reconfigure / Crew / Saddle / waterbend
   activations). Both fixed with tests; the rest board caps.
+- **Sweeps 307001 (`--a dflt` fuzzed, 1,700) / 308001 (fuzzed, 5,100):** one
+  abort — `Effect::Move` named an unmoved card as `LastMoved`, so Tinybones'
+  stash granted its play permission to a Dogged Detective already back in a
+  hand (CR 400.7, fixed `ba8528023`); the rest draws by rule (Zellix + Altar
+  of the Brood milling a self-shuffling Blightsteel — CR 701.17c counts it as
+  milled — Polyraptor, Ghostly Dancers + Doomwake Giant) and board caps.
 - **Layer 7c** summed P/T modifications unsaturated (two end-of-combat pumps
   at i32::MAX overflowed); now saturating, bench-neutral (PERF).
 - **Census (6 seats × every deck, seed 31001):** the "never activated" rows
