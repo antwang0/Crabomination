@@ -142,6 +142,9 @@ the handoff.
   lore counters and its chapters copy it again; the bot always took three (the
   stack reached 800). An `AmountKind::Upside` answer now counts toward
   `OPTIONAL_LOOP_CAP` and takes 0 past it.
+- **Closing tip** (seats through 373): fuzzed strict 195001 (4,890 games) and
+  plain 196001 (9,780) — **0 aborts**; 11 undecided between them, all classes
+  below plus the open Heliod + Shalai "can't lose" action cap.
 - Left, classified: Polyraptor's forced reveal (above), token board caps
   (Myrel doubling under Isshin + Karlach's extra combats: 1,024 permanents in
   one turn, no lethal yet because the tokens are summoning-sick), CR 104.4a

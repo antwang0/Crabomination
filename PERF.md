@@ -3134,6 +3134,26 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-11 (Commander run, `017yfeX4` second firing) — guardrail; answer-log clears, mana burn's sweep, the upside-amount loop cap
+
+Hot-path touch: the bot's pending-decision path checks `AmountKind::Upside`
+answers against `OPTIONAL_LOOP_CAP` (one `matches!` per answered decision);
+`burn_unspent_mana` (cold, Yurlok only) sweeps state-based actions. Release
+`bot_ladder` at `f0d5933e1`, Xeon @ 2.80 GHz (4 cores, 15 GB).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); peak_rss 31.7 MiB
+                 (games_per_s not a reading: a suite pod test ran beside it)
+audit pods       overflow + debug-assertions: fuzzed strict 191001 (25 aborts,
+                 one class) / 193001 (2) / 195001 (4,890 games, 0); plain
+                 192001 (1) / 196001 (9,780 games, 0 aborts, 9 undecided =
+                 0.09 %); `--a dflt` 194001 (1,530, 0) — every abort fixed
+2-player         release tip, --a dflt --b dflt --seed 9701 x 300: cube 2,398 /
+                 2, sos 1,500 / 0, sealed 3,600 / 0; 0 panics
+suite            24,941 / 0 / 5; workspace clippy 0
+```
+
 ### 2026-10-10 (Commander routine — seventeenth run, closing, session `017yfeX4`) — guardrail; audit-sweep aborts
 
 Hot-path touch: `sink_facts`'s statics pass (K'rrik's pips, the Soul Cauldron)
