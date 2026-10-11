@@ -290,6 +290,25 @@ fn anti_venom_reanimates_and_grows_from_damage() {
     assert_eq!(pt(&g, av), (8, 8));
 }
 
+/// Anti-Venom's counters are put by Anti-Venom's controller (CR 109.5 — a
+/// static ability acts for the controller of the object it's on), so an
+/// opponent's All Will Be One doesn't trigger off damage it dealt him. It
+/// used to, and an All Will Be One aimed at an opponent's Anti-Venom looped
+/// until the action cap (sweep 197001).
+#[test]
+fn anti_venoms_counters_are_his_controllers() {
+    let mut g = pod(3);
+    let av = g.add_card_to_battlefield(0, catalog::anti_venom_horrifying_healer());
+    g.add_card_to_battlefield(1, catalog::all_will_be_one());
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    cast(&mut g, 1, bolt, Some(Target::Permanent(av))).expect("Bolt him");
+    assert_eq!(pt(&g, av), (8, 8), "three counters");
+    assert!(g.stack.is_empty(), "no All Will Be One trigger");
+    assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), lives);
+}
+
 /// Sonic: attacking puts a counter on each creature of yours with haste
 /// (Sonic among them).
 #[test]

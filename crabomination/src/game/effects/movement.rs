@@ -1609,14 +1609,15 @@ impl GameState {
         // unpreventable damage per CR 615.12. Combat damage is replaced on the
         // combat path (`ironscale_replace`).
         let amount = if let EntityRef::Permanent(tgt) = ent
-            && let Some((kind, how)) = self.creature_replaces_damage_with_counters(tgt)
+            && let Some((kind, how, placer)) = self.creature_replaces_damage_with_counters(tgt)
         {
             let unpreventable = how != crate::effect::DamageToCounters::Instead
                 && self.damage_is_unpreventable_now(source);
             let (grow, left) = crate::game::combat::damage_to_counters_split(how, unpreventable, amount);
             let grow = self.place_counters(tgt, kind, grow);
             if grow > 0 {
-                events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: grow, placer: self.resolution_causer });
+                // CR 109.5 / 614.1a — the replacement's controller puts the counters.
+                events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: grow, placer: Some(placer) });
             }
             if left == 0 {
                 return;
