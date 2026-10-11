@@ -2177,7 +2177,8 @@ impl Effect {
             | Effect::StampMayPlaySurcharge { what, .. }
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
-            | Effect::OneCastAmongGranted { what } => sel_has_target(what),
+            | Effect::OneCastAmongGranted { what }
+            | Effect::OneCastPerTurnAmongGranted { what } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
             Effect::AddCardTypeIndefinitely { what, .. }
@@ -3233,6 +3234,7 @@ impl Effect {
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
             | Effect::OneCastAmongGranted { what }
+            | Effect::OneCastPerTurnAmongGranted { what }
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }

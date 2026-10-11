@@ -10057,6 +10057,12 @@ pub enum Effect {
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.
     OneCastAmongGranted { what: Selector },
+    /// The once-each-turn sibling of `OneCastAmongGranted` (Maralen, Fae
+    /// Ascendant: "once each turn, you may cast a spell from among cards
+    /// exiled with Maralen this turn"): the grants join the source's group,
+    /// and when a cast through that group already happened this turn
+    /// (`TurnRegistries.one_cast_groups_spent_this_turn`) they're void.
+    OneCastPerTurnAmongGranted { what: Selector },
     /// Stamp a conditional surcharge onto cards just granted a may-play
     /// permission (chain after `GrantMayPlay` in a `Seq`): "it costs
     /// [cost] more to cast this way unless the spell targets a permanent

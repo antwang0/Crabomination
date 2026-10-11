@@ -3839,10 +3839,12 @@ impl crate::game::GameState {
             .iter()
             .filter(|c| c.controller == player)
             .map(|c| {
+                // Through `active_static`: Thranduil's Company grants the play
+                // only "as long as you control another Elf".
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| matches!(sa.effect, StaticEffect::ExtraLandPerTurn))
+                    .filter(|sa| matches!(self.active_static(&sa.effect, c), Some(StaticEffect::ExtraLandPerTurn)))
                     .count() as u32
             })
             .sum()

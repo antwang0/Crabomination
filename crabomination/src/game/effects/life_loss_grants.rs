@@ -73,6 +73,10 @@ impl GameState {
     /// "You may cast a spell from among them": a cast through one grant of
     /// `group` spends the others (`MayPlayPermission::one_cast_group`).
     pub(crate) fn clear_one_cast_group(&mut self, group: crate::card::CardId) {
+        // Maralen's "once each turn" reads the spent group back.
+        if !self.turn.one_cast_groups_spent_this_turn.contains(&group) {
+            self.turn.one_cast_groups_spent_this_turn.insert(group);
+        }
         let hit = |c: &crate::card::CardInstance| {
             c.may_play_until.is_some_and(|m| m.one_cast_group == Some(group))
         };

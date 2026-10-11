@@ -1458,6 +1458,12 @@ pub struct TurnRegistries {
     /// turn (CR 120.4a/120.10 — Rith, Liberated Primeval). Cleared at cleanup.
     #[serde(default)]
     pub(crate) excess_damaged_seats: Vec<usize>,
+    /// Sources whose "cast a spell from among them" grant group was spent
+    /// this turn (`clear_one_cast_group`). Read by
+    /// `Effect::OneCastPerTurnAmongGranted` (Maralen, Fae Ascendant's "once
+    /// each turn").
+    #[serde(default)]
+    pub one_cast_groups_spent_this_turn: crate::game::types::IdSet<CardId>,
     /// Distinct (controller, source) pairs that have dealt damage this turn.
     /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
     /// (Case of the Burning Masks). Cleared at the turn boundary.

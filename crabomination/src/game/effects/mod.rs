@@ -41538,6 +41538,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OneCastPerTurnAmongGranted { what } => {
+                let Some(group) = ctx.source else { return Ok(()) };
+                let spent = self.turn.one_cast_groups_spent_this_turn.contains(&group);
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    if let Some(card) = self.find_card_anywhere_mut(cid)
+                        && card.may_play_until.is_some()
+                    {
+                        if spent {
+                            card.may_play_until = None;
+                            card.granted_alt_cast_cost_eot = None;
+                        } else if let Some(perm) = card.may_play_until.as_mut() {
+                            perm.one_cast_group = Some(group);
+                        }
+                    }
+                }
+                Ok(())
+            }
             Effect::OneCastAmongGranted { what } => {
                 let group = ctx.source;
                 for ent in self.resolve_selector(what, ctx) {
