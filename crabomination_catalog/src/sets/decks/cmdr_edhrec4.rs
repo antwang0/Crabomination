@@ -2585,9 +2585,10 @@ pub fn tony_stark() -> CardDefinition {
     }
 }
 
-/// Vault of Catlacan — Storm the Vault's back: legendary land; {T}: any
-/// color; {T}: {U} for each artifact you control.
-pub fn vault_of_catlacan() -> CardDefinition {
+/// Vault of Catlacan — Storm the Vault's back: legendary land; {T}: any color;
+/// {T}: {U} for each artifact you control. Private: its CR 903.4 identity is
+/// the whole card's, so it is no catalog entry of its own.
+fn vault_of_catlacan() -> CardDefinition {
     use crate::effect::ManaPayload;
     CardDefinition {
         name: "Vault of Catlacan",
@@ -2989,6 +2990,443 @@ pub fn court_of_vantress() -> CardDefinition {
                 }),
             }),
         ],
+        ..Default::default()
+    }
+}
+
+// ── Captain America, First Avenger's EDHREC gaps ────────────────────────────
+
+fn equipment_card(name: &'static str, mana: crate::mana::ManaCost, equip: crate::mana::ManaCost, bonus: crate::card::EquipBonus) -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(bonus),
+        ..artifact(name, mana)
+    }
+}
+
+/// Captain America, First Avenger — {R}{W}{U} 4/4. Throw — {3}, unattach an
+/// Equipment from it: damage equal to that Equipment's mana value divided
+/// among one, two, or three targets. Catch — at the beginning of combat on
+/// your turn, attach up to one target Equipment you control to it.
+pub fn captain_america_first_avenger() -> CardDefinition {
+    let equipment = || R::HasArtifactSubtype(ArtifactSubtype::Equipment);
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            unattach_equipment_cost: true,
+            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(equipment().and(R::AttachedToSource)))),
+            effect: Effect::DealDamageDivided {
+                total: Value::ExiledForCostManaValue,
+                filter: R::Creature.or(R::Planeswalker).or(R::Player),
+                max_targets: 3,
+                retaliate_to_source: false,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: equipment().and(R::ControlledByYou),
+                effect: Box::new(Effect::Attach { what: Selector::Target(0), to: Selector::This }),
+            },
+        }],
+        ..legend(
+            "Captain America, First Avenger",
+            cost(&[r(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Hero],
+            4,
+            4,
+        )
+    }
+}
+
+/// Captain America's Shield — {2} legendary Equipment, indestructible. The
+/// bearer gets +0/+8 and vigilance; whenever it attacks, tap target creature
+/// defending player controls. Equip {2}.
+pub fn captain_americas_shield() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let mut def = equipment_card(
+        "Captain America's Shield",
+        cost(&[generic(2)]),
+        cost(&[generic(2)]),
+        EquipBonus {
+            toughness: 8,
+            keywords: vec![Keyword::Vigilance],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)) },
+            }],
+            ..Default::default()
+        },
+    );
+    def.supertypes = vec![Supertype::Legendary];
+    def.keywords.push(Keyword::Indestructible);
+    def
+}
+
+/// Bruenor Battlehammer — {2}{R}{W} 5/3. Each creature you control gets +2/+0
+/// for each Equipment attached to it; you may pay {0} rather than the equip
+/// cost of the first equip ability you activate each turn.
+pub fn bruenor_battlehammer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each creature you control gets +2/+0 for each Equipment attached to it.",
+                effect: StaticEffect::PumpTeamPerAttachmentOnSource {
+                    applies_to: R::Creature,
+                    attachment_filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    per_power: 2,
+                    per_toughness: 0,
+                    each_counts_its_own: true,
+                },
+            },
+            StaticAbility {
+                description: "You may pay {0} rather than pay the equip cost of the first equip ability you activate each turn.",
+                effect: StaticEffect::EquipmentYouControlEquipZeroWhile {
+                    condition: Predicate::Not(Box::new(Predicate::ValueAtLeast(
+                        Value::EquipsActivatedThisTurn(PlayerRef::You),
+                        Value::ONE,
+                    ))),
+                },
+            },
+        ],
+        ..legend("Bruenor Battlehammer", cost(&[generic(2), r(), w()]), vec![CreatureType::Dwarf, CreatureType::Warrior], 5, 3)
+    }
+}
+
+/// Bureau Headmaster — {R}{W} 2/2. Equipment spells you cast and equip
+/// abilities you activate cost {1} less.
+pub fn bureau_headmaster() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Equipment spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction { filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment), amount: 1 },
+            },
+            StaticAbility {
+                description: "Equip abilities you activate cost {1} less to activate.",
+                effect: StaticEffect::EquipCostReduction { amount: 1 },
+            },
+        ],
+        ..creature("Bureau Headmaster", cost(&[r(), w()]), vec![CreatureType::Human, CreatureType::Assassin], 2, 2)
+    }
+}
+
+/// Kellan, the Fae-Blooded — {2}{R} 2/2 double strike; other creatures you
+/// control get +1/+0 for each Aura and Equipment attached to it. Adventure:
+/// Birthright Boon {1}{W} — search for an Aura or Equipment card, reveal it,
+/// put it into your hand.
+pub fn kellan_the_fae_blooded() -> CardDefinition {
+    use crate::card::{Adventure, EnchantmentSubtype};
+    let gear = || R::HasEnchantmentSubtype(EnchantmentSubtype::Aura).or(R::HasArtifactSubtype(ArtifactSubtype::Equipment));
+    CardDefinition {
+        keywords: vec![Keyword::DoubleStrike],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+0 for each Aura and Equipment attached to Kellan.",
+            effect: StaticEffect::PumpTeamPerAttachmentOnSource {
+                applies_to: R::Creature.and(R::OtherThanSource),
+                attachment_filter: gear(),
+                per_power: 1,
+                per_toughness: 0,
+                each_counts_its_own: false,
+            },
+        }],
+        adventure: Some(Box::new(Adventure {
+            name: "Birthright Boon",
+            cost: cost(&[generic(1), w()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Search { who: PlayerRef::You, filter: gear(), to: ZoneDest::Hand(PlayerRef::You) },
+        })),
+        ..legend(
+            "Kellan, the Fae-Blooded",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Human, CreatureType::Faerie],
+            2,
+            2,
+        )
+    }
+}
+
+/// The Mighty Thor, Jane Foster — {1}{W}{U} 3/3 flying. Whenever it attacks,
+/// exile up to one target nontoken artifact or creature, then return it
+/// tapped under its owner's control; whenever an Equipment you control
+/// enters, draw a card.
+pub fn the_mighty_thor_jane_foster() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            on_attack(Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Artifact.or(R::Creature).and(R::NotToken),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                    Effect::Move {
+                        what: Selector::LastMoved,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::LastMoved)),
+                            tapped: true,
+                        },
+                    },
+                ])),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment) },
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..legend(
+            "The Mighty Thor, Jane Foster",
+            cost(&[generic(1), w(), u()]),
+            vec![CreatureType::Human, CreatureType::God, CreatureType::Hero],
+            3,
+            3,
+        )
+    }
+}
+
+/// Super-Soldier Serum — {1}{W} Aura. The enchanted creature gets +2/+2, first
+/// strike and vigilance, and is a legendary Soldier; whenever it attacks or
+/// blocks, attach any number of Equipment you control to it (chosen as the
+/// trigger resolves).
+pub fn super_soldier_serum() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    let attach = || TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::AttachAnyNumberTo {
+            what: Selector::EachPermanent(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou)),
+            to: Selector::This,
+        },
+    };
+    let mut blocks = attach();
+    blocks.event = EventSpec::new(EventKind::Blocks, EventScope::SelfSource);
+    CardDefinition {
+        name: "Super-Soldier Serum",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature is legendary.",
+            effect: StaticEffect::AttachedIsLegendary,
+        }],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
+            add_creature_types: vec![CreatureType::Soldier],
+            triggered_abilities: vec![attach(), blocks],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+// ── Doran, Besieged by Time's EDHREC gaps ───────────────────────────────────
+
+fn treefolk() -> R {
+    R::HasCreatureType(CreatureType::Treefolk)
+}
+
+fn forest() -> R {
+    R::HasLandType(crate::card::LandType::Forest)
+}
+
+/// Bark of Doran — {1}{W} Equipment. +0/+1; while the bearer's toughness is
+/// greater than its power, it assigns combat damage by toughness. Equip {1}.
+pub fn bark_of_doran() -> CardDefinition {
+    use crate::card::{ConditionalEquipBonus, EquipBonus};
+    equipment_card(
+        "Bark of Doran",
+        cost(&[generic(1), w()]),
+        cost(&[generic(1)]),
+        EquipBonus {
+            toughness: 1,
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: R::ToughnessGreaterThanPower,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::AssignsCombatDamageByToughness],
+                condition: None,
+                set_base_pt: None,
+                activated_abilities: vec![],
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Bosk Banneret — {1}{G} 1/3 Treefolk Shaman. Treefolk and Shaman spells you
+/// cast cost {1} less.
+pub fn bosk_banneret() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Treefolk spells and Shaman spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: treefolk().or(R::HasCreatureType(CreatureType::Shaman)), amount: 1 },
+        }],
+        ..creature("Bosk Banneret", cost(&[generic(1), g()]), vec![CreatureType::Treefolk, CreatureType::Shaman], 1, 3)
+    }
+}
+
+/// Colfenor, the Last Yew — {3}{W}{B}{G} 3/7 reach, vigilance. Whenever it or
+/// another creature you control dies, return up to one other target creature
+/// card with lesser toughness from your graveyard to your hand.
+pub fn colfenor_the_last_yew() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature
+                    .and(R::InYourGraveyard)
+                    .and(R::OtherThanTriggerSubject)
+                    .and(R::ToughnessLessThanTriggerSubject),
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+            },
+        }],
+        ..legend(
+            "Colfenor, the Last Yew",
+            cost(&[generic(3), w(), b(), g()]),
+            vec![CreatureType::Treefolk, CreatureType::Shaman],
+            3,
+            7,
+        )
+    }
+}
+
+/// Fangorn, Tree Shepherd — {4}{G}{G}{G} 4/10. Your Treefolk have vigilance;
+/// whenever one or more of them attack, add {G}{G} per attacking Treefolk;
+/// you don't lose unspent green mana as steps and phases end.
+pub fn fangorn_tree_shepherd() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    let attacking = Value::CountOf(Box::new(Selector::EachPermanent(
+        R::Creature.and(treefolk()).and(R::IsAttacking).and(R::ControlledByYou),
+    )));
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Treefolk you control have vigilance.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature.and(treefolk()).and(R::ControlledByYou)),
+                    keyword: Keyword::Vigilance,
+                },
+            },
+            StaticAbility {
+                description: "You don't lose unspent green mana as steps and phases end.",
+                effect: StaticEffect::UnspentColorManaPersists(Color::Green),
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource)
+                .with_filter(Predicate::AttackedWithCreatureMatching { who: PlayerRef::You, filter: treefolk() }),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Green, Value::Times(Box::new(Value::Const(2)), Box::new(attacking))),
+            },
+        }],
+        ..legend("Fangorn, Tree Shepherd", cost(&[generic(4), g(), g(), g()]), vec![CreatureType::Treefolk], 4, 10)
+    }
+}
+
+/// Great Forest Druid — {1}{G} 0/4 Treefolk Druid. {T}: Add one mana of any
+/// color.
+pub fn great_forest_druid() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..creature("Great Forest Druid", cost(&[generic(1), g()]), vec![CreatureType::Treefolk, CreatureType::Druid], 0, 4)
+    }
+}
+
+/// Timber Protector — {4}{G} 4/6 Treefolk Warrior. Other Treefolk creatures
+/// you control get +1/+1; other Treefolk and Forests you control have
+/// indestructible.
+pub fn timber_protector() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Treefolk creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(R::Creature.and(treefolk()).and(R::ControlledByYou).and(R::OtherThanSource)),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "Other Treefolk and Forests you control have indestructible.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(treefolk().or(forest()).and(R::ControlledByYou).and(R::OtherThanSource)),
+                    keyword: Keyword::Indestructible,
+                },
+            },
+        ],
+        ..creature("Timber Protector", cost(&[generic(4), g()]), vec![CreatureType::Treefolk, CreatureType::Warrior], 4, 6)
+    }
+}
+
+/// Treefolk Harbinger — {G} 0/3 Treefolk Druid. Entering, you may search for a
+/// Treefolk or Forest card, reveal it, shuffle, and put it on top.
+pub fn treefolk_harbinger() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for a Treefolk or Forest card to put on top?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: treefolk().or(forest()),
+                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            }),
+        })],
+        ..creature("Treefolk Harbinger", cost(&[g()]), vec![CreatureType::Treefolk, CreatureType::Druid], 0, 3)
+    }
+}
+
+/// Sapling Nursery — {6}{G}{G} Enchantment, affinity for Forests. Landfall: a
+/// 3/4 green Treefolk with reach. {1}{G}, exile it: your Treefolk and Forests
+/// gain indestructible until end of turn.
+pub fn sapling_nursery() -> CardDefinition {
+    use crate::effect::shortcut::landfall;
+    let token = Arc::new(TokenDefinition {
+        name: "Treefolk".into(),
+        power: 3,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        keywords: vec![Keyword::Reach],
+        ..Default::default()
+    });
+    CardDefinition {
+        name: "Sapling Nursery",
+        cost: cost(&[generic(6), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Affinity for Forests (This spell costs {1} less to cast for each Forest you control.)",
+            effect: StaticEffect::SelfCostReducedPerPermanentMatching { filter: forest(), per: 1 },
+        }],
+        triggered_abilities: vec![landfall(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: token })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            exile_self_cost: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(treefolk().or(forest()).and(R::ControlledByYou)),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

@@ -1903,3 +1903,168 @@ fn white_lotus_hideout_funds_a_shrine() {
     cast(&mut g, honden);
     assert!(g.battlefield_find(honden).is_some());
 }
+
+/// Captain America: Catch attaches an Equipment at the beginning of combat;
+/// Throw unattaches it and deals its mana value (the Shield's 2) to a target.
+#[test]
+fn captain_america_catches_and_throws() {
+    let mut g = pod(2);
+    let cap = ready(&mut g, 0, catalog::captain_america_first_avenger());
+    let shield = ready(&mut g, 0, catalog::captain_americas_shield());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(shield).unwrap().attached_to, Some(cap));
+    assert_eq!(g.computed_permanent(cap).unwrap().toughness, 12, "+0/+8");
+    g.step = TurnStep::PreCombatMain;
+    flood(&mut g);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: cap, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("Throw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(g.battlefield_find(shield).unwrap().attached_to, None);
+    // Nothing attached: Throw can't be activated.
+    assert!(activate(&mut g, cap, 0).is_err());
+}
+
+/// Bruenor: +2/+0 per Equipment on each of your creatures; the first equip
+/// each turn is free; Bureau Headmaster takes {1} off the rest.
+#[test]
+fn bruenor_and_bureau_equip_cheaply() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::bruenor_battlehammer());
+    ready(&mut g, 0, catalog::bureau_headmaster());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let shield = ready(&mut g, 0, catalog::captain_americas_shield());
+    let ring = ready(&mut g, 0, catalog::ring_of_kalonia());
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::Equip { equipment: shield, target: bear }).expect("the first equip is free");
+    g.players[0].mana_pool.add_colorless(0);
+    assert!(g.perform_action(GameAction::Equip { equipment: ring, target: bear }).is_ok(), "{{1}} - {{1}} = {{0}}");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2 + 4);
+}
+
+/// Kellan: other creatures get +1/+0 per Aura and Equipment on Kellan.
+#[test]
+fn kellan_shares_his_gear() {
+    let mut g = pod(2);
+    let kellan = ready(&mut g, 0, catalog::kellan_the_fae_blooded());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ring = ready(&mut g, 0, catalog::ring_of_kalonia());
+    equip_to(&mut g, ring, kellan);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(kellan).unwrap().power, 2, "\"other\" creatures");
+}
+
+/// The Mighty Thor flickers a creature tapped as it attacks, and an
+/// Equipment entering draws a card.
+#[test]
+fn mighty_thor_flickers_and_draws() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let thor = ready(&mut g, 0, catalog::the_mighty_thor_jane_foster());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    attack_with(&mut g, &[thor]);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Serra Angel").expect("returned");
+    assert!(back.id != angel || back.tapped);
+    assert!(back.tapped && back.owner == 1);
+    let hand = g.players[0].hand.len();
+    let ring = g.add_card_to_hand(0, catalog::ring_of_kalonia());
+    flood(&mut g);
+    g.step = TurnStep::PostCombatMain;
+    cast(&mut g, ring);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cast one, drew one");
+}
+
+/// Super-Soldier Serum: +2/+2, first strike, a legendary Soldier; attacking,
+/// it gathers your Equipment.
+#[test]
+fn super_soldier_serum_suits_up_on_attack() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ring = ready(&mut g, 0, catalog::ring_of_kalonia());
+    let serum = g.add_card_to_hand(0, catalog::super_soldier_serum());
+    flood(&mut g);
+    cast_at(&mut g, serum, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.supertypes().contains(&crabomination::card::Supertype::Legendary));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Soldier));
+    attack_with(&mut g, &[bear]);
+    assert_eq!(g.battlefield_find(ring).unwrap().attached_to, Some(bear));
+}
+
+/// Bark of Doran: a 0/4 wearing it (0/5) deals 5 combat damage.
+#[test]
+fn bark_of_doran_hits_with_toughness() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let druid = ready(&mut g, 0, catalog::great_forest_druid());
+    let bark = ready(&mut g, 0, catalog::bark_of_doran());
+    equip_to(&mut g, bark, druid);
+    assert!(has_kw(&g, druid, Keyword::AssignsCombatDamageByToughness));
+    let life = g.players[1].life;
+    attack_with(&mut g, &[druid]);
+    run_to(&mut g, 0, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, life - 5);
+}
+
+/// Colfenor: a 4/6 dying returns a smaller creature card (toughness 2) but
+/// not a bigger one.
+#[test]
+fn colfenor_returns_a_lesser_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::colfenor_the_last_yew());
+    let victim = ready(&mut g, 0, catalog::timber_protector());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_graveyard(0, catalog::wall_of_wood());
+    destroy(&mut g, victim);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "toughness 2 < 6");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wall));
+}
+
+/// Fangorn: two attacking Treefolk add four green.
+#[test]
+fn fangorn_pays_for_each_treefolk() {
+    let mut g = pod(2);
+    let fangorn = ready(&mut g, 0, catalog::fangorn_tree_shepherd());
+    let druid = ready(&mut g, 0, catalog::great_forest_druid());
+    assert!(has_kw(&g, druid, Keyword::Vigilance));
+    g.players[0].mana_pool = Default::default();
+    attack_with(&mut g, &[fangorn, druid]);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 4);
+}
+
+/// Timber Protector, Treefolk Harbinger and Sapling Nursery.
+#[test]
+fn treefolk_support_cards() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::timber_protector());
+    let druid = ready(&mut g, 0, catalog::great_forest_druid());
+    let forest = ready(&mut g, 0, catalog::forest());
+    assert_eq!(g.computed_permanent(druid).unwrap().toughness, 5);
+    assert!(has_kw(&g, druid, Keyword::Indestructible) && has_kw(&g, forest, Keyword::Indestructible));
+
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_library(0, catalog::timber_protector());
+    let h = g.add_card_to_hand(0, catalog::treefolk_harbinger());
+    flood(&mut g);
+    yes(&mut g, 1);
+    cast(&mut g, h);
+    assert_eq!(g.players[0].library.first().map(|c| c.definition.name), Some("Timber Protector"));
+
+    let mut g = pod(2);
+    let nursery = ready(&mut g, 0, catalog::sapling_nursery());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Treefolk"), 1);
+    flood(&mut g);
+    activate(&mut g, nursery, 0).expect("exile for indestructible");
+    let tf = g.battlefield.iter().find(|c| c.definition.name == "Treefolk").unwrap().id;
+    assert!(has_kw(&g, tf, Keyword::Indestructible));
+}
