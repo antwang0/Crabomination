@@ -1456,6 +1456,14 @@ impl GameState {
             Value::CardsRevealedThisEffect => self.cards_revealed_this_resolution as i32,
             Value::LandCardsRevealedThisEffect => self.scratch.parley_lands_revealed as i32,
             Value::DiscoveredManaValue => self.scratch.discovered_mana_value as i32,
+            Value::LastExiledPower => match self.scratch.exiled_card_ids_this_resolution.last() {
+                Some(id) => self
+                    .lki_snapshot(*id)
+                    .map(|snap| snap.power())
+                    .or_else(|| self.find_card_anywhere(*id).map(|c| c.definition.power))
+                    .unwrap_or(0),
+                None => 0,
+            },
             Value::LastExiledManaValue => self
                 .scratch.exiled_card_ids_this_resolution
                 .last()

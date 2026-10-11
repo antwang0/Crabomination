@@ -885,6 +885,9 @@ impl Effect {
             | Effect::CounterOnMatchingOfEachColor { .. }
             | Effect::YourNoncombatDamageBonusThisTurn { .. }
             | Effect::PlotSpellOnResolve { .. }
+            | Effect::ExileSpellOnResolveWithCounter { .. }
+            | Effect::MayCastFromExileFree { .. }
+            | Effect::CastUpToFreeFromHandAndGraveyard { .. }
             | Effect::PutLandsFromHandOntoBattlefieldTapped { .. }
             | Effect::MayCastPermanentFromHandFree { .. }
             | Effect::MayCastFromHandFreeMatching { .. }

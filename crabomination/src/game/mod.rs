@@ -30932,6 +30932,18 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
+        // Goliath Daydreamer — exile the resolving spell with a dream counter.
+        if let Some(kind) = card.exile_on_resolve_counter
+            && !card.is_token
+        {
+            let mut card = card;
+            card.exile_on_resolve_counter = None;
+            card.add_counters(kind, 1);
+            self.players[caster].cards_exiled_this_turn =
+                self.players[caster].cards_exiled_this_turn.saturating_add(1);
+            self.exile.push(card);
+            return Ok(events);
+        }
         // CR 702.170 — Lilah, Undefeated Slickshot: exile the resolving spell
         // plotted instead of routing it to the graveyard.
         if card.plot_on_resolve {

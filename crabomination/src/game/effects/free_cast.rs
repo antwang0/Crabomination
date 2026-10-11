@@ -1,6 +1,8 @@
 //! "You may cast [a spell] from your hand without paying its mana cost. If
 //! you don't, …" — the shared body behind Kellan, the Kid and Baral and Kari
-//! Zev.
+//! Zev — and its siblings from other zones: one card from exile (Goliath
+//! Daydreamer) and up to N from hand and graveyard under a total mana value
+//! (Invoke Calamity).
 
 use super::{EffectContext, PickValue};
 use crate::card::{CardId, CardInstance};
@@ -186,6 +188,124 @@ impl GameState {
         self.clear_answer_log();
         let cast = self.cast_card_for_free(player, card, crate::card::Zone::Exile, target, vec![], None, None, false)?;
         events.extend(cast);
+        Ok(())
+    }
+
+    /// Offer the controller one of `candidates` (a headless seat takes the
+    /// first) and cast it from `zone` without paying its mana cost, during
+    /// this resolution.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn may_cast_one_free(
+        &mut self,
+        candidates: Vec<(CardId, String)>,
+        zone: crate::card::Zone,
+        exile_after: bool,
+        source: CardId,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(first) = candidates.first().map(|(id, _)| *id) else { return Ok(()) };
+        let Some(picked) = self.choose_up_to_cards(
+            ctx.controller,
+            "Cast which card without paying its mana cost?".to_string(),
+            source,
+            candidates,
+            1,
+            PickValue::Gain,
+            effect,
+            vec![first],
+        ) else {
+            return Ok(());
+        };
+        let Some(pick) = picked.first().copied() else { return Ok(()) };
+        self.run_effect(
+            &Effect::CastWithoutPayingImmediate {
+                what: Selector::Target(0),
+                source_zone: zone,
+                exile_after,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+            &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
+            events,
+        )
+    }
+
+    /// `Effect::CastUpToFreeFromHandAndGraveyard` (Invoke Calamity): one pick
+    /// of up to `count` matching hand and graveyard cards, kept in pick order
+    /// while their total mana value stays within `cap` (a headless seat takes
+    /// the costliest that fit), then each is cast free and exiled instead of
+    /// going to the graveyard.
+    pub(super) fn cast_up_to_free_from_hand_and_graveyard(
+        &mut self,
+        count: u32,
+        filter: &crate::card::SelectionRequirement,
+        cap: u32,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let pool: Vec<(CardId, u32, crate::card::Zone)> = self.players[me]
+            .hand
+            .iter()
+            .map(|c| (c, crate::card::Zone::Hand))
+            .chain(self.players[me].graveyard.iter().map(|c| (c, crate::card::Zone::Graveyard)))
+            .filter(|(c, _)| Some(c.id) != ctx.source && c.definition.cost.cmc() <= cap)
+            .filter(|(c, _)| self.evaluate_requirement_on_card(filter, c, me))
+            .map(|(c, z)| (c.id, c.definition.cost.cmc(), z))
+            .collect();
+        if pool.is_empty() {
+            return Ok(());
+        }
+        // Kept in order while the running total fits; a pick that would
+        // overshoot is skipped.
+        let fit = |ids: &[CardId]| {
+            let mut total = 0u32;
+            let mut kept = Vec::new();
+            for id in ids {
+                let Some(mv) = pool.iter().find(|p| p.0 == *id).map(|p| p.1) else { continue };
+                if kept.len() < count as usize && total + mv <= cap {
+                    total += mv;
+                    kept.push(*id);
+                }
+            }
+            kept
+        };
+        let mut by_mv: Vec<CardId> = pool.iter().map(|p| p.0).collect();
+        by_mv.sort_by_key(|id| std::cmp::Reverse(pool.iter().find(|p| p.0 == *id).map_or(0, |p| p.1)));
+        let auto = fit(&by_mv);
+        let candidates = self.card_id_names(&pool.iter().map(|p| p.0).collect::<Vec<_>>());
+        let Some(picked) = self.choose_up_to_cards(
+            me,
+            format!("Cast up to {count} spells with total mana value {cap} or less free"),
+            source,
+            candidates,
+            count,
+            PickValue::Gain,
+            effect,
+            auto,
+        ) else {
+            return Ok(());
+        };
+        for id in fit(&picked) {
+            let Some(zone) = pool.iter().find(|p| p.0 == id).map(|p| p.2) else { continue };
+            self.run_effect(
+                &Effect::CastWithoutPayingImmediate {
+                    what: Selector::Target(0),
+                    source_zone: zone,
+                    exile_after: true,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                },
+                &EffectContext { targets: vec![Target::Permanent(id)], ..ctx.clone() },
+                events,
+            )?;
+        }
         Ok(())
     }
 }

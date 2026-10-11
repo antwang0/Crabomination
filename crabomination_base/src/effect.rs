@@ -1254,6 +1254,10 @@ pub enum Value {
     /// (Undying Flames' "damage equal to that card's mana value"). 0 when
     /// nothing was exiled. Reset between independent resolutions.
     LastExiledManaValue,
+    /// Power of the last card exiled within the current resolution, as it last
+    /// existed on the battlefield (CR 603.10 / 608.2h — Olórin's Searing
+    /// Light's "the power of the creature they exiled"). 0 when nothing was.
+    LastExiledPower,
     /// Number of permanents returned to hand by an
     /// `Effect::ReturnAnyNumberToHand` earlier in the current resolution — the
     /// Sweep count. Reset between independent resolutions.
@@ -5702,6 +5706,22 @@ pub enum Effect {
     /// Stamps the resolving spell so its post-resolution route is
     /// `ZoneDest::ExilePlotted`.
     PlotSpellOnResolve { what: Selector },
+    /// "Exile that card with a [counter] counter on it instead of putting it
+    /// into your graveyard as it resolves" (Goliath Daydreamer's dream
+    /// counter). Stamps the spell `what` names on the stack; a spell that
+    /// doesn't resolve isn't exiled.
+    ExileSpellOnResolveWithCounter { what: Selector, counter: crate::card::CounterType },
+    /// "You may cast a spell from among [filter] cards in exile without paying
+    /// its mana cost" — during the resolution, timing ignored (Goliath
+    /// Daydreamer: cards you own in exile with dream counters on them).
+    /// `filter` is read for the controller.
+    MayCastFromExileFree { filter: SelectionRequirement },
+    /// "You may cast up to `count` [filter] spells with total mana value
+    /// `total_mana_value` or less from your graveyard and/or hand without
+    /// paying their mana costs. If those spells would be put into your
+    /// graveyard, exile them instead." (Invoke Calamity). The picks are cast
+    /// one after another during the resolution (the second resolves first).
+    CastUpToFreeFromHandAndGraveyard { count: u32, filter: SelectionRequirement, total_mana_value: u32 },
     /// "You may cast a permanent spell with mana value `max_mv` or less from
     /// your hand without paying its mana cost. If you don't, `else_`"
     /// (Kellan, the Kid).

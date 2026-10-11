@@ -6602,6 +6602,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileSpellOnResolveWithCounter { what, counter } => {
+                for cid in
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id())
+                {
+                    if let Some(StackItem::Spell { card, .. }) = self
+                        .stack
+                        .iter_mut()
+                        .find(|si| matches!(si, StackItem::Spell { card, .. } if card.id == cid))
+                    {
+                        card.exile_on_resolve_counter = Some(*counter);
+                    }
+                }
+                Ok(())
+            }
+
             // Kellan, the Kid — free-cast a cheap permanent off your hand, or
             // (if you decline / can't) drop a land instead.
             Effect::MayCastPermanentFromHandFree { max_mv, else_ } => {
@@ -16670,6 +16685,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayCastFromExileFree { filter } => {
+                let src = ctx.source.unwrap_or(CardId(0));
+                let candidates: Vec<(CardId, String)> = self
+                    .exile
+                    .iter()
+                    .filter(|c| !c.definition.is_land())
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                self.may_cast_one_free(candidates, crate::card::Zone::Exile, false, src, effect, ctx, events)
+            }
+            Effect::CastUpToFreeFromHandAndGraveyard { count, filter, total_mana_value } => {
+                self.cast_up_to_free_from_hand_and_graveyard(*count, filter, *total_mana_value, effect, ctx, events)
+            }
             Effect::MayCastExiledWithSource { filter } => {
                 // Kaho, Minamo Historian. Offer the exiled cards stamped with
                 // this source that match `filter` (X resolved from the
