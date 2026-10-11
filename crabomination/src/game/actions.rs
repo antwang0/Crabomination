@@ -23363,12 +23363,14 @@ impl GameState {
         // Mana abilities don't emit the activation event — every printed
         // "whenever an opponent activates an ability" trigger carves them
         // out (Flamescroll Celebrant, CR 605.1), and the log skips the
-        // tap-for-mana spam.
+        // tap-for-mana spam. A `{T}`-less one emits it flagged `mana` for the
+        // few cards that count mana abilities (Elrond); a `{T}` one is
+        // `TappedForMana` above.
         // CR 701.67c — a waterbend activation cost was paid.
         if ability.waterbend {
             self.note_bent(p, crate::effect::BendKind::Water, events);
         }
-        if !ability_is_mana {
+        if !ability_is_mana || !ability.tap_cost {
             events.push(GameEvent::AbilityActivated {
                 source: card_id,
                 exhaust: ability.exhaust,
@@ -23382,6 +23384,7 @@ impl GameState {
                     || ability.sac_any_number_filter.is_some(),
                 life_paid: life_spent,
                 ninjutsu: false,
+                mana: ability_is_mana,
             });
         }
 

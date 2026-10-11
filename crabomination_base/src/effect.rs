@@ -4015,6 +4015,10 @@ pub enum ActivationTrait {
     Adapt,
     /// CR 702.49 — a ninjutsu ability (Satoru Umezawa).
     Ninjutsu,
+    /// CR 605.1a — a mana ability without `{T}` in its cost (Elrond's
+    /// "an ability of a creature" counts mana abilities; the `{T}` ones are
+    /// `EventKind::TappedForMana`).
+    ManaWithoutTap,
 }
 
 /// The zones [`EventKind::CardExiledFrom`] distinguishes (a bitmask).

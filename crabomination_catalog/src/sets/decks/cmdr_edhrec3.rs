@@ -3773,36 +3773,30 @@ pub fn dionus_elvish_archdruid() -> CardDefinition {
 }
 
 /// Elrond, Moon-Reader — {2}{U} 3/3 legendary Elf Noble. The first time each
-/// turn you activate an ability of a creature, draw a card (a {T} mana
-/// ability included; a creature's non-{T} mana ability isn't heard). {5}{U}{U}: exile
+/// turn you activate an ability of a creature, draw a card. {5}{U}{U}: exile
 /// up to two other target nonland permanents you control; they return under
 /// their owner's control at the beginning of the next end step.
+///
+/// Mana abilities count (ruling 2026-06-29): a `{T}` one is read off
+/// `TappedForMana`, any other off `ActivationTrait::ManaWithoutTap`; the three
+/// halves share one "first time each turn" (CR 603.3d).
 pub fn elrond_moon_reader() -> CardDefinition {
+    let others_unused = |a: u8, b: u8| {
+        Predicate::All(vec![
+            Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+            Predicate::Not(Box::new(Predicate::SourceTriggerUsedThisTurn(a))),
+            Predicate::Not(Box::new(Predicate::SourceTriggerUsedThisTurn(b))),
+        ])
+    };
+    let draw = |kind: EventKind, a: u8, b: u8| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::YourControl).with_filter(others_unused(a, b)).once_per_turn(),
+        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+    };
     CardDefinition {
-        // "Triggers only once each turn" across both halves: each is gated
-        // on the other's per-turn stamp.
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
-                    .with_filter(Predicate::All(vec![
-                        Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
-                        Predicate::Not(Box::new(Predicate::SourceTriggerUsedThisTurn(1))),
-                    ]))
-                    .once_per_turn(),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
-            },
-            // A creature's mana ability counts too (ruling 2026-06-29); mana
-            // activations emit no `AbilityActivated`, so a {T} mana ability is
-            // heard through `TappedForMana`.
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::TappedForMana, EventScope::YourControl)
-                    .with_filter(Predicate::All(vec![
-                        Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
-                        Predicate::Not(Box::new(Predicate::SourceTriggerUsedThisTurn(0))),
-                    ]))
-                    .once_per_turn(),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
-            },
+            draw(EventKind::AbilityActivated, 1, 2),
+            draw(EventKind::TappedForMana, 0, 2),
+            draw(EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::ManaWithoutTap), 0, 1),
         ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5), u(), u()]),

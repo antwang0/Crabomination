@@ -23788,6 +23788,7 @@ impl GameState {
             sacrificed: false,
             life_paid: 0,
             ninjutsu: true,
+            mana: false,
         });
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).

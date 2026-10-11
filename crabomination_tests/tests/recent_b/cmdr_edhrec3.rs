@@ -2693,19 +2693,22 @@ fn elrond_draws_once_and_flickers_till_end_step() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
 }
 
-/// Elrond, Moon-Reader: a creature's mana ability is an activated ability of
-/// a creature (ruling 2026-06-29) — tapping Llanowar Elves draws, and the
-/// shared "only once each turn" then holds the flicker activation to none.
+/// Elrond counts a creature's mana ability (ruling 2026-06-29): tapping an
+/// Elf for mana draws, and that spends the turn's one draw (CR 603.3d) — a
+/// later non-mana activation doesn't draw again. A land's doesn't count.
 #[test]
-fn elrond_draws_for_a_creature_mana_ability_once_a_turn() {
+fn elrond_draws_off_a_creature_mana_ability_once() {
     let mut g = pod(2);
     for _ in 0..4 {
         g.add_card_to_library(0, catalog::island());
     }
     let elrond = ready(&mut g, 0, catalog::elrond_moon_reader());
-    let elves = ready(&mut g, 0, catalog::llanowar_elves());
-    activate(&mut g, elves, 0);
-    assert_eq!(g.players[0].hand.len(), 1, "the Elves' mana ability drew");
+    let land = ready(&mut g, 0, catalog::forest());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    activate(&mut g, land, 0);
+    assert_eq!(g.players[0].hand.len(), 0, "a land isn't a creature");
+    activate(&mut g, elf, 0);
+    assert_eq!(g.players[0].hand.len(), 1, "the Elf's mana ability draws");
     flood(&mut g);
     let bear = ready(&mut g, 0, catalog::grizzly_bears());
     g.priority.player_with_priority = 0;
@@ -2714,7 +2717,17 @@ fn elrond_draws_for_a_creature_mana_ability_once_a_turn() {
     })
     .expect("flicker");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), 1, "once each turn across both halves");
+    assert_eq!(g.players[0].hand.len(), 1, "the turn's one draw is spent");
+
+    // A mana ability without {T} (Blood Pet's sacrifice) counts too (CR 605.1a).
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::elrond_moon_reader());
+    let pet = ready(&mut g, 0, catalog::blood_pet());
+    activate(&mut g, pet, 0);
+    assert_eq!(g.players[0].hand.len(), 1, "the sacrifice-for-mana draws");
 }
 
 /// Maralen, Fae Ascendant: entering exiles the top two of an opponent's

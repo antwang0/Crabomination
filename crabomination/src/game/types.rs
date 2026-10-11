@@ -2833,6 +2833,11 @@ pub enum GameEvent {
         /// CR 702.49a — a ninjutsu ability (Satoru Umezawa's "whenever you
         /// activate a ninjutsu ability"); `source` is the ninja.
         ninjutsu: bool,
+        /// CR 605.1a — a mana ability without `{T}` in its cost (a `{T}` one
+        /// announces itself as `TappedForMana`). Only
+        /// `ActivationTrait::ManaWithoutTap` sees it; every other activation
+        /// listener reads "an ability" as a non-mana one.
+        mana: bool,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.

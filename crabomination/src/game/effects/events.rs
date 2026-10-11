@@ -119,10 +119,13 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CounterRemoved { .. } => {
             bits!(K::CounterRemoved(crate::card::CounterType::PlusOnePlusOne))
         }
-        E::AbilityActivated { .. } => bits!(
+        E::AbilityActivated { mana: false, .. } => bits!(
             K::AbilityActivated,
             K::AbilityActivatedWith(crate::effect::ActivationTrait::Sacrifice),
         ),
+        E::AbilityActivated { mana: true, .. } => {
+            bits!(K::AbilityActivatedWith(crate::effect::ActivationTrait::Sacrifice))
+        }
         E::CardLeftGraveyard { .. } => bits!(K::CardLeftGraveyard),
         E::CardPutIntoGraveyard { .. } => bits!(K::LandPutIntoGraveyard, K::PutIntoGraveyard),
         E::CardMilled { .. } => bits!(K::PutIntoGraveyard, K::CardMilled, K::Milled),
@@ -222,10 +225,13 @@ fn event_payload_matches(
         }
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
+                // A mana activation is seen only by the trait that asks for it.
+                T::ManaWithoutTap => *mana,
+                _ if *mana => false,
                 T::Sacrifice => *sacrificed,
                 T::LifePaid => *life_paid > 0,
                 T::Exhaust => *exhaust,
@@ -387,13 +393,16 @@ fn reference_event_kind_matches(
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
         (EventKind::CounterRemoved(k), GameEvent::CounterRemoved { counter_type, .. }) => counter_type == k,
         (EventKind::AnyCounterAdded, GameEvent::CounterAdded { .. } | GameEvent::KeywordCounterAdded { .. }) => true,
-        (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
+        (EventKind::AbilityActivated, GameEvent::AbilityActivated { mana, .. }) => !mana,
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
+                // A mana activation is seen only by the trait that asks for it.
+                T::ManaWithoutTap => *mana,
+                _ if *mana => false,
                 T::Sacrifice => *sacrificed,
                 T::LifePaid => *life_paid > 0,
                 T::Exhaust => *exhaust,
@@ -1080,7 +1089,7 @@ fn event_matches_spec_rest(
             // "Whenever this permanent activates an ability" — the equipped
             // creature's own activations (Illusionist's Bracers, CR 707.10).
             event,
-            GameEvent::AbilityActivated { source: cid, .. } if *cid == source.id
+            GameEvent::AbilityActivated { source: cid, mana: false, .. } if *cid == source.id
         ),
         // CR 810.5 / 810.9 — "you" is one player, not a team: life
         // gained by a teammate doesn't trigger your "whenever you gain
@@ -1866,11 +1875,12 @@ mod tests {
             E::LandPlayed { player: 0, card_id: c, played: true, from_hand: true },
             E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
             E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false },
-            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, life_paid: 0, ninjutsu: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 2, ninjutsu: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false },
+            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 2, ninjutsu: false, mana: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: true },
             E::ManaAdded { player: 0, color: crate::mana::Color::Green, source: Some(c) },
             E::ColorlessManaAdded { player: 0, source: None },
             E::PermanentEntered { card_id: c },
@@ -2124,6 +2134,8 @@ mod tests {
             K::AbilityActivated,
             K::AbilityActivatedWith(crate::effect::ActivationTrait::Exhaust),
             K::AbilityActivatedWith(crate::effect::ActivationTrait::Adapt),
+            K::AbilityActivatedWith(crate::effect::ActivationTrait::Sacrifice),
+            K::AbilityActivatedWith(crate::effect::ActivationTrait::ManaWithoutTap),
             K::CardLeftGraveyard,
             K::CardExiled,
             K::CardExiledFrom(crate::effect::exile_from::GRAVEYARD),
