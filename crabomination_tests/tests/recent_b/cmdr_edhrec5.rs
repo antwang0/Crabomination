@@ -1221,3 +1221,26 @@ fn myojin_of_cryptic_dreams_triples_a_permanent_spell() {
         "no counter left"
     );
 }
+
+/// CR 611.2c — Minas Morgul's target is a Wraith only for as long as it has
+/// the shadow counter (seats 392 and 396); removing the counter ends it.
+#[test]
+fn cr_611_2c_minas_morgul_wraith_lasts_with_the_shadow_counter() {
+    let mut g = pod(2);
+    let fortress = ready(&mut g, 0, catalog::minas_morgul_dark_fortress());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, fortress, 1, Some(Target::Permanent(bear))).expect("shadow counter");
+    let wraith = |g: &GameState| g.computed_permanent(bear).unwrap().subtypes().creature_types.contains(&CreatureType::Wraith);
+    assert!(wraith(&g));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shadow));
+    run(
+        &mut g,
+        &crabomination::effect::Effect::RemoveKeywordCounter {
+            what: crabomination::effect::Selector::ExactObjects(vec![bear]),
+            keyword: Keyword::Shadow,
+            amount: crabomination::card::Value::ONE,
+        },
+    );
+    g.check_state_based_actions();
+    assert!(!wraith(&g), "the counter is gone");
+}

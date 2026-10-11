@@ -46,7 +46,6 @@
 //! * Witch's Clinic — "target commander" is "target legendary creature".
 //! * The Black Gate — the creature can't be blocked at all this turn, gated on an
 //!   opponent having the most life, rather than "by that player's creatures".
-//! * Minas Morgul — the Wraith type doesn't fall off with the shadow counter.
 //! * Stonespeaker Crystal — exiles every opponent's graveyard (not "any number
 //!   of target players'").
 
@@ -1773,8 +1772,8 @@ pub fn the_black_gate() -> CardDefinition {
 /// long as that creature has a shadow counter on it, it's a Wraith in addition
 /// to its other types.
 ///
-/// The shadow counter is a CR 122.1b keyword counter. Approximation: the Wraith
-/// type is added indefinitely rather than for as long as the counter stays.
+/// The shadow counter is a CR 122.1b keyword counter; the Wraith type lasts as
+/// long as it does (CR 611.2c).
 pub fn minas_morgul_dark_fortress() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -1795,7 +1794,7 @@ pub fn minas_morgul_dark_fortress() -> CardDefinition {
                         Effect::AddCreatureTypes {
                             what: Selector::Target(0),
                             creature_types: vec![CreatureType::Wraith],
-                            duration: Duration::Permanent,
+                            duration: Duration::WhileHasKeywordCounter(crate::effect::KeywordCounterKind::Shadow),
                         },
                     ]),
                     ..Default::default()
