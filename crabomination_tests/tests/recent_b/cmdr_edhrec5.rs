@@ -1017,3 +1017,98 @@ fn pumpkin_bombardment_discards_or_pays() {
         assert!(g.players[0].hand.is_empty());
     }
 }
+
+/// Shelob: an opponent's creature a Spider of yours damaged this turn dies →
+/// a token copy that's a Food artifact (no creature type, the Food ability
+/// added). A creature nothing of yours damaged leaves nothing.
+#[test]
+fn shelob_turns_her_victims_into_food() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::shelob_child_of_ungoliant());
+    let recluse = ready(&mut g, 0, catalog::ruins_recluse());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    run(
+        &mut g,
+        &crabomination::effect::Effect::DealDamage {
+            to: crabomination::effect::Selector::ExactObjects(vec![giant]),
+            amount: crabomination::card::Value::ONE,
+        },
+    );
+    // Damage from the Recluse (a Spider): fight it into the giant.
+    let ctx = EffectContext::for_ability(recluse, 0, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::DealDamageFrom {
+                source: crabomination::effect::Selector::ExactObjects(vec![recluse]),
+                to: crabomination::effect::Selector::ExactObjects(vec![giant]),
+                amount: crabomination::card::Value::ONE,
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(!on_bf(&g, giant), "deathtouch");
+    let food = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hill Giant").expect("the copy");
+    assert_eq!(food.controller, 0);
+    assert!(!food.definition.is_creature());
+    assert!(food.definition.subtypes.artifact_subtypes.contains(&crabomination::card::ArtifactSubtype::Food));
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Grizzly Bears"));
+}
+
+/// Supper for Spiders returns this turn's dead from opponents' graveyards as
+/// Food artifacts under your control; a card already there stays.
+#[test]
+fn supper_for_spiders_serves_the_fallen() {
+    let mut g = pod(3);
+    let old = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let bear = ready(&mut g, 2, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
+    let supper = g.add_card_to_hand(0, catalog::supper_for_spiders());
+    cast(&mut g, 0, supper, None).expect("Supper");
+    let c = g.battlefield_find(bear).expect("returned");
+    assert_eq!(c.controller, 0);
+    assert!(!c.definition.is_creature() && c.definition.is_artifact());
+    assert!(!on_bf(&g, old));
+}
+
+/// Lolth's −8 emblem: an opponent hit in combat by your creatures loses up to
+/// 8 life this turn in total; a second hitter adds nothing.
+#[test]
+fn lolths_emblem_tops_up_to_eight() {
+    let mut g = pod(2);
+    let lolth = ready(&mut g, 0, catalog::lolth_spider_queen());
+    g.battlefield_find_mut(lolth).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 8);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: lolth, ability_index: 2, target: None, x_value: None })
+        .expect("-8");
+    drain_stack(&mut g);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    attack(&mut g, 0, &[a, b], 1);
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 12, "4 combat, topped up to 8");
+}
+
+/// Hatchery Spider's cast trigger digs X deep (X creature cards in your
+/// graveyard) for a green permanent card of mana value X or less.
+#[test]
+fn hatchery_spider_hatches_a_green_permanent() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let elves = g.add_card_to_library(0, catalog::llanowar_elves());
+    let maw = g.add_card_to_library(0, catalog::colossal_dreadmaw());
+    let _ = maw;
+    let hs = g.add_card_to_hand(0, catalog::hatchery_spider());
+    cast(&mut g, 0, hs, None).expect("Hatchery Spider");
+    assert!(on_bf(&g, elves) || g.players[0].library.iter().all(|c| c.id != elves), "found the Elves");
+    assert!(on_bf(&g, elves));
+}

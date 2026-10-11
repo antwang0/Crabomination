@@ -3,12 +3,12 @@
 //! fourth). Lord of the Nazgûl's Wraiths and Ring spells; Leonardo and
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
 //! connive and mayhem; Reaper King's Scarecrows; Sauron, the Dark Lord's
-//! Orc Armies; Saruman, the White Hand's spells; Kibo's Apes and Monkeys.
-//! Tests in
+//! Orc Armies; Saruman, the White Hand's spells; Kibo's Apes and Monkeys;
+//! Shelob's Spiders. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, EnchantmentSubtype, CardType, CounterType, CreatureType, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    ArtifactSubtype, CardDefinition, EnchantmentSubtype, LoyaltyAbility, PlaneswalkerSubtype, SoulbondBonus, CardType, CounterType, CreatureType, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, WardCost,
 };
@@ -1676,4 +1676,308 @@ pub fn party_dude() -> CardDefinition {
         activated_abilities: vec![level_up(cost(&[generic(1), g()]), 1), level_up(cost(&[generic(4), g()]), 2)],
         ..Default::default()
     }
+}
+
+// ── Shelob, Child of Ungoliant (BG) ──────────────────────────────────────────
+
+fn spider() -> R {
+    R::HasCreatureType(CreatureType::Spider)
+}
+
+fn spider_token(p: i32, t: i32, color: Color, menace: bool) -> TokenDefinition {
+    let mut keywords = vec![Keyword::Reach];
+    if menace {
+        keywords.push(Keyword::Menace);
+    }
+    TokenDefinition {
+        name: "Spider".into(),
+        power: p,
+        toughness: t,
+        colors: vec![color],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        keywords,
+        ..Default::default()
+    }
+}
+
+fn make(def: TokenDefinition, n: i32) -> Effect {
+    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(n), definition: Arc::new(def) }
+}
+
+/// Shelob, Child of Ungoliant — {4}{B}{G} 8/8 deathtouch, ward {2}. Other
+/// Spiders you control have both; another creature a Spider of yours damaged
+/// this turn dying leaves a token copy that's a Food artifact instead.
+pub fn shelob_child_of_ungoliant() -> CardDefinition {
+    let others = || yours(R::Creature.and(spider()).and(R::OtherThanSource));
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch, Keyword::Ward(WardCost::generic(2))],
+        static_abilities: vec![
+            grant("Other Spiders you control have deathtouch.", others(), Keyword::Deathtouch),
+            grant("Other Spiders you control have ward {2}.", others(), Keyword::Ward(WardCost::generic(2))),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::OtherThanSource.and(R::DamagedThisTurnByMatching(Box::new(spider().and(R::ControlledByYou)))),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::TriggerSource,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+                Effect::BecomeFoodArtifact { what: Selector::LastCreatedToken },
+            ]),
+        }],
+        ..legend("Shelob, Child of Ungoliant", cost(&[generic(4), b(), g()]), vec![CreatureType::Spider, CreatureType::Demon], 8, 8)
+    }
+}
+
+/// Doom Weaver — {4}{B}{B} 1/8 reach, soulbond: each of the pair has "when
+/// this creature dies, draw cards equal to its power".
+pub fn doom_weaver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::PowerOf(Box::new(Selector::This)) },
+            }],
+            ..Default::default()
+        }),
+        ..creature("Doom Weaver", cost(&[generic(4), b(), b()]), vec![CreatureType::Spider, CreatureType::Horror], 1, 8)
+    }
+}
+
+/// Drider — {4}{B} 4/3 reach; combat damage to a player makes a 2/1 reach,
+/// menace Spider.
+pub fn drider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: make(spider_token(2, 1, Color::Black, true), 1),
+        }],
+        ..creature("Drider", cost(&[generic(4), b()]), vec![CreatureType::Elf, CreatureType::Spider], 4, 3)
+    }
+}
+
+/// Hatchery Spider — {5}{G}{G} 5/7 reach. Undergrowth: casting it reveals
+/// the top X (creature cards in your graveyard); a green permanent card of
+/// mana value X or less may enter, the rest go to the bottom at random.
+pub fn hatchery_spider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::WithX {
+            x: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+            body: Box::new(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                pick_filter: Some(R::PermanentCard.and(R::HasColor(Color::Green)).and(R::ManaValueAtMostXFromCost)),
+                to_battlefield: true,
+                optional: true,
+                rest_bottom_random: true,
+                ..Default::default()
+            }))),
+        })],
+        ..creature("Hatchery Spider", cost(&[generic(5), g(), g()]), vec![CreatureType::Spider], 5, 7)
+    }
+}
+
+/// Obelisk Spider — {1}{B}{G} 1/4 reach. Its combat damage to a creature adds
+/// a -1/-1 counter; each -1/-1 placement of yours drains each opponent 1.
+pub fn obelisk_spider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+                effect: Effect::AddCounter { what: Selector::Target(0), kind: CounterType::MinusOneMinusOne, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CounterAdded(CounterType::MinusOneMinusOne), EventScope::YouPutCounters)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                    Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                ]),
+            },
+        ],
+        ..creature("Obelisk Spider", cost(&[generic(1), b(), g()]), vec![CreatureType::Spider], 1, 4)
+    }
+}
+
+/// Rotwidow Pack — {2}{B}{G} 2/4 reach. {3}{B}{G}, exile a creature card from
+/// your graveyard: a 1/2 reach Spider, then each opponent loses 1 per Spider
+/// you control.
+pub fn rotwidow_pack() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b(), g()]),
+            exile_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                make(spider_token(1, 2, Color::Green, false), 1),
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::PermanentCountControlledByMatching(PlayerRef::You, R::Creature.and(spider())),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Rotwidow Pack", cost(&[generic(2), b(), g()]), vec![CreatureType::Spider], 2, 4)
+    }
+}
+
+/// Ruins Recluse — {1}{G} 1/1 reach, deathtouch; {3}{G}: a +1/+1 counter.
+pub fn ruins_recluse() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Ruins Recluse", cost(&[generic(1), g()]), vec![CreatureType::Spider], 1, 1)
+    }
+}
+
+/// Watcher in the Web — {4}{G} 2/5 reach; blocks up to eight creatures.
+pub fn watcher_in_the_web() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::CanBlockAdditional(7)],
+        ..creature("Watcher in the Web", cost(&[generic(4), g()]), vec![CreatureType::Spider], 2, 5)
+    }
+}
+
+/// Arachnus Web — {2}{G} Aura: the creature can't attack, block or activate
+/// abilities; at the beginning of the end step, with power 4 or greater it
+/// breaks free (destroy this).
+pub fn arachnus_web() -> CardDefinition {
+    CardDefinition {
+        name: "Arachnus Web",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    filter: R::PowerAtLeast(4),
+                },
+            ),
+            effect: Effect::Destroy { what: Selector::This },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Supper for Spiders — {1}{B} instant. Every creature card put into an
+/// opponent's graveyard from the battlefield this turn returns under your
+/// control as a Food artifact.
+pub fn supper_for_spiders() -> CardDefinition {
+    spell(
+        "Supper for Spiders",
+        cost(&[generic(1), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::EachMatching {
+                    zone: crate::effect::ZoneRef::Graveyard(PlayerRef::EachOpponent),
+                    filter: R::Creature.and(R::PutIntoGraveyardFromBattlefieldThisTurn),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::BecomeFoodArtifact { what: Selector::LastMoved },
+        ]),
+    )
+}
+
+/// Lolth, Spider Queen — {3}{B}{B} planeswalker, loyalty 4. A creature of
+/// yours dying adds loyalty. 0: draw, lose 1. −3: two 2/1 reach, menace
+/// Spiders. −8: an emblem tops each opponent you hit in combat up to 8 life
+/// lost this turn.
+pub fn lolth_spider_queen() -> CardDefinition {
+    let ability = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let lost = || Value::LifeLostThisTurn(PlayerRef::TriggerEventPlayer);
+    CardDefinition {
+        name: "Lolth, Spider Queen",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Lolth], ..Default::default() },
+        base_loyalty: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Loyalty, amount: Value::ONE },
+        }],
+        loyalty_abilities: vec![
+            ability(
+                0,
+                Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                ]),
+            ),
+            ability(-3, make(spider_token(2, 1, Color::Black, true), 2)),
+            ability(
+                -8,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Lolth, Spider Queen".into(),
+                    triggered: vec![TriggeredAbility {
+                        // CR 603.4 — the intervening "if" is rechecked on
+                        // resolution, so a second hit's trigger does nothing.
+                        event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourCreatureCombatDamagedOpponent)
+                            .with_filter(Predicate::Not(Box::new(Predicate::ValueAtLeast(lost(), Value::Const(8))))),
+                        effect: Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                            amount: Value::NonNeg(Box::new(Value::Diff(Box::new(Value::Const(8)), Box::new(lost())))),
+                        },
+                    }],
+                    statics: vec![],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Roar of Challenge — {2}{G} sorcery. Every creature able to block the
+/// target does; ferocious: it's indestructible too.
+pub fn roar_of_challenge() -> CardDefinition {
+    spell(
+        "Roar of Challenge",
+        cost(&[generic(2), g()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::GrantKeyword { what: target_filtered(R::Creature), keyword: Keyword::AllMustBlock, duration: Duration::EndOfTurn },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(yours(R::Creature.and(R::PowerAtLeast(4))))),
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
 }
