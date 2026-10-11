@@ -11589,3 +11589,32 @@ pub const SAURON_DARK_LORD_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SARUMAN_WHITE_HAND_COMMANDERS: &[CardFactory] = &[saruman_the_white_hand];
+
+/// **Saruman, the White Hand**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 83 nonbasic cards + 6 Islands + 6 Mountains + 4 Swamps = 99.
+/// Saruman, the White Hand (UBR) noncreature spells and Orc Armies
+pub const SARUMAN_WHITE_HAND_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, dimir_signet, izzet_signet, mind_stone, relic_of_sauron,
+    sol_ring, talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence,
+    wizards_staff, barad_dur, choked_estuary, command_tower, crumbling_necropolis,
+    dragonskull_summit, drowned_catacomb, evolving_wilds, exotic_orchard, foreboding_ruins,
+    frostboil_snarl, path_of_ancestry, rogues_passage, smoldering_marsh, sulfur_falls,
+    sulfurous_springs, sunken_hollow, the_black_gate, underground_river, watery_grave,
+    archmage_emeritus, bothersome_noisemaker, corsairs_of_umbar, goblin_electromancer,
+    gothmog_morgul_lieutenant, grishnakh_brash_instigator, grima_sarumans_footman, guttersnipe,
+    harmonic_prodigy, mauhur_uruk_hai_captain, orcish_bowmasters, orcish_siegemaster,
+    sauron_the_dark_lord, the_great_goblin, the_mouth_of_sauron, warg_rider, book_of_mazarbul,
+    dreadhorde_invasion, fall_of_cair_andros, fiery_inscription, march_from_the_black_gate,
+    storm_of_saruman, arcane_denial, chaos_warp, consider, counterspell, dark_ritual,
+    fact_or_fiction, flame_of_anor, fling, frantic_search, lazotep_plating, negate,
+    orcish_medicine, sarumans_trickery, souls_fire, thrill_of_possibility,
+    angrath_captain_of_chaos, assault_on_osgiliath, blasphemous_act, chandras_ignition,
+    deep_analysis, faithless_looting, feed_the_swarm, foray_of_orcs, mordor_muster,
+    rage_into_the_valley, reanimate, ringsight, summons_of_saruman, surrounded_by_orcs,
+    treason_of_isengard, widespread_brutality,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp,
+];

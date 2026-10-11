@@ -2832,6 +2832,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAURON_DARK_LORD_COMMANDERS,
             main: decks::SAURON_DARK_LORD_MAIN,
         },
+        // Seat 397: Saruman, the White Hand's EDHREC average deck. `--pod-decks 397`.
+        PodDeck {
+            name: "Saruman, the White Hand (UBR)",
+            commanders: decks::SARUMAN_WHITE_HAND_COMMANDERS,
+            main: decks::SARUMAN_WHITE_HAND_MAIN,
+        },
     ]
 }
 
@@ -4985,6 +4991,7 @@ mod tests {
             ("Norman Osborn", [0x0AB0, 394, 9319]),
             ("Reaper King", [0x0AB1, 395, 9320]),
             ("Sauron, the Dark Lord", [0x0AB2, 396, 9321]),
+            ("Saruman, the White Hand", [0x0AB3, 397, 9322]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
