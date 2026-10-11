@@ -695,6 +695,22 @@ fn yurlok_burns_unspent_mana_and_horizon_stone_spares_it() {
     assert_eq!(g.players[2].mana_pool.total(), 3);
 }
 
+/// CR 704.3 — a seat Yurlok's mana burn takes to 0 loses before anyone gets
+/// priority, even when the loss triggered something (Valgavoth): that path
+/// handed priority out unswept (audit pod seed 192001, an Apex of Power's ten).
+#[test]
+fn yurlok_burn_to_zero_loses_before_priority() {
+    let mut g = pod(3);
+    ready(&mut g, 1, catalog::yurlok_of_scorch_thrash());
+    ready(&mut g, 2, catalog::valgavoth_harrower_of_souls());
+    g.players[0].life = 3;
+    g.players[0].mana_pool.add(Color::Red, 3);
+    for _ in 0..3 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(!g.players[0].is_alive(), "burned to 0, the seat is out");
+}
+
 /// Rug of Smothering: the third spell in a turn costs its caster 3 life.
 #[test]
 fn rug_of_smothering_taxes_each_spell() {

@@ -35,6 +35,11 @@ impl GameState {
                 events.append(&mut evs);
             }
         }
+        // CR 704.3 — a seat the burn took to 0 loses before anyone gets
+        // priority: the step-advance path hands priority straight out when
+        // the loss triggered something (Valgavoth), so it never swept (an
+        // Apex of Power's unspent ten, eight-seat audit pod seed 192001).
+        self.check_state_based_actions_into(&mut events);
         self.dispatch_triggers_for_events(&events);
     }
 }
