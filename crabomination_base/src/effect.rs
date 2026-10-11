@@ -7268,6 +7268,10 @@ pub enum Effect {
     /// through step and phase ends until cleanup, restricted to spells
     /// ("Spend this mana only to cast spells" — `SpendRestriction::SpellsOnly`).
     AddManaKeptThisTurnAnyColors { who: PlayerRef, amount: Value },
+    /// `amount` pips in any combination of `colors`, each chosen per pip,
+    /// kept through step and phase ends until cleanup, spent freely (Grand
+    /// Warlord Radha's "any combination of {R} and/or {G}").
+    AddManaKeptThisTurnOfColors { who: PlayerRef, colors: Vec<Color>, amount: Value },
     /// "Add that much mana of any one color. Until end of turn, you don't lose
     /// this mana as steps and phases end" (Photon, Mighty Marvel).
     AddManaKeptThisTurnAnyOneColor { who: PlayerRef, amount: Value },

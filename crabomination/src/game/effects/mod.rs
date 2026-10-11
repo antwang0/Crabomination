@@ -13438,6 +13438,9 @@ impl GameState {
             Effect::AddManaKeptThisTurnAnyColors { who, amount } => {
                 self.add_mana_kept_this_turn_any_colors(who, amount, ctx, events)
             }
+            Effect::AddManaKeptThisTurnOfColors { who, colors, amount } => {
+                self.add_mana_kept_this_turn_of_colors(who, colors, amount, ctx, events)
+            }
             Effect::AddManaKeptThisTurnAnyOneColor { who, amount } => {
                 self.add_mana_kept_this_turn_any_one_color(who, amount, ctx, events)
             }

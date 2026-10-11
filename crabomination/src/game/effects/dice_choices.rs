@@ -177,6 +177,31 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::AddManaKeptThisTurnOfColors` (Grand Warlord Radha): each pip
+    /// a color from `colors`, chosen per pip, unrestricted.
+    pub(super) fn add_mana_kept_this_turn_of_colors(
+        &mut self,
+        who: &PlayerRef,
+        colors: &[Color],
+        amount: &Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+        if colors.is_empty() {
+            return Ok(());
+        }
+        let n = self.evaluate_value(amount, ctx).max(0) as u32;
+        let mult = self.mana_production_multiplier.max(1);
+        for _ in 0..(n * mult) {
+            let color = self.chosen_mana_color(p, colors, ctx.source);
+            self.players[p].mana_pool.add(color, 1);
+            self.players[p].kept_mana_this_turn.add(color, 1);
+            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+        }
+        Ok(())
+    }
+
     pub(super) fn add_colorless_kept_this_turn(
         &mut self,
         who: &PlayerRef,

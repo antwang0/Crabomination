@@ -1840,6 +1840,7 @@ impl Effect {
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. }
             | Effect::AddManaKeptThisTurnAnyColors { who, .. }
+            | Effect::AddManaKeptThisTurnOfColors { who, .. }
             | Effect::AddManaKeptThisTurnAnyOneColor { who, .. }
             | Effect::AddColorlessKeptThisTurn { who, .. }
             | Effect::CommanderToHand { who }
