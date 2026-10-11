@@ -1441,8 +1441,8 @@ fn hexing_squelcher_grants_life_ward_to_your_other_creatures() {
 #[test]
 fn blank_goblin_name_sticker_names_it_and_adds_red_per_unique_vowel() {
     let mut g = c_main(2);
-    // Stand-in sheets 0-2: Wobbly Audacious Grim / Eerie Fabulous Spry /
-    // Quizzical Bold Tiny.
+    // Sheets 0-2: Eldrazi Guacamole Tightrope / Trendy Circus Pirate /
+    // Night Brushwagg Ringmaster.
     g.set_sticker_sheets(0, [0, 1, 2]);
     let cast_goblin = |g: &mut GameState| {
         let id = g.add_card_to_hand(0, catalog::blank_goblin());
@@ -1456,19 +1456,25 @@ fn blank_goblin_name_sticker_names_it_and_adds_red_per_unique_vowel() {
 
     // The auto decider takes the ballot's first (richest) sticker.
     let (first, name, red) = cast_goblin(&mut g);
-    assert_eq!((name, red), ("Audacious Goblin", 4), "A U I O");
+    assert_eq!((name, red), ("Guacamole Goblin", 4), "U A O E");
     let cp = g.computed_permanent(first).unwrap();
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Guest), "Goblin Guest");
     assert_eq!((cp.power, cp.toughness), (2, 2));
 
-    // Audacious is on an object seat 0 owns, so it's gone from the ballot.
+    // Guacamole is on an object seat 0 owns, so it's gone from the ballot.
     let (_, name, red) = cast_goblin(&mut g);
-    assert_eq!((name, red), ("Fabulous Goblin", 3), "the best sticker left");
+    assert_eq!((name, red), ("Eldrazi Goblin", 3), "the best sticker left");
 
     // "No sticker" is the ballot's last entry.
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(99)]));
     let (_, name, red) = cast_goblin(&mut g);
     assert_eq!((name, red), ("_____ Goblin", 0), "declined: no name, no mana");
+
+    // CR 123.6b — the controller places the word: after "Goblin" leaves the
+    // blank (not a word, CR 123.6a) in the name, and the mana is the same.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(0), DecisionAnswer::Amount(1)]));
+    let (_, name, red) = cast_goblin(&mut g);
+    assert_eq!((name, red), ("_____ Goblin Tightrope", 3));
 }
 
 // ── Lands ───────────────────────────────────────────────────────────────────

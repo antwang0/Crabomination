@@ -381,8 +381,8 @@ fn cr_123_name_sticker_renames_is_exclusive_and_comes_off_in_a_hidden_zone() {
     use crabomination::game::*;
 
     let mut g = two_player_game();
-    // Stand-in sheets 0-2: Wobbly Audacious Grim / Eerie Fabulous Spry /
-    // Quizzical Bold Tiny. Audacious (4 unique vowels) is id 1.
+    // Sheets 0-2: Eldrazi Guacamole Tightrope / Trendy Circus Pirate /
+    // Night Brushwagg Ringmaster. Guacamole (4 unique vowels) is id 1.
     g.set_sticker_sheets(0, [0, 1, 2]);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -395,7 +395,7 @@ fn cr_123_name_sticker_renames_is_exclusive_and_comes_off_in_a_hidden_zone() {
     let name = |g: &GameState, id: CardId| g.find_card_anywhere(id).unwrap().definition.name;
 
     sticker(&mut g, bear);
-    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+    assert_eq!(name(&g, bear), "Grizzly Bears Guacamole");
     assert!(!g.available_name_stickers(0).contains(&1), "a used sticker is taken");
     assert_eq!(g.available_name_stickers(0).len(), 8);
 
@@ -407,11 +407,11 @@ fn cr_123_name_sticker_renames_is_exclusive_and_comes_off_in_a_hidden_zone() {
     let ctx = EffectContext::for_spell(0, None, 0, 0);
     let mut events = Vec::new();
     g.move_card_to(bear, &ZoneDest::Graveyard, &ctx, &mut events);
-    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+    assert_eq!(name(&g, bear), "Grizzly Bears Guacamole");
     let card = g.find_card_anywhere(bear).unwrap().clone();
     let back: CardInstance =
         serde_json::from_str(&serde_json::to_string(&card).unwrap()).expect("round trip");
-    assert_eq!(back.definition.name, "Grizzly Bears Audacious");
+    assert_eq!(back.definition.name, "Grizzly Bears Guacamole");
     assert_eq!(back.name_stickers, card.name_stickers);
 
     // Hidden zone: the sticker comes off and is free again.
@@ -441,7 +441,7 @@ fn cr_123_1_name_stickers_are_not_copiable_values() {
     g.resolve_effect(&Effect::PutNameSticker { what: Selector::This, optional: false }, &ctx)
         .expect("sticker");
     let name = |g: &GameState, id: CardId| g.find_card_anywhere(id).unwrap().definition.name;
-    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+    assert_eq!(name(&g, bear), "Grizzly Bears Guacamole");
 
     // A new object built from its definition has no sticker.
     let def = (*g.battlefield_find(bear).unwrap().definition.arc()).clone();
@@ -481,8 +481,8 @@ fn cr_123_1_name_stickers_are_not_copiable_values() {
         &become_ctx,
     )
     .expect("become a copy");
-    assert_eq!(name(&g, bear), "Llanowar Elves Audacious");
+    assert_eq!(name(&g, bear), "Llanowar Elves Guacamole");
     let mut events = Vec::new();
     g.do_cleanup(&mut events);
-    assert_eq!(name(&g, bear), "Grizzly Bears Audacious");
+    assert_eq!(name(&g, bear), "Grizzly Bears Guacamole");
 }

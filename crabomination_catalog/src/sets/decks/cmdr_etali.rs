@@ -5,9 +5,6 @@
 //! Residuals (approximated or omitted clauses; each card's doc has the detail):
 //! - Hunting Velociraptor: a Dinosaur with a printed alternative cost keeps
 //!   that one instead of the granted prowl (a card carries one alt cost).
-//! - _____ Goblin: the name stickers are the engine's stand-in sheets (not
-//!   Unfinity's printed inserts), drawn lazily; the sticker's position in the
-//!   name is not offered (it fills the blank).
 //! - Passionate Archaeologist: gated on your controlling your own commander,
 //!   its trigger is printed on the Background (it deals the damage, once,
 //!   however many commanders you have).
@@ -1630,14 +1627,10 @@ pub fn hexing_squelcher() -> CardDefinition {
 /// that sticker. (The vowels are A, E, I, O, U, and Y.)
 ///
 /// `Effect::PutNameSticker` (CR 123.3/123.6): the ballot is the controller's
-/// unused name stickers, richest first, plus "No sticker"; the chosen word
-/// fills the blank ("Audacious Goblin") and the sticker stays taken while the
-/// card is in a public zone. The mana reads `Value::NameStickerUniqueVowels`,
-/// 0 when no sticker went on.
-///
-/// Approximations: the sticker sheets are the engine's stand-in collection
-/// (`sticker::DEFAULT_STICKER_SHEETS`), and the name position isn't offered —
-/// the sticker always fills the blank.
+/// unused name stickers off their three Unfinity sheets, richest first, plus
+/// "No sticker"; then where the word goes (the blank first, "Guacamole
+/// Goblin"). The sticker stays taken while the card is in a public zone. The
+/// mana reads `Value::NameStickerUniqueVowels`, 0 when no sticker went on.
 pub fn blank_goblin() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![

@@ -8,35 +8,74 @@
 //! sticker on something, so a game without sticker cards stores and pays
 //! nothing.
 //!
-//! ⚠ **The sheet contents are a STAND-IN, not Unfinity's printed sheets.**
-//! The real inserts (CR 123.2 — listed on Gatherer) are not reproduced here
-//! because their exact texts could not be verified; the words below are
-//! invented, chosen so their unique-vowel counts (CR 123.6e) span 1-5 like
-//! real name stickers do. Every player brings this same collection
-//! (CR 123.2a's "at least ten, each unique" is not enforced — six sheets).
+//! The sheets are Unfinity's 48 printed inserts (Scryfall set `sunf`); a
+//! sheet's name is its three name stickers. Every seat brings all 48 (CR
+//! 123.2a's "at least ten, each unique") and draws three at random.
 
-/// One sticker sheet: its (stand-in) name and the name stickers on it.
+/// One sticker sheet: its name and the name stickers on it.
 #[derive(Debug, Clone, Copy)]
 pub struct StickerSheet {
     pub name: &'static str,
     pub name_stickers: [&'static str; NAME_STICKERS_PER_SHEET],
 }
 
-/// Name stickers per sheet in the stand-in collection.
+/// Name stickers per Unfinity sheet.
 pub const NAME_STICKERS_PER_SHEET: usize = 3;
 
 /// CR 123.2c — a player has access to the stickers on this many sheets.
 pub const SHEETS_PER_PLAYER: usize = 3;
 
-/// The default sticker-sheet collection every player brings (STAND-IN — see
-/// the module doc). Index = sheet id.
+/// The sticker-sheet collection every player brings: the Unfinity inserts,
+/// in collector-number order. Index = sheet id.
 pub const DEFAULT_STICKER_SHEETS: &[StickerSheet] = &[
-    StickerSheet { name: "Stand-in Sheet A", name_stickers: ["Wobbly", "Audacious", "Grim"] },
-    StickerSheet { name: "Stand-in Sheet B", name_stickers: ["Eerie", "Fabulous", "Spry"] },
-    StickerSheet { name: "Stand-in Sheet C", name_stickers: ["Quizzical", "Bold", "Tiny"] },
-    StickerSheet { name: "Stand-in Sheet D", name_stickers: ["Rowdy", "Enormous", "Crisp"] },
-    StickerSheet { name: "Stand-in Sheet E", name_stickers: ["Mysterious", "Sly", "Dapper"] },
-    StickerSheet { name: "Stand-in Sheet F", name_stickers: ["Hilarious", "Gnarly", "Plump"] },
+    StickerSheet { name: "Eldrazi Guacamole Tightrope", name_stickers: ["Eldrazi", "Guacamole", "Tightrope"] },
+    StickerSheet { name: "Trendy Circus Pirate", name_stickers: ["Trendy", "Circus", "Pirate"] },
+    StickerSheet { name: "Night Brushwagg Ringmaster", name_stickers: ["Night", "Brushwagg", "Ringmaster"] },
+    StickerSheet { name: "Urza's Dark Cannonball", name_stickers: ["Urza's", "Dark", "Cannonball"] },
+    StickerSheet { name: "Misunderstood Trapeze Elf", name_stickers: ["Misunderstood", "Trapeze", "Elf"] },
+    StickerSheet { name: "Zombie Cheese Magician", name_stickers: ["Zombie", "Cheese", "Magician"] },
+    StickerSheet { name: "Carnival Elephant Meteor", name_stickers: ["Carnival", "Elephant", "Meteor"] },
+    StickerSheet { name: "Happy Dead Squirrel", name_stickers: ["Happy", "Dead", "Squirrel"] },
+    StickerSheet { name: "Slimy Burrito Illusion", name_stickers: ["Slimy", "Burrito", "Illusion"] },
+    StickerSheet { name: "Spooky Clown Mox", name_stickers: ["Spooky", "Clown", "Mox"] },
+    StickerSheet { name: "Mystic Doom Sandwich", name_stickers: ["Mystic", "Doom", "Sandwich"] },
+    StickerSheet { name: "Narrow-Minded Baloney Fireworks", name_stickers: ["Narrow-Minded", "Baloney", "Fireworks"] },
+    StickerSheet { name: "Unsanctioned Ancient Juggler", name_stickers: ["Unsanctioned", "Ancient", "Juggler"] },
+    StickerSheet { name: "Deep-Fried Plague Myr", name_stickers: ["Deep-Fried", "Plague", "Myr"] },
+    StickerSheet { name: "Contortionist Otter Storm", name_stickers: ["Contortionist", "Otter", "Storm"] },
+    StickerSheet { name: "Sticky Kavu Daredevil", name_stickers: ["Sticky", "Kavu", "Daredevil"] },
+    StickerSheet { name: "Goblin Coward Parade", name_stickers: ["Goblin", "Coward", "Parade"] },
+    StickerSheet { name: "Phyrexian Midway Bamboozle", name_stickers: ["Phyrexian", "Midway", "Bamboozle"] },
+    StickerSheet { name: "Eternal Acrobat Toast", name_stickers: ["Eternal", "Acrobat", "Toast"] },
+    StickerSheet { name: "Jetpack Death Seltzer", name_stickers: ["Jetpack", "Death", "Seltzer"] },
+    StickerSheet { name: "Demonic Tourist Laser", name_stickers: ["Demonic", "Tourist", "Laser"] },
+    StickerSheet { name: "Cursed Firebreathing Yogurt", name_stickers: ["Cursed", "Firebreathing", "Yogurt"] },
+    StickerSheet { name: "Ancestral Hot Dog Minotaur", name_stickers: ["Ancestral", "Hot Dog", "Minotaur"] },
+    StickerSheet { name: "Familiar Beeble Mascot", name_stickers: ["Familiar", "Beeble", "Mascot"] },
+    StickerSheet { name: "Giant Mana Cake", name_stickers: ["Giant", "Mana", "Cake"] },
+    StickerSheet { name: "Snazzy Aether Homunculus", name_stickers: ["Snazzy", "Aether", "Homunculus"] },
+    StickerSheet { name: "Squid Fire Knight", name_stickers: ["Squid", "Fire", "Knight"] },
+    StickerSheet { name: "Cool Fluffy Loxodon", name_stickers: ["Cool", "Fluffy", "Loxodon"] },
+    StickerSheet { name: "Space Fungus Snickerdoodle", name_stickers: ["Space", "Fungus", "Snickerdoodle"] },
+    StickerSheet { name: "Playable Delusionary Hydra", name_stickers: ["Playable", "Delusionary", "Hydra"] },
+    StickerSheet { name: "Wrinkly Monkey Shenanigans", name_stickers: ["Wrinkly", "Monkey", "Shenanigans"] },
+    StickerSheet { name: "Geek Lotus Warrior", name_stickers: ["Geek", "Lotus", "Warrior"] },
+    StickerSheet { name: "Primal Elder Kitty", name_stickers: ["Primal", "Elder", "Kitty"] },
+    StickerSheet { name: "Sassy Gremlin Blood", name_stickers: ["Sassy", "Gremlin", "Blood"] },
+    StickerSheet { name: "Yawgmoth Merfolk Soul", name_stickers: ["Yawgmoth", "Merfolk", "Soul"] },
+    StickerSheet { name: "Unassuming Gelatinous Serpent", name_stickers: ["Unassuming", "Gelatinous", "Serpent"] },
+    StickerSheet { name: "Squishy Sphinx Ninja", name_stickers: ["Squishy", "Sphinx", "Ninja"] },
+    StickerSheet { name: "Unique Charmed Pants", name_stickers: ["Unique", "Charmed", "Pants"] },
+    StickerSheet { name: "Unhinged Beast Hunt", name_stickers: ["Unhinged", "Beast", "Hunt"] },
+    StickerSheet { name: "Wild Ogre Bupkis", name_stickers: ["Wild", "Ogre", "Bupkis"] },
+    StickerSheet { name: "Notorious Sliver War", name_stickers: ["Notorious", "Sliver", "War"] },
+    StickerSheet { name: "Weird Angel Flame", name_stickers: ["Weird", "Angel", "Flame"] },
+    StickerSheet { name: "Vampire Champion Fury", name_stickers: ["Vampire", "Champion", "Fury"] },
+    StickerSheet { name: "Trained Blessed Mind", name_stickers: ["Trained", "Blessed", "Mind"] },
+    StickerSheet { name: "Unglued Pea-Brained Dinosaur", name_stickers: ["Unglued", "Pea-Brained", "Dinosaur"] },
+    StickerSheet { name: "Elemental Time Flamingo", name_stickers: ["Elemental", "Time", "Flamingo"] },
+    StickerSheet { name: "Unstable Robot Dragon", name_stickers: ["Unstable", "Robot", "Dragon"] },
+    StickerSheet { name: "Werewolf Lightning Mage", name_stickers: ["Werewolf", "Lightning", "Mage"] },
 ];
 
 /// A name sticker's identity: `sheet * NAME_STICKERS_PER_SHEET + slot`.
@@ -116,10 +155,12 @@ pub fn stickered_name(printed: &str, stickers: &[(NameStickerId, u8)]) -> String
                 real += 1;
             }
         }
+        // CR 123.6a — a multi-word sticker ("Hot Dog") adds that many words.
         if words.get(at).is_some_and(|w| is_blank(w)) {
-            words[at] = text;
-        } else {
-            words.insert(at, text);
+            words.remove(at);
+        }
+        for (k, w) in text.split_whitespace().enumerate() {
+            words.insert(at + k, w);
         }
     }
     words.join(" ")
@@ -139,13 +180,23 @@ mod tests {
 
     #[test]
     fn a_sticker_fills_the_blank_else_goes_where_placed() {
-        // "Wobbly" is sticker 0, "Grim" is sticker 2.
+        // "Eldrazi" is sticker 0, "Tightrope" is sticker 2.
         let pos = default_name_sticker_position("_____ Goblin");
         assert_eq!(pos, 0);
-        assert_eq!(stickered_name("_____ Goblin", &[(0, pos)]), "Wobbly Goblin");
+        assert_eq!(stickered_name("_____ Goblin", &[(0, pos)]), "Eldrazi Goblin");
         assert_eq!(default_name_sticker_position("Bear Cub"), 2);
-        assert_eq!(stickered_name("Bear Cub", &[(2, 2)]), "Bear Cub Grim");
-        assert_eq!(stickered_name("Bear Cub", &[(2, 1)]), "Bear Grim Cub");
-        assert_eq!(stickered_name("Bear Cub", &[(2, 9)]), "Bear Cub Grim");
+        assert_eq!(stickered_name("Bear Cub", &[(2, 2)]), "Bear Cub Tightrope");
+        assert_eq!(stickered_name("Bear Cub", &[(2, 1)]), "Bear Tightrope Cub");
+        assert_eq!(stickered_name("Bear Cub", &[(2, 9)]), "Bear Cub Tightrope");
+    }
+
+    /// CR 123.6a — "Hot Dog" is two words: it fills a blank as two, and a
+    /// later sticker placed after one word lands between them.
+    #[test]
+    fn a_two_word_sticker_counts_as_two_words() {
+        let hot_dog = 22 * NAME_STICKERS_PER_SHEET as NameStickerId + 1;
+        assert_eq!(name_sticker_text(hot_dog), "Hot Dog");
+        assert_eq!(stickered_name("_____ Goblin", &[(hot_dog, 0)]), "Hot Dog Goblin");
+        assert_eq!(stickered_name("_____ Goblin", &[(hot_dog, 0), (0, 1)]), "Hot Eldrazi Dog Goblin");
     }
 }

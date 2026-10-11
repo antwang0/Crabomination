@@ -5099,11 +5099,45 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
+                let Some(&sticker) = stickers.get(idx) else {
+                    self.clear_answer_log();
+                    return Ok(());
+                };
+                // CR 123.6b — the controller picks where the word goes: the
+                // start or after any number of the name's words. The blank (or
+                // the end) is offered first, so a first-option decider fills it.
+                let Some(name) = self.find_card_anywhere(obj).map(|c| c.definition.name) else {
+                    self.clear_answer_log();
+                    return Ok(());
+                };
+                let default = crate::sticker::default_name_sticker_position(name);
+                let words = name.split_whitespace().filter(|w| !w.chars().all(|c| c == '_')).count() as u8;
+                let mut spots: Vec<u8> = std::iter::once(default).chain((0..=words).filter(|&p| p != default)).collect();
+                if spots.len() > 1 {
+                    let base: Vec<(crate::sticker::NameStickerId, u8)> =
+                        self.find_card_anywhere(obj).map(|c| c.name_stickers.clone()).unwrap_or_default();
+                    let printed = self
+                        .find_card_anywhere(obj)
+                        .and_then(|c| c.definition.unstickered_name)
+                        .unwrap_or(name);
+                    let labels: Vec<String> = spots
+                        .iter()
+                        .map(|&p| {
+                            let mut all = base.clone();
+                            all.push((sticker, p));
+                            crate::sticker::stickered_name(printed, &all)
+                        })
+                        .collect();
+                    let Some(pick) =
+                        self.ask_seat_option(&mut cursor, seat, "Where does the sticker go?".to_string(), ctx.source.unwrap_or(obj), labels, effect)
+                    else {
+                        return Ok(());
+                    };
+                    spots = vec![spots.get(pick).copied().unwrap_or(default)];
+                }
                 self.clear_answer_log();
-                let Some(&sticker) = stickers.get(idx) else { return Ok(()) };
                 if let Some(c) = self.find_card_anywhere_mut(obj) {
-                    let pos = crate::sticker::default_name_sticker_position(c.definition.name);
-                    c.put_name_sticker(sticker, pos);
+                    c.put_name_sticker(sticker, spots[0]);
                     self.last_name_sticker_vowels = crate::sticker::unique_vowels(
                         crate::sticker::name_sticker_text(sticker),
                     ) as u8;
