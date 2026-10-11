@@ -3069,8 +3069,8 @@ pub fn the_earth_king() -> CardDefinition {
 }
 
 /// The Lion-Turtle — {1}{G}{U} 3/6 legendary Cat Turtle. Vigilance, reach. When
-/// it enters, gain 3 life. {T}: Add one mana of any color. (The Lesson-gated
-/// attack/block restriction is dropped.)
+/// it enters, gain 3 life. It can't attack or block unless there are three or
+/// more Lesson cards in your graveyard. {T}: Add one mana of any color.
 pub fn the_lion_turtle() -> CardDefinition {
     CardDefinition {
         name: "The Lion-Turtle",
@@ -3088,6 +3088,21 @@ pub fn the_lion_turtle() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(3),
         })],
+        static_abilities: [Keyword::CantAttack, Keyword::CantBlock]
+            .map(|kw| crate::card::StaticAbility {
+                description: "The Lion-Turtle can't attack or block unless there are three or more Lesson cards in your graveyard.",
+                effect: crate::effect::StaticEffect::WhileCondition {
+                    condition: Predicate::Not(Box::new(Predicate::ValueAtLeast(
+                        Value::CardsInGraveyardMatching {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                        },
+                        Value::Const(3),
+                    ))),
+                    inner: Box::new(crate::effect::StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: kw }),
+                },
+            })
+            .into(),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {

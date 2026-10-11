@@ -105,8 +105,8 @@ pub fn solstice_revelations() -> CardDefinition {
 }
 
 /// White Lotus Hideout — Land. `{T}: Add {C}.` `{T}: Add one mana of any color.
-/// Spend only to cast a Lesson spell.` (The Shrine half is dropped.) `{1}, {T}:
-/// Add one mana of any color.`
+/// Spend only to cast a Lesson or Shrine spell.` `{1}, {T}: Add one mana of any
+/// color.`
 pub fn white_lotus_hideout() -> CardDefinition {
     CardDefinition {
         name: "White Lotus Hideout",
@@ -126,7 +126,7 @@ pub fn white_lotus_hideout() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Restricted(
                         Box::new(ManaPayload::AnyOneColor(Value::ONE)),
-                        SpendRestriction::LessonSpellsOnly,
+                        SpendRestriction::LessonOrShrineSpellsOnly,
                     ),
                 },
                 ..Default::default()

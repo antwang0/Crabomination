@@ -1790,7 +1790,9 @@ fn spells_requiring_two_targets_print_no_optional_target() {
     use crabomination::effect::Effect;
     /// Reviewed: a divided amount needs at least one target (CR 601.2d), so
     /// "divided among any number of targets" plus a target opponent is two.
-    const REVIEWED: &[&str] = &["Fiery Justice"];
+    /// Friendly Rivalry requires its two creatures and makes only the third
+    /// slot (the "up to one other" legend) optional (`OptionalTargets { min: 2 }`).
+    const REVIEWED: &[&str] = &["Fiery Justice", "Friendly Rivalry"];
     let raw = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../scripts/.scryfall_cache.json"))
         .expect(".scryfall_cache.json");
     let cache: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(&raw).expect("JSON object");

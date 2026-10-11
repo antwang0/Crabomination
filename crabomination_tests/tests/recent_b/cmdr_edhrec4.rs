@@ -1774,3 +1774,112 @@ fn flesh_reaver_does_not_retrigger_off_its_controller() {
     // 4 back to its controller, and Spirit Loop's 4 + 4 life.
     assert_eq!(g.players[0].life, me - 4 + 8);
 }
+
+/// Braids, Conjurer Adept: on another player's upkeep, THAT player may put a
+/// creature from their hand onto the battlefield.
+#[test]
+fn braids_lets_the_active_player_deploy() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::braids_conjurer_adept());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(1));
+}
+
+/// Jhoira of the Ghitu suspends an exiled card with four time counters.
+#[test]
+fn jhoira_suspends_from_hand() {
+    let mut g = pod(2);
+    let jhoira = ready(&mut g, 0, catalog::jhoira_of_the_ghitu());
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    flood(&mut g);
+    activate(&mut g, jhoira, 0).expect("exile and suspend");
+    let c = g.exile.iter().find(|c| c.id == angel).expect("exiled");
+    assert_eq!(c.counter_count(CounterType::Time), 4);
+}
+
+/// Rilsa Rael takes the initiative entering, and gives an attacker
+/// deathtouch.
+#[test]
+fn rilsa_rael_initiative_and_deathtouch() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let rilsa = g.add_card_to_hand(0, catalog::rilsa_rael_kingpin());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    cast(&mut g, rilsa);
+    assert_eq!(g.initiative, Some(0));
+    attack_with(&mut g, &[bear]);
+    assert!(has_kw(&g, bear, Keyword::Deathtouch));
+}
+
+/// Court of Locthwain: the monarch exiles an opponent's top card and may cast
+/// it free that turn.
+#[test]
+fn court_of_locthwain_steals_a_free_spell() {
+    let mut g = pod(2);
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    let court = g.add_card_to_hand(0, catalog::court_of_locthwain());
+    flood(&mut g);
+    cast(&mut g, court);
+    assert_eq!(g.monarch, Some(0));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let bear = g.exile.iter().find(|c| c.definition.name == "Grizzly Bears").expect("exiled").id;
+    g.players[0].mana_pool = Default::default();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("free cast from exile");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(0));
+}
+
+/// Court of Vantress: as the monarch, a token copy of another artifact.
+#[test]
+fn court_of_vantress_copies_as_monarch() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::sol_ring());
+    let court = g.add_card_to_hand(0, catalog::court_of_vantress());
+    flood(&mut g);
+    cast(&mut g, court);
+    yes(&mut g, 1);
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Sol Ring"), 2);
+}
+
+/// The Lion-Turtle can't attack or block until three Lessons sit in your
+/// graveyard.
+#[test]
+fn lion_turtle_waits_for_three_lessons() {
+    let mut g = pod(2);
+    let turtle = ready(&mut g, 0, catalog::the_lion_turtle());
+    assert!(has_kw(&g, turtle, Keyword::CantAttack) && has_kw(&g, turtle, Keyword::CantBlock));
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::overwhelming_victory());
+    }
+    assert!(!has_kw(&g, turtle, Keyword::CantAttack) && !has_kw(&g, turtle, Keyword::CantBlock));
+}
+
+/// White Lotus Hideout's restricted mana pays for a Shrine as well as a
+/// Lesson (Honden of Cleansing Fire: {3}{W}).
+#[test]
+fn white_lotus_hideout_funds_a_shrine() {
+    let mut g = pod(2);
+    let hideout = ready(&mut g, 0, catalog::white_lotus_hideout());
+    let honden = g.add_card_to_hand(0, catalog::honden_of_cleansing_fire());
+    {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::White)]));
+    }
+    activate(&mut g, hideout, 1).expect("restricted white");
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, honden);
+    assert!(g.battlefield_find(honden).is_some());
+}

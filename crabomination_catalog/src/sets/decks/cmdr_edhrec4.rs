@@ -2549,7 +2549,10 @@ pub fn the_invincible_iron_man() -> CardDefinition {
                 }),
             },
         }],
-        ..legend("The Invincible Iron Man", cost(&[generic(4), u(), r()]), vec![CreatureType::Human, CreatureType::Hero], 5, 5)
+        // CR 712.8 — a transforming back face has no mana cost; its colours
+        // are its indicator's.
+        color_indicator: vec![Color::Blue, Color::Red],
+        ..legend("The Invincible Iron Man", crate::mana::ManaCost::default(), vec![CreatureType::Human, CreatureType::Hero], 5, 5)
     }
 }
 
@@ -2810,6 +2813,185 @@ pub fn modify_memory() -> CardDefinition {
                 b: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::DifferentControllerFromTargetSlot(0)) },
             },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── Obeka, Splitter of Seconds's EDHREC gaps ────────────────────────────────
+
+/// Braids, Conjurer Adept — {2}{U}{U} 2/2. At the beginning of each player's
+/// upkeep, that player may put an artifact, creature, or land card from their
+/// hand onto the battlefield.
+pub fn braids_conjurer_adept() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::ActivePlayer,
+                filter: R::Artifact.or(R::Creature).or(R::Land),
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+                return_eot: false,
+                then: None,
+            },
+        }],
+        ..legend("Braids, Conjurer Adept", cost(&[generic(2), u(), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Jhoira of the Ghitu — {1}{U}{R} 2/2. {2}, exile a nonland card from your
+/// hand: put four time counters on it; it gains suspend if it lacks it.
+pub fn jhoira_of_the_ghitu() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            exile_from_hand_cost: Some(R::Nonland),
+            effect: Effect::GrantSuspend { what: Selector::ExiledForCost, time_counters: 4 },
+            ..Default::default()
+        }],
+        ..legend("Jhoira of the Ghitu", cost(&[generic(1), u(), r()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Rilsa Rael, Kingpin — {3}{U}{B} 2/5 deathtouch. Entering, you take the
+/// initiative. Whenever you attack, target attacking creature gains
+/// deathtouch until end of turn; with a completed dungeon it also gets +5/+0,
+/// first strike and menace.
+pub fn rilsa_rael_kingpin() -> CardDefinition {
+    use crate::effect::shortcut::on_you_attack;
+    let it = || Selector::Target(0);
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            etb(Effect::TakeInitiative { who: PlayerRef::You }),
+            on_you_attack(Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(R::Creature.and(R::IsAttacking)),
+                    keyword: Keyword::Deathtouch,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::DungeonsCompleted, Value::ONE),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::PumpPT { what: it(), power: Value::Const(5), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                        Effect::GrantKeywords {
+                            what: it(),
+                            keywords: vec![Keyword::FirstStrike, Keyword::Menace],
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        ],
+        ..legend("Rilsa Rael, Kingpin", cost(&[generic(3), u(), b()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 5)
+    }
+}
+
+/// Court of Locthwain — {2}{B}{B} Enchantment. Entering, you become the
+/// monarch. At your upkeep, exile the top card of target opponent's library;
+/// you may play it while it stays exiled, spending mana as any type. As the
+/// monarch, until end of turn you may cast a spell from among the cards
+/// exiled with it free.
+pub fn court_of_locthwain() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Court of Locthwain",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            upkeep(Effect::Seq(vec![
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::TopOfLibrary { who: PlayerRef::Target(0), count: Value::ONE },
+                            to: ZoneDest::ExileWithSourceStamp,
+                        },
+                        Effect::GrantMayPlay {
+                            what: Selector::LastMoved,
+                            duration: MayPlayDuration::WhileExiled,
+                            to_owner: false,
+                            exile_after: false,
+                            pay_own_cost: true,
+                            any_color: true,
+                        },
+                    ])),
+                },
+                Effect::If {
+                    cond: Predicate::IsMonarch { who: PlayerRef::You },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::GrantMayPlay {
+                            what: Selector::CardExiledWithSource,
+                            duration: MayPlayDuration::EndOfThisTurn,
+                            to_owner: false,
+                            exile_after: false,
+                            pay_own_cost: false,
+                            any_color: false,
+                        },
+                        Effect::OneCastAmongGranted { what: Selector::CardExiledWithSource },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Court of Vantress — {2}{U}{U} Enchantment. Entering, you become the
+/// monarch. At your upkeep, choose up to one other target enchantment or
+/// artifact: as the monarch you may create a token copy of it; otherwise you
+/// may have this become a copy of it, keeping this ability.
+pub fn court_of_vantress() -> CardDefinition {
+    CardDefinition {
+        name: "Court of Vantress",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            upkeep(Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Enchantment.or(R::Artifact).and(R::OtherThanSource),
+                effect: Box::new(Effect::If {
+                    cond: Predicate::IsMonarch { who: PlayerRef::You },
+                    then: Box::new(Effect::MayDo {
+                        description: "Create a token copy of it?".into(),
+                        body: Box::new(Effect::CreateTokenCopyOf {
+                            extra_keywords: vec![],
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            source: Selector::Target(0),
+                            extra_creature_types: vec![],
+                            extra_card_types: vec![],
+                            override_pt: None,
+                            override_colors: None,
+                            enters_tapped: false,
+                            non_legendary: false,
+                            legendary: false,
+                            no_mana_cost: false,
+                            enters_with_counters: None,
+                            remove_keywords: vec![],
+                        }),
+                    }),
+                    else_: Box::new(Effect::MayDo {
+                        description: "Have Court of Vantress become a copy of it?".into(),
+                        body: Box::new(Effect::BecomeCopyOf {
+                            what: Selector::This,
+                            source: Selector::Target(0),
+                            extra_creature_types: vec![],
+                            keep_own_triggered: true,
+                            keep_own_activated: false,
+                            keep_name: false,
+                        }),
+                    }),
+                }),
+            }),
+        ],
         ..Default::default()
     }
 }
