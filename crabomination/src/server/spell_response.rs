@@ -121,7 +121,7 @@ pub(super) fn pick_substitution_response(state: &GameState, seat: usize, w: &sup
         .filter(|c| c.controller == seat && c.definition.is_creature() && !state.is_commander(c.id))
         .min_by_key(|c| {
             let cp = state.computed_permanent(c.id);
-            (cp.as_ref().map_or(0, |p| p.power + p.toughness), c.definition.cost.cmc(), c.id)
+            (cp.as_ref().map_or(0, |p| p.power.saturating_add(p.toughness)), c.definition.cost.cmc(), c.id)
         })?
         .id;
     state.players[seat]

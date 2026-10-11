@@ -20458,7 +20458,7 @@ impl GameState {
                     }
                 }
                 if total > 0 && let Some(s) = src {
-                    let n = self.scaled_counter_count_on(s, CounterType::PlusOnePlusOne, total * 2);
+                    let n = self.scaled_counter_count_on(s, CounterType::PlusOnePlusOne, total.saturating_mul(2));
                     if let Some(c) = self.battlefield_find_mut(s) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded { card_id: s, counter_type: CounterType::PlusOnePlusOne, count: n, placer: self.resolution_causer });
@@ -32030,7 +32030,7 @@ impl GameState {
                             .iter()
                             .copied()
                             .min_by_key(|id| {
-                                self.computed_permanent(*id).map_or(0, |cp| cp.power + cp.toughness)
+                                self.computed_permanent(*id).map_or(0, |cp| cp.power.saturating_add(cp.toughness))
                             })
                             .expect("non-empty");
                         self.deal_damage_to_from(

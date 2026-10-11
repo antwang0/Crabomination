@@ -11435,7 +11435,7 @@ fn pick_removal_fight(state: &GameState, seat: usize) -> Option<GameAction> {
                 let lives = me_safe
                     || (cp.power < my_left && !cp.keywords().contains(&Keyword::Deathtouch));
                 let score = if kills && lives {
-                    cp.power + cp.toughness
+                    cp.power.saturating_add(cp.toughness)
                 } else if me_safe && redirects && cp.power >= 2 {
                     cp.power
                 } else {
@@ -21370,7 +21370,7 @@ fn target_arm_variants(
         .map(|c| {
             let value = state
                 .computed_permanent(c.id)
-                .map(|cp| cp.power + cp.toughness)
+                .map(|cp| cp.power.saturating_add(cp.toughness))
                 .unwrap_or(c.definition.power + c.definition.toughness);
             (0u8, -value, c.id)
         })

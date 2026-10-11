@@ -34,7 +34,7 @@ pub(super) fn pick_killing_fight(state: &GameState, source: crate::card::CardId,
         let dies = !c.keywords().contains(&crate::card::Keyword::Indestructible)
             && me.power > 0
             && (deathtouch || c.toughness - damage <= me.power);
-        dies.then_some((c.power + c.toughness, t.clone()))
+        dies.then_some((c.power.saturating_add(c.toughness), t.clone()))
     };
     legal
         .iter()
