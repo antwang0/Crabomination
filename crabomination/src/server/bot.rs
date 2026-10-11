@@ -4319,6 +4319,30 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
             return Some(Picked::Probed(action, Box::new(next)));
         }
     }
+    // Pods: a permanent's counterspell ability (Glen Elendra Guardian's
+    // "{1}{U}, remove a counter: counter target noncreature spell") — the
+    // census never saw one activated. Commander games only, so two-player
+    // play is unchanged; `accept` is the gate (filter, cost, counters).
+    if !state.players[seat].commanders.is_empty() {
+        for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+            for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+                if ab.sac_cost || !effect_counters_spells(&ab.effect) {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(spell_id)),
+                    additional_targets: vec![],
+                    x_value: None,
+                    mode: None,
+                };
+                if let Some(next) = state.accept(action.clone()) {
+                    return Some(Picked::Probed(action, Box::new(next)));
+                }
+            }
+        }
+    }
     None
 }
 
@@ -30683,6 +30707,43 @@ mod stack_response_tests {
             pick_stack_response(&g, 0, &w).expect("clogged hand counters").action();
         assert!(
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
+            "got {action:?}"
+        );
+    }
+
+    /// Pods: Glen Elendra Guardian's activated counter answers an opponent's
+    /// Murder aimed at our Serra Angel; outside a pod the seat holds it.
+    #[test]
+    fn a_permanents_counter_ability_answers_a_threat_in_a_pod() {
+        use crate::mana::Color;
+        let mut g = crate::game::multi_player_game(3);
+        let guardian = g.add_card_to_battlefield(0, catalog::glen_elendra_guardian());
+        if let Some(c) = g.battlefield_find_mut(guardian) {
+            c.add_counters(crate::card::CounterType::MinusOneMinusOne, 1);
+        }
+        let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        g.active_player_idx = 1;
+        let murder = g.add_card_to_hand(1, catalog::murder());
+        g.players[1].mana_pool.add(Color::Black, 3);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: murder,
+            target: Some(crate::game::Target::Permanent(angel)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("opponent casts");
+        while g.player_with_priority() != 0 {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        let w = EvalWeights::default();
+        assert!(pick_stack_response(&g, 0, &w).is_none(), "no commander: not a pod seat");
+        g.seat_commanders(0, vec![catalog::grizzly_bears()]);
+        let action = pick_stack_response(&g, 0, &w).expect("the Guardian counters").action();
+        assert!(
+            matches!(action, GameAction::ActivateAbility { card_id, .. } if card_id == guardian),
             "got {action:?}"
         );
     }
