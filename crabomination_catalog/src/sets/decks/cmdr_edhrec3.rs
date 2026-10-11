@@ -4,8 +4,8 @@
 //! Ashvale, Kastral, the Windcrested, Jodah, Archmage Eternal, Child of Alara,
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
-//! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar and Norin. Tests in
-//! `tests/recent_b/cmdr_edhrec3.rs`.
+//! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin and Katara,
+//! the Fearless. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -3185,6 +3185,233 @@ pub fn wheel_of_misfortune() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::WheelOfMisfortune { max: 20 },
+        ..Default::default()
+    }
+}
+
+// ── Katara, the Fearless (GWU) ──────────────────────────────────────────────
+
+fn ally() -> TokenDefinition {
+    TokenDefinition {
+        name: "Ally".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ally], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+fn yours(filter: R) -> Selector {
+    Selector::EachPermanent(filter.and(R::ControlledByYou))
+}
+
+/// Aang and Katara — {3}{G}{W}{U} 5/5 legendary Human Avatar Ally. Whenever
+/// they enter or attack, create X 1/1 white Ally tokens, X = the tapped
+/// artifacts and/or creatures you control (counted on resolution).
+pub fn aang_and_katara() -> CardDefinition {
+    let allies = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::CountOf(Box::new(yours(R::Tapped.and(R::Artifact.or(R::Creature))))),
+        definition: Arc::new(ally()),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(allies()),
+            TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource), effect: allies() },
+        ],
+        ..legend(
+            "Aang and Katara",
+            cost(&[generic(3), g(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Avatar, CreatureType::Ally],
+            5,
+            5,
+        )
+    }
+}
+
+/// Aang, Swift Savior // Aang and La, Ocean's Fury — flash, flying; ETB airbend
+/// up to one other target creature or spell; Waterbend {8}: transform. The
+/// back is a 5/5 reach, trample Avatar Spirit Ally whose attack puts a +1/+1
+/// counter on each tapped creature you control.
+pub fn aang_swift_savior() -> CardDefinition {
+    let la = CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        color_indicator: vec![Color::White, Color::Blue],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: yours(R::Creature.and(R::Tapped)),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..legend(
+            "Aang and La, Ocean's Fury",
+            crate::mana::ManaCost::default(),
+            vec![CreatureType::Avatar, CreatureType::Spirit, CreatureType::Ally],
+            5,
+            5,
+        )
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: R::Creature.and(R::OtherThanSource).or(R::IsSpellOnStack),
+            effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            waterbend: true,
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(la)),
+        ..legend(
+            "Aang, Swift Savior",
+            cost(&[generic(1), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Avatar, CreatureType::Ally],
+            2,
+            3,
+        )
+    }
+}
+
+/// Aang, at the Crossroads // Aang, Destined Savior — flying; ETB look at the
+/// top five, you may put a creature card with mana value 4 or less onto the
+/// battlefield, the rest on the bottom in a random order; another creature of
+/// yours leaving transforms him at the beginning of the next upkeep. The back
+/// gives land creatures you control vigilance and earthbends 2 at the
+/// beginning of combat on your turn.
+pub fn aang_at_the_crossroads() -> CardDefinition {
+    let destined = CardDefinition {
+        keywords: vec![Keyword::Flying],
+        color_indicator: vec![Color::White, Color::Blue, Color::Green],
+        static_abilities: vec![StaticAbility {
+            description: "Land creatures you control have vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: yours(R::Land.and(R::Creature)),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Earthbend { n: Value::Const(2) },
+        }],
+        ..legend(
+            "Aang, Destined Savior",
+            crate::mana::ManaCost::default(),
+            vec![CreatureType::Avatar, CreatureType::Ally],
+            4,
+            4,
+        )
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                count: Value::Const(5),
+                pick_filter: Some(R::Creature.and(R::ManaValueAtMost(4))),
+                to_battlefield: true,
+                optional: true,
+                rest_bottom_random: true,
+                ..Default::default()
+            }))),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::OtherThanSource) },
+                ),
+                effect: Effect::AtNextTurnsUpkeep { body: Box::new(Effect::Transform { what: Selector::This }) },
+            },
+        ],
+        back_face: Some(Box::new(destined)),
+        ..legend(
+            "Aang, at the Crossroads",
+            cost(&[generic(2), g(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Avatar, CreatureType::Ally],
+            3,
+            3,
+        )
+    }
+}
+
+/// Appa, the Vigilant — {5}{W}{W} 6/6 legendary Bison Ally. Flying,
+/// vigilance. Whenever Appa or another Ally you control enters, creatures you
+/// control get +1/+1 and gain flying and vigilance until end of turn.
+pub fn appa_the_vigilant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Ally) },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: yours(R::Creature),
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword { what: yours(R::Creature), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: yours(R::Creature), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..legend("Appa, the Vigilant", cost(&[generic(5), w(), w()]), vec![CreatureType::Bison, CreatureType::Ally], 6, 6)
+    }
+}
+
+/// Tale of Katara and Toph — {2}{G} Enchantment. Creatures you control have
+/// "Whenever this creature becomes tapped for the first time during each of
+/// your turns, put a +1/+1 counter on it."
+pub fn tale_of_katara_and_toph() -> CardDefinition {
+    CardDefinition {
+        name: "Tale of Katara and Toph",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have \"Whenever this creature becomes tapped for the first time \
+                          during each of your turns, put a +1/+1 counter on it.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::ControlledByYou),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource).with_filter(Predicate::All(vec![
+                        Predicate::IsTurnOf(PlayerRef::You),
+                        Predicate::TriggerSourceFirstTappedThisTurn,
+                    ])),
+                    effect: Effect::AddCounter {
+                        what: Selector::This,
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tale of Momo — {2}{W} Sorcery. Costs {2} less if a creature left the
+/// battlefield under your control this turn. Search your library and/or
+/// graveyard for an Ally creature card, reveal it, put it into your hand
+/// (shuffling if the library was searched).
+pub fn tale_of_momo() -> CardDefinition {
+    CardDefinition {
+        name: "Tale of Momo",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        self_cost_reduction_if: Some((Predicate::CreatureLeftBattlefieldThisTurn { who: PlayerRef::You }, 2)),
+        effect: Effect::SearchZones {
+            who: PlayerRef::You,
+            zones: vec![crate::card::Zone::Library, crate::card::Zone::Graveyard],
+            filter: R::Creature.and(R::HasCreatureType(CreatureType::Ally)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
         ..Default::default()
     }
 }

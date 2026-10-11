@@ -2202,3 +2202,160 @@ fn wheel_of_misfortune_wheels_the_high_pickers() {
     assert_eq!(g.players[0].hand.len(), 7);
     assert_eq!(g.players[1].hand.len(), 1);
 }
+
+// ── Katara, the Fearless's list ─────────────────────────────────────────────
+
+fn cast_on(g: &mut GameState, id: CardId, target: Option<Target>) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(g);
+}
+
+/// Aang and Katara: the enter trigger counts tapped artifacts and/or
+/// creatures you control on resolution (CR 608.2h) — two tapped bears and a
+/// tapped Sol Ring make three Allies; an untapped bear doesn't count.
+#[test]
+fn aang_and_katara_count_tapped_artifacts_and_creatures() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().tapped = true;
+    }
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    g.battlefield_find_mut(ring).unwrap().tapped = true;
+    let aang = g.add_card_to_hand(0, catalog::aang_and_katara());
+    flood(&mut g);
+    cast_on(&mut g, aang, None);
+    assert_eq!(named(&g, "Ally"), 3);
+}
+
+/// Aang, Swift Savior: flash lets him resolve over an opponent's creature
+/// spell, and his enter trigger airbends that spell (CR 701.65a — airbend
+/// exiles permanents and/or spells; its owner may cast it for {2}).
+#[test]
+fn aang_swift_savior_airbends_a_spell() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("opponent's bear");
+    let aang = g.add_card_to_hand(0, catalog::aang_swift_savior());
+    flood(&mut g);
+    cast_on(&mut g, aang, None);
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("the bear spell was airbent");
+    assert!(exiled.may_play_until.is_some(), "its owner may cast it for {{2}}");
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Aang, Swift Savior: Waterbend {8} transforms him (CR 701.67, CR 701.27a)
+/// into Aang and La, whose attack puts a +1/+1 counter on each tapped creature
+/// you control (attacking taps them, CR 508.1f).
+#[test]
+fn aang_swift_savior_waterbends_into_aang_and_la() {
+    let mut g = pod(2);
+    let aang = ready(&mut g, 0, catalog::aang_swift_savior());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbilityWaterbend {
+        card_id: aang, ability_index: 0, target: None, additional_targets: vec![], x_value: None, helpers: vec![],
+    })
+    .expect("waterbend {8}");
+    drain_stack(&mut g);
+    let la = g.battlefield_find(aang).unwrap();
+    assert!(la.transformed);
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == aang).unwrap().power, 5);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: aang, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// Aang, at the Crossroads: the top five offer a creature with mana value 4
+/// or less onto the battlefield (a 5-drop doesn't qualify); another creature
+/// leaving schedules the transform for the next upkeep (CR 603.7a delayed
+/// trigger), and Aang, Destined Savior earthbends at combat.
+#[test]
+fn aang_at_the_crossroads_digs_then_transforms_at_upkeep() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let aang = g.add_card_to_hand(0, catalog::aang_at_the_crossroads());
+    flood(&mut g);
+    cast_on(&mut g, aang, None);
+    assert!(g.battlefield_find(bear).is_some(), "the bear came in");
+    assert!(g.battlefield_find(angel).is_none(), "mana value 5 is too much");
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    cast_on(&mut g, murder, Some(Target::Permanent(bear)));
+    assert!(!g.battlefield_find(aang).unwrap().transformed, "not until the upkeep");
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aang).unwrap().transformed);
+}
+
+/// Appa, the Vigilant: an Ally entering pumps the team and gives it flying
+/// and vigilance until end of turn (CR 611.2c — creatures you control as the
+/// ability resolves).
+#[test]
+fn appa_the_vigilant_lifts_the_team_on_ally_entry() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::appa_the_vigilant());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ally = g.add_card_to_hand(0, catalog::aang_swift_savior());
+    flood(&mut g);
+    cast_on(&mut g, ally, None);
+    let v = g.compute_battlefield();
+    let b = v.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 3));
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Flying));
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Vigilance));
+}
+
+/// Tale of Katara and Toph: a creature's first tap during your turn grows it
+/// (the granted trigger, CR 613.1f); an opponent's creature doesn't have it.
+#[test]
+fn tale_of_katara_and_toph_grows_on_the_first_tap() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::tale_of_katara_and_toph());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    connect(&mut g, bear);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// Tale of Momo: {2} cheaper once a creature left the battlefield under your
+/// control this turn (CR 601.2f), and it tutors an Ally from the graveyard.
+#[test]
+fn tale_of_momo_discounts_after_a_creature_leaves() {
+    let mut g = pod(2);
+    let ally = g.add_card_to_graveyard(0, catalog::appa_the_vigilant());
+    let momo = g.add_card_to_hand(0, catalog::tale_of_momo());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: momo, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "{{W}} alone is short before anything left"
+    );
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    cast_on(&mut g, murder, Some(Target::Permanent(bear)));
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_on(&mut g, momo, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ally));
+}
