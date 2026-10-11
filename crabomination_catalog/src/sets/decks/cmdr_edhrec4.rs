@@ -1482,3 +1482,114 @@ pub fn trystans_command() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Iroh, Grand Lotus's EDHREC gaps ─────────────────────────────────────────
+
+/// Chakra Meditation — {2}{U} Enchantment. ETB: return up to one target
+/// instant or sorcery card from your graveyard to your hand. Whenever you cast
+/// an instant or sorcery spell, draw a card, then discard a card unless there
+/// are three or more Lesson cards in your graveyard.
+pub fn chakra_meditation() -> CardDefinition {
+    use crate::card::SpellSubtype;
+    use crate::effect::shortcut::magecraft;
+    let lessons = Value::CardsInGraveyardMatching {
+        who: PlayerRef::You,
+        filter: R::HasSpellSubtype(SpellSubtype::Lesson),
+    };
+    CardDefinition {
+        name: "Chakra Meditation",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::InYourGraveyard.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+            }),
+            magecraft(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(lessons, Value::Const(3)),
+                    then: Box::new(Effect::Noop),
+                    else_: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+                },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Elemental Teachings — {4}{G} Instant — Lesson. Search for up to four land
+/// cards with different names; an opponent chooses two for your graveyard, the
+/// rest enter tapped; then shuffle.
+pub fn elemental_teachings() -> CardDefinition {
+    use crate::card::SpellSubtype;
+    CardDefinition {
+        name: "Elemental Teachings",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        effect: Effect::Seq(vec![
+            Effect::SearchSplitWithOpponent {
+                count: 4,
+                filter: R::Land,
+                mv_at_most_x: false,
+                graveyard: false,
+                denied: ZoneDest::Graveyard,
+                rest: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            Effect::ShuffleLibrary { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Overwhelming Victory — {4}{R} Instant — Lesson. 5 damage to target
+/// creature; each creature you control gains trample and gets +X/+0 until end
+/// of turn, X the excess damage dealt this way.
+pub fn overwhelming_victory() -> CardDefinition {
+    use crate::card::SpellSubtype;
+    let mine = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Overwhelming Victory",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(5) },
+            Effect::GrantKeyword { what: mine(), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            Effect::PumpPT {
+                what: mine(),
+                power: Value::ExcessDamageDealtThisResolution,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Secret of Bloodbending — {U}{U}{U}{U} Sorcery — Lesson. You may waterbend
+/// {10}. You control target opponent during their next combat phase (CR 723.2),
+/// or during their next turn if the waterbend was paid. Exile it.
+pub fn secret_of_bloodbending() -> CardDefinition {
+    use crate::card::{SpellSubtype, Waterbend};
+    CardDefinition {
+        name: "Secret of Bloodbending",
+        cost: cost(&[u(), u(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        waterbend: Some(Waterbend { amount: Value::Const(10), optional: true }),
+        exile_on_resolve: true,
+        effect: Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::If {
+                cond: Predicate::SpellWasWaterbend,
+                then: Box::new(Effect::ControlPlayerNextTurn { who: PlayerRef::Target(0) }),
+                else_: Box::new(Effect::ControlPlayerNextCombat { who: PlayerRef::Target(0) }),
+            }),
+        },
+        ..Default::default()
+    }
+}

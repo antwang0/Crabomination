@@ -1986,3 +1986,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | Card | Residual | Why |
 |---|---|---|
 | 🟡 Trystan's Command | the "return one or two target permanent cards from your graveyard" mode picks the cards as it resolves (`MoveChosen`, up to two) instead of targeting them | a mode of `ChooseModesCast` holds one target slot; a mode with "one or two" targets of its own needs per-mode slot counts |
+| 🟡 Elemental Teachings | the four lands and the opponent's two are picked by `SearchSplitWithOpponent`'s heuristic (library order; the first two denied), not asked of either seat | the split has no decision of its own; Ecological Appreciation shares it |

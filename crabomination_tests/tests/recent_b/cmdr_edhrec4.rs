@@ -748,6 +748,9 @@ fn goliath_daydreamer_dreams_a_bolt_and_recasts_it() {
 #[test]
 fn invoke_calamity_casts_two_within_six() {
     let mut g = pod(2);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let axe = g.add_card_to_hand(0, catalog::lava_axe());
     let divination = g.add_card_to_hand(0, catalog::divination());
@@ -918,4 +921,104 @@ fn trystans_command_destroys_and_pumps() {
     let bears = g.battlefield_find(mine).unwrap();
     assert!(!bears.tapped);
     assert_eq!(g.computed_permanent(mine).unwrap().power, 5);
+}
+
+/// Chakra Meditation: the ETB returns an instant; a cast draws and then
+/// discards unless three Lessons sit in the graveyard.
+#[test]
+fn chakra_meditation_loots_until_three_lessons() {
+    let mut g = pod(2);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let med = g.add_card_to_hand(0, catalog::chakra_meditation());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: med, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "the ETB returned Lightning Bolt");
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "cast one, drew one, discarded one");
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::overwhelming_victory());
+    }
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: shock, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("shock");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "three Lessons: the draw is kept");
+}
+
+/// Elemental Teachings: four lands with different names found; two go to the
+/// graveyard, two enter tapped.
+#[test]
+fn elemental_teachings_splits_four_lands() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for def in [catalog::forest(), catalog::forest(), catalog::island(), catalog::mountain(), catalog::plains()] {
+        g.add_card_to_library(0, def);
+    }
+    let et = g.add_card_to_hand(0, catalog::elemental_teachings());
+    flood(&mut g);
+    let lands = g.battlefield.len();
+    g.perform_action(GameAction::CastSpell { card_id: et, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let entered: Vec<_> = g.battlefield.iter().skip(lands).collect();
+    assert_eq!(entered.len(), 2);
+    assert!(entered.iter().all(|c| c.tapped));
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_land()).count(), 2);
+    assert_eq!(g.players[0].library.len(), 1, "one Forest is left: names differ");
+}
+
+/// Overwhelming Victory: 5 damage to a 2/2 is 3 excess — each creature you
+/// control gets +3/+0 and trample.
+#[test]
+fn overwhelming_victory_pumps_by_the_excess() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let ov = g.add_card_to_hand(0, catalog::overwhelming_victory());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: ov, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 5);
+    assert!(has_kw(&g, mine, Keyword::Trample));
+}
+
+/// Secret of Bloodbending: unpaid, the caster controls the opponent's next
+/// combat phase (CR 723.2); with waterbend {10}, their whole next turn
+/// (CR 723.1). Either way the card is exiled.
+#[test]
+fn secret_of_bloodbending_controls_a_combat_or_a_turn() {
+    for paid in [false, true] {
+        let mut g = pod(3);
+        let secret = g.add_card_to_hand(0, catalog::secret_of_bloodbending());
+        flood(&mut g);
+        let cast = if paid {
+            GameAction::CastSpellWaterbend {
+                card_id: secret, target: Some(Target::Player(2)), additional_targets: vec![], mode: None, x_value: None,
+                helpers: vec![],
+            }
+        } else {
+            GameAction::CastSpell { card_id: secret, target: Some(Target::Player(2)), additional_targets: vec![], mode: None, x_value: None }
+        };
+        g.perform_action(cast).expect("cast");
+        drain_stack(&mut g);
+        if paid {
+            assert_eq!(g.pending_player_control, vec![(2, 0)]);
+            assert!(g.pending_combat_control.is_empty());
+        } else {
+            assert_eq!(g.pending_combat_control, vec![(2, 0)]);
+            assert!(g.pending_player_control.is_empty());
+        }
+        assert!(g.exile.iter().any(|c| c.id == secret), "exiled on resolution");
+    }
 }
