@@ -3645,16 +3645,16 @@ impl crate::game::GameState {
         if let Some(c) = card.definition.mayhem_cost() {
             return Some(c.clone());
         }
-        let granted = !card.definition.is_land()
-            && self.seat_static_sources(seat).any(|src| {
-                src.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, src),
-                        Some(crate::effect::StaticEffect::GraveyardNonlandHaveMayhem)
-                    )
-                })
-            });
-        granted.then(|| card.definition.cost.clone())
+        (!card.definition.is_land() && self.grants_graveyard_mayhem(seat)).then(|| card.definition.cost.clone())
+    }
+
+    /// Whether `seat` controls a `GraveyardNonlandHaveMayhem` static.
+    pub fn grants_graveyard_mayhem(&self, seat: usize) -> bool {
+        self.seat_static_sources(seat).any(|src| {
+            src.definition.static_abilities.iter().any(|sa| {
+                matches!(self.active_static(&sa.effect, src), Some(crate::effect::StaticEffect::GraveyardNonlandHaveMayhem))
+            })
+        })
     }
 
     /// Lier, Disciple of the Drowned: if `seat` controls a permanent granting

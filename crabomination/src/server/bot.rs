@@ -7644,6 +7644,10 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
 fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
     use crate::card::Keyword;
     let mut m = 0;
+    // Green Goblin's Goblin Formula: every nonland card here has mayhem.
+    if state.players[seat].graveyard.iter().any(|c| !c.definition.is_land()) && state.grants_graveyard_mayhem(seat) {
+        m |= spec::GY_RECAST;
+    }
     for c in state.players[seat].graveyard.iter() {
         let def = &c.definition;
         for kw in &def.keywords {
