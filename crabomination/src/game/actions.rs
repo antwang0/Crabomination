@@ -3343,8 +3343,48 @@ pub(crate) fn ally_trigger_extra_fires(
     }) {
         return 0;
     }
+    // A source off the battlefield counts against the
+    // `DoubleControllerTriggersMatching` filters only: a permanent that has
+    // just left, by last known information (CR 603.10a), and a spell its
+    // controller cast where the doubler says "spell" (Echoes of Eternity).
+    if state.battlefield_find(source).is_none() {
+        let cast_by_controller = state.stack.iter().any(|si| {
+            matches!(si, crate::game::types::StackItem::Spell { card, caster, .. }
+                if card.id == source && *caster == controller)
+        });
+        // The dispatch pass's own snapshot (cleared after each pass), so a
+        // card that left long ago and triggers from its new zone isn't read
+        // as a permanent.
+        let lki = state.died_card_snapshots.get(&source).filter(|c| c.controller == controller);
+        if !cast_by_controller && lki.is_none() {
+            return 0;
+        }
+        return state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
+            .filter(|(id, sa)| match &sa.effect {
+                StaticEffect::DoubleControllerTriggersMatching { filter, include_spells } => match lki {
+                    Some(snapshot) if !cast_by_controller => {
+                        state.evaluate_requirement_on_card(filter, snapshot, controller)
+                    }
+                    _ => {
+                        *include_spells
+                            && state.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(source),
+                                controller,
+                                Some(*id),
+                            )
+                    }
+                },
+                _ => false,
+            })
+            .count();
+    }
     // The triggering source's current creature types (read live off the
-    // battlefield; a source no longer in play or not `controller`'s → 0).
+    // battlefield; a source not `controller`'s → 0).
     let Some(cp) = state.computed_permanent(source) else { return 0 };
     if state.battlefield_find(source).is_none_or(|c| c.controller != controller) {
         return 0;
@@ -3367,7 +3407,7 @@ pub(crate) fn ally_trigger_extra_fires(
                         (!*exclude_source || c.id != source)
                             && types.iter().any(|t| source_types.contains(t))
                     }
-                    StaticEffect::DoubleControllerTriggersMatching { filter } => state
+                    StaticEffect::DoubleControllerTriggersMatching { filter, .. } => state
                         .evaluate_requirement_static(
                             filter,
                             &Target::Permanent(source),
@@ -13261,6 +13301,14 @@ impl GameState {
         triggers: Vec<(Option<crate::card::Predicate>, Effect)>,
         cast_x: u32,
     ) {
+        // CR 603.2d — "a triggered ability of a [colorless] spell you control
+        // triggers an additional time" (Echoes of Eternity).
+        let extra = if triggers.is_empty() { 0 } else { ally_trigger_extra_fires(self, controller, source) };
+        let triggers = if extra == 0 {
+            triggers
+        } else {
+            triggers.into_iter().flat_map(|t| std::iter::repeat_n(t, 1 + extra)).collect()
+        };
         for (filter, effect) in triggers {
             // Evaluate the trigger's filter (Infusion's
             // LifeGainedThisTurnAtLeast, etc.) before pushing. The ctx

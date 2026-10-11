@@ -271,7 +271,10 @@ pub fn wizards_staff() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus { keywords: vec![Keyword::Prowess], ..Default::default() }),
         static_abilities: vec![crate::card::StaticAbility {
             description: "If a triggered ability of equipped creature triggers, it triggers an additional time.",
-            effect: crate::card::StaticEffect::DoubleControllerTriggersMatching { filter: R::IsHostOfSource },
+            effect: crate::card::StaticEffect::DoubleControllerTriggersMatching {
+                filter: R::IsHostOfSource,
+                include_spells: false,
+            },
         }],
         ..Default::default()
     }

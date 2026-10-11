@@ -783,6 +783,7 @@ pub fn delney_streetwise_lookout() -> CardDefinition {
                               less triggers, that ability triggers an additional time.",
                 effect: crate::effect::StaticEffect::DoubleControllerTriggersMatching {
                     filter: small(),
+                    include_spells: false,
                 },
             },
         ],

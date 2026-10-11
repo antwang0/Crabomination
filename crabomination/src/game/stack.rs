@@ -9657,11 +9657,15 @@ impl GameState {
             }
             // Drivnod, Carnage Dominus — a creature dying causes this trigger,
             // so it fires an additional time per Drivnod its controller runs.
-            let fires = 1 + if dying_creature_controller.is_some() {
-                self.death_trigger_extra_fires(controller, source)
-            } else {
-                0
-            };
+            // Echoes of Eternity — a colorless permanent's trigger, read by
+            // its death snapshot (CR 603.10a), fires an additional time too.
+            let fires = 1
+                + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
+                + if dying_creature_controller.is_some() {
+                    self.death_trigger_extra_fires(controller, source)
+                } else {
+                    0
+                };
             // `repeat_n` yields the original last, so the ordinary board — no
             // Drivnod, `fires == 1` — pays no clone at all (PERF `(-361)`).
             // The target is still picked per fire: the stack grows between

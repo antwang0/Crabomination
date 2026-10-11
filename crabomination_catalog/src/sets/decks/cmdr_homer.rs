@@ -534,6 +534,7 @@ pub fn roaming_throne() -> CardDefinition {
                     filter: R::Creature
                         .and(R::IsSourceChosenCreatureType)
                         .and(R::OtherThanSource),
+                    include_spells: false,
                 },
             },
         ],

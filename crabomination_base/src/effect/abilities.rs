@@ -1981,8 +1981,15 @@ pub enum StaticEffect {
     /// CR 603.x — the filter-based sibling of `DoubleControllerTriggersOfType`:
     /// "If a triggered ability of a creature you control matching `filter`
     /// triggers, that ability triggers an additional time" (Delney, Streetwise
-    /// Lookout's power-2-or-less clause).
-    DoubleControllerTriggersMatching { filter: crate::card::SelectionRequirement },
+    /// Lookout's power-2-or-less clause). A source that has just left the
+    /// battlefield is read by last known information (CR 603.10a);
+    /// `include_spells` also covers "a triggered ability of a [matching]
+    /// **spell** you control" (Echoes of Eternity).
+    DoubleControllerTriggersMatching {
+        filter: crate::card::SelectionRequirement,
+        #[serde(default)]
+        include_spells: bool,
+    },
     DoubleControllerTriggersOfType {
         types: Vec<crate::card::CreatureType>,
         #[serde(default)]
