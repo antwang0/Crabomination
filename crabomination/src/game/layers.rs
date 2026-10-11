@@ -1573,11 +1573,13 @@ fn compute_permanent_pass(
             Modification::SetPowerToughnessLive(_) => {}
             Modification::SetPower(p) => set_power_only = Some(*p),
             Modification::SetToughness(t) => set_toughness_only = Some(*t),
-            Modification::ModifyPower(n) => mod_power += n,
-            Modification::ModifyToughness(n) => mod_toughness += n,
+            // Saturating: a pump sized by a power can reach i32::MAX, and two
+            // until-end-of-combat ones overflowed the sum.
+            Modification::ModifyPower(n) => mod_power = mod_power.saturating_add(*n),
+            Modification::ModifyToughness(n) => mod_toughness = mod_toughness.saturating_add(*n),
             Modification::ModifyPowerToughness(p, t) => {
-                mod_power += p;
-                mod_toughness += t;
+                mod_power = mod_power.saturating_add(*p);
+                mod_toughness = mod_toughness.saturating_add(*t);
             }
             Modification::ModifyPtPerOwnCreatureType(pp, pt, max) => {
                 // Creature types are finalized at layer 4, processed before

@@ -2383,6 +2383,28 @@ fn a_damage_tripled_past_i32_max_is_still_a_loss() {
     assert!(g.players[1].life <= 0, "life {}", g.players[1].life);
 }
 
+/// Two layer-7 pumps sized at i32::MAX (until end of combat: the layer path,
+/// not the end-of-turn bonus) saturate the power instead of overflowing.
+#[test]
+fn two_pumps_past_i32_max_saturate_the_power() {
+    use crabomination::effect::{Duration, Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(bear);
+    let pump = Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(i32::MAX),
+        toughness: Value::Const(0),
+        duration: Duration::EndOfCombat,
+    };
+    for _ in 0..2 {
+        g.resolve_effect(&pump, &ctx).expect("pump");
+    }
+    assert_eq!(g.computed_permanent(bear).unwrap().power, i32::MAX);
+}
+
 /// City on Fire is the same multiplier, and two of them compose to ×9 rather
 /// than to ×6 — the reason the factor is a multiplier and not a count.
 #[test]
