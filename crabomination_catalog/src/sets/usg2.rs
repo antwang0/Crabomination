@@ -508,13 +508,21 @@ pub fn imaginary_pet() -> CardDefinition {
 /// Flesh Reaver — {1}{B} 4/4 that bites you back.
 pub fn flesh_reaver() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
-            effect: Effect::DealDamage {
-                to: Selector::You,
-                amount: Value::TriggerEventAmount,
+        // "to a creature or opponent" — never its own controller, or the
+        // damage it deals you would retrigger it (with Spirit Loop on it, a
+        // mandatory loop — pod seed 38801 game 8).
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource),
+                effect: Effect::DealDamage { to: Selector::You, amount: Value::TriggerEventAmount },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource).with_filter(
+                    crate::effect::Predicate::PlayerIsOpponent { who: crate::effect::PlayerRef::TriggerEventPlayer },
+                ),
+                effect: Effect::DealDamage { to: Selector::You, amount: Value::TriggerEventAmount },
+            },
+        ],
         ..creature(
             "Flesh Reaver",
             cost(&[generic(1), b()]),
