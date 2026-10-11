@@ -119,6 +119,37 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-10-11 (Commander run, `01EvCQ72`, concurrent with `01Mwhi27`) — the last pod residuals, a designation leak, an i32 overflow class
+
+- **CR 400.7 designations:** monstrous, renowned and suspected rode the card
+  through every zone (CR 701.37b / 702.112b / 701.60a say "until it leaves
+  the battlefield"); `leave_battlefield_state` clears them with the new
+  CR 701.64 `harnessed` (The Soul Stone). ~25 comments cited Planeswalk
+  (701.31) for monstrosity and voting and Undying (702.93) for renown —
+  `audit_cr_citations.py`'s keyword check didn't see them (it reads only the
+  keyword the comment names first).
+- **CR 701.3b attach legality:** `AttachAnyNumberTo` moved any permanent onto
+  any host (an "enchant land" Aura onto Bruna); `can_become_attached` now
+  gates Equipment / Fortification / Aura enchant filters, and a host may be a
+  player (Ardenn, a Curse).
+- **CR 605.1a mana abilities without {T}** announced nothing, so Elrond and
+  the three Antiquities "artifact tax" enchantments never saw Ashnod's Altar;
+  `AbilityActivated { mana: true }` + `ActivationTrait::ManaWithoutTap`.
+- **CR 123** the 48 printed Unfinity sheets and the 123.6b position ask.
+- **Overflow class (sweep `--a dflt` 302001):** `chump_block_candidates`'s
+  saturated power total `* 2`; the same in `fog.rs::danger`, the attack
+  guard's `through`, and five `power + toughness` reads (an i32::MAX power is
+  reachable through power doublers). Debug-assertion builds only — release wraps.
+- **Sweeps:** fuzzed strict 301001 (3/4/6/8 × 15, 5,010 games) 0 aborts, 4
+  undecided by rule; `--a dflt` 302001 (3/4/6 × 5, 1,430) the one abort above;
+  `--a dflt` 303001 after the fix (4/6/8 × 5, 1,035) 0 aborts, 2 draws by
+  rule (a CR 104.4a simultaneous loss; Altar of the Brood milling a
+  Worldspine Wurm that shuffles itself back, CR 104.4b).
+- **Census (6 seats × every deck, seed 31001):** the "never activated" rows
+  left are situational (Shelldock Isle's library ≤ 20, Halo Fountain's
+  fifteen creatures, Kinnan's {5}{G}{U} dig — a seat rarely holds seven mana
+  after its casts).
+
 ## FIXED/OPEN 2026-10-11 (nineteenth Commander run, `01Vk2K6g`, concurrent with `017yfeX4`'s second firing) — sixteen EDHREC seats and the primitives under them
 
 - **Seats 357-368, 372-375** (EDHREC average decks, `decks::cmdr_edhrec3`, tests
