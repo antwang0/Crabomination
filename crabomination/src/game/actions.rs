@@ -22109,6 +22109,23 @@ impl GameState {
                     )
                 })
                 .collect();
+            // "… with different names": one candidate per name, so any pick
+            // of `count` of them is a legal payment.
+            let candidates = if ability.sac_other_distinct_names {
+                let mut seen: Vec<&str> = Vec::new();
+                candidates
+                    .into_iter()
+                    .filter(|id| {
+                        let name = self.battlefield_find(*id).map_or("", |c| c.definition.name);
+                        !seen.contains(&name) && {
+                            seen.push(name);
+                            true
+                        }
+                    })
+                    .collect()
+            } else {
+                candidates
+            };
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
