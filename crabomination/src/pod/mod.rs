@@ -2652,6 +2652,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_MYCOTYRANT_COMMANDERS,
             main: decks::THE_MYCOTYRANT_MAIN,
         },
+        // Seat 369: Shroofus Sproutsire's EDHREC average deck. `--pod-decks 369`.
+        PodDeck {
+            name: "Shroofus Sproutsire (G)",
+            commanders: decks::SHROOFUS_COMMANDERS,
+            main: decks::SHROOFUS_MAIN,
+        },
+        // Seat 370: Miirym, Sentinel Wyrm's EDHREC average deck. `--pod-decks 370`.
+        PodDeck {
+            name: "Miirym, Sentinel Wyrm (GUR)",
+            commanders: decks::MIIRYM_COMMANDERS,
+            main: decks::MIIRYM_MAIN,
+        },
+        // Seat 371: Tiamat's EDHREC average deck. `--pod-decks 371`.
+        PodDeck {
+            name: "Tiamat (WUBRG)",
+            commanders: decks::TIAMAT_COMMANDERS,
+            main: decks::TIAMAT_MAIN,
+        },
     ]
 }
 
@@ -4738,6 +4756,9 @@ mod tests {
             ("Katara, the Fearless", [0x0A94, 366, 9291]),
             ("Azlask, the Swelling Scourge", [0x0A95, 367, 9292]),
             ("The Mycotyrant", [0x0A96, 368, 9293]),
+            ("Shroofus Sproutsire", [0x0A97, 369, 9294]),
+            ("Miirym, Sentinel Wyrm", [0x0A98, 370, 9295]),
+            ("Tiamat", [0x0A99, 371, 9296]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

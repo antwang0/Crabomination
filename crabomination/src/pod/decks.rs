@@ -10772,3 +10772,93 @@ pub const THE_MYCOTYRANT_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SHROOFUS_COMMANDERS: &[CardFactory] = &[shroofus_sproutsire];
+
+/// **Shroofus Sproutsire**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 71 nonbasic cards + 28 Forests = 99.
+/// Shroofus Sproutsire (G) Saprolings: Thallids,\n/// token doublers and anthems, and every
+/// Saproling hit makes that many more.
+pub const SHROOFUS_MAIN: &[CardFactory] = &[
+    arcane_signet, banner_of_kinship, eldrazi_monument, emerald_medallion, heraldic_banner,
+    idol_of_oblivion, patchwork_banner, skullclamp, sol_ring, swiftfoot_boots,
+    evendo_waking_haven, oran_rief_the_vastwood, reliquary_tower, rogues_passage,
+    three_tree_city, war_room, brightcap_badger, champion_of_lambholt, craterhoof_behemoth,
+    elvish_mystic, enduring_vitality, fyndhorn_elves, llanowar_elves, mycoloth,
+    nemata_grove_guardian, ohran_frostfang, psychotrope_thallid, ruxa_patient_professor,
+    sporecrown_thallid, sporemound, tendershoot_dryad, thallid_germinator, thelonite_hermit,
+    toski_bearer_of_secrets, undercellar_myconid, utopia_mycon, verdant_force,
+    verdeloth_the_ancient, beastmaster_ascension, blanchwood_armor, doubling_season,
+    fungal_plots, growing_rites_of_itlimoc, night_soil, parallel_lives, sylvan_anthem,
+    tribute_to_the_world_tree, utopia_sprawl, verdant_embrace, wild_growth, beast_within,
+    collective_resistance, echoing_courage, fungal_rebirth, get_a_leg_up, heroic_intervention,
+    invigorate, might_of_the_masses, overprotect, return_of_the_wildspeaker, second_harvest,
+    snakeskin_veil, tyvars_stand, cultivate, fungal_sprouting, natures_lore, overrun,
+    preposterous_proportions, rampant_growth, saproling_symbiosis, shamanic_revelation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];
+
+pub const MIIRYM_COMMANDERS: &[CardFactory] = &[miirym_sentinel_wyrm];
+
+/// **Miirym, Sentinel Wyrm**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 83 nonbasic cards + 5 Forests + 4 Islands + 7 Mountains = 99.
+/// Miirym, Sentinel Wyrm (GUR) Dragons: every nontoken Dragon\n/// entering copies itself,
+/// and Orbs and Dragon lords turn the copies loose.
+pub const MIIRYM_MAIN: &[CardFactory] = &[
+    arcane_signet, carnelian_orb_of_dragonkind, dragons_hoard, heralds_horn,
+    jade_orb_of_dragonkind, panharmonicon, sol_ring, swiftfoot_boots, urzas_incubator,
+    breeding_pool, cinder_glade, command_tower, exotic_orchard, frontier_bivouac,
+    haven_of_the_spirit_dragon, hinterland_harbor, ketria_triome,
+    maelstrom_of_the_spirit_dragon, path_of_ancestry, rejuvenating_springs, rockfall_vale,
+    rootbound_crag, shivan_reef, spire_garden, steam_vents, stomping_ground, sulfur_falls,
+    temple_of_the_dragon_queen, yavimaya_coast, ancient_copper_dragon, ancient_silver_dragon,
+    astral_dragon, atarka_world_render, dragonborn_champion, dragonlords_servant,
+    dragonspeaker_shaman, drakuseth_maw_of_flames, earthquake_dragon, ganax_astral_hunter,
+    goldspan_dragon, klauth_unrivaled_ancient, korlessa_scale_singer, lathliss_dragon_queen,
+    lozhan_dragons_legacy, old_gnawbone, roaming_throne, sarkhan_soul_aflame, savage_ventmaw,
+    scaled_nurturer, scourge_of_valkas, temur_battlecrier, terror_of_the_peaks,
+    thrakkus_the_butcher, thunderbreak_regent, twinflame_tyrant, ureni_of_the_unwritten,
+    utvara_hellkite, wrathful_red_dragon, dracogenesis, dragon_tempest, elemental_bond,
+    encroaching_dragonstorm, garruks_uprising, kindred_discovery, rhythm_of_the_wild,
+    temur_ascendancy, beast_within, chaos_warp, counterspell, cyclonic_rift, ghostly_flicker,
+    heroic_intervention, negate, return_of_the_wildspeaker, sarkhans_triumph, sarkhan_unbroken,
+    blasphemous_act, cultivate, farseek, kodamas_reach, natures_lore, rampant_growth,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const TIAMAT_COMMANDERS: &[CardFactory] = &[tiamat];
+
+/// **Tiamat**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 86 nonbasic cards + 3 Forests + 2 Islands + 4 Mountains + 2 Plains + 2 Swamps = 99.
+/// Tiamat (WUBRG) Dragons: Tiamat tutors five\n/// differently named Dragons, and five-
+/// colour ramp casts them.
+pub const TIAMAT_MAIN: &[CardFactory] = &[
+    arcane_signet, carnelian_orb_of_dragonkind, chromatic_lantern, dragons_hoard,
+    dragonstorm_globe, fellwar_stone, mox_jasper, orb_of_dragonkind, sol_ring, urzas_incubator,
+    blood_crypt, breeding_pool, cavern_of_souls, command_tower, evolving_wilds, exotic_orchard,
+    frontier_bivouac, haven_of_the_spirit_dragon, ketria_triome, maelstrom_of_the_spirit_dragon,
+    misty_rainforest, overgrown_tomb, path_of_ancestry, reliquary_tower, sacred_foundry,
+    steam_vents, stomping_ground, temple_garden, temple_of_the_dragon_queen, verdant_catacombs,
+    windswept_heath, wooded_foothills, ziatoras_proving_ground, ancient_brass_dragon,
+    ancient_copper_dragon, ancient_gold_dragon, ancient_silver_dragon, atarka_world_render,
+    birds_of_paradise, bladewing_the_risen, dragonlord_dromoka, dragonlords_servant,
+    dragonspeaker_shaman, ganax_astral_hunter, goldspan_dragon, klauth_unrivaled_ancient,
+    korlessa_scale_singer, lathliss_dragon_queen, miirym_sentinel_wyrm, morophon_the_boundless,
+    old_gnawbone, rith_liberated_primeval, rivaz_of_the_claw, sarkhan_soul_aflame,
+    savage_ventmaw, scourge_of_valkas, terror_of_the_peaks, the_ur_dragon, thrakkus_the_butcher,
+    twinflame_tyrant, ureni_of_the_unwritten, call_the_spirit_dragons, dracogenesis,
+    dragon_tempest, encroaching_dragonstorm, garruks_uprising, rhythm_of_the_wild,
+    smothering_tithe, temur_ascendancy, counterspell, cyclonic_rift, dragons_fire,
+    enlightened_tutor, heroic_intervention, path_to_exile, swords_to_plowshares, vampiric_tutor,
+    sarkhan_unbroken, crux_of_fate, cultivate, demonic_tutor, farseek, kodamas_reach,
+    natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, island, island, mountain, mountain, mountain, mountain, plains,
+    plains, swamp, swamp,
+];
