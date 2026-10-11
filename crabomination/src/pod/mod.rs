@@ -2844,6 +2844,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KIBO_COMMANDERS,
             main: decks::KIBO_MAIN,
         },
+        // Seat 399: Shelob, Child of Ungoliant's EDHREC average deck. `--pod-decks 399`.
+        PodDeck {
+            name: "Shelob, Child of Ungoliant (BG)",
+            commanders: decks::SHELOB_COMMANDERS,
+            main: decks::SHELOB_MAIN,
+        },
     ]
 }
 
@@ -4999,6 +5005,7 @@ mod tests {
             ("Sauron, the Dark Lord", [0x0AB2, 396, 9321]),
             ("Saruman, the White Hand", [0x0AB3, 397, 9322]),
             ("Kibo, Uktabi Prince", [0x0AB4, 398, 9323]),
+            ("Shelob, Child of Ungoliant", [0x0AB5, 399, 9324]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

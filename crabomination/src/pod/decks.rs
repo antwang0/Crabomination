@@ -11645,3 +11645,30 @@ pub const KIBO_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const SHELOB_COMMANDERS: &[CardFactory] = &[shelob_child_of_ungoliant];
+
+/// **Shelob, Child of Ungoliant**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 78 nonbasic cards + 13 Forests + 8 Swamps = 99.
+/// Shelob, Child of Ungoliant (BG) Spiders and Food
+pub const SHELOB_MAIN: &[CardFactory] = &[
+    arcane_signet, golgari_signet, heralds_horn, patchwork_banner, sol_ring, swiftfoot_boots,
+    thornbite_staff, viridian_longbow, bojuka_bog, command_tower, deathcap_glade,
+    golgari_rot_farm, jungle_hollow, llanowar_wastes, necroblossom_snarl, overgrown_tomb,
+    path_of_ancestry, swarmyard, tainted_wood, temple_of_malady, undergrowth_stadium,
+    woodland_cemetery, arasta_of_the_endless_web, brood_weaver, broodspinner, chainweb_aracnir,
+    deadly_recluse, doom_weaver, drider, fynn_the_fangbearer, hatchery_spider,
+    ishkanah_grafwidow, llanowar_greenwidow, mirkwood_spider, nyx_weaver, obelisk_spider,
+    penumbra_spider, peregrin_took, realmwalker, rotwidow_pack, ruins_recluse,
+    shelob_dread_weaver, silklash_spider, skyfisher_spider, spinner_of_souls, sporeweb_weaver,
+    sweet_gum_recluse, twin_silk_spider, twitching_doll, watcher_in_the_web, arachnus_web,
+    curse_of_clinging_webs, deathreap_ritual, night_of_the_sweets_revenge, parallel_lives,
+    phyrexian_arena, arachnogenesis, assassins_trophy, beast_within, bite_down, cosmic_hunger,
+    golgari_charm, heroic_intervention, prizefight, putrefy, supper_for_spiders,
+    lolth_spider_queen, bushwhack, cultivate, farseek, kodamas_reach, natures_lore,
+    rampant_growth, roar_of_challenge, spider_food, spider_spawning, swarmyard_massacre,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
