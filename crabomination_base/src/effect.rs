@@ -2087,14 +2087,17 @@ pub enum Predicate {
     /// `GameState.current_turn_is_extra`. Medomai the Ageless's
     /// "can't attack during extra turns".
     IsExtraTurn,
-    /// CR 701.31 — the source permanent is monstrous. Backed by
+    /// CR 701.37 — the source permanent is monstrous. Backed by
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
     SourceIsMonstrous,
-    /// CR 702.93 — the source permanent is renowned. Backed by
+    /// CR 702.112 — the source permanent is renowned. Backed by
     /// `CardInstance.renowned`. Powers "if it's renowned, …" attack intervening-
     /// ifs (Consul's Lieutenant) and "as long as renowned" statics.
     SourceIsRenowned,
+    /// CR 701.64b / 702.186b — the source permanent is harnessed, so its ∞
+    /// abilities work (The Soul Stone's upkeep reanimation).
+    SourceIsHarnessed,
     /// CR 301.5 — the source permanent is equipped (an Equipment is attached).
     /// Powers "as long as this creature is equipped, …" team statics (Auriok
     /// Steelshaper's Soldier/Knight anthem).
@@ -3725,7 +3728,7 @@ pub enum EventKind {
     /// the event subject; matched to `GameEvent::Discovered`. The discover
     /// value is exposed via `Value::TriggerEventAmount`.
     Discovered,
-    /// CR 701.31 — a permanent became monstrous (Fleecemane Lion, Nessian
+    /// CR 701.37 — a permanent became monstrous (Fleecemane Lion, Nessian
     /// Wilds Ravager "when this becomes monstrous" triggers). The permanent
     /// is the event subject; matched to `GameEvent::BecameMonstrous`.
     BecameMonstrous,
@@ -7548,10 +7551,13 @@ pub enum Effect {
     /// Vendrell). Unlocks a still-locked door when there is one; otherwise
     /// re-locks the right door so it can be unlocked (and re-triggered) later.
     LockOrUnlockRoomDoor { what: Selector },
-    /// CR 702.93 — mark each matching permanent as renowned (sets
+    /// CR 702.112 — mark each matching permanent as renowned (sets
     /// `CardInstance.renowned`). Paired with the Renown counter add so the
     /// once-only gate keys off the real flag, not a counter heuristic.
     BecomeRenowned { what: Selector },
+    /// CR 701.64a — "Harness [this permanent]": each matching permanent that
+    /// isn't harnessed becomes harnessed (`CardInstance.harnessed`).
+    Harness { what: Selector },
     /// CR 710.2 — Flip the matching flip-card permanent(s) to their flipped
     /// (bottom) face in place (same object, keeping counters / tapped state /
     /// attachments). One-way; no-op on a permanent already flipped or without a
@@ -7823,7 +7829,7 @@ pub enum Effect {
     /// Choice). Sets `GameState.vote_controller_this_turn` to the resolved
     /// player; each vote this turn is answered by them on the voter's behalf.
     ControlVotesThisTurn { who: PlayerRef },
-    /// CR 701.31 — "Will of the council." Starting with the controller, each
+    /// CR 701.38 — "Will of the council." Starting with the controller, each
     /// player votes for one permanent matching `filter` (evaluated relative to
     /// the controller, so Council's Judgment's "a nonland permanent you don't
     /// control" reads `Nonland.and(ControlledByOpponent)`). Every permanent

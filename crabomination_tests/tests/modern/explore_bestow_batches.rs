@@ -162,7 +162,7 @@ fn nessian_wilds_ravager_becomes_monstrous() {
     assert!(g.battlefield_find(id).unwrap().monstrous, "flagged monstrous");
 }
 
-/// Monstrosity is once-only (CR 701.31) — a second activation does nothing.
+/// Monstrosity is once-only (CR 701.37) — a second activation does nothing.
 #[test]
 fn monstrosity_is_once_only() {
     let mut g = two_player_game();

@@ -166,7 +166,7 @@ pub fn faiths_fetters() -> CardDefinition {
 
 /// Council's Judgment — {1}{W}{W} Sorcery. Will of the council: each player
 /// votes for a nonland permanent you don't control; exile each tied for most
-/// votes (no targeting — gets around hexproof/shroud). CR 701.31.
+/// votes (no targeting — gets around hexproof/shroud). CR 701.38.
 pub fn councils_judgment() -> CardDefinition {
     CardDefinition {
         name: "Council's Judgment",

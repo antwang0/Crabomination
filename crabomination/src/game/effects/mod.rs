@@ -1381,7 +1381,7 @@ impl GameState {
         Ok(())
     }
 
-    /// CR 701.31 — each player (controller first) votes for one of `candidates`;
+    /// CR 701.38 — each player (controller first) votes for one of `candidates`;
     /// every card tied for most votes is moved to `to`. Shared by
     /// `WillOfTheCouncilExile` and `WillOfTheCouncilOnCards`.
     fn run_council_card_vote(
@@ -12960,7 +12960,7 @@ impl GameState {
             }
 
             Effect::Monstrosity { n } => {
-                // CR 701.31 — if the source isn't monstrous, add N +1/+1
+                // CR 701.37 — if the source isn't monstrous, add N +1/+1
                 // counters and mark it monstrous (firing BecameMonstrous).
                 let base = self.evaluate_value(n, ctx).max(0) as u32;
                 let Some(src) = ctx.source else { return Ok(()); };
@@ -18862,7 +18862,7 @@ impl GameState {
             }
 
             Effect::BecomeRenowned { what } => {
-                // CR 702.93 — mark each resolved permanent as renowned.
+                // CR 702.112 — mark each resolved permanent as renowned.
                 let ids: Vec<CardId> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
@@ -18871,6 +18871,24 @@ impl GameState {
                 for id in ids {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.renowned = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Harness { what } => {
+                // CR 701.64a — "if this permanent isn't harnessed, it becomes
+                // harnessed"; the write is guarded (CoW card).
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    if self.battlefield.find_by_id(id).is_some_and(|c| !c.harnessed)
+                        && let Some(c) = self.battlefield_find_mut(id)
+                    {
+                        c.harnessed = true;
                     }
                 }
                 Ok(())

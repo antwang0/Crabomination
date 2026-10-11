@@ -449,6 +449,8 @@ pub enum ArtifactSubtype {
     Bobblehead,
     // Marvel: the Vibranium token (CR 111.10w).
     Vibranium,
+    // Marvel: the Infinity Stones (CR 205.3g; their ∞ abilities, CR 702.186).
+    Infinity, Stone,
 }
 
 /// Enchantment subtypes.
@@ -10037,7 +10039,7 @@ pub struct CardData {
     /// ChosenColorOfSource` so a `{T}: Add the chosen color` ability taps for
     /// it. `None` until an `Effect::ChooseColorForSelf` stamps it.
     pub chosen_color: Option<crate::mana::Color>,
-    /// CR 701.31 — true once this permanent has become monstrous. Persistent
+    /// CR 701.37 — true once this permanent has become monstrous. Persistent
     /// (never cleared); gates the once-only `Effect::Monstrosity` counter add
     /// and any "as long as ~ is monstrous" state. Round-trips through
     /// `CardInstanceWire` with `#[serde(default)]`.
@@ -10045,9 +10047,13 @@ pub struct CardData {
     /// CR 702.158b — this permanent's sector designation, assigned by the
     /// space-sculptor state-based action (CR 704.5u).
     pub sector: Option<Sector>,
-    /// CR 702.93 — true once this creature has become renowned. Persistent;
+    /// CR 702.112 — true once this creature has become renowned. Persistent;
     /// gates the once-only Renown counter add.
     pub renowned: bool,
+    /// CR 701.64b — true once this permanent has become harnessed; its ∞
+    /// abilities (CR 702.186b) work while it is. Lasts until it leaves the
+    /// battlefield and is not a copiable value.
+    pub harnessed: bool,
     /// CR 701.60 — true while this creature is suspected. A suspected
     /// creature has menace and can't block (injected as computed keywords).
     /// Persistent until it leaves the battlefield. Round-trips through
@@ -10911,6 +10917,7 @@ impl CardInstance {
             monstrous: false,
             sector: None,
             renowned: false,
+            harnessed: false,
             suspected: false,
             adventuring: false,
             on_adventure: false,
@@ -11942,6 +11949,15 @@ impl CardInstance {
         if self.soulbond_partner.is_some() {
             self.soulbond_partner = None;
         }
+        // CR 701.37b / 702.112b / 701.60a / 701.64b — monstrous, renowned,
+        // suspected and harnessed last until the permanent leaves the
+        // battlefield; a bounced Fleecemane Lion comes back able to go again.
+        if self.monstrous || self.renowned || self.suspected || self.harnessed {
+            self.monstrous = false;
+            self.renowned = false;
+            self.suspected = false;
+            self.harnessed = false;
+        }
     }
 
     /// CR 122.2 — counters cease to exist as the object changes zones, unless
@@ -12359,14 +12375,17 @@ struct CardInstanceWire {
     goad_holds: Vec<(usize, GoadHold)>,
     #[serde(default)]
     combat_defenders: Option<Vec<usize>>,
-    /// CR 701.31 monstrous flag. `#[serde(default)]` so older snapshots load
+    /// CR 701.37 monstrous flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
     monstrous: bool,
-    /// CR 702.93 renowned flag. `#[serde(default)]` so older snapshots load
+    /// CR 702.112 renowned flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
     renowned: bool,
+    /// CR 701.64 harnessed designation.
+    #[serde(default)]
+    harnessed: bool,
     /// CR 701.60 suspected flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -12578,6 +12597,7 @@ impl serde::Serialize for CardInstance {
             combat_defenders: self.combat_defenders.clone(),
             monstrous: self.monstrous,
             renowned: self.renowned,
+            harnessed: self.harnessed,
             suspected: self.suspected,
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
@@ -12758,6 +12778,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.combat_defenders = wire.combat_defenders;
         c.monstrous = wire.monstrous;
         c.renowned = wire.renowned;
+        c.harnessed = wire.harnessed;
         c.suspected = wire.suspected;
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;

@@ -1021,7 +1021,7 @@ fn event_matches_spec_rest(
             event,
             GameEvent::Explored { card_id, .. } | GameEvent::Connived { card_id, .. } if *card_id == source.id
         ) || matches!(
-            // CR 701.31 — "When this becomes monstrous." Source must equal
+            // CR 701.37 — "When this becomes monstrous." Source must equal
             // the permanent that became monstrous.
             event,
             GameEvent::BecameMonstrous { card_id, .. } if *card_id == source.id

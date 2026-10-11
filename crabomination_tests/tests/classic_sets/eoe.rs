@@ -565,7 +565,7 @@ fn view_surfaces_station_next_threshold() {
     assert_eq!(pv2.station_charges, Some(4), "charge count tracks");
 }
 
-/// The server view surfaces the renowned flag (CR 702.93) so the client can
+/// The server view surfaces the renowned flag (CR 702.112) so the client can
 /// badge a creature whose Renown trigger has fired.
 #[test]
 fn view_surfaces_renowned_flag() {

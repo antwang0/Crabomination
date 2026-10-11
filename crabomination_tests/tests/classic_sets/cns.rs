@@ -627,7 +627,7 @@ fn custodi_squire_returns_the_voted_card() {
     assert!(g.players[0].hand.iter().any(|c| c.id == relic), "returned to hand");
 }
 
-/// …and each seat casts its OWN ballot. CR 701.31 gives every player a vote, and
+/// …and each seat casts its OWN ballot. CR 701.38 gives every player a vote, and
 /// every one of them went to `self.decider` — the resolving seat's — so the
 /// controller's policy voted for the whole council. Each ballot is routed to its
 /// voter now, through the cursor-indexed channel because this is a loop over

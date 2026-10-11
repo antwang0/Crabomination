@@ -690,7 +690,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     }
 
     // Designation badges surfaced over the wire (CR 701.60 Suspect,
-    // CR 701.15 Goad, CR 701.31 Monstrosity). Each is a sticky game-state
+    // CR 701.15 Goad, CR 701.37 Monstrosity). Each is a sticky game-state
     // flag the player needs at a glance — a suspected creature has menace
     // and can't block, a goaded creature must attack a player other than
     // the goader if able, and a monstrous creature has already paid its
@@ -716,7 +716,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if let Some(sector) = &p.sector {
         lines.push(format!("({sector} sector)"));
     }
-    // CR 702.93 Renown — its renown trigger has already fired (it became
+    // CR 702.112 Renown — its renown trigger has already fired (it became
     // renowned), so it won't add more counters on later combat hits.
     if p.renowned {
         lines.push(String::from("(renowned)"));

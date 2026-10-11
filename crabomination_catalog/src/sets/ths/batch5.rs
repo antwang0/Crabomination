@@ -290,7 +290,7 @@ pub fn polukranos_world_eater() -> CardDefinition {
             effect: Effect::Monstrosity {
                 n: Value::XFromCost,
             },
-            // CR 701.31a puts no timing rider on monstrosity, and blowing out
+            // CR 701.37a puts no timing rider on monstrosity, and blowing out
             // a block with Polukranos at instant speed is the card. It carried
             // `sorcery_speed` inline, so the two helper fixes did not reach it.
             ..Default::default()

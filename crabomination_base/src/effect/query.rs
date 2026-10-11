@@ -1431,7 +1431,7 @@ impl Effect {
             Effect::ExileAndReturnSelfWithSaddler => false,
             Effect::ReturnTopCreatureFromGraveyard { .. } => false,
             Effect::Transform { what } => sel_has_target(what),
-            Effect::BecomeRenowned { what } => sel_has_target(what),
+            Effect::BecomeRenowned { what } | Effect::Harness { what } => sel_has_target(what),
             Effect::Flip { what } => sel_has_target(what),
             Effect::Meld { .. } => false,
             Effect::SpellsCostLessThisTurn { .. } => false,

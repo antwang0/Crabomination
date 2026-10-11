@@ -1940,7 +1940,7 @@ pub struct PermanentView {
     /// the declare-blockers step shows *why* a block is being forced.
     #[serde(default)]
     pub must_block: bool,
-    /// True when this permanent is monstrous (CR 701.31). Populated by
+    /// True when this permanent is monstrous (CR 701.37). Populated by
     /// `project_permanent`.
     #[serde(default)]
     pub monstrous: bool,
@@ -1949,7 +1949,7 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub suspected: bool,
-    /// True when this creature is renowned (CR 702.93) — a UI hint so the client
+    /// True when this creature is renowned (CR 702.112) — a UI hint so the client
     /// can badge it (its Renown trigger has already fired). Populated by
     /// `project_permanent`.
     #[serde(default)]

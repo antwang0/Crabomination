@@ -174,7 +174,7 @@ fn renown_adds_counters_on_first_combat_damage() {
     assert!(g.players[1].life < 20, "defender took combat damage");
 }
 
-/// CR 702.93 fidelity: Renown keys off the real `renowned` flag, so a creature
+/// CR 702.112 fidelity: Renown keys off the real `renowned` flag, so a creature
 /// that already carries an unrelated +1/+1 counter still becomes renowned and
 /// gains its Renown counter on its first connection.
 #[test]
@@ -192,6 +192,25 @@ fn renown_fires_despite_preexisting_counter() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "renowned creature doesn't re-trigger");
+}
+
+/// CR 701.37b / 702.112b / 701.60a — monstrous, renowned and suspected last
+/// only "until it leaves the battlefield": a renowned creature bounced and
+/// put back is a new object (CR 400.7) whose Renown can fire again. The
+/// flags used to ride the card through every zone.
+#[test]
+fn battlefield_designations_end_when_the_permanent_leaves() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::topan_freeblade()); // Renown 1
+    {
+        let c = g.battlefield_find_mut(id).unwrap();
+        c.renowned = true;
+        c.monstrous = true;
+        c.suspected = true;
+    }
+    let _ = g.remove_from_battlefield_to_hand(id);
+    let c = g.players[0].hand.iter().find(|c| c.id == id).unwrap();
+    assert!(!c.renowned && !c.monstrous && !c.suspected, "a new object carries no designation");
 }
 
 // ── Outlast (CR 702.107) ────────────────────────────────────────────────────

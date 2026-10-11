@@ -3054,7 +3054,7 @@ pub enum GameEvent {
     /// Sun's Creation's "whenever you discover" payoff reads `value` via
     /// `Value::TriggerEventAmount`).
     Discovered { player: usize, value: u32 },
-    /// CR 701.31 — a permanent became monstrous.
+    /// CR 701.37 — a permanent became monstrous.
     /// CR 701.37 — `n` is the monstrosity value, read via
     /// `Value::TriggerEventAmount` (Polukranos's X damage).
     BecameMonstrous { card_id: CardId, n: u32 },

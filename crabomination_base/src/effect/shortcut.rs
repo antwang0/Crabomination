@@ -1559,7 +1559,7 @@ pub fn boast(cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
 
 /// CR 701.37 — "`cost`: Monstrosity `n`." Grows the source to monstrous once.
 ///
-/// ⚠ **It is NOT sorcery-speed.** CR 701.31a defines monstrosity as a plain
+/// ⚠ **It is NOT sorcery-speed.** CR 701.37a defines monstrosity as a plain
 /// activated ability with no timing rider, and playing Polukranos at instant
 /// speed in combat is the card's whole point. Both this helper and `cn2.rs`'s
 /// copy carried `sorcery_speed: true` and a doc comment asserting it, which
@@ -1575,7 +1575,7 @@ pub fn monstrosity(cost: crate::mana::ManaCost, n: i32) -> ActivatedAbility {
     }
 }
 
-/// "When this becomes monstrous, …" trigger (CR 701.31).
+/// "When this becomes monstrous, …" trigger (CR 701.37).
 pub fn on_becomes_monstrous(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::BecameMonstrous, EventScope::SelfSource),
@@ -2471,7 +2471,7 @@ pub fn adapt(n: i32) -> Effect {
 /// unrelated +1/+1 counters don't suppress it.
 pub fn renown(n: i32) -> TriggeredAbility {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec};
-    // CR 702.93 — "if it isn't renowned, put N +1/+1 counters on it and it
+    // CR 702.112 — "if it isn't renowned, put N +1/+1 counters on it and it
     // becomes renowned." Gated on the real `renowned` flag (not a counter
     // heuristic) so unrelated +1/+1 counters don't suppress it.
     TriggeredAbility {
