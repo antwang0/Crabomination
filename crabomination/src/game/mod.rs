@@ -26090,7 +26090,7 @@ impl GameState {
                         if crate::game::effects::emblem_event_matches(self, ev, &ta.event, seat_idx) {
                             candidates.push(TriggerCandidate {
                                 from_mana_ability: false,
-                            actor: None,
+                            actor: crate::game::effects::events::event_actor(self, ev),
                                 source: CardId(0),
                                 effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
                                 controller: seat_idx,

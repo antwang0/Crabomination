@@ -1250,6 +1250,7 @@ impl GameState {
             | EventScope::YourCreatureTargeted
             | EventScope::EnchantedBySource
             | EventScope::YourSourceDamagedOpponent
+            | EventScope::YourCreatureCombatDamagedOpponent
             | EventScope::YourSourceDamagedAnyPlayer
             | EventScope::OpponentSourceDamagedYou
             | EventScope::YourOtherSourceDamagedOpponent

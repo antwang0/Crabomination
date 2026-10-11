@@ -1169,6 +1169,9 @@ fn event_matches_spec_rest(
                 if *fc == source.controller
                     && !state.same_team(*p, source.controller)
         ),
+        EventScope::YourCreatureCombatDamagedOpponent => {
+            your_creature_combat_damaged_opponent(state, event, source.controller)
+        }
         EventScope::YourSourceDamagedAnyPlayer => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(_), from_controller: Some(fc), .. }
@@ -1680,6 +1683,22 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
 /// triggers actually use; scope is resolved against `controller` (the
 /// emblem's owner). Step-keyed kinds are dispatched separately in
 /// `fire_step_triggers`, so they're rejected here.
+/// [`EventScope::YourCreatureCombatDamagedOpponent`]: combat damage to an
+/// opponent of `you` from a creature `you` control (read as it last existed).
+fn your_creature_combat_damaged_opponent(state: &GameState, event: &GameEvent, you: usize) -> bool {
+    let GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), from_card: Some(src), combat: true, .. } =
+        event
+    else {
+        return false;
+    };
+    *fc == you
+        && !state.same_team(*p, you)
+        && match state.battlefield_find(*src) {
+            Some(c) => state.computed_is_creature(c),
+            None => state.find_card_anywhere(*src).is_some_and(|c| c.definition.is_creature()),
+        }
+}
+
 pub(crate) fn emblem_event_matches(
     state: &GameState,
     event: &GameEvent,
@@ -1706,6 +1725,7 @@ pub(crate) fn emblem_event_matches(
         ),
         EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == controller),
         EventScope::OpponentPutsCountersOnTheirOwn => opponent_put_counters_on_their_own(state, event, controller),
+        EventScope::YourCreatureCombatDamagedOpponent => your_creature_combat_damaged_opponent(state, event, controller),
         EventScope::FromYourGraveyard
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::YourPermanentTargetedByOpponent

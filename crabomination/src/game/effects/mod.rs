@@ -13447,6 +13447,28 @@ impl GameState {
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {
                 self.put_any_number_from_graveyard_on_top(filter, effect, ctx, events)
             }
+            Effect::BecomeFoodArtifact { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let mut def = (*c.definition.arc()).clone();
+                        def.card_types = vec![crate::card::CardType::Artifact];
+                        def.subtypes = crate::card::Subtypes {
+                            artifact_subtypes: vec![crate::card::ArtifactSubtype::Food],
+                            ..Default::default()
+                        };
+                        def.activated_abilities.push(crate::effect::ActivatedAbility {
+                            mana_cost: crate::mana::cost(&[crate::mana::generic(2)]),
+                            tap_cost: true,
+                            sac_cost: true,
+                            effect: Effect::GainLife { who: Selector::You, amount: crate::effect::Value::Const(3) },
+                            ..Default::default()
+                        });
+                        c.set_copiable_definition(std::sync::Arc::new(def));
+                    }
+                }
+                Ok(())
+            }
             Effect::AmendCopiableValues {
                 what,
                 name,

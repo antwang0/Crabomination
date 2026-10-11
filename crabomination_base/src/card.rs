@@ -527,6 +527,8 @@ pub enum PlaneswalkerSubtype {
     Venser,
     // Niko Aris (Niko, Light of Hope's EDHREC deck).
     Niko,
+    // Lolth, Spider Queen (Shelob's EDHREC deck).
+    Lolth,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -3421,6 +3423,11 @@ pub enum SelectionRequirement {
     /// powers Spear of Heliod's "destroy target creature that dealt damage
     /// to you this turn".
     DealtDamageToControllerThisTurn,
+    /// The candidate was dealt damage this turn by a source matching the
+    /// inner filter (read as it last existed) — "another creature dealt
+    /// damage this turn by a Spider you controlled" (Shelob, Child of
+    /// Ungoliant). A creature that just died is read off its death snapshot.
+    DamagedThisTurnByMatching(Box<SelectionRequirement>),
     /// The candidate dealt COMBAT damage this turn to the controller of the
     /// ability's source — not the evaluating player, who is the sacrificer in
     /// an edict (Witch-king of Angmar). Battlefield-only.

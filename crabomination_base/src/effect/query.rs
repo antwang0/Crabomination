@@ -1997,6 +1997,7 @@ impl Effect {
             }
             Effect::SetCardTypesTo { what, .. }
             | Effect::AmendCopiableValues { what, .. }
+            | Effect::BecomeFoodArtifact { what }
             | Effect::BecomeNamed { what, .. } => sel_has_target(what),
             Effect::GrantKeyword { what, .. }
             | Effect::GrantKeywordThroughControllersNextCombat { what, .. } => sel_has_target(what),
@@ -2915,6 +2916,7 @@ impl Effect {
             | Effect::BecomeCreatureLosingTypes { what, .. }
             | Effect::SetCardTypesTo { what, .. }
             | Effect::AmendCopiableValues { what, .. }
+            | Effect::BecomeFoodArtifact { what }
             | Effect::BecomeNamed { what, .. } => sel_filter(what),
             Effect::AnimateAsCreature { what, .. } => sel_filter(what),
             // Riptide Mangler: the target hides in the power value ("base
@@ -4631,6 +4633,7 @@ impl Effect {
             | Effect::BecomeCreatureLosingTypes { .. }
             | Effect::SetCardTypesTo { .. }
             | Effect::AmendCopiableValues { .. }
+            | Effect::BecomeFoodArtifact { .. }
             | Effect::GrantKeywordToMatchingThisTurn { .. }
             | Effect::AnimateAsCreature { .. }
             | Effect::SetBasePower { .. }
@@ -5539,6 +5542,7 @@ impl Effect {
                 | Effect::GrantSacrificedLandTypesLandwalk { what, .. }
                 | Effect::SetCardTypesTo { what, .. }
                 | Effect::AmendCopiableValues { what, .. }
+                | Effect::BecomeFoodArtifact { what }
                 | Effect::BecomeNamed { what, .. }
                 | Effect::SpellEntersWithCounters { what, .. } => sel_find(what, slot),
                 Effect::RedirectNextCombatDamageTo { what, to }

@@ -5749,6 +5749,10 @@ impl GameState {
                     R::DamagedBySourceThisTurn => {
                         source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
                     }
+                    R::DamagedThisTurnByMatching(inner) => card
+                        .damaged_by_this_turn
+                        .iter()
+                        .any(|s| self.evaluate_requirement_static(inner, &Target::Permanent(*s), controller, source)),
                     // Sentinel — "blocking or blocked by this creature",
                     // read off `block_map` in both directions.
                     R::BlockingOrBlockedBySource => source.is_some_and(|s| {
@@ -7611,6 +7615,7 @@ impl GameState {
             | R::DealtDamageToControllerThisTurn | R::CombatDamagedSourceControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
+            | R::DamagedThisTurnByMatching(_)
             | R::BlockingOrBlockedBySource
             | R::BlockingHostOfSource
             | R::BlockingOrBlockedByHostOfSource

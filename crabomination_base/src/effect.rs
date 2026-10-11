@@ -4084,6 +4084,12 @@ pub enum EventScope {
     /// controller and whose damaged player is an opponent of them ("a source
     /// you control deals damage to an opponent" — Quest for Pure Flame).
     YourSourceDamagedOpponent,
+    /// A `PlayerDamaged` event that is COMBAT damage to an opponent from a
+    /// creature the trigger's controller controls ("whenever an opponent is
+    /// dealt combat damage by one or more creatures you control" — Lolth's
+    /// emblem). One trigger per damaging creature; an intervening `if` that
+    /// the first resolution falsifies makes them one.
+    YourCreatureCombatDamagedOpponent,
     /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) with the
     /// printed "other than this <permanent>" exclusion (Talon of Pain): the
     /// damage event's own source must not be the trigger's source.
@@ -9620,6 +9626,13 @@ pub enum Effect {
         #[serde(default)]
         remove_keywords: Vec<crate::card::Keyword>,
     },
+    /// "… a Food artifact with \"{2}, {T}, Sacrifice this artifact: You gain
+    /// 3 life\" and it loses all other card types" (Shelob, Child of
+    /// Ungoliant's copy; Supper for Spiders' returned cards): each permanent
+    /// `what` names becomes an artifact — Food its only subtype — with the
+    /// Food ability added, its other abilities kept. Written into its
+    /// copiable values (CR 707.9b).
+    BecomeFoodArtifact { what: Selector },
     /// CR 707.9b — a copy exception written into the copiable values of each
     /// permanent `what` names, so a copy of it carries it too: "except its
     /// name is …" (Mishra's Warform), "except it's a … Zombie" (creature types
