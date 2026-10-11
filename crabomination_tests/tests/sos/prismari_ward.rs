@@ -1653,6 +1653,46 @@ fn tablet_of_discovery_etb_mills_and_grants_may_play() {
         crabomination::card::MayPlayDuration::EndOfThisTurn));
 }
 
+/// Tablet of Discovery: the milled card is played under its own timing — an
+/// instant at instant speed (here in the declare-blockers step), a land as
+/// the turn's land drop.
+#[test]
+fn tablet_of_discovery_plays_the_milled_card_on_its_own_timing() {
+    for land in [false, true] {
+        let mut g = two_player_game();
+        let top_id = if land {
+            g.add_card_to_library(0, catalog::mountain())
+        } else {
+            g.add_card_to_library(0, catalog::lightning_bolt())
+        };
+        let tablet_id = g.add_card_to_hand(0, catalog::tablet_of_discovery());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: tablet_id, target: None, additional_targets: vec![],
+            mode: None, x_value: None,
+        }).expect("Tablet castable");
+        drain_stack(&mut g);
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == top_id), "milled");
+        if land {
+            g.perform_action(GameAction::PlayLandFromGraveyard(top_id)).expect("play the milled land");
+            assert!(g.battlefield_find(top_id).is_some());
+        } else {
+            g.step = TurnStep::DeclareBlockers;
+            g.priority.player_with_priority = 0;
+            g.players[0].mana_pool.add(Color::Red, 1);
+            let life = g.players[1].life;
+            g.perform_action(GameAction::CastFromZoneWithoutPaying {
+                card_id: top_id, target: Some(Target::Player(1)), additional_targets: vec![],
+                mode: None, x_value: None,
+            }).expect("cast the milled Bolt at instant speed");
+            assert_eq!(g.players[0].mana_pool.total(), 0, "paying its own {{R}}");
+            drain_stack(&mut g);
+            assert_eq!(g.players[1].life, life - 3);
+        }
+    }
+}
+
 #[test]
 fn ark_of_hunger_mill_activation_grants_may_play() {
     let mut g = two_player_game();

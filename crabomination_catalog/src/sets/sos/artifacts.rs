@@ -145,9 +145,8 @@ pub fn diary_of_dreams() -> CardDefinition {
 /// (which reads the freshly-milled card's id from the resolution-scoped
 /// scratch). Printed text is a normal play — the permission carries
 /// `pay_own_cost: true`, so the controller pays the card's real cost to
-/// recur it. Approximation: the play happens at a sorcery-speed window
-/// (instants aren't playable at instant speed through this path, and
-/// land plays aren't supported).
+/// recur it, under the card's own timing — an instant at instant speed, a
+/// land as a land drop (`PlayLandFromGraveyard`).
 ///
 /// Both mana abilities are wired: `{T}: Add {R}` is a plain adder, and
 /// `{T}: Add {R}{R}` produces spend-restricted mana via
