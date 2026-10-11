@@ -150,6 +150,15 @@ the handoff.
   by the chooser's deck (Eclipsed Realms named Elemental in an Elf deck);
   `ManaPayload::RestrictedToChosenTypeSpellOrAbility`; `Effect::
   AddManaKeptThisTurnOfColors`.
+- **Audit sweeps over the newest seats** (`scripts/pod_sweep.py … --decks 335-378`,
+  new option): plain 197001 (3/4/6/8 × 30, 1,200 games) and fuzzed strict 198001
+  (3/4/6 × 30, 1,020 games) — **0 aborts**. Undecided: **5 action caps in one
+  block, a real loop** — Anti-Venom's damage-to-counters replacement credited
+  its counters to the damage source's controller, so an opponent's All Will Be
+  One aimed at him retriggered for ever; the replacement's controller puts them
+  now (CR 109.5 / 614.1a, both damage paths; `anti_venoms_counters_are_his_controllers`).
+  4 board caps: token floods (Myrel, Goldnight Commander + Odric). `--bench`
+  byte-identical after the fix.
 - **Open** (INCOMPLETE_CARDS "EDHREC average-deck seats … open residuals"):
   Echoes of Eternity doesn't double a colorless *spell's* trigger or a
   leaves-the-battlefield one (the doubler reads its source live); Maralen's
