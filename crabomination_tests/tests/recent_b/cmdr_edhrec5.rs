@@ -1112,3 +1112,112 @@ fn hatchery_spider_hatches_a_green_permanent() {
     assert!(on_bf(&g, elves) || g.players[0].library.iter().all(|c| c.id != elves), "found the Elves");
     assert!(on_bf(&g, elves));
 }
+
+/// Stack a library so seat `seat`'s top card has mana value `mv`.
+fn top_mv(g: &mut GameState, seat: usize, big: bool) {
+    let def = if big { catalog::colossal_dreadmaw() } else { catalog::island() };
+    g.add_card_to_library(seat, def);
+}
+
+/// CR 701.30 — Pulling Teeth's two branches: a won clash discards two, a lost
+/// one discards one (the "otherwise" half).
+#[test]
+fn cr_701_30_pulling_teeth_discards_by_the_clash() {
+    for (win, discarded) in [(true, 2usize), (false, 1)] {
+        let mut g = pod(2);
+        g.players[0].library.clear();
+        g.players[1].library.clear();
+        top_mv(&mut g, 0, win);
+        top_mv(&mut g, 1, !win);
+        for _ in 0..3 {
+            g.add_card_to_hand(1, catalog::island());
+        }
+        let pt = g.add_card_to_hand(0, catalog::pulling_teeth());
+        cast(&mut g, 0, pt, Some(Target::Player(1))).expect("Pulling Teeth");
+        assert_eq!(g.players[1].hand.len(), 3 - discarded, "win {win}");
+    }
+}
+
+/// Research the Deep returns to hand on a won clash; Weed Strangle gains the
+/// destroyed creature's toughness on one.
+#[test]
+fn clash_spells_reward_a_win() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    g.players[1].library.clear();
+    top_mv(&mut g, 0, true);
+    top_mv(&mut g, 0, true);
+    top_mv(&mut g, 1, false);
+    let rd = g.add_card_to_hand(0, catalog::research_the_deep());
+    cast(&mut g, 0, rd, None).expect("Research the Deep");
+    assert!(g.players[0].hand.iter().any(|c| c.id == rd), "back to hand");
+
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    g.players[1].library.clear();
+    top_mv(&mut g, 0, true);
+    top_mv(&mut g, 1, false);
+    let maw = ready(&mut g, 1, catalog::colossal_dreadmaw());
+    let ws = g.add_card_to_hand(0, catalog::weed_strangle());
+    cast(&mut g, 0, ws, Some(Target::Permanent(maw))).expect("Weed Strangle");
+    assert!(!on_bf(&g, maw));
+    assert_eq!(g.players[0].life, 26);
+}
+
+/// Captivating Glance: a lost clash hands the enchanted creature to the
+/// clashed opponent; a won one takes it.
+#[test]
+fn captivating_glance_moves_the_creature_either_way() {
+    for win in [true, false] {
+        let mut g = pod(2);
+        g.players[0].library.clear();
+        g.players[1].library.clear();
+        top_mv(&mut g, 0, win);
+        top_mv(&mut g, 1, !win);
+        let bear = ready(&mut g, if win { 1 } else { 0 }, catalog::grizzly_bears());
+        let glance = g.add_card_to_hand(0, catalog::captivating_glance());
+        cast(&mut g, 0, glance, Some(Target::Permanent(bear))).expect("Glance");
+        end_step(&mut g);
+        assert_eq!(g.battlefield_find(bear).unwrap().controller, if win { 0 } else { 1 }, "win {win}");
+    }
+}
+
+/// Myojin of Cryptic Dreams: cast from hand it carries an indestructible
+/// counter, which pays for three copies of a permanent spell you control.
+#[test]
+fn myojin_of_cryptic_dreams_triples_a_permanent_spell() {
+    let mut g = pod(2);
+    let myojin = g.add_card_to_hand(0, catalog::myojin_of_cryptic_dreams());
+    cast(&mut g, 0, myojin, None).expect("Myojin");
+    assert!(g.computed_permanent(myojin).unwrap().keywords().contains(&Keyword::Indestructible));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("bear");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: myojin,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("remove the counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 4);
+    assert!(!g.computed_permanent(myojin).unwrap().keywords().contains(&Keyword::Indestructible));
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: myojin,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "no counter left"
+    );
+}

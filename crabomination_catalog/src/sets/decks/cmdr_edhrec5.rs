@@ -4,7 +4,7 @@
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
 //! connive and mayhem; Reaper King's Scarecrows; Sauron, the Dark Lord's
 //! Orc Armies; Saruman, the White Hand's spells; Kibo's Apes and Monkeys;
-//! Shelob's Spiders. Tests in
+//! Shelob's Spiders; Marvo's clash spells. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
@@ -1978,6 +1978,279 @@ pub fn roar_of_challenge() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
+        ]),
+    )
+}
+
+// ── Marvo, Deep Operative (UB) ───────────────────────────────────────────────
+
+fn clash(on_win: Effect) -> Effect {
+    Effect::ClashWithOpponent { on_win: Box::new(on_win), on_lose: None, with: None }
+}
+
+/// Brinelin, the Moon Kraken — {6}{U}{U} 6/8, partner. Entering, and each
+/// spell of mana value 6 or more you cast, may bounce a nonland permanent.
+pub fn brinelin_the_moon_kraken() -> CardDefinition {
+    let bounce = || Effect::MayDo {
+        description: "Return target nonland permanent to its owner's hand?".into(),
+        body: Box::new(Effect::Move {
+            what: target_filtered(R::Permanent.and(R::Land.negate())),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        }),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Partner],
+        triggered_abilities: vec![
+            etb(bounce()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::ManaValueAtLeast(6) }),
+                effect: bounce(),
+            },
+        ],
+        ..legend("Brinelin, the Moon Kraken", cost(&[generic(6), u(), u()]), vec![CreatureType::Kraken], 6, 8)
+    }
+}
+
+/// Myojin of Cryptic Dreams — {5}{U}{U}{U} 3/3. Cast from hand, it gets an
+/// indestructible counter; remove it: copy a permanent spell you control
+/// three times.
+pub fn myojin_of_cryptic_dreams() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(Predicate::CastFromHand),
+            effect: Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Indestructible, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            remove_keyword_counter_cost: Some(Keyword::Indestructible),
+            effect: Effect::CopySpellMayChooseTargets {
+                what: target_filtered(R::IsSpellOnStack.and(R::ControlledByYou).and(R::PermanentCard)),
+                count: Value::Const(3),
+            },
+            ..Default::default()
+        }],
+        ..legend("Myojin of Cryptic Dreams", cost(&[generic(5), u(), u(), u()]), vec![CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Paperfin Rascal — {2}{U} 2/2. Entering, clash; a win adds a +1/+1 counter.
+pub fn paperfin_rascal() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(clash(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        }))],
+        ..creature("Paperfin Rascal", cost(&[generic(2), u()]), vec![CreatureType::Merfolk, CreatureType::Rogue], 2, 2)
+    }
+}
+
+/// Ringskipper — {1}{U} 1/1 flying. Dying, clash; a win returns it to hand.
+pub fn ringskipper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: clash(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))) }),
+        }],
+        ..creature("Ringskipper", cost(&[generic(1), u()]), vec![CreatureType::Faerie, CreatureType::Wizard], 1, 1)
+    }
+}
+
+/// Krothuss, Lord of the Deep — Runo Stromkirk's back: 3/5 flying; attacking,
+/// a tapped attacking copy of another attacker (two of a Kraken, Leviathan,
+/// Octopus or Serpent). Private: CR 903.4 reads the whole card.
+fn krothuss_lord_of_the_deep() -> CardDefinition {
+    let sea = R::HasCreatureType(CreatureType::Kraken)
+        .or(R::HasCreatureType(CreatureType::Leviathan))
+        .or(R::HasCreatureType(CreatureType::Octopus))
+        .or(R::HasCreatureType(CreatureType::Serpent));
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::IfPred {
+                    pred: Box::new(target_is(sea)),
+                    then: Box::new(Value::Const(2)),
+                    else_: Box::new(Value::ONE),
+                },
+                source: target_filtered(R::Creature.and(R::IsAttacking).and(R::OtherThanSource)),
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: true,
+                non_legendary: false,
+                legendary: false,
+                extra_keywords: vec![],
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: vec![],
+            },
+            Effect::JoinCombatAttackingChosen {
+                cleanup: crate::effect::AttackingTokenCleanup::None,
+                what: Selector::LastCreatedTokens,
+            },
+        ]))],
+        color_indicator: vec![Color::Blue, Color::Black],
+        ..legend("Krothuss, Lord of the Deep", ManaCost::default(), vec![CreatureType::Kraken, CreatureType::Horror], 3, 5)
+    }
+}
+
+/// Runo Stromkirk — {1}{U}{B} 1/4 flying. Entering, a creature card from your
+/// graveyard may go on top of your library; at your upkeep, a revealed
+/// creature card of mana value 6 or more on top transforms it.
+pub fn runo_stromkirk() -> CardDefinition {
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        back_face: Some(Box::new(krothuss_lord_of_the_deep())),
+        triggered_abilities: vec![
+            etb(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature.from_your_graveyard()),
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches { what: top(), filter: R::Creature.and(R::ManaValueAtLeast(6)) },
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..legend("Runo Stromkirk", cost(&[generic(1), u(), b()]), vec![CreatureType::Vampire, CreatureType::Cleric], 1, 4)
+    }
+}
+
+/// Baneful Omen — {4}{B}{B}{B} enchantment. At your end step you may reveal
+/// the top card: each opponent loses life equal to its mana value.
+pub fn baneful_omen() -> CardDefinition {
+    CardDefinition {
+        name: "Baneful Omen",
+        cost: cost(&[generic(4), b(), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Reveal the top card of your library?".into(),
+                body: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ManaValueOf(Box::new(Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE })),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Captivating Glance — {2}{U} Aura. At your end step, clash: a win takes
+/// the creature, a loss hands it to the clashed opponent.
+pub fn captivating_glance() -> CardDefinition {
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        name: "Captivating Glance",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::ClashWithOpponent {
+                on_win: Box::new(Effect::GainControl { what: host(), to: None, duration: Duration::Permanent }),
+                on_lose: Some(Box::new(Effect::GainControl {
+                    what: host(),
+                    to: Some(PlayerRef::ChosenPlayerOfSource),
+                    duration: Duration::Permanent,
+                })),
+                with: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Broken Ambitions — {X}{U} instant. Counter a spell unless its controller
+/// pays {X}; clash, and a win mills that controller four.
+pub fn broken_ambitions() -> CardDefinition {
+    spell(
+        "Broken Ambitions",
+        cost(&[x(), u()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::CounterUnlessPaid {
+                what: target_filtered(R::IsSpellOnStack),
+                mana_cost: ManaCost::default(),
+                exile: false,
+                extra_generic: Some(Value::XFromCost),
+                if_paid: None,
+            },
+            clash(Effect::Mill {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(4),
+            }),
+        ]),
+    )
+}
+
+/// Pulling Teeth — {1}{B} sorcery. Clash: a win makes the target player
+/// discard two, otherwise one.
+pub fn pulling_teeth() -> CardDefinition {
+    let discard = |n: i32, who: Selector| Effect::Discard { who, amount: Value::Const(n), random: false };
+    spell(
+        "Pulling Teeth",
+        cost(&[generic(1), b()]),
+        CardType::Sorcery,
+        Effect::ClashWithOpponent {
+            on_win: Box::new(discard(2, target_filtered(R::Player))),
+            on_lose: Some(Box::new(discard(1, Selector::Target(0)))),
+            with: None,
+        },
+    )
+}
+
+/// Research the Deep — {1}{U} sorcery. Draw; clash, and a win returns it to
+/// your hand.
+pub fn research_the_deep() -> CardDefinition {
+    spell(
+        "Research the Deep",
+        cost(&[generic(1), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![Effect::Draw { who: Selector::You, amount: Value::ONE }, clash(Effect::ReturnResolvingSpellToHand)]),
+    )
+}
+
+/// Revive the Fallen — {1}{B} sorcery. A creature card from a graveyard to
+/// its owner's hand; clash, and a win returns this to your hand.
+pub fn revive_the_fallen() -> CardDefinition {
+    spell(
+        "Revive the Fallen",
+        cost(&[generic(1), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.from_any_graveyard()),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            clash(Effect::ReturnResolvingSpellToHand),
+        ]),
+    )
+}
+
+/// Weed Strangle — {3}{B}{B} sorcery. Destroy a creature; clash, and a win
+/// gains you its toughness.
+pub fn weed_strangle() -> CardDefinition {
+    spell(
+        "Weed Strangle",
+        cost(&[generic(3), b(), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            clash(Effect::GainLife { who: Selector::You, amount: Value::ToughnessOf(Box::new(Selector::Target(0))) }),
         ]),
     )
 }
