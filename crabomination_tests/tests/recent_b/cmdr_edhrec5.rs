@@ -1244,3 +1244,83 @@ fn cr_611_2c_minas_morgul_wraith_lasts_with_the_shadow_counter() {
     g.check_state_based_actions();
     assert!(!wraith(&g), "the counter is gone");
 }
+
+fn lore_count(g: &GameState, id: CardId) -> u32 {
+    g.battlefield_find(id).map_or(0, |c| c.counter_count(crabomination::card::CounterType::Lore))
+}
+
+/// Goldberry takes one counter of each kind she lacks, then hands all of hers
+/// to another permanent and draws.
+#[test]
+fn goldberry_borrows_and_returns_counters() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    let gold = ready(&mut g, 0, catalog::goldberry_river_daughter());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    {
+        let b = g.battlefield_find_mut(bear).unwrap();
+        b.add_counters(crabomination::card::CounterType::PlusOnePlusOne, 3);
+        b.add_counters(crabomination::card::CounterType::Stun, 2);
+    }
+    activate(&mut g, gold, 0, Some(Target::Permanent(bear))).expect("borrow");
+    let gc = g.battlefield_find(gold).unwrap();
+    assert_eq!(gc.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    assert_eq!(gc.counter_count(crabomination::card::CounterType::Stun), 1);
+    assert_eq!(counters(&g, bear), 2);
+    g.battlefield_find_mut(gold).unwrap().tapped = false;
+    let hand = g.players[0].hand.len();
+    activate(&mut g, gold, 1, Some(Target::Permanent(bear))).expect("return");
+    assert_eq!(counters(&g, bear), 3);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Satsuki's {T} adds a lore counter to each Saga of yours (chapter II
+/// fires); each such counter makes Sigurd put a +1/+1 counter on another
+/// creature.
+#[test]
+fn satsuki_and_sigurd_turn_the_pages() {
+    let mut g = pod(2);
+    let sigurd = ready(&mut g, 0, catalog::sigurd_jarl_of_ravensthorpe());
+    let azusa = g.add_card_to_hand(0, catalog::azusas_many_journeys());
+    cast(&mut g, 0, azusa, None).expect("Azusa's Many Journeys");
+    assert_eq!(lore_count(&g, azusa), 1);
+    let satsuki = ready(&mut g, 0, catalog::satsuki_the_living_lore());
+    activate(&mut g, satsuki, 0, None).expect("lore");
+    assert_eq!(lore_count(&g, azusa), 2);
+    assert_eq!(g.players[0].life, 23, "chapter II");
+    assert_eq!(counters(&g, satsuki), 1, "Sigurd's counter, on the other creature");
+    assert_eq!(counters(&g, sigurd), 0);
+    // Chapter III exiles it and returns it transformed: a 3/3 creature.
+    g.battlefield_find_mut(satsuki).unwrap().tapped = false;
+    activate(&mut g, satsuki, 0, None).expect("III");
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Likeness of the Seeker").expect("transformed");
+    assert!(back.definition.is_creature());
+}
+
+/// Historian's Boon: a Saga's final chapter makes a 4/4 Angel; There and Back
+/// Again's Smaug dies into fourteen Treasures.
+#[test]
+fn historians_boon_and_smaug() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::historians_boon());
+    let saga = g.add_card_to_hand(0, catalog::there_and_back_again());
+    cast(&mut g, 0, saga, None).expect("There and Back Again");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count(), 1, "a nontoken enchantment entered");
+    run(
+        &mut g,
+        &crabomination::effect::Effect::AddCounter {
+            what: crabomination::effect::Selector::ExactObjects(vec![saga]),
+            kind: crabomination::card::CounterType::Lore,
+            amount: crabomination::card::Value::Const(2),
+        },
+    );
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Angel").count(), 1);
+    let smaug = g.battlefield.iter().find(|c| c.definition.name == "Smaug").expect("Smaug").id;
+    let mut evs = Vec::new();
+    g.destroy_permanent(smaug, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 14);
+}

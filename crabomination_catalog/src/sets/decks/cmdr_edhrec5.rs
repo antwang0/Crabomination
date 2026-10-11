@@ -4,7 +4,7 @@
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
 //! connive and mayhem; Reaper King's Scarecrows; Sauron, the Dark Lord's
 //! Orc Armies; Saruman, the White Hand's spells; Kibo's Apes and Monkeys;
-//! Shelob's Spiders; Marvo's clash spells. Tests in
+//! Shelob's Spiders; Marvo's clash spells; Tom Bombadil's Sagas. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
@@ -2252,5 +2252,456 @@ pub fn weed_strangle() -> CardDefinition {
             Effect::Destroy { what: target_filtered(R::Creature) },
             clash(Effect::GainLife { who: Selector::You, amount: Value::ToughnessOf(Box::new(Selector::Target(0))) }),
         ]),
+    )
+}
+
+// ── Tom Bombadil (WUBRG) ─────────────────────────────────────────────────────
+
+fn saga(name: &'static str, mana: ManaCost, chapters: Vec<(u32, Effect)>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: chapters,
+        ..Default::default()
+    }
+}
+
+fn yours_saga() -> R {
+    yours(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga))
+}
+
+fn lore(what: Selector) -> Effect {
+    Effect::AddCounter { what, kind: CounterType::Lore, amount: Value::ONE }
+}
+
+fn tutor(filter: R) -> Effect {
+    Effect::Search { who: PlayerRef::You, filter, to: ZoneDest::Hand(PlayerRef::You) }
+}
+
+/// Goldberry, River-Daughter — {1}{U} 1/3. {T}: a counter of each kind she
+/// lacks from another permanent of yours onto her; {U}, {T}: her counters
+/// onto another permanent of yours, and draw.
+pub fn goldberry_river_daughter() -> CardDefinition {
+    let other = || target_filtered(yours(R::Permanent).and(R::OtherThanSource));
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::MoveOneOfEachAbsentKind { from: other(), to: Selector::This },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                tap_cost: true,
+                condition: Some(Predicate::EntityMatches { what: Selector::This, filter: R::WithAnyCounter }),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches { what: Selector::This, filter: R::WithAnyCounter },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::MoveAllCounters { from: Selector::This, to: other() },
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..legend("Goldberry, River-Daughter", cost(&[generic(1), u()]), vec![CreatureType::Nymph], 1, 3)
+    }
+}
+
+/// Satsuki, the Living Lore — {G}{W} 1/3. {T}: a lore counter on each of your
+/// Sagas (sorcery speed). Dying, choose up to one: bounce a Saga or
+/// enchantment creature of yours, or a Saga card from your graveyard to hand.
+pub fn satsuki_the_living_lore() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: lore(Selector::EachPermanent(yours_saga())),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        yours(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga).or(R::Enchantment.and(R::Creature))),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::Move {
+                    what: target_filtered(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga).from_your_graveyard()),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::Noop,
+            ]),
+        }],
+        ..legend("Satsuki, the Living Lore", cost(&[g(), w()]), vec![CreatureType::Human, CreatureType::Druid], 1, 3)
+    }
+}
+
+/// Sigurd, Jarl of Ravensthorpe — {R}{G}{W} 3/3 vigilance, trample, lifelink.
+/// Boast {1}: add or remove a lore counter on a Saga of yours; each lore
+/// counter you put on a Saga puts a +1/+1 counter on up to one other creature.
+pub fn sigurd_jarl_of_ravensthorpe() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            once_per_turn: true,
+            // CR 702.142a — boast: only if it attacked this turn.
+            condition: Some(Predicate::SourceAttackedThisTurn),
+            effect: Effect::ChooseMode(vec![
+                lore(target_filtered(yours_saga())),
+                Effect::RemoveCounter { what: target_filtered(yours_saga()), kind: CounterType::Lore, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CounterAdded(CounterType::Lore), EventScope::YouPutCounters)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: yours_saga() }),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..legend("Sigurd, Jarl of Ravensthorpe", cost(&[r(), g(), w()]), vec![CreatureType::Human, CreatureType::Warrior], 3, 3)
+    }
+}
+
+/// Likeness of the Seeker — Azusa's Many Journeys' back: 3/3; becoming
+/// blocked untaps up to three of your lands.
+fn likeness_of_the_seeker() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::Untap { what: Selector::EachPermanent(yours(R::Land)), up_to: Some(Value::Const(3)) },
+        }],
+        color_indicator: vec![Color::Green],
+        ..creature("Likeness of the Seeker", ManaCost::default(), vec![CreatureType::Human, CreatureType::Monk], 3, 3)
+    }
+}
+
+/// Azusa's Many Journeys — {1}{G} Saga. I: an extra land play. II: 3 life.
+/// III: exile it and return it transformed.
+pub fn azusas_many_journeys() -> CardDefinition {
+    CardDefinition {
+        back_face: Some(Box::new(likeness_of_the_seeker())),
+        ..saga(
+            "Azusa's Many Journeys",
+            cost(&[generic(1), g()]),
+            vec![
+                (1, Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE }),
+                (2, Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+                (3, Effect::ExileSelfReturnTransformed),
+            ],
+        )
+    }
+}
+
+/// Historian's Boon — {3}{W} enchantment. It or another nontoken enchantment
+/// of yours entering makes a 1/1 Soldier; a Saga of yours' final chapter
+/// makes a 4/4 flying, vigilant Angel.
+pub fn historians_boon() -> CardDefinition {
+    let token = |name: &str, kind: CreatureType, p: i32, keywords: Vec<Keyword>| TokenDefinition {
+        name: name.into(),
+        power: p,
+        toughness: p,
+        colors: vec![Color::White],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![kind], ..Default::default() },
+        keywords,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Historian's Boon",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Enchantment.and(R::NotToken.or(R::IsSource)),
+                    },
+                ),
+                effect: make(token("Soldier", CreatureType::Soldier, 1, vec![]), 1),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SagaFinalChapterResolved, EventScope::YourControl),
+                effect: make(token("Angel", CreatureType::Angel, 4, vec![Keyword::Flying, Keyword::Vigilance]), 1),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Remnant of the Rising Star — Jugan Defends the Temple's back: 2/2 flying.
+/// Another creature of yours entering may take {X} for X +1/+1 counters;
+/// with five modified creatures it gets +5/+5 and trample.
+fn remnant_of_the_rising_star() -> CardDefinition {
+    let five_modified = || Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(yours(R::Creature.and(R::IsModified))),
+        n: Value::Const(5),
+    };
+    CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::MayPayX {
+                description: "Pay {X} to put X +1/+1 counters on it?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
+                }),
+            },
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as you control five or more modified creatures, this creature gets +5/+5.",
+                effect: StaticEffect::WhileCondition {
+                    condition: five_modified(),
+                    inner: Box::new(StaticEffect::PumpPT { applies_to: Selector::This, power: 5, toughness: 5 }),
+                },
+            },
+            StaticAbility {
+                description: "As long as you control five or more modified creatures, this creature has trample.",
+                effect: StaticEffect::WhileCondition {
+                    condition: five_modified(),
+                    inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Trample }),
+                },
+            },
+        ],
+        color_indicator: vec![Color::Green],
+        ..creature("Remnant of the Rising Star", ManaCost::default(), vec![CreatureType::Dragon, CreatureType::Spirit], 2, 2)
+    }
+}
+
+/// Jugan Defends the Temple — {2}{G} Saga. I: a 1/1 Monk with "{T}: Add
+/// {G}". II: a +1/+1 counter on each of up to two creatures. III: exile it
+/// and return it transformed.
+pub fn jugan_defends_the_temple() -> CardDefinition {
+    let monk = TokenDefinition {
+        name: "Human Monk".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Monk], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::OfColor(Color::Green, Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        back_face: Some(Box::new(remnant_of_the_rising_star())),
+        ..saga(
+            "Jugan Defends the Temple",
+            cost(&[generic(2), g()]),
+            vec![
+                (1, make(monk, 1)),
+                (
+                    2,
+                    Effect::ApplyToTargets {
+                        max_targets: 2,
+                        min_targets: 0,
+                        filter: R::Creature,
+                        effect: Box::new(Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        }),
+                    },
+                ),
+                (3, Effect::ExileSelfReturnTransformed),
+            ],
+        )
+    }
+}
+
+/// Scroll of Isildur — {2}{U} Saga. I: take up to one artifact while you
+/// control this, and the Ring tempts you. II: tap and stun up to two
+/// creatures. III: draw per tapped creature a target opponent controls.
+pub fn scroll_of_isildur() -> CardDefinition {
+    saga(
+        "Scroll of Isildur",
+        cost(&[generic(2), u()]),
+        vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::GainControlWhileYouControlSource { what: target_filtered(R::Artifact) }),
+                    },
+                    tempt(),
+                ]),
+            ),
+            (
+                2,
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::Target(0) },
+                        Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+                    ])),
+                },
+            ),
+            (
+                3,
+                Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::PermanentCountControlledByMatching(PlayerRef::Target(0), R::Creature.and(R::Tapped)),
+                    }),
+                },
+            ),
+        ],
+    )
+}
+
+/// The Bath Song — {3}{U} Saga. I, II: draw two, discard one. III: shuffle
+/// any number of cards from your graveyard into your library; add {U}{U}.
+pub fn the_bath_song() -> CardDefinition {
+    let loot = || {
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        ])
+    };
+    saga(
+        "The Bath Song",
+        cost(&[generic(3), u()]),
+        vec![
+            (1, loot()),
+            (2, loot()),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::ApplyToTargets {
+                        max_targets: 60,
+                        min_targets: 0,
+                        filter: R::Any.from_your_graveyard(),
+                        effect: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Shuffled },
+                        }),
+                    },
+                    Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::OfColor(Color::Blue, Value::Const(2)) },
+                ]),
+            ),
+        ],
+    )
+}
+
+/// The Cruelty of Gix — {3}{B}{B} Saga, read ahead. I: an opponent discards a
+/// creature or planeswalker card you choose. II: tutor, lose 3. III: a
+/// creature card from a graveyard onto the battlefield under your control.
+pub fn the_cruelty_of_gix() -> CardDefinition {
+    CardDefinition {
+        read_ahead: true,
+        ..saga(
+            "The Cruelty of Gix",
+            cost(&[generic(3), b(), b()]),
+            vec![
+                (
+                    1,
+                    Effect::DiscardChosen {
+                        from: target_filtered(R::OpponentPlayer),
+                        count: Value::ONE,
+                        filter: R::Creature.or(R::HasCardType(CardType::Planeswalker)),
+                    },
+                ),
+                (
+                    2,
+                    Effect::Seq(vec![tutor(R::Any), Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }]),
+                ),
+                (
+                    3,
+                    Effect::Move {
+                        what: target_filtered(R::Creature.from_any_graveyard()),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                ),
+            ],
+        )
+    }
+}
+
+/// There and Back Again — {3}{R}{R} Saga. I: up to one creature can't block
+/// while you control this, and the Ring tempts you. II: a Mountain onto the
+/// battlefield. III: Smaug, a 6/6 flying, hasty Dragon whose death makes
+/// fourteen Treasures.
+pub fn there_and_back_again() -> CardDefinition {
+    let smaug = TokenDefinition {
+        name: "Smaug".into(),
+        power: 6,
+        toughness: 6,
+        colors: vec![Color::Red],
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(14), definition: Arc::new(treasure_token()) },
+        }],
+        ..Default::default()
+    };
+    saga(
+        "There and Back Again",
+        cost(&[generic(3), r(), r()]),
+        vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::GrantKeyword {
+                            what: target_filtered(R::Creature),
+                            keyword: Keyword::CantBlock,
+                            duration: Duration::WhileSourceOnBattlefield,
+                        }),
+                    },
+                    tempt(),
+                ]),
+            ),
+            (
+                2,
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasLandType(crate::card::LandType::Mountain),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ),
+            (3, make(smaug, 1)),
+        ],
+    )
+}
+
+/// War of the Last Alliance — {3}{W} Saga. I, II: tutor a legendary creature
+/// card. III: your creatures gain double strike until end of turn; the Ring
+/// tempts you.
+pub fn war_of_the_last_alliance() -> CardDefinition {
+    let legend_tutor = || tutor(R::Creature.and(R::HasSupertype(Supertype::Legendary)));
+    saga(
+        "War of the Last Alliance",
+        cost(&[generic(3), w()]),
+        vec![(1, legend_tutor()), (2, legend_tutor()), (3, Effect::Seq(vec![team_eot(Keyword::DoubleStrike), tempt()]))],
     )
 }
