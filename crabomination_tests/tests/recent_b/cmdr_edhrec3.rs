@@ -2885,3 +2885,129 @@ fn druids_repository_banks_attack_counters() {
     activate(&mut g, repo, 0);
     assert_eq!(g.players[0].mana_pool.total(), 1);
 }
+
+// ── Toph, the First Metalbender's list ──────────────────────────────────────
+
+fn land_creature_power(g: &GameState, id: CardId) -> Option<i32> {
+    g.compute_battlefield()
+        .iter()
+        .find(|c| c.id == id && c.card_types().contains(&crabomination::card::CardType::Creature))
+        .map(|c| c.power)
+}
+
+/// The Stasis Coffin: exiling it as a cost gives you protection from
+/// everything until your next turn (CR 702.16j).
+#[test]
+fn the_stasis_coffin_protects_its_controller() {
+    let mut g = pod(2);
+    let coffin = ready(&mut g, 0, catalog::the_stasis_coffin());
+    flood(&mut g);
+    activate(&mut g, coffin, 0);
+    assert!(g.battlefield_find(coffin).is_none());
+    assert!(g.exile.iter().any(|c| c.id == coffin));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "can't be targeted"
+    );
+}
+
+/// Avatar Kyoshi, Earthbender: beginning of combat earthbends 8 and untaps
+/// the land (CR 701.66a).
+#[test]
+fn avatar_kyoshi_earthbends_eight_and_untaps() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::avatar_kyoshi_earthbender());
+    let forest = ready(&mut g, 0, catalog::forest());
+    g.battlefield_find_mut(forest).unwrap().tapped = true;
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(land_creature_power(&g, forest), Some(8));
+    assert!(!g.battlefield_find(forest).unwrap().tapped);
+}
+
+/// Bumi, Eclectic Earthbender: ETB earthbend 1; attacking adds two counters
+/// to each land creature.
+#[test]
+fn bumi_grows_land_creatures() {
+    let mut g = pod(2);
+    let forest = ready(&mut g, 0, catalog::forest());
+    let bumi = g.add_card_to_hand(0, catalog::bumi_eclectic_earthbender());
+    flood(&mut g);
+    cast_on(&mut g, bumi, None);
+    assert_eq!(land_creature_power(&g, forest), Some(1));
+    g.clear_sickness(bumi);
+    attack_with(&mut g, &[bumi]);
+    assert_eq!(land_creature_power(&g, forest), Some(3));
+}
+
+/// Toph, Earthbending Master: landfall banks experience; attacking earthbends
+/// that many.
+#[test]
+fn toph_earthbending_master_spends_experience_on_attack() {
+    let mut g = pod(2);
+    let toph = ready(&mut g, 0, catalog::toph_earthbending_master());
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(forest)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].experience, 1);
+    attack_with(&mut g, &[toph]);
+    assert_eq!(land_creature_power(&g, forest), Some(1));
+}
+
+/// Toph, Greatest Earthbender: earthbends the mana spent on her (four), and
+/// land creatures gain double strike.
+#[test]
+fn toph_greatest_earthbender_earthbends_her_cost() {
+    let mut g = pod(2);
+    let forest = ready(&mut g, 0, catalog::forest());
+    let toph = g.add_card_to_hand(0, catalog::toph_greatest_earthbender());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast_on(&mut g, toph, None);
+    let v = g.compute_battlefield();
+    let land = v.iter().find(|c| c.id == forest).unwrap();
+    assert_eq!(land.power, 4);
+    assert!(land.keywords().contains(&crabomination::card::Keyword::DoubleStrike));
+}
+
+/// The Legend of Kyoshi: I draws for the biggest creature; II earthbends by
+/// hand size and makes the land an Island too; III flips into Avatar Kyoshi.
+#[test]
+fn the_legend_of_kyoshi_reads_power_then_hand() {
+    let mut g = pod(2);
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::serra_angel());
+    let saga = g.add_card_to_hand(0, catalog::the_legend_of_kyoshi());
+    flood(&mut g);
+    cast_on(&mut g, saga, None);
+    assert_eq!(g.players[0].hand.len(), 4, "Serra Angel's power");
+}
+
+/// Earthshape: the 3/3 land shields creatures with power 3 or less, not a
+/// 4-power Angel, and you gain hexproof.
+#[test]
+fn earthshape_shields_the_small() {
+    let mut g = pod(2);
+    let forest = ready(&mut g, 0, catalog::forest());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    let shape = g.add_card_to_hand(0, catalog::earthshape());
+    flood(&mut g);
+    cast_on(&mut g, shape, Some(Target::Permanent(forest)));
+    let v = g.compute_battlefield();
+    let kw = |id| v.iter().find(|c| c.id == id).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible);
+    assert!(kw(bear));
+    assert!(!kw(angel));
+    assert_eq!(land_creature_power(&g, forest), Some(3));
+}

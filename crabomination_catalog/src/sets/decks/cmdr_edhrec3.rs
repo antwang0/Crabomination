@@ -6,7 +6,8 @@
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
 //! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin, Katara, the
 //! Fearless, Azlask, the Swelling Scourge, The Mycotyrant, Thranduil, the
-//! Elvenking, Maralen, Fae Ascendant and Najeela, the Blade-Blossom. Tests in
+//! Elvenking, Maralen, Fae Ascendant, Najeela, the Blade-Blossom and Toph, the First
+//! Metalbender. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -4137,6 +4138,225 @@ pub fn druids_repository() -> CardDefinition {
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+// ── Toph, the First Metalbender (RGW) ───────────────────────────────────────
+
+fn land_creature() -> R {
+    R::Land.and(R::Creature)
+}
+
+/// The Stasis Coffin — {3} legendary artifact. {2}, {T}, exile it: you gain
+/// protection from everything until your next turn.
+pub fn the_stasis_coffin() -> CardDefinition {
+    CardDefinition {
+        name: "The Stasis Coffin",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            exile_self_cost: true,
+            effect: Effect::PlayerProtectionUntilNextTurn { who: PlayerRef::You },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Avatar Kyoshi, Earthbender — {5}{G}{G}{G} 6/6 legendary Human Avatar.
+/// Hexproof during your turn. At the beginning of combat on your turn,
+/// earthbend 8, then untap that land.
+pub fn avatar_kyoshi_earthbender() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, Avatar Kyoshi has hexproof.",
+            effect: StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Hexproof }),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Earthbend { n: Value::Const(8) },
+                Effect::Untap { what: Selector::Target(0), up_to: None },
+            ]),
+        }],
+        ..legend(
+            "Avatar Kyoshi, Earthbender",
+            cost(&[generic(5), g(), g(), g()]),
+            vec![CreatureType::Human, CreatureType::Avatar],
+            6,
+            6,
+        )
+    }
+}
+
+/// Bumi, Eclectic Earthbender — {3}{G}{G} 4/4 legendary Human Noble Ally. ETB
+/// earthbend 1; attacking puts two +1/+1 counters on each land creature you
+/// control.
+pub fn bumi_eclectic_earthbender() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::Earthbend { n: Value::ONE }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: yours(land_creature()),
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        ..legend(
+            "Bumi, Eclectic Earthbender",
+            cost(&[generic(3), g(), g()]),
+            vec![CreatureType::Human, CreatureType::Noble, CreatureType::Ally],
+            4,
+            4,
+        )
+    }
+}
+
+/// Toph, Earthbending Master — {3}{G} 2/4 legendary Human Warrior Ally.
+/// Landfall: you get an experience counter. Whenever you attack, earthbend X,
+/// X = your experience counters.
+pub fn toph_earthbending_master() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::effect::shortcut::landfall(Effect::AddExperience(Value::ONE)),
+            crate::effect::shortcut::on_you_attack(Effect::Earthbend { n: Value::ControllerExperience }),
+        ],
+        ..legend(
+            "Toph, Earthbending Master",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            2,
+            4,
+        )
+    }
+}
+
+/// Toph, Greatest Earthbender — {2}{R}{G} 3/3 legendary Human Warrior Ally.
+/// ETB earthbend X, X = the mana spent to cast her. Land creatures you
+/// control have double strike.
+pub fn toph_greatest_earthbender() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Land creatures you control have double strike.",
+            effect: StaticEffect::GrantKeyword { applies_to: yours(land_creature()), keyword: Keyword::DoubleStrike },
+        }],
+        triggered_abilities: vec![etb(Effect::Earthbend { n: Value::CastSpellManaSpent })],
+        ..legend(
+            "Toph, Greatest Earthbender",
+            cost(&[generic(2), r(), g()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            3,
+            3,
+        )
+    }
+}
+
+/// Avatar Kyoshi — the back of The Legend of Kyoshi: a 5/4 legendary Avatar.
+/// Lands you control have trample and hexproof. {T}: add X mana of any one
+/// color, X = the greatest power among creatures you control.
+pub fn avatar_kyoshi() -> CardDefinition {
+    CardDefinition {
+        // CR 105.2c — a transformed Saga's back face carries a color indicator.
+        color_indicator: vec![Color::Green],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Lands you control have trample.",
+                effect: StaticEffect::GrantKeyword { applies_to: yours(R::Land), keyword: Keyword::Trample },
+            },
+            StaticAbility {
+                description: "Lands you control have hexproof.",
+                effect: StaticEffect::GrantKeyword { applies_to: yours(R::Land), keyword: Keyword::Hexproof },
+            },
+        ],
+        activated_abilities: vec![tap_for(ManaPayload::AnyOneColor(Value::GreatestPowerControlled {
+            who: PlayerRef::You,
+        }))],
+        ..legend("Avatar Kyoshi", crate::mana::ManaCost::default(), vec![CreatureType::Avatar], 5, 4)
+    }
+}
+
+/// The Legend of Kyoshi — {4}{G}{G} Saga. I: draw cards equal to the greatest
+/// power among creatures you control. II: earthbend X, X = cards in your hand;
+/// that land becomes an Island too. III: exile it, return it transformed
+/// (Avatar Kyoshi).
+pub fn the_legend_of_kyoshi() -> CardDefinition {
+    CardDefinition {
+        name: "The Legend of Kyoshi",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga(),
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Draw { who: Selector::You, amount: Value::GreatestPowerControlled { who: PlayerRef::You } },
+            ),
+            (
+                2,
+                Effect::Seq(vec![
+                    Effect::Earthbend { n: Value::HandSizeOf(PlayerRef::You) },
+                    Effect::GainLandType {
+                        what: Selector::Target(0),
+                        land_type: crate::card::LandType::Island,
+                        duration: Duration::Permanent,
+                    },
+                ]),
+            ),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(avatar_kyoshi())),
+        ..Default::default()
+    }
+}
+
+/// Earthshape — {2}{W} Instant. Earthbend 3. Then each creature you control
+/// with power at most that land's gains hexproof and indestructible until end
+/// of turn, and you gain hexproof until end of turn.
+pub fn earthshape() -> CardDefinition {
+    let shielded = || {
+        Predicate::ValueAtLeast(
+            Value::PowerOf(Box::new(Selector::Target(0))),
+            Value::PowerOf(Box::new(Selector::TriggerSource)),
+        )
+    };
+    CardDefinition {
+        name: "Earthshape",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Earthbend { n: Value::Const(3) },
+            Effect::ForEach {
+                selector: yours(R::Creature),
+                body: Box::new(Effect::If {
+                    cond: shielded(),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::GrantKeyword {
+                            what: Selector::TriggerSource,
+                            keyword: Keyword::Hexproof,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::TriggerSource,
+                            keyword: Keyword::Indestructible,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+            Effect::PlayerHexproofThisTurn { who: Selector::You },
+        ]),
         ..Default::default()
     }
 }
