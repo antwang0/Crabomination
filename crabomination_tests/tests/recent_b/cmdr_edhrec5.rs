@@ -907,3 +907,84 @@ fn souls_fire_surrounded_by_orcs_and_the_noisemaker() {
     assert_eq!(army_power(&g), Some(4), "the Noisemaker's 1, then 3");
     assert_eq!(g.players[1].library.len(), 2);
 }
+
+/// CR 506.2 — Party Dude's level 3 fires when any player attacks one of your
+/// opponents (seat 1 attacking seat 2), not when you are the one attacked.
+#[test]
+fn cr_506_2_party_dude_sees_your_opponents_attacked_by_anyone() {
+    for (defender, pumped) in [(2usize, true), (0, false)] {
+        let mut g = pod(3);
+        let dude = ready(&mut g, 0, catalog::party_dude());
+        g.battlefield_find_mut(dude).unwrap().class_level = 3;
+        g.add_card_to_hand(0, catalog::island());
+        g.add_card_to_hand(0, catalog::island());
+        let bear = ready(&mut g, 1, catalog::grizzly_bears());
+        attack(&mut g, 1, &[bear], defender);
+        let p = g.computed_permanent(bear).unwrap().power;
+        assert_eq!(p == 4, pumped, "defender {defender}: power {p}");
+    }
+}
+
+/// Grunn: kicked, five +1/+1 counters; attacking alone doubles it. Gorilla
+/// Shaman's {X}{X}{1} hits a noncreature artifact of mana value X only.
+#[test]
+fn grunn_and_gorilla_shaman() {
+    let mut g = pod(2);
+    let grunn = g.add_card_to_hand(0, catalog::grunn_the_lonely_king());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: grunn,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(counters(&g, grunn), 5);
+    g.clear_sickness(grunn);
+    attack(&mut g, 0, &[grunn], 1);
+    assert_eq!(g.computed_permanent(grunn).unwrap().power, 20);
+
+    let mut g = pod(2);
+    let shaman = ready(&mut g, 0, catalog::gorilla_shaman());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let x = |g: &mut GameState, x: u32| {
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        let r = g.perform_action(GameAction::ActivateAbility {
+            card_id: shaman,
+            ability_index: 0,
+            target: Some(Target::Permanent(ring)),
+            additional_targets: vec![],
+            x_value: Some(x),
+            mode: None,
+        });
+        drain_stack(g);
+        r
+    };
+    let _ = x(&mut g, 2);
+    assert!(on_bf(&g, ring), "X = 2 misses a mana value 1 artifact");
+    x(&mut g, 1).expect("X = 1");
+    assert!(!on_bf(&g, ring));
+}
+
+/// Towering Gibbon's power is the greatest mana value among your creatures;
+/// Elephant-Mandrill grows by the artifacts opponents control as combat
+/// begins.
+#[test]
+fn towering_gibbon_and_elephant_mandrill() {
+    let mut g = pod(2);
+    let gibbon = ready(&mut g, 0, catalog::towering_gibbon());
+    assert_eq!(g.computed_permanent(gibbon).unwrap().power, 4, "itself");
+    ready(&mut g, 0, catalog::colossal_dreadmaw());
+    assert_eq!(g.computed_permanent(gibbon).unwrap().power, 6);
+    let em = g.add_card_to_hand(0, catalog::elephant_mandrill());
+    cast(&mut g, 0, em, None).expect("Mandrill");
+    ready(&mut g, 1, catalog::sol_ring());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(em).unwrap().power, 5, "their Food and Sol Ring");
+}

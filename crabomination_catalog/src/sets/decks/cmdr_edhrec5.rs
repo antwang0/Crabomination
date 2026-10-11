@@ -3,7 +3,8 @@
 //! fourth). Lord of the Nazgûl's Wraiths and Ring spells; Leonardo and
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
 //! connive and mayhem; Reaper King's Scarecrows; Sauron, the Dark Lord's
-//! Orc Armies; Saruman, the White Hand's spells. Tests in
+//! Orc Armies; Saruman, the White Hand's spells; Kibo's Apes and Monkeys.
+//! Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
@@ -1454,4 +1455,229 @@ pub fn surrounded_by_orcs() -> CardDefinition {
             Effect::Mill { who: target_filtered(R::Player), amount: army_power() },
         ]),
     )
+}
+
+// ── Kibo, Uktabi Prince (RG) ─────────────────────────────────────────────────
+
+fn food_each_player() -> Effect {
+    Effect::CreateToken {
+        who: PlayerRef::EachPlayer,
+        count: Value::ONE,
+        definition: Arc::new(crabomination_base::tokens::food_token()),
+    }
+}
+
+fn begin_combat(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl), effect }
+}
+
+/// Elephant-Mandrill — {2}{G} 3/2 reach. Each player makes a Food on entry; at
+/// the beginning of combat on your turn, +1/+1 per artifact your opponents
+/// control.
+pub fn elephant_mandrill() -> CardDefinition {
+    let n = || Value::CountOf(Box::new(Selector::EachPermanent(R::Artifact.and(R::ControlledByOpponent))));
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![
+            etb(food_each_player()),
+            begin_combat(Effect::PumpPT { what: Selector::This, power: n(), toughness: n(), duration: Duration::EndOfTurn }),
+        ],
+        ..creature("Elephant-Mandrill", cost(&[generic(2), g()]), vec![CreatureType::Elephant, CreatureType::Monkey], 3, 2)
+    }
+}
+
+/// Gorilla Shaman — {R} 1/1. {X}{X}{1}: destroy a noncreature artifact with
+/// mana value X.
+pub fn gorilla_shaman() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), x(), generic(1)]),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    R::Artifact.and(R::Creature.negate()).and(R::ManaValueExactlyXFromCost),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature("Gorilla Shaman", cost(&[r()]), vec![CreatureType::Ape, CreatureType::Shaman], 1, 1)
+    }
+}
+
+/// Grunn, the Lonely King — {4}{G}{G} 5/5, kicker {3}: kicked, it enters with
+/// five +1/+1 counters; attacking alone doubles its power and toughness.
+pub fn grunn_the_lonely_king() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SpellWasKicked),
+                then: Box::new(Value::Const(5)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::AttackingAlone),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::PowerOf(Box::new(Selector::This)),
+                toughness: Value::ToughnessOf(Box::new(Selector::This)),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..legend("Grunn, the Lonely King", cost(&[generic(4), g(), g()]), vec![CreatureType::Ape, CreatureType::Warrior], 5, 5)
+    }
+}
+
+/// Scrounging Bandar — {1}{G} 0/0, enters with two +1/+1 counters; at your
+/// upkeep it may move its +1/+1 counters onto another creature.
+pub fn scrounging_bandar() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Move this creature's +1/+1 counters onto another creature?".into(),
+                body: Box::new(Effect::MoveCounters {
+                    from: Selector::This,
+                    to: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    counter: CounterType::PlusOnePlusOne,
+                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+                }),
+            },
+        }],
+        ..creature("Scrounging Bandar", cost(&[generic(1), g()]), vec![CreatureType::Cat, CreatureType::Monkey], 0, 0)
+    }
+}
+
+/// Silverback Shaman — {3}{G}{G} 5/4 trample; dies: draw a card.
+pub fn silverback_shaman() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..creature("Silverback Shaman", cost(&[generic(3), g(), g()]), vec![CreatureType::Ape, CreatureType::Shaman], 5, 4)
+    }
+}
+
+/// Simian Simulacrum — {3} 2/1 artifact Ape: two +1/+1 counters on a creature
+/// you control on entry; unearth {2}{G}{G}.
+pub fn simian_simulacrum() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(yours(R::Creature)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(2), g(), g()]))],
+        ..creature("Simian Simulacrum", cost(&[generic(3)]), vec![CreatureType::Ape], 2, 1)
+    }
+}
+
+/// Towering Gibbon — {3}{G} */4 reach; its power is the greatest mana value
+/// among creatures you control.
+pub fn towering_gibbon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Towering Gibbon's power is equal to the greatest mana value among creatures you control.",
+            effect: StaticEffect::SelfBasePtFromValue {
+                power: Value::ManaValueOf(Box::new(Selector::GreatestManaValueControlledMatching {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                })),
+                toughness: Value::Const(4),
+            },
+        }],
+        ..creature("Towering Gibbon", cost(&[generic(3), g()]), vec![CreatureType::Ape], 0, 4)
+    }
+}
+
+/// Tree Monkey — {G} 1/1 reach.
+pub fn tree_monkey() -> CardDefinition {
+    CardDefinition { keywords: vec![Keyword::Reach], ..creature("Tree Monkey", cost(&[g()]), vec![CreatureType::Monkey], 1, 1) }
+}
+
+/// Wily Bandar — {G} 1/1. {2}{G}: indestructible until end of turn.
+pub fn wily_bandar() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("Wily Bandar", cost(&[g()]), vec![CreatureType::Cat, CreatureType::Monkey], 1, 1)
+    }
+}
+
+/// Yavimaya Steelcrusher — {1}{R} 2/2, enlist; {1}, sacrifice it: destroy an
+/// artifact.
+pub fn yavimaya_steelcrusher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::enlist()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Destroy { what: target_filtered(R::Artifact) },
+            ..Default::default()
+        }],
+        ..creature("Yavimaya Steelcrusher", cost(&[generic(1), r()]), vec![CreatureType::Ape, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Zodiac Monkey — {1}{G} 2/1 forestwalk.
+pub fn zodiac_monkey() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(crate::card::LandType::Forest)],
+        ..creature("Zodiac Monkey", cost(&[generic(1), g()]), vec![CreatureType::Monkey], 2, 1)
+    }
+}
+
+/// Party Dude — {G} Class. Each player makes a Food on entry. L2 ({1}{G}): an
+/// opponent's artifact going to a graveyard draws you a card. L3 ({4}{G}):
+/// when one or more opponents are attacked, an attacking creature gets +X/+X,
+/// X your hand size.
+pub fn party_dude() -> CardDefinition {
+    let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
+        mana_cost: mana,
+        sorcery_speed: true,
+        condition: Some(Predicate::SourceClassLevelIs(from)),
+        effect: Effect::AdvanceClassLevel,
+        ..Default::default()
+    };
+    let hand = || Value::HandSizeOf(PlayerRef::You);
+    CardDefinition {
+        name: "Party Dude",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Class], ..Default::default() },
+        triggered_abilities: vec![
+            etb(food_each_player()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
+                    Predicate::SourceClassLevelAtLeast(2),
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.and(R::ControlledByOpponent) },
+                ])),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer)
+                    .with_filter(Predicate::All(vec![Predicate::SourceClassLevelAtLeast(3), Predicate::AnOpponentIsAttacked])),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::PumpPT {
+                        what: target_filtered(R::Creature.and(R::IsAttacking)),
+                        power: hand(),
+                        toughness: hand(),
+                        duration: Duration::EndOfTurn,
+                    }),
+                },
+            },
+        ],
+        activated_abilities: vec![level_up(cost(&[generic(1), g()]), 1), level_up(cost(&[generic(4), g()]), 2)],
+        ..Default::default()
+    }
 }
