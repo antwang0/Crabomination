@@ -2688,6 +2688,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NAJEELA_COMMANDERS,
             main: decks::NAJEELA_MAIN,
         },
+        // Seat 375: Toph, the First Metalbender's EDHREC average deck. `--pod-decks 375`.
+        PodDeck {
+            name: "Toph, the First Metalbender (RGW)",
+            commanders: decks::TOPH_FIRST_METALBENDER_COMMANDERS,
+            main: decks::TOPH_FIRST_METALBENDER_MAIN,
+        },
     ]
 }
 
@@ -4780,6 +4786,7 @@ mod tests {
             ("Thranduil, the Elvenking", [0x0A9A, 372, 9297]),
             ("Maralen, Fae Ascendant", [0x0A9B, 373, 9298]),
             ("Najeela, the Blade-Blossom", [0x0A9C, 374, 9299]),
+            ("Toph, the First Metalbender", [0x0A9D, 375, 9300]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

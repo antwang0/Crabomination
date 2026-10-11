@@ -10953,3 +10953,33 @@ pub const NAJEELA_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, island, mountain, mountain, plains, plains, swamp, swamp,
 ];
+
+pub const TOPH_FIRST_METALBENDER_COMMANDERS: &[CardFactory] = &[toph_the_first_metalbender];
+
+/// **Toph, the First Metalbender**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 84 nonbasic cards + 7 Forests + 4 Mountains + 4 Plains = 99.
+/// Toph, the First Metalbender (RGW) earthbending: lands become hasty creatures and Toph
+/// keeps artifacts as lands while land-creature payoffs give them double strike.
+pub const TOPH_FIRST_METALBENDER_MAIN: &[CardFactory] = &[
+    amulet_of_vigor, arcane_signet, benders_waterskin, chromatic_lantern, commanders_sphere,
+    ichor_wellspring, lightning_greaves, liquimetal_coating, liquimetal_torque, mishras_bauble,
+    mycosynth_lattice, sol_ring, swiftfoot_boots, the_earth_crystal, the_ozolith,
+    the_stasis_coffin, zuran_orb, abandoned_air_temple, arid_mesa, ba_sing_se, canopy_vista,
+    cinder_glade, command_tower, evolving_wilds, exotic_orchard, fabled_passage, jetmirs_garden,
+    jungle_shrine, rootbound_crag, rumble_arena, sacred_foundry, secret_tunnel, stomping_ground,
+    temple_garden, terramorphic_expanse, windswept_heath, wooded_foothills,
+    yavimaya_cradle_of_growth, ashaya_soul_of_the_wild, avatar_kyoshi_earthbender, badgermole,
+    badgermole_cub, bumi_eclectic_earthbender, bumi_unleashed, dryad_of_the_ilysian_grove,
+    earthbending_student, esper_sentinel, evolution_sage, great_divide_guide, haywire_mite,
+    lotus_cobra, moraug_fury_of_akoum, scute_swarm, solemn_simulacrum, sylvan_safekeeper,
+    tannuk_memorial_ensign, the_boulder_ready_to_rumble, tireless_provisioner,
+    toph_earthbending_master, toph_greatest_earthbender, toph_hardheaded_teacher,
+    toph_the_blind_bandit, annie_joins_up, bitter_work, earthbender_ascension, felidar_retreat,
+    terra_eternal, terrasymbiosis, the_legend_of_kyoshi, crop_rotation, cycle_of_renewal,
+    earthshape, heroic_intervention, origin_of_metalbending, path_to_exile, redirect_lightning,
+    swords_to_plowshares, earth_rumble, earthbending_lesson, farseek, hour_of_revelation,
+    natures_lore, rockalanche, seismic_sense,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains,
+];
