@@ -1212,3 +1212,30 @@ fn visions_of_dominance_adds_then_doubles() {
     cast_at(&mut g, vis, Some(Target::Permanent(bear)));
     assert_eq!(counters(&g, bear), 6);
 }
+
+/// CR 704.5d / 117.3c — the auto-tapper never leaves a sacrificed Spawn in a
+/// graveyard: a nested payment for Cascading Cataracts' {5} that sacrificed
+/// Spawns and then failed rolled back only the pool and the taps (an audit
+/// pod, seed 38200260); a Spawn that does pay is swept once the caster gets
+/// priority.
+#[test]
+fn cr_704_5d_a_spawn_sacrificed_for_a_cast_leaves_no_token() {
+    for signet in [false, true] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::ulalek_fused_atrocity());
+        // The green comes off a restricted source, which the auto-tapper
+        // reaches only after Cataracts' {5} "any colour" attempt fails.
+        let court = ready(&mut g, 0, catalog::secluded_courtyard());
+        g.battlefield_find_mut(court).unwrap().chosen_creature_type = Some(crabomination::card::CreatureType::Eldrazi);
+        ready(&mut g, 0, catalog::cascading_cataracts());
+        if signet {
+            ready(&mut g, 0, catalog::golgari_signet());
+        }
+        for _ in 0..2 {
+            g.add_token_to_battlefield(0, &crabomination_base::tokens::eldrazi_spawn_token());
+        }
+        let vile = g.add_card_to_hand(0, catalog::vile_redeemer());
+        let _ = g.perform_action(GameAction::CastSpell { card_id: vile, target: None, additional_targets: vec![], mode: None, x_value: None });
+        assert!(!g.players[0].graveyard.iter().any(|c| c.is_token), "signet {signet}");
+    }
+}

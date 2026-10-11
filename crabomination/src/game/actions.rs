@@ -18603,10 +18603,33 @@ impl GameState {
         if !costly {
             return self.activate_ability_into(id, idx, None, Vec::new(), x_value, None, events);
         }
+        // The ability's own cost is paid by a nested auto-tap, and a failed
+        // payment rolls back only the pool and the taps: a Spawn sacrificed
+        // toward Cascading Cataracts' {5} stayed in the graveyard, unswept
+        // and unannounced (audit pod, seed 38200260). Where the payer has a
+        // self-consuming source, a dry run on a clone decides first.
+        if self.has_self_consuming_mana_source(id) {
+            let mut trial = self.clone();
+            trial.mana_sources_paying.push(id);
+            trial.activate_ability_into(id, idx, None, Vec::new(), x_value, None, &mut Vec::new())?;
+        }
         self.mana_sources_paying.push(id);
         let r = self.activate_ability_into(id, idx, None, Vec::new(), x_value, None, events);
         self.mana_sources_paying.pop();
         r
+    }
+
+    /// Does the controller of `id` control another untapped permanent with a
+    /// mana ability that sacrifices, exiles or discards as its cost?
+    fn has_self_consuming_mana_source(&self, id: CardId) -> bool {
+        let Some(p) = self.battlefield_find(id).map(|c| c.controller) else { return false };
+        self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.id != id
+                && c.definition.activated_abilities.iter().any(|a| {
+                    (a.sac_cost || a.exile_self_cost || a.discard_cost.is_some()) && is_mana_ability(&a.effect)
+                })
+        })
     }
 
     fn auto_tap_for_cost_inner(
