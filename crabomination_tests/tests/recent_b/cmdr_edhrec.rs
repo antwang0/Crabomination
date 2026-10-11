@@ -1760,6 +1760,39 @@ fn tinybones_does_not_stash_a_commander_that_went_home() {
     assert_eq!(c.counter_count(crabomination::card::CounterType::Stash), 0);
 }
 
+/// CR 400.7 — a discarded card that leaves the graveyard before Tinybones'
+/// trigger resolves is a new object: "exile it from their graveyard" finds
+/// nothing, and the card stays where it went.
+#[test]
+fn tinybones_does_not_stash_a_card_that_left_the_graveyard() {
+    let mut g = pod(2);
+    let bones = ready(&mut g, 0, catalog::tinybones_bauble_burglar());
+    g.players[1].hand.clear();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bones,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    // Resolve the activation only: the discard puts the stash trigger on top.
+    while g.players[1].hand.iter().any(|c| c.id == bolt) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(!g.stack.is_empty(), "the stash trigger waits");
+    let pos = g.players[1].graveyard.iter().position(|c| c.id == bolt).expect("discarded");
+    let card = g.players[1].graveyard.remove(pos);
+    g.players[1].hand.push(card);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "the new object stays in hand");
+    assert!(!g.exile.iter().any(|c| c.id == bolt));
+}
+
 /// Grolnok: a Frog attacking mills three; the milled permanent cards are
 /// exiled with croak counters and playable, the instants stay binned.
 #[test]

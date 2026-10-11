@@ -845,6 +845,7 @@ fn until_end_of_combat_expires_when_combat_phase_ends() {
         source: Some(bear),
         targets: vec![Target::Permanent(bear)],
         trigger_source: None,
+        trigger_source_left_gy: false,
         mode: 0,
         x_value: 0,
         converged_value: 0,

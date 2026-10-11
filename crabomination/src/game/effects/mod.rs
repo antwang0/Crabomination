@@ -394,6 +394,12 @@ pub struct EffectContext {
     pub targets: Vec<Target>,
     /// The entity that caused the current trigger to fire (`Selector::TriggerSource`).
     pub trigger_source: Option<EntityRef>,
+    /// CR 400.7 — the trigger source sat in a graveyard as the trigger went on
+    /// the stack (`StackItem::Trigger::ts_in_gy`) and had left every graveyard
+    /// by the time it resolved: a new object, which a move of "it" doesn't
+    /// find. Read once at the start, so the resolution's own "exile it, then
+    /// return it" still moves the card twice.
+    pub trigger_source_left_gy: bool,
     /// Modal choice index (for `Effect::ChooseMode`).
     pub mode: usize,
     pub x_value: u32,
@@ -506,6 +512,7 @@ impl EffectContext {
             cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
+            trigger_source_left_gy: false,
             kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
@@ -596,6 +603,7 @@ impl EffectContext {
             cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
+            trigger_source_left_gy: false,
             kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
@@ -631,6 +639,7 @@ impl EffectContext {
             cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
+            trigger_source_left_gy: false,
             kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
@@ -665,6 +674,7 @@ impl EffectContext {
             cast_from_graveyard: false,
             event_amount: 0,
             kicked: false,
+            trigger_source_left_gy: false,
             kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
@@ -779,6 +789,7 @@ impl EffectContext {
             cast_from_graveyard: false,
             event_amount,
             kicked: false,
+            trigger_source_left_gy: false,
             kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,

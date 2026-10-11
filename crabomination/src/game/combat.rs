@@ -2692,6 +2692,7 @@ impl GameState {
                     cast_from_graveyard: false,
                     event_amount: 0,
                     kicked: false,
+                    trigger_source_left_gy: false,
                     kicked_options: Vec::new(),
                     kick_count: 0,
                     bargained: false,

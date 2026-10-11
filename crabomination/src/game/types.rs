@@ -1860,6 +1860,9 @@ pub enum ResumeContext {
         /// preserved across a mid-resolution suspend.
         #[serde(default)]
         additional_targets: Vec<Target>,
+        /// `StackItem::Trigger::ts_in_gy`, kept across the suspend (CR 400.7).
+        #[serde(default)]
+        ts_in_gy: bool,
     },
     Ability {
         source: CardId,
@@ -3383,6 +3386,13 @@ pub enum StackItem {
         /// aimed at a graveyard all along. Slots past 7 are unchecked.
         #[serde(default)]
         bf_slots: u8,
+        /// CR 400.7 — `trigger_source` was a card in a graveyard as this went
+        /// on the stack (stamped by `push_stack`). If it has left every
+        /// graveyard by resolution it is a new object, and a move of "it"
+        /// finds nothing (a discarded card returned to hand before Tinybones'
+        /// trigger resolved).
+        #[serde(default)]
+        ts_in_gy: bool,
     },
 }
 
@@ -3521,6 +3531,7 @@ impl TriggerPush {
             source_transformed_since_push: false,
             ability_id: 0,
             bf_slots: 0,
+            ts_in_gy: false,
         }
     }
 }

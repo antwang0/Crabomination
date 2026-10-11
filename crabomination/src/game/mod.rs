@@ -28285,6 +28285,7 @@ impl GameState {
                 event_amount,
                 trigger_player,
                 additional_targets,
+                ts_in_gy,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 // CR 603.10 — re-arm the dying object's LKI scope for the
@@ -28311,7 +28312,7 @@ impl GameState {
                 self.continue_trigger_resolution_with_source_into(
                     source, controller, remaining, target, mode, x_value, converged_value,
                     mana_spent, trigger_source_ent, event_amount, trigger_player,
-                    additional_targets, 0, true, &mut evs,
+                    additional_targets, 0, ts_in_gy, true, &mut evs,
                 )?;
                 let suspended_again = self.pending_decision.is_some();
                 // The Master, Multiplied's shield, armed by the first pass.
@@ -31172,6 +31173,7 @@ impl GameState {
             additional_targets,
             bf_slots,
             false,
+            false,
             &mut events,
         )?;
         Ok(events)
@@ -31209,6 +31211,8 @@ impl GameState {
         mut additional_targets: Vec<Target>,
         // `StackItem::Trigger::bf_slots` (CR 608.2b).
         bf_slots: u8,
+        // `StackItem::Trigger::ts_in_gy` (CR 400.7).
+        ts_in_gy: bool,
         // True when this is the continuation of a trigger resolution that
         // suspended: the per-resolution scratch the first pass built is kept.
         resuming: bool,
@@ -31333,6 +31337,10 @@ impl GameState {
             // as the trigger resolves (CR 603.4).
             ctx.cast_via_madness = src.cast_via_madness;
         }
+        ctx.trigger_source_left_gy = ts_in_gy
+            && trigger_source_ent.and_then(|e| e.as_card_id()).is_some_and(|id| {
+                !self.players.iter().any(|p| p.graveyard.iter().rev().any(|c| c.id == id))
+            });
         if let Some(ts) = trigger_source_ent {
             ctx.trigger_source = Some(ts);
         }
@@ -31363,6 +31371,7 @@ impl GameState {
                     event_amount,
                     trigger_player,
                     additional_targets,
+                    ts_in_gy,
                 },
             }));
         }

@@ -2422,6 +2422,12 @@ impl GameState {
         if matches!(dest, ZoneDest::Exile) && self.trigger_shields_token(cid) {
             return;
         }
+        // CR 400.7 — the trigger's subject left the graveyard it triggered
+        // from before the trigger resolved: a new object "it" no longer names
+        // (a discarded card back in hand before Tinybones' stash resolved).
+        if ctx.trigger_source_left_gy && ctx.trigger_source.is_some_and(|e| e.as_card_id() == Some(cid)) {
+            return;
+        }
         // A permanent already on the battlefield can't be put onto it: the
         // card a "return it" names has become a new object there (CR 400.7).
         // Moving it anyway was a blink — it left and re-entered, so two

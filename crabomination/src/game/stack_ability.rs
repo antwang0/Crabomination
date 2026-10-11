@@ -16,7 +16,19 @@ impl GameState {
     pub fn push_stack(&mut self, mut item: StackItem) {
         self.stamp_ability_id(&mut item);
         self.mark_battlefield_targets(&mut item);
+        self.stamp_trigger_source_in_graveyard(&mut item);
         self.stack.push(item);
+    }
+
+    /// CR 400.7 — mark a trigger whose subject is a card in a graveyard right
+    /// now (`StackItem::Trigger::ts_in_gy`). Graveyards are push-only, so
+    /// the back-to-front scan hits a card that just arrived first.
+    fn stamp_trigger_source_in_graveyard(&self, item: &mut StackItem) {
+        let StackItem::Trigger { trigger_source: Some(ts), ts_in_gy, .. } = item else { return };
+        let Some(id) = ts.as_card_id() else { return };
+        if self.players.iter().any(|p| p.graveyard.iter().rev().any(|c| c.id == id)) {
+            *ts_in_gy = true;
+        }
     }
 
     /// CR 608.2b — OR into `item`'s battlefield-slot mark the slots that name a

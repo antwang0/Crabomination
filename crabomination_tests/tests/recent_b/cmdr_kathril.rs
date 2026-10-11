@@ -423,6 +423,7 @@ fn yannik_prompting_controller_picks_and_divides() {
         x_value: 0,
         converged_value: 0,
         trigger_source: None,
+        ts_in_gy: false,
         mana_spent: 0,
         event_amount: 0,
         trigger_player: None,
