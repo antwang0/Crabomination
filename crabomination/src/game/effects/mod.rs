@@ -32473,6 +32473,37 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MoveOneOfEachAbsentKind { from, to } => {
+                let Some(dest) = self.resolve_selector(to, ctx).into_iter().find_map(|e| e.as_permanent_id()) else {
+                    return Ok(());
+                };
+                let Some(src) = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .find(|id| *id != dest)
+                else {
+                    return Ok(());
+                };
+                let Some(dest_card) = self.battlefield_find(dest) else { return Ok(()) };
+                let kinds: Vec<crate::card::CounterType> = self
+                    .battlefield_find(src)
+                    .map(|c| {
+                        c.counters
+                            .iter()
+                            .filter(|(k, n)| **n > 0 && dest_card.counter_count(**k) == 0)
+                            .map(|(k, _)| *k)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                for kind in kinds {
+                    if let Some(c) = self.battlefield.find_by_id_mut(src) {
+                        c.remove_counters(kind, 1);
+                    }
+                    self.place_counters(dest, kind, 1);
+                }
+                Ok(())
+            }
             Effect::MoveAllCountersOfKind { from, to, kind } => {
                 let Some(dest) =
                     self.resolve_selector(to, ctx).into_iter().find_map(|e| e.as_permanent_id())

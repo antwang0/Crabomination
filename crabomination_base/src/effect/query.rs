@@ -1382,7 +1382,7 @@ impl Effect {
             Effect::ExileSpellWithDelayCounters { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }
-            Effect::MoveAllCountersOfKind { from, to, .. } => {
+            Effect::MoveAllCountersOfKind { from, to, .. } | Effect::MoveOneOfEachAbsentKind { from, to } => {
                 sel_has_target(from) || sel_has_target(to)
             }
             Effect::EachPlayerKeepsOneSacrificeRest { who, .. } => sel_has_target(who),

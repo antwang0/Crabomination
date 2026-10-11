@@ -9874,6 +9874,10 @@ pub enum Effect {
     /// Move every counter of `kind` from each resolved `from` onto `to` (Spike
     /// Cannibal). Relocation, not creation — no doublers (CR 122.5).
     MoveAllCountersOfKind { from: Selector, to: Selector, kind: crate::card::CounterType },
+    /// "Move a counter of each kind not on [to] from [from] onto [to]"
+    /// (Goldberry, River-Daughter). One counter per kind `from` carries and
+    /// `to` lacks; relocation, not creation (CR 122.5).
+    MoveOneOfEachAbsentKind { from: Selector, to: Selector },
     /// "Choose target player matching `filter`, then `then`." A player target
     /// slot 0 with an explicit restriction, for bodies that don't reference
     /// the target themselves — the EXO Keeper cycle's "choose target opponent
