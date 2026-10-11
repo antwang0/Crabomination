@@ -173,6 +173,13 @@ the handoff.
   probe-reproducible without a set-up board: Karn's Bastion, Shadowspear, Nesting
   Grounds, Fauna Shaman, Stoneforge Mystic, Najeela's untap, Mjölnir (the probe's
   board has no counters, equipment in hand or combat to read).
+- **Seat 379, Avatar Aang** (WUBRG — the back face's "{W}{U}{B}{R}{G} less" puts
+  black in the identity): bending is an event now — `KeywordAct::Bent(Option<BendKind>)`
+  / `GameEvent::Bent` at CR 701.65b airbend, 701.66b earthbend, 701.67c waterbend
+  (cast or activation cost), 702.189b firebend, with `Player.bends_this_turn` and
+  `Predicate::BentAllFourThisTurn`; `Effect::EachPlayerChoosesOpponentPermanentExile`
+  (The Legend of Yangchen). Test `avatar_aang_draws_per_bend_and_transforms_after_all_four`
+  does all four in one turn.
 - **Open** (INCOMPLETE_CARDS "EDHREC average-deck seats … open residuals"):
   Echoes of Eternity doesn't double a colorless *spell's* trigger or a
   leaves-the-battlefield one (the doubler reads its source live); Maralen's

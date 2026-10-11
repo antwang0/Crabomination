@@ -34,12 +34,12 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-374 / 378 pod decks carry no residual (2026-10-11, after `01Mwhi27`'s afternoon residual pass; 370 at the
-nineteenth Commander run `01Vk2K6g`, concurrent with `017yfeX4`'s second firing). Seats 335-378 are EDHREC average decks, card for card (`scripts/edhrec_deck.py
+374 / 379 pod decks carry no residual (2026-10-11, after seat 379 and `01Mwhi27`'s afternoon residual pass; 370 at the
+nineteenth Commander run `01Vk2K6g`, concurrent with `017yfeX4`'s second firing). Seats 335-379 are EDHREC average decks, card for card (`scripts/edhrec_deck.py
 --rust`; the seat scan is `scripts/edhrec_scan_top.py`; cards in `decks::cmdr_edhrec2` /
-`cmdr_edhrec3` / `cmdr_edhrec4`). This run's seats 357-368 and 372-375: Fire Lord Zuko, Arna
+`cmdr_edhrec3` / `cmdr_edhrec4`). This run's seats 357-368, 372-375 and 379: Fire Lord Zuko, Arna
 Kennerüd, Terra, Atreus // Kratos, Kratos, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin,
-Katara, Azlask, The Mycotyrant, Thranduil, Maralen, Najeela and Toph, the First Metalbender (~140
+Katara, Azlask, The Mycotyrant, Thranduil, Maralen, Najeela, Toph, the First Metalbender and Avatar Aang (~150
 cards); the concurrent run's 369-371 and 376-378: Shroofus Sproutsire, Miirym, Tiamat, Wolverine, Captain
 Howler, Magda. Every residual a new card
 carries is an open row in INCOMPLETE_CARDS ("EDHREC average-deck seats … open residuals") or named
@@ -52,8 +52,9 @@ in its doc. Left: the stand-in sticker collection, Ardenn's player-host attach, 
 | 358 | Arna Kennerüd, Skycaptain (WUB) | 1: ardenn_intrepid_archaeologist |
 | 362 | Eddie Brock (BRG) | 1: the_soul_stone |
 | 372 | Thranduil, the Elvenking (BGU) | 1: elrond_moon_reader |
+| 379 | Avatar Aang (WUBRG) | 1: iroh_grand_lotus |
 
-374 / 378 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+374 / 379 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
