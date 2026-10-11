@@ -3506,7 +3506,10 @@ pub fn echoes_of_eternity() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If a triggered ability of a colorless spell you control or another colorless permanent \
                           you control triggers, that ability triggers an additional time.",
-            effect: StaticEffect::DoubleControllerTriggersMatching { filter: R::Colorless.and(R::OtherThanSource) },
+            effect: StaticEffect::DoubleControllerTriggersMatching {
+                filter: R::Colorless.and(R::OtherThanSource),
+                include_spells: true,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {

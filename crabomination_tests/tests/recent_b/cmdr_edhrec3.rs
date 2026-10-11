@@ -2470,6 +2470,30 @@ fn echoes_of_eternity_copies_and_doubles_colorless() {
     assert_eq!(g.players[0].hand.len(), 4);
 }
 
+/// Echoes of Eternity: CR 603.2d — "a triggered ability of a colorless
+/// **spell** you control" doubles too (Kozilek's cast trigger draws eight),
+/// and a colorless permanent's dies trigger doubles by last known
+/// information (CR 603.10a): Wurmcoil Engine leaves four Wurms.
+#[test]
+fn echoes_of_eternity_doubles_cast_and_dies_triggers() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::echoes_of_eternity());
+    for _ in 0..12 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let kozilek = g.add_card_to_hand(0, catalog::kozilek_butcher_of_truth());
+    flood(&mut g);
+    let hand = g.players[0].hand.len() - 1;
+    cast_x(&mut g, kozilek, None);
+    assert_eq!(g.players[0].hand.len(), hand + 8, "the cast trigger fired twice");
+    let wurmcoil = ready(&mut g, 0, catalog::wurmcoil_engine());
+    let wrath = g.add_card_to_hand(0, catalog::wrath_of_god());
+    flood(&mut g);
+    cast_x(&mut g, wrath, None);
+    assert!(g.battlefield_find(wurmcoil).is_none());
+    assert_eq!(named(&g, "Phyrexian Wurm"), 4, "the dies trigger fired twice");
+}
+
 // ── The Mycotyrant's list ───────────────────────────────────────────────────
 
 /// Matzalantli, the Great Door: the transform needs four permanent types
