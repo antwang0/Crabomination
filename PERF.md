@@ -3162,6 +3162,14 @@ CR 400.7 stamp   `bd87704e7` (a graveyard scan per trigger push whose subject
                  determinism ok; bench_ab.py 46cd44fdd vs bd87704e7, 16 pairs:
                  median +5.85 % (sd 6.12) — no regression (the interval holds
                  seats 369-379 and their engine commits too)
+Gained mana      `92fee1d27` (available_mana's tapped/sick skip also asks
+ on a sick src   `grants_nothing` — a correctness fix, Necrotic Ooze):
+                 --bench 196,176 / 27.64 / 613.0 byte-identical, determinism
+                 ok; bench_ab.py bd87704e7 vs 92fee1d27, 16 pairs: median
+                 +1.98 % (sd 6.65, noise). Callgrind `--decks cube --games 6`,
+                 same 48 games: 379,257,458 -> 380,206,862 Ir (+0.25 %, the
+                 refusal per tapped land on a board with grant statics) —
+                 accepted as the price of the fix
 ```
 
 ### 2026-10-10 (Commander routine — seventeenth run, closing, session `017yfeX4`) — guardrail; audit-sweep aborts
