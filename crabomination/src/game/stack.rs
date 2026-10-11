@@ -1547,6 +1547,9 @@ impl GameState {
             (DelayedKind::PlayersNextEndStep { player, after_turn }, TurnStep::End) => {
                 *player == active && turn > *after_turn
             }
+            (DelayedKind::PlayersNextUpkeep { player, after_turn }, TurnStep::Upkeep) => {
+                *player == active && turn > *after_turn
+            }
             (DelayedKind::PlayersNextDrawStep { player, after_turn }, TurnStep::Draw) => {
                 *player == active && turn > *after_turn
             }

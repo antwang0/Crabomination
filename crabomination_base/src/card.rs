@@ -3147,6 +3147,12 @@ pub enum SelectionRequirement {
     /// by the same player" — Barrin's Spite). Vacuously true while that slot
     /// is unchosen, so it never blocks the first pick.
     SameControllerAsTargetSlot(u8),
+    /// The positive mirror: controlled by a different player than slot `.0`'s
+    /// target ("two target creatures controlled by different players" —
+    /// Modify Memory). Vacuously true while that slot is unchosen, so a
+    /// resolution-time read without the cast's slots never filters it out
+    /// (a `Not(SameControllerAsTargetSlot)` there read false).
+    DifferentControllerFromTargetSlot(u8),
     /// CR 601.2c — the printed word "**another**" between two target slots:
     /// not the object already chosen for slot `.0` ("target creature fights
     /// **another** target creature"). Two separate instances of "target" may
@@ -4404,6 +4410,7 @@ impl SelectionRequirement {
     pub fn mentions_cross_slot(&self) -> bool {
         match self {
             Self::SameControllerAsTargetSlot(_)
+            | Self::DifferentControllerFromTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
@@ -4425,6 +4432,7 @@ impl SelectionRequirement {
     pub fn without_cross_slot(&self) -> Self {
         match self {
             Self::SameControllerAsTargetSlot(_)
+            | Self::DifferentControllerFromTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)

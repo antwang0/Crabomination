@@ -47,6 +47,10 @@ pub(crate) fn delayed_kind_from_effect(
             Some(player) => DelayedKind::PlayersNextEndStep { player, after_turn: turn },
             None => DelayedKind::NextEndStep,
         },
+        DelayedTriggerKind::TargetsNextUpkeep => match target_player {
+            Some(player) => DelayedKind::PlayersNextUpkeep { player, after_turn: turn },
+            None => DelayedKind::NextUpkeep { after_turn: turn },
+        },
         DelayedTriggerKind::TargetsNextDrawStep => match target_player {
             Some(player) => DelayedKind::PlayersNextDrawStep { player, after_turn: turn - 1 },
             None => DelayedKind::NextEndStep,

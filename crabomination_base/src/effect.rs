@@ -13412,6 +13412,9 @@ pub enum DelayedTriggerKind {
     /// Reads the player from the trigger's event subject, falling back to
     /// target slot 0.
     TargetsNextDrawStep,
+    /// "At the beginning of that player's next upkeep" (Plague Reaver's
+    /// return). Reads the player from target slot 0.
+    TargetsNextUpkeep,
     /// "At end of combat, …" — fires once at the current turn's end-of-combat
     /// step (Fortune, Loyal Steed's saddle blink).
     EndOfCombat,

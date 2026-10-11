@@ -4409,6 +4409,19 @@ impl GameState {
                     None => true,
                 }
             }
+            R::DifferentControllerFromTargetSlot(slot) => {
+                let ctrl_of = |t: &Target| match t {
+                    Target::Permanent(cid) => self
+                        .battlefield_find(*cid)
+                        .map(|c| c.controller)
+                        .or_else(|| self.stack_spell_caster(*cid)),
+                    Target::Player(p) => Some(*p),
+                };
+                match slots.get(*slot as usize).and_then(|t| t.as_ref()) {
+                    Some(other) if other != target => ctrl_of(other) != ctrl_of(target),
+                    _ => true,
+                }
+            }
             R::Or(a, b) => {
                 self.cross_slot_targets_ok(a, target, slots)
                     || self.cross_slot_targets_ok(b, target, slots)
@@ -5173,6 +5186,19 @@ impl GameState {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => ctrl_of(other).is_some() && ctrl_of(other) == ctrl_of(target),
                     None => true,
+                }
+            }
+            R::DifferentControllerFromTargetSlot(slot) => {
+                let ctrl_of = |t: &Target| match t {
+                    Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
+                        Some(c) => Some(c.controller),
+                        None => self.stack_spell_caster(*cid),
+                    },
+                    Target::Player(p) => Some(*p),
+                };
+                match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
+                    Some(other) if other != target => ctrl_of(other) != ctrl_of(target),
+                    _ => true,
                 }
             }
             // CR 601.2c — "**another** target": not the object slot N already
@@ -7099,6 +7125,7 @@ impl GameState {
             // and slot-aware (`cross_slot_targets_ok`) respectively.
             R::SharesColorWithManaSpent
             | R::SameControllerAsTargetSlot(_)
+            | R::DifferentControllerFromTargetSlot(_)
             | R::OtherThanTargetSlot(_)
             | R::SameToughnessAsTargetSlot(_)
             | R::SharesCreatureTypeWithTargetSlot(_)
