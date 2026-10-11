@@ -257,7 +257,12 @@ the handoff.
   `cast_from_hand`, so a card cast from hand, exiled and recast kept the
   flag ("cast from your hand" payoffs — Lilah — heard the recast; CR 601.2).
   Plain sweep 293001 over seats 335-378 (1,600 games): 0 aborts, 3 draws /
-  board caps by rule.
+  board caps by rule. **Seat 381, High Perfect Morcant**: Eclipsed Elf,
+  Elvish Harbinger, Crumbling Ashes, Morcant's Eyes (a Kindred Elf, it counts
+  itself once sacrificed), Tyvar Kell (granted `{T}: Add {B}`, the emblem's
+  haste via `GrantKeywordsToSpell`), Trystan's Command (🟡 the graveyard mode
+  is chosen, not targeted). 40 fuzzed strict debug pod games each for 380 and
+  381: all decided. Strict suite at the seat-380 tip: 24,995 / 0 / 5.
 - **Gates at `bf15ed5f8`:** strict suite 24,979 / 0 / 5; workspace clippy 0;
   `release-fast` typecheck clean; `--bench` 196,176 / 27.64 / 613.0
   byte-identical, both determinism checks ok; release pod smoke seed 29301 ×
