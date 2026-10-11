@@ -6239,6 +6239,10 @@ pub enum AdditionalCastCost {
     /// Food to sacrifice) the forage half is paid; otherwise `pay` generic joins
     /// the cost via `extra_cost_for_spell`. CR 701.61.
     ForageOrPay { pay: u32 },
+    /// "As an additional cost to cast this spell, discard a card or pay
+    /// {pay}" (Pumpkin Bombardment). With another card in hand the discard
+    /// half is paid; otherwise `pay` generic joins the cost.
+    DiscardOrPay { pay: u32 },
     /// "Pay `life` life or pay {`pay`}" (Redirect Lightning). Life is paid
     /// while it leaves the caster at 10 or more (`pick_one_of_cost`'s line),
     /// else `pay` generic joins the cost via `extra_cost_for_spell`.

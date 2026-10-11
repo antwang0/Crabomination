@@ -1758,6 +1758,11 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 }
             }
             // No forage material → the pay half joins the cost.
+            crate::card::AdditionalCastCost::DiscardOrPay { pay }
+                if !state.players[caster].hand.iter().any(|c| c.id != card.id) =>
+            {
+                tax += pay;
+            }
             crate::card::AdditionalCastCost::ForageOrPay { pay }
                 if !state.can_forage(caster) =>
             {
@@ -11939,7 +11944,7 @@ impl GameState {
             }
             // Forage-or-pay is always announceable: with no forage material the
             // pay half is folded into the cost.
-            A::ForageOrPay { .. } => true,
+            A::ForageOrPay { .. } | A::DiscardOrPay { .. } => true,
             A::PayLifeOrPay { .. } => true,
             // Need a creature to point at — one you control or one to reveal.
             A::ChooseOrRevealCreature => {
@@ -12533,6 +12538,19 @@ impl GameState {
                     });
                     if sac_power.is_none() {
                         sac_power = power;
+                    }
+                }
+                A::DiscardOrPay { .. } => {
+                    // A card in hand pays the discard half; else the pay half
+                    // was already folded into the cost.
+                    if !self.players[p].hand.is_empty() {
+                        let (mut ev, _) = self.pay_additional_costs(
+                            p,
+                            &[A::Discard { count: 1, filter: None }],
+                            None,
+                            discard_override.take(),
+                        );
+                        events.append(&mut ev);
                     }
                 }
                 A::ForageOrPay { .. } => {
