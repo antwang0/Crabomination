@@ -807,6 +807,10 @@ pub enum SpendRestriction {
     /// life." (Scaled Nurturer.) Unrestricted spend; the trigger goes on the
     /// stack above the spell it funded.
     DragonCreatureGainTwo,
+    /// "Whenever you cast a permanent spell using mana produced by [this],
+    /// discover X, where X is that spell's mana value." (Tecutlan, the Searing
+    /// Rift.) Unrestricted spend; one discover trigger per funding pip.
+    PermanentSpellDiscover,
     /// "When that mana is spent to cast a creature spell that shares a
     /// creature type with your commander, scry 1." (Path of Ancestry.)
     /// Unrestricted spend; the shared-type check and the trigger live in
@@ -954,6 +958,7 @@ impl SpendRestriction {
             | SpendRestriction::DragonCreatureHaste
             | SpendRestriction::DragonCreatureCounterHexproof
             | SpendRestriction::DragonCreatureGainTwo
+            | SpendRestriction::PermanentSpellDiscover
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
@@ -1111,6 +1116,7 @@ impl SpendRestriction {
             | SpendRestriction::DragonCreatureHaste
             | SpendRestriction::DragonCreatureCounterHexproof
             | SpendRestriction::DragonCreatureGainTwo
+            | SpendRestriction::PermanentSpellDiscover
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter

@@ -356,6 +356,8 @@ pub(crate) struct CommanderManaScry {
     palace_copies: (u32, Option<CardId>),
     /// Scaled Nurturer — rider pips that funded a Dragon creature spell.
     dragon_life: u32,
+    /// Tecutlan — rider pips that funded a permanent spell, and its mana value.
+    discover: (u32, u32),
 }
 
 impl GameState {
@@ -464,6 +466,11 @@ impl GameState {
             copies,
             palace_copies,
             dragon_life: if dragon { spent.spent_count(SpendRestriction::DragonCreatureGainTwo) } else { 0 },
+            discover: if card.definition.is_permanent() {
+                (spent.spent_count(SpendRestriction::PermanentSpellDiscover), card.definition.cost.cmc())
+            } else {
+                (0, 0)
+            },
         }
     }
 
@@ -533,6 +540,18 @@ impl GameState {
                         Effect::GainLife { who: crate::effect::Selector::You, amount: Value::Const(2) },
                     )
                     .build(),
+                );
+            }
+        }
+        // Tecutlan — "discover X, where X is that spell's mana value".
+        let (discover_pips, mv) = riders.discover;
+        if discover_pips > 0 {
+            let source = self
+                .restricted_mana_source(seat, SpendRestriction::PermanentSpellDiscover)
+                .unwrap_or(CardId(0));
+            for _ in 0..discover_pips {
+                self.push_stack(
+                    TriggerPush::new(source, seat, Effect::Discover { n: Value::Const(mv as i32), filter: None }).build(),
                 );
             }
         }

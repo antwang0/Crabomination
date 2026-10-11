@@ -2728,6 +2728,12 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].was_dealt_damage_this_turn),
+            Predicate::HasEnduringStory { who } => {
+                self.resolve_players(who, ctx).into_iter().any(|p| self.players[p].enduring_story)
+            }
+            Predicate::SourceDamagedAnotherCreatureThisTurn => {
+                ctx.source.is_some_and(|s| self.turn.creature_damage_sources.contains(&s))
+            }
             Predicate::ExcessDamagedPermanentThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

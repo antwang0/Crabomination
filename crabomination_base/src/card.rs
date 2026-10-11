@@ -998,6 +998,8 @@ pub enum CounterType {
     Chorus,
     /// The Thallids' spore counters (three buy a Saproling).
     Spore,
+    /// Brass's Tunnel-Grinder's bore counters (three transform it).
+    Bore,
 }
 
 /// Every zone a card can occupy.

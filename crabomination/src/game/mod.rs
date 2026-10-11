@@ -133,6 +133,7 @@ mod attack_requirements;
 mod adventure_grant;
 mod goad;
 mod ascend;
+mod storied;
 // CR 106.7 — "could produce" mana.
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
@@ -1464,6 +1465,10 @@ pub struct TurnRegistries {
     /// each turn").
     #[serde(default)]
     pub one_cast_groups_spent_this_turn: crate::game::types::IdSet<CardId>,
+    /// Sources that dealt damage to another creature this turn (Wolverine,
+    /// Best There Is). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) creature_damage_sources: Vec<CardId>,
     /// Distinct (controller, source) pairs that have dealt damage this turn.
     /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
     /// (Case of the Burning Masks). Cleared at the turn boundary.
@@ -10265,6 +10270,17 @@ impl GameState {
                 .filter(|c| c.controller == sc.controller)
                 .flat_map(|c| &c.definition.static_abilities)
                 .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageFromControlledCreatures))
+                .count() as u32;
+        }
+        // Mjölnir, Hammer of Thor — an Equipment doubling everything its
+        // creature deals (CR 614.2), combat or not.
+        if let Some(src) = source {
+            d += self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to == Some(src))
+                .flat_map(|c| &c.definition.static_abilities)
+                .filter(|sa| matches!(sa.effect, StaticEffect::AttachedDealsDoubleDamage))
                 .count() as u32;
         }
         // Trance Kuja — the filtered sibling: only sources you control that
@@ -32740,6 +32756,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::DoubleDamageToOpponentPlayers
         | SE::DoubleDamageToEnchantedPlayer
         | SE::AttachedDealsDoubleCombatDamage
+        | SE::AttachedDealsDoubleDamage
         | SE::AttachedTakesDoubleCombatDamage
         | SE::DoubleDamageToChosenPlayer
         | SE::DoubleDamageBetweenYouAndChosenPlayer
@@ -34026,6 +34043,7 @@ fn static_effect_to_effects(
             | StaticEffect::FirstOwnCreatureTargetingAbilityCostsLess { .. }
             // Read on permanent entry (`apply_permanent_ascend`).
             | StaticEffect::Ascend
+            | StaticEffect::Storied
             // Read by `Effect::Explore`.
             | StaticEffect::ExploresTwice
             // Read by the rad-counter turn-based action.
@@ -34502,6 +34520,8 @@ fn static_effect_to_effects(
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer
             | StaticEffect::AttachedDealsDoubleCombatDamage
+            | StaticEffect::AttachedDealsDoubleDamage
+            | StaticEffect::NewDamageHealsOldDamage
             | StaticEffect::AttachedTakesDoubleCombatDamage
             | StaticEffect::DoubleDamageToChosenPlayer
             | StaticEffect::DoubleDamageBetweenYouAndChosenPlayer

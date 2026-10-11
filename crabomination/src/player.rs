@@ -373,6 +373,14 @@ pub struct PlayerCold {
     /// control, so permanent entries check for the city's blessing.
     #[serde(default)]
     pub ascend_armed: bool,
+    /// Storied: a storied permanent has entered under this player's control,
+    /// so permanent entries check for the enduring story.
+    #[serde(default)]
+    pub storied_armed: bool,
+    /// True once this player has an enduring story (storied); it lasts for
+    /// the rest of the game.
+    #[serde(default)]
+    pub enduring_story: bool,
     /// Tezzeret, Betrayer of Flesh — this player has activated an artifact's
     /// ability this turn. Written once a turn; reset at the turn boundary.
     #[serde(default)]

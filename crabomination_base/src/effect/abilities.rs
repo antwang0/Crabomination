@@ -1718,6 +1718,17 @@ pub enum StaticEffect {
     /// sources you control matching `filter` deal double damage (Trance Kuja's
     /// Wizards). Same funnel (`scale_damage_to`).
     DoubleDamageFromControlledMatching { filter: SelectionRequirement },
+    /// CR 614.2 — "Double all damage equipped creature would deal" (Mjölnir,
+    /// Hammer of Thor): the attached creature's damage, combat or not.
+    AttachedDealsDoubleDamage,
+    /// CR 614.1a — "If damage would be dealt to [this], instead that damage is
+    /// dealt, but all other damage already dealt to it is healed" (Wolverine,
+    /// Fierce Fighter): marking damage first clears what was marked.
+    NewDamageHealsOldDamage,
+    /// Storied — "If you control three or more artifacts, legendaries, and/or
+    /// Sagas, you have an enduring story for the rest of the game" (Óin the
+    /// Brave). Read on permanent entry like `Ascend`.
+    Storied,
     /// CR 614.5 Hellbent — "As long as you have no cards in hand, if a source you
     /// control would deal damage to a permanent or player, it deals double that
     /// damage instead." (Anthem of Rakdos.) Any source (not just creatures),

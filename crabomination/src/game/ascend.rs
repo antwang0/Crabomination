@@ -12,6 +12,7 @@ impl GameState {
     /// A permanent entered under some player's control: arm its controller if
     /// it has ascend, then grant the blessing if an armed seat reached ten.
     pub(super) fn apply_permanent_ascend(&mut self, entered: CardId) {
+        self.apply_permanent_storied(entered);
         let Some(c) = self.battlefield_find(entered) else { return };
         let p = c.controller;
         if self.players[p].city_blessing {

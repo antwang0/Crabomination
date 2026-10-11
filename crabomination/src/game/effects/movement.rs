@@ -403,12 +403,38 @@ impl GameState {
         Some((cp.toughness.max(0) as u32).saturating_sub(prior))
     }
 
-    /// CR 120.10 — `amount` damage is about to be marked on `cid`: tally what
-    /// it deals beyond lethal on the creature's `excess_damage_this_turn`.
-    /// Call before the damage is marked. Returns the excess.
-    pub(crate) fn note_excess_damage(&mut self, cid: CardId, amount: u32, deathtouch: bool) -> u32 {
+    /// CR 120.10 — `amount` damage from `source` is about to be marked on
+    /// `cid`: tally what it deals beyond lethal on the creature's
+    /// `excess_damage_this_turn`, and note the source as a creature-damager.
+    /// A victim whose new damage heals the old (Wolverine, Fierce Fighter —
+    /// CR 614.1a) is healed first. Call before the damage is marked. Returns
+    /// the excess.
+    pub(crate) fn note_excess_damage(
+        &mut self,
+        cid: CardId,
+        amount: u32,
+        deathtouch: bool,
+        source: Option<CardId>,
+    ) -> u32 {
         if amount == 0 {
             return 0;
+        }
+        if let Some(src) = source
+            && src != cid
+            && !self.turn.creature_damage_sources.contains(&src)
+            && self.battlefield_find(cid).is_some_and(|c| self.computed_is_creature(c))
+        {
+            self.turn.creature_damage_sources.push(src);
+        }
+        if self.battlefield_find(cid).is_some_and(|c| {
+            c.damage > 0
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::NewDamageHealsOldDamage))
+        }) && let Some(c) = self.battlefield_find_mut(cid)
+        {
+            c.damage = 0;
         }
         let Some(lethal) = self.lethal_damage_needed(cid, deathtouch) else { return 0 };
         let excess = amount.saturating_sub(lethal);
@@ -1929,7 +1955,7 @@ impl GameState {
                     // accounting for damage already marked. Deathtouch makes any
                     // damage past 1 excess (CR 702.2c). Computed before the
                     // mutable borrow below applies the new damage.
-                    let excess = self.note_excess_damage(cid, amount, source_has_deathtouch);
+                    let excess = self.note_excess_damage(cid, amount, source_has_deathtouch, source);
                     self.excess_damage_this_resolution =
                         self.excess_damage_this_resolution.saturating_add(excess);
                     // Name of the damaging source, read before the mutable

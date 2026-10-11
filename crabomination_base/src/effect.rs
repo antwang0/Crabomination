@@ -2004,6 +2004,11 @@ pub enum Predicate {
     /// True if a creature or planeswalker any player matched by `who`
     /// controlled was dealt excess damage this turn (CR 120.10 — Rith).
     ExcessDamagedPermanentThisTurn { who: PlayerRef },
+    /// The source dealt damage to another creature this turn, that creature
+    /// alive or not (Wolverine, Best There Is).
+    SourceDamagedAnotherCreatureThisTurn,
+    /// Any player matched by `who` has an enduring story (storied).
+    HasEnduringStory { who: PlayerRef },
     /// True if any player matched by `who` has lost life this turn (damage or
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
     /// Spectacle (CR 702.137) — pair with `who: EachOpponent`.
