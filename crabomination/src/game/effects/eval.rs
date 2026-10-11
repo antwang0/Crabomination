@@ -4437,7 +4437,6 @@ impl GameState {
     }
 
     /// Two permanent targets share a creature type (a changeling shares all).
-
     fn targets_share_creature_type(&self, a: &Target, b: &Target) -> bool {
         let types = |t: &Target| match t {
             Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| {
