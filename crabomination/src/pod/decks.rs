@@ -11245,3 +11245,33 @@ pub const SKULLBRIAR_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ARAGORN_THE_UNITER_COMMANDERS: &[CardFactory] = &[aragorn_the_uniter];
+
+/// **Aragorn, the Uniter**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 86 nonbasic cards + 3 Forests + 4 Islands + 3 Mountains + 3 Plains = 99.
+/// Aragorn, the Uniter (WURG) legends
+pub const ARAGORN_THE_UNITER_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, horn_of_gondor, lightning_greaves,
+    mithril_coat, sol_ring, swiftfoot_boots, breeding_pool, canopy_vista, clifftop_retreat,
+    command_tower, evolving_wilds, exotic_orchard, flooded_strand, great_hall_of_the_citadel,
+    hallowed_fountain, jetmirs_garden, ketria_triome, minas_tirith, path_of_ancestry,
+    prairie_stream, raugrin_triome, rejuvenating_springs, rivendell, sacred_foundry,
+    sparas_headquarters, steam_vents, stomping_ground, temple_garden, windswept_heath,
+    aragorn_and_arwen_wed, aragorn_hornburg_hero, aragorn_king_of_gondor, birds_of_paradise,
+    bloom_tender, boromir_warden_of_the_tower, chulane_teller_of_tales, delighted_halfling,
+    faeburrow_elder, fallaji_wayfarer, faramir_prince_of_ithilien, faramir_steward_of_gondor,
+    galadriel_light_of_valinor, general_ferrous_rokiric, hero_of_precinct_one, inga_and_esika,
+    katilda_dawnhart_prime, merry_esquire_of_rohan, noble_hierarch, pippin_guard_of_the_citadel,
+    prince_imrahil_the_fair, rienne_angel_of_rebirth, surrak_dragonclaw, theoden_king_of_rohan,
+    eomer_king_of_rohan, eowyn_fearless_knight, eowyn_shieldmaiden, annie_joins_up,
+    brokers_ascendancy, elven_chorus, flowering_of_the_white_tree, rhythm_of_the_wild,
+    rising_of_the_day, trace_of_abundance, bant_charm, boros_charm, brokers_charm,
+    cabaretti_charm, counterspell, dovins_veto, friendly_rivalry, growth_spiral,
+    heroic_intervention, jeskai_charm, naya_charm, path_to_exile, swords_to_plowshares,
+    cultivate, farseek, forth_eorlingas, natures_lore, rampant_growth, supreme_verdict,
+    taunt_from_the_rampart, three_visits,
+    // Basics
+    forest, forest, forest, island, island, island, island, mountain, mountain, mountain,
+    plains, plains, plains,
+];

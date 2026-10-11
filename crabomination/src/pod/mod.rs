@@ -2759,6 +2759,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SKULLBRIAR_COMMANDERS,
             main: decks::SKULLBRIAR_MAIN,
         },
+        // Seat 385: Aragorn, the Uniter's EDHREC average deck. `--pod-decks 385`.
+        PodDeck {
+            name: "Aragorn, the Uniter (WURG)",
+            commanders: decks::ARAGORN_THE_UNITER_COMMANDERS,
+            main: decks::ARAGORN_THE_UNITER_MAIN,
+        },
     ]
 }
 
@@ -4888,6 +4894,7 @@ mod tests {
             ("Iroh, Grand Lotus", [0x0AA4, 382, 9307]),
             ("Galadriel, Light of Valinor", [0x0AA5, 383, 9308]),
             ("Skullbriar, the Walking Grave", [0x0AA6, 384, 9309]),
+            ("Aragorn, the Uniter", [0x0AA7, 385, 9310]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
