@@ -2820,6 +2820,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NORMAN_OSBORN_COMMANDERS,
             main: decks::NORMAN_OSBORN_MAIN,
         },
+        // Seat 395: Reaper King's EDHREC average deck. `--pod-decks 395`.
+        PodDeck {
+            name: "Reaper King (WUBRG)",
+            commanders: decks::REAPER_KING_COMMANDERS,
+            main: decks::REAPER_KING_MAIN,
+        },
     ]
 }
 
@@ -4971,6 +4977,7 @@ mod tests {
             ("Lord of the Nazgûl", [0x0AAE, 392, 9317]),
             ("Leonardo, the Balance", [0x0AAF, 393, 9318]),
             ("Norman Osborn", [0x0AB0, 394, 9319]),
+            ("Reaper King", [0x0AB1, 395, 9320]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

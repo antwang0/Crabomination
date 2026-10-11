@@ -11532,3 +11532,31 @@ pub const NORMAN_OSBORN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const REAPER_KING_COMMANDERS: &[CardFactory] = &[reaper_king];
+
+/// **Reaper King**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 86 nonbasic cards + 3 Forests + 3 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// Reaper King (WUBRG) Scarecrows
+pub const REAPER_KING_MAIN: &[CardFactory] = &[
+    arcane_signet, birthing_boughs, chromatic_lantern, commanders_sphere, fellwar_stone,
+    heralds_horn, lightning_greaves, maskwood_nexus, panharmonicon, sol_ring, swiftfoot_boots,
+    urzas_incubator, breeding_pool, cascading_cataracts, cavern_of_souls, command_tower,
+    crumbling_necropolis, evolving_wilds, exotic_orchard, frontier_bivouac, hallowed_fountain,
+    jungle_shrine, mystic_monastery, opulent_palace, overgrown_tomb, path_of_ancestry,
+    reliquary_tower, seaside_citadel, secluded_courtyard, temple_garden, terramorphic_expanse,
+    the_world_tree, unclaimed_territory, watery_grave, bloodline_pretender, changeling_outcast,
+    dread_tiller, graveshifter, heap_doll, irregular_cohort, jawbone_skulkin, metallic_mimic,
+    mirror_entity, oasis_gardener, one_eyed_scarecrow, osseous_sticktwister,
+    padeem_consul_of_innovation, pili_pala, realmwalker, rendmaw_creaking_nest, roaming_throne,
+    scarecrone, scarecrow_guide, scaretiller, scorn_effigy, scuttlemutt, shire_scarecrow,
+    taurean_mauler, the_reaper_king_no_more, universal_automaton, unsettled_mariner,
+    wickerfolk_thresher, wild_field_scarecrow, wildfire_wickerfolk, wingrattle_scarecrow,
+    black_market_connections, kindred_discovery, leyline_of_the_guildpact, molten_echoes,
+    reflections_of_littjara, springleaf_parade, counterspell, double_major, eerie_interlude,
+    ephemerate, ghostly_flicker, negate, personify, swords_to_plowshares, cultivate, farseek,
+    kodamas_reach, natures_lore, one_with_the_machine, rampant_growth, rite_of_replication,
+    // Basics
+    forest, forest, forest, island, island, island, mountain, mountain, plains, plains, plains,
+    swamp, swamp,
+];
