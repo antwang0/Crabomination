@@ -1,18 +1,20 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, fifth file (`cmdr_edhrec4` is the
 //! fourth). Lord of the Nazgûl's Wraiths and Ring spells; Leonardo and
-//! Michelangelo's Turtles, Ninjas and Mutagen. Tests in
+//! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
+//! connive and mayhem. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, on_attack, sneak, target_filtered};
 use crate::effect::{ActivatedAbility, DelayedTriggerKind, Duration, Effect, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
-use crabomination_base::tokens::mutagen_token;
+use crate::game::types::TurnStep;
+use crabomination_base::tokens::{mutagen_token, treasure_token};
 use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -552,4 +554,277 @@ pub fn splinter_radical_rat() -> CardDefinition {
             4,
         )
     }
+}
+
+// ── Norman Osborn // Green Goblin (UBR) ──────────────────────────────────────
+
+fn villain(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    let mut types = types;
+    types.push(CreatureType::Villain);
+    legend(name, mana, types, p, t)
+}
+
+fn connive(what: Selector) -> Effect {
+    Effect::Connive { what, amount: Value::ONE }
+}
+
+fn treasure(tapped: bool) -> Effect {
+    Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: Arc::new(TokenDefinition { tapped, ..treasure_token() }),
+    }
+}
+
+fn br() -> crate::mana::ManaSymbol {
+    hybrid(Color::Black, Color::Red)
+}
+
+/// Green Goblin — Norman Osborn's back: flying, menace; spells you cast from
+/// your graveyard cost {2} less; every nonland card in your graveyard has
+/// mayhem for its mana cost. Private: CR 903.4 reads the whole card.
+fn green_goblin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Menace],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spells you cast from your graveyard cost {2} less to cast.",
+                effect: StaticEffect::GraveyardCastCostReduction { amount: 2 },
+            },
+            StaticAbility {
+                description: "Goblin Formula — Each nonland card in your graveyard has mayhem. The mayhem cost is equal \
+                              to its mana cost.",
+                effect: StaticEffect::GraveyardNonlandHaveMayhem,
+            },
+        ],
+        // CR 712.8 — a transforming back face has no mana cost.
+        color_indicator: vec![Color::Blue, Color::Black, Color::Red],
+        ..villain("Green Goblin", ManaCost::default(), vec![CreatureType::Goblin, CreatureType::Human], 3, 3)
+    }
+}
+
+/// Norman Osborn — {1}{U} 1/1, can't be blocked; connives off combat damage
+/// to a player; {1}{U}{B}{R}: transform, sorcery speed.
+pub fn norman_osborn() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Unblockable],
+        back_face: Some(Box::new(green_goblin())),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: connive(Selector::This),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u(), b(), r()]),
+            sorcery_speed: true,
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        ..villain("Norman Osborn", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Scientist], 1, 1)
+    }
+}
+
+/// Pumpkin Bombs — {1}{R} artifact. {T}, discard two: draw three, add a fuse
+/// counter, deal that much to target opponent, who gains control of it.
+pub fn pumpkin_bombs() -> CardDefinition {
+    CardDefinition {
+        name: "Pumpkin Bombs",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            discard_cost: Some((R::Any, 2)),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Fuse, amount: Value::ONE },
+                Effect::DealDamage {
+                    to: target_filtered(R::OpponentPlayer),
+                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Fuse },
+                },
+                Effect::GainControl {
+                    what: Selector::This,
+                    to: Some(PlayerRef::Target(0)),
+                    duration: Duration::Permanent,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rocket-Powered Goblin Glider — {3} Equipment: +2/+0, flying and haste;
+/// equip {2}; mayhem {2}; cast from your graveyard, it attaches on entry.
+pub fn rocket_powered_goblin_glider() -> CardDefinition {
+    CardDefinition {
+        name: "Rocket-Powered Goblin Glider",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)])), Keyword::Mayhem(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::WasCastFromGraveyard }),
+            effect: Effect::Attach { what: Selector::This, to: target_filtered(yours(R::Creature)) },
+        }],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::Flying, Keyword::Haste],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Oscorp Industries — a tapped Grixis tri-land with mayhem; entering from a
+/// graveyard costs you 2 life.
+pub fn oscorp_industries() -> CardDefinition {
+    CardDefinition {
+        // CR 702.187 — a land's mayhem lets it be played, so it has no cost.
+        keywords: vec![Keyword::Mayhem(ManaCost::default())],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches { what: Selector::This, filter: R::EnteredFromGraveyardThisTurn },
+            ),
+            effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        }],
+        ..crate::sets::tri_land("Oscorp Industries", Color::Blue, Color::Black, Color::Red)
+    }
+}
+
+/// Doctor Octopus, Master Planner — {5}{U}{B} 4/8. Other Villains you control
+/// get +2/+2; maximum hand size eight; your end step refills to eight.
+pub fn doctor_octopus_master_planner() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Villains you control get +2/+2.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        yours(R::Creature.and(R::HasCreatureType(CreatureType::Villain))).and(R::OtherThanSource),
+                    ),
+                    power: 2,
+                    toughness: 2,
+                },
+            },
+            StaticAbility { description: "Your maximum hand size is eight.", effect: StaticEffect::ControllerMaxHandSize(8) },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::ValueAtLeast(Value::HandSizeOf(PlayerRef::You), Value::Const(8))))),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::NonNeg(Box::new(Value::Diff(
+                    Box::new(Value::Const(8)),
+                    Box::new(Value::HandSizeOf(PlayerRef::You)),
+                ))),
+            },
+        }],
+        ..villain(
+            "Doctor Octopus, Master Planner",
+            cost(&[generic(5), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Scientist],
+            4,
+            8,
+        )
+    }
+}
+
+fn on_discard(filter: R, effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter }),
+        effect,
+    }
+}
+
+/// Green Goblin, Nemesis — {2}{B}{R} 3/3 flying. Discarding a nonland card
+/// grows a Goblin of yours; discarding a land makes a tapped Treasure.
+pub fn green_goblin_nemesis() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            on_discard(
+                R::Nonland,
+                Effect::AddCounter {
+                    what: target_filtered(yours(R::Creature.and(R::HasCreatureType(CreatureType::Goblin)))),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ),
+            on_discard(R::Land, treasure(true)),
+        ],
+        ..villain(
+            "Green Goblin, Nemesis",
+            cost(&[generic(2), b(), r()]),
+            vec![CreatureType::Goblin, CreatureType::Human],
+            3,
+            3,
+        )
+    }
+}
+
+/// Green Goblin, Revenant — {3}{B}{R} 3/3 flying, deathtouch. Attacking:
+/// discard a card, then draw one for each card you've discarded this turn.
+pub fn green_goblin_revenant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw { who: Selector::You, amount: Value::CardsDiscardedThisTurn(PlayerRef::You) },
+        ]))],
+        ..villain(
+            "Green Goblin, Revenant",
+            cost(&[generic(3), b(), r()]),
+            vec![CreatureType::Goblin, CreatureType::Human],
+            3,
+            3,
+        )
+    }
+}
+
+/// Leader, Super-Genius — {2}{U}{U} 1/3. Your creatures' connives each draw a
+/// card first; at the beginning of combat on your turn, a creature of yours
+/// connives.
+pub fn leader_super_genius() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If a creature you control would connive, instead you draw a card, then that creature connives.",
+            effect: StaticEffect::ConniveDrawsFirst,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: connive(target_filtered(yours(R::Creature))),
+        }],
+        ..villain("Leader, Super-Genius", cost(&[generic(2), u(), u()]), vec![CreatureType::Gamma, CreatureType::Scientist], 1, 3)
+    }
+}
+
+/// Ultimate Green Goblin — {1}{B/R}{B/R} 5/4. Your upkeep: discard a card,
+/// then a Treasure; mayhem {2}{B/R}.
+pub fn ultimate_green_goblin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Mayhem(cost(&[generic(2), br()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }, treasure(false)]),
+        }],
+        ..villain("Ultimate Green Goblin", cost(&[generic(1), br(), br()]), vec![CreatureType::Goblin], 5, 4)
+    }
+}
+
+/// Unstable Experiment — {1}{U} instant. Target player draws a card, then up
+/// to one target creature you control connives.
+pub fn unstable_experiment() -> CardDefinition {
+    spell(
+        "Unstable Experiment",
+        cost(&[generic(1), u()]),
+        CardType::Instant,
+        Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Draw { who: target_filtered(R::Player), amount: Value::ONE },
+                connive(Selector::TargetFiltered { slot: 1, filter: yours(R::Creature) }),
+            ])),
+        },
+    )
 }

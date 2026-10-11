@@ -460,3 +460,170 @@ fn splinter_doubles_ninja_triggers() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(bff).unwrap().keywords().contains(&Keyword::Unblockable));
 }
+
+/// Seat 0 discards `id`, the only card in their hand.
+fn discard_only(g: &mut GameState, id: CardId) {
+    assert!(g.players[0].hand.len() == 1 && g.players[0].hand.iter().any(|c| c.id == id));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Discard {
+                who: crabomination::effect::Selector::You,
+                amount: crabomination::card::Value::ONE,
+                random: false,
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// CR 702.187 — Green Goblin's Goblin Formula gives a discarded nonland card
+/// mayhem for its mana cost, and its graveyard discount takes {2} off: a
+/// discarded Hill Giant ({3}{R}) comes back for {1}{R}. A land gets none.
+#[test]
+fn green_goblin_grants_mayhem_to_the_graveyard() {
+    let mut g = pod(2);
+    let norman = ready(&mut g, 0, catalog::norman_osborn());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: norman,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("transform");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(norman).unwrap().definition.name, "Green Goblin");
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    discard_only(&mut g, giant);
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastMayhem { card_id: giant, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("mayhem for {3}{R} less {2}");
+    drain_stack(&mut g);
+    assert!(on_bf(&g, giant));
+}
+
+/// CR 702.187 — a land with mayhem is played from the graveyard the turn it
+/// was discarded; Oscorp Industries enters tapped and costs 2 life that way.
+#[test]
+fn oscorp_industries_is_played_back_from_the_graveyard() {
+    let mut g = pod(2);
+    let oscorp = g.add_card_to_hand(0, catalog::oscorp_industries());
+    discard_only(&mut g, oscorp);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLandFromGraveyard(oscorp)).expect("mayhem land play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(oscorp).unwrap().tapped);
+    assert_eq!(g.players[0].life, 18);
+    // Not discarded this turn: no play.
+    let mut g = pod(2);
+    let oscorp = g.add_card_to_graveyard(0, catalog::oscorp_industries());
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::PlayLandFromGraveyard(oscorp)).is_err());
+}
+
+/// CR 614.1a + 701.50 — Leader, Super-Genius: a creature of yours conniving
+/// draws a card first, then connives (two draws, one discard).
+#[test]
+fn leader_draws_before_each_connive() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::leader_super_genius());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let exp = g.add_card_to_hand(0, catalog::unstable_experiment());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: exp,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Unstable Experiment");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "drew two, discarded one");
+    assert_eq!(g.players[0].graveyard.len(), 2, "the Experiment and the discard");
+}
+
+/// Pumpkin Bombs: draw three, one fuse counter's damage, and the opponent
+/// takes it; Doctor Octopus refills the hand to eight at your end step.
+#[test]
+fn pumpkin_bombs_and_doctor_octopus() {
+    let mut g = pod(2);
+    for _ in 0..12 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bombs = ready(&mut g, 0, catalog::pumpkin_bombs());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bombs,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("bombs");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 3);
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.battlefield_find(bombs).unwrap().controller, 1);
+    let doc = ready(&mut g, 0, catalog::doctor_octopus_master_planner());
+    let norman = ready(&mut g, 0, catalog::norman_osborn());
+    assert_eq!(g.computed_permanent(norman).unwrap().power, 3, "another Villain");
+    assert_eq!(g.computed_permanent(doc).unwrap().power, 4, "not itself");
+    end_step(&mut g);
+    assert_eq!(g.players[0].hand.len(), 8);
+}
+
+/// Green Goblin, Nemesis: a discarded land makes a tapped Treasure, a
+/// discarded nonland card grows a Goblin.
+#[test]
+fn green_goblin_nemesis_profits_from_discards() {
+    let mut g = pod(2);
+    let gob = ready(&mut g, 0, catalog::green_goblin_nemesis());
+    let land = g.add_card_to_hand(0, catalog::island());
+    discard_only(&mut g, land);
+    let t = g.battlefield.iter().find(|c| c.definition.name == "Treasure").expect("a Treasure");
+    assert!(t.tapped);
+    let spell = g.add_card_to_hand(0, catalog::lightning_bolt());
+    discard_only(&mut g, spell);
+    assert_eq!(counters(&g, gob), 1);
+}
+
+/// Rocket-Powered Goblin Glider: cast for mayhem from the graveyard, it
+/// attaches as it enters; cast from hand it does not.
+#[test]
+fn goblin_glider_attaches_when_cast_from_the_graveyard() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let glider = g.add_card_to_hand(0, catalog::rocket_powered_goblin_glider());
+    discard_only(&mut g, glider);
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastMayhem { card_id: glider, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("mayhem {2}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(glider).unwrap().attached_to, Some(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords().contains(&Keyword::Flying));
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let glider = g.add_card_to_hand(0, catalog::rocket_powered_goblin_glider());
+    cast(&mut g, 0, glider, None).expect("from hand");
+    assert_eq!(g.battlefield_find(glider).unwrap().attached_to, None);
+}
