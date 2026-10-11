@@ -2646,6 +2646,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AZLASK_COMMANDERS,
             main: decks::AZLASK_MAIN,
         },
+        // Seat 368: The Mycotyrant's EDHREC average deck. `--pod-decks 368`.
+        PodDeck {
+            name: "The Mycotyrant (BG)",
+            commanders: decks::THE_MYCOTYRANT_COMMANDERS,
+            main: decks::THE_MYCOTYRANT_MAIN,
+        },
     ]
 }
 
@@ -4731,6 +4737,7 @@ mod tests {
             ("Norin the Wary", [0x0A93, 365, 9290]),
             ("Katara, the Fearless", [0x0A94, 366, 9291]),
             ("Azlask, the Swelling Scourge", [0x0A95, 367, 9292]),
+            ("The Mycotyrant", [0x0A96, 368, 9293]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

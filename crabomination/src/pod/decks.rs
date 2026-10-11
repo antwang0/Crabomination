@@ -10742,3 +10742,33 @@ pub const AZLASK_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, forest, island, island, mountain, plains, swamp, swamp,
 ];
+
+pub const THE_MYCOTYRANT_COMMANDERS: &[CardFactory] = &[the_mycotyrant];
+
+/// **The Mycotyrant**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 80 nonbasic cards + 10 Forests + 9 Swamps = 99.
+/// The Mycotyrant (BG) Fungus tribal: Saproling makers and descend payoffs feed a
+/// graveyard-sized Mycotyrant while Slimefoot and Nemata drain the table.
+pub const THE_MYCOTYRANT_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, cauldron_of_essence, hedge_shredder,
+    matzalantli_the_great_door, perpetual_timepiece, skullclamp, sol_ring, bojuka_bog,
+    command_tower, dakmor_salvage, deathcap_glade, evolving_wilds, exotic_orchard,
+    golgari_rot_farm, llanowar_wastes, necroblossom_snarl, overgrown_tomb, tainted_wood,
+    temple_of_malady, terramorphic_expanse, twilight_mire, underground_mortuary,
+    undergrowth_stadium, woodland_cemetery, aftermath_analyst, akawalli_the_seething_tower,
+    ayara_first_of_locthwain, brightcap_badger, broodrage_mycoid, cankerbloom,
+    deathcap_marionette, eternal_witness, golgari_grave_troll, golgari_thug, hermit_druid,
+    icetill_explorer, insidious_fungus, millikin, mirkwood_bats, mycoloth,
+    nemata_primeval_warden, nyx_weaver, old_rutstein, sakura_tribe_elder, six, skull_prophet,
+    slimefoot_the_stowaway, splinterfright, sporecrown_thallid, stinkweed_imp,
+    stitchers_supplier, syr_konrad_the_grim, tendershoot_dryad, underrealm_lich,
+    wight_of_the_reliquary, world_shaper, beastmaster_ascension, cemetery_tampering,
+    crawling_infestation, deadbridge_chant, growing_rites_of_itlimoc, insidious_roots,
+    moldervine_reclamation, out_of_the_tombs, ripples_of_undeath, assassins_trophy,
+    beast_within, fungal_rebirth, grisly_salvage, lethal_scheme, putrefy, cultivate,
+    dread_return, fungal_sprouting, lich_knights_conquest, life_from_the_loam, reanimate,
+    squirming_emergence, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
