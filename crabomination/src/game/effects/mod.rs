@@ -43126,8 +43126,10 @@ impl GameState {
                                 .get_or_insert(crate::player::LossCause::Other);
                         }
                     }
-                    // CR 104.2a — the win is immediate, not the next sweep's.
-                    self.settle_game_over_if_decided(events);
+                    // CR 104.2a — the win is immediate, not the next sweep's;
+                    // with a seat that can't lose still in, CR 800.4a's leave
+                    // pass is too.
+                    self.settle_then_sweep_mid_resolution(events);
                 }
                 Ok(())
             }

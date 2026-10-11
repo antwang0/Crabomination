@@ -233,6 +233,8 @@ impl GameState {
         {
             if (self.players[p].graveyard_card_count() as u32) < amount {
                 self.players[p].eliminated = true;
+                // CR 800.4a — they leave now, not at the next sweep.
+                self.settle_then_sweep_mid_resolution(events);
             } else {
                 for _ in 0..amount {
                     let Some(card) = self.players[p].graveyard.pop() else { break };

@@ -5787,10 +5787,25 @@ fn cr_704_5c_drawing_from_empty_library_loses() {
     g.players[0].library.clear();
     let mut events = vec![];
     assert!(!g.draw_one(0, &mut events), "draw from empty library fails");
-    g.lose_to_empty_draw(0);
+    g.lose_to_empty_draw(0, &mut Vec::new());
     g.check_state_based_actions();
     assert!(g.players[0].eliminated, "empty-library draw eliminates the player");
     assert!(g.is_game_over(), "game ends — the other player wins");
+}
+
+/// CR 104.2a / 800.4a — Laboratory Maniac's win off an empty draw ends the
+/// game at once, mid-resolution: a fuzzed 8-seat pod (seed 41300532) found
+/// the losers still in, their Possibility Storm trigger on the stack, while a
+/// decision paused the resolution that drew.
+#[test]
+fn cr_104_2a_an_empty_draw_win_settles_the_game_at_once() {
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::laboratory_maniac());
+    g.players[0].library.clear();
+    let mut events = Vec::new();
+    assert!(!g.draw_one_or_deck(0, &mut events));
+    assert!(g.players[1].eliminated && g.players[2].eliminated);
+    assert!(g.is_game_over(), "no state-based check needed");
 }
 
 // ── CR 603.7 — reflexive "when you do" triggered abilities ───────────────────

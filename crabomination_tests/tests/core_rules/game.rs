@@ -8628,7 +8628,7 @@ fn loss_cause_records_authoritative_reason() {
     g.players[0].library.clear();
     let mut events = vec![];
     let _ = g.draw_one(0, &mut events);
-    g.lose_to_empty_draw(0);
+    g.lose_to_empty_draw(0, &mut Vec::new());
     g.check_state_based_actions();
     assert_eq!(g.players[0].loss_cause, Some(LossCause::Decked));
 }

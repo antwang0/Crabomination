@@ -21936,7 +21936,7 @@ impl GameState {
         true
     }
 
-    pub fn lose_to_empty_draw(&mut self, p: usize) {
+    pub fn lose_to_empty_draw(&mut self, p: usize, events: &mut Vec<GameEvent>) {
         let wins = self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| {
@@ -21960,6 +21960,10 @@ impl GameState {
                     self.players[idx].loss_cause.get_or_insert(LossCause::Other);
                 }
             }
+            // CR 800.4a — the losers leave at once: with a seat that can't
+            // lose still in, the game goes on, and their spells and
+            // abilities on the stack must not wait for the next sweep.
+            self.settle_then_sweep_mid_resolution(events);
         } else {
             // CR 104.3c — the loss happens the next time a player would
             // receive priority, i.e. at the next SBA check, *not* inside the
@@ -22134,7 +22138,7 @@ impl GameState {
             DrawOutcome::Drew => true,
             DrawOutcome::Skipped => false,
             DrawOutcome::EmptyLibrary => {
-                self.lose_to_empty_draw(p);
+                self.lose_to_empty_draw(p, events);
                 false
             }
         }
@@ -22183,7 +22187,7 @@ impl GameState {
             // here rather than handed back to `p`'s caller.
             return match self.draw_one_outcome(thief, events) {
                 DrawOutcome::EmptyLibrary => {
-                    self.lose_to_empty_draw(thief);
+                    self.lose_to_empty_draw(thief, events);
                     DrawOutcome::Skipped
                 }
                 _ => DrawOutcome::Skipped,
@@ -22422,7 +22426,7 @@ impl GameState {
             self.in_draw_redirect = false;
             return match out {
                 DrawOutcome::EmptyLibrary => {
-                    self.lose_to_empty_draw(thief);
+                    self.lose_to_empty_draw(thief, events);
                     DrawOutcome::Skipped
                 }
                 _ => DrawOutcome::Skipped,

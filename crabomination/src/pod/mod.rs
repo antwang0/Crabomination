@@ -3900,7 +3900,8 @@ fn play_pod_game(
             }.filter(|&(_, p)| !g.players.get(p).is_some_and(|q| q.is_alive())));
             if let Some((name, p)) = orphan {
                 panic!(
-                    "seed {seed}: {name} on the stack is controlled by departed p{p} (turn {}, {:?}, after {actions} actions)",
+                    "seed {seed}: {name} on the stack is controlled by departed p{p} ({:?}) (turn {}, {:?}, after {actions} actions)",
+                    g.players.get(p).and_then(|q| q.loss_cause),
                     g.turn_number, g.step,
                 );
             }
