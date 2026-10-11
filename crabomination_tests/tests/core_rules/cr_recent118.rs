@@ -1486,3 +1486,56 @@ fn cr_603_2_an_each_opponents_upkeep_trigger_skips_its_controllers_upkeep() {
     g.fire_step_triggers(TurnStep::Upkeep);
     assert_eq!(g.stack.len(), 1, "on an opponent's");
 }
+
+/// CR 608.2 — "put any number of them onto the battlefield" (Gishath) and
+/// "put up to N lore counters" (a token Saga's) each spend their logged pick
+/// once the resolution completes. Both left it behind under a strict fuzzed
+/// pod sweep (seed 191001, 3 seats: decks 296,115,359 and 27,359,211,107 for
+/// the counter count).
+#[test]
+fn cr_608_2_a_reveal_pick_and_a_counter_count_spend_their_answers() {
+    use crabomination::card::{CardDefinition, CardType, CounterType, SelectionRequirement as R};
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::effect::Value;
+    use crabomination::game::types::GameAction;
+    // SAFETY: set before any thread reads the environment.
+    unsafe { std::env::set_var("CRAB_ANSWER_LOG", "strict") };
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let ox = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sorcery = |effect: Effect| CardDefinition {
+        name: "Gishath's Reveal",
+        card_types: vec![CardType::Sorcery],
+        effect,
+        ..Default::default()
+    };
+    let mut asked = 0;
+    for effect in [
+        Effect::RevealTopNPutMatchingToBattlefield { who: PlayerRef::You, count: Value::Const(2), filter: R::Creature },
+        Effect::AddCountersUpTo {
+            what: Selector::ExactObjects(vec![ox]),
+            kind: CounterType::PlusOnePlusOne,
+            max: Value::Const(1),
+            filter: None,
+        },
+    ] {
+        let spell = g.add_card_to_hand(0, sorcery(effect));
+        g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        g.resolve_top_of_stack().expect("resolve");
+        while let Some(d) = g.pending_decision.as_ref() {
+            let answer = match &d.decision {
+                Decision::ChooseCards { .. } => DecisionAnswer::Cards(vec![bear]),
+                Decision::ChooseAmount { max, .. } => DecisionAnswer::Amount(*max),
+                _ => break,
+            };
+            asked += 1;
+            g.submit_decision(answer).expect("answer");
+        }
+    }
+    assert_eq!(asked, 2, "both asks reached the seat");
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.battlefield_find(ox).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

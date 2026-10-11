@@ -19821,6 +19821,7 @@ impl GameState {
                     ) else {
                         return Ok(());
                     };
+                    self.clear_answer_log();
                     n
                 } else {
                     cap
