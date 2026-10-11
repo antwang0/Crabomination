@@ -34,8 +34,8 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-380 / 381 pod decks carry no residual (2026-10-11, after seats 380-381 and `01EvCQ72` / `01Mwhi27`'s evening passes; 374 after `01Mwhi27`'s afternoon pass; 370 at the
-nineteenth Commander run `01Vk2K6g`, concurrent with `017yfeX4`'s second firing). Seats 335-381 are EDHREC average decks, card for card (`scripts/edhrec_deck.py
+382 / 389 pod decks carry no residual (2026-10-11 late, after seats 382-389 — `01Lnhgw3`; 380 / 381 after seats 380-381 and `01EvCQ72` / `01Mwhi27`'s evening passes; 374 after `01Mwhi27`'s afternoon pass; 370 at the
+nineteenth Commander run `01Vk2K6g`, concurrent with `017yfeX4`'s second firing). Seats 335-389 are EDHREC average decks, card for card (`scripts/edhrec_deck.py
 --rust`; the seat scan is `scripts/edhrec_scan_top.py`; cards in `decks::cmdr_edhrec2` /
 `cmdr_edhrec3` / `cmdr_edhrec4`). This run's seats 357-368, 372-375 and 379: Fire Lord Zuko, Arna
 Kennerüd, Terra, Atreus // Kratos, Kratos, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin,
@@ -43,7 +43,7 @@ Katara, Azlask, The Mycotyrant, Thranduil, Maralen, Najeela, Toph, the First Met
 cards); the concurrent run's 369-371 and 376-378: Shroofus Sproutsire, Miirym, Tiamat, Wolverine, Captain
 Howler, Magda. Every residual a new card
 carries is an open row in INCOMPLETE_CARDS ("EDHREC average-deck seats … open residuals") or named
-in its doc. Seat 380 (Lorehold, the Historian) added clean; seat 381 (High Perfect Morcant) carries Trystan's Command's untargeted graveyard mode. `--table` output: **380 / 381 pod decks carry no residual**
+in its doc. Seat 380 (Lorehold, the Historian) added clean; seat 381 (High Perfect Morcant) carries Trystan's Command's untargeted graveyard mode; seats 382-389 (Iroh, Grand Lotus; Galadriel, Light of Valinor; Skullbriar; Aragorn, the Uniter; Ragost; Iron Man, Titan of Innovation; Jon Irenicus; Obeka) carry the rows INCOMPLETE_CARDS lists. `--table` output: **382 / 389 pod decks carry no residual**
 in their card docs or INCOMPLETE_CARDS.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and

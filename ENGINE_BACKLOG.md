@@ -119,6 +119,42 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED/OPEN 2026-10-11 (Commander run, `01Lnhgw3`) — eight EDHREC seats, CR 723.2, and five bug classes the sweeps and seats found
+
+- **Seats 382-389** (EDHREC average decks, `decks::cmdr_edhrec4`): Iroh, Grand Lotus; Galadriel, Light
+  of Valinor; Skullbriar; Aragorn, the Uniter; Ragost; Iron Man, Titan of Innovation; Jon Irenicus;
+  Obeka. 61 cards; every seat 20 debug pod games decided (strict answer log).
+- **CR 723.2 — combat-phase player control** (`game/player_control.rs`): Secret of Bloodbending's
+  "control target opponent during their next combat phase" takes the `controlled_by` slot as that
+  player's BeginCombat starts and hands it back (a whole-turn Mindslaver grant resumes) as it ends;
+  CR 800.4b drops a grant naming a departed seat. **CR 723.5 in pods** (`pod/controlled.rs`): a
+  controlled seat plays its controller's policy — no casts, plays, activations or attacks; an
+  override the rules reject falls back to the seat's own action. Mindslaver was a no-op in bot play.
+- **Primitives:** `SearchSplitWithOpponent` generalised (Elemental Teachings), `RevealTopDeployIfMatch
+  { tapped }`, `ManaPayload::AnyColorOfSource` (read off the source by the auto-tap table — Katilda),
+  `GrantProtectionFromChosenCardType` (Pippin; the keyword shield answers removal with it),
+  `Predicate::PlayerAttackedYouThisTurn` (Faramir), `CardDefinition::dies_to_exile_extra_turn` (Ugin's
+  Nexus), `DelayedTriggerKind::TargetsNextUpkeep` (Plague Reaver), `R::DifferentControllerFromTargetSlot`.
+- **Bug classes fixed:** ① a failed NESTED payment (a mana ability's own cost, Cascading Cataracts'
+  {5}) rolled back the pool and the taps but not a sacrificed Spawn — it sat in the graveyard with no
+  event, so no sweep and no dies trigger saw it (fuzzed sweep 382001): a costed mana source now dry-runs
+  on a clone when a self-consuming source could pay it. ② CR 400.7 — a creature-type choice stamped a
+  source that had already died (Selfless Safewright). ③ `Not(<cross-slot atom>)` reads false at
+  resolution, where the cast's slots are unstamped — Modify Memory's exchange silently did nothing;
+  the positive atom replaces it (no other negated cross atom in the catalog). ④ a free `GrantMayPlay`
+  over a paid one kept the stale alt cost. ⑤ Flesh Reaver retriggered off the damage it deals its own
+  controller (a Spirit Loop pod drew by CR 104.4b); the other 19 bare `DealsDamage` self-triggers are
+  printed unconditional. Also: `exile_from_hand_cost` now sets `ExiledForCost` (Jhoira), and the pod's
+  CR 400.7 invariant lets a Skullbriar keep its counters in the command zone.
+- **Sweeps:** fuzzed strict 382001 (all 381 decks, 10,080 games): 2 aborts, both fixed above, 7 undecided
+  by rule; 382101 (seats 375-387, 560 games): 0 bad.
+- **Open (INCOMPLETE_CARDS "EDHREC average-deck seats"):** Elemental Teachings' split is heuristic,
+  Galadriel's Dismissal kicked targets only the player, Transmutation Font's distinct-name sacrifice,
+  Esoteric Duplicator can't copy a sacrificed TOKEN (no LKI past the trigger), Iron Man, Bleeding Edge's
+  may-once, Exchange of Words outlasts the enchantment, Court of Locthwain's monarch grant replaces the
+  lasting one. A top-level auto-tap that sacrifices a source and then fails has the same rollback gap
+  as ①; bots never reach it (their casts are probed first).
+
 ## FIXED 2026-10-11 (Commander run, `01EvCQ72`, concurrent with `01Mwhi27`) — the last pod residuals, a designation leak, an i32 overflow class
 
 - **CR 400.7 designations:** monstrous, renowned and suspected rode the card
@@ -525,8 +561,7 @@ Ethereal Valkyrie's, `effects/foretell.rs`) plus a "whenever you foretell" event
 Balor's "one or more — each mode a different player", Raphael a per-player
 "creature card put into your graveyard this turn" (the tally is
 `Player::creature_cards_to_graveyard_this_turn`); Azlask (Echoes of Eternity's
-trigger doubling for colorless sources); Iroh (Secret of Bloodbending — control
-another player); Lorehold (Goliath Daydreamer's dream counters, Invoke
+trigger doubling for colorless sources); Lorehold (Goliath Daydreamer's dream counters, Invoke
 Calamity); Terra (Tom Bombadil, The Kami War).
 
 **✅ Fixed 2026-10-10 (eighteenth Commander run) — CR 601.2c, every required
