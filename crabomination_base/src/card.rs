@@ -3105,6 +3105,10 @@ pub enum SelectionRequirement {
     /// Empty-Shrine Kannushi's "protection from the colors of permanents you
     /// control".
     SharesColorWithPermanentYouControl,
+    /// Shares a color with a permanent the evaluating player controls that
+    /// matches the inner filter (Ringsight: "a legendary creature you
+    /// control"). A colorless candidate shares nothing.
+    SharesColorWithYourPermanentMatching(Box<SelectionRequirement>),
     /// Shares a creature type with a creature the evaluating player controls
     /// (Descendants' Path's revealed card). Changelings on either side share
     /// with everything; a creature's layer-4 types count.
@@ -3411,6 +3415,10 @@ pub enum SelectionRequirement {
     /// powers Spear of Heliod's "destroy target creature that dealt damage
     /// to you this turn".
     DealtDamageToControllerThisTurn,
+    /// The candidate dealt COMBAT damage this turn to the controller of the
+    /// ability's source — not the evaluating player, who is the sacrificer in
+    /// an edict (Witch-king of Angmar). Battlefield-only.
+    CombatDamagedSourceControllerThisTurn,
     /// The candidate creature dealt damage to a player other than its
     /// controller this turn — "one of them" after "whenever one or more
     /// creatures you control deal combat damage to a player" (Descendants'
@@ -3846,6 +3854,9 @@ pub enum SelectionRequirement {
     /// Onyx's −3 ("each opponent sacrifices a creature with the
     /// greatest power among creatures that player controls").
     HasGreatestPowerAmongControlled(Box<SelectionRequirement>),
+    /// "A creature with the least power among [filter] that player controls"
+    /// (Witch-king, Bringer of Ruin). Ties pass; battlefield-only.
+    HasLeastPowerAmongControlled(Box<SelectionRequirement>),
     /// "A creature with the greatest power among all creatures on the
     /// battlefield" — the candidate must be a creature whose power ≥ every
     /// other creature's (any controller). Ties pass. Gates Getaway Glamer's

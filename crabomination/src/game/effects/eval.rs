@@ -5357,6 +5357,15 @@ impl GameState {
                     .contains(cid),
                 Target::Player(_) => false,
             },
+            // Read off the SOURCE's controller: the sacrificing opponent is
+            // the evaluating player of an edict's candidate walk.
+            R::CombatDamagedSourceControllerThisTurn => match target {
+                Target::Permanent(cid) => {
+                    let you = source.and_then(|s| self.last_known_controller(s, None)).unwrap_or(controller);
+                    self.players[you].creatures_that_combat_damaged_me_this_turn.contains(cid)
+                }
+                Target::Player(_) => false,
+            },
             R::DamagedAPlayerThisTurn => match target {
                 // CR 603.10 — a dying creature's own trigger reads it off the
                 // death snapshot (Wave of Rats).
@@ -6539,6 +6548,22 @@ impl GameState {
                                 && self.effective_power(other) > cand_pow
                         })
                     }
+                    R::HasLeastPowerAmongControlled(inner) => {
+                        let Some(cand) = self.bf_hint_or_find(*cid, hint) else {
+                            return false;
+                        };
+                        if !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint) {
+                            return false;
+                        }
+                        let cand_pow = self.effective_power(cand);
+                        let cand_ctrl = cand.controller;
+                        !self.battlefield.iter().any(|other| {
+                            other.controller == cand_ctrl
+                                && other.id != *cid
+                                && self.evaluate_requirement_static_on(inner, other, controller, source)
+                                && self.effective_power(other) < cand_pow
+                        })
+                    }
                     R::HasGreatestPowerAmongAllCreatures => {
                         let Some(cand) = self.bf_hint_or_find(*cid, hint) else { return false };
                         if !self.computed_is_creature(cand) {
@@ -7195,6 +7220,15 @@ impl GameState {
                         })
                     })
             }
+            R::SharesColorWithYourPermanentMatching(inner) => {
+                let colors = card.definition.printed_colors();
+                !colors.is_empty()
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == controller
+                            && self.evaluate_requirement_static_on(inner, c, controller, None)
+                            && self.card_colors_anywhere(c.id).iter().any(|x| colors.contains(x))
+                    })
+            }
             R::SharesColorWithPermanentYouControl => {
                 let colors = card.definition.printed_colors();
                 !colors.is_empty()
@@ -7406,6 +7440,7 @@ impl GameState {
             // surface this filter).
             R::HasGreatestManaValueAmongControlled(_) => false,
             R::HasGreatestPowerAmongControlled(_) => false,
+            R::HasLeastPowerAmongControlled(_) => false,
             R::HasGreatestPowerAmongAllCreatures => false,
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
@@ -7565,7 +7600,7 @@ impl GameState {
             | R::ActivatedAbilityTargetsOnlySource
             | R::ActivatedAbilityTargetsMatching(_)
             | R::SpellWithSingleTarget
-            | R::DealtDamageToControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
+            | R::DealtDamageToControllerThisTurn | R::CombatDamagedSourceControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::BlockingOrBlockedBySource
