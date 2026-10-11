@@ -251,6 +251,14 @@ the handoff.
 - **Closing tip** (seats through 373): fuzzed strict 195001 (4,890 games) and
   plain 196001 (9,780) — **0 aborts**; 11 undecided between them, all classes
   below plus the open Heliod + Shalai "can't lose" action cap.
+- **CR 104.4b — a counter is growth to the loop watch.** Heliod, Sun-Crowned
+  and a lifelinking Shalai and Hallar against Pariah on an indestructible
+  creature put a counter on Shalai every cycle, so no board repeated and only
+  new permanents counted as growth: 196001 ran it to the action cap (and it is
+  the same loop as 184001's Darksteel Angel row — closed). A trigger
+  resolution that adds a counter now counts. Sweeps after it: fuzzed strict
+  197001 (4,980 games) and plain 198001 (9,960) — **0 aborts**, 7 undecided,
+  no action cap among them.
 - Left, classified: Polyraptor's forced reveal (above), token board caps
   (Myrel doubling under Isshin + Karlach's extra combats: 1,024 permanents in
   one turn, no lethal yet because the tokens are summoning-sick), CR 104.4a
@@ -308,8 +316,9 @@ the handoff.
   token board cap, and **an action cap the loop watch can't call**: Shalai and
   Hallar + Heliod, Sun-Crowned against a seat holding Darksteel Angel ("you
   can't lose") is a genuine mandatory infinite loop, but life totals change
-  every pass, so the no-progress digest never repeats. Open, low value: a
-  CR 104.4b reading that ignores a seat's life while it can't lose.
+  every pass, so the no-progress digest never repeats. ✅ Closed 2026-10-11:
+  Shalai takes a counter every cycle, and a counter is now growth to the
+  loop watch (the `017yfeX4` second-firing section above).
 - **Fuzzed strict sweep** 185001 (same settings, 4,710 games): two aborts, one
   class — `Effect::Move` recorded every selected card in `last_moved_cards`,
   moved or not, so Tinybones' "exile it from their graveyard with a stash

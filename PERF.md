@@ -3152,6 +3152,11 @@ audit pods       overflow + debug-assertions: fuzzed strict 191001 (25 aborts,
 2-player         release tip, --a dflt --b dflt --seed 9701 x 300: cube 2,398 /
                  2, sos 1,500 / 0, sealed 3,600 / 0; 0 panics
 suite            24,941 / 0 / 5; workspace clippy 0
+loop watch       `46cd44fdd` (a CounterAdded scan per trigger resolution, CR
+                 104.4b): --bench 196,176 / 27.64 / 613.0 byte-identical,
+                 determinism ok; bench_ab.py f0d5933e1 vs 46cd44fdd, 16 pairs:
+                 median +0.38 %, mean +0.59 % (sd 3.08) — inside noise (the
+                 interval also holds the concurrent runs' commits)
 ```
 
 ### 2026-10-10 (Commander routine — seventeenth run, closing, session `017yfeX4`) — guardrail; audit-sweep aborts
