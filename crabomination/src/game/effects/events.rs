@@ -99,7 +99,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::Proliferated { .. } => bits!(K::Proliferated),
         E::SagaFinalChapterResolved { .. } => bits!(K::SagaFinalChapterResolved),
         E::Foraged { .. } => bits!(K::Foraged),
-        E::Investigated { .. } | E::Exploited { .. } | E::Enlisted { .. } | E::DieResult { .. } => {
+        E::Investigated { .. } | E::Exploited { .. } | E::Enlisted { .. } | E::DieResult { .. } | E::Bent { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
         }
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
@@ -276,6 +276,7 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::Exploited, GameEvent::Exploited { .. })
         | (A::Enlisted, GameEvent::Enlisted { .. })
         | (A::DieResult, GameEvent::DieResult { .. }) => true,
+        (A::Bent(want), GameEvent::Bent { kind, .. }) => want.is_none_or(|w| w == *kind),
         _ => false,
     }
 }
@@ -1414,6 +1415,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::Proliferated { player }
         | GameEvent::SagaFinalChapterResolved { player, .. }
         | GameEvent::Foraged { player }
+        | GameEvent::Bent { player, .. }
         | GameEvent::Investigated { player, .. }
         | GameEvent::EvidenceCollected { player }
         | GameEvent::GiftGiven { player }
@@ -1927,6 +1929,7 @@ mod tests {
             E::Proliferated { player: 0 },
             E::SagaFinalChapterResolved { player: 0, saga: c, mana_value: 3 },
             E::Foraged { player: 0 },
+            E::Bent { player: 0, kind: crate::effect::BendKind::Earth },
             E::Investigated { player: 0, first_this_turn: true },
             E::Exploited { card_id: c, controller: 0 },
             E::Enlisted { card_id: c, controller: 0 },
@@ -2098,6 +2101,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::Exploited),
             K::Performed(crate::effect::KeywordAct::Enlisted),
             K::Performed(crate::effect::KeywordAct::DieResult),
+            K::Performed(crate::effect::KeywordAct::Bent(None)),
             K::EvidenceCollected,
             K::GiftGiven,
             K::PoisonAdded,

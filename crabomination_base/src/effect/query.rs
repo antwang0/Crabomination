@@ -934,6 +934,7 @@ impl Effect {
             | Effect::ManifestTopOfLibraryUnderYou { .. }
             | Effect::CounterAllAbilitiesOf { .. }
             | Effect::CounterOpponentsSpellsAndAbilities { .. }
+            | Effect::EachPlayerChoosesOpponentPermanentExile { .. }
             | Effect::LookTopExileOneFaceDownMayPlay { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn

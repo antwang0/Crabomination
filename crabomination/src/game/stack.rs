@@ -5242,6 +5242,9 @@ impl GameState {
                 pl.permanent_left_battlefield_this_turn = false;
                 pl.creature_left_battlefield_this_turn = false;
             }
+            if pl.bends_this_turn != 0 {
+                pl.bends_this_turn = 0;
+            }
             if pl.cards_exiled_this_turn != 0 || pl.cards_discarded_this_turn != 0 {
                 pl.cards_exiled_this_turn = 0;
                 pl.cards_discarded_this_turn = 0;

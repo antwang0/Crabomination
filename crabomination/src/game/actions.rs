@@ -11640,13 +11640,15 @@ impl GameState {
                 };
             }
         }
-        let events = auto_events;
+        let mut events = auto_events;
         let final_x = x_value.unwrap_or(0).max(sac_x.unwrap_or(0));
 
         // CR 701.67 — record that the waterbend additional cost was paid, so
         // "if its additional cost was paid" riders can branch on resolution.
         if waterbend.is_some_and(|a| a > 0) {
             card.cast_via_waterbend = true;
+            // CR 701.67c — "whenever you waterbend" (a waterbend cost was paid).
+            self.note_bent(p, crate::effect::BendKind::Water, &mut events);
         }
         // Mana provenance (Opal Palace's counters ride the card; Path of
         // Ancestry's trigger waits until the spell is on the stack).
@@ -23335,6 +23337,10 @@ impl GameState {
         // "whenever an opponent activates an ability" trigger carves them
         // out (Flamescroll Celebrant, CR 605.1), and the log skips the
         // tap-for-mana spam.
+        // CR 701.67c — a waterbend activation cost was paid.
+        if ability.waterbend {
+            self.note_bent(p, crate::effect::BendKind::Water, events);
+        }
         if !ability_is_mana {
             events.push(GameEvent::AbilityActivated {
                 source: card_id,

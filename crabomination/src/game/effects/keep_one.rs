@@ -76,6 +76,67 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::EachPlayerChoosesOpponentPermanentExile` (The Legend of
+    /// Yangchen): starting with the controller, each living seat chooses up
+    /// to one `filter` permanent an opponent of the controller controls; the
+    /// chosen ones are exiled together. A headless seat names the highest
+    /// mana value among those it doesn't control itself.
+    pub(super) fn each_player_chooses_opponent_permanent_exile(
+        &mut self,
+        filter: &SelectionRequirement,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut chosen: Vec<CardId> = Vec::new();
+        for p in self.seats_in_turn_order_from(me) {
+            let pool: Vec<&crate::card::CardInstance> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller != me && self.evaluate_requirement_on_card(filter, c, me))
+                .collect();
+            if pool.is_empty() {
+                break;
+            }
+            let auto = pool
+                .iter()
+                .filter(|c| c.controller != p)
+                .max_by_key(|c| c.definition.cost.cmc())
+                .map(|c| c.id);
+            let candidates: Vec<(CardId, String)> =
+                pool.iter().map(|c| (c.id, c.definition.name.to_string())).collect();
+            let Some(picked) = self.ask_seat_cards_logged(
+                &mut cursor,
+                p,
+                "Choose up to one permanent to exile".into(),
+                source,
+                candidates,
+                0,
+                1,
+                PickValue::Cost,
+                effect,
+                auto.into_iter().collect(),
+            ) else {
+                return Ok(());
+            };
+            if let Some(id) = picked.first().copied()
+                && !chosen.contains(&id)
+            {
+                chosen.push(id);
+            }
+        }
+        self.clear_answer_log();
+        for id in chosen {
+            if self.battlefield_find(id).is_some() {
+                self.move_card_to(id, &crate::effect::ZoneDest::Exile, ctx, events);
+            }
+        }
+        Ok(())
+    }
+
     /// `Effect::SacrificeAllButOnePerType{,YouChoose}` — for each resolved
     /// player in turn, one permanent of each listed card type is chosen to
     /// keep: by that player, or (Tragic Arrogance, `you_choose`) by the

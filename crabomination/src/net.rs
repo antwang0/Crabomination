@@ -2844,6 +2844,7 @@ pub enum GameEventWire {
     SagaFinalChapterResolved { player: usize, saga: CardId },
     /// Wire mirror of `GameEvent::Foraged` (CR 701.61).
     Foraged { player: usize },
+    Bent { player: usize, kind: crate::effect::BendKind },
     /// Wire mirror of `GameEvent::Investigated` (CR 701.16a).
     Investigated { player: usize },
     /// Wire mirror of `GameEvent::Exploited` (CR 702.110b).
@@ -3122,6 +3123,7 @@ impl From<&GameEvent> for GameEventWire {
                 GameEventWire::SagaFinalChapterResolved { player: *player, saga: *saga }
             }
             GameEvent::Foraged { player } => GameEventWire::Foraged { player: *player },
+            GameEvent::Bent { player, kind } => GameEventWire::Bent { player: *player, kind: *kind },
             GameEvent::Investigated { player, .. } => GameEventWire::Investigated { player: *player },
             GameEvent::Exploited { card_id, controller } => {
                 GameEventWire::Exploited { card_id: *card_id, controller: *controller }
@@ -3535,6 +3537,12 @@ impl GameEventWire {
             // The chapter's own resolution row already narrates it.
             E::SagaFinalChapterResolved { .. } => String::new(),
             E::Foraged { player } => format!("{} forages", pn(*player)),
+            E::Bent { player, kind } => format!("{} {}", pn(*player), match kind {
+                crate::effect::BendKind::Air => "airbends",
+                crate::effect::BendKind::Earth => "earthbends",
+                crate::effect::BendKind::Fire => "firebends",
+                crate::effect::BendKind::Water => "waterbends",
+            }),
             E::Investigated { player } => format!("{} investigates", pn(*player)),
             E::EvidenceCollected { player } => format!("{} collects evidence", pn(*player)),
             E::GiftGiven { player } => format!("{} gives a gift", pn(*player)),

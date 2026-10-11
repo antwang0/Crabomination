@@ -2155,6 +2155,10 @@ pub enum Predicate {
     /// of Momo's cost reduction). Backed by
     /// `Player.creature_left_battlefield_this_turn`.
     CreatureLeftBattlefieldThisTurn { who: PlayerRef },
+    /// `who` has airbent, earthbent, firebent and waterbent this turn (Avatar
+    /// Aang's "if you've done all four this turn"). Backed by
+    /// `Player.bends_this_turn`.
+    BentAllFourThisTurn { who: PlayerRef },
     /// EOE Void — true if a nonland permanent left the battlefield this turn
     /// (any controller) or `who` cast a spell for its warp cost this turn.
     /// Backed by `GameState.nonland_permanent_left_bf_this_turn` +
@@ -3930,6 +3934,33 @@ pub enum KeywordAct {
     /// "whenever you roll a 4 or higher" pairs it with `DieResultAtLeast`
     /// (Mr. House, Ground Pounder).
     DieResult,
+    /// A player bent (`None` = any of the four): CR 701.65b airbend (exiled
+    /// objects under an airbend instruction), 701.66b earthbend (its delayed
+    /// return trigger was created), 701.67c waterbend (a waterbend cost was
+    /// paid), 702.189b firebend (a firebending ability resolved). The bender
+    /// is the actor (Avatar Aang).
+    Bent(Option<BendKind>),
+}
+
+/// The four bending actions [`KeywordAct::Bent`] tells apart.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BendKind {
+    Air,
+    Earth,
+    Fire,
+    Water,
+}
+
+impl BendKind {
+    /// This kind's bit in `Player::bends_this_turn`.
+    pub const fn bit(self) -> u8 {
+        match self {
+            BendKind::Air => 1,
+            BendKind::Earth => 2,
+            BendKind::Fire => 4,
+            BendKind::Water => 8,
+        }
+    }
 }
 
 impl EventKind {
@@ -11113,6 +11144,12 @@ pub enum Effect {
         #[serde(default)]
         destroy: bool,
     },
+    /// "Starting with you, each player chooses up to one [filter] permanent
+    /// from among permanents your opponents control. Exile those permanents."
+    /// (The Legend of Yangchen.) Each living seat in turn order from the
+    /// controller picks (CR 101.4); the picks are exiled at once (CR 608.2c).
+    /// A headless seat names the highest-mana-value one it doesn't control.
+    EachPlayerChoosesOpponentPermanentExile { filter: SelectionRequirement },
     /// "Wish" — put a card you own matching `filter` from your sideboard
     /// ("outside the game") or from exile into your hand (Karn, the Great
     /// Creator's -2). Chosen via `Decision::ChooseCards` for a `wants_ui`

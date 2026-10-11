@@ -2894,6 +2894,8 @@ pub enum GameEvent {
     /// CR 701.61 — `player` foraged (exiled three graveyard cards or sacrificed
     /// a Food). Powers "whenever you forage" payoffs.
     Foraged { player: usize },
+    /// `player` bent (CR 701.65b / 701.66b / 701.67c / 702.189b).
+    Bent { player: usize, kind: crate::effect::BendKind },
     /// CR 701.16a — `player` investigated once (`Effect::Investigate`);
     /// `first_this_turn` marks their first investigation of the turn.
     Investigated { player: usize, first_this_turn: bool },

@@ -14769,6 +14769,10 @@ impl GameState {
                         events.push(GameEvent::ManaAdded { player: p, color: crate::mana::Color::Red, source: ctx.source });
                     }
                 }
+                // CR 702.189b — a firebending ability resolved.
+                if self.players.get(p).is_some_and(|pl| pl.is_alive()) {
+                    self.note_bent(p, crate::effect::BendKind::Fire, events);
+                }
                 Ok(())
             }
             Effect::SagaFinalChapterResolved => {
@@ -19737,6 +19741,9 @@ impl GameState {
                     fires_once: true,
                     expires_after_turn: None,
                 });
+                // CR 701.66b — "whenever you earthbend" triggers as the
+                // delayed return trigger is created.
+                self.note_bent(ctx.controller, crate::effect::BendKind::Earth, events);
                 Ok(())
             }
 
@@ -19765,11 +19772,13 @@ impl GameState {
                     )?;
                 }
                 let turn = self.turn_number;
+                let mut exiled_any = false;
                 for cid in spells.iter().copied().chain(std::mem::take(&mut ids)) {
                     if !spells.contains(&cid) {
                         self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                     }
                     if let Some(card) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        exiled_any = true;
                         let owner = card.owner;
                         card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: owner,
@@ -19784,6 +19793,11 @@ impl GameState {
                         card.granted_alt_cast_cost_eot =
                             Some(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]));
                     }
+                }
+                // CR 701.65b — "whenever you airbend" triggers when one or
+                // more objects were exiled under the instruction.
+                if exiled_any {
+                    self.note_bent(ctx.controller, crate::effect::BendKind::Air, events);
                 }
                 Ok(())
             }
@@ -26101,6 +26115,9 @@ impl GameState {
 
             Effect::EachPlayerKeepsOneSacrificeRest { who, filter, destroy } => {
                 self.each_player_keeps_one(who, filter, *destroy, ctx, events, effect)
+            }
+            Effect::EachPlayerChoosesOpponentPermanentExile { filter } => {
+                self.each_player_chooses_opponent_permanent_exile(filter, ctx, events, effect)
             }
 
             Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx),

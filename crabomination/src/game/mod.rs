@@ -17702,6 +17702,23 @@ impl GameState {
         kinds.len()
     }
 
+    /// `player` bent (CR 701.65b / 701.66b / 701.67c / 702.189b): note the
+    /// kind for "all four this turn" and emit the event bending triggers read.
+    pub(crate) fn note_bent(
+        &mut self,
+        player: usize,
+        kind: crate::effect::BendKind,
+        events: &mut Vec<crate::game::types::GameEvent>,
+    ) {
+        if player >= self.players.len() {
+            return;
+        }
+        if self.players[player].bends_this_turn & kind.bit() == 0 {
+            self.players[player].bends_this_turn |= kind.bit();
+        }
+        events.push(crate::game::types::GameEvent::Bent { player, kind });
+    }
+
     /// Distinct permanent types (CR 110.4a) among cards in `seat`'s
     /// graveyard (`Value::PermanentTypesInGraveyard`, Matzalantli).
     pub fn distinct_permanent_types_in_graveyard(&self, seat: usize) -> usize {

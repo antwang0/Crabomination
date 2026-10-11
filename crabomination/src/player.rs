@@ -727,6 +727,10 @@ pub struct PlayerData {
     /// Momo), read last-known before the creature left. Reset with it.
     #[serde(default)]
     pub creature_left_battlefield_this_turn: bool,
+    /// The bending actions this player took this turn, one
+    /// [`crate::effect::BendKind::bit`] each (Avatar Aang). Reset per turn.
+    #[serde(default)]
+    pub bends_this_turn: u8,
     /// True if this player has been dealt damage so far this turn. Set in
     /// `deal_damage_to_from`'s player branch (combat or non-combat, incl.
     /// infect/poison), reset for *all* players at the active player's
@@ -1710,6 +1714,7 @@ impl Player {
             pending_creature_etb_counters: Default::default(),
             permanent_left_battlefield_this_turn: false,
             creature_left_battlefield_this_turn: false,
+            bends_this_turn: 0,
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,
             greatest_hit_this_turn: 0,
