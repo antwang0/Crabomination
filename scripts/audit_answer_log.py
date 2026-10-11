@@ -239,6 +239,21 @@ def main():
         print(f"{PATH}:{line}  fn {fn}  [{status}] asks={nasks} clears={nclears}")
         for rl, txt in risky[:6]:
             print(f"    ~{rl}: {txt}")
+    inline_asks_without_clear()
+
+
+def inline_asks_without_clear():
+    """An ask with an inline `&mut 0` cursor has no `let mut cursor` block for
+    the walk above to see: `AddCountersUpTo` leaked that way (fuzzed strict pod
+    193001). Every effects module; a clear within the next 45 lines passes."""
+    import glob
+    for f in sorted(glob.glob("crabomination/src/game/**/*.rs", recursive=True)):
+        lines = open(f).read().split("\n")
+        for i, l in enumerate(lines):
+            if not ASK.search(l) or "&mut 0" not in "\n".join(lines[i : i + 3]):
+                continue
+            if not CLEAR.search("\n".join(lines[i : i + 45])):
+                print(f"{f}:{i + 1}  [INLINE NO-CLEAR] {l.strip()[:80]}")
 
 
 if __name__ == "__main__":
