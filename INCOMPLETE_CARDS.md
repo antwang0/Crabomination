@@ -1981,3 +1981,7 @@ library-exile event.
 | Behold the Sinister Six! | "with different names" isn't checked among the six targets | a singleton Commander graveyard holds no two names alike; a 60-card graveyard could return two copies |
 | Venom, Deadly Devourer | the reflexive "when you do" Symbiote target is chosen up front with the graveyard card | reflexive triggers with their own target slot aren't split from the activation's targets |
 | Echoes of Eternity | a colorless *spell's* triggered ability and a leaves-the-battlefield trigger of a colorless permanent don't fire an additional time | the trigger doubler reads its source live on the battlefield; a spell source or last-known source isn't consulted |
+| Maralen, Fae Ascendant | the free cast's mana-value cap (your Elves and Faeries) is read as the cards are exiled, not as the spell is cast | `ExileTopAndGrantMayPlay.max_mana_value` is evaluated at grant time; a cast-time cap on a may-play grant doesn't exist |
+| Elrond, Moon-Reader | activating a creature's *mana* ability doesn't draw | mana abilities emit no `AbilityActivated` event (the engine's CR 605.1 carve-out for "whenever an opponent activates" cards) |
+| Woodland Weavemaster | its mana can't pay for a Kindred Elf noncreature spell | `SpendRestriction::CreatureOfTypeOrItsAbility` reads creature spells only |
+| Elven Passage | with an Elf to behold, the basic enters untapped rather than tapped-then-untapped | beholding is free and always taken, so the two differ only for "enters tapped" watchers |

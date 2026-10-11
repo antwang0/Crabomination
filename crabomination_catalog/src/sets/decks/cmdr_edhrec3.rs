@@ -5,7 +5,8 @@
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
 //! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin, Katara, the
-//! Fearless, Azlask, the Swelling Scourge and The Mycotyrant. Tests in
+//! Fearless, Azlask, the Swelling Scourge, The Mycotyrant and Thranduil, the
+//! Elvenking. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -3684,5 +3685,190 @@ pub fn fungal_sprouting() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: saprolings(Value::GreatestPowerControlled { who: PlayerRef::You }),
         ..Default::default()
+    }
+}
+
+// ── Thranduil, the Elvenking (BGU) ──────────────────────────────────────────
+
+fn elf() -> R {
+    R::HasCreatureType(CreatureType::Elf)
+}
+
+/// Elven Passage — Land. {T}, pay 1 life, sacrifice it: search for a basic
+/// land onto the battlefield tapped; you may behold an Elf (an Elf you
+/// control, or an Elf card revealed from hand), and if you do, untap it.
+/// Beholding costs nothing, so the land arrives untapped exactly when an
+/// Elf can be beheld.
+pub fn elven_passage() -> CardDefinition {
+    let fetch = |tapped: bool| {
+        Box::new(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped },
+        })
+    };
+    CardDefinition {
+        name: "Elven Passage",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            life_cost: 1,
+            sac_cost: true,
+            effect: Effect::If {
+                cond: Predicate::Any(vec![
+                    Predicate::SelectorExists(yours(elf())),
+                    Predicate::ValueAtLeast(
+                        Value::CardsInHandMatching { who: PlayerRef::You, filter: elf() },
+                        Value::ONE,
+                    ),
+                ]),
+                then: fetch(false),
+                else_: fetch(true),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dionus, Elvish Archdruid — {3}{G} 3/3 legendary Elf Druid. Elves you
+/// control have "Whenever this creature becomes tapped during your turn, untap
+/// it and put a +1/+1 counter on it. This ability triggers only once each
+/// turn."
+pub fn dionus_elvish_archdruid() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Elves you control have \"Whenever this creature becomes tapped during your turn, untap it \
+                          and put a +1/+1 counter on it. This ability triggers only once each turn.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(elf()).and(R::ControlledByYou),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource)
+                        .with_filter(Predicate::IsTurnOf(PlayerRef::You))
+                        .once_per_turn(),
+                    effect: Effect::Seq(vec![
+                        Effect::Untap { what: Selector::This, up_to: None },
+                        Effect::AddCounter {
+                            what: Selector::This,
+                            kind: crate::card::CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        },
+                    ]),
+                }),
+            },
+        }],
+        ..legend("Dionus, Elvish Archdruid", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Druid], 3, 3)
+    }
+}
+
+/// Elrond, Moon-Reader — {2}{U} 3/3 legendary Elf Noble. The first time each
+/// turn you activate an ability of a creature, draw a card. {5}{U}{U}: exile
+/// up to two other target nonland permanents you control; they return under
+/// their owner's control at the beginning of the next end step.
+pub fn elrond_moon_reader() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature })
+                .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u(), u()]),
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Nonland.and(R::ControlledByYou).and(R::OtherThanSource),
+                effect: Box::new(Effect::ExileReturnToOwnerNextEndStep { what: Selector::Target(0), tapped: false }),
+            },
+            ..Default::default()
+        }],
+        ..legend("Elrond, Moon-Reader", cost(&[generic(2), u()]), vec![CreatureType::Elf, CreatureType::Noble], 3, 3)
+    }
+}
+
+/// Maralen, Fae Ascendant — {2}{B}{G}{U} 4/5 legendary Elf Faerie Noble.
+/// Flying. Whenever Maralen or another Elf or Faerie you control enters,
+/// exile the top two cards of target opponent's library. Once each turn, you
+/// may cast a spell with mana value at most your Elves and Faeries from among
+/// cards exiled with Maralen this turn without paying its mana cost. The cap
+/// is read as the cards are exiled.
+pub fn maralen_fae_ascendant() -> CardDefinition {
+    let kin = || elf().or(R::HasCreatureType(CreatureType::Faerie));
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: kin() }),
+            effect: Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::Target(0),
+                    count: Value::Const(2),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    max_mana_value: Some(Value::CountOf(Box::new(yours(R::Creature.and(kin()))))),
+                    pay_own_cost: false,
+                    uncast_penalty: None,
+                },
+                Effect::OneCastPerTurnAmongGranted { what: Selector::ExiledThisResolution { filter: R::Any } },
+            ]),
+        }],
+        ..legend(
+            "Maralen, Fae Ascendant",
+            cost(&[generic(2), b(), g(), u()]),
+            vec![CreatureType::Elf, CreatureType::Faerie, CreatureType::Noble],
+            4,
+            5,
+        )
+    }
+}
+
+/// Thranduil's Company — {2}{G}{U} 3/4 Elf Soldier. With another Elf, you may
+/// play an additional land each turn. Landfall: two +1/+1 counters on target
+/// creature you control, which gains vigilance until end of turn.
+pub fn thranduils_company() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control another Elf, you may play an additional land on each of your turns.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::SelectorExists(yours(elf().and(R::OtherThanSource))),
+                inner: Box::new(StaticEffect::ExtraLandPerTurn),
+            },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::landfall(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+        ]))],
+        ..creature("Thranduil's Company", cost(&[generic(2), g(), u()]), vec![CreatureType::Elf, CreatureType::Soldier], 3, 4)
+    }
+}
+
+/// Woodland Weavemaster — {1}{G} 1/2 Elf Druid. Vigilance. Another Elf of
+/// yours entering gives it +1/+1 until end of turn. {T}: add X mana of any one
+/// color, X = its power; spend it only on Elf creature spells and abilities of
+/// Elf creatures.
+pub fn woodland_weavemaster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: elf().and(R::OtherThanSource) },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![tap_for(ManaPayload::Restricted(
+            Box::new(ManaPayload::AnyOneColor(Value::PowerOf(Box::new(Selector::This)))),
+            SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Elf),
+        ))],
+        ..creature("Woodland Weavemaster", cost(&[generic(1), g()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 2)
     }
 }

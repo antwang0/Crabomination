@@ -2542,3 +2542,131 @@ fn fungal_sprouting_counts_the_biggest_creature() {
     cast_on(&mut g, sprout, None);
     assert_eq!(named(&g, "Saproling"), 4);
 }
+
+// ── Thranduil, the Elvenking's list ─────────────────────────────────────────
+
+/// Elven Passage: the fetched basic enters tapped, and beholding an Elf (CR
+/// 701.4-style reveal-or-choose; free) untaps it.
+#[test]
+fn elven_passage_untaps_with_an_elf_to_behold() {
+    for with_elf in [false, true] {
+        let mut g = pod(2);
+        let passage = ready(&mut g, 0, catalog::elven_passage());
+        let forest = g.add_card_to_library(0, catalog::forest());
+        if with_elf {
+            g.add_card_to_hand(0, catalog::llanowar_elves());
+        }
+        let life = g.players[0].life;
+        activate(&mut g, passage, 0);
+        assert_eq!(g.players[0].life, life - 1);
+        assert!(g.battlefield_find(passage).is_none());
+        assert_eq!(g.battlefield_find(forest).map(|c| c.tapped), Some(!with_elf));
+    }
+}
+
+/// Dionus, Elvish Archdruid: an Elf tapping on your turn untaps with a
+/// counter, once each turn (CR 603.2h triggers-only-once).
+#[test]
+fn dionus_untaps_and_grows_elves_once_a_turn() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::dionus_elvish_archdruid());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    activate(&mut g, elf, 0);
+    let c = g.battlefield_find(elf).unwrap();
+    assert!(!c.tapped, "untapped");
+    assert_eq!(c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+    activate(&mut g, elf, 0);
+    let c = g.battlefield_find(elf).unwrap();
+    assert!(c.tapped, "only once each turn");
+    assert_eq!(c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// Elrond, Moon-Reader: activating a creature's ability draws, once a turn
+/// (CR 603.2h); the flicker returns the exiled permanent at the next end step
+/// (CR 603.7).
+#[test]
+fn elrond_draws_once_and_flickers_till_end_step() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let elrond = ready(&mut g, 0, catalog::elrond_moon_reader());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elrond, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("flicker");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert!(g.battlefield_find(bear).is_none());
+    flood(&mut g);
+    activate(&mut g, elrond, 0);
+    assert_eq!(g.players[0].hand.len(), 1, "once each turn");
+    to_end_step(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
+}
+
+/// Maralen, Fae Ascendant: entering exiles the top two of an opponent's
+/// library; one spell among them with mana value up to your Elves and Faeries
+/// may be cast free, once each turn.
+#[test]
+fn maralen_casts_one_exiled_spell_a_turn() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    let shock = g.add_card_to_library(1, catalog::shock());
+    let maralen = g.add_card_to_hand(0, catalog::maralen_fae_ascendant());
+    flood(&mut g);
+    cast_on(&mut g, maralen, None);
+    assert!(g.exile.iter().any(|c| c.id == bolt) && g.exile.iter().any(|c| c.id == shock));
+    g.players[0].mana_pool.empty();
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("free bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastFromZoneWithoutPaying { card_id: shock, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "once each turn"
+    );
+}
+
+/// Thranduil's Company: a second land drop only beside another Elf (CR
+/// 305.2), and landfall puts two counters on a creature of yours.
+#[test]
+fn thranduils_company_extra_land_needs_another_elf() {
+    let mut g = pod(2);
+    let company = ready(&mut g, 0, catalog::thranduils_company());
+    assert_eq!(g.max_lands_per_turn(0), 1);
+    ready(&mut g, 0, catalog::llanowar_elves());
+    assert_eq!(g.max_lands_per_turn(0), 2);
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    let counters: u32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| c.counter_count(crabomination::card::CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(counters, 2);
+    assert!(g.battlefield_find(company).is_some());
+}
+
+/// Woodland Weavemaster: taps for mana equal to its power, which grows when
+/// another Elf enters.
+#[test]
+fn woodland_weavemaster_taps_for_its_power() {
+    let mut g = pod(2);
+    let weaver = ready(&mut g, 0, catalog::woodland_weavemaster());
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_on(&mut g, elf, None);
+    activate(&mut g, weaver, 0);
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "Elf-only mana");
+}
