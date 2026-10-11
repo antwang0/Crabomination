@@ -206,4 +206,5 @@ mod cmdr_etali;
 mod cmdr_edhrec;
 mod cmdr_edhrec2;
 mod cmdr_edhrec3;
+mod cmdr_edhrec4;
 mod cmdr_most_built;

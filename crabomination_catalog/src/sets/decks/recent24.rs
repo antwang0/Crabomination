@@ -1822,8 +1822,8 @@ pub fn threats_around_every_corner() -> CardDefinition {
 }
 
 /// Insidious Fungus — {G} 1/2 Fungus. {2}, Sacrifice it: choose one — destroy
-/// target artifact; destroy target enchantment; or draw a card. (The "may put
-/// a land onto the battlefield" rider on the draw mode is dropped.)
+/// target artifact; destroy target enchantment; or draw a card, then you may
+/// put a land card from your hand onto the battlefield tapped.
 pub fn insidious_fungus() -> CardDefinition {
     CardDefinition {
         name: "Insidious Fungus",
@@ -1845,7 +1845,19 @@ pub fn insidious_fungus() -> CardDefinition {
                 Effect::Destroy {
                     what: target_filtered(SelectionRequirement::Enchantment),
                 },
-                draw(1),
+                Effect::Seq(vec![
+                    draw(1),
+                    Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Land,
+                        count: Value::ONE,
+                        tapped: true,
+                        haste: false,
+                        sacrifice_eot: false,
+                        return_eot: false,
+                        then: None,
+                    },
+                ]),
             ]),
             ..Default::default()
         }],
