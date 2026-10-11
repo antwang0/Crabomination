@@ -34,11 +34,28 @@ impl GameState {
             let controller = self.battlefield_find(id).map_or(ctx.controller, |c| c.controller);
             let seat = || Selector::Player(PlayerRef::Seat(controller));
             let since = self.scratch.discarded_card_ids_this_resolution.len() as u32;
-            let steps = Effect::Seq(vec![
+            // CR 614.1a — Leader, Super-Genius: "instead you draw a card, then
+            // that creature connives", once per such replacement.
+            let first = if self.battlefield_find(id).is_some_and(|c| self.computed_is_creature(c)) {
+                let this: &GameState = self;
+                this.seat_static_sources(controller)
+                    .flat_map(|src| {
+                        src.definition.static_abilities.iter().filter_map(move |sa| this.active_static(&sa.effect, src))
+                    })
+                    .filter(|e| matches!(e, crate::effect::StaticEffect::ConniveDrawsFirst))
+                    .count() as i32
+            } else {
+                0
+            };
+            let mut steps = vec![
                 Effect::Draw { who: seat(), amount: Value::Const(n) },
                 Effect::Discard { who: seat(), amount: Value::Const(n), random: false },
                 Effect::ConniveFinish { conniver: id, controller, since },
-            ]);
+            ];
+            if first > 0 {
+                steps.insert(0, Effect::Draw { who: seat(), amount: Value::Const(first) });
+            }
+            let steps = Effect::Seq(steps);
             self.run_effect(&steps, ctx, events)?;
             if splice_after_suspend(&mut self.suspend_signal, || {
                 if i + 1 < ids.len() {

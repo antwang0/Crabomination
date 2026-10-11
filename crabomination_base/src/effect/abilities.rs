@@ -709,6 +709,13 @@ pub enum StaticEffect {
     /// the mirror of `FlashbackCostReduction`.
     OpponentFlashbackTax { amount: u32 },
     GraveyardCastCostReduction { amount: u32 },
+    /// CR 702.187 — "Each nonland card in your graveyard has mayhem. The
+    /// mayhem cost is equal to its mana cost" (Green Goblin's Goblin Formula).
+    GraveyardNonlandHaveMayhem,
+    /// CR 701.50 + 614.1a — "If a creature you control would connive,
+    /// instead you draw a card, then that creature connives" (Leader,
+    /// Super-Genius). Each instance draws one first.
+    ConniveDrawsFirst,
     /// Generic cost reduction for spells the controller casts *from exile*
     /// (Doc Aurlock — "Spells you cast … from exile cost {2} less"). Applied on
     /// the exile-cast paths (foretell, adventure-creature, plotted, impulse

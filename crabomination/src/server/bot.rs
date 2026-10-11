@@ -9223,7 +9223,7 @@ pub(super) fn cast_candidates<'a>(
         // Mayhem (CR 702.187): if the card was discarded this turn and has a
         // mayhem cost, offer a graveyard cast for it. `would_accept` enforces
         // the discarded-this-turn gate, cost, and timing.
-        if c.definition.mayhem_cost().is_some() {
+        if !c.definition.is_land() && state.effective_mayhem_cost(seat, c).is_some() {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
                 let (t, extras) =
                     state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);

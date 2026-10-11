@@ -2923,6 +2923,9 @@ pub enum SelectionRequirement {
     /// The library-top sibling: a permanent cast from the top of its owner's
     /// library on its way to the battlefield (Mikey & Don's extra counter).
     WasCastFromLibrary,
+    /// The graveyard sibling: a permanent cast from a graveyard on its way to
+    /// the battlefield (Rocket-Powered Goblin Glider's mayhem attach).
+    WasCastFromGraveyard,
     /// The card shares a card type with a card exiled by the evaluating
     /// source (`exiled_with == source`) — Holistic Wisdom's return gate.
     SharesCardTypeWithExiledBySource,

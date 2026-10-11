@@ -3634,6 +3634,29 @@ impl crate::game::GameState {
         false
     }
 
+    /// CR 702.187 — `card`'s mayhem cost for `seat`: its printed one, else its
+    /// mana cost when a nonland card in `seat`'s graveyard is granted mayhem
+    /// (Green Goblin's Goblin Formula).
+    pub fn effective_mayhem_cost(
+        &self,
+        seat: usize,
+        card: &crate::card::CardInstance,
+    ) -> Option<crate::mana::ManaCost> {
+        if let Some(c) = card.definition.mayhem_cost() {
+            return Some(c.clone());
+        }
+        let granted = !card.definition.is_land()
+            && self.seat_static_sources(seat).any(|src| {
+                src.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, src),
+                        Some(crate::effect::StaticEffect::GraveyardNonlandHaveMayhem)
+                    )
+                })
+            });
+        granted.then(|| card.definition.cost.clone())
+    }
+
     /// Lier, Disciple of the Drowned: if `seat` controls a permanent granting
     /// "each instant and sorcery card in your graveyard has flashback (= its
     /// mana cost)", returns the flashback cost for an I/S `card` that lacks a
@@ -4076,6 +4099,11 @@ impl crate::game::GameState {
         let Some(card) = self.players[player].graveyard.iter().find(|c| c.id == card_id) else {
             return false;
         };
+        // CR 702.187 — a land with mayhem (Oscorp Industries) is played from
+        // the graveyard the turn its owner discarded it.
+        if card.definition.mayhem_cost().is_some() && self.players[player].discarded_this_turn.contains(&card_id) {
+            return true;
+        }
         // CR 305.1 — a "you may play this card" grant stamped on the card
         // itself (Kethis, the Hidden Hand) covers a land: it is played.
         if card.may_play_until.is_some_and(|perm| perm.player == player && !perm.cast_only) {
@@ -13539,9 +13567,8 @@ impl GameState {
         // CR 702.187 — Mayhem: when the card has no flashback/jump-start but a
         // Mayhem cost, it may be cast from the graveyard for that cost only if
         // its owner discarded it this turn. Same exile-after tail as flashback.
-        let mayhem = card.effective_flashback().is_none()
-            && !jumpstart
-            && card.definition.mayhem_cost().is_some();
+        let mayhem_cost = self.effective_mayhem_cost(p, &card);
+        let mayhem = card.effective_flashback().is_none() && !jumpstart && mayhem_cost.is_some();
         // "You may cast this card from your graveyard …" — own cost plus the
         // card's additional-cost riders, and no exile tail.
         let gy_cast = card.effective_flashback().is_none()
@@ -13569,7 +13596,7 @@ impl GameState {
                 if !self.players[p].discarded_this_turn.contains(&card_id) {
                     return Err(GameError::SorcerySpeedOnly);
                 }
-                card.definition.mayhem_cost().unwrap().clone()
+                mayhem_cost.clone().unwrap_or_default()
             }
             None => match lier_cost {
                 Some(c) => c,

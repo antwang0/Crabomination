@@ -33656,6 +33656,8 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionBySourcePower { .. }
             | StaticEffect::CostReductionWhile { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
+            | StaticEffect::GraveyardNonlandHaveMayhem
+            | StaticEffect::ConniveDrawsFirst
             | StaticEffect::ExileCastCostReduction { .. }
             | StaticEffect::LinkedExileCastCostReduction { .. }
             | StaticEffect::NonHandCastCostReduction { .. }

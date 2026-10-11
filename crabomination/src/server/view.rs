@@ -1439,7 +1439,7 @@ fn graveyard_entry(
         }),
         // CR 702.187 — Mayhem is castable only if this seat discarded the card
         // this turn (the same gate `cast_flashback` enforces).
-        mayhem_cost: card.definition.mayhem_cost().cloned().filter(|_| {
+        mayhem_cost: state.effective_mayhem_cost(seat, card).filter(|_| {
             state.players[seat].discarded_this_turn.contains(&card.id)
         }),
         harmonize_cost: card.definition.harmonize_cost().cloned(),
