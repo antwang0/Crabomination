@@ -11303,3 +11303,32 @@ pub const RAGOST_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const IRON_MAN_TITAN_COMMANDERS: &[CardFactory] = &[iron_man_titan_of_innovation];
+
+/// **Iron Man, Titan of Innovation**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 84 nonbasic cards + 8 Islands + 7 Mountains = 99.
+/// Iron Man, Titan of Innovation (UR) artifacts
+pub const IRON_MAN_TITAN_MAIN: &[CardFactory] = &[
+    arc_reactor, arcane_signet, chimil_the_inner_sun, cloud_key, commanders_plate,
+    crystal_skull_isu_spyglass, esoteric_duplicator, fellwar_stone, ichor_wellspring,
+    izzet_signet, lightning_greaves, mind_stone, mirrorworks, mithril_coat,
+    mycosynth_wellspring, mystic_forge, prized_statue, repurposing_bay, sculpting_steel,
+    senseis_divining_top, simulacrum_synthesizer, sol_ring, swiftfoot_boots,
+    talisman_of_creativity, the_one_ring, thought_vessel, thran_dynamo, ugins_nexus,
+    unwinding_clock, academy_ruins, archway_of_innovation, buried_ruin, cascade_bluffs,
+    command_tower, darksteel_citadel, great_furnace, inventors_fair, reliquary_tower,
+    scalding_tarn, seat_of_the_synod, shivan_reef, silverbluff_bridge, steam_vents,
+    stormcarved_coast, sulfur_falls, training_center, urzas_saga, academy_manufactor,
+    cyberdrive_awakener, emry_lurker_of_the_loch, enthusiastic_mechanaut, etherium_sculptor,
+    foundry_inspector, goblin_engineer, goblin_welder, iron_man_bleeding_edge,
+    jhoira_weatherlight_captain, kappa_cannoneer, myr_retriever, padeem_consul_of_innovation,
+    phyrexian_metamorph, scrap_trawler, shuri_wakandan_inventor, solemn_simulacrum, tony_stark,
+    urza_lord_high_artificer, mechanized_production, rhystic_study, storm_the_vault,
+    an_offer_you_cant_refuse, chaos_warp, counterspell, cyclonic_rift, deflecting_swat,
+    desynchronization, fierce_guardianship, galvanic_blast, mana_drain, daretti_scrap_savant,
+    blasphemous_act, fabricate, jeskas_will, thoughtcast, trash_for_treasure,
+    // Basics
+    island, island, island, island, island, island, island, island, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];

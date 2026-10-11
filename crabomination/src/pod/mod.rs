@@ -2771,6 +2771,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAGOST_COMMANDERS,
             main: decks::RAGOST_MAIN,
         },
+        // Seat 387: Iron Man, Titan of Innovation's EDHREC average deck. `--pod-decks 387`.
+        PodDeck {
+            name: "Iron Man, Titan of Innovation (UR)",
+            commanders: decks::IRON_MAN_TITAN_COMMANDERS,
+            main: decks::IRON_MAN_TITAN_MAIN,
+        },
     ]
 }
 
@@ -4902,6 +4908,7 @@ mod tests {
             ("Skullbriar, the Walking Grave", [0x0AA6, 384, 9309]),
             ("Aragorn, the Uniter", [0x0AA7, 385, 9310]),
             ("Ragost, Deft Gastronaut", [0x0AA8, 386, 9311]),
+            ("Iron Man, Titan of Innovation", [0x0AA9, 387, 9312]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
