@@ -119,11 +119,12 @@ the handoff.
 
 # Bugs & robustness
 
-## FIXED/OPEN 2026-10-11 (Commander run, `01Lnhgw3`) — eight EDHREC seats, CR 723.2, and five bug classes the sweeps and seats found
+## FIXED/OPEN 2026-10-11 (Commander run, `01Lnhgw3`) — ten EDHREC seats, CR 723.2, and five bug classes the sweeps and seats found
 
-- **Seats 382-389** (EDHREC average decks, `decks::cmdr_edhrec4`): Iroh, Grand Lotus; Galadriel, Light
+- **Seats 382-391** (EDHREC average decks, `decks::cmdr_edhrec4`): Iroh, Grand Lotus; Galadriel, Light
   of Valinor; Skullbriar; Aragorn, the Uniter; Ragost; Iron Man, Titan of Innovation; Jon Irenicus;
-  Obeka. 61 cards; every seat 20 debug pod games decided (strict answer log).
+  Obeka; Captain America, First Avenger; Doran, Besieged by Time. 76 cards; every seat 20 debug pod
+  games decided (strict answer log).
 - **CR 723.2 — combat-phase player control** (`game/player_control.rs`): Secret of Bloodbending's
   "control target opponent during their next combat phase" takes the `controlled_by` slot as that
   player's BeginCombat starts and hands it back (a whole-turn Mindslaver grant resumes) as it ends;
@@ -134,7 +135,9 @@ the handoff.
   { tapped }`, `ManaPayload::AnyColorOfSource` (read off the source by the auto-tap table — Katilda),
   `GrantProtectionFromChosenCardType` (Pippin; the keyword shield answers removal with it),
   `Predicate::PlayerAttackedYouThisTurn` (Faramir), `CardDefinition::dies_to_exile_extra_turn` (Ugin's
-  Nexus), `DelayedTriggerKind::TargetsNextUpkeep` (Plague Reaver), `R::DifferentControllerFromTargetSlot`.
+  Nexus), `DelayedTriggerKind::TargetsNextUpkeep` (Plague Reaver), `R::DifferentControllerFromTargetSlot`,
+  `ActivatedAbility::unattach_equipment_cost` (Captain America's Throw), `PumpTeamPerAttachmentOnSource
+  { each_counts_its_own }` (Bruenor), `R::ToughnessLessThanTriggerSubject` (Colfenor).
 - **Bug classes fixed:** ① a failed NESTED payment (a mana ability's own cost, Cascading Cataracts'
   {5}) rolled back the pool and the taps but not a sacrificed Spawn — it sat in the graveyard with no
   event, so no sweep and no dies trigger saw it (fuzzed sweep 382001): a costed mana source now dry-runs
@@ -147,11 +150,12 @@ the handoff.
   printed unconditional. Also: `exile_from_hand_cost` now sets `ExiledForCost` (Jhoira), and the pod's
   CR 400.7 invariant lets a Skullbriar keep its counters in the command zone.
 - **Sweeps:** fuzzed strict 382001 (all 381 decks, 10,080 games): 2 aborts, both fixed above, 7 undecided
-  by rule; 382101 (seats 375-387, 560 games): 0 bad.
+  by rule; 382101 (seats 375-387, 560 games): 0 bad; 382201 (all decks, 8,500 games): 0 aborts, 8
+  undecided by rule; fuzzed strict 391001 (seats 382-391, 400 games): 0 aborts, 2 CR 104.4a draws;
+  `--a dflt` 392001 (all decks): in progress at this commit, no aborts yet (two draws, one board cap).
 - **Open (INCOMPLETE_CARDS "EDHREC average-deck seats"):** Elemental Teachings' split is heuristic,
-  Galadriel's Dismissal kicked targets only the player, Transmutation Font's distinct-name sacrifice,
-  Esoteric Duplicator can't copy a sacrificed TOKEN (no LKI past the trigger), Iron Man, Bleeding Edge's
-  may-once, Exchange of Words outlasts the enchantment, Court of Locthwain's monarch grant replaces the
+  Galadriel's Dismissal kicked targets only the player, Esoteric Duplicator can't copy a sacrificed
+  TOKEN (no LKI past the trigger), Captain America's Throw picks the Equipment, Exchange of Words outlasts the enchantment, Court of Locthwain's monarch grant replaces the
   lasting one. A top-level auto-tap that sacrifices a source and then fails has the same rollback gap
   as ①; bots never reach it (their casts are probed first).
 
