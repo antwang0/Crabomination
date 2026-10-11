@@ -6164,6 +6164,13 @@ pub enum AdditionalCastCost {
     /// only for a power of `at_least` or more (where it beats the default the
     /// body falls back to), threaded into X as `ChooseOrRevealCreature`'s.
     BeholdPower { filter: SelectionRequirement, at_least: u32 },
+    /// "As an additional cost to cast this spell, behold a [filter] and exile
+    /// it" (Champions of the Perfect): exile a [filter] card from your hand or
+    /// a [filter] permanent you control. The exiled card is linked to the
+    /// spell (`exiled_with`, CR 607.2a) so the permanent's "return the exiled
+    /// card" reads it back through `Selector::CardExiledWithSource`. Auto-pay
+    /// takes a hand card first (it comes back), else the cheapest permanent.
+    BeholdAndExile { filter: SelectionRequirement },
     /// "As an additional cost to cast this spell, forage or pay {pay}." (Feed
     /// the Cycle.) When the caster can forage (three cards in the graveyard or a
     /// Food to sacrifice) the forage half is paid; otherwise `pay` generic joins

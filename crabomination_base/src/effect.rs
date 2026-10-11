@@ -12924,6 +12924,10 @@ pub enum Effect {
     /// Counter every triggered or activated ability on the stack controlled by
     /// a player `who` resolves to (Kadena's Silencer).
     CounterAllAbilitiesOf { who: PlayerRef },
+    /// "Counter all spells your opponents control and all abilities your
+    /// opponents control. Create a [token] for each spell and ability
+    /// countered this way." (Glen Elendra's Answer.)
+    CounterOpponentsSpellsAndAbilities { token: std::sync::Arc<TokenDefinition> },
     /// CR 903.9 — `who` returns each commander they control from the
     /// battlefield to the command zone (Leadership Vacuum).
     ReturnCommandersToCommandZone { who: PlayerRef },

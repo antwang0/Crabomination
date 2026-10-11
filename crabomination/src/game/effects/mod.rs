@@ -37015,10 +37015,21 @@ impl GameState {
                     }
                     _ => ctx.controller,
                 };
-                let options = match effect {
+                let mut options = match effect {
                     Effect::NameCreatureTypeAmong { options, .. } => options.clone(),
                     _ => Vec::new(),
                 };
+                // The listed types, ranked by the chooser's usual read so a
+                // headless seat lands on the one its deck plays (Eclipsed
+                // Realms in an Elf deck → Elf): an off-list answer falls back
+                // to the first. A secretly chosen type (a guessing game)
+                // keeps its printed order.
+                if !options.is_empty()
+                    && !self.find_card_anywhere(target_id).is_some_and(|c| c.definition.secret_chosen_type)
+                {
+                    let rank = self.creature_type_suggestions(chooser);
+                    options.sort_by_key(|t| rank.iter().position(|r| r == t).unwrap_or(usize::MAX));
+                }
                 let decision = Decision::ChooseCreatureType {
                     excluded: Vec::new(),
                     source: target_id,
@@ -40089,6 +40100,9 @@ impl GameState {
             }
             Effect::ManifestTopOfLibraryUnderYou { who } => self.manifest_top_of_library_under_you(who, ctx, events),
             Effect::CounterAllAbilitiesOf { who } => self.counter_all_abilities_of(who, ctx),
+            Effect::CounterOpponentsSpellsAndAbilities { token } => {
+                self.counter_opponents_spells_and_abilities(token, ctx, events)
+            }
             Effect::ReturnCommandersToCommandZone { who } => self.return_commanders_to_command_zone(who, ctx, events),
             Effect::ExchangeSpellAndCreatureControl { a, b } => {
                 self.exchange_spell_and_creature_control(a, b, ctx, events)

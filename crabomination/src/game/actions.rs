@@ -11523,6 +11523,13 @@ impl GameState {
             let (mut cost_events, power) =
                 self.pay_additional_costs(p, &additional_costs, chosen_sacrifices, chosen_discards);
             auto_events.append(&mut cost_events);
+            // CR 607.2a — the beheld-and-exiled card is linked to this spell
+            // (Champions of the Perfect returns it when it leaves).
+            if let Some(id) = self.beheld_and_exiled.take()
+                && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)
+            {
+                c.exiled_with = Some(card.id);
+            }
             // CR 601.2h — a discard paid as a cost happened before resolution;
             // carry its nonland count so "if the discarded card wasn't a land
             // card" (Grab the Prize) reads it, copies included (CR 707.10).
@@ -11797,6 +11804,12 @@ impl GameState {
                         && self.evaluate_requirement_static_on(filter, c, p, None)
                 }).count();
                 matching >= *count as usize
+            }
+            A::BeholdAndExile { filter } => {
+                self.players[p].hand.iter().any(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    || self.battlefield.iter().any(|c| {
+                        c.controller == p && self.evaluate_requirement_static_on(filter, c, p, None)
+                    })
             }
             A::SacrificeOrPayLife { filter, life } => {
                 self.players[p].life >= *life as i32
@@ -12301,6 +12314,28 @@ impl GameState {
                     for id in picked {
                         let ctx = EffectContext::for_spell(p, None, 0, 0);
                         self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+                    }
+                }
+                A::BeholdAndExile { filter } => {
+                    let from_hand = self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .min_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                    let pick = from_hand.or_else(|| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == p && self.evaluate_requirement_static_on(filter, c, p, None))
+                            .min_by_key(|c| (!c.is_token, c.definition.cost.cmc()))
+                            .map(|c| c.id)
+                    });
+                    if let Some(id) = pick {
+                        let ctx = EffectContext::for_spell(p, None, 0, 0);
+                        self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+                        if self.exile.iter().any(|c| c.id == id) {
+                            self.beheld_and_exiled = Some(id);
+                        }
                     }
                 }
                 A::SacrificeOrPayLife { filter, life } => {

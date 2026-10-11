@@ -40,6 +40,58 @@ impl GameState {
         Ok(())
     }
 
+    /// `Effect::CounterOpponentsSpellsAndAbilities` (Glen Elendra's Answer):
+    /// counter every spell and every ability on the stack an opponent of the
+    /// controller controls (CR 701.6a), then create `token` once per object
+    /// countered. An uncounterable spell stays, and nothing is countered
+    /// while "spells and abilities can't be countered" is on the battlefield.
+    pub(super) fn counter_opponents_spells_and_abilities(
+        &mut self,
+        token: &std::sync::Arc<crate::card::TokenDefinition>,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        if self.abilities_uncounterable() {
+            return Ok(());
+        }
+        let me = ctx.controller;
+        let opponent = |seat: usize| seat != me;
+        let abilities_before = self.stack.len();
+        self.stack.retain(|si| !matches!(si, StackItem::Trigger { controller, .. } if opponent(*controller)));
+        let mut countered = (abilities_before - self.stack.len()) as i32;
+        let spells: Vec<usize> = self
+            .stack
+            .iter()
+            .enumerate()
+            .filter(|(_, si)| {
+                matches!(si, StackItem::Spell { card, caster, uncounterable: false, .. }
+                    if opponent(*caster) && Some(card.id) != ctx.source)
+            })
+            .map(|(i, _)| i)
+            .collect();
+        for pos in spells.into_iter().rev() {
+            if let StackItem::Spell { card, mana_spent, caster, x_value, .. } = self.stack.remove(pos) {
+                self.countered_spell_mana_spent = mana_spent;
+                self.countered_spell_controller = Some(caster);
+                self.countered_spell_mana_value = Self::spell_mana_value(&card, x_value);
+                self.countered_spell_off_stack(*card, me, events);
+                countered += 1;
+            }
+        }
+        if countered > 0 {
+            self.run_effect(
+                &Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: crate::effect::Value::Const(countered),
+                    definition: token.clone(),
+                },
+                ctx,
+                events,
+            )?;
+        }
+        Ok(())
+    }
+
     /// `Effect::ReturnCommandersToCommandZone`.
     pub(super) fn return_commanders_to_command_zone(
         &mut self,

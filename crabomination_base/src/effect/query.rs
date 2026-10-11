@@ -933,6 +933,7 @@ impl Effect {
             | Effect::ExileTopOfEachLibraryMayPlayForLife
             | Effect::ManifestTopOfLibraryUnderYou { .. }
             | Effect::CounterAllAbilitiesOf { .. }
+            | Effect::CounterOpponentsSpellsAndAbilities { .. }
             | Effect::LookTopExileOneFaceDownMayPlay { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn

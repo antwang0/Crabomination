@@ -1770,6 +1770,11 @@ pub struct ColdState {
     /// (Necropolis's "the exiled card's mana value").
     #[serde(default)]
     pub(crate) cost_exiled_cards: Vec<CardId>,
+    /// The card a `BeholdAndExile` cast cost just exiled, taken by the cast
+    /// path to stamp its `exiled_with` with the spell (Champions of the
+    /// Perfect).
+    #[serde(default)]
+    pub(crate) beheld_and_exiled: Option<CardId>,
     /// Did the permanent returned to hand to pay the current activation's
     /// `bounce_other_filter` cost have a nonbasic land type as it last
     /// existed on the battlefield (Wonderscape Sage's "unless that land had a
