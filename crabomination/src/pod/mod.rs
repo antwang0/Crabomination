@@ -2872,8 +2872,17 @@ impl RepeatGuard {
         action: &crate::game::GameAction,
         name: Option<&'static str>,
     ) -> bool {
+        use crate::game::GameAction as A;
+        // The activations with their own action carry a pseudo-index under
+        // the cast's `usize::MAX`: a free Equip (Puresteel Paladin) moved one
+        // Equipment between two creatures 401 times in a turn (sweep 306001).
         let (card_id, ability_index) = match *action {
-            crate::game::GameAction::ActivateAbility { card_id, ability_index, .. } => (card_id, ability_index),
+            A::ActivateAbility { card_id, ability_index, .. }
+            | A::ActivateAbilityWaterbend { card_id, ability_index, .. } => (card_id, ability_index),
+            A::Equip { equipment, .. } => (equipment, usize::MAX - 1),
+            A::Reconfigure { equipment, .. } => (equipment, usize::MAX - 2),
+            A::Crew { vehicle, .. } => (vehicle, usize::MAX - 3),
+            A::Saddle { mount, .. } => (mount, usize::MAX - 4),
             _ => match action.cast_card_id() {
                 Some(id) => (id, usize::MAX),
                 None => return true,
@@ -4982,6 +4991,22 @@ mod tests {
         assert!(guard.admit(7, 2, &act(408, 0)), "another seat");
         assert!(guard.admit(7, 1, &crate::game::GameAction::PassPriority));
         assert!(guard.admit(8, 1, &act(408, 0)), "a new turn resets it");
+    }
+
+    /// CR 732.2a — an Equip (its own action, not `ActivateAbility`) counts
+    /// too: a free equip moved back and forth is the same loop (Puresteel
+    /// Paladin and Assimilation Aegis, sweep 306001, 401 equips in a turn).
+    #[test]
+    fn cr_732_2a_a_seat_stops_re_equipping_past_the_cap() {
+        let equip = |to| crate::game::GameAction::Equip {
+            equipment: crate::card::CardId(303),
+            target: crate::card::CardId(to),
+        };
+        let mut guard = RepeatGuard::default();
+        for i in 0..POD_SAME_ACTIVATION_PER_TURN {
+            assert!(guard.admit(38, 3, &equip(343 + (i % 2) * 57)));
+        }
+        assert!(!guard.admit(38, 3, &equip(343)), "the 65th equip of one Equipment is a pass");
     }
 
     /// CR 733.1 — a cast its own answer made illegal is rewound; casting the
