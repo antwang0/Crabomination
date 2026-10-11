@@ -37728,7 +37728,8 @@ pub fn squadron_hawk() -> CardDefinition {
 
 /// Felidar Guardian — {3}{W} 1/4 Cat Beast. ETB: you may exile another target
 /// permanent you control, then return it to the battlefield under its owner's
-/// control (a blink).
+/// control (a blink). The "may" is the controller's: two Guardians blinking
+/// each other is an optional loop, not a mandatory one (CR 732.4).
 pub fn felidar_guardian() -> CardDefinition {
     CardDefinition {
         name: "Felidar Guardian",
@@ -37740,21 +37741,24 @@ pub fn felidar_guardian() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Exile {
-                what: target_filtered(
-                    SelectionRequirement::ControlledByYou
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-            },
-            Effect::Move {
-                what: Selector::Target(0),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::OwnerOfMoved,
-                    tapped: false,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Exile and return another permanent you control?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::ControlledByYou
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
                 },
-            },
-        ]))],
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOfMoved,
+                        tapped: false,
+                    },
+                },
+            ])),
+        })],
         ..Default::default()
     }
 }

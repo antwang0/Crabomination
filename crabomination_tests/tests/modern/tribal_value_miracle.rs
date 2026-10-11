@@ -132,6 +132,24 @@ fn felidar_guardian_blinks_permanent() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear blinked back");
 }
 
+/// Felidar Guardian's blink is a "may": declining leaves the target alone
+/// (two Guardians blinked each other forever in an eight-seat audit pod,
+/// seed 192001, when the trigger was mandatory).
+#[test]
+fn felidar_guardian_blink_is_optional() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(bear)),
+        DecisionAnswer::Bool(false),
+    ]));
+    let f = g.add_card_to_battlefield(0, catalog::felidar_guardian());
+    g.fire_self_etb_triggers(f, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.tapped), "declined: the bear never left");
+}
+
 /// Village Bell-Ringer untaps all your creatures on ETB.
 #[test]
 fn village_bell_ringer_untaps_team() {
