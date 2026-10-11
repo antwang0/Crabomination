@@ -2664,6 +2664,30 @@ fn elrond_draws_once_and_flickers_till_end_step() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
 }
 
+/// Elrond, Moon-Reader: a creature's mana ability is an activated ability of
+/// a creature (ruling 2026-06-29) — tapping Llanowar Elves draws, and the
+/// shared "only once each turn" then holds the flicker activation to none.
+#[test]
+fn elrond_draws_for_a_creature_mana_ability_once_a_turn() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let elrond = ready(&mut g, 0, catalog::elrond_moon_reader());
+    let elves = ready(&mut g, 0, catalog::llanowar_elves());
+    activate(&mut g, elves, 0);
+    assert_eq!(g.players[0].hand.len(), 1, "the Elves' mana ability drew");
+    flood(&mut g);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elrond, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("flicker");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "once each turn across both halves");
+}
+
 /// Maralen, Fae Ascendant: entering exiles the top two of an opponent's
 /// library; one spell among them with mana value up to your Elves and Faeries
 /// may be cast free, once each turn.

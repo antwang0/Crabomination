@@ -3773,17 +3773,37 @@ pub fn dionus_elvish_archdruid() -> CardDefinition {
 }
 
 /// Elrond, Moon-Reader — {2}{U} 3/3 legendary Elf Noble. The first time each
-/// turn you activate an ability of a creature, draw a card. {5}{U}{U}: exile
+/// turn you activate an ability of a creature, draw a card (a {T} mana
+/// ability included; a creature's non-{T} mana ability isn't heard). {5}{U}{U}: exile
 /// up to two other target nonland permanents you control; they return under
 /// their owner's control at the beginning of the next end step.
 pub fn elrond_moon_reader() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature })
-                .once_per_turn(),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
-        }],
+        // "Triggers only once each turn" across both halves: each is gated
+        // on the other's per-turn stamp.
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
+                    .with_filter(Predicate::All(vec![
+                        Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                        Predicate::Not(Box::new(Predicate::SourceTriggerUsedThisTurn(1))),
+                    ]))
+                    .once_per_turn(),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+            // A creature's mana ability counts too (ruling 2026-06-29); mana
+            // activations emit no `AbilityActivated`, so a {T} mana ability is
+            // heard through `TappedForMana`.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TappedForMana, EventScope::YourControl)
+                    .with_filter(Predicate::All(vec![
+                        Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                        Predicate::Not(Box::new(Predicate::SourceTriggerUsedThisTurn(0))),
+                    ]))
+                    .once_per_turn(),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5), u(), u()]),
             effect: Effect::ApplyToTargets {

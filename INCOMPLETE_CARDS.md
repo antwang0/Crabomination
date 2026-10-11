@@ -697,7 +697,7 @@ modelled at all, so there is no filter to correct.
 
 | Card | Residual |
 | --- | --- |
-| Elrond, Moon-Reader | 🟡 "whenever you activate an ability of a creature" counts a creature's **mana** abilities too (ruling 2026-06-29), but a mana activation emits no `AbilityActivated` event, so tapping an Elf for mana never draws. Adding the event is a hot-path change (every mana tap); price it on `--bench` first. |
+| Elrond, Moon-Reader | 🟡 "whenever you activate an ability of a creature" counts a creature's **mana** abilities too (ruling 2026-06-29). A {T} mana ability is heard through `TappedForMana` (a second trigger, the two sharing "once each turn" through `SourceTriggerUsedThisTurn`); a creature's mana ability *without* {T} (a sacrifice or {1} cost) emits no event, so it still never draws. Adding `AbilityActivated` to every mana activation is a hot-path change; price it on `--bench` first. |
 | Jeska, Thrice Reborn / Tasha, the Witch Queen | 🟡 a multi-target loyalty ability's extra slots — Jeska's −X "each of up to three targets", Tasha's +1 "for each opponent … up to one target": `GameAction::ActivateLoyaltyAbility` carries one target, so slots past the first are `auto_extra_targets_for`'s pick, which fills permanents only and stops at the first player it prefers (Tasha's graveyard cards past the first are not filled). |
 
 Three approximations the fixes left standing, each documented at its variant:
@@ -1983,4 +1983,3 @@ library-exile event.
 | Card | Residual | Why |
 |---|---|---|
 | 🟡 Ardenn, Intrepid Archaeologist | the combat attach targets a creature only, not "permanent or player" | no Curse sits in a target deck and an Equipment can only hold a creature (CR 301.5c); attaching to a player needs a player-host attach path |
-| 🟡 Elrond, Moon-Reader | activating a creature's *mana* ability doesn't draw | mana abilities emit no `AbilityActivated` event (the engine's CR 605.1 carve-out for "whenever an opponent activates" cards) |
