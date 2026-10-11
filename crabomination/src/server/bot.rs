@@ -9852,8 +9852,22 @@ fn gate_blame(state: &GameState, action: Option<&GameAction>) -> String {
                 if c.summoning_sick { " (sick)" } else { "" }
             )
         }));
+    // Mana abilities a permanent of the seat only *gains* (Necrotic Ooze's
+    // graveyard creatures, Cryptolith Rite), which a board of names hides.
+    let scan = state.grant_scan();
+    let granted = names(&mut state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == card.controller)
+        .flat_map(|c| {
+            state
+                .granted_abilities_of(c, &scan)
+                .into_iter()
+                .filter(|a| !crate::game::actions::effect_produced_colors(&a.effect).is_empty())
+                .map(move |a| format!("{}: tap={} {:?}", c.definition.name, a.tap_cost, a.mana_cost.symbols))
+        }));
     format!(
-        "{} ability {ability_index} in {zone}, printed cost {cost}, available total {} by_color {:?}; hand [{hand}]; board [{board}]",
+        "{} ability {ability_index} in {zone}, printed cost {cost}, available total {} by_color {:?}; hand [{hand}]; board [{board}]; granted mana [{granted}]",
         card.definition.name, have.total, have.by_color
     )
 }
@@ -17665,12 +17679,17 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // mana is a `Seq` around its `AddMana`, and matching the wrapper
         // skipped a sick Wall whole while the engine paid `{G}` off it —
         // the `AB_SAC` / `AB_SELF_COUNTER` gate audits at `all` seed 737
-        // (2026-09-09).
+        // (2026-09-09). And printed is not the whole list: a summoning-sick
+        // Necrotic Ooze prints nothing but gains a graveyard creature's
+        // non-tap mana ability, and skipping it read `by_color` zeros while
+        // the engine paid `{B}` off it — the `AB_DESTROY` gate audit at pod
+        // seed 20000328 (2026-10-11). `grants_nothing` is the cheap refusal.
         if no_tap
             && !p.definition.activated_abilities.iter().any(|a| {
                 !a.tap_cost
                     && !crate::game::actions::effect_produced_colors(&a.effect).is_empty()
             })
+            && state.grants_nothing(p, &scan)
         {
             continue;
         }
@@ -26058,6 +26077,23 @@ mod tests {
         g.clear_sickness(wall);
         g.battlefield_find_mut(wall).unwrap().tapped = true;
         assert_eq!(available_mana(&g, 0).by_color, [u32::MAX; 5], "tapped, still opaque");
+    }
+
+    /// A summoning-sick Necrotic Ooze prints no ability, but gains a
+    /// graveyard creature's non-tap mana ability (Blood Pet's "Sacrifice
+    /// this: add {B}"), and the sickness pre-check read only the printed
+    /// list: the Ooze read as no black while the engine paid `{B}` off it —
+    /// the `AB_DESTROY` gate audit at pod seed 20000328 (2026-10-11).
+    #[test]
+    fn available_mana_sick_necrotic_ooze_reads_its_graveyard_mana_ability() {
+        let mut g = two_player_game();
+        let ooze = g.add_card_to_battlefield(0, catalog::necrotic_ooze());
+        assert!(g.battlefield_find(ooze).unwrap().summoning_sick);
+        assert_eq!(available_mana(&g, 0).by_color, [0; 5], "an empty graveyard grants nothing");
+        g.add_card_to_graveyard(1, catalog::blood_pet());
+        let have = available_mana(&g, 0);
+        assert_eq!(have.total, 0, "a sacrifice-fed source is not spare mana");
+        assert_eq!(have.by_color, [u32::MAX; 5], "but it can cover black");
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main
