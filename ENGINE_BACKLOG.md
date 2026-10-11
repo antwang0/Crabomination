@@ -245,6 +245,19 @@ the handoff.
   makes each Spirit token an enchantment, so the mandatory Eerie trigger
   loops: CR 104.4b), a token board cap, and a 401-deep Shalai and Hallar /
   The Red Terror / All Will Be One stack.
+- **Evening:** Elrond, Moon-Reader hears a creature's {T} mana ability
+  through `TappedForMana` (two triggers sharing "once each turn" via
+  `SourceTriggerUsedThisTurn`); Iroh, Grand Lotus's "during your turn" and
+  Lessons' flashback {1} (`StaticEffect::GraveyardMatchingHaveFlashback`);
+  **seat 380, Lorehold, the Historian** — Goliath Daydreamer
+  (`ExileSpellOnResolveWithCounter`, `MayCastFromExileFree`), Invoke
+  Calamity (`CastUpToFreeFromHandAndGraveyard`), Olórin's Searing Light
+  (`Value::LastExiledPower`), Soulfire Eruption. **Bug found by the
+  Daydreamer:** a free cast from exile/graveyard/library never reset
+  `cast_from_hand`, so a card cast from hand, exiled and recast kept the
+  flag ("cast from your hand" payoffs — Lilah — heard the recast; CR 601.2).
+  Plain sweep 293001 over seats 335-378 (1,600 games): 0 aborts, 3 draws /
+  board caps by rule.
 - **Gates at `bf15ed5f8`:** strict suite 24,979 / 0 / 5; workspace clippy 0;
   `release-fast` typecheck clean; `--bench` 196,176 / 27.64 / 613.0
   byte-identical, both determinism checks ok; release pod smoke seed 29301 ×
