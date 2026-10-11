@@ -2747,6 +2747,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IROH_GRAND_LOTUS_COMMANDERS,
             main: decks::IROH_GRAND_LOTUS_MAIN,
         },
+        // Seat 383: Galadriel, Light of Valinor's EDHREC average deck. `--pod-decks 383`.
+        PodDeck {
+            name: "Galadriel, Light of Valinor (GWU)",
+            commanders: decks::GALADRIEL_LIGHT_OF_VALINOR_COMMANDERS,
+            main: decks::GALADRIEL_LIGHT_OF_VALINOR_MAIN,
+        },
     ]
 }
 
@@ -4864,6 +4870,7 @@ mod tests {
             ("Lorehold, the Historian", [0x0AA2, 380, 9305]),
             ("High Perfect Morcant", [0x0AA3, 381, 9306]),
             ("Iroh, Grand Lotus", [0x0AA4, 382, 9307]),
+            ("Galadriel, Light of Valinor", [0x0AA5, 383, 9308]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

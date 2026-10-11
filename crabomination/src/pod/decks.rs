@@ -11189,3 +11189,32 @@ pub const IROH_GRAND_LOTUS_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, island, island,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const GALADRIEL_LIGHT_OF_VALINOR_COMMANDERS: &[CardFactory] = &[galadriel_light_of_valinor];
+
+/// **Galadriel, Light of Valinor**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 84 nonbasic cards + 7 Forests + 4 Islands + 4 Plains = 99.
+/// Galadriel, Light of Valinor (GWU) Elves
+pub const GALADRIEL_LIGHT_OF_VALINOR_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, panharmonicon, sol_ring, swiftfoot_boots, the_great_henge,
+    bountiful_promenade, breeding_pool, canopy_vista, command_tower, exotic_orchard,
+    flooded_grove, flooded_strand, glacial_fortress, hallowed_fountain, hinterland_harbor,
+    misty_rainforest, path_of_ancestry, prairie_stream, rejuvenating_springs, reliquary_tower,
+    seaside_citadel, sparas_headquarters, sunpetal_grove, temple_garden, windswept_heath,
+    aragorn_and_arwen_wed, arwen_undomiel, arwen_weaver_of_hope, beast_whisperer,
+    birds_of_paradise, bloom_tender, craterhoof_behemoth, elrond_master_of_healing,
+    elvish_archdruid, elvish_harbinger, elvish_mystic, elvish_warmaster, evolution_witness,
+    farhaven_elf, fyndhorn_elves, gala_greeters, galadhrim_brigade, galadriel_of_lothlorien,
+    haldir_lorien_lieutenant, imperious_perfect, incubation_druid, koma_cosmos_serpent,
+    kutzil_malamet_exemplar, leaf_crowned_visionary, llanowar_elves, marwyn_the_nurturer,
+    noble_hierarch, paradise_druid, priest_of_titania, reclamation_sage,
+    thranduil_sindarin_liege, wolverine_riders, wood_elves, arboreal_alliance, doubling_season,
+    elven_chorus, guardian_project, hardened_scales, rhystic_study, an_offer_you_cant_refuse,
+    beast_within, counterspell, galadhrim_ambush, galadriels_dismissal, heroic_intervention,
+    inspiring_call, path_to_exile, swan_song, swords_to_plowshares, windswift_slice,
+    freyalise_llanowars_fury, cultivate, farseek, natures_lore, overwhelming_stampede,
+    raise_the_palisade, rally_the_galadhrim, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
+    plains, plains, plains, plains,
+];
