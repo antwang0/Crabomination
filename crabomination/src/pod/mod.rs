@@ -2838,6 +2838,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SARUMAN_WHITE_HAND_COMMANDERS,
             main: decks::SARUMAN_WHITE_HAND_MAIN,
         },
+        // Seat 398: Kibo, Uktabi Prince's EDHREC average deck. `--pod-decks 398`.
+        PodDeck {
+            name: "Kibo, Uktabi Prince (RG)",
+            commanders: decks::KIBO_COMMANDERS,
+            main: decks::KIBO_MAIN,
+        },
     ]
 }
 
@@ -4992,6 +4998,7 @@ mod tests {
             ("Reaper King", [0x0AB1, 395, 9320]),
             ("Sauron, the Dark Lord", [0x0AB2, 396, 9321]),
             ("Saruman, the White Hand", [0x0AB3, 397, 9322]),
+            ("Kibo, Uktabi Prince", [0x0AB4, 398, 9323]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

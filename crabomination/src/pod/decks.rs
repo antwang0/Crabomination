@@ -11618,3 +11618,30 @@ pub const SARUMAN_WHITE_HAND_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, mountain, mountain, mountain, mountain,
     mountain, mountain, swamp, swamp, swamp, swamp,
 ];
+
+pub const KIBO_COMMANDERS: &[CardFactory] = &[kibo_uktabi_prince];
+
+/// **Kibo, Uktabi Prince**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 79 nonbasic cards + 12 Forests + 8 Mountains = 99.
+/// Kibo, Uktabi Prince (RG) Apes, Monkeys and artifact hate
+pub const KIBO_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, liquimetal_coating, liquimetal_torque, monkey_cage,
+    ozolith_the_shattered_spire, sol_ring, sting_the_glinting_dagger, swiftfoot_boots,
+    tarrians_soulcleaver, cinder_glade, command_tower, game_trail, gruul_turf, karplusan_forest,
+    kessig_wolf_run, mossfire_valley, path_of_ancestry, rockfall_vale, rogues_passage,
+    rootbound_crag, spire_garden, stomping_ground, treetop_village, elephant_mandrill,
+    fangren_marauder, ferocious_tigorilla, flopsie_bumis_buddy, gearbane_orangutan,
+    gorilla_shaman, grunn_the_lonely_king, hit_monkey, kird_ape, kird_chieftain,
+    kodama_of_the_west_tree, kogla_and_yidaro, kogla_the_titan_ape, ragavan_nimble_pilferer,
+    realmwalker, scrounging_bandar, silverback_elder, silverback_shaman, simian_simulacrum,
+    simian_spirit_guide, summit_apes, taurean_mauler, towering_gibbon, tree_monkey,
+    uktabi_orangutan, wily_bandar, yavimaya_steelcrusher, zodiac_monkey, curse_of_opulence,
+    descent_into_avernus, garruks_uprising, hardened_scales, invigorating_hot_spring,
+    party_dude, primal_vigor, rhythm_of_the_wild, viridian_revel, abrade, ancient_grudge,
+    beast_within, chaos_warp, heroic_intervention, inspiring_call, return_of_the_wildspeaker,
+    signature_slam, anzrags_rampage, blasphemous_act, cultivate, decimate, kodamas_reach,
+    meltdown, natures_lore, rampant_growth, three_visits, vandalblast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
