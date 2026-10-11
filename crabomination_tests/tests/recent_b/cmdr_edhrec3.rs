@@ -1217,6 +1217,25 @@ fn the_legend_of_roku_becomes_avatar_roku() {
     assert_eq!(roku.definition.name, "Avatar Roku");
 }
 
+/// CR 712.4 — under Containment Priest the returning Avatar Roku (a nontoken
+/// creature that wasn't cast) is exiled instead, and in exile it is The
+/// Legend of Roku again, front face up (pod sweep 305001 found it kept its
+/// back face).
+#[test]
+fn a_saga_returned_transformed_into_containment_priest_is_front_face_up() {
+    use crabomination::effect::Effect;
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::containment_priest());
+    let saga = g.add_card_to_battlefield(0, catalog::the_legend_of_roku());
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(saga);
+    g.resolve_effect(&Effect::ExileSelfReturnTransformed, &ctx).expect("chapter III");
+    let card = g.exile.iter().find(|c| c.id == saga).expect("exiled instead");
+    assert!(!card.transformed);
+    assert_eq!(card.definition.name, "The Legend of Roku");
+}
+
 fn attach(g: &mut GameState, gear: CardId, host: CardId) {
     g.battlefield_find_mut(gear).unwrap().attached_to = Some(host);
 }

@@ -3077,7 +3077,11 @@ impl GameState {
                     // under a Containment Priest exiled the shell whole, its
                     // commander half inside it).
                     let parts = std::mem::take(&mut card.meld_parts);
-                    for card in if parts.is_empty() { vec![card] } else { parts } {
+                    for mut card in if parts.is_empty() { vec![card] } else { parts } {
+                        // CR 712.4 — and a card returned transformed (a Saga's
+                        // chapter III) is front face up in exile; it kept its
+                        // back face (pod sweep 305001, The Legend of Roku).
+                        card.revert_transform();
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
