@@ -25748,9 +25748,20 @@ impl GameState {
                     if self.move_stack_spell(cid, to, ctx, events) {
                         continue;
                     }
+                    let before = self.find_card_zone(cid);
                     self.move_card_to(cid, to, ctx, events);
                     if let Some(Some(host)) = aura {
                         self.attach_moved_aura(cid, host, events);
+                    }
+                    // CR 400.7 — a card the move left where it was (a trigger's
+                    // discarded card already back in a hand) is not "it": no
+                    // downstream step may name it. A library or battlefield
+                    // card can move within its zone (a put-on-top, a blink).
+                    use crate::card::Zone;
+                    if before.is_some_and(|z| !matches!(z, Zone::Library | Zone::Battlefield))
+                        && self.find_card_zone(cid) == before
+                    {
+                        continue;
                     }
                     // A commander already home didn't move (CR 400.7: the
                     // discarded card a trigger names went to the command zone

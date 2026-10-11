@@ -1789,7 +1789,12 @@ fn tinybones_does_not_stash_a_card_that_left_the_graveyard() {
     let card = g.players[1].graveyard.remove(pos);
     g.players[1].hand.push(card);
     drain_stack(&mut g);
-    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "the new object stays in hand");
+    let c = g.players[1].hand.iter().find(|c| c.id == bolt).expect("the new object stays in hand");
+    // Nor does it carry the stash: no counter, no play permission (a fuzzed
+    // eight-seat audit pod, seed 30800364 game 12, found Dogged Detective in
+    // a hand with Tinybones' permission).
+    assert!(c.may_play_until.is_none(), "no play permission in hand");
+    assert_eq!(c.counter_count(crabomination::card::CounterType::Stash), 0);
     assert!(!g.exile.iter().any(|c| c.id == bolt));
 }
 
