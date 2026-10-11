@@ -11332,3 +11332,30 @@ pub const IRON_MAN_TITAN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const JON_IRENICUS_COMMANDERS: &[CardFactory] = &[jon_irenicus_shattered_one];
+
+/// **Jon Irenicus, Shattered One**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 78 nonbasic cards + 9 Islands + 12 Swamps = 99.
+/// Jon Irenicus, Shattered One (UB) donate and goad
+pub const JON_IRENICUS_MAIN: &[CardFactory] = &[
+    arcane_signet, crawlspace, dimir_signet, fellwar_stone, lightning_greaves, mind_stone,
+    sol_ring, swiftfoot_boots, talisman_of_dominance, thought_vessel, bojuka_bog,
+    choked_estuary, command_tower, darkwater_catacombs, drowned_catacomb, exotic_orchard,
+    homeward_path, morphic_pool, reliquary_tower, shipwreck_marsh, sunken_hollow, tainted_isle,
+    temple_of_deceit, underground_river, watery_grave, abyssal_persecutor,
+    archfiend_of_the_dross, baleful_strix, blighted_agent, demonic_taskmaster,
+    desecration_elemental, drinker_of_sorrow, ebon_drake, ebonblade_reaper,
+    evil_eye_of_orms_by_gore, evil_eye_of_urborg, flesh_reaver, greater_harvester, grid_monitor,
+    lord_of_the_pit, master_of_the_feast, phyrexian_negator, phyrexian_soulgorger,
+    phyrexian_vatmother, plague_reaver, rotting_regisaur, rust_elemental, slither_blade,
+    steel_golem, sygg_river_cutthroat, taniwha, thought_devourer, thought_eater,
+    wretched_anurid, curse_of_verbosity, dissipation_field, exchange_of_words,
+    heartless_summoning, no_mercy, propaganda, rhystic_study, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, counterspell, dark_ritual, infernal_grasp, negate,
+    pongify, reins_of_power, run_away_together, wrong_turn, blasphemous_edict, fateful_handoff,
+    feed_the_swarm, modify_memory, reanimate, shifting_grift,
+    // Basics
+    island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

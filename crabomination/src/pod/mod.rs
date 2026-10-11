@@ -2777,6 +2777,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IRON_MAN_TITAN_COMMANDERS,
             main: decks::IRON_MAN_TITAN_MAIN,
         },
+        // Seat 388: Jon Irenicus, Shattered One's EDHREC average deck. `--pod-decks 388`.
+        PodDeck {
+            name: "Jon Irenicus, Shattered One (UB)",
+            commanders: decks::JON_IRENICUS_COMMANDERS,
+            main: decks::JON_IRENICUS_MAIN,
+        },
     ]
 }
 
@@ -4909,6 +4915,7 @@ mod tests {
             ("Aragorn, the Uniter", [0x0AA7, 385, 9310]),
             ("Ragost, Deft Gastronaut", [0x0AA8, 386, 9311]),
             ("Iron Man, Titan of Innovation", [0x0AA9, 387, 9312]),
+            ("Jon Irenicus, Shattered One", [0x0AAA, 388, 9313]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
