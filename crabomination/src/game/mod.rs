@@ -1465,6 +1465,11 @@ pub struct TurnRegistries {
     /// each turn").
     #[serde(default)]
     pub one_cast_groups_spent_this_turn: crate::game::types::IdSet<CardId>,
+    /// `Effect::CapGrantedCastsAtCast`: a granted card, the mana-value cap
+    /// read when it is cast, and the controller / source that cap is
+    /// evaluated for. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) granted_cast_mv_caps: Vec<(CardId, crate::effect::Value, usize, Option<CardId>)>,
     /// Sources that dealt damage to another creature this turn (Wolverine,
     /// Best There Is). Cleared at cleanup.
     #[serde(default)]

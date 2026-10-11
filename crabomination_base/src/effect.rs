@@ -10078,6 +10078,13 @@ pub enum Effect {
     /// and when a cast through that group already happened this turn
     /// (`TurnRegistries.one_cast_groups_spent_this_turn`) they're void.
     OneCastPerTurnAmongGranted { what: Selector },
+    /// CR 601.2 — "you may cast a spell with mana value less than or equal
+    /// to [value] from among them" read as the spell is cast, not as the
+    /// permission is granted (Maralen, Fae Ascendant: "the number of Elves
+    /// and/or Faeries you control"). Chain after the grant: each card `what`
+    /// picks gets a this-turn cap (`TurnRegistries.granted_cast_mv_caps`),
+    /// evaluated for the grant's controller and source at every cast.
+    CapGrantedCastsAtCast { what: Selector, max_mana_value: Value },
     /// Stamp a conditional surcharge onto cards just granted a may-play
     /// permission (chain after `GrantMayPlay` in a `Seq`): "it costs
     /// [cost] more to cast this way unless the spell targets a permanent

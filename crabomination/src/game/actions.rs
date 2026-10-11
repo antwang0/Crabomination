@@ -4804,6 +4804,20 @@ impl GameState {
     /// `WhileExiledIfHolderControls` wants its holder to control a creature
     /// of the named type (Flameshape's Wizard); every other duration is
     /// usable for as long as it lasts.
+    /// `Effect::CapGrantedCastsAtCast`: whether a granted card's mana value
+    /// is within the cap recorded for it, read now (CR 601.2).
+    pub(crate) fn granted_cast_under_cap(&self, card_id: CardId, mana_value: u32) -> bool {
+        let Some((_, cap, controller, source)) = self.turn.granted_cast_mv_caps.iter().find(|(id, ..)| *id == card_id)
+        else {
+            return true;
+        };
+        let ctx = match source {
+            Some(src) => crate::game::effects::EffectContext::for_ability(*src, *controller, None),
+            None => crate::game::effects::EffectContext::for_spell(*controller, None, 0, 0),
+        };
+        i64::from(mana_value) <= i64::from(self.evaluate_value(cap, &ctx))
+    }
+
     pub(crate) fn may_play_usable(&self, perm: &crate::card::MayPlayPermission) -> bool {
         match perm.duration {
             crate::card::MayPlayDuration::WhileExiledIfHolderControls { creature_type } => {
@@ -14469,6 +14483,11 @@ impl GameState {
         let exile_after = match card_ref.may_play_until {
             Some(permission) => {
                 if permission.player != p || !self.may_play_usable(&permission) {
+                    return Err(GameError::CardNotInHand(card_id));
+                }
+                if !self.turn.granted_cast_mv_caps.is_empty()
+                    && !self.granted_cast_under_cap(card_id, card_ref.definition.cost.cmc())
+                {
                     return Err(GameError::CardNotInHand(card_id));
                 }
                 // A real may-play grant drives this cast; don't also bill the

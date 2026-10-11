@@ -41586,6 +41586,17 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::CapGrantedCastsAtCast { what, max_mana_value } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    if self.find_card_anywhere(cid).is_some_and(|c| c.may_play_until.is_some()) {
+                        let caps = &mut self.turn.granted_cast_mv_caps;
+                        caps.retain(|(id, ..)| *id != cid);
+                        caps.push((cid, max_mana_value.clone(), ctx.controller, ctx.source));
+                    }
+                }
+                Ok(())
+            }
             Effect::OneCastAmongGranted { what } => {
                 let group = ctx.source;
                 for ent in self.resolve_selector(what, ctx) {
