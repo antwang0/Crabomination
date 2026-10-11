@@ -164,6 +164,15 @@ the handoff.
   (3/4/6 × 10, 2,840 games) **0 aborts**, 6 undecided — 5 draws (simultaneous
   losses; Polyraptor's forced reveal twice; a Shalai and Hallar / The Red Terror
   mandatory loop) and a board cap (Sylvan Offering at X = 232). Nothing new.
+- **Bot coverage** (`--card-census` over seats 357-378, then the ability probe):
+  pods now flip a creature into a bigger creature or a planeswalker
+  (`transform_sink::pick_creature_upgrade_transform` — Aang, Swift Savior's
+  Waterbend {8}, Nicol Bolas, the Ravager) and answer a threatening spell with a
+  permanent's counter ability (`pick_stack_response` — Glen Elendra Guardian).
+  Both Commander-only; golden traces unchanged. Still never activated and not
+  probe-reproducible without a set-up board: Karn's Bastion, Shadowspear, Nesting
+  Grounds, Fauna Shaman, Stoneforge Mystic, Najeela's untap, Mjölnir (the probe's
+  board has no counters, equipment in hand or combat to read).
 - **Open** (INCOMPLETE_CARDS "EDHREC average-deck seats … open residuals"):
   Echoes of Eternity doesn't double a colorless *spell's* trigger or a
   leaves-the-battlefield one (the doubler reads its source live); Maralen's
