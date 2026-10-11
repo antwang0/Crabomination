@@ -296,4 +296,26 @@ mod tests {
         crate::game::drain_stack(&mut g);
         assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Serra Angel"), "an Angel stolen");
     }
+
+    /// Kinnan's "look at the top five, put a non-Human creature onto the
+    /// battlefield" is taken when its seven mana is there. (The census's
+    /// "never activated" for it is the cost: a pod seat rarely holds seven
+    /// mana after its casts.)
+    #[test]
+    fn kinnan_digs_for_a_creature() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let k = g.add_card_to_battlefield(0, crate::catalog::kinnan_bonder_prodigy());
+        g.clear_sickness(k);
+        for _ in 0..5 {
+            g.add_card_to_library(0, crate::catalog::serra_angel());
+        }
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(5);
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == k), "got {got:?}");
+    }
 }
