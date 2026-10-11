@@ -327,7 +327,7 @@ fn cr_702_190b_a_sneaked_raphael_enters_attacking_the_returned_creatures_defende
 #[test]
 fn dark_leo_and_shredder_halve_a_player_at_five_ninjas() {
     let mut g = pod(2);
-    let leo = ready(&mut g, 0, catalog::dark_leo_and_shredder());
+    let leo = ready(&mut g, 0, catalog::dark_leo_shredder());
     attack(&mut g, 0, &[leo], 1);
     combat_damage(&mut g);
     assert_eq!(g.players[1].life, 19, "fewer than five Ninjas");
@@ -392,7 +392,7 @@ fn weirdness_and_mikey_and_leo_on_counters() {
         g.add_card_to_library(0, catalog::island());
     }
     ready(&mut g, 0, catalog::michelangelo_weirdness_to_11());
-    ready(&mut g, 0, catalog::mikey_and_leo_chaos_and_order());
+    ready(&mut g, 0, catalog::mikey_leo_chaos_order());
     let bear = ready(&mut g, 0, catalog::grizzly_bears());
     let hand = g.players[0].hand.len();
     let ctx = EffectContext::for_spell(0, None, 0, 0);
@@ -415,7 +415,7 @@ fn weirdness_and_mikey_and_leo_on_counters() {
 #[test]
 fn mikey_and_don_cast_turtles_from_the_top() {
     let mut g = pod(2);
-    ready(&mut g, 0, catalog::mikey_and_don_party_planners());
+    ready(&mut g, 0, catalog::mikey_don_party_planners());
     let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
     flood(&mut g, 0);
     g.priority.player_with_priority = 0;

@@ -361,7 +361,7 @@ pub fn the_ooze() -> CardDefinition {
 /// Dark Leo & Shredder — {W}{B} 1/3, sneak {W}{B}. Attacking Ninjas you
 /// control have deathtouch; combat damage to a player makes a 1/1 Ninja, then
 /// at five Ninjas that player loses half their life, rounded up.
-pub fn dark_leo_and_shredder() -> CardDefinition {
+pub fn dark_leo_shredder() -> CardDefinition {
     let ninjas = || yours(R::Creature.and(R::HasCreatureType(CreatureType::Ninja)));
     CardDefinition {
         keywords: vec![Keyword::Sneak(cost(&[w(), b()]))],
@@ -436,7 +436,7 @@ pub fn michelangelo_weirdness_to_11() -> CardDefinition {
 /// Mikey & Don, Party Planners — {2}{G/U}{G/U} 3/3, ward {2}. Look at the top
 /// of your library; play lands and cast Mutant, Ninja or Turtle spells from
 /// it; a creature cast that way enters with an extra +1/+1 counter.
-pub fn mikey_and_don_party_planners() -> CardDefinition {
+pub fn mikey_don_party_planners() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Ward(WardCost::generic(2))],
         static_abilities: vec![
@@ -469,7 +469,7 @@ pub fn mikey_and_don_party_planners() -> CardDefinition {
 
 /// Mikey & Leo, Chaos & Order — {G/W}{G/W} 2/2. Putting a counter on a
 /// creature you control draws a card, once each turn.
-pub fn mikey_and_leo_chaos_and_order() -> CardDefinition {
+pub fn mikey_leo_chaos_order() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             // CR 122.6 — keyed on who put the counter.
