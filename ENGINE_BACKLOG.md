@@ -119,6 +119,34 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-10-11 (Commander run, `017yfeX4` second firing) — answer-log leaks, mana burn's SBA, optional loops
+
+- **Fuzzed strict sweep** 191001 (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`,
+  3/4/6/8 × 15, 4,725 games): **25 aborts, one class** — Gishath's "put any
+  number" reveal (`RevealTopNPutMatchingToBattlefield`, 7dec65015) logged its
+  pick and never cleared it, so a later ask in the same resolution replayed it
+  (a dungeon room's `Seq`; two reveals in one `Seq` put nothing in the second
+  time). Test `a_reveal_pick_does_not_leak_into_the_next_ask`.
+- **Fuzzed strict sweep** 193001 (4,815 games): 2 aborts, `AddCountersUpTo`
+  (Esper Terra's lore counters) — the same leak through an inline `&mut 0`
+  cursor (fixed in parallel by 1f382e008), which `audit_answer_log.py` could not
+  see; the script now lists every
+  inline-cursor ask in `game/` with no clear after it (0 rows).
+- **Plain sweep** 192001 (every deck × 3/4/6/8 × 30, 9,570 games): 1 abort,
+  **CR 704.3** — mana burn (Yurlok) whose life loss triggered something
+  (Valgavoth) handed out priority without a sweep, so a seat burned to 0 by an
+  Apex of Power's unspent mana stayed in. `burn_unspent_mana` sweeps.
+  Undecided: **Felidar Guardian** was encoded mandatory, and two of them blinked
+  each other forever (now `MayDo`, so the bot's CR 732.2 cap declines); **Esper
+  Terra** — a token copy of a nonlegendary Esper Terra takes "up to three"
+  lore counters and its chapters copy it again; the bot always took three (the
+  stack reached 800). An `AmountKind::Upside` answer now counts toward
+  `OPTIONAL_LOOP_CAP` and takes 0 past it.
+- Left, classified: Polyraptor's forced reveal (above), token board caps
+  (Myrel doubling under Isshin + Karlach's extra combats: 1,024 permanents in
+  one turn, no lethal yet because the tokens are summoning-sick), CR 104.4a
+  simultaneous losses. Not bugs.
+
 ## FIXED 2026-10-10 (eighteenth Commander run, `01Xu59CH`, concurrent with the seventeenth) — required slots, who may sacrifice, CR citations
 
 - **CR 601.2c** — the cast path requires every required slot of a multi-slot
