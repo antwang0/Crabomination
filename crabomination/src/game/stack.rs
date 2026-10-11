@@ -7395,12 +7395,26 @@ impl GameState {
         }
         // CR 611.2c — "for as long as it has a [kind] counter on it": kept
         // while every affected permanent still carries one.
-        if self.continuous_effects.iter().any(|e| matches!(e.duration, crate::game::layers::EffectDuration::WhileHasCounter(_))) {
+        if self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.duration,
+                crate::game::layers::EffectDuration::WhileHasCounter(_)
+                    | crate::game::layers::EffectDuration::WhileHasKeywordCounter(_)
+            )
+        }) {
             let holds = |g: &Self, e: &crate::game::layers::ContinuousEffect| {
-                let crate::game::layers::EffectDuration::WhileHasCounter(kind) = e.duration else { return true };
+                use crate::game::layers::EffectDuration as D;
+                let has = |c: &crate::card::CardInstance| match e.duration {
+                    D::WhileHasCounter(kind) => c.counter_count(kind) > 0,
+                    D::WhileHasKeywordCounter(kind) => c.keyword_counters.get(&kind.keyword()).copied().unwrap_or(0) > 0,
+                    _ => true,
+                };
+                if !matches!(e.duration, D::WhileHasCounter(_) | D::WhileHasKeywordCounter(_)) {
+                    return true;
+                }
                 match &e.affected {
                     crate::game::layers::AffectedPermanents::Specific(ids) => {
-                        ids.iter().all(|id| g.battlefield_find(*id).is_some_and(|c| c.counter_count(kind) > 0))
+                        ids.iter().all(|id| g.battlefield_find(*id).is_some_and(has))
                     }
                     _ => true,
                 }

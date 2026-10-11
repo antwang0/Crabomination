@@ -69,6 +69,8 @@ pub enum EffectDuration {
     /// CR 611.2c — lasts while each affected permanent has a `kind` counter;
     /// swept beside `WhileSourceTapped`.
     WhileHasCounter(crate::card::CounterType),
+    /// The keyword-counter sibling (Minas Morgul's shadow counter).
+    WhileHasKeywordCounter(crate::effect::KeywordCounterKind),
 }
 
 // ── Layer classification ───────────────────────────────────────────────────────

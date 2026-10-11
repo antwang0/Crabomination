@@ -335,6 +335,7 @@ pub(crate) fn map_effect_duration(
         // (`temporary_copies`); as a layer effect it would never end on time.
         crate::effect::Duration::UntilTurnedFaceDown => EffectDuration::Indefinite,
         crate::effect::Duration::WhileHasCounter(kind) => EffectDuration::WhileHasCounter(kind),
+        crate::effect::Duration::WhileHasKeywordCounter(kind) => EffectDuration::WhileHasKeywordCounter(kind),
     }
 }
 

@@ -3056,6 +3056,48 @@ pub enum Duration {
     /// sweep drops the effect once an affected permanent has none (Aven
     /// Mimeomancer's feather, Xolatoyac's flood), whatever its source does.
     WhileHasCounter(crate::card::CounterType),
+    /// The keyword-counter sibling: "for as long as that creature has a
+    /// shadow counter on it" (Minas Morgul). CR 122.1b's kinds only.
+    WhileHasKeywordCounter(KeywordCounterKind),
+}
+
+/// CR 122.1b — the keyword counters, as a `Copy` tag a `Duration` can carry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum KeywordCounterKind {
+    Flying,
+    FirstStrike,
+    DoubleStrike,
+    Deathtouch,
+    Haste,
+    Hexproof,
+    Indestructible,
+    Lifelink,
+    Menace,
+    Reach,
+    Shadow,
+    Trample,
+    Vigilance,
+}
+
+impl KeywordCounterKind {
+    pub fn keyword(self) -> crate::card::Keyword {
+        use crate::card::Keyword as K;
+        match self {
+            Self::Flying => K::Flying,
+            Self::FirstStrike => K::FirstStrike,
+            Self::DoubleStrike => K::DoubleStrike,
+            Self::Deathtouch => K::Deathtouch,
+            Self::Haste => K::Haste,
+            Self::Hexproof => K::Hexproof,
+            Self::Indestructible => K::Indestructible,
+            Self::Lifelink => K::Lifelink,
+            Self::Menace => K::Menace,
+            Self::Reach => K::Reach,
+            Self::Shadow => K::Shadow,
+            Self::Trample => K::Trample,
+            Self::Vigilance => K::Vigilance,
+        }
+    }
 }
 
 // ── Library positions, scry modes, mana ──────────────────────────────────────
