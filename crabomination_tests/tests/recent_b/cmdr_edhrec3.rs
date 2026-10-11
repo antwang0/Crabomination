@@ -2670,3 +2670,134 @@ fn woodland_weavemaster_taps_for_its_power() {
     activate(&mut g, weaver, 0);
     assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "Elf-only mana");
 }
+
+// ── Maralen, Fae Ascendant's list ───────────────────────────────────────────
+
+/// Eclipsed Realms: {C}, or one restricted mana of any color for the chosen
+/// type (CR 106.6); a headless seat names the listed type its deck plays.
+#[test]
+fn eclipsed_realms_makes_restricted_mana() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::llanowar_elves());
+    }
+    let realms = g.add_card_to_hand(0, catalog::eclipsed_realms());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(realms)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(realms).unwrap().chosen_creature_type, Some(crabomination::card::CreatureType::Elf));
+    activate(&mut g, realms, 1);
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1);
+}
+
+/// Champions of the Perfect: beholding exiles an Elf card from hand as a cost
+/// (no Elf, no cast — CR 601.2f); creature spells draw; leaving returns the
+/// exiled card to its owner's hand (CR 607.2a link).
+#[test]
+fn champions_of_the_perfect_returns_its_beheld_elf() {
+    let mut g = pod(2);
+    let champ = g.add_card_to_hand(0, catalog::champions_of_the_perfect());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: champ, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "nothing to behold"
+    );
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast_on(&mut g, champ, None);
+    assert!(g.battlefield_find(champ).is_some());
+    assert!(g.exile.iter().any(|c| c.id == elf), "the Elf was exiled");
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    flood(&mut g);
+    cast_on(&mut g, bear, None);
+    assert_eq!(g.players[0].hand.len(), hand, "cast a bear, drew a card");
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    cast_on(&mut g, murder, Some(Target::Permanent(champ)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf));
+}
+
+/// Glen Elendra Guardian: enters with a -1/-1 counter (CR 122.1); removing it
+/// counters a noncreature spell and its controller draws.
+#[test]
+fn glen_elendra_guardian_spends_its_counter_to_counter() {
+    let mut g = pod(2);
+    let guard = g.add_card_to_hand(0, catalog::glen_elendra_guardian());
+    flood(&mut g);
+    cast_on(&mut g, guard, None);
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == guard).unwrap().power, 2);
+    g.add_card_to_library(1, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    let life = g.players[0].life;
+    let opp_hand = g.players[1].hand.len();
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: guard, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "countered");
+    assert_eq!(g.players[1].hand.len(), opp_hand + 1, "its controller drew");
+    assert_eq!(g.battlefield_find(guard).unwrap().counter_count(crabomination::card::CounterType::MinusOneMinusOne), 0);
+}
+
+/// Morcant's Loyalist: an Elf lord; dying returns another Elf card (CR
+/// 603.10a looks back to the battlefield).
+#[test]
+fn morcants_loyalist_pumps_and_recurs_an_elf() {
+    let mut g = pod(2);
+    let loyal = ready(&mut g, 0, catalog::morcants_loyalist());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == elf).unwrap().power, 2);
+    let dead_elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    cast_on(&mut g, murder, Some(Target::Permanent(loyal)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead_elf));
+}
+
+/// Selfless Safewright: naming Elf, the other Elves gain hexproof and
+/// indestructible until end of turn.
+#[test]
+fn selfless_safewright_shields_its_kin() {
+    let mut g = pod(2);
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let wright = g.add_card_to_hand(0, catalog::selfless_safewright());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(crabomination::card::CreatureType::Elf)]));
+    cast_on(&mut g, wright, None);
+    let v = g.compute_battlefield();
+    let e = v.iter().find(|c| c.id == elf).unwrap();
+    assert!(e.keywords().contains(&crabomination::card::Keyword::Hexproof));
+    assert!(e.keywords().contains(&crabomination::card::Keyword::Indestructible));
+}
+
+/// Glen Elendra's Answer: counters an opponent's spell and makes a Faerie for
+/// it (CR 701.6a).
+#[test]
+fn glen_elendras_answer_counters_and_makes_faeries() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    let life = g.players[0].life;
+    let answer = g.add_card_to_hand(0, catalog::glen_elendras_answer());
+    flood(&mut g);
+    cast_on(&mut g, answer, None);
+    assert_eq!(g.players[0].life, life);
+    assert_eq!(named(&g, "Faerie"), 1);
+}

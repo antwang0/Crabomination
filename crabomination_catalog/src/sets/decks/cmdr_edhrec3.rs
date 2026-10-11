@@ -5,8 +5,8 @@
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
 //! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin, Katara, the
-//! Fearless, Azlask, the Swelling Scourge, The Mycotyrant and Thranduil, the
-//! Elvenking. Tests in
+//! Fearless, Azlask, the Swelling Scourge, The Mycotyrant, Thranduil, the
+//! Elvenking and Maralen, Fae Ascendant. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -3870,5 +3870,150 @@ pub fn woodland_weavemaster() -> CardDefinition {
             SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Elf),
         ))],
         ..creature("Woodland Weavemaster", cost(&[generic(1), g()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 2)
+    }
+}
+
+// ── Maralen, Fae Ascendant (BGU) ────────────────────────────────────────────
+
+/// Eclipsed Realms — Land. As it enters, choose a creature type (Elemental,
+/// Elf, Faerie, Giant, Goblin, Kithkin, Merfolk or Treefolk). {T}: Add {C}.
+/// {T}: Add one mana of any color, spent only on a spell of the chosen type
+/// or an ability of a source of that type.
+pub fn eclipsed_realms() -> CardDefinition {
+    CardDefinition {
+        name: "Eclipsed Realms",
+        card_types: vec![CardType::Land],
+        as_enters_effect: Some(Effect::NameCreatureTypeAmong {
+            what: Selector::This,
+            options: vec![
+                CreatureType::Elemental,
+                CreatureType::Elf,
+                CreatureType::Faerie,
+                CreatureType::Giant,
+                CreatureType::Goblin,
+                CreatureType::Kithkin,
+                CreatureType::Merfolk,
+                CreatureType::Treefolk,
+            ],
+        }),
+        activated_abilities: vec![
+            tap_for(ManaPayload::Colorless(Value::ONE)),
+            tap_for(ManaPayload::RestrictedToChosenTypeOrAbility(Box::new(ManaPayload::AnyOneColor(Value::ONE)))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Champions of the Perfect — {3}{G} 6/6 Elf Warrior. As an additional cost,
+/// behold an Elf and exile it. Whenever you cast a creature spell, draw a
+/// card. When it leaves the battlefield, the exiled card returns to its
+/// owner's hand.
+pub fn champions_of_the_perfect() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::BeholdAndExile { filter: elf() }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::CardExiledWithSource,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::CardExiledWithSource))),
+                },
+            },
+        ],
+        ..creature("Champions of the Perfect", cost(&[generic(3), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 6, 6)
+    }
+}
+
+/// Glen Elendra Guardian — {2}{U} 3/4 Faerie Wizard. Flash, flying; enters
+/// with a -1/-1 counter. {1}{U}, remove a counter from it: counter target
+/// noncreature spell; its controller draws a card.
+pub fn glen_elendra_guardian() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        enters_with_counters: Some((crate::card::CounterType::MinusOneMinusOne, Value::ONE)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            remove_counter_among_filter: Some((None, 1, R::OtherThanSource.negate())),
+            effect: Effect::Seq(vec![
+                Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::Noncreature)) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::ONE,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Glen Elendra Guardian", cost(&[generic(2), u()]), vec![CreatureType::Faerie, CreatureType::Wizard], 3, 4)
+    }
+}
+
+/// Morcant's Loyalist — {1}{B}{G} 3/2 Elf Warrior. Other Elves you control get
+/// +1/+1. When it dies, return another target Elf card from your graveyard to
+/// your hand.
+pub fn morcants_loyalist() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other Elves you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: yours(R::Creature.and(elf()).and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(elf().and(R::InYourGraveyard).and(R::OtherThanSource)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..creature("Morcant's Loyalist", cost(&[generic(1), b(), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 3, 2)
+    }
+}
+
+/// Selfless Safewright — {3}{G}{G} 4/2 Elf Warrior. Flash, convoke. On entry,
+/// choose a creature type: other permanents you control of that type gain
+/// hexproof and indestructible until end of turn.
+pub fn selfless_safewright() -> CardDefinition {
+    let kin = || yours(R::IsSourceChosenCreatureType.and(R::OtherThanSource));
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Convoke],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::NameCreatureType { what: Selector::This },
+            Effect::GrantKeyword { what: kin(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: kin(), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+        ]))],
+        ..creature("Selfless Safewright", cost(&[generic(3), g(), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 4, 2)
+    }
+}
+
+/// Glen Elendra's Answer — {2}{U}{U} Instant. Can't be countered. Counter all
+/// spells and abilities your opponents control; a 1/1 blue and black flying
+/// Faerie for each one countered.
+pub fn glen_elendras_answer() -> CardDefinition {
+    CardDefinition {
+        name: "Glen Elendra's Answer",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::CounterOpponentsSpellsAndAbilities {
+            token: Arc::new(TokenDefinition {
+                name: "Faerie".into(),
+                power: 1,
+                toughness: 1,
+                colors: vec![Color::Blue, Color::Black],
+                card_types: vec![CardType::Creature],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+                keywords: vec![Keyword::Flying],
+                ..Default::default()
+            }),
+        },
+        ..Default::default()
     }
 }

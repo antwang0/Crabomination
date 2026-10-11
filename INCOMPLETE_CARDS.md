@@ -1985,3 +1985,4 @@ library-exile event.
 | Elrond, Moon-Reader | activating a creature's *mana* ability doesn't draw | mana abilities emit no `AbilityActivated` event (the engine's CR 605.1 carve-out for "whenever an opponent activates" cards) |
 | Woodland Weavemaster | its mana can't pay for a Kindred Elf noncreature spell | `SpendRestriction::CreatureOfTypeOrItsAbility` reads creature spells only |
 | Elven Passage | with an Elf to behold, the basic enters untapped rather than tapped-then-untapped | beholding is free and always taken, so the two differ only for "enters tapped" watchers |
+| Eclipsed Realms | its restricted mana can't pay for a Kindred noncreature spell of the chosen type | `RestrictedToChosenTypeOrAbility` (Secluded Courtyard's shape) reads creature spells only |
