@@ -1128,6 +1128,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::GenericCountersOnSource(k) => {
                 format!("Ward—{{X}} ({k:?} counters)")
             }
+            crabomination::card::WardCost::GenericControllerExperience => {
+                "Ward—{X} (your experience counters)".to_string()
+            }
             crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
             crabomination::card::WardCost::DiscardRandom(n) => {
                 format!("Ward—Discard {n} at random")

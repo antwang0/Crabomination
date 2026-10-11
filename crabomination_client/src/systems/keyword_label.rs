@@ -333,6 +333,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         DiscardHand => "hand↓".into(),
         Blight(n) => format!("{n}☠"),
         GenericCountersOnSource(_) => "◆".into(),
+        GenericControllerExperience => "X".into(),
         CollectEvidence(n) => format!("ev{n}"),
         ExileFromGraveyard(n) => format!("{n}gy⌫"),
         BottomFromGraveyard(n) => format!("{n}gy↓"),
