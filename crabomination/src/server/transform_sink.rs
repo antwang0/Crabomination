@@ -44,6 +44,47 @@ pub(super) fn pick_flip_to_saga(state: &GameState, seat: usize) -> Option<GameAc
     None
 }
 
+/// Pods: a creature's "{cost}: transform this" (Aang, Swift Savior's Waterbend
+/// {8}) or "exile this, then return it transformed" (Nicol Bolas, the Ravager)
+/// whose back face is an upgrade — a bigger creature, or a planeswalker. The
+/// census never saw either taken: `pick_transform_self` flips noncreatures only.
+/// A waterbend cost is paid from mana here (the helpers are optional). Commander
+/// games only, so two-player play is unchanged.
+pub(super) fn pick_creature_upgrade_transform(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players[seat].commanders.is_empty() {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_creature()) {
+        let Some(back) = card.definition.back_face.as_deref() else { continue };
+        let upgrade = back.is_planeswalker()
+            || back.is_creature()
+                && back.power + back.toughness > card.definition.power + card.definition.toughness;
+        if !upgrade {
+            continue;
+        }
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if ab.sac_cost
+                || ab.exhaust
+                || !(ability_transforms_self(&ab.effect) || matches!(ab.effect, Effect::ExileSelfReturnTransformed))
+            {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
 /// The ability transforms its own source.
 pub(super) fn ability_transforms_self(e: &Effect) -> bool {
     matches!(e, Effect::Transform { what: Selector::This })
@@ -125,6 +166,22 @@ mod tests {
     use super::*;
     use crate::game::types::TurnStep;
     use crate::mana::Color;
+
+    /// Aang, Swift Savior waterbends into Aang and La (a 5/5 over a 2/3) in a
+    /// pod with mana for {8}; a two-player seat (no commander) keeps him.
+    #[test]
+    fn aang_swift_savior_flips_when_eight_mana_is_open() {
+        let mut g = crate::game::multi_player_game(3);
+        let aang = g.add_card_to_battlefield(0, crate::catalog::aang_swift_savior());
+        g.step = TurnStep::PostCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add_colorless(8);
+        assert!(pick_creature_upgrade_transform(&g, 0).is_none(), "no commander: not a pod seat");
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let a = pick_creature_upgrade_transform(&g, 0).expect("flip");
+        assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == aang));
+    }
 
     /// Urabrask flips into The Great Work in a pod once three instants and
     /// sorceries were cast this turn, and not before.
