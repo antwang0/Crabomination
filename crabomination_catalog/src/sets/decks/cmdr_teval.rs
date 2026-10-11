@@ -31,9 +31,8 @@
 //! * Necromantic Selection — any other creature you reanimated earlier that turn
 //!   also becomes a black Zombie.
 //! * Agadeem's Awakening — the returns are picked at resolution, not targeted.
-//! * Palantír of Orthanc / Midnight Clock / The Soul Stone — influence and hour
-//!   counters (and the harnessed state) are charge counters; The Soul Stone has
-//!   no Infinity Stone subtype.
+//! * Palantír of Orthanc / Midnight Clock — influence and hour counters are
+//!   charge counters.
 //! * Reflections of Littjara — the creature type is chosen by an ETB trigger,
 //!   not "as this enters".
 //! * Rogue Class — cards exiled before level 3 don't become playable when it
@@ -1451,11 +1450,14 @@ pub fn midnight_clock() -> CardDefinition {
 /// Stone. ∞ — At the beginning of your upkeep, return target creature card from
 /// your graveyard to the battlefield.
 ///
-/// Approximations: "harnessed" is a charge counter (the ∞ trigger is gated on
-/// having one); the Infinity Stone subtype isn't modelled.
+/// The ∞ ability is a trigger gated on the harnessed designation (CR 702.186b).
 pub fn the_soul_stone() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Infinity, ArtifactSubtype::Stone],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Indestructible],
         activated_abilities: vec![
             tap_add(Color::Black),
@@ -1463,24 +1465,13 @@ pub fn the_soul_stone() -> CardDefinition {
                 mana_cost: cost(&[generic(6), b()]),
                 tap_cost: true,
                 exile_permanent_cost: Some((R::Creature.and(R::ControlledByYou), 1)),
-                effect: Effect::If {
-                    cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Charge, n: 1 },
-                    then: Box::new(Effect::Noop),
-                    else_: Box::new(Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::Charge,
-                        amount: Value::ONE,
-                    }),
-                },
+                effect: Effect::Harness { what: Selector::This },
                 ..Default::default()
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
-                .with_filter(Predicate::SourceHasCountersAtLeast {
-                    counter: CounterType::Charge,
-                    n: 1,
-                }),
+                .with_filter(Predicate::SourceIsHarnessed),
             effect: Effect::Move {
                 what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: to_battlefield(false),

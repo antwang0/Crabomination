@@ -1158,6 +1158,32 @@ fn the_soul_stone_harnessed_reanimates() {
     assert!(on_battlefield(&g, bears));
 }
 
+/// CR 701.64b — harnessed is a designation, not a counter: removing every
+/// counter doesn't unharness the Stone, and once it leaves the battlefield
+/// and returns it is a new, unharnessed object whose ∞ trigger is off.
+#[test]
+fn the_soul_stone_harness_is_a_designation_that_leaving_clears() {
+    let mut g = main_phase();
+    let stone = g.add_card_to_battlefield(0, catalog::the_soul_stone());
+    let fodder = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    activate(&mut g, stone, 1, None);
+    assert!(in_exile(&g, fodder));
+    let s = g.battlefield_find(stone).unwrap();
+    assert!(s.harnessed);
+    assert_eq!(s.counter_count(CounterType::Charge), 0, "no stand-in counter");
+    // Bounced, the card in hand is a new object and carries no designation.
+    let _ = g.remove_from_battlefield_to_hand(stone);
+    assert!(!g.players[0].hand.iter().find(|c| c.id == stone).unwrap().harnessed);
+    let stone = g.add_card_to_battlefield(0, catalog::the_soul_stone());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    stock_libraries(&mut g, 5);
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    advance_to(&mut g, TurnStep::Draw);
+    assert!(!g.battlefield_find(stone).unwrap().harnessed);
+    assert!(!on_battlefield(&g, bears), "an unharnessed Stone has no ∞ trigger");
+}
+
 /// Stonespeaker Crystal taps for two and cashes in to wipe opposing graveyards.
 #[test]
 fn stonespeaker_crystal_exiles_graveyards_and_draws() {
