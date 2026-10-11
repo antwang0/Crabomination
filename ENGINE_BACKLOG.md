@@ -280,6 +280,9 @@ the handoff.
   resolution that adds a counter now counts. Sweeps after it: fuzzed strict
   197001 (4,980 games) and plain 198001 (9,960) — **0 aborts**, 7 undecided,
   no action cap among them.
+- **CR 400.7** — a trigger's subject that left its graveyard before
+  resolution is a new object (the eighteenth run's open `TriggerSource` row,
+  graveyard case; detail there).
 - Left, classified: Polyraptor's forced reveal (above), token board caps
   (Myrel doubling under Isshin + Karlach's extra combats: 1,024 permanents in
   one turn, no lethal yet because the tokens are summoning-sick), CR 104.4a
@@ -346,10 +349,14 @@ the handoff.
   counter" stashed and granted a play permission to a discarded commander its
   owner had already sent home (Éowyn, four seats; Muldrotha, six — the CR 400.7
   invariant). A card still in a command zone after a Move elsewhere is no
-  longer recorded. ⚠ The wider class is open: a `TriggerSource` that moved to
-  another zone than the command zone (a discarded card returned to hand before
-  the trigger resolves) is still moved and named; CR 400.7 says it is a new
-  object. Undecided: two token board caps (Myrel + Roaming Throne, Garruk's
+  longer recorded. ✅ *2026-10-11* the wider class, for a subject that
+  triggered from a graveyard: a `TriggerSource` that left every graveyard
+  before its trigger resolved is not moved (`StackItem::Trigger::ts_in_gy`,
+  `EffectContext::trigger_source_left_gy`; `tinybones_does_not_stash_a_card_
+  that_left_the_graveyard`). Still open: a subject that triggered from exile
+  or a hand and moved before resolution (no shipped card found to need it).
+  It is still *named* (a value read keeps last-known information, CR 608.2h).
+  Undecided: two token board caps (Myrel + Roaming Throne, Garruk's
   Packleader), one simultaneous loss.
 - **Plain sweep** 187001 (every deck × 3/4/6/8 × 30 = 9,420 games): 0 aborts;
   Polyraptor + Marauding Raptor was 3 of 5 undecided, every one a Gishath

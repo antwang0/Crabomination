@@ -3157,6 +3157,11 @@ loop watch       `46cd44fdd` (a CounterAdded scan per trigger resolution, CR
                  determinism ok; bench_ab.py f0d5933e1 vs 46cd44fdd, 16 pairs:
                  median +0.38 %, mean +0.59 % (sd 3.08) — inside noise (the
                  interval also holds the concurrent runs' commits)
+CR 400.7 stamp   `bd87704e7` (a graveyard scan per trigger push whose subject
+                 is a card): --bench 196,176 / 27.64 / 613.0 byte-identical,
+                 determinism ok; bench_ab.py 46cd44fdd vs bd87704e7, 16 pairs:
+                 median +5.85 % (sd 6.12) — no regression (the interval holds
+                 seats 369-379 and their engine commits too)
 ```
 
 ### 2026-10-10 (Commander routine — seventeenth run, closing, session `017yfeX4`) — guardrail; audit-sweep aborts
