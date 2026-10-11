@@ -2368,6 +2368,21 @@ fn cr_614_2_fiery_emancipation_triples_your_sources_damage() {
     assert_eq!(g.players[1].life, before - 9, "3 tripled is 9, not 6 and not 12");
 }
 
+/// A damage tripled past `i32::MAX` is still a loss: the amount cast `as i32`
+/// wrapped negative and the player dealt it gained life.
+#[test]
+fn a_damage_tripled_past_i32_max_is_still_a_loss() {
+    use crabomination::effect::{Effect, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fiery_emancipation());
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell_with_source(src, "Grizzly Bears", 0, Some(Target::Player(1)), vec![], 0, 0, 0, 0);
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(i32::MAX) }, &ctx)
+        .expect("damage");
+    assert!(g.players[1].life <= 0, "life {}", g.players[1].life);
+}
+
 /// City on Fire is the same multiplier, and two of them compose to ×9 rather
 /// than to ×6 — the reason the factor is a multiplier and not a count.
 #[test]

@@ -693,7 +693,7 @@ impl GameState {
                         })
                         .is_some_and(|cs| shield.gain_life_colors.iter().any(|c| cs.contains(c)));
                 if let Some(seat) = shield.gain_life_to.filter(|_| color_ok) {
-                    self.adjust_life_emit(seat, amount as i32, events);
+                    self.adjust_life_emit(seat, crate::game::life_amount(amount), events);
                 }
                 // "When damage is prevented this way, …" (New Way Forward) —
                 // a reflexive trigger reading how much was prevented.
@@ -1198,7 +1198,7 @@ impl GameState {
             }
         }
         if life_gain > 0 && let Some(p) = life_gain_to.or(to_player) {
-            self.adjust_life_emit(p, life_gain as i32, events);
+            self.adjust_life_emit(p, crate::game::life_amount(life_gain), events);
         }
         // Bone Mask — exile one card off the top per point the shield ate.
         for (seat, n) in exile_tolls {
@@ -1853,7 +1853,7 @@ impl GameState {
                     // (the event below carries `amount`), but the life
                     // reduction is clamped to the floor.
                     let life_delta = self.clamp_damage_to_life_floor(p, amount);
-                    let applied = self.adjust_life_applied(p, -(life_delta as i32));
+                    let applied = self.adjust_life_applied(p, -crate::game::life_amount(life_delta));
                     events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None, combat: false, from_controller, from_card: source });
                     let lost = (-applied).max(0) as u32;
                     if lost > 0 {
@@ -2087,7 +2087,7 @@ impl GameState {
         // Scrollwielder), that controller gains life equal to the damage dealt.
         // (Combat damage handles its own lifelink in `combat.rs`.)
         if let Some(seat) = self.noncombat_lifelink_seat(source) {
-            self.adjust_life_emit(seat, amount as i32, events);
+            self.adjust_life_emit(seat, crate::game::life_amount(amount), events);
         }
         // CR 603.4 — "whenever [this creature] deals damage this turn" delayed
         // triggers watching the noncombat source (Paladin of Prahv's Forecast).

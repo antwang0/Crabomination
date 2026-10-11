@@ -537,7 +537,7 @@ impl GameState {
                 )
             };
             if yes {
-                self.adjust_life_emit(active, life as i32, events);
+                self.adjust_life_emit(active, crate::game::life_amount(life), events);
                 return true;
             }
         }

@@ -12350,7 +12350,7 @@ impl GameState {
                 }
                 A::PayLife { amount } => {
                     if !self.replace_life_payment(p, *amount, &mut events) {
-                        let applied = self.adjust_life_applied(p, -(*amount as i32));
+                        let applied = self.adjust_life_applied(p, -crate::game::life_amount(*amount));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                         }
@@ -12441,7 +12441,7 @@ impl GameState {
                             sac_power = sp;
                         }
                     } else {
-                        let applied = self.adjust_life_applied(p, -(*life as i32));
+                        let applied = self.adjust_life_applied(p, -crate::game::life_amount(*life));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost {
                                 player: p,
@@ -12589,7 +12589,7 @@ impl GameState {
                 A::OpponentGainsLife { amount } => {
                     // "An opponent" is the caster's pick (not a target).
                     if let Some(opp) = self.choose_opponent_at_once(p, CardId(0), "Choose the opponent who gains life") {
-                        self.adjust_life_emit(opp, *amount as i32, &mut events);
+                        self.adjust_life_emit(opp, crate::game::life_amount(*amount), &mut events);
                     }
                 }
             }
@@ -15406,7 +15406,7 @@ impl GameState {
         // Pay the life portion of the alt cost (CR 119.4; applied
         // amount honors cannot-lose replacements).
         if alt.life_cost > 0 && !self.replace_life_payment(p, alt.life_cost, &mut auto_events) {
-            let applied = self.adjust_life_applied(p, -(alt.life_cost as i32));
+            let applied = self.adjust_life_applied(p, -crate::game::life_amount(alt.life_cost));
             if applied < 0 {
                 auto_events.push(GameEvent::LifeLost {
                     player: p,
@@ -15493,7 +15493,7 @@ impl GameState {
                 .filter(|&o| o != p && !self.players[o].eliminated)
                 .min_by_key(|&o| self.players[o].life)
         {
-            let applied = self.adjust_life_applied(opp, alt.opponent_gains_life as i32);
+            let applied = self.adjust_life_applied(opp, crate::game::life_amount(alt.opponent_gains_life));
             if applied > 0 {
                 auto_events
                     .push(GameEvent::LifeGained { player: opp, amount: applied as u32 });
@@ -23292,7 +23292,7 @@ impl GameState {
         // observers see the cost.
         life_spent += life_cost;
         if life_cost > 0 && !self.replace_life_payment(p, life_cost, &mut auto_mana_events) {
-            let applied = self.adjust_life_applied(p, -(life_cost as i32));
+            let applied = self.adjust_life_applied(p, -crate::game::life_amount(life_cost));
             if applied < 0 {
                 auto_mana_events.push(GameEvent::LifeLost {
                     player: p,
@@ -24756,7 +24756,7 @@ impl GameState {
         // paid, whether or not the life reduction was itself replaced.
         self.scratch.pending_cost_events
             .push(GameEvent::PaidLife { player: p, amount: life });
-        let applied = self.adjust_life_applied(p, -(life as i32));
+        let applied = self.adjust_life_applied(p, -crate::game::life_amount(life));
         if applied < 0 {
             self.scratch.pending_cost_events
                 .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });

@@ -65,7 +65,7 @@ impl GameState {
             if paid[i] == 0 {
                 continue;
             }
-            let applied = self.adjust_life_applied(p, -(paid[i] as i32));
+            let applied = self.adjust_life_applied(p, -crate::game::life_amount(paid[i]));
             if applied < 0 {
                 events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
             }

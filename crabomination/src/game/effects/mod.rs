@@ -1367,7 +1367,7 @@ impl GameState {
         let mut doomed: Vec<CardId> = Vec::new();
         for (id, seat, paid) in answers {
             if paid {
-                let applied = self.adjust_life_applied(seat, -(life as i32));
+                let applied = self.adjust_life_applied(seat, -crate::game::life_amount(life));
                 if applied < 0 {
                     events.push(GameEvent::LifeLost { player: seat, amount: (-applied) as u32 });
                 }
@@ -4305,7 +4305,7 @@ impl GameState {
                     ),
                 };
                 if pay {
-                    self.adjust_life_emit(ctx.controller, -(*life as i32), events);
+                    self.adjust_life_emit(ctx.controller, -crate::game::life_amount(*life), events);
                     let card = self.players[p].library.remove(0);
                     self.players[p].graveyard.push(card);
                 }
@@ -8443,7 +8443,7 @@ impl GameState {
                 let payable = amt == 0 || self.players[ctx.controller].life >= amt as i32;
                 if yes && payable {
                     if amt > 0 && !self.replace_life_payment(ctx.controller, amt, events) {
-                        let applied = self.adjust_life_applied(ctx.controller, -(amt as i32));
+                        let applied = self.adjust_life_applied(ctx.controller, -crate::game::life_amount(amt));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost {
                                 player: ctx.controller,
@@ -9549,7 +9549,7 @@ impl GameState {
                         // CR 119.10 — the event carries the APPLIED amount
                         // (post replacement/bonus); a fully-replaced gain
                         // fires no lifegain trigger.
-                        self.adjust_life_emit(p, amt as i32, events);
+                        self.adjust_life_emit(p, crate::game::life_amount(amt), events);
                     }
                 }
                 Ok(())
@@ -9560,7 +9560,7 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        let applied = self.adjust_life_applied(p, -(amt as i32));
+                        let applied = self.adjust_life_applied(p, -crate::game::life_amount(amt));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                         }
@@ -9618,7 +9618,7 @@ impl GameState {
                     if amt == 0 {
                         continue;
                     }
-                    let applied = self.adjust_life_applied(p, -(amt as i32));
+                    let applied = self.adjust_life_applied(p, -crate::game::life_amount(amt));
                     if applied < 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
@@ -9638,7 +9638,7 @@ impl GameState {
                     let life = self.players[p].life.max(0);
                     let amt = if *rounded_up { (life + 1) / 2 } else { life / 2 } as u32;
                     if amt == 0 { continue; }
-                    let applied = self.adjust_life_applied(p, -(amt as i32));
+                    let applied = self.adjust_life_applied(p, -crate::game::life_amount(amt));
                     if applied < 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
@@ -10054,7 +10054,7 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(from, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        let applied = self.adjust_life_applied(p, -(amt as i32));
+                        let applied = self.adjust_life_applied(p, -crate::game::life_amount(amt));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                         }
@@ -10062,7 +10062,7 @@ impl GameState {
                 }
                 for ent in self.resolve_selector(to, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.adjust_life_emit(p, amt as i32, events);
+                        self.adjust_life_emit(p, crate::game::life_amount(amt), events);
                     }
                 }
                 self.check_state_based_actions_mid_resolution(events);
@@ -10449,7 +10449,7 @@ impl GameState {
                         CumulativeUpkeepCost::Life(per) => {
                             let total = per * n;
                             if self.players[p].life > total as i32 {
-                                let applied = self.adjust_life_applied(p, -(total as i32));
+                                let applied = self.adjust_life_applied(p, -crate::game::life_amount(total));
                                 if applied < 0 {
                                     events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                                 }
@@ -16617,7 +16617,7 @@ impl GameState {
                     }
                 }
                 self.clear_answer_log();
-                let applied = self.adjust_life_applied(leader, -(high as i32));
+                let applied = self.adjust_life_applied(leader, -crate::game::life_amount(high));
                 if applied < 0 {
                     events.push(GameEvent::LifeLost {
                         player: leader,
@@ -22826,7 +22826,7 @@ impl GameState {
                     leader = bidder;
                 }
                 self.clear_answer_log();
-                self.adjust_life_emit(leader, -(high as i32), events);
+                self.adjust_life_emit(leader, -crate::game::life_amount(high), events);
                 if leader == me {
                     self.run_effect(
                         &Effect::CounterSpell { what: what.clone() },
@@ -28480,7 +28480,7 @@ impl GameState {
                 self.clear_answer_log();
                 for (id, kept) in answers {
                     if kept {
-                        let applied = self.adjust_life_applied(seat, -(*life as i32));
+                        let applied = self.adjust_life_applied(seat, -crate::game::life_amount(*life));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost {
                                 player: seat,
@@ -31049,7 +31049,7 @@ impl GameState {
                 };
                 let mut controller_won = false;
                 for (seat, _) in picks.iter().filter(|(_, n)| *n == high) {
-                    self.adjust_life_emit(*seat, -(high as i32), events);
+                    self.adjust_life_emit(*seat, -crate::game::life_amount(high), events);
                     controller_won |= *seat == ctx.controller;
                 }
                 if controller_won {
@@ -33453,7 +33453,7 @@ impl GameState {
                     _ => 0,
                 };
                 if x == 0 { return Ok(()); }
-                let applied = self.adjust_life_applied(p, -(x as i32));
+                let applied = self.adjust_life_applied(p, -crate::game::life_amount(x));
                 if applied < 0 {
                     events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                 }
@@ -34092,7 +34092,7 @@ impl GameState {
                     _ => 0,
                 };
                 if x == 0 { return Ok(()); }
-                let applied = self.adjust_life_applied(p, -(x as i32));
+                let applied = self.adjust_life_applied(p, -crate::game::life_amount(x));
                 if applied < 0 {
                     events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                 }
@@ -34146,7 +34146,7 @@ impl GameState {
                     _ => 0,
                 };
                 if n > 0 {
-                    let applied = self.adjust_life_applied(payer, -(n as i32));
+                    let applied = self.adjust_life_applied(payer, -crate::game::life_amount(n));
                     if applied < 0 {
                         events.push(GameEvent::LifeLost { player: payer, amount: (-applied) as u32 });
                     }
@@ -35797,7 +35797,7 @@ impl GameState {
                 let life_ok = self.players[p].life > *life_cost as i32;
                 if mana_paid && life_ok {
                     if *life_cost > 0 {
-                        let applied = self.adjust_life_applied(p, -(*life_cost as i32));
+                        let applied = self.adjust_life_applied(p, -crate::game::life_amount(*life_cost));
                         if applied < 0 {
                             paid_events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                         }
@@ -35994,7 +35994,7 @@ impl GameState {
                 // Lose 1 life per revealed card (Spoils of the Vault rider).
                 let life = (revealed as u32).saturating_mul(*life_per_revealed);
                 if life > 0 {
-                    let applied = self.adjust_life_applied(p, -(life as i32));
+                    let applied = self.adjust_life_applied(p, -crate::game::life_amount(life));
                     if applied < 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
@@ -37499,7 +37499,7 @@ impl GameState {
                     _ => cap,
                 };
                 if n > 0 {
-                    let applied = self.adjust_life_applied(ctx.controller, -(n as i32));
+                    let applied = self.adjust_life_applied(ctx.controller, -crate::game::life_amount(n));
                     if applied < 0 {
                         events.push(GameEvent::LifeLost {
                             player: ctx.controller,

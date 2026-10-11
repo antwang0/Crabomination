@@ -4887,7 +4887,7 @@ impl GameState {
                     let dealt = self.deal_combat_damage_to_target(atk, amount, events);
                     if atk.has_lifelink && dealt > 0 {
                         let a = self.active_player_idx;
-                        self.adjust_life_emit(a, dealt as i32, events);
+                        self.adjust_life_emit(a, crate::game::life_amount(dealt), events);
                     }
                 }
             } else {
@@ -6020,7 +6020,7 @@ impl GameState {
                     // Angel's Grace / Worship — damage lands in full, but the
                     // life reduction is clamped to the floor.
                     let life_delta = self.clamp_damage_to_life_floor(p, amount);
-                    let applied = self.adjust_life_applied(p, -(life_delta as i32));
+                    let applied = self.adjust_life_applied(p, -crate::game::life_amount(life_delta));
                     events.push(GameEvent::DamageDealt {
                         amount,
                         to_player: Some(p),

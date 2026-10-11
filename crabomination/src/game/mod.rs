@@ -246,6 +246,12 @@ pub mod subgame;
 
 pub mod types;
 
+/// An amount of life as an `i32` delta, saturating at `i32::MAX`: a tripled
+/// damage past it cast `as i32` wrapped negative, so a loss read as a gain.
+pub(crate) fn life_amount<T: TryInto<i32>>(x: T) -> i32 {
+    x.try_into().unwrap_or(i32::MAX)
+}
+
 #[doc(hidden)]
 pub fn two_player_game() -> GameState {
     multi_player_game(2)
@@ -6889,7 +6895,7 @@ impl GameState {
     pub fn adjust_life_applied(&mut self, seat: usize, delta: i32) -> i32 {
         let before = self.effective_life(seat);
         let after = self.adjust_life(seat, delta);
-        after - before
+        after.saturating_sub(before)
     }
 
     /// Overwrite the effective life total for `seat` (Effect::SetLife
@@ -8883,7 +8889,7 @@ impl GameState {
                     let total = per * n;
                     // Auto-pay life only while it leaves the player alive.
                     if self.players[active].life > total as i32 {
-                        let applied = self.adjust_life_applied(active, -(total as i32));
+                        let applied = self.adjust_life_applied(active, -crate::game::life_amount(total));
                         if applied < 0 {
                             events.push(crate::game::GameEvent::LifeLost { player: active, amount: (-applied) as u32 });
                         }
@@ -21446,7 +21452,7 @@ impl GameState {
             return false;
         }
         if life > 0 && !self.replace_life_payment(p, life, events) {
-            let applied = self.adjust_life_applied(p, -(life as i32));
+            let applied = self.adjust_life_applied(p, -crate::game::life_amount(life));
             if applied < 0 {
                 events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
             }
@@ -21599,7 +21605,7 @@ impl GameState {
             paid = self.pay_action_mana(seat, &mc)?;
         }
         if life_cost > 0 {
-            self.adjust_life_emit(seat, -(life_cost as i32), &mut paid);
+            self.adjust_life_emit(seat, -crate::game::life_amount(life_cost), &mut paid);
         }
         // Discard the card from hand via the centralized path (handles the
         // graveyard move, CardDiscarded, discard-matters counters, and the
@@ -22459,7 +22465,7 @@ impl GameState {
             }
             self.in_draw_double = false;
             if life_loss > 0 {
-                let applied = self.adjust_life_applied(p, -(life_loss as i32));
+                let applied = self.adjust_life_applied(p, -crate::game::life_amount(life_loss));
                 if applied < 0 {
                     events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                 }
@@ -22506,7 +22512,7 @@ impl GameState {
                         )
                 };
                 if pays {
-                    let applied = self.adjust_life_applied(p, -(life as i32));
+                    let applied = self.adjust_life_applied(p, -crate::game::life_amount(life));
                     if applied < 0 {
                         events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                     }
