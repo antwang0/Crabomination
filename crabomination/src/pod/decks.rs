@@ -11102,3 +11102,32 @@ pub const AVATAR_AANG_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, mountain, mountain, plains, plains, plains,
     swamp, swamp,
 ];
+
+pub const LOREHOLD_HISTORIAN_COMMANDERS: &[CardFactory] = &[lorehold_the_historian];
+
+/// **Lorehold, the Historian**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 78 nonbasic cards + 12 Mountains + 9 Plains = 99.
+/// Lorehold, the Historian (RW) spellslinger
+pub const LOREHOLD_HISTORIAN_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, boros_signet, library_of_leng, lightning_greaves,
+    monument_to_endurance, ruby_medallion, scroll_rack, senseis_divining_top, sol_ring,
+    tablet_of_discovery, talisman_of_conviction, victory_chimes, arid_mesa, battlefield_forge,
+    clifftop_retreat, command_tower, elegant_parlor, exotic_orchard, furycalm_snarl,
+    radiant_summit, reliquary_tower, rugged_prairie, sacred_foundry, spectator_seating,
+    sunbillow_verge, sundown_pass, temple_of_triumph, caldera_pyremaw, dragons_rage_channeler,
+    esper_sentinel, goliath_daydreamer, guttersnipe, hexing_squelcher, longshot_rebel_bowman,
+    mother_of_runes, pinnacle_monk, storm_kiln_artist, the_dawning_archaic, velomachus_lorehold,
+    verge_rangers, arcane_bombardment, double_vision, land_tax, penance, beacon_of_immortality,
+    big_score, bolt_bend, boros_charm, chaos_warp, deflecting_swat, generous_gift,
+    invoke_calamity, olorins_searing_light, path_to_exile, perch_protection,
+    swords_to_plowshares, unexpected_windfall, apex_of_power, approach_of_the_second_sun,
+    austere_command, blasphemous_act, brasss_bounty, call_forth_the_tempest,
+    dance_with_calamity, emerias_call, faithless_looting, hit_the_mother_lode,
+    improvisation_capstone, insurrection, mizzixs_mastery, reforge_the_soul,
+    restoration_seminar, rise_of_the_eldrazi, soulfire_eruption, storm_herd,
+    taunt_from_the_rampart, volcanic_vision,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];

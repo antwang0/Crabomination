@@ -2728,6 +2728,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AVATAR_AANG_COMMANDERS,
             main: decks::AVATAR_AANG_MAIN,
         },
+        // Seat 380: Lorehold, the Historian's EDHREC average deck. `--pod-decks 380`.
+        PodDeck {
+            name: "Lorehold, the Historian (RW)",
+            commanders: decks::LOREHOLD_HISTORIAN_COMMANDERS,
+            main: decks::LOREHOLD_HISTORIAN_MAIN,
+        },
     ]
 }
 
@@ -4831,6 +4837,7 @@ mod tests {
             ("Captain Howler, Sea Scourge", [0x0A9F, 377, 9302]),
             ("Magda, Brazen Outlaw", [0x0AA0, 378, 9303]),
             ("Avatar Aang", [0x0AA1, 379, 9304]),
+            ("Lorehold, the Historian", [0x0AA2, 380, 9305]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
