@@ -4411,6 +4411,7 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|o| self.targets_share_creature_type(o, target)),
+            R::NameDiffersFromOtherTargets => self.name_differs_from_other_targets(target, slots),
             _ => true,
         }
     }
@@ -4425,9 +4426,18 @@ impl GameState {
         }
     }
 
-    /// A targeted permanent's current toughness (CR 613); `None` for a player
-    /// or an object off the battlefield.
+    /// No other chosen slot names a card with `target`'s name (CR 201.2).
+    fn name_differs_from_other_targets(&self, target: &Target, slots: &[Option<Target>]) -> bool {
+        let name = |t: &Target| match t {
+            Target::Permanent(cid) => self.find_card_anywhere(*cid).map(|c| c.definition.name),
+            Target::Player(_) => None,
+        };
+        let Some(mine) = name(target) else { return true };
+        slots.iter().flatten().filter(|o| *o != target).all(|o| name(o) != Some(mine))
+    }
+
     /// Two permanent targets share a creature type (a changeling shares all).
+
     fn targets_share_creature_type(&self, a: &Target, b: &Target) -> bool {
         let types = |t: &Target| match t {
             Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| {
@@ -4443,6 +4453,8 @@ impl GameState {
         }
     }
 
+    /// A targeted permanent's current toughness (CR 613); `None` for a player
+    /// or an object off the battlefield.
     fn target_toughness(&self, t: &Target) -> Option<i32> {
         match t {
             Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| cp.toughness),
@@ -5171,6 +5183,7 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|other| self.targets_share_creature_type(other, target)),
+            R::NameDiffersFromOtherTargets => self.name_differs_from_other_targets(target, &self.target_slots_scratch),
             R::OtherThanTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => other != target,
@@ -7071,6 +7084,7 @@ impl GameState {
             | R::OtherThanTargetSlot(_)
             | R::SameToughnessAsTargetSlot(_)
             | R::SharesCreatureTypeWithTargetSlot(_)
+            | R::NameDiffersFromOtherTargets
             | R::SameGraveyardAsTargetSlot(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {
                 let mine = &card.definition.subtypes.creature_types;

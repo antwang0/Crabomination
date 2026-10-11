@@ -3164,6 +3164,10 @@ pub enum SelectionRequirement {
     /// control that share a creature type" — Secret Tunnel). Vacuously true
     /// while that slot is unchosen.
     SharesCreatureTypeWithTargetSlot(u8),
+    /// CR 601.2c — cross-slot filter: a name no other chosen target has
+    /// ("up to six target creature cards with different names" — Behold the
+    /// Sinister Six!). Read against every slot chosen so far.
+    NameDiffersFromOtherTargets,
     /// CR 601.2c — "target cards from **a single graveyard**": in the same
     /// graveyard as the card already chosen for slot `.0`. Vacuously true
     /// while that slot is unchosen; read like `SameControllerAsTargetSlot`.
@@ -4401,6 +4405,7 @@ impl SelectionRequirement {
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
+            | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX => true,
@@ -4421,6 +4426,7 @@ impl SelectionRequirement {
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
+            | Self::NameDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX => Self::Any,
