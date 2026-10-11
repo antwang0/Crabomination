@@ -1239,3 +1239,143 @@ fn cr_704_5d_a_spawn_sacrificed_for_a_cast_leaves_no_token() {
         assert!(!g.players[0].graveyard.iter().any(|c| c.is_token), "signet {signet}");
     }
 }
+
+/// Step `g` forward until `step` on `seat`'s turn.
+fn run_to(g: &mut GameState, seat: usize, step: TurnStep) {
+    for _ in 0..200 {
+        if g.active_player_idx == seat && g.step == step {
+            return;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+    panic!("never reached {step:?} on seat {seat}'s turn");
+}
+
+/// Rivendell: tapped without a legendary creature, untapped with one; the
+/// scry needs one too.
+#[test]
+fn rivendell_wants_a_legend() {
+    for legend in [false, true] {
+        let mut g = pod(2);
+        if legend {
+            ready(&mut g, 0, catalog::pippin_guard_of_the_citadel());
+        }
+        let riv = g.add_card_to_hand(0, catalog::rivendell());
+        g.perform_action(GameAction::PlayLand(riv)).expect("land drop");
+        assert_eq!(g.battlefield_find(riv).unwrap().tapped, !legend);
+        g.battlefield_find_mut(riv).unwrap().tapped = false;
+        stock_libraries(&mut g, 3);
+        flood(&mut g);
+        assert_eq!(activate(&mut g, riv, 1).is_ok(), legend);
+    }
+}
+
+/// Aragorn, Hornburg Hero: an attacker has first strike and renown 1; once
+/// renowned, its next combat damage to a player doubles its counters.
+#[test]
+fn aragorn_hornburg_hero_renown_then_doubling() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::aragorn_hornburg_hero());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    attack_with(&mut g, &[bear]);
+    assert!(has_kw(&g, bear, Keyword::FirstStrike));
+    run_to(&mut g, 0, TurnStep::PostCombatMain);
+    assert_eq!(counters(&g, bear), 1, "renown 1");
+    assert!(!has_kw(&g, bear, Keyword::FirstStrike), "only while attacking");
+    run_to(&mut g, 0, TurnStep::PreCombatMain);
+    run_to(&mut g, 0, TurnStep::BeginCombat);
+    g.battlefield_find_mut(bear).unwrap().tapped = false;
+    attack_with(&mut g, &[bear]);
+    run_to(&mut g, 0, TurnStep::PostCombatMain);
+    assert_eq!(counters(&g, bear), 2, "renowned: doubled, not renowned again");
+}
+
+/// Faramir: the chosen opponent's end step draws a card when they left you
+/// alone, and makes three Soldiers when they attacked you.
+#[test]
+fn faramir_rewards_peace_or_punishes_attacks() {
+    for attacked in [false, true] {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 10);
+        ready(&mut g, 0, catalog::faramir_prince_of_ithilien());
+        run_to(&mut g, 1, TurnStep::PostCombatMain);
+        if attacked {
+            g.players[1].attacked_players_this_turn.push(0);
+        }
+        let hand = g.players[0].hand.len();
+        run_to(&mut g, 1, TurnStep::End);
+        let soldiers = named(&g, "Human Soldier");
+        if attacked {
+            assert_eq!((soldiers, g.players[0].hand.len()), (3, hand));
+        } else {
+            assert_eq!((soldiers, g.players[0].hand.len()), (0, hand + 1));
+        }
+    }
+}
+
+/// Katilda: a Human taps for a mana of its own colour.
+#[test]
+fn katilda_humans_tap_for_their_colors() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::katilda_dawnhart_prime());
+    let lions = ready(&mut g, 0, catalog::elite_vanguard());
+    activate(&mut g, lions, 0).expect("granted mana ability");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+}
+
+/// Pippin: a creature targeted by an opponent's Lightning Bolt gains
+/// protection from instants, and the Bolt fizzles.
+#[test]
+fn pippin_blanks_the_threat_by_card_type() {
+    let mut g = pod(2);
+    let pippin = ready(&mut g, 0, catalog::pippin_guard_of_the_citadel());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: pippin, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("Pippin");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the Bolt lost its target");
+}
+
+/// Éowyn, Fearless Knight exiles a bigger opposing creature and shields your
+/// legends from its colours.
+#[test]
+fn eowyn_fearless_knight_exiles_the_bigger_threat() {
+    let mut g = pod(2);
+    let pippin = ready(&mut g, 0, catalog::pippin_guard_of_the_citadel());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let eowyn = g.add_card_to_hand(0, catalog::eowyn_fearless_knight());
+    flood(&mut g);
+    cast(&mut g, eowyn);
+    assert!(g.battlefield_find(angel).is_none(), "4 power beats Éowyn's 3");
+    assert!(has_kw(&g, pippin, Keyword::Protection(Color::White)));
+}
+
+/// Friendly Rivalry: a 2-power creature and a 4-power legend together kill a
+/// 4/4 neither kills alone.
+#[test]
+fn friendly_rivalry_two_sources_one_victim() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let hero = ready(&mut g, 0, catalog::aragorn_hornburg_hero());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let fr = g.add_card_to_hand(0, catalog::friendly_rivalry());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fr,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(angel), Target::Permanent(hero)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none());
+}

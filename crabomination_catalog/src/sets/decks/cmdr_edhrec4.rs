@@ -1926,3 +1926,220 @@ pub fn visions_of_dominance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Aragorn, the Uniter's EDHREC gaps ───────────────────────────────────────
+
+fn your_legend() -> R {
+    R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::ControlledByYou)
+}
+
+/// Rivendell — legendary land; enters tapped unless you control a legendary
+/// creature; {T}: Add {U}; {1}{U}, {T}: Scry 2, only with a legendary
+/// creature.
+pub fn rivendell() -> CardDefinition {
+    let legend_here = || Predicate::SelectorExists(Selector::EachPermanent(your_legend()));
+    CardDefinition {
+        name: "Rivendell",
+        card_types: vec![CardType::Land],
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![StaticAbility {
+            description: "Rivendell enters tapped unless you control a legendary creature.",
+            effect: StaticEffect::EntersTappedUnless { applies_to: Selector::This, condition: legend_here() },
+        }],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Blue),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                tap_cost: true,
+                condition: Some(legend_here()),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Aragorn, Hornburg Hero — {1}{R}{G}{W} 4/4. Attacking creatures you control
+/// have first strike and renown 1; a renowned creature of yours that deals
+/// combat damage to a player doubles its +1/+1 counters.
+pub fn aragorn_hornburg_hero() -> CardDefinition {
+    use crate::effect::shortcut::renown;
+    let attacking = || Selector::EachPermanent(R::Creature.and(R::IsAttacking).and(R::ControlledByYou));
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Attacking creatures you control have first strike.",
+                effect: StaticEffect::GrantKeyword { applies_to: attacking(), keyword: Keyword::FirstStrike },
+            },
+            StaticAbility {
+                description: "Attacking creatures you control have renown 1.",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: R::Creature.and(R::IsAttacking).and(R::ControlledByYou),
+                    ability: Box::new(renown(1)),
+                },
+            },
+            StaticAbility {
+                description: "Whenever a renowned creature you control deals combat damage to a player, double the number of +1/+1 counters on it.",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: R::Creature.and(R::ControlledByYou),
+                    ability: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
+                            .with_filter(Predicate::SourceIsRenowned),
+                        effect: Effect::DoubleCountersOnEach { what: Selector::This, kind: CounterType::PlusOnePlusOne },
+                    }),
+                },
+            },
+        ],
+        ..legend(
+            "Aragorn, Hornburg Hero",
+            cost(&[generic(1), r(), g(), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            4,
+            4,
+        )
+    }
+}
+
+/// Faramir, Prince of Ithilien — {2}{W}{U} 3/3. At your end step, choose an
+/// opponent; at their next end step, draw if they didn't attack you that
+/// turn, else three 1/1 white Human Soldiers.
+pub fn faramir_prince_of_ithilien() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    let soldier = Arc::new(TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::ChooseOpponentThen {
+                then: Box::new(Effect::DelayUntilWithCapture {
+                    kind: DelayedTriggerKind::TargetsNextEndStep,
+                    capture: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                    body: Box::new(Effect::If {
+                        cond: Predicate::PlayerAttackedYouThisTurn(PlayerRef::Target(0)),
+                        then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: soldier }),
+                        else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    }),
+                }),
+            },
+        }],
+        ..legend(
+            "Faramir, Prince of Ithilien",
+            cost(&[generic(2), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Noble],
+            3,
+            3,
+        )
+    }
+}
+
+/// Katilda, Dawnhart Prime — {G}{W} 1/1. Protection from Werewolves; your
+/// Humans have "{T}: Add one mana of any of this creature's colors";
+/// {4}{G}{W}, {T}: a +1/+1 counter on each creature you control.
+pub fn katilda_dawnhart_prime() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        keywords: vec![Keyword::ProtectionFromCreatureType(CreatureType::Werewolf)],
+        static_abilities: vec![StaticAbility {
+            description: "Human creatures you control have \"{T}: Add one mana of any of this creature's colors.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::HasCreatureType(CreatureType::Human)).and(R::ControlledByYou)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColorOfSource },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g(), w()]),
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..legend("Katilda, Dawnhart Prime", cost(&[g(), w()]), vec![CreatureType::Human, CreatureType::Warlock], 1, 1)
+    }
+}
+
+/// Pippin, Guard of the Citadel — {W}{U} 2/2 vigilance, ward {1}. {T}: another
+/// target creature you control gains protection from the card type of your
+/// choice until end of turn.
+pub fn pippin_guard_of_the_citadel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Ward(crate::card::WardCost::generic(1))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantProtectionFromChosenCardType {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Pippin, Guard of the Citadel",
+            cost(&[w(), u()]),
+            vec![CreatureType::Halfling, CreatureType::Soldier],
+            2,
+            2,
+        )
+    }
+}
+
+/// Éowyn, Fearless Knight — {2}{R}{W} 3/4 haste. Entering, exile target
+/// creature an opponent controls with greater power; your legendary creatures
+/// gain protection from each of its colors until end of turn.
+pub fn eowyn_fearless_knight() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        // The colours are read before the exile takes the creature away.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GrantProtectionFromColorsOf {
+                what: Selector::EachPermanent(your_legend()),
+                of: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::PowerGreaterThanSource)),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Exile { what: Selector::Target(0) },
+        ]))],
+        ..legend("Éowyn, Fearless Knight", cost(&[generic(2), r(), w()]), vec![CreatureType::Human, CreatureType::Knight], 3, 4)
+    }
+}
+
+/// Friendly Rivalry — {R}{G} Instant. Target creature you control and up to
+/// one other target legendary creature you control each deal damage equal to
+/// their power to target creature you don't control. (Slots: yours, theirs,
+/// then the optional legend.)
+pub fn friendly_rivalry() -> CardDefinition {
+    CardDefinition {
+        name: "Friendly Rivalry",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::OptionalTargets {
+            min: 2,
+            body: Box::new(Effect::Seq(vec![
+                Effect::DealDamageFrom {
+                    source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou.negate()) },
+                    amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                },
+                Effect::DealDamageFrom {
+                    source: Selector::TargetFiltered { slot: 2, filter: your_legend().and(R::NameDiffersFromOtherTargets) },
+                    to: Selector::Target(1),
+                    amount: Value::PowerOf(Box::new(Selector::Target(2))),
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}
