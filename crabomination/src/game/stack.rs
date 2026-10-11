@@ -644,11 +644,16 @@ impl GameState {
             self.expire_end_of_combat_effects();
             self.revert_temporary_control(&[crate::effect::Duration::EndOfCombat]);
             self.revert_temporary_copies(&[crate::effect::Duration::EndOfCombat]);
+            self.end_combat_control();
             let mut cleanup = self.process_attacking_token_cleanup();
             events.append(&mut cleanup);
         }
 
         self.step = next;
+        // CR 723.2 — a combat-phase player-control grant starts with the phase.
+        if next == TurnStep::BeginCombat && !self.pending_combat_control.is_empty() {
+            self.begin_combat_control();
+        }
         // Per-step draw tallies reset at every step boundary (Orcish
         // Bowmasters' "first card drawn in the draw step" exemption).
         // Only *write* when the tally is non-zero: `&mut` on a `Player`
@@ -6292,6 +6297,7 @@ impl GameState {
             }
         }
         retain_cold!(self.pending_player_control, |(c, ctrl)| *c != p && *ctrl != p);
+        self.drop_combat_control_for(p);
         // CR 800.4a / 800.4h — a combat declaration handed to the departed seat
         // (Master Warcraft's attackers and blockers, Odric's blockers) goes
         // back to the seats the rules name; left in place, the declare step

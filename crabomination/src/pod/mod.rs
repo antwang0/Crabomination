@@ -9,6 +9,7 @@
 //! It is not on the 2-player throughput path and does not touch it.
 
 pub mod decks;
+mod controlled;
 pub(crate) mod fuzz;
 pub mod power;
 mod power_table;
@@ -3186,6 +3187,13 @@ fn play_pod_game(
                 action = crate::game::GameAction::PassPriority;
                 settled = None;
             }
+            // CR 723.5 — a controlled seat plays the controller's policy; an
+            // override the rules reject falls back to the seat's own action.
+            let mut fallback = None;
+            if let Some(forced) = controlled::controller_override(&g, seat, &action) {
+                fallback = Some(std::mem::replace(&mut action, forced));
+                settled = None;
+            }
             let is_pass = matches!(action, crate::game::GameAction::PassPriority);
             // Keyed against the pre-action state: a cast names the card while
             // it is still in the zone it is cast from.
@@ -3195,7 +3203,11 @@ fn play_pod_game(
                 g = *settled;
                 true
             } else {
-                match g.perform_action(action) {
+                let result = match (g.perform_action(action), fallback) {
+                    (Err(_), Some(own)) => g.perform_action(own),
+                    (r, _) => r,
+                };
+                match result {
                     Ok(events) => {
                         g.recycle_events(events);
                         true

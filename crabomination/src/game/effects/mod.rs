@@ -12145,6 +12145,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ControlPlayerNextCombat { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.queue_combat_control(p, ctx.controller);
+                }
+                Ok(())
+            }
+
             Effect::PutCardFromHandOnTopOfLibrary { who } => {
                 let players: Vec<usize> = self.resolve_selector(who, ctx).into_iter()
                     .filter_map(|e| match e { EntityRef::Player(p) => Some(p), _ => None })
@@ -34589,53 +34596,38 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SearchSplitWithOpponent { count } => {
-                use crate::card::CardType;
-                use crate::effect::ZoneDest;
+            Effect::SearchSplitWithOpponent { count, filter, mv_at_most_x, graveyard, denied, rest } => {
                 let p = ctx.controller;
-                let cap = ctx.x_value;
+                let cap = if *mv_at_most_x { ctx.x_value } else { u32::MAX };
                 self.players[p].searched_library_this_turn = true;
-                // Candidates: creature cards in the controller's library +
-                // graveyard, MV ≤ X, distinct names; take the biggest `count`.
+                // Candidates: `filter` cards in the controller's library (+
+                // graveyard), MV ≤ cap, distinct names; take the biggest `count`.
+                let gy: &[CardInstance] = if *graveyard { &self.players[p].graveyard } else { &[] };
                 let mut candidates: Vec<(CardId, &'static str, u32)> = self.players[p]
                     .library
                     .iter()
-                    .chain(self.players[p].graveyard.iter())
-                    .filter(|c| {
-                        c.definition.card_types.contains(&CardType::Creature)
-                            && c.definition.cost.cmc() <= cap
-                    })
+                    .chain(gy.iter())
+                    .filter(|c| c.definition.cost.cmc() <= cap && self.evaluate_requirement_on_card(filter, c, p))
                     .map(|c| (c.id, c.definition.name, c.definition.cost.cmc()))
                     .collect();
                 candidates.sort_by_key(|&(_, _, mv)| std::cmp::Reverse(mv));
-                let mut picked: Vec<(CardId, u32)> = Vec::new();
+                let mut picked: Vec<CardId> = Vec::new();
                 let mut names: Vec<&str> = Vec::new();
-                for (cid, name, mv) in candidates {
+                for (cid, name, _) in candidates {
                     if picked.len() as u32 >= *count {
                         break;
                     }
                     if !names.contains(&name) {
                         names.push(name);
-                        picked.push((cid, mv));
+                        picked.push(cid);
                     }
                 }
                 // The opponent denies the two biggest (picked is MV-sorted).
-                let denied: Vec<CardId> = picked.iter().take(2).map(|(c, _)| *c).collect();
-                for (cid, _) in picked.iter().skip(2) {
-                    self.move_card_to(
-                        *cid,
-                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
-                        ctx,
-                        events,
-                    );
+                for cid in picked.iter().skip(2) {
+                    self.move_card_to(*cid, rest, ctx, events);
                 }
-                for cid in denied {
-                    self.move_card_to(
-                        cid,
-                        &ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::Shuffled },
-                        ctx,
-                        events,
-                    );
+                for cid in picked.iter().take(2) {
+                    self.move_card_to(*cid, denied, ctx, events);
                 }
                 Ok(())
             }

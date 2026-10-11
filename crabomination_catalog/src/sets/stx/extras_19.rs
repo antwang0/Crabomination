@@ -10,7 +10,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft, target_filtered};
-use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Duration, LibraryPosition, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Emergent Sequence — {1}{G} Sorcery. Search your library for a basic land,
@@ -1028,7 +1028,14 @@ pub fn ecological_appreciation() -> CardDefinition {
         cost: cost(&[x(), generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::SearchSplitWithOpponent { count: 4 },
+            Effect::SearchSplitWithOpponent {
+                count: 4,
+                filter: SelectionRequirement::Creature,
+                mv_at_most_x: true,
+                graveyard: true,
+                denied: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Shuffled },
+                rest: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
             Effect::ExileResolvingSpell,
         ]),
         ..Default::default()

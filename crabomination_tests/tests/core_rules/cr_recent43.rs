@@ -1,5 +1,6 @@
 //! CR conformance for the Mirrodin-completion pass:
-//! - CR 723 — controlling another player during their next turn (Mindslaver).
+//! - CR 723 — controlling another player during their next turn (Mindslaver),
+//!   and for one combat phase (CR 723.2, Secret of Bloodbending).
 //! - CR 605.1a — a mana ability's `{T}` fires the tapped-for-mana event, and
 //!   the ability itself never uses the stack.
 //! - CR 500.8 / 502-506 — a turn-scoped step skip actually skips the step.
@@ -99,6 +100,77 @@ fn cr_723_4_controller_sees_the_controlled_hand() {
     let view = crabomination::server::view::project(&g, 0);
     assert!(matches!(view.players[1].hand[0], crabomination::net::HandCardView::Known(_)));
     assert_eq!(view.players[1].controlled_by, Some(0));
+}
+
+/// Give every seat a library so nobody decks out on a draw (CR 704.5b).
+fn stock(g: &mut GameState) {
+    for seat in 0..g.players.len() {
+        for _ in 0..10 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+}
+
+/// Step `g` forward until `step` on `seat`'s turn.
+fn run_to(g: &mut GameState, seat: usize, step: TurnStep) {
+    for _ in 0..200 {
+        if g.active_player_idx == seat && g.step == step {
+            return;
+        }
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+    panic!("never reached {step:?} on seat {seat}'s turn");
+}
+
+/// CR 723.2 — a limited-duration control (Secret of Bloodbending's "during
+/// their next combat phase") starts with that combat phase and ends with it.
+#[test]
+fn cr_723_2_combat_phase_control_lasts_one_combat_phase() {
+    let mut g = main_phase();
+    stock(&mut g);
+    g.pending_combat_control.push((1, 0));
+    run_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert_eq!(g.acting_seat_for(1), 1, "not before their combat phase");
+    run_to(&mut g, 1, TurnStep::BeginCombat);
+    assert_eq!(g.acting_seat_for(1), 0, "seat 0 runs seat 1's combat");
+    assert!(g.pending_combat_control.is_empty());
+    run_to(&mut g, 1, TurnStep::PostCombatMain);
+    assert_eq!(g.acting_seat_for(1), 1, "the combat phase is over");
+    assert!(g.combat_control_restore.is_none());
+}
+
+/// CR 723.2 + 723.1 — a whole-turn grant underneath a combat-phase one
+/// resumes when that combat phase ends.
+#[test]
+fn cr_723_2_combat_control_hands_back_to_a_whole_turn_controller() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    stock(&mut g);
+    g.pending_player_control.push((1, 2));
+    g.pending_combat_control.push((1, 0));
+    run_to(&mut g, 1, TurnStep::Upkeep);
+    assert_eq!(g.acting_seat_for(1), 2);
+    run_to(&mut g, 1, TurnStep::DeclareAttackers);
+    assert_eq!(g.acting_seat_for(1), 0, "CR 723.1a — the newer effect works");
+    run_to(&mut g, 1, TurnStep::PostCombatMain);
+    assert_eq!(g.acting_seat_for(1), 2, "back to the whole-turn controller");
+}
+
+/// CR 800.4a/b — a combat grant naming a seat that left the game, on either
+/// side, never lands.
+#[test]
+fn cr_800_4b_combat_control_by_a_departed_player_never_lands() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    stock(&mut g);
+    g.pending_combat_control.push((1, 2));
+    let _ = g.concede(2);
+    assert!(g.pending_combat_control.is_empty());
+    run_to(&mut g, 1, TurnStep::DeclareAttackers);
+    assert_eq!(g.acting_seat_for(1), 1);
 }
 
 // ── CR 605.1a — mana abilities ──

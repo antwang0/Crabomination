@@ -11817,12 +11817,21 @@ pub enum Effect {
     /// top); the land branch puts it onto the battlefield and returns this
     /// spell to hand via `return_resolving_spell_to_hand`.
     UnexpectedResults,
-    /// Ecological Appreciation: search your library and graveyard for up to
-    /// `count` creature cards with different names and mana value ≤ X
-    /// (`Value::XFromCost`); an opponent chooses two to shuffle into your
-    /// library, the rest enter the battlefield. Auto-pickers: caster takes
-    /// the highest-MV candidates, the opponent denies the two biggest.
-    SearchSplitWithOpponent { count: u32 },
+    /// Search your library (and graveyard, `graveyard`) for up to `count`
+    /// `filter` cards with different names (mana value ≤ X when `mv_at_most_x`);
+    /// an opponent chooses two for `denied`, the rest go to `rest`.
+    /// Ecological Appreciation (two shuffled back, the rest onto the
+    /// battlefield), Elemental Teachings (two to the graveyard, the rest onto
+    /// the battlefield tapped). Auto-pickers: caster takes the highest-MV
+    /// candidates in library order, the opponent denies the first two.
+    SearchSplitWithOpponent {
+        count: u32,
+        filter: SelectionRequirement,
+        mv_at_most_x: bool,
+        graveyard: bool,
+        denied: ZoneDest,
+        rest: ZoneDest,
+    },
     /// Fact or Fiction / Atris — reveal the top `count` cards of your library;
     /// an opponent separates them into two piles; put one pile into your hand
     /// and the other into your graveyard. The split + pick are modeled by a
@@ -12160,6 +12169,9 @@ pub enum Effect {
     /// Registers a pending control entry consumed when that player actually
     /// takes a turn (Mindslaver).
     ControlPlayerNextTurn { who: PlayerRef },
+    /// CR 723.2 — "You control target opponent during their next combat
+    /// phase" (Secret of Bloodbending): control for that one combat phase only.
+    ControlPlayerNextCombat { who: PlayerRef },
     /// CR 723.1 — "The first player controls the second player during the
     /// second player's next turn, and the second player controls the first
     /// player during the first player's next turn" (Cruel Entertainment).

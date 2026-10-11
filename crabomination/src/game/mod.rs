@@ -138,6 +138,7 @@ mod storied;
 mod could_produce;
 // CR 508.4 — put onto the battlefield attacking, never declared.
 mod enter_attacking;
+mod player_control;
 // CR 614.1a — Jinnie Fay's "instead create that many" token replacement.
 mod token_replacement;
 // CR 205.4e — a legendary instant or sorcery needs a legendary creature or planeswalker.
@@ -2095,6 +2096,14 @@ pub struct ColdState {
     /// overwrites the earlier one (CR 723.1a).
     #[serde(default)]
     pub pending_player_control: Vec<(usize, usize)>,
+    /// CR 723.2 — `(controlled, controller)` pairs waiting for `controlled`'s
+    /// next combat phase (Secret of Bloodbending); `player_control.rs`.
+    #[serde(default)]
+    pub pending_combat_control: Vec<(usize, usize)>,
+    /// The combat-phase control live now: `(seat, the slot it replaced)`, put
+    /// back as that combat phase ends.
+    #[serde(default)]
+    pub combat_control_restore: Option<(usize, Option<usize>)>,
     /// Registered replacement effects (Phase H — Commander prerequisite).
     /// Walked by zone-change paths (`place_card_in_dest`,
     /// `remove_from_battlefield_to_*`) at placement time; a matching
@@ -10542,6 +10551,11 @@ impl GameState {
     /// starting, and drop any control that expired with the previous turn.
     /// Called from the turn-begin path.
     pub fn apply_pending_player_control(&mut self, seat: usize) {
+        // A turn ended mid-combat (CR 723.2's grant never saw its phase end)
+        // carries no combat control into the next one.
+        if self.combat_control_restore.is_some() {
+            self.combat_control_restore = None;
+        }
         // CR 723.1a — the most recently created effect wins.
         let Some(pos) = self.pending_player_control.iter().rposition(|(c, _)| *c == seat) else {
             // Nobody takes control this turn, so every slot clears — and the
@@ -10555,15 +10569,9 @@ impl GameState {
             return;
         };
         self.controlled_by.clear();
-        self.controlled_by.resize(self.players.len(), None);
         let (_, controller) = self.pending_player_control.remove(pos);
         retain_cold!(self.pending_player_control, |(c, _)| *c != seat);
-        self.controlled_by[seat] = Some(controller);
-        // CR 723.4 — the controller sees everything the controlled player
-        // can see, starting with their hand.
-        if !self.hands_revealed_to.contains(&(controller, seat)) {
-            self.hands_revealed_to.push((controller, seat));
-        }
+        self.set_player_controller(seat, Some(controller));
     }
 
     /// Controller of a damage source: the battlefield permanent's controller,
