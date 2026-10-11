@@ -34646,6 +34646,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantCastFromAnywhereButHand
             // Lier — read by the flashback-cast path / graveyard view.
             | StaticEffect::GraveyardInstantsSorceriesHaveFlashback
+            | StaticEffect::GraveyardMatchingHaveFlashback { .. }
             // Carth the Lion — read where loyalty activation costs apply.
             | StaticEffect::LoyaltyAbilitiesCostExtra(_)
             // Zabaz — read where the modular death trigger moves counters.

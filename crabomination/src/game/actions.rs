@@ -3659,6 +3659,29 @@ impl crate::game::GameState {
             }
             _ => false,
         };
+        // The filtered grant (Iroh, Grand Lotus), its own cost or the card's.
+        let matching = |sa: &crate::card::StaticAbility| {
+            let effect = match &sa.effect {
+                crate::effect::StaticEffect::WhileYourTurn { inner } if my_turn => &**inner,
+                other => other,
+            };
+            match effect {
+                crate::effect::StaticEffect::GraveyardMatchingHaveFlashback { filter, cost }
+                    if self.evaluate_requirement_on_card(filter, card, seat) =>
+                {
+                    Some(cost.clone().unwrap_or_else(|| card.definition.cost.clone()))
+                }
+                _ => None,
+            }
+        };
+        if let Some(cost) = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .find_map(|c| c.definition.static_abilities.iter().find_map(matching))
+        {
+            return Some(cost);
+        }
         let granted = self
             .battlefield
             .iter()
