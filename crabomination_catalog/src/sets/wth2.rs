@@ -1674,6 +1674,7 @@ pub fn call_of_the_wild() -> CardDefinition {
                 haste: false,
                 sacrifice_at_next_end_step: false,
                 miss_to_graveyard: true,
+                tapped: false,
             },
             ..Default::default()
         }],

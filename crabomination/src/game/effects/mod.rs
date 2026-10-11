@@ -12021,6 +12021,7 @@ impl GameState {
                 haste,
                 sacrifice_at_next_end_step,
                 miss_to_graveyard,
+                tapped,
             } => {
                 let p = ctx.controller;
                 let Some(top) = self.players[p].library.first() else { return Ok(()) };
@@ -12041,7 +12042,7 @@ impl GameState {
                 self.place_card_in_dest(
                     card,
                     p,
-                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *tapped },
                     events,
                 );
                 if *haste {

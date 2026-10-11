@@ -283,6 +283,7 @@ pub fn killer_instinct() -> CardDefinition {
                 haste: true,
                 sacrifice_at_next_end_step: true,
                 miss_to_graveyard: false,
+                tapped: false,
             },
         }],
         ..Default::default()

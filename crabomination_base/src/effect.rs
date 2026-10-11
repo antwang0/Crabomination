@@ -6467,6 +6467,9 @@ pub enum Effect {
         /// of leaving the miss on top.
         #[serde(default)]
         miss_to_graveyard: bool,
+        /// The hit enters tapped (Galadriel of Lothlórien's land).
+        #[serde(default)]
+        tapped: bool,
     },
     /// "Look at the top `count` cards of your library. For each, put it into
     /// your graveyard unless you pay `life` life. Then put the rest into your
