@@ -1983,7 +1983,6 @@ library-exile event.
 | Card | Residual | Why |
 |---|---|---|
 | 🟡 Ardenn, Intrepid Archaeologist | the combat attach targets a creature only, not "permanent or player" | no Curse sits in a target deck and an Equipment can only hold a creature (CR 301.5c); attaching to a player needs a player-host attach path |
-| 🟡 Behold the Sinister Six! | "with different names" isn't checked among the six targets | a singleton Commander graveyard holds no two names alike; a 60-card graveyard could return two copies |
 | 🟡 Venom, Deadly Devourer | the reflexive "when you do" Symbiote target is chosen up front with the graveyard card | reflexive triggers with their own target slot aren't split from the activation's targets |
 | 🟡 Echoes of Eternity | a colorless *spell's* triggered ability and a leaves-the-battlefield trigger of a colorless permanent don't fire an additional time | the trigger doubler reads its source live on the battlefield; a spell source or last-known source isn't consulted |
 | 🟡 Maralen, Fae Ascendant | the free cast's mana-value cap (your Elves and Faeries) is read as the cards are exiled, not as the spell is cast | `ExileTopAndGrantMayPlay.max_mana_value` is evaluated at grant time; a cast-time cap on a may-play grant doesn't exist |

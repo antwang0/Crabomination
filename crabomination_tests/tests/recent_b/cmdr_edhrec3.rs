@@ -1879,6 +1879,34 @@ fn behold_the_sinister_six_reanimates_a_team() {
     assert!(dead.iter().all(|id| g.battlefield_find(*id).is_some()));
 }
 
+/// Behold the Sinister Six!: CR 601.2c — "with different names" binds the
+/// targets together, so a second Grizzly Bears can't be chosen beside the
+/// first (the cast is rejected), while two different names are fine.
+#[test]
+fn behold_the_sinister_six_rejects_two_targets_with_one_name() {
+    let mut g = pod(2);
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let c = g.add_card_to_graveyard(0, catalog::gray_ogre());
+    let six = g.add_card_to_hand(0, catalog::behold_the_sinister_six());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    let cast = |g: &mut GameState, extra: CardId| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: six,
+            target: Some(Target::Permanent(a)),
+            additional_targets: vec![Target::Permanent(extra)],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast(&mut g, b).is_err(), "two Grizzly Bears share a name");
+    cast(&mut g, c).expect("different names");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(c).is_some());
+    assert!(g.battlefield_find(b).is_none());
+}
+
 fn set_loyalty(g: &mut GameState, id: CardId, n: u32) {
     use crabomination::card::CounterType;
     let c = g.battlefield_find_mut(id).unwrap();

@@ -2584,7 +2584,7 @@ pub fn behold_the_sinister_six() -> CardDefinition {
         effect: Effect::ApplyToTargets {
             max_targets: 6,
             min_targets: 0,
-            filter: R::Creature.from_your_graveyard(),
+            filter: R::Creature.from_your_graveyard().and(R::NameDiffersFromOtherTargets),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
