@@ -152,7 +152,7 @@ the handoff.
 - **Sweeps:** fuzzed strict 382001 (all 381 decks, 10,080 games): 2 aborts, both fixed above, 7 undecided
   by rule; 382101 (seats 375-387, 560 games): 0 bad; 382201 (all decks, 8,500 games): 0 aborts, 8
   undecided by rule; fuzzed strict 391001 (seats 382-391, 400 games): 0 aborts, 2 CR 104.4a draws;
-  `--a dflt` 392001 (all decks): in progress at this commit, no aborts yet (two draws, one board cap).
+  `--a dflt` 392001 (all decks): stopped at the 2-hour task limit, no aborts in what ran (two draws, one board cap).
 - **Open (INCOMPLETE_CARDS "EDHREC average-deck seats"):** Elemental Teachings' split is heuristic,
   Galadriel's Dismissal kicked targets only the player, Esoteric Duplicator can't copy a sacrificed
   TOKEN (no LKI past the trigger), Captain America's Throw picks the Equipment, Exchange of Words outlasts the enchantment, Court of Locthwain's monarch grant replaces the
