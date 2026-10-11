@@ -2437,3 +2437,108 @@ fn echoes_of_eternity_copies_and_doubles_colorless() {
     assert_eq!(named(&g, "Ichor Wellspring"), 2);
     assert_eq!(g.players[0].hand.len(), 4);
 }
+
+// ── The Mycotyrant's list ───────────────────────────────────────────────────
+
+/// Matzalantli, the Great Door: the transform needs four permanent types
+/// among graveyard cards (instants don't count, CR 110.4a); The Core then taps
+/// for X mana of one color, X = permanent cards in the graveyard.
+#[test]
+fn matzalantli_opens_on_four_permanent_types() {
+    let mut g = pod(2);
+    let door = ready(&mut g, 0, catalog::matzalantli_the_great_door());
+    for def in [catalog::grizzly_bears(), catalog::sol_ring(), catalog::island(), catalog::lightning_bolt()] {
+        g.add_card_to_graveyard(0, def);
+    }
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility { card_id: door, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None })
+            .is_err(),
+        "three permanent types and an instant"
+    );
+    g.add_card_to_graveyard(0, catalog::tale_of_katara_and_toph());
+    activate(&mut g, door, 1);
+    let core = g.battlefield_find(door).unwrap();
+    assert!(core.transformed);
+    g.players[0].mana_pool.empty();
+    g.battlefield_find_mut(door).unwrap().tapped = false;
+    activate(&mut g, door, 0);
+    assert_eq!(g.players[0].mana_pool.total(), 4, "four permanent cards");
+}
+
+/// Nemata, Primeval Warden: an opponent's dying creature is exiled instead
+/// (CR 614.1a), and the "when you do" makes a Saproling.
+#[test]
+fn nemata_exiles_dying_opponents_creatures_for_saprolings() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::nemata_primeval_warden());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    cast_on(&mut g, murder, Some(Target::Permanent(bear)));
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    assert_eq!(named(&g, "Saproling"), 1);
+}
+
+/// Slimefoot, the Stowaway: {4} makes a Saproling; a Saproling of yours dying
+/// drains each opponent for 1 (CR 603.10a leaves-the-battlefield trigger).
+#[test]
+fn slimefoot_drains_when_a_saproling_dies() {
+    let mut g = pod(3);
+    let slime = ready(&mut g, 0, catalog::slimefoot_the_stowaway());
+    flood(&mut g);
+    activate(&mut g, slime, 0);
+    let sap = g.battlefield.iter().find(|c| c.definition.name == "Saproling").unwrap().id;
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    let (me, a, b) = (g.players[0].life, g.players[1].life, g.players[2].life);
+    cast_on(&mut g, murder, Some(Target::Permanent(sap)));
+    assert_eq!((g.players[0].life, g.players[1].life, g.players[2].life), (me + 1, a - 1, b - 1));
+}
+
+/// Sporecrown Thallid: other Fungi and Saprolings get +1/+1; a bear doesn't.
+#[test]
+fn sporecrown_thallid_pumps_fungi_and_saprolings() {
+    let mut g = pod(2);
+    let crown = ready(&mut g, 0, catalog::sporecrown_thallid());
+    let slime = ready(&mut g, 0, catalog::slimefoot_the_stowaway());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let v = g.compute_battlefield();
+    let pt = |id| v.iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)).unwrap();
+    assert_eq!(pt(slime), (3, 4));
+    assert_eq!(pt(bear), (2, 2));
+    assert_eq!(pt(crown), (2, 2));
+}
+
+/// Fungal Rebirth: the permanent card returns, and the Saprolings come only
+/// once a creature died this turn (CR 608.2c).
+#[test]
+fn fungal_rebirth_adds_saprolings_after_a_death() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let rebirth = g.add_card_to_hand(0, catalog::fungal_rebirth());
+    flood(&mut g);
+    cast_on(&mut g, rebirth, Some(Target::Permanent(ring)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == ring));
+    assert_eq!(named(&g, "Saproling"), 0);
+
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    cast_on(&mut g, murder, Some(Target::Permanent(bear)));
+    let ring2 = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let rebirth = g.add_card_to_hand(0, catalog::fungal_rebirth());
+    cast_on(&mut g, rebirth, Some(Target::Permanent(ring2)));
+    assert_eq!(named(&g, "Saproling"), 2);
+}
+
+/// Fungal Sprouting: X Saprolings for the greatest power you control.
+#[test]
+fn fungal_sprouting_counts_the_biggest_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::serra_angel());
+    let sprout = g.add_card_to_hand(0, catalog::fungal_sprouting());
+    flood(&mut g);
+    cast_on(&mut g, sprout, None);
+    assert_eq!(named(&g, "Saproling"), 4);
+}

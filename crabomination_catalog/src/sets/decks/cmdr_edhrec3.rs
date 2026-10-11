@@ -5,7 +5,8 @@
 //! Rakdos, Lord of Riots, Be'lakor's Demons, Myrel, Shield of Argive, Fire Lord
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
 //! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin, Katara, the
-//! Fearless and Azlask, the Swelling Scourge. Tests in `tests/recent_b/cmdr_edhrec3.rs`.
+//! Fearless, Azlask, the Swelling Scourge and The Mycotyrant. Tests in
+//! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
@@ -3504,6 +3505,184 @@ pub fn echoes_of_eternity() -> CardDefinition {
             }),
             effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::ONE },
         }],
+        ..Default::default()
+    }
+}
+
+// ── The Mycotyrant (BG) ─────────────────────────────────────────────────────
+
+fn saproling() -> TokenDefinition {
+    TokenDefinition {
+        name: "Saproling".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+fn saprolings(count: Value) -> Effect {
+    Effect::CreateToken { who: PlayerRef::You, count, definition: Arc::new(saproling()) }
+}
+
+/// Matzalantli, the Great Door // The Core — {3} legendary artifact. {T}:
+/// loot. {4}, {T}: transform, only with four or more permanent types among
+/// cards in your graveyard. The Core is a legendary land tapping for X mana of
+/// any one color, X = permanent cards in your graveyard.
+pub fn matzalantli_the_great_door() -> CardDefinition {
+    let core = CardDefinition {
+        name: "The Core",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_for(ManaPayload::AnyOneColor(Value::CardsInGraveyardMatching {
+            who: PlayerRef::You,
+            filter: R::PermanentCard,
+        }))],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Matzalantli, the Great Door",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::PermanentTypesInGraveyard(PlayerRef::You),
+                    Value::Const(4),
+                )),
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(core)),
+        ..Default::default()
+    }
+}
+
+/// Nemata, Primeval Warden — {2}{B}{G} 3/4 legendary Treefolk, reach. An
+/// opponent's creature that would die is exiled instead, and you create a
+/// Saproling (CR 614.1a + reflexive "when you do"). {G}, sacrifice a
+/// Saproling: +2/+2 until end of turn. {1}{B}, sacrifice two Saprolings: draw.
+pub fn nemata_primeval_warden() -> CardDefinition {
+    let sap = || R::HasCreatureType(CreatureType::Saproling);
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "If a creature an opponent controls would die, exile it instead. When you do, create a \
+                          1/1 green Saproling creature token.",
+            effect: StaticEffect::ExileDyingOpponentCreatures {
+                when_you_do: Some(Box::new(saprolings(Value::ONE))),
+                tokens_too: true,
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                sac_other_filter: Some((sap(), 1)),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b()]),
+                sac_other_filter: Some((sap(), 2)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+        ],
+        ..legend("Nemata, Primeval Warden", cost(&[generic(2), b(), g()]), vec![CreatureType::Treefolk], 3, 4)
+    }
+}
+
+/// Slimefoot, the Stowaway — {1}{B}{G} 2/3 legendary Fungus. A Saproling of
+/// yours dying drains each opponent for 1. {4}: create a Saproling.
+pub fn slimefoot_the_stowaway() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Saproling) },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            effect: saprolings(Value::ONE),
+            ..Default::default()
+        }],
+        ..legend("Slimefoot, the Stowaway", cost(&[generic(1), b(), g()]), vec![CreatureType::Fungus], 2, 3)
+    }
+}
+
+/// Sporecrown Thallid — {1}{G} 2/2 Fungus. Each other Fungus or Saproling
+/// creature you control gets +1/+1.
+pub fn sporecrown_thallid() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each other creature you control that's a Fungus or Saproling gets +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: yours(
+                    R::Creature
+                        .and(R::OtherThanSource)
+                        .and(R::HasCreatureType(CreatureType::Fungus).or(R::HasCreatureType(CreatureType::Saproling))),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..creature("Sporecrown Thallid", cost(&[generic(1), g()]), vec![CreatureType::Fungus], 2, 2)
+    }
+}
+
+/// Fungal Rebirth — {2}{G} Instant. Return target permanent card from your
+/// graveyard to your hand; two Saprolings if a creature died this turn.
+pub fn fungal_rebirth() -> CardDefinition {
+    CardDefinition {
+        name: "Fungal Rebirth",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::PermanentCard.and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::CreaturesDiedThisTurnTotal, Value::ONE),
+                then: Box::new(saprolings(Value::Const(2))),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fungal Sprouting — {3}{G} Sorcery. X Saprolings, X = the greatest power
+/// among creatures you control.
+pub fn fungal_sprouting() -> CardDefinition {
+    CardDefinition {
+        name: "Fungal Sprouting",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: saprolings(Value::GreatestPowerControlled { who: PlayerRef::You }),
         ..Default::default()
     }
 }
