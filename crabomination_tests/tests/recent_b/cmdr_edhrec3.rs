@@ -2954,6 +2954,29 @@ fn selfless_safewright_shields_its_kin() {
     assert!(e.keywords().contains(&crabomination::card::Keyword::Indestructible));
 }
 
+/// CR 400.7 — Safewright dead before its trigger resolves: the kin are still
+/// shielded off the resolution's choice, but the graveyard card is a new
+/// object and keeps no chosen type (an audit pod, seed 38200284).
+#[test]
+fn selfless_safewright_gone_before_its_trigger_leaves_no_stamp() {
+    let mut g = pod(2);
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let wright = g.add_card_to_hand(0, catalog::selfless_safewright());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(crabomination::card::CreatureType::Elf)]));
+    g.perform_action(GameAction::CastSpell { card_id: wright, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    g.resolve_top_of_stack().expect("the creature spell");
+    assert!(!g.stack.is_empty(), "the ETB trigger waits");
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![wright]) }, &ctx).expect("destroy");
+    drain_stack(&mut g);
+    let dead = g.players[0].graveyard.iter().find(|c| c.id == wright).expect("in the graveyard");
+    assert!(dead.chosen_creature_type.is_none());
+    let v = g.compute_battlefield();
+    assert!(v.iter().find(|c| c.id == elf).unwrap().keywords().contains(&crabomination::card::Keyword::Hexproof));
+}
+
 /// Glen Elendra's Answer: counters an opponent's spell and makes a Faerie for
 /// it (CR 701.6a).
 #[test]

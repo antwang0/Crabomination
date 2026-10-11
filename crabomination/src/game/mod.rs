@@ -29896,11 +29896,19 @@ impl GameState {
                     Some(first) if !options.contains(ct) => first,
                     _ => ct,
                 };
-                if let Some(card) = self.find_card_anywhere_mut(target_id) {
+                // CR 400.7 — a source that left the battlefield before its
+                // trigger resolved (a flashed-in Selfless Safewright chumping)
+                // is a new object: no stamp on the graveyard/exile card.
+                let left = self.exile.iter().any(|c| c.id == target_id)
+                    || self.players.iter().any(|p| {
+                        p.graveyard.iter().chain(p.hand.iter()).chain(p.library.iter()).chain(p.command.iter())
+                            .any(|c| c.id == target_id)
+                    });
+                if !left && let Some(card) = self.find_card_anywhere_mut(target_id) {
                     card.chosen_creature_type = Some(*ct);
                 }
-                // A resolving instant/sorcery is already off the stack, so the
-                // stamp has nowhere to live — keep it as resolution scratch.
+                // A resolving instant/sorcery is already off the stack, and a
+                // departed source keeps no stamp — the resolution reads scratch.
                 self.chosen_creature_type_scratch = Some(*ct);
                 Ok(Vec::new())
             }
