@@ -5296,8 +5296,8 @@ reports 0 missing), including the Vanille ↔ Fang meld into Ragnarok
 (`Effect::Meld`). Remaining known approximations, each documented on its
 factory doc comment:
 - Zidane (opponent-gains-control → Treasure rider dropped), Y'shtola
-  (lost-4-life end-step draw omitted), Rydia (Summon-Saga reanimation
-  activated ability omitted), Squall (creature-*spell*-targeted half dropped).
+  (lost-4-life end-step draw omitted), ~~Rydia (Summon-Saga reanimation
+  activated ability omitted)~~ (2026-10-11), Squall (creature-*spell*-targeted half dropped).
 - Gogo's "this ability can't be copied" rider unmodeled; copies keep targets.
 - Memories Returning / Choco / Gilgamesh picks are auto-heuristics (no
   interactive multi-pick UI yet).

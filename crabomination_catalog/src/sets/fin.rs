@@ -974,8 +974,10 @@ pub fn angel_of_mercy() -> CardDefinition {
 }
 
 /// Rydia, Summoner of Mist — {R}{G} 1/2 Human Shaman. Landfall — whenever a land
-/// you control enters, you may discard a card; if you do, draw a card. (The
-/// "Summon" Saga-reanimation activated ability is omitted.)
+/// you control enters, you may discard a card; if you do, draw a card. Summon —
+/// {X}, {T}: return target Saga card with mana value X from your graveyard to
+/// the battlefield with a finality counter; it gains haste until end of turn.
+/// Sorcery speed.
 pub fn rydia_summoner_of_mist() -> CardDefinition {
     CardDefinition {
         name: "Rydia, Summoner of Mist",
@@ -999,6 +1001,28 @@ pub fn rydia_summoner_of_mist() -> CardDefinition {
                 }),
                 else_: None,
             },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::SpellEntersWithCounters {
+                    what: target_filtered(
+                        SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Saga)
+                            .and(SelectionRequirement::ManaValueExactlyXFromCost)
+                            .from_your_graveyard(),
+                    ),
+                    kind: CounterType::Finality,
+                    amount: Value::ONE,
+                },
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -6844,8 +6868,7 @@ pub fn summon_anima() -> CardDefinition {
 
 /// Haste Magic — {1}{R} Instant. Target creature gets +3/+1 and gains haste
 /// until end of turn. Exile the top card of your library; you may play it until
-/// end of turn. (The "until your next end step" window is modeled as end of the
-/// current turn — the intended attack-this-turn use.)
+/// your next end step.
 pub fn haste_magic() -> CardDefinition {
     CardDefinition {
         name: "Haste Magic",
@@ -7763,9 +7786,8 @@ pub fn dark_knights_greatsword() -> CardDefinition {
 
 /// Summoner's Grimoire — {3}{G} Book Equipment. Job select. Equipped creature is
 /// a Shaman and, when it attacks, you may put a creature card from your hand
-/// onto the battlefield. Equip {3}.
-/// (The "if it's an enchantment card it enters tapped and attacking" rider is
-/// approximated — the entrant simply enters under your control.)
+/// onto the battlefield; an enchantment card enters tapped and attacking (CR
+/// 508.4). Equip {3}.
 pub fn summoners_grimoire() -> CardDefinition {
     CardDefinition {
         name: "Summoner's Grimoire",
@@ -7788,8 +7810,15 @@ pub fn summoners_grimoire() -> CardDefinition {
                     tapped: false,
                     haste: false,
                     sacrifice_eot: false,
-                return_eot: false,
-                then: None,
+                    return_eot: false,
+                    then: Some(Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::LastMoved, filter: SelectionRequirement::Enchantment },
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Tap { what: Selector::LastMoved },
+                            Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    })),
                 },
             }],
             ..Default::default()
@@ -8845,10 +8874,8 @@ pub fn torgal_a_fine_hound() -> CardDefinition {
 }
 
 /// Garnet, Princess of Alexandria — {G}{W} 2/2 Human Noble Cleric with lifelink.
-/// Whenever Garnet attacks, remove a lore counter from each Saga you control and
-/// put a +1/+1 counter on Garnet for each one removed.
-/// (Approximation: the printed "any number" choice is modeled as all your Sagas
-/// that carry a lore counter.)
+/// Whenever Garnet attacks, you may remove a lore counter from each of any
+/// number of Sagas you control; a +1/+1 counter on Garnet for each one removed.
 pub fn garnet_princess_of_alexandria() -> CardDefinition {
     let sagas_with_lore = || {
         SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Saga)
@@ -8873,18 +8900,24 @@ pub fn garnet_princess_of_alexandria() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::count(Selector::EachPermanent(sagas_with_lore())),
-                },
-                Effect::RemoveCounter {
-                    what: Selector::EachPermanent(sagas_with_lore()),
-                    kind: CounterType::Lore,
-                    amount: Value::ONE,
-                },
-            ]),
+            effect: crate::effect::shortcut::choose_some_then(
+                Selector::EachPermanent(sagas_with_lore()),
+                PlayerRef::You,
+                Value::count(Selector::EachPermanent(sagas_with_lore())),
+                true,
+                Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::count(crate::effect::shortcut::chosen_one()),
+                    },
+                    Effect::RemoveCounter {
+                        what: crate::effect::shortcut::chosen_one(),
+                        kind: CounterType::Lore,
+                        amount: Value::ONE,
+                    },
+                ]),
+            ),
         }],
         ..Default::default()
     }

@@ -6112,8 +6112,9 @@ pub fn tannuk_memorial_ensign() -> CardDefinition {
 }
 
 /// Xu-Ifit, Osteoharmonist — {1}{B}{B} 2/3 Legendary Human Wizard. {T}: Return
-/// target creature card from your graveyard to the battlefield. Activate only as
-/// a sorcery. (The "is a Skeleton with no abilities" rider is dropped.)
+/// target creature card from your graveyard to the battlefield; it's a Skeleton
+/// in addition to its other types and has no abilities (layers 4 and 6, for as
+/// long as it stays). Activate only as a sorcery.
 pub fn xu_ifit_osteoharmonist() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {
@@ -6130,15 +6131,23 @@ pub fn xu_ifit_osteoharmonist() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
-            effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
-                ),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
-            },
+                Effect::AddCreatureTypes {
+                    what: Selector::LastMoved,
+                    creature_types: vec![CreatureType::Skeleton],
+                    duration: Duration::Permanent,
+                },
+                Effect::LoseAllAbilities { what: Selector::LastMoved, duration: Duration::Permanent },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

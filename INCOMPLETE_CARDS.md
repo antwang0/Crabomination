@@ -692,12 +692,11 @@ Wolf, Leonin of the Lost Pride and Break Ties were the same shape.
   candidate lists out of `players[*].graveyard`, so no filter can aim them at
   the battlefield.
 
-⚠ **Two rows are handed to `audit_incomplete`, not fixed**: the clause is not
+⚠ **One row is handed to `audit_incomplete`, not fixed** (Rydia's Summon shipped 2026-10-11): the clause is not
 modelled at all, so there is no filter to correct.
 
 | Card | Residual |
 | --- | --- |
-| Rydia, Summoner of Mist | 🟡 the **Summon** ability ("{X}, {T}: Return target Saga card with mana value X from your graveyard to the battlefield with a finality counter on it") is not modelled; only the landfall loot ships. |
 | Jeska, Thrice Reborn / Tasha, the Witch Queen | 🟡 a multi-target loyalty ability's extra slots — Jeska's −X "each of up to three targets", Tasha's +1 "for each opponent … up to one target": `GameAction::ActivateLoyaltyAbility` carries one target, so slots past the first are `auto_extra_targets_for`'s pick, which fills permanents only and stops at the first player it prefers (Tasha's graveyard cards past the first are not filled). |
 
 Three approximations the fixes left standing, each documented at its variant:
@@ -1740,7 +1739,7 @@ full suite also caught Mai, Scornful Striker draining the *opponent*
 caster) — a trigger-column fix whose test had never run. Still one edit
 each: Touch the Spirit Realm's channel (the discard-activated body cannot
 target), Gideon's Company once a name-prefix requirement exists, Hauntwoods
-Shrieker, Eladamri, Pinnacle Starcage, Rydia, ~~Diviner's Wand~~, Urborg
+Shrieker, Eladamri, Pinnacle Starcage, ~~Rydia~~, ~~Diviner's Wand~~, Urborg
 Panther, Tephraderm's spell half, ~~Skophos Maze-Warden~~, ~~Shieldmage
 Elder~~, ~~Iroh~~ (`01WwQaPJ`), Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's
 reveal and Severance Priest's Spirit shipped the same day, with
