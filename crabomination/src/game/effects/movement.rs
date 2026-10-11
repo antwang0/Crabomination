@@ -1959,6 +1959,12 @@ impl GameState {
                     let excess = self.note_excess_damage(cid, amount, source_has_deathtouch, source);
                     self.excess_damage_this_resolution =
                         self.excess_damage_this_resolution.saturating_add(excess);
+                    if excess > 0
+                        && let Some(c) = self.battlefield_find(cid)
+                        && self.computed_is_creature(c)
+                    {
+                        events.push(GameEvent::ExcessNoncombatDamage { card_id: cid, controller: c.controller, amount: excess });
+                    }
                     // Name of the damaging source, read before the mutable
                     // borrow (Blazing Effigy's per-name tally).
                     let source_name = source

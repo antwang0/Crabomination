@@ -2925,6 +2925,7 @@ pub enum GameEventWire {
     ControlChanged { card_id: CardId, from: usize, to: usize },
     Explored { card_id: CardId, controller: usize },
     Connived { card_id: CardId, controller: usize },
+    ExcessNoncombatDamage { card_id: CardId, controller: usize, amount: u32 },
     Discovered { player: usize, value: u32 },
     BecameMonstrous { card_id: CardId },
     Transformed { card_id: CardId },
@@ -3245,6 +3246,11 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::Explored { card_id, controller, .. } => {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
             }
+            GameEvent::ExcessNoncombatDamage { card_id, controller, amount } => GameEventWire::ExcessNoncombatDamage {
+                card_id: *card_id,
+                controller: *controller,
+                amount: *amount,
+            },
             GameEvent::Connived { card_id, controller } => {
                 GameEventWire::Connived { card_id: *card_id, controller: *controller }
             }
@@ -3619,6 +3625,9 @@ impl GameEventWire {
             }
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
             E::Connived { card_id, .. } => format!("{} connived", name(*card_id)),
+            E::ExcessNoncombatDamage { card_id, amount, .. } => {
+                format!("{} was dealt {amount} excess damage", name(*card_id))
+            }
             E::Discovered { player, value } => format!("{} discovered {value}", pn(*player)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),
             E::Transformed { card_id } => format!("{} transformed", name(*card_id)),

@@ -31592,6 +31592,7 @@ impl GameState {
             GameEvent::SagaFinalChapterResolved { mana_value, .. } => *mana_value,
             // Nicanzil: 1 when a land was explored, 0 for a nonland.
             GameEvent::Explored { explored_land, .. } => *explored_land as u32,
+            GameEvent::ExcessNoncombatDamage { amount, .. } => *amount,
             _ => event_amount(ev),
         }
     }

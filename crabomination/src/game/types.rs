@@ -3058,6 +3058,9 @@ pub enum GameEvent {
     Explored { card_id: CardId, controller: usize, explored_land: bool },
     /// CR 701.50 — `card_id` connived (its controller drew and discarded).
     Connived { card_id: CardId, controller: usize },
+    /// CR 120.10 — `card_id` (controlled by `controller`) was dealt `amount`
+    /// excess noncombat damage.
+    ExcessNoncombatDamage { card_id: CardId, controller: usize, amount: u32 },
     /// CR 701.57 — `player` performed a discover for `value` (Curator of
     /// Sun's Creation's "whenever you discover" payoff reads `value` via
     /// `Value::TriggerEventAmount`).
