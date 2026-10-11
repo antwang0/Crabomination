@@ -2765,6 +2765,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARAGORN_THE_UNITER_COMMANDERS,
             main: decks::ARAGORN_THE_UNITER_MAIN,
         },
+        // Seat 386: Ragost, Deft Gastronaut's EDHREC average deck. `--pod-decks 386`.
+        PodDeck {
+            name: "Ragost, Deft Gastronaut (RW)",
+            commanders: decks::RAGOST_COMMANDERS,
+            main: decks::RAGOST_MAIN,
+        },
     ]
 }
 
@@ -4895,6 +4901,7 @@ mod tests {
             ("Galadriel, Light of Valinor", [0x0AA5, 383, 9308]),
             ("Skullbriar, the Walking Grave", [0x0AA6, 384, 9309]),
             ("Aragorn, the Uniter", [0x0AA7, 385, 9310]),
+            ("Ragost, Deft Gastronaut", [0x0AA8, 386, 9311]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -11275,3 +11275,31 @@ pub const ARAGORN_THE_UNITER_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, island, mountain, mountain, mountain,
     plains, plains, plains,
 ];
+
+pub const RAGOST_COMMANDERS: &[CardFactory] = &[ragost_deft_gastronaut];
+
+/// **Ragost, Deft Gastronaut**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 80 nonbasic cards + 9 Mountains + 10 Plains = 99.
+/// Ragost, Deft Gastronaut (RW) Food artifacts
+pub const RAGOST_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, boros_signet, caduceus_staff_of_hermes, ichor_wellspring,
+    implement_of_improvement, instant_ramen, krark_clan_ironworks, lembas, lightning_greaves,
+    liquimetal_torque, mycosynth_wellspring, nimblewright_schematic, nuka_cola_vending_machine,
+    nutrient_block, prized_statue, scrapheap, servo_schematic, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, transmutation_font, ancient_den, battlefield_forge, buried_ruin,
+    clifftop_retreat, command_tower, darksteel_citadel, furycalm_snarl, great_furnace,
+    inventors_fair, rugged_prairie, rustvale_bridge, sacred_foundry, spectator_seating,
+    sundown_pass, treasure_vault, academy_manufactor, apothecary_white, astrid_peth,
+    crime_novelist, foundry_inspector, goblin_engineer, haliya_guided_by_light,
+    illustrious_wanderglyph, ingenious_artillerist, junk_diver, leonin_elder, loyal_apprentice,
+    myr_retriever, ratchet_field_medic, reckless_fireweaver, sami_wildcat_captain,
+    scrap_trawler, solemn_simulacrum, stridehangar_automaton, syr_ginger_the_meal_ender,
+    the_gaffer, treasure_nabber, weftstalker_ardent, authority_of_the_consuls,
+    descent_into_avernus, sheltered_by_ghosts, smothering_tithe, spirit_loop,
+    weapons_manufacturing, big_score, boros_charm, chaos_warp, dispatch, generous_gift,
+    path_to_exile, swords_to_plowshares, unexpected_windfall, tezzeret_cruel_captain,
+    blasphemous_act, sevinnes_reclamation, the_battle_of_bywater, vandalblast, wake_the_past,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
