@@ -9036,6 +9036,14 @@ impl GameState {
             {
                 self.exiled_instead_by.push((src, id));
             }
+            // CR 614.6 — Ugin's Nexus: its own replacement exiles it and the
+            // same replacement grants the extra turn (no trigger, no stack).
+            if card.definition.dies_to_exile_extra_turn && resolved == crate::card::Zone::Exile {
+                let p = card.controller;
+                if let Some(pl) = self.players.get_mut(p) {
+                    pl.extra_turns = pl.extra_turns.saturating_add(1);
+                }
+            }
             // CR 702.69 — bump the turn's "permanents put into a graveyard
             // from the battlefield" tally for Gravestorm. Only when the
             // card actually landed in a graveyard (Finality / dies-to-exile

@@ -4982,6 +4982,11 @@ pub struct CardDefinition {
     /// Gloomshrieker, and the escape/Titan self-exile clauses.
     #[serde(default)]
     pub dies_to_exile: bool,
+    /// With `dies_to_exile`: "… instead exile it and take an extra turn after
+    /// this one" (Ugin's Nexus) — the replaced death banks an extra turn for
+    /// the permanent's controller.
+    #[serde(default)]
+    pub dies_to_exile_extra_turn: bool,
     /// CR 614.6 — "If this creature would die, put it on the bottom of its
     /// owner's library instead." The library sibling of `dies_to_exile`,
     /// checked at the same battlefield-death funnel (Nissa's Chosen).
