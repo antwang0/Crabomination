@@ -1518,3 +1518,114 @@ fn spirit_loop_links_and_returns() {
     destroy(&mut g, bear);
     assert!(g.players[0].hand.iter().any(|c| c.id == lp), "back to hand");
 }
+
+fn yes(g: &mut GameState, n: usize) {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new(std::iter::repeat_n(DecisionAnswer::Bool(true), n)));
+}
+
+/// Arc Reactor enters tapped and taps for three.
+#[test]
+fn arc_reactor_enters_tapped_for_three() {
+    let mut g = pod(2);
+    let arc = g.add_card_to_hand(0, catalog::arc_reactor());
+    flood(&mut g);
+    cast(&mut g, arc);
+    let arc = g.battlefield.iter().find(|c| c.definition.name == "Arc Reactor").unwrap().id;
+    assert!(g.battlefield_find(arc).unwrap().tapped);
+    g.battlefield_find_mut(arc).unwrap().tapped = false;
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, arc, 0).expect("tap");
+    assert_eq!(g.players[0].mana_pool.total(), 3);
+}
+
+/// Esoteric Duplicator: a sacrificed Implement of Improvement, {2} paid,
+/// comes back as a token copy at the next end step.
+#[test]
+fn esoteric_duplicator_copies_a_sacrificed_artifact() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 3);
+    ready(&mut g, 0, catalog::esoteric_duplicator());
+    let imp = ready(&mut g, 0, catalog::implement_of_improvement());
+    flood(&mut g);
+    yes(&mut g, 1);
+    activate(&mut g, imp, 0).expect("sacrifice");
+    assert_eq!(named(&g, "Implement of Improvement"), 0);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Implement of Improvement").expect("the copy");
+    assert!(copy.is_token);
+}
+
+/// Ugin's Nexus: destroyed, it is exiled instead and its controller banks an
+/// extra turn (CR 614.6).
+#[test]
+fn ugins_nexus_dies_into_an_extra_turn() {
+    let mut g = pod(2);
+    let nexus = ready(&mut g, 0, catalog::ugins_nexus());
+    destroy(&mut g, nexus);
+    assert!(g.exile.iter().any(|c| c.id == nexus));
+    assert_eq!(g.players[0].extra_turns, 1);
+}
+
+/// Iron Man, Bleeding Edge copies the first artifact spell each turn; Shuri
+/// makes it a {1} cheaper.
+#[test]
+fn iron_man_bleeding_edge_and_shuri_double_up_artifacts() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::iron_man_bleeding_edge());
+    ready(&mut g, 0, catalog::shuri_wakandan_inventor());
+    yes(&mut g, 4);
+    let statue = g.add_card_to_hand(0, catalog::prized_statue());
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, statue);
+    assert_eq!(named(&g, "Prized Statue"), 2, "cast for {{1}} and copied");
+    let second = g.add_card_to_hand(0, catalog::prized_statue());
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, second);
+    assert_eq!(named(&g, "Prized Statue"), 3, "once each turn");
+}
+
+/// Tony Stark digs an artifact, then becomes The Invincible Iron Man, which
+/// puts an Equipment from hand onto the battlefield attached to itself.
+#[test]
+fn tony_stark_digs_then_suits_up() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_library(0, catalog::ring_of_kalonia());
+    let tony = ready(&mut g, 0, catalog::tony_stark());
+    flood(&mut g);
+    activate(&mut g, tony, 0).expect("dig");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Ring of Kalonia"));
+    activate(&mut g, tony, 1).expect("transform");
+    assert!(g.battlefield_find(tony).unwrap().transformed);
+    let ring = g.players[0].hand.iter().find(|c| c.definition.name == "Ring of Kalonia").unwrap().id;
+    {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![ring])]));
+    }
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ring).expect("put onto the battlefield").attached_to, Some(tony));
+}
+
+/// Storm the Vault transforms at an end step with five artifacts, and Vault
+/// of Catlacan taps for a blue per artifact.
+#[test]
+fn storm_the_vault_becomes_the_vault() {
+    let mut g = pod(2);
+    let storm = ready(&mut g, 0, catalog::storm_the_vault());
+    for _ in 0..5 {
+        g.add_token_to_battlefield(0, &crabomination_base::tokens::treasure_token());
+    }
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(storm).unwrap().transformed);
+    activate(&mut g, storm, 1).expect("tap for blue");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 5);
+}

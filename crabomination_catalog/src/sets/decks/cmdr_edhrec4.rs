@@ -2386,3 +2386,260 @@ pub fn spirit_loop() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Iron Man, Titan of Innovation's EDHREC gaps ─────────────────────────────
+
+/// Arc Reactor — {5} artifact, improvise; enters tapped; {T}: Add {C}{C}{C}.
+pub fn arc_reactor() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        keywords: vec![Keyword::Improvise],
+        static_abilities: vec![crate::sets::enters_tapped()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(3)) },
+            ..Default::default()
+        }],
+        ..artifact("Arc Reactor", cost(&[generic(5)]))
+    }
+}
+
+/// Esoteric Duplicator — {2}{U} artifact Clue. Whenever you sacrifice it or
+/// another artifact, you may pay {2}: at the next end step, a token copy of
+/// that artifact. {2}, sacrifice: draw a card.
+pub fn esoteric_duplicator() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Clue], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+            effect: Effect::MayPay {
+                description: "Pay {2} to copy the sacrificed artifact at the next end step?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::DelayUntilWithCapture {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    capture: Selector::TriggerSource,
+                    body: Box::new(Effect::CreateTokenCopyOf {
+                        extra_keywords: vec![],
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: Selector::Target(0),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        no_mana_cost: false,
+                        enters_with_counters: None,
+                        remove_keywords: vec![],
+                    }),
+                }),
+                else_: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..artifact("Esoteric Duplicator", cost(&[generic(2), u()]))
+    }
+}
+
+/// Ugin's Nexus — {5} legendary artifact. Extra turns are skipped; if it
+/// would be put into a graveyard from the battlefield, exile it instead and
+/// take an extra turn after this one.
+pub fn ugins_nexus() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![StaticAbility {
+            description: "If a player would begin an extra turn, that player skips that turn instead.",
+            effect: StaticEffect::PlayersSkipExtraTurns,
+        }],
+        dies_to_exile: true,
+        dies_to_exile_extra_turn: true,
+        ..artifact("Ugin's Nexus", cost(&[generic(5)]))
+    }
+}
+
+/// Iron Man, Bleeding Edge — {3}{U}{U} 3/5 flying. Whenever you cast an
+/// artifact spell, you may copy it, the copy not legendary; once each turn.
+pub fn iron_man_bleeding_edge() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Artifact))
+                .once_per_turn(),
+            effect: Effect::MayDo {
+                description: "Copy that artifact spell (the copy isn't legendary)?".into(),
+                body: Box::new(Effect::CopySpellNonLegendary { what: Selector::TriggerSource }),
+            },
+        }],
+        ..CardDefinition {
+            card_types: vec![CardType::Artifact, CardType::Creature],
+            ..legend("Iron Man, Bleeding Edge", cost(&[generic(3), u(), u()]), vec![CreatureType::Human, CreatureType::Hero], 3, 5)
+        }
+    }
+}
+
+/// Shuri, Wakandan Inventor — {1}{U} 2/1. Artifact spells you cast cost {1}
+/// less; {1}, {T}: target artifact you control becomes a copy of a second
+/// target artifact you control until end of turn, not legendary; sorcery
+/// speed.
+pub fn shuri_wakandan_inventor() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Artifact spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: R::Artifact, amount: 1 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::BecomeCopyOfFor {
+                what: target_filtered(R::Artifact.and(R::ControlledByYou)),
+                source: Selector::TargetFiltered { slot: 1, filter: R::Artifact.and(R::ControlledByYou) },
+                duration: Duration::EndOfTurn,
+                non_legendary: true,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Shuri, Wakandan Inventor",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Hero],
+            2,
+            1,
+        )
+    }
+}
+
+/// The Invincible Iron Man — Tony Stark's back face: 5/5 flying, haste; at
+/// the beginning of combat on your turn, you may put an artifact card from
+/// your hand onto the battlefield, attaching it to this if it's an Equipment.
+pub fn the_invincible_iron_man() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Put an artifact card from your hand onto the battlefield?".into(),
+                body: Box::new(Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: R::Artifact,
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                    return_eot: false,
+                    then: Some(Box::new(Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::LastMoved,
+                            filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                        },
+                        then: Box::new(Effect::Attach { what: Selector::LastMoved, to: Selector::This }),
+                        else_: Box::new(Effect::Noop),
+                    })),
+                }),
+            },
+        }],
+        ..legend("The Invincible Iron Man", cost(&[generic(4), u(), r()]), vec![CreatureType::Human, CreatureType::Hero], 5, 5)
+    }
+}
+
+/// Tony Stark — {1}{U} 1/3. {1}, {T}: look at the top four, you may reveal an
+/// artifact card into your hand, the rest on the bottom in a random order;
+/// {4}{U}{R}: transform it, sorcery speed.
+pub fn tony_stark() -> CardDefinition {
+    use crate::effect::LookPick;
+    CardDefinition {
+        back_face: Some(Box::new(the_invincible_iron_man())),
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    pick_filter: Some(R::Artifact),
+                    optional: true,
+                    rest_bottom_random: true,
+                    ..Default::default()
+                })),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), u(), r()]),
+                sorcery_speed: true,
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        ..legend("Tony Stark", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Hero], 1, 3)
+    }
+}
+
+/// Vault of Catlacan — Storm the Vault's back: legendary land; {T}: any
+/// color; {T}: {U} for each artifact you control.
+pub fn vault_of_catlacan() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Vault of Catlacan",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Blue, Value::PermanentCountControlledByMatching(PlayerRef::You, R::Artifact)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Storm the Vault — {2}{U}{R} legendary enchantment. Whenever one or more of
+/// your creatures deal combat damage to a player, a Treasure; at your end
+/// step with five or more artifacts, transform it.
+pub fn storm_the_vault() -> CardDefinition {
+    CardDefinition {
+        name: "Storm the Vault",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        back_face: Some(Box::new(vault_of_catlacan())),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature })
+                    .once_per_batch(),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(crabomination_base::tokens::treasure_token()),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+                    Predicate::ValueAtLeast(Value::PermanentCountControlledByMatching(PlayerRef::You, R::Artifact), Value::Const(5)),
+                ),
+                effect: Effect::Transform { what: Selector::This },
+            },
+        ],
+        ..Default::default()
+    }
+}
