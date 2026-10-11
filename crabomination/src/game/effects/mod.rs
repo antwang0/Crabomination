@@ -14039,6 +14039,17 @@ impl GameState {
                             chosen.map(crate::mana::SpendRestriction::CreatureOfTypeOrItsAbility),
                         )
                     }
+                    // Eclipsed Realms: any spell or source of the chosen type.
+                    ManaPayload::RestrictedToChosenTypeSpellOrAbility(inner) => {
+                        let chosen = ctx
+                            .source
+                            .and_then(|cid| self.battlefield_find(cid))
+                            .and_then(|c| c.chosen_creature_type);
+                        (
+                            inner.as_ref(),
+                            chosen.map(crate::mana::SpendRestriction::TypeSpellOrItsAbility),
+                        )
+                    }
                     // The Ringhart Crest: the chosen type's creature spells
                     // or any legendary creature spell.
                     ManaPayload::RestrictedToChosenTypeOrLegendary(inner) => {
@@ -14660,6 +14671,7 @@ impl GameState {
                     | ManaPayload::RestrictedToChosenType(..)
                     | ManaPayload::RestrictedToChosenTypePlain(..)
                     | ManaPayload::RestrictedToChosenTypeOrAbility(..)
+                    | ManaPayload::RestrictedToChosenTypeSpellOrAbility(..)
                     | ManaPayload::RestrictedToChosenTypeOrLegendary(..)
                     | ManaPayload::RestrictedToChosenColorMono(..) => {
                         // One unwrap above already stripped the restriction;

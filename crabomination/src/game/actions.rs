@@ -3147,6 +3147,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner)
                     | ManaPayload::RestrictedToChosenTypeOrAbility(inner)
+                    | ManaPayload::RestrictedToChosenTypeSpellOrAbility(inner)
                     | ManaPayload::RestrictedToChosenTypeOrLegendary(inner)
                     | ManaPayload::RestrictedToChosenColorMono(inner) => {
             payload_yields_multiple(inner)
@@ -4753,6 +4754,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         | ManaPayload::RestrictedToChosenType(_)
         | ManaPayload::RestrictedToChosenTypePlain(_)
         | ManaPayload::RestrictedToChosenTypeOrAbility(_)
+        | ManaPayload::RestrictedToChosenTypeSpellOrAbility(_)
         | ManaPayload::RestrictedToChosenTypeOrLegendary(_)
         | ManaPayload::RestrictedToChosenColorMono(_) => ColorSet::empty(),
         // Instance-dependent (the chosen color isn't known at the
@@ -17736,6 +17738,10 @@ impl GameState {
                         inner,
                         c.chosen_creature_type
                             .is_some_and(|t| SR::CreatureOfTypeOrLegendaryCreature(t).allows(kind)),
+                    ),
+                    ManaPayload::RestrictedToChosenTypeSpellOrAbility(inner) => (
+                        inner,
+                        c.chosen_creature_type.is_some_and(|t| SR::TypeSpellOrItsAbility(t).allows(kind)),
                     ),
                     _ => continue,
                 };

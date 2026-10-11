@@ -1864,6 +1864,7 @@ impl Effect {
                     | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner)
                     | ManaPayload::RestrictedToChosenTypeOrAbility(inner)
+                    | ManaPayload::RestrictedToChosenTypeSpellOrAbility(inner)
                     | ManaPayload::RestrictedToChosenTypeOrLegendary(inner)
                     | ManaPayload::RestrictedToChosenColorMono(inner) => match inner.as_ref() {
                         ManaPayload::Colorless(v)
