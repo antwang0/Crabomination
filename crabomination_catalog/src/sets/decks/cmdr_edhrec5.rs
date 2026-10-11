@@ -2,7 +2,7 @@
 //! average deck and a complete pod seat, fifth file (`cmdr_edhrec4` is the
 //! fourth). Lord of the Nazgûl's Wraiths and Ring spells; Leonardo and
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
-//! connive and mayhem. Tests in
+//! connive and mayhem; Reaper King's Scarecrows. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
@@ -826,5 +826,231 @@ pub fn unstable_experiment() -> CardDefinition {
                 connive(Selector::TargetFiltered { slot: 1, filter: yours(R::Creature) }),
             ])),
         },
+    )
+}
+
+// ── Reaper King (WUBRG) ──────────────────────────────────────────────────────
+
+fn scarecrow(name: &'static str, mana: ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..creature(name, mana, vec![CreatureType::Scarecrow], p, t)
+    }
+}
+
+fn shapeshifter(p: i32, t: i32) -> Effect {
+    Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: Arc::new(TokenDefinition {
+            name: "Shapeshifter".into(),
+            power: p,
+            toughness: t,
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+            keywords: vec![Keyword::Changeling],
+            ..Default::default()
+        }),
+    }
+}
+
+fn any_color_mana() -> Effect {
+    Effect::AddMana { who: PlayerRef::You, pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE) }
+}
+
+fn while_you_control(color: Color, inner: StaticEffect) -> StaticEffect {
+    StaticEffect::WhileCondition {
+        condition: Predicate::SelectorExists(Selector::EachPermanent(yours(R::Creature.and(R::HasColor(color))))),
+        inner: Box::new(inner),
+    }
+}
+
+/// Birthing Boughs — {3} artifact. {4}, {T}: a 2/2 Shapeshifter with
+/// changeling.
+pub fn birthing_boughs() -> CardDefinition {
+    CardDefinition {
+        name: "Birthing Boughs",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: shapeshifter(2, 2),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Heap Doll — {1} 1/1. Sacrifice it: exile target card from a graveyard.
+pub fn heap_doll() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Move { what: target_filtered(R::Any.from_any_graveyard()), to: ZoneDest::Exile },
+            ..Default::default()
+        }],
+        ..scarecrow("Heap Doll", cost(&[generic(1)]), 1, 1)
+    }
+}
+
+/// Jawbone Skulkin — {1} 1/1. {2}: a red creature gains haste until end of
+/// turn.
+pub fn jawbone_skulkin() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature.and(R::HasColor(Color::Red))),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..scarecrow("Jawbone Skulkin", cost(&[generic(1)]), 1, 1)
+    }
+}
+
+/// One-Eyed Scarecrow — {3} 2/3 defender. Opponents' fliers get -1/-0.
+pub fn one_eyed_scarecrow() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures with flying your opponents control get -1/-0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::HasKeyword(Keyword::Flying)).and(R::ControlledByOpponent),
+                ),
+                power: -1,
+                toughness: 0,
+            },
+        }],
+        ..scarecrow("One-Eyed Scarecrow", cost(&[generic(3)]), 2, 3)
+    }
+}
+
+/// Scarecrone — {3} 1/2. {1}, sacrifice a Scarecrow: draw; {4}, {T}: return
+/// an artifact creature card from your graveyard to the battlefield.
+pub fn scarecrone() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                sac_other_filter: Some((R::Creature.and(R::HasCreatureType(CreatureType::Scarecrow)), 1)),
+                sac_other_may_be_source: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                tap_cost: true,
+                effect: Effect::Move {
+                    what: target_filtered(R::Artifact.and(R::Creature).from_your_graveyard()),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+        ],
+        ..scarecrow("Scarecrone", cost(&[generic(3)]), 1, 2)
+    }
+}
+
+/// Scorn Effigy — {3} 2/3, foretell {0}.
+pub fn scorn_effigy() -> CardDefinition {
+    CardDefinition { foretell_cost: Some(ManaCost::default()), ..scarecrow("Scorn Effigy", cost(&[generic(3)]), 2, 3) }
+}
+
+/// Scuttlemutt — {3} 2/2. {T}: any color; {T}: a creature becomes the color
+/// of your choice until end of turn.
+pub fn scuttlemutt() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility { tap_cost: true, effect: any_color_mana(), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::BecomeChosenColor { what: target_filtered(R::Creature), duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+        ],
+        ..scarecrow("Scuttlemutt", cost(&[generic(3)]), 2, 2)
+    }
+}
+
+/// Shire Scarecrow — {2} 0/3 defender. {1}: any color, once each turn.
+pub fn shire_scarecrow() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            once_per_turn: true,
+            effect: any_color_mana(),
+            ..Default::default()
+        }],
+        ..scarecrow("Shire Scarecrow", cost(&[generic(2)]), 0, 3)
+    }
+}
+
+/// Wild-Field Scarecrow — {3} 1/4 defender. {2}, sacrifice it: up to two
+/// basic lands to your hand.
+pub fn wild_field_scarecrow() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..scarecrow("Wild-Field Scarecrow", cost(&[generic(3)]), 1, 4)
+    }
+}
+
+/// Wingrattle Scarecrow — {3} 2/2. Flying while you control a blue creature,
+/// persist while you control a black one.
+pub fn wingrattle_scarecrow() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "This creature has flying as long as you control a blue creature.",
+                effect: while_you_control(
+                    Color::Blue,
+                    StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Flying },
+                ),
+            },
+            StaticAbility {
+                description: "This creature has persist as long as you control a black creature.",
+                effect: while_you_control(
+                    Color::Black,
+                    StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Persist },
+                ),
+            },
+        ],
+        ..scarecrow("Wingrattle Scarecrow", cost(&[generic(3)]), 2, 2)
+    }
+}
+
+/// Personify — {1}{W} instant. Blink a creature you control back under its
+/// owner's control, and make a 1/1 Shapeshifter with changeling.
+pub fn personify() -> CardDefinition {
+    spell(
+        "Personify",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Exile { what: target_filtered(yours(R::Creature)) },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            },
+            shapeshifter(1, 1),
+        ]),
     )
 }

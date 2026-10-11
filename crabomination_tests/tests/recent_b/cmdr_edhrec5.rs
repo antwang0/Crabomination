@@ -627,3 +627,95 @@ fn goblin_glider_attaches_when_cast_from_the_graveyard() {
     cast(&mut g, 0, glider, None).expect("from hand");
     assert_eq!(g.battlefield_find(glider).unwrap().attached_to, None);
 }
+
+fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<(), String> {
+    flood(g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Wingrattle Scarecrow: flying only with a blue creature; persist only with
+/// a black one — it returns with a -1/-1 counter (CR 702.79a).
+#[test]
+fn wingrattle_scarecrow_borrows_colors() {
+    let mut g = pod(2);
+    let crow = ready(&mut g, 0, catalog::wingrattle_scarecrow());
+    let has = |g: &GameState, kw| g.computed_permanent(crow).unwrap().keywords().contains(&kw);
+    assert!(!has(&g, Keyword::Flying) && !has(&g, Keyword::Persist));
+    ready(&mut g, 0, catalog::wind_drake());
+    assert!(has(&g, Keyword::Flying));
+    ready(&mut g, 0, catalog::vampire_nighthawk());
+    assert!(has(&g, Keyword::Persist));
+    let mut evs = Vec::new();
+    g.destroy_permanent(crow, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Wingrattle Scarecrow").expect("persisted");
+    assert_eq!(back.counter_count(crabomination::card::CounterType::MinusOneMinusOne), 1);
+}
+
+/// Scarecrone sacrifices any Scarecrow — itself included — to draw, and its
+/// {4}, {T} returns an artifact creature card; Shire Scarecrow's mana is
+/// once each turn; One-Eyed Scarecrow shrinks only opponents' fliers.
+#[test]
+fn scarecrows_at_work() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let crone = ready(&mut g, 0, catalog::scarecrone());
+    let doll = ready(&mut g, 0, catalog::heap_doll());
+    activate(&mut g, crone, 0, None).expect("sacrifice a Scarecrow");
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(on_bf(&g, doll) as u8 + on_bf(&g, crone) as u8, 1, "one Scarecrow went");
+    if on_bf(&g, crone) {
+        let doll_card = g.players[0].graveyard.iter().find(|c| c.id == doll).map(|c| c.id).unwrap();
+        activate(&mut g, crone, 1, Some(Target::Permanent(doll_card))).expect("return the Doll");
+        assert!(on_bf(&g, doll));
+    }
+
+    let mut g = pod(2);
+    let shire = ready(&mut g, 0, catalog::shire_scarecrow());
+    activate(&mut g, shire, 0, None).expect("first");
+    assert!(activate(&mut g, shire, 0, None).is_err(), "once each turn");
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::one_eyed_scarecrow());
+    let theirs = ready(&mut g, 1, catalog::wind_drake());
+    let mine = ready(&mut g, 0, catalog::wind_drake());
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 1);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 2);
+}
+
+/// Personify blinks a creature (its entry triggers again) and adds a 1/1
+/// changeling; Wild-Field Scarecrow fetches two basics to hand.
+#[test]
+fn personify_and_wild_field_scarecrow() {
+    let mut g = pod(2);
+    let bff = ready(&mut g, 0, catalog::michelangelo_mutant_bff());
+    let p = g.add_card_to_hand(0, catalog::personify());
+    cast(&mut g, 0, p, Some(Target::Permanent(bff))).expect("Personify");
+    assert_eq!(mutagens(&g), 1, "BFF entered again");
+    let shifter = g.battlefield.iter().find(|c| c.definition.name == "Shapeshifter").expect("a token");
+    assert!(shifter.definition.keywords.contains(&Keyword::Changeling));
+
+    let mut g = pod(2);
+    for def in [catalog::forest(), catalog::island(), catalog::sol_ring(), catalog::plains()] {
+        g.add_card_to_library(0, def);
+    }
+    let wf = ready(&mut g, 0, catalog::wild_field_scarecrow());
+    activate(&mut g, wf, 0, None).expect("search");
+    assert!(!on_bf(&g, wf));
+    assert_eq!(g.players[0].hand.len(), 2);
+    assert!(g.players[0].hand.iter().all(|c| c.definition.is_land()));
+}
