@@ -3713,6 +3713,12 @@ fn play_pod_game(
                     || c.phased_out_by.is_some()
                     || c.loyalty_uses_this_turn != 0
                     || c.loyalty_twice_this_turn
+                    // CR 701.37b / 702.112b / 701.60a / 701.64b — monstrous,
+                    // renowned, suspected and harnessed end as it leaves.
+                    || c.monstrous
+                    || c.renowned
+                    || c.suspected
+                    || c.harnessed
                     // CR 400.7 — an "as this enters, choose" answer belongs to
                     // the permanent (exile may hold a link's chosen card; a
                     // spell's gift recipient, `chosen_player`, rides along).
@@ -3746,7 +3752,7 @@ fn play_pod_game(
                 .find(|(c, z)| stale(c, *z));
             if let Some((c, _)) = found {
                 panic!(
-                    "seed {seed}: {} {:?} in {} kept battlefield state (tapped {}, pump {}/{}, echo {}, face down {}, transformed {}, attached {:?}/{:?}, counters {:?}; flipped {} doors {} class {} case {} soulbond {:?} phased-by {:?} loyalty uses {}/{} chosen {:?}/{:?}/{:?}/{:?}/{:?}; turn {}, after {actions} actions)",
+                    "seed {seed}: {} {:?} in {} kept battlefield state (tapped {}, pump {}/{}, echo {}, face down {}, transformed {}, attached {:?}/{:?}, counters {:?}; flipped {} doors {} class {} case {} soulbond {:?} phased-by {:?} loyalty uses {}/{} chosen {:?}/{:?}/{:?}/{:?}/{:?} designations {}/{}/{}/{}; turn {}, after {actions} actions)",
                     c.definition.name,
                     c.id,
                     zone_label(&g, c.id),
@@ -3772,6 +3778,10 @@ fn play_pod_game(
                     c.chosen_number,
                     c.chosen_card_type,
                     c.chosen_permanent,
+                    c.monstrous,
+                    c.renowned,
+                    c.suspected,
+                    c.harnessed,
                     g.turn_number,
                 );
             }
