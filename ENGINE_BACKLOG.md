@@ -151,6 +151,14 @@ the handoff.
   names one color; Shelob's and Supper for Spiders' Foods enter as creatures first; Myojin of Cryptic
   Dreams' counter is an ETB trigger. (Minas Morgul's shadow-counter Wraith: fixed,
   `Duration::WhileHasKeywordCounter`.)
+- **Found by the field sweep (fuzzed strict 413001, 10,530 games, 1 abort, fixed `b9415d744`):**
+  Laboratory Maniac's empty-draw win, the alt-win effect and Nefarious Lich's loss eliminated
+  seats mid-resolution and left CR 104.2a's game-over and CR 800.4a's leave pass to the next
+  sweep; a decision pausing the resolution held a departed seat's trigger on the stack. Also
+  5 token-board caps and 1 CR 104.4 draw in that sweep (the known shapes). **Open:**
+  `player_cant_win_game` reads ANY opponent's `ControllerCantLoseGame` as "your opponents can't
+  win" — Platinum Angel's second sentence — so Lich's Mastery alone blocks a multiplayer win that
+  CR 104.2b + 104.3 would let eliminate the other seats; split the static before relying on it.
 
 ## FIXED/OPEN 2026-10-11 (Commander run, `01Lnhgw3`) — ten EDHREC seats, CR 723.2, and five bug classes the sweeps and seats found
 
