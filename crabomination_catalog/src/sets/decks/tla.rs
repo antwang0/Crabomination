@@ -6239,8 +6239,9 @@ pub fn toph_the_first_metalbender() -> CardDefinition {
 
 /// Bumi, Unleashed — {3}{R}{G} 5/4 Legendary Human Noble Ally. Trample; ETB
 /// earthbend 4. Whenever Bumi deals combat damage to a player, untap all lands
-/// you control and take an additional combat phase. (The extra phase's "only
-/// land creatures can attack" restriction is approximated as a normal phase.)
+/// you control and take an additional combat phase; at its beginning each
+/// nonland creature you control can't attack this combat (only land
+/// creatures can attack during it).
 pub fn bumi_unleashed() -> CardDefinition {
     CardDefinition {
         name: "Bumi, Unleashed",
@@ -6267,6 +6268,17 @@ pub fn bumi_unleashed() -> CardDefinition {
                     },
                     Effect::AdditionalCombatPhase {
                         count: Value::Const(1),
+                    },
+                    Effect::AtTheAddedCombat {
+                        body: Box::new(Effect::GrantKeyword {
+                            what: Selector::EachPermanent(
+                                SelectionRequirement::Creature
+                                    .and(SelectionRequirement::ControlledByYou)
+                                    .and(SelectionRequirement::Land.negate()),
+                            ),
+                            keyword: Keyword::CantAttack,
+                            duration: Duration::EndOfCombat,
+                        }),
                     },
                 ]),
             },

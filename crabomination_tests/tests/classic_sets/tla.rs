@@ -3703,6 +3703,19 @@ fn bumi_unleashed_earthbends_and_untaps_on_hit() {
         drain_stack(&mut g);
     }
     assert!(!g.battlefield_find(mtn).unwrap().tapped, "Bumi's hit untapped the land");
+    // The extra combat: only land creatures can attack — Bumi can't, the
+    // earthbent Forest can.
+    for _ in 0..20 {
+        if g.step == TurnStep::BeginCombat && g.stack.is_empty() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.step, TurnStep::BeginCombat, "the additional combat phase began");
+    let kw = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::CantAttack);
+    assert!(kw(&g, bumi), "a nonland creature can't attack the extra combat");
+    assert!(!kw(&g, ebland), "a land creature can");
 }
 
 /// Fated Firepower enters with X fire counters and pumps your damage to
