@@ -11070,3 +11070,35 @@ pub const MAGDA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain,
 ];
+
+pub const AVATAR_AANG_COMMANDERS: &[CardFactory] = &[avatar_aang];
+
+/// **Avatar Aang**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 86 nonbasic cards + 3 Forests + 3 Islands + 2 Mountains + 3 Plains + 2 Swamps = 99.
+/// Avatar Aang (WUBRG — the back face's cost reduction prints {B}) all four elements: every airbend, earthbend, firebend and waterbend
+/// draws, and doing all four in a turn flips Aang into the Master of Elements.
+pub const AVATAR_AANG_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, chromatic_lantern, glider_staff, sol_ring,
+    swiftfoot_boots, white_lotus_tile, abandoned_air_temple, agna_qela, ba_sing_se,
+    breeding_pool, command_tower, exotic_orchard, fabled_passage, fire_nation_palace,
+    hallowed_fountain, jasmine_dragon_tea_shop, kyoshi_village, meditation_pools,
+    north_pole_gates, omashu_city, path_of_ancestry, reliquary_tower, rumble_arena,
+    sacred_foundry, secret_tunnel, stomping_ground, sun_blessed_peak, temple_garden,
+    aang_airbending_master, aang_swift_savior, aang_at_the_crossroads, aang_the_last_airbender,
+    appa_loyal_sky_bison, appa_steadfast_guardian, badgermole_cub, bumi_unleashed,
+    earth_kings_lieutenant, fire_lord_zuko, great_divide_guide, hakoda_selfless_commander,
+    haru_hidden_talent, hermitic_herbalist, iroh_grand_lotus, katara_bending_prodigy,
+    katara_water_tribes_hope, katara_the_fearless, mai_and_zuko, monk_gyatso, north_pole_patrol,
+    sokka_tenacious_tactician, sun_warriors, toph_earthbending_master, toph_hardheaded_teacher,
+    toph_the_blind_bandit, toph_the_first_metalbender, yue_the_moon_spirit, aangs_iceberg,
+    airbender_ascension, earthbender_ascension, firebender_ascension, the_legend_of_kuruk,
+    the_legend_of_kyoshi, the_legend_of_roku, the_legend_of_yangchen, waterbender_ascension,
+    airbenders_reversal, airbending_lesson, cycle_of_renewal, earthshape,
+    enter_the_avatar_state, heroic_intervention, itll_quench_ya, moonmist,
+    origin_of_metalbending, redirect_lightning, swords_to_plowshares, waterbenders_restoration,
+    avatars_wrath, crashing_wave, earthbending_lesson, farseek, natures_lore, shared_roots,
+    spirit_water_revival, waterbending_lesson,
+    // Basics
+    forest, forest, forest, island, island, island, mountain, mountain, plains, plains, plains,
+    swamp, swamp,
+];

@@ -2722,6 +2722,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MAGDA_COMMANDERS,
             main: decks::MAGDA_MAIN,
         },
+        // Seat 379: Avatar Aang's EDHREC average deck. `--pod-decks 379`.
+        PodDeck {
+            name: "Avatar Aang (WUBRG)",
+            commanders: decks::AVATAR_AANG_COMMANDERS,
+            main: decks::AVATAR_AANG_MAIN,
+        },
     ]
 }
 
@@ -4824,6 +4830,7 @@ mod tests {
             ("Wolverine, Best There Is", [0x0A9E, 376, 9301]),
             ("Captain Howler, Sea Scourge", [0x0A9F, 377, 9302]),
             ("Magda, Brazen Outlaw", [0x0AA0, 378, 9303]),
+            ("Avatar Aang", [0x0AA1, 379, 9304]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
