@@ -43,18 +43,13 @@ Katara, Azlask, The Mycotyrant, Thranduil, Maralen, Najeela, Toph, the First Met
 cards); the concurrent run's 369-371 and 376-378: Shroofus Sproutsire, Miirym, Tiamat, Wolverine, Captain
 Howler, Magda. Every residual a new card
 carries is an open row in INCOMPLETE_CARDS ("EDHREC average-deck seats … open residuals") or named
-in its doc. Left: the stand-in sticker collection, Ardenn's player-host attach, the Soul Stone's
-"harnessed" designation, and Elrond's mana-ability trigger (a hot-path event). `--table` output pasted as is:
+in its doc. Left: Iroh, Grand Lotus (seat 379). `--table` output pasted as is:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
-| 204 | Etali, Primal Conqueror (GR) | 1: blank_goblin |
-| 358 | Arna Kennerüd, Skycaptain (WUB) | 1: ardenn_intrepid_archaeologist |
-| 362 | Eddie Brock (BRG) | 1: the_soul_stone |
-| 372 | Thranduil, the Elvenking (BGU) | 1: elrond_moon_reader |
 | 379 | Avatar Aang (WUBRG) | 1: iroh_grand_lotus |
 
-374 / 379 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+378 / 379 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not

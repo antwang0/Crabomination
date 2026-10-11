@@ -250,12 +250,10 @@ the handoff.
   byte-identical, both determinism checks ok; release pod smoke seed 29301 ×
   250 at 3/4/6/8 seats 1,000/1,000 decided; 2-player cube/sos/sealed seed
   29401 × 300 all decided.
-- **Open:** The Soul Stone's "harnessed" is a charge counter (needs a
-  designation on the permanent, like a Case's `case_solved`); Etali's
-  sticker stand-in; Elrond, Moon-Reader's trigger should count a creature's
-  *mana* abilities too (ruling 2026-06-29) — mana activations emit no
-  `AbilityActivated` event today, and adding one is a hot-path change to
-  price first.
+- **Closed 2026-10-11 late:** the Soul Stone's harness (CR 701.64 designation),
+  Elrond's creature mana abilities (`TappedForMana` + `ManaWithoutTap`),
+  Etali's stickers (the 48 printed Unfinity sheets + the CR 123.6b position
+  choice), Ardenn's "permanent or player" host (CR 701.3b legality).
 
 ## FIXED 2026-10-11 (Commander run, `017yfeX4` second firing) — answer-log leaks, mana burn's SBA, optional loops
 

@@ -3723,9 +3723,9 @@ zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
   `CardCold::name_stickers` (a definition swap carrying the stickered name;
   stripped into a hidden zone at the two placement funnels, CR 123.5),
   lazily drawn sheets in `ColdState::sticker_sheets`, and
-  `Effect::PutNameSticker` / `Value::NameStickerUniqueVowels`. Open: ability /
-  P-T / art stickers, `{TK}` tickets, the real sheet list, and the
-  name-position choice. CR 123.1's "not copiable" is DONE: the stickered
+  `Effect::PutNameSticker` / `Value::NameStickerUniqueVowels`. The 48 printed
+  Unfinity sheets and the CR 123.6b position choice landed 2026-10-11. Open:
+  ability / P-T / art stickers and `{TK}` tickets. CR 123.1's "not copiable" is DONE: the stickered
   definition carries `unstickered_name`, `CardInstance::new` and the copy
   effects read `CardDefinition::copiable`, and a stickered permanent that
   becomes a copy keeps its stickers (`set_copiable_definition`, CR 123.6c).
