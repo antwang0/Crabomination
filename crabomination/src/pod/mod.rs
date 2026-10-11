@@ -2850,6 +2850,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SHELOB_COMMANDERS,
             main: decks::SHELOB_MAIN,
         },
+        // Seat 400: Marvo, Deep Operative's EDHREC average deck. `--pod-decks 400`.
+        PodDeck {
+            name: "Marvo, Deep Operative (UB)",
+            commanders: decks::MARVO_COMMANDERS,
+            main: decks::MARVO_MAIN,
+        },
     ]
 }
 
@@ -5006,6 +5012,7 @@ mod tests {
             ("Saruman, the White Hand", [0x0AB3, 397, 9322]),
             ("Kibo, Uktabi Prince", [0x0AB4, 398, 9323]),
             ("Shelob, Child of Ungoliant", [0x0AB5, 399, 9324]),
+            ("Marvo, Deep Operative", [0x0AB6, 400, 9325]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

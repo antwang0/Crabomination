@@ -11672,3 +11672,30 @@ pub const SHELOB_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const MARVO_COMMANDERS: &[CardFactory] = &[marvo_deep_operative];
+
+/// **Marvo, Deep Operative**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 80 nonbasic cards + 11 Islands + 8 Swamps = 99.
+/// Marvo, Deep Operative (UB) clash and big spells
+pub const MARVO_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, lantern_of_insight, lightning_greaves,
+    mind_stone, scroll_rack, senseis_divining_top, sol_ring, swiftfoot_boots,
+    talisman_of_dominance, thought_vessel, choked_estuary, command_tower, darkwater_catacombs,
+    dimir_aqueduct, drowned_catacomb, halimar_depths, morphic_pool, mystic_sanctuary,
+    reliquary_tower, rivendell, rogues_passage, shipwreck_marsh, sunken_hollow, tainted_isle,
+    temple_of_deceit, watery_grave, archon_of_cruelty, auton_soldier, benthic_anomaly,
+    brinelin_the_moon_kraken, doom_whisperer, hullbreaker_horror, massacre_wurm, mindleech_mass,
+    myojin_of_cryptic_dreams, nezahal_primal_tide, paperfin_rascal, ringskipper, runo_stromkirk,
+    scourge_of_fleets, shard_of_the_nightbringer, slinn_voda_the_rising_deep,
+    sphinx_of_the_second_sun, star_whale, starwinder, the_reality_chip, tromokratis,
+    twilight_prophet, wrexial_the_risen_deep, aqueous_form, baneful_omen, captivating_glance,
+    minds_dilation, one_with_the_multiverse, soothsaying, brainstorm, brainsurge,
+    broken_ambitions, counterspell, dark_ritual, dig_through_time, lim_duls_vault,
+    otherworldly_gaze, scattering_stroke, spy_network, whirlpool_whelm, aminatous_augury,
+    breach_the_multiverse, diabolic_vision, dream_harvest, hoarders_greed, ponder, preordain,
+    pulling_teeth, research_the_deep, revive_the_fallen, weed_strangle, whelming_wave,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
