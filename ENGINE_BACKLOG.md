@@ -159,6 +159,11 @@ the handoff.
   now (CR 109.5 / 614.1a, both damage paths; `anti_venoms_counters_are_his_controllers`).
   4 board caps: token floods (Myrel, Goldnight Commander + Odric). `--bench`
   byte-identical after the fix.
+- **At `af36b6a1c`** (audit build rebuilt): production pilot `--a dflt` 199001 over
+  seats 335-378 (4/6 × 10, 190 games) clean; fuzzed strict 200001 over every deck
+  (3/4/6 × 10, 2,840 games) **0 aborts**, 6 undecided — 5 draws (simultaneous
+  losses; Polyraptor's forced reveal twice; a Shalai and Hallar / The Red Terror
+  mandatory loop) and a board cap (Sylvan Offering at X = 232). Nothing new.
 - **Open** (INCOMPLETE_CARDS "EDHREC average-deck seats … open residuals"):
   Echoes of Eternity doesn't double a colorless *spell's* trigger or a
   leaves-the-battlefield one (the doubler reads its source live); Maralen's
