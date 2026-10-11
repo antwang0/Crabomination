@@ -274,7 +274,13 @@ impl GameState {
             }
         }
 
-        if accepts_player {
+        // Gathering Auras and Equipment onto "target permanent or player"
+        // (Ardenn) only moves Curses onto a player; the headless pick wants
+        // a creature, so it skips the player slots.
+        let gathers = prefer_friendly
+            && accepts_player
+            && eff.any_nested(&|e| matches!(e, Effect::AttachAnyNumberTo { .. }));
+        if accepts_player && !gathers {
             let player_primary = Target::Player(primary_player);
             if is_legal(&player_primary) { return Some(player_primary); }
             let player_secondary = Target::Player(secondary_player);

@@ -9,13 +9,41 @@ use super::{EffectContext, PickValue};
 use crate::card::CardId;
 use crate::effect::{Effect, Selector};
 use crate::game::GameState;
-use crate::game::types::{GameError, GameEvent};
+use crate::game::types::{GameError, GameEvent, Target};
 
 impl GameState {
+    /// CR 701.3b — can `att` become attached to `host`? An Equipment only to
+    /// a creature (CR 301.5c), a Fortification only to a land (CR 301.6), an
+    /// Aura only to what its enchant ability allows (CR 303.4a, a player for
+    /// "enchant player"); nothing to itself.
+    pub(crate) fn can_become_attached(&self, att: CardId, host: &Target) -> bool {
+        let Some(a) = self.battlefield_find(att) else { return false };
+        let def = &a.definition;
+        let enchant_ok = |host: &Target| {
+            def.aura_enchant_filter()
+                .is_some_and(|f| self.evaluate_requirement_static(f, host, a.controller, Some(att)))
+        };
+        match host {
+            Target::Permanent(h) if *h != att => {
+                let Some(hc) = self.battlefield_find(*h) else { return false };
+                if def.is_aura() {
+                    if def.aura_enchant_filter().is_some() { enchant_ok(host) } else { self.computed_is_creature(hc) }
+                } else if def.is_equipment() {
+                    self.computed_is_creature(hc)
+                } else if def.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Fortification) {
+                    self.evaluate_requirement_static(&crate::card::SelectionRequirement::Land, host, a.controller, None)
+                } else {
+                    false
+                }
+            }
+            Target::Player(_) => def.is_aura() && enchant_ok(host),
+            _ => false,
+        }
+    }
+
     /// `Effect::AttachAnyNumberTo` — offer every permanent `what` resolves to
-    /// (other than the host) and attach the chosen ones to `to`. A headless
-    /// controller takes its own attachments that aren't on an opponent's
-    /// permanent, so a Curse or a Pacifism it aimed elsewhere stays put.
+    /// that could legally attach to the host `to` (a permanent or, for an
+    /// "enchant player" Aura, a player) and attach the chosen ones.
     pub(super) fn attach_any_number_to(
         &mut self,
         what: &Selector,
@@ -25,29 +53,40 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let me = ctx.controller;
-        let Some(host) = self.resolve_selector(to, ctx).iter().find_map(|e| e.as_permanent_id()) else {
+        let Some(host) = self.resolve_selector(to, ctx).iter().find_map(|e| match e {
+            super::EntityRef::Player(p) => Some(Target::Player(*p)),
+            e => e.as_permanent_id().map(Target::Permanent),
+        }) else {
             return Ok(());
         };
         let candidates: Vec<(CardId, String)> = self
             .resolve_selector(what, ctx)
             .into_iter()
             .filter_map(|e| e.as_permanent_id())
-            .filter(|&id| id != host)
+            .filter(|&id| self.can_become_attached(id, &host))
             .filter_map(|id| self.battlefield_find(id).map(|c| (id, c.definition.name.to_string())))
             .collect();
         if candidates.is_empty() {
             return Ok(());
         }
         let hostile_host = |g: &GameState, id: CardId| {
-            g.battlefield_find(id)
-                .and_then(|c| c.attached_to)
-                .and_then(|h| g.battlefield_find(h))
-                .is_some_and(|h| h.controller != me)
+            g.battlefield_find(id).is_some_and(|c| {
+                c.attached_to.and_then(|h| g.battlefield_find(h)).is_some_and(|h| h.controller != me)
+                    || c.attached_to_player.is_some_and(|p| p != me)
+            })
+        };
+        // Headless, an attachment moves only between hosts on the same side:
+        // Equipment from one of yours to another, a Curse between opponents.
+        let host_hostile = match host {
+            Target::Player(p) => p != me,
+            Target::Permanent(h) => self.battlefield_find(h).is_some_and(|c| c.controller != me),
         };
         let auto: Vec<CardId> = candidates
             .iter()
             .map(|(id, _)| *id)
-            .filter(|&id| self.battlefield_find(id).is_some_and(|c| c.controller == me) && !hostile_host(self, id))
+            .filter(|&id| {
+                self.battlefield_find(id).is_some_and(|c| c.controller == me) && hostile_host(self, id) == host_hostile
+            })
             .collect();
         let max = candidates.len() as u32;
         let Some(picked) = self.choose_up_to_cards(
@@ -62,11 +101,15 @@ impl GameState {
         ) else {
             return Ok(());
         };
+        let (on_card, on_player) = match host {
+            Target::Permanent(h) => (Some(h), None),
+            Target::Player(p) => (None, Some(p)),
+        };
         for id in picked {
             if let Some(c) = self.battlefield_find_mut(id) {
-                c.attached_to = Some(host);
-                c.attached_to_player = None;
-                events.push(GameEvent::AttachmentMoved { attachment: id, attached_to: Some(host) });
+                c.attached_to = on_card;
+                c.attached_to_player = on_player;
+                events.push(GameEvent::AttachmentMoved { attachment: id, attached_to: on_card });
             }
         }
         Ok(())

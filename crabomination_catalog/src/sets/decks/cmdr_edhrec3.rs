@@ -1802,8 +1802,8 @@ pub fn biorganic_carapace() -> CardDefinition {
 
 /// Ardenn, Intrepid Archaeologist — {2}{W} 2/2, partner. At the beginning of
 /// combat on your turn, you may attach any number of Auras and Equipment you
-/// control to target permanent or player — narrowed to a creature: no Curse
-/// sits in a target deck, and an Equipment can only hold a creature (CR 301.5c).
+/// control to target permanent or player. Only what could legally attach
+/// moves (CR 701.3b): Equipment onto a creature, a Curse onto a player.
 pub fn ardenn_intrepid_archaeologist() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Partner],
@@ -1816,7 +1816,7 @@ pub fn ardenn_intrepid_archaeologist() -> CardDefinition {
                             .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
                     ),
                 ),
-                to: target_filtered(R::Creature),
+                to: target_filtered(R::Permanent.or(R::Player)),
             },
         }],
         ..legend(

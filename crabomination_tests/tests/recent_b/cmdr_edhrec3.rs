@@ -1303,6 +1303,35 @@ fn ardenn_gathers_equipment_on_one_creature() {
     assert_eq!(hosts[0], hosts[1], "both on one creature");
 }
 
+/// Ardenn's host is "target permanent or player", and only what could
+/// legally attach moves (CR 701.3b): aimed at a player, the Curse goes onto
+/// them (CR 303.4a) and the Equipment stays; aimed at a land, nothing moves
+/// (CR 301.5c).
+#[test]
+fn ardenn_moves_only_what_can_attach_to_the_host() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(3);
+    let ardenn = ready(&mut g, 0, catalog::ardenn_intrepid_archaeologist());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gear = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    attach(&mut g, gear, bear);
+    let curse = g.add_card_to_battlefield(0, catalog::curse_of_vengeance());
+    g.battlefield_find_mut(curse).unwrap().attached_to_player = Some(1);
+    let land = ready(&mut g, 0, catalog::plains());
+    let effect = catalog::ardenn_intrepid_archaeologist().triggered_abilities[0].effect.clone();
+    let run = |g: &mut GameState, host: Target| {
+        let ctx = EffectContext::for_spell_with_source(ardenn, "Ardenn", 0, Some(host), vec![], 0, 0, 0, 0);
+        g.resolve_effect(&effect, &ctx).expect("resolve");
+    };
+    run(&mut g, Target::Player(2));
+    let c = g.battlefield_find(curse).unwrap();
+    assert_eq!((c.attached_to_player, c.attached_to), (Some(2), None), "the Curse follows to the player");
+    assert_eq!(g.battlefield_find(gear).unwrap().attached_to, Some(bear), "no Equipment on a player");
+    run(&mut g, Target::Permanent(land));
+    assert_eq!(g.battlefield_find(gear).unwrap().attached_to, Some(bear), "no Equipment on a land");
+    assert_eq!(g.battlefield_find(curse).unwrap().attached_to_player, Some(2), "no Curse on a land");
+}
+
 /// Halvar, God of Battle (Arna's list): equipped creatures have double
 /// strike; Sword of the Realms (the MDFC back) returns its dead host to hand.
 #[test]
