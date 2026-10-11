@@ -11160,3 +11160,32 @@ pub const HIGH_PERFECT_MORCANT_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const IROH_GRAND_LOTUS_COMMANDERS: &[CardFactory] = &[iroh_grand_lotus];
+
+/// **Iroh, Grand Lotus**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 82 nonbasic cards + 5 Forests + 6 Islands + 6 Mountains = 99.
+/// Iroh, Grand Lotus (URG) Lessons spellslinger
+pub const IROH_GRAND_LOTUS_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, resonating_lute, sol_ring, swiftfoot_boots, agna_qela,
+    breeding_pool, cinder_glade, command_tower, dreamroot_cascade, exotic_orchard,
+    frontier_bivouac, hinterland_harbor, ketria_triome, reliquary_tower, rootbound_crag,
+    shivan_reef, steam_vents, stomping_ground, stormcarved_coast, sulfur_falls,
+    white_lotus_hideout, archmage_emeritus, archmage_of_runes, coruscation_mage,
+    doc_aurlock_grizzled_genius, firebending_student, goblin_electromancer, gran_gran,
+    guru_pathik, guttersnipe, hermitic_herbalist, longshot_rebel_bowman, master_pakku,
+    ran_and_shaw, sokka_bold_boomeranger, storm_kiln_artist, stormcatch_mentor, the_lion_turtle,
+    toph_hardheaded_teacher, uncle_iroh, chakra_meditation, leaves_from_the_vine,
+    rite_of_the_dragoncaller, secrets_of_the_dead, thousand_year_storm, abandon_attachments,
+    accumulate_wisdom, combustion_technique, cycle_of_renewal, elemental_teachings,
+    energybending, firebending_lesson, frantic_search, how_to_start_a_riot, itll_quench_ya,
+    lost_days, octopus_form, origin_of_metalbending, overwhelming_victory, redirect_lightning,
+    sokkas_haiku, solstice_revelations, whirlwind_technique, zukos_exile, aangs_journey,
+    boomerang_basics, faithless_looting, farseek, grapeshot, illuminate_history,
+    improvisation_capstone, introduction_to_annihilation, introduction_to_prophecy,
+    irohs_demonstration, price_of_freedom, secret_of_bloodbending, seismic_sense, shared_roots,
+    teachings_of_the_archaics, true_ancestry, waterbending_lesson,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];

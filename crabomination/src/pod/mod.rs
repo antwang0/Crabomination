@@ -2741,6 +2741,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HIGH_PERFECT_MORCANT_COMMANDERS,
             main: decks::HIGH_PERFECT_MORCANT_MAIN,
         },
+        // Seat 382: Iroh, Grand Lotus's EDHREC average deck. `--pod-decks 382`.
+        PodDeck {
+            name: "Iroh, Grand Lotus (URG)",
+            commanders: decks::IROH_GRAND_LOTUS_COMMANDERS,
+            main: decks::IROH_GRAND_LOTUS_MAIN,
+        },
     ]
 }
 
@@ -4857,6 +4863,7 @@ mod tests {
             ("Avatar Aang", [0x0AA1, 379, 9304]),
             ("Lorehold, the Historian", [0x0AA2, 380, 9305]),
             ("High Perfect Morcant", [0x0AA3, 381, 9306]),
+            ("Iroh, Grand Lotus", [0x0AA4, 382, 9307]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
