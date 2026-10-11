@@ -11218,3 +11218,30 @@ pub const GALADRIEL_LIGHT_OF_VALINOR_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
     plains, plains, plains, plains,
 ];
+
+pub const SKULLBRIAR_COMMANDERS: &[CardFactory] = &[skullbriar_the_walking_grave];
+
+/// **Skullbriar, the Walking Grave**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 79 nonbasic cards + 12 Forests + 8 Swamps = 99.
+/// Skullbriar, the Walking Grave (BG) +1/+1 counters
+pub const SKULLBRIAR_MAIN: &[CardFactory] = &[
+    arcane_signet, golgari_signet, ozolith_the_shattered_spire, power_fist, ring_of_kalonia,
+    ring_of_xathrid, sol_ring, swiftfoot_boots, the_ozolith, bojuka_bog, command_tower,
+    deathcap_glade, golgari_rot_farm, llanowar_wastes, necroblossom_snarl, opal_palace,
+    overgrown_tomb, rogues_passage, tainted_wood, temple_of_malady, twilight_mire,
+    tyrite_sanctum, undergrowth_stadium, woodland_cemetery, birds_of_paradise,
+    corpsejack_menace, daring_fiendbonder, duskfang_mentor, duskshell_crawler, evolution_sage,
+    forgotten_ancient, hornbash_mentor, kalonian_hydra, kami_of_whispered_hopes,
+    kodama_of_the_west_tree, llanowar_elves, qarsi_revenant, reyhan_last_of_the_abzan,
+    scavenged_brawler, slippery_bogbonder, thundering_mightmare, titanoth_rex, void_beckoner,
+    winding_constrictor, branching_evolution, hardened_scales, hollowmurk_siege, hydras_growth,
+    innkeepers_talent, level_up, ordeal_of_nylea, rancor, terrasymbiosis, vraska_joins_up,
+    assassins_trophy, astarions_thirst, beast_within, blood_curdle, feign_death, fully_grown,
+    gift_of_the_viper, hunters_insight, invigorating_surge, putrefy, revitalizing_repast,
+    snakeskin_veil, solidarity_of_heroes, undying_malice, unexpected_fangs,
+    call_of_the_death_dweller, cultivate, fangs_of_kalonia, increasing_savagery, kodamas_reach,
+    mandate_of_abaddon, rampant_growth, rishkars_expertise, unearth, visions_of_dominance,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

@@ -2753,6 +2753,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GALADRIEL_LIGHT_OF_VALINOR_COMMANDERS,
             main: decks::GALADRIEL_LIGHT_OF_VALINOR_MAIN,
         },
+        // Seat 384: Skullbriar, the Walking Grave's EDHREC average deck. `--pod-decks 384`.
+        PodDeck {
+            name: "Skullbriar, the Walking Grave (BG)",
+            commanders: decks::SKULLBRIAR_COMMANDERS,
+            main: decks::SKULLBRIAR_MAIN,
+        },
     ]
 }
 
@@ -3621,9 +3627,10 @@ fn play_pod_game(
                 let counters_kept = match z {
                     // Suspend's time counters, a hideaway card, …
                     Off::Exile => true,
-                    // CR 122.2 — a card that keeps its counters (Skullbriar).
-                    Off::Graveyard => c.definition.keeps_counters_off_battlefield,
-                    Off::Hand | Off::Library | Off::Command => false,
+                    // CR 122.2 — a card that keeps its counters (Skullbriar),
+                    // into the command zone too: only a hand or library strips them.
+                    Off::Graveyard | Off::Command => c.definition.keeps_counters_off_battlefield,
+                    Off::Hand | Off::Library => false,
                 };
                 // Not `damage`: it is cleared as a card enters, not as it
                 // leaves (ENGINE_BACKLOG 2026-09-08, a priced CoW write).
@@ -4871,6 +4878,7 @@ mod tests {
             ("High Perfect Morcant", [0x0AA3, 381, 9306]),
             ("Iroh, Grand Lotus", [0x0AA4, 382, 9307]),
             ("Galadriel, Light of Valinor", [0x0AA5, 383, 9308]),
+            ("Skullbriar, the Walking Grave", [0x0AA6, 384, 9309]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
