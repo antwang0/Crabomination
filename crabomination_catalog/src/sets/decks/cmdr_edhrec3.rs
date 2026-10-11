@@ -3698,16 +3698,8 @@ fn elf() -> R {
 /// Elven Passage — Land. {T}, pay 1 life, sacrifice it: search for a basic
 /// land onto the battlefield tapped; you may behold an Elf (an Elf you
 /// control, or an Elf card revealed from hand), and if you do, untap it.
-/// Beholding costs nothing, so the land arrives untapped exactly when an
-/// Elf can be beheld.
+/// Beholding costs nothing, so it is taken whenever an Elf can be beheld.
 pub fn elven_passage() -> CardDefinition {
-    let fetch = |tapped: bool| {
-        Box::new(Effect::Search {
-            who: PlayerRef::You,
-            filter: R::IsBasicLand,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped },
-        })
-    };
     CardDefinition {
         name: "Elven Passage",
         card_types: vec![CardType::Land],
@@ -3715,17 +3707,24 @@ pub fn elven_passage() -> CardDefinition {
             tap_cost: true,
             life_cost: 1,
             sac_cost: true,
-            effect: Effect::If {
-                cond: Predicate::Any(vec![
-                    Predicate::SelectorExists(yours(elf())),
-                    Predicate::ValueAtLeast(
-                        Value::CardsInHandMatching { who: PlayerRef::You, filter: elf() },
-                        Value::ONE,
-                    ),
-                ]),
-                then: fetch(false),
-                else_: fetch(true),
-            },
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::If {
+                    cond: Predicate::Any(vec![
+                        Predicate::SelectorExists(yours(elf())),
+                        Predicate::ValueAtLeast(
+                            Value::CardsInHandMatching { who: PlayerRef::You, filter: elf() },
+                            Value::ONE,
+                        ),
+                    ]),
+                    then: Box::new(Effect::Untap { what: Selector::LastMoved, up_to: None }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
@@ -3850,8 +3849,8 @@ pub fn thranduils_company() -> CardDefinition {
 
 /// Woodland Weavemaster — {1}{G} 1/2 Elf Druid. Vigilance. Another Elf of
 /// yours entering gives it +1/+1 until end of turn. {T}: add X mana of any one
-/// color, X = its power; spend it only on Elf creature spells and abilities of
-/// Elf creatures.
+/// color, X = its power; spend it only on Elf spells and abilities of Elf
+/// sources.
 pub fn woodland_weavemaster() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
@@ -3868,7 +3867,7 @@ pub fn woodland_weavemaster() -> CardDefinition {
         }],
         activated_abilities: vec![tap_for(ManaPayload::Restricted(
             Box::new(ManaPayload::AnyOneColor(Value::PowerOf(Box::new(Selector::This)))),
-            SpendRestriction::CreatureOfTypeOrItsAbility(CreatureType::Elf),
+            SpendRestriction::TypeSpellOrItsAbility(CreatureType::Elf),
         ))],
         ..creature("Woodland Weavemaster", cost(&[generic(1), g()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 2)
     }
@@ -3899,7 +3898,7 @@ pub fn eclipsed_realms() -> CardDefinition {
         }),
         activated_abilities: vec![
             tap_for(ManaPayload::Colorless(Value::ONE)),
-            tap_for(ManaPayload::RestrictedToChosenTypeOrAbility(Box::new(ManaPayload::AnyOneColor(Value::ONE)))),
+            tap_for(ManaPayload::RestrictedToChosenTypeSpellOrAbility(Box::new(ManaPayload::AnyOneColor(Value::ONE)))),
         ],
         ..Default::default()
     }

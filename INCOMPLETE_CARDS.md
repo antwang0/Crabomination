@@ -1976,12 +1976,14 @@ library-exile event.
 | Psychic Purge | "when a spell or ability an opponent controls causes you to discard this, that player loses 5 life" is absent | `GameEvent::OpponentCausedYouToDiscard` doesn't carry the causing seat, and no `PlayerRef` names it |
 | Geosurge, Helga, Heartwood Crafter, Mm'menon, Clement | the printed spend limit isn't enforced ("artifact or creature spells", "MV 4+ creature spells", "not from your hand", "not from your hand" / "creature spell") | no `SpendRestriction` of that shape yet |
 | Beamtown Beatstick | "Whenever equipped creature deals combat damage to a player **or battle**" — only the player half triggers | no `EventKind` for combat damage to a battle (Attentive Skywarden shares the gap) |
-| Ardenn, Intrepid Archaeologist | the combat attach targets a creature only, not "permanent or player" | no Curse sits in a target deck and an Equipment can only hold a creature (CR 301.5c); attaching to a player needs a player-host attach path |
-| Behold the Sinister Six! | "with different names" isn't checked among the six targets | a singleton Commander graveyard holds no two names alike; a 60-card graveyard could return two copies |
-| Venom, Deadly Devourer | the reflexive "when you do" Symbiote target is chosen up front with the graveyard card | reflexive triggers with their own target slot aren't split from the activation's targets |
-| Echoes of Eternity | a colorless *spell's* triggered ability and a leaves-the-battlefield trigger of a colorless permanent don't fire an additional time | the trigger doubler reads its source live on the battlefield; a spell source or last-known source isn't consulted |
-| Maralen, Fae Ascendant | the free cast's mana-value cap (your Elves and Faeries) is read as the cards are exiled, not as the spell is cast | `ExileTopAndGrantMayPlay.max_mana_value` is evaluated at grant time; a cast-time cap on a may-play grant doesn't exist |
-| Elrond, Moon-Reader | activating a creature's *mana* ability doesn't draw | mana abilities emit no `AbilityActivated` event (the engine's CR 605.1 carve-out for "whenever an opponent activates" cards) |
-| Woodland Weavemaster | its mana can't pay for a Kindred Elf noncreature spell | `SpendRestriction::CreatureOfTypeOrItsAbility` reads creature spells only |
-| Elven Passage | with an Elf to behold, the basic enters untapped rather than tapped-then-untapped | beholding is free and always taken, so the two differ only for "enters tapped" watchers |
-| Eclipsed Realms | its restricted mana can't pay for a Kindred noncreature spell of the chosen type | `RestrictedToChosenTypeOrAbility` (Secluded Courtyard's shape) reads creature spells only |
+
+### EDHREC average-deck seats (`decks::cmdr_edhrec3`, 2026-10-11 Commander run) — open residuals
+
+| Card | Residual | Why |
+|---|---|---|
+| 🟡 Ardenn, Intrepid Archaeologist | the combat attach targets a creature only, not "permanent or player" | no Curse sits in a target deck and an Equipment can only hold a creature (CR 301.5c); attaching to a player needs a player-host attach path |
+| 🟡 Behold the Sinister Six! | "with different names" isn't checked among the six targets | a singleton Commander graveyard holds no two names alike; a 60-card graveyard could return two copies |
+| 🟡 Venom, Deadly Devourer | the reflexive "when you do" Symbiote target is chosen up front with the graveyard card | reflexive triggers with their own target slot aren't split from the activation's targets |
+| 🟡 Echoes of Eternity | a colorless *spell's* triggered ability and a leaves-the-battlefield trigger of a colorless permanent don't fire an additional time | the trigger doubler reads its source live on the battlefield; a spell source or last-known source isn't consulted |
+| 🟡 Maralen, Fae Ascendant | the free cast's mana-value cap (your Elves and Faeries) is read as the cards are exiled, not as the spell is cast | `ExileTopAndGrantMayPlay.max_mana_value` is evaluated at grant time; a cast-time cap on a may-play grant doesn't exist |
+| 🟡 Elrond, Moon-Reader | activating a creature's *mana* ability doesn't draw | mana abilities emit no `AbilityActivated` event (the engine's CR 605.1 carve-out for "whenever an opponent activates" cards) |
