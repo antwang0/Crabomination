@@ -3134,6 +3134,27 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-11 (Commander run, `01EvCQ72`) — guardrail; harness, attach legality, tapless mana activations, stickers
+
+Hot-path touch: `leave_battlefield_state` reads four designation flags (one
+branch per leave); a `{T}`-less mana ability now pushes `AbilityActivated
+{ mana: true }` (a `{T}` one is unchanged); the event matchers read one more
+field. Release `bot_ladder` at `19df14279`, Xeon @ 2.80 GHz (4 cores, 15 GB).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); peak_rss 29.5 MiB; games_per_s 182.55
+audit pods       overflow + debug-assertions, fuzzed strict 301001 (3/4/6/8 x
+                 15, 5,010 games): 0 aborts, 4 undecided (Jadzi's copy bound,
+                 a token board cap, two CR 104.4 draws)
+release pods     seed 30501 x 250 at 3/4/6/8 seats: 1,000/1,000 decided
+2-player         --a dflt --b dflt --seed 30401 x 300: cube 2,400 / 0, sos
+                 1,500 / 0, sealed 3,600 / 0
+suite            core_rules + recent_b + engine lib 9,504 / 0 / 6; workspace
+                 clippy 0; release-fast typecheck clean
+```
+
 ### 2026-10-11 (Commander run, `017yfeX4` second firing) — guardrail; answer-log clears, mana burn's sweep, the upside-amount loop cap
 
 Hot-path touch: the bot's pending-decision path checks `AmountKind::Upside`
