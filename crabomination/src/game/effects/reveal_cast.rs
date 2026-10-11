@@ -12,6 +12,7 @@ impl GameState {
     /// The choice is made over the cards where they lie, BEFORE anything
     /// moves: a prompting seat suspends inside `choose_up_to_cards` and the
     /// effect re-runs on the answer, which must not reveal a second batch.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn reveal_top_may_cast_one_free(
         &mut self,
         count: &Value,
