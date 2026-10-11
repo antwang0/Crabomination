@@ -119,6 +119,45 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED/OPEN 2026-10-11 (nineteenth Commander run, `01Vk2K6g`, concurrent with `017yfeX4`'s second firing) — sixteen EDHREC seats and the primitives under them
+
+- **Seats 357-368, 372-375** (EDHREC average decks, `decks::cmdr_edhrec3`, tests
+  `recent_b/cmdr_edhrec3.rs`): Fire Lord Zuko, Arna, Terra, Atreus // Kratos,
+  Kratos, Eddie Brock, Nicol Bolas the Ravager, Shilgengar, Norin, Katara,
+  Azlask, The Mycotyrant, Thranduil, Maralen, Najeela, Toph the First
+  Metalbender. Each seat: 40 debug pod games, all decided, 0 panics.
+  ⚠ **The concurrent run built Miirym and Tiamat (and their 11 Dragons) at the
+  same time** — this run's copies were dropped at the rebase and its Thranduil /
+  Maralen seats renumbered 369/370 → 372/373. Fetch before *starting* a deck,
+  not only before pushing; push each deck as it lands.
+- **Rules fixes found by the cards:** CR 109.2 an "exile it" scope reaching an
+  off-battlefield card (The Kami War); CR 120.8 0 damage is never increased
+  (Mechanized Warfare); CR 701.65a airbend takes a *spell* off the stack (Aang,
+  Swift Savior); color identity counts a Firebend tag (Fire Lord Ozai) and a back
+  face's color indicator (Venom, Lethal Protector); `SacrificeAndRemember`
+  never set the sacrificed count (`Predicate::PlayerSacrificedThisResolution`);
+  a Jace at 0 loyalty tripped the pod invariant (shared
+  `planeswalkers_survive_zero_loyalty`); `scripts/edhrec_deck.py` missed
+  `-> crate::card::CardDefinition` factories (Kazuul had a duplicate).
+- **Primitives:** `Player.creature_left_battlefield_this_turn` +
+  `Predicate::CreatureLeftBattlefieldThisTurn` (read last-known); `WardCost::
+  GenericControllerExperience`; `Value::PermanentTypesInGraveyard`;
+  `Effect::OneCastPerTurnAmongGranted` (+ `TurnRegistries.
+  one_cast_groups_spent_this_turn`); `extra_land_plays_per_turn` reads statics
+  through `active_static` (a gated `ExtraLandPerTurn`); `AdditionalCastCost::
+  BeholdAndExile` (linked to the spell, CR 607.2a); `Effect::
+  CounterOpponentsSpellsAndAbilities`; `NameCreatureTypeAmong` ranks its options
+  by the chooser's deck (Eclipsed Realms named Elemental in an Elf deck);
+  `ManaPayload::RestrictedToChosenTypeSpellOrAbility`; `Effect::
+  AddManaKeptThisTurnOfColors`.
+- **Open** (INCOMPLETE_CARDS "EDHREC average-deck seats … open residuals"):
+  Echoes of Eternity doesn't double a colorless *spell's* trigger or a
+  leaves-the-battlefield one (the doubler reads its source live); Maralen's
+  free-cast cap is read at exile, not at cast; Elrond, Moon-Reader misses mana
+  abilities (no `AbilityActivated` for them); Ardenn's attach is creature-only;
+  Behold the Sinister Six! doesn't check distinct names; Venom, Deadly
+  Devourer's reflexive target is chosen up front.
+
 ## FIXED 2026-10-11 (Commander run, `017yfeX4` second firing) — answer-log leaks, mana burn's SBA, optional loops
 
 - **Fuzzed strict sweep** 191001 (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`,

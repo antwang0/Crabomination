@@ -34,26 +34,29 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-352 / 353 pod decks carry no residual (2026-10-10, seventeenth Commander run `017yfeX4`). Seats
-335-353 are EDHREC average decks, card for card (`scripts/edhrec_deck.py --rust`; the seat scan is
-`scripts/edhrec_scan_top.py`; cards in `decks::cmdr_edhrec2` / `cmdr_edhrec3`): **Henzie "Toolbox"
-Torre (BRG)** and **Frodo + Sam (WBG)** (crowd lists beside their precon seats), **K'rrik (B)**,
-**Voja (GRW)**, **Choco (GWU)**, **Light-Paws (W)**, **Yurlok (BRG)**, **Rocco, Street Chef (GRW)**,
-**Tinybones, Bauble Burglar (B)**, **Indominus Rex, Alpha (UBG)**, **Tergrid, God of Fright (B)**,
-**Athreos, God of Passage (WB)**, **Ketramose, the New Dawn (WB)**, **Niko, Light of Hope (WU)**,
-**Syr Gwyn, Hero of Ashvale (RWB)**, **Kastral, the Windcrested (WU)**, **Jodah, Archmage Eternal
-(WUBRG)**, **Child of Alara (WUBRG)** and **Rakdos, Lord of Riots (BR)** — about 120 new cards, none
-with a residual; the scan's older-card finds in those lists were all fixed (Ossification, Shardmage's
-Rescue, War's Toll, Ragost, Liliana of the Veil's −6, the Tinybones pair, Emperor of Bones' reanimation,
-Kaya, Orzhov Usurper's life rider; Spawn of Mayhem's note was stale). Seats 331-334 (sixteenth run):
-Athreos, Shroud-Veiled, Rakdos the Muscle, Captain N'ghathrod's crowd list, Kotis. Left: the stand-in
-sticker collection. `--table` output pasted as is:
+370 / 378 pod decks carry no residual (2026-10-11, nineteenth Commander run `01Vk2K6g`, concurrent
+with `017yfeX4`'s second firing). Seats 335-378 are EDHREC average decks, card for card (`scripts/edhrec_deck.py
+--rust`; the seat scan is `scripts/edhrec_scan_top.py`; cards in `decks::cmdr_edhrec2` /
+`cmdr_edhrec3` / `cmdr_edhrec4`). This run's seats 357-368 and 372-375: Fire Lord Zuko, Arna
+Kennerüd, Terra, Atreus // Kratos, Kratos, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin,
+Katara, Azlask, The Mycotyrant, Thranduil, Maralen, Najeela and Toph, the First Metalbender (~140
+cards); the concurrent run's 369-371 and 376-378: Shroofus Sproutsire, Miirym, Tiamat, Wolverine, Captain
+Howler, Magda. Every residual a new card
+carries is an open row in INCOMPLETE_CARDS ("EDHREC average-deck seats … open residuals") or named
+in its doc. Left from earlier runs: the stand-in sticker collection. `--table` output pasted as is:
 
 | # | Deck | Cards with a residual |
 |---|---|---|
 | 204 | Etali, Primal Conqueror (GR) | 1: blank_goblin |
+| 358 | Arna Kennerüd, Skycaptain (WUB) | 1: ardenn_intrepid_archaeologist |
+| 362 | Eddie Brock (BRG) | 3: behold_the_sinister_six, the_soul_stone, venom_deadly_devourer |
+| 365 | Norin the Wary (R) | 1: tibalts_trickery |
+| 367 | Azlask, the Swelling Scourge (WUBRG) | 1: echoes_of_eternity |
+| 372 | Thranduil, the Elvenking (BGU) | 2: elrond_moon_reader, maralen_fae_ascendant |
+| 373 | Maralen, Fae Ascendant (BGU) | 1: maralen_fae_ascendant |
+| 375 | Toph, the First Metalbender (RGW) | 2: bumi_unleashed, toph_hardheaded_teacher |
 
-352 / 353 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
+370 / 378 pod decks carry no residual in their card docs or INCOMPLETE_CARDS; the rest are listed.
 
 The **ninth** is the pod's only **commander ninjutsu** seat (CR 702.49d) and
 the only one whose commander leaves the command zone by an action that is not
