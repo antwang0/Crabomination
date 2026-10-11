@@ -244,6 +244,7 @@ pub fn pollen_lullaby() -> CardDefinition {
         Effect::Seq(vec![
             Effect::PreventAllCombatDamageThisTurn,
             Effect::ClashWithOpponent {
+                on_lose: None,
                 on_win: Box::new(Effect::CreaturesDontUntapNextUntapStep {
                     who: Selector::Player(PlayerRef::ChosenPlayerOfSource),
                 }),
@@ -326,6 +327,7 @@ pub fn scattering_stroke() -> CardDefinition {
         Effect::Seq(vec![
             Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
             Effect::ClashWithOpponent {
+                on_lose: None,
                 on_win: Box::new(Effect::AddManaAtNextMainPhase {
                     amount: Value::CounteredSpellManaValue,
                     any_color: false,
@@ -367,6 +369,7 @@ pub fn whirlpool_whelm() -> CardDefinition {
         cost(&[generic(1), u()]),
         Effect::Seq(vec![
             Effect::ClashWithOpponent {
+                on_lose: None,
                 on_win: Box::new(Effect::MayDo {
                     description: "Put that creature on top of its owner's library instead?".into(),
                     body: Box::new(Effect::Move {

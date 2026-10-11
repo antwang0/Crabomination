@@ -54242,6 +54242,7 @@ pub fn recross_the_paths() -> CardDefinition {
                 miss_dest: RevealMissDest::BottomRandom,
             },
             Effect::ClashWithOpponent {
+                on_lose: None,
                 on_win: Box::new(Effect::ReturnResolvingSpellToHand),
                 with: None,
             },
@@ -58550,6 +58551,7 @@ pub fn lash_out() -> CardDefinition {
                 amount: Value::Const(3),
             },
             Effect::ClashWithOpponent {
+                on_lose: None,
                 on_win: Box::new(Effect::DealDamage {
                     to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::Const(3),

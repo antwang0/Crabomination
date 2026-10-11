@@ -10617,6 +10617,10 @@ pub enum Effect {
     /// ("that player" — Pollen Lullaby). Recross the Paths.
     ClashWithOpponent {
         on_win: Box<Effect>,
+        /// "Otherwise, …" — runs when the controller doesn't win (Pulling
+        /// Teeth, Captivating Glance).
+        #[serde(default)]
+        on_lose: Option<Box<Effect>>,
         #[serde(default)]
         with: Option<PlayerRef>,
     },

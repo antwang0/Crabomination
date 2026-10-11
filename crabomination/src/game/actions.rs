@@ -22734,6 +22734,12 @@ impl GameState {
             }
         }
 
+        if let Some(kw) = ability.remove_keyword_counter_cost.as_ref()
+            && self.battlefield_find(card_id).is_none_or(|c| c.keyword_counters.get(kw).copied().unwrap_or(0) == 0)
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Pre-flight remove-ALL-counters gate: "Remove all [kind] counters
         // from this:" needs at least one to pay with (Essence Bottle).
         if let Some(kind) = ability.remove_all_counters_cost.as_ref()
@@ -24017,6 +24023,12 @@ impl GameState {
             if kind == crate::card::CounterType::Oil {
                 self.players[ctrl].oil_activity_this_turn = true;
             }
+        }
+
+        if let Some(kw) = ability.remove_keyword_counter_cost.as_ref()
+            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
+        {
+            c.keyword_counters.remove_up_to(kw, 1);
         }
 
         // Remove-ALL-counters-as-cost: strip them and stamp the tally so the

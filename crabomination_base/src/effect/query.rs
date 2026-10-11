@@ -691,8 +691,11 @@ impl Effect {
             Effect::SacrificeAnyNumber { per_each, .. } => {
                 f(per_each);
             }
-            Effect::ClashWithOpponent { on_win, .. } => {
+            Effect::ClashWithOpponent { on_win, on_lose, .. } => {
                 f(on_win);
+                if let Some(e) = on_lose {
+                    f(e);
+                }
             }
             Effect::Punisher { options, otherwise, .. } => {
                 for e in options {
@@ -2306,7 +2309,9 @@ impl Effect {
             Effect::EachPlayerRecyclesArtifacts => false,
             Effect::OpponentChoosesPermanentThen { .. } => false,
             Effect::RevealUntilMatchingToBattlefield { count, .. } => value_has_target(count),
-            Effect::ClashWithOpponent { on_win, .. } => on_win.requires_target(),
+            Effect::ClashWithOpponent { on_win, on_lose, .. } => {
+                on_win.requires_target() || on_lose.as_ref().is_some_and(|e| e.requires_target())
+            }
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::MayExileFromYourGraveyard { then, .. } => then.requires_target(),
@@ -5454,7 +5459,8 @@ impl Effect {
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 // Whirlpool Whelm's clash-won branch carries its target.
-                Effect::ClashWithOpponent { on_win, .. } => eff_find(on_win, slot, mode, kicked),
+                Effect::ClashWithOpponent { on_win, on_lose, .. } => eff_find(on_win, slot, mode, kicked)
+                    .or_else(|| on_lose.as_ref().and_then(|e| eff_find(e, slot, mode, kicked))),
                 Effect::ExilePlayerGraveyard { who, .. }
                 | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who }
                 | Effect::ExileHand { who }

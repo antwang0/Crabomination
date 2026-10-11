@@ -145,6 +145,7 @@ pub fn marvo_deep_operative() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             on_attack(Effect::ClashWithOpponent {
+                on_lose: None,
                 on_win: Box::new(Effect::Noop),
                 with: Some(PlayerRef::DefendingPlayer),
             }),

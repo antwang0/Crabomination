@@ -4537,6 +4537,11 @@ pub struct ActivatedAbility {
     /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// CR 122.1b + 602.5b — "Remove a [keyword] counter from this:" (Myojin
+    /// of Cryptic Dreams' indestructible counter). Gated and paid like
+    /// `remove_counter_cost`, off the source's keyword counters.
+    #[serde(default)]
+    pub remove_keyword_counter_cost: Option<crate::card::Keyword>,
     /// Optional cost: "Remove all [kind] counters from this:" (Essence
     /// Bottle). At least one counter is required; the tally paid is stamped on
     /// the state for `Value::CountersRemovedAsCost` to read at resolution.

@@ -33626,7 +33626,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ClashWithOpponent { on_win, with } => {
+            Effect::ClashWithOpponent { on_win, on_lose, with } => {
                 // CR 701.30 — both reveal the top card; each may bottom it
                 // (seat-routed yes/no, so a networked human gets the prompt;
                 // AutoDecider keeps it on top), deciding in APNAP order
@@ -33685,10 +33685,11 @@ impl GameState {
                 if let Some(w) = winner {
                     events.push(GameEvent::ClashWon { player: w });
                 }
-                if winner == Some(me) {
+                let payoff = if winner == Some(me) { Some(&**on_win) } else { on_lose.as_deref() };
+                if let Some(payoff) = payoff {
                     // "That player" in the payoff is the clashed opponent.
                     let prev = self.scratch.chosen_opponent_scratch.replace(opp);
-                    let r = self.run_effect(on_win, ctx, events);
+                    let r = self.run_effect(payoff, ctx, events);
                     self.scratch.chosen_opponent_scratch = prev;
                     r?;
                 }
@@ -35243,7 +35244,7 @@ impl GameState {
                 // clash that suspends resumes at that clash, not at `body`.
                 let step = Effect::Seq(vec![
                     (**body).clone(),
-                    Effect::ClashWithOpponent { on_win: Box::new(effect.clone()), with: None },
+                    Effect::ClashWithOpponent { on_win: Box::new(effect.clone()), on_lose: None, with: None },
                 ]);
                 self.run_effect(&step, ctx, events)
             }
