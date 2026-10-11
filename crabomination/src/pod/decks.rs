@@ -11560,3 +11560,32 @@ pub const REAPER_KING_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, mountain, mountain, plains, plains, plains,
     swamp, swamp,
 ];
+
+pub const SAURON_DARK_LORD_COMMANDERS: &[CardFactory] = &[sauron_the_dark_lord];
+
+/// **Sauron, the Dark Lord**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 84 nonbasic cards + 5 Islands + 4 Mountains + 6 Swamps = 99.
+/// Sauron, the Dark Lord (UBR) the Ring and Orc Armies
+pub const SAURON_DARK_LORD_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, dimir_signet, fellwar_stone, palantir_of_orthanc,
+    relic_of_sauron, sol_ring, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, the_one_ring, barad_dur, blood_crypt, choked_estuary, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard,
+    foreboding_ruins, minas_morgul_dark_fortress, mount_doom, path_of_ancestry, rogues_passage,
+    smoldering_marsh, steam_vents, sulfur_falls, sulfurous_springs, sunken_hollow,
+    the_black_gate, underground_river, watery_grave, anger, corsairs_of_umbar,
+    gothmog_morgul_lieutenant, grishnakh_brash_instigator, lord_of_the_nazgul,
+    mauhur_uruk_hai_captain, moria_scavenger, nazgul, nazgul, nazgul, nazgul, nazgul, nazgul,
+    nazgul, orcish_bowmasters, orcish_siegemaster, saruman_the_white_hand,
+    sauron_lord_of_the_rings, sauron_the_necromancer, the_balrog_of_moria, the_great_goblin,
+    the_mouth_of_sauron, warg_rider, witch_king_of_angmar, call_of_the_ring,
+    dreadhorde_invasion, fiery_inscription, in_the_darkness_bind_them,
+    march_from_the_black_gate, one_ring_to_rule_them_all, an_offer_you_cant_refuse,
+    arcane_denial, counterspell, dark_ritual, lazotep_plating, orcish_medicine,
+    sarumans_trickery, saurons_ransom, soothing_of_smeagol, swan_song, blasphemous_act,
+    claim_the_precious, faithless_looting, feed_the_swarm, foray_of_orcs, living_death,
+    reanimate, ringsight, summons_of_saruman, toxic_deluge, treason_of_isengard, victimize,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];

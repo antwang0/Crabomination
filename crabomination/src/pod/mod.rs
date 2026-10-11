@@ -2826,6 +2826,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::REAPER_KING_COMMANDERS,
             main: decks::REAPER_KING_MAIN,
         },
+        // Seat 396: Sauron, the Dark Lord's EDHREC average deck. `--pod-decks 396`.
+        PodDeck {
+            name: "Sauron, the Dark Lord (UBR)",
+            commanders: decks::SAURON_DARK_LORD_COMMANDERS,
+            main: decks::SAURON_DARK_LORD_MAIN,
+        },
     ]
 }
 
@@ -4978,6 +4984,7 @@ mod tests {
             ("Leonardo, the Balance", [0x0AAF, 393, 9318]),
             ("Norman Osborn", [0x0AB0, 394, 9319]),
             ("Reaper King", [0x0AB1, 395, 9320]),
+            ("Sauron, the Dark Lord", [0x0AB2, 396, 9321]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
