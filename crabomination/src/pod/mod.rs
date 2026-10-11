@@ -2801,6 +2801,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DORAN_BESIEGED_COMMANDERS,
             main: decks::DORAN_BESIEGED_MAIN,
         },
+        // Seat 392: Lord of the Nazgûl's EDHREC average deck. `--pod-decks 392`.
+        PodDeck {
+            name: "Lord of the Nazgûl (UB)",
+            commanders: decks::LORD_OF_THE_NAZGUL_COMMANDERS,
+            main: decks::LORD_OF_THE_NAZGUL_MAIN,
+        },
     ]
 }
 
@@ -4939,6 +4945,7 @@ mod tests {
             ("Obeka, Splitter of Seconds", [0x0AAB, 389, 9314]),
             ("Captain America, First Avenger", [0x0AAC, 390, 9315]),
             ("Doran, Besieged by Time", [0x0AAD, 391, 9316]),
+            ("Lord of the Nazgûl", [0x0AAE, 392, 9317]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

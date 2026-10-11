@@ -11446,3 +11446,29 @@ pub const DORAN_BESIEGED_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, plains, plains, plains,
     plains, plains, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const LORD_OF_THE_NAZGUL_COMMANDERS: &[CardFactory] = &[lord_of_the_nazgul];
+
+/// **Lord of the Nazgûl**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 80 nonbasic cards + 10 Islands + 9 Swamps = 99.
+/// Lord of the Nazgûl (UB) Wraith spellslinger
+pub const LORD_OF_THE_NAZGUL_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, lightning_greaves, mind_stone, sol_ring,
+    swiftfoot_boots, talisman_of_dominance, the_one_ring, thought_vessel, bojuka_bog,
+    choked_estuary, command_tower, drowned_catacomb, minas_morgul_dark_fortress, morphic_pool,
+    mystic_sanctuary, path_of_ancestry, polluted_delta, reliquary_tower, shipwreck_marsh,
+    sunken_hollow, tainted_isle, underground_river, watery_grave, archmage_emeritus,
+    changeling_outcast, gandalf_friend_of_the_shire, grima_sarumans_footman, nazgul, nazgul,
+    nazgul, nazgul, nazgul, nazgul, nazgul, nazgul, ringwraiths, roaming_throne,
+    sauron_the_necromancer, witch_king_of_angmar, witch_king_bringer_of_ruin,
+    black_market_connections, call_of_the_ring, kindred_discovery, rhystic_study,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, consider, counterspell, cyclonic_rift,
+    dark_ritual, deadly_rollick, frantic_search, glorious_gale, go_for_the_throat,
+    infernal_grasp, mana_drain, negate, opt, pongify, rapid_hybridization, saurons_ransom, snap,
+    soothing_of_smeagol, swan_song, birthday_escape, claim_the_precious, feed_the_swarm,
+    gitaxian_probe, nights_whisper, ponder, preordain, raise_the_palisade, reanimate, ringsight,
+    sams_desperate_rescue, serum_visions, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
