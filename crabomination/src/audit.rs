@@ -36,6 +36,10 @@ use serde_json::Value;
 /// in **both** directions, so an entry whose card stopped having a dead mode
 /// fails too rather than quietly licensing a future one.
 pub const REVIEWED_DEAD_MODES: &[(&str, &str)] = &[(
+    "Satsuki, the Living Lore",
+    "\"When Satsuki dies, choose up to one\" — choosing neither mode is the \
+     empty arm, which is the printed card and not a gap",
+), (
     "Hullbreaker Horror",
     "\"Choose up to one\" — choosing neither mode is the empty arm, which is \
      the printed card and not a gap",

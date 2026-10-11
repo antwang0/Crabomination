@@ -3270,6 +3270,7 @@ impl Effect {
             | Effect::MoveAnyNumberOfCounters { from, to }
             | Effect::MoveCounter { from, to, .. }
             | Effect::MoveOneCounter { from, to }
+            | Effect::MoveOneOfEachAbsentKind { from, to }
             | Effect::CopyCountersOnto { from, to } => {
                 sel_filter(from).or_else(|| sel_filter(to))
             }
@@ -5679,6 +5680,7 @@ impl Effect {
                 | Effect::MoveAnyNumberOfCounters { from, to }
                 | Effect::MoveCounter { from, to, .. }
                 | Effect::MoveOneCounter { from, to }
+                | Effect::MoveOneOfEachAbsentKind { from, to }
                 | Effect::CopyCountersOnto { from, to } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }

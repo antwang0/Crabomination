@@ -1678,27 +1678,22 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
     }
 }
 
+/// [`EventScope::YourCreatureCombatDamagedOpponent`]: combat damage to an
+/// opponent of `you` dealt by a source `you` control. Only attacking and
+/// blocking creatures deal combat damage (CR 510.1), so the source needs no
+/// type check.
+fn your_creature_combat_damaged_opponent(state: &GameState, event: &GameEvent, you: usize) -> bool {
+    let GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), combat: true, .. } = event else {
+        return false;
+    };
+    *fc == you && !state.same_team(*p, you)
+}
+
 /// Like `event_matches_spec`, but for a player-owned emblem (CR 114) that
 /// has no backing permanent. Handles the player-keyed event kinds emblem
 /// triggers actually use; scope is resolved against `controller` (the
 /// emblem's owner). Step-keyed kinds are dispatched separately in
 /// `fire_step_triggers`, so they're rejected here.
-/// [`EventScope::YourCreatureCombatDamagedOpponent`]: combat damage to an
-/// opponent of `you` from a creature `you` control (read as it last existed).
-fn your_creature_combat_damaged_opponent(state: &GameState, event: &GameEvent, you: usize) -> bool {
-    let GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), from_card: Some(src), combat: true, .. } =
-        event
-    else {
-        return false;
-    };
-    *fc == you
-        && !state.same_team(*p, you)
-        && match state.battlefield_find(*src) {
-            Some(c) => state.computed_is_creature(c),
-            None => state.find_card_anywhere(*src).is_some_and(|c| c.definition.is_creature()),
-        }
-}
-
 pub(crate) fn emblem_event_matches(
     state: &GameState,
     event: &GameEvent,
