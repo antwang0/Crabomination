@@ -11131,3 +11131,32 @@ pub const LOREHOLD_HISTORIAN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const HIGH_PERFECT_MORCANT_COMMANDERS: &[CardFactory] = &[high_perfect_morcant];
+
+/// **High Perfect Morcant**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 79 nonbasic cards + 12 Forests + 8 Swamps = 99.
+/// High Perfect Morcant (BG) Elves
+pub const HIGH_PERFECT_MORCANT_MAIN: &[CardFactory] = &[
+    arcane_signet, chronicle_of_victory, lightning_greaves, skullclamp, sol_ring,
+    swiftfoot_boots, bojuka_bog, command_tower, deathcap_glade, eclipsed_realms,
+    gilt_leaf_palace, llanowar_wastes, overgrown_tomb, path_of_ancestry, three_tree_city,
+    twilight_mire, undergrowth_stadium, vernal_fen, wirewood_lodge, woodland_cemetery,
+    yavimaya_cradle_of_growth, abomination_of_llanowar, beast_whisperer,
+    champions_of_the_perfect, circle_of_dreams_druid, dionus_elvish_archdruid,
+    dwynen_gilt_leaf_daen, eclipsed_elf, elves_of_deep_shadow, elvish_archdruid,
+    elvish_champion, elvish_harbinger, elvish_mystic, elvish_warmaster, evolution_sage,
+    ezuri_renegade_leader, formidable_speaker, fyndhorn_elves, generous_patron,
+    glissa_sunslayer, imperious_perfect, lathril_blade_of_the_elves, leaf_crowned_visionary,
+    llanowar_elves, lys_alana_huntmaster, marwyn_the_nurturer, massacre_girl_known_killer,
+    morcants_loyalist, necroskitter, poison_tip_archer, priest_of_titania, reclamation_sage,
+    selfless_safewright, shaman_of_the_pack, virulent_emissary, wolverine_riders,
+    blowfly_infestation, crumbling_ashes, elderfang_venom, flourishing_defenses, morcants_eyes,
+    prowess_of_the_fair, assassins_trophy, atomize, beast_within, elven_ambush,
+    galadhrim_ambush, golgari_charm, heroic_intervention, putrefy, tyvar_kell,
+    bloodline_bidding, cultivate, elvish_promenade, kindred_dominance, natures_lore,
+    rampant_growth, triumph_of_the_hordes, trystans_command,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

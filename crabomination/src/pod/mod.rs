@@ -2734,6 +2734,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LOREHOLD_HISTORIAN_COMMANDERS,
             main: decks::LOREHOLD_HISTORIAN_MAIN,
         },
+        // Seat 381: High Perfect Morcant's EDHREC average deck. `--pod-decks 381`.
+        PodDeck {
+            name: "High Perfect Morcant (BG)",
+            commanders: decks::HIGH_PERFECT_MORCANT_COMMANDERS,
+            main: decks::HIGH_PERFECT_MORCANT_MAIN,
+        },
     ]
 }
 
@@ -4838,6 +4844,7 @@ mod tests {
             ("Magda, Brazen Outlaw", [0x0AA0, 378, 9303]),
             ("Avatar Aang", [0x0AA1, 379, 9304]),
             ("Lorehold, the Historian", [0x0AA2, 380, 9305]),
+            ("High Perfect Morcant", [0x0AA3, 381, 9306]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
