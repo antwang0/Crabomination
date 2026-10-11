@@ -104,3 +104,49 @@ fn cr_603_2_a_listener_gone_before_the_draws_did_not_see_them() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 20);
 }
+
+/// CR 104.4b — Heliod and a lifelinking Shalai against Pariah on an
+/// indestructible creature: every cycle gains life, puts a counter on Shalai
+/// and deals its damage elsewhere, all mandatory, and no board repeats. A
+/// counter is growth to the loop watch, so the game is a draw rather than an
+/// action cap (four-seat audit pod seed 196001).
+#[test]
+fn cr_104_4b_a_counter_growing_mandatory_loop_is_a_draw() {
+    use crabomination::game::types::{GameAction, Target};
+    let mut g = main_phase();
+    let heliod = g.add_card_to_battlefield(0, catalog::heliod_sun_crowned());
+    let shalai = g.add_card_to_battlefield(0, catalog::shalai_and_hallar());
+    let myr = g.add_card_to_battlefield(1, catalog::darksteel_myr());
+    let pariah = g.add_card_to_battlefield(1, catalog::pariah());
+    g.battlefield_find_mut(pariah).unwrap().attached_to = Some(myr);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: heliod,
+        ability_index: 0,
+        target: Some(Target::Permanent(shalai)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("lifelink");
+    drain_stack(&mut g);
+    let events = g
+        .resolve_effect(
+            &Effect::AddCounter {
+                what: Selector::ExactObjects(vec![shalai]),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            &EffectContext::for_ability(shalai, 0, None),
+        )
+        .expect("resolves");
+    g.dispatch_triggers_for_events(&events);
+    for _ in 0..20_000 {
+        if g.is_game_over() || g.stack.is_empty() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.game_over, Some(None), "a mandatory loop is a draw");
+    assert_eq!(g.players[1].life, 20, "Pariah took every point");
+}

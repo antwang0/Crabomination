@@ -2305,7 +2305,13 @@ impl GameState {
         let (w1, w2) = (self.mandatory_loop_watch.1, self.mandatory_loop_watch.2);
         self.mandatory_loop_watch.1 = w1 & 0xFFFF;
         self.mandatory_loop_watch.2 = w2 & 0xFFFF;
-        let grew = self.battlefield.len() > board_before;
+        // Counters are growth too: Heliod and a lifelinking Shalai, with
+        // Pariah turning the damage aside, put one on Shalai every cycle
+        // and never repeat a board (four-seat audit pod seed 196001 ran to
+        // the action cap). Read only for a trigger — the watch ignores the
+        // rest.
+        let grew = self.battlefield.len() > board_before
+            || (was_trigger && events.iter().any(|e| matches!(e, GameEvent::CounterAdded { .. })));
         let grow = self.note_growth_loop(was_trigger, depth_before, grew, (w2 >> 16, w1 >> 16), &mut events);
         if was_trigger && self.game_over.is_none() {
             // The watch holds an *anchor* fingerprint and counts the trigger

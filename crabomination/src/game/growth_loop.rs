@@ -1,6 +1,7 @@
 //! CR 104.4b / 732.4 — a mandatory loop that never repeats a board because
 //! every cycle adds an object (Gremlin Tamer under Secret Arcade: each Gremlin
-//! token is an enchantment, so its arrival re-triggers Eerie). The exact-state
+//! token is an enchantment, so its arrival re-triggers Eerie) or a counter
+//! (Heliod, Sun-Crowned and a lifelinking Shalai and Hallar). The exact-state
 //! watch in `stack.rs` cannot see it; this one counts the consecutive
 //! triggered-ability resolutions that put a permanent onto the battlefield
 //! (a non-growing rider between them is carried, not counted) and never leave
