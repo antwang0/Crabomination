@@ -2258,6 +2258,7 @@ pub fn transmutation_font() -> CardDefinition {
                 tap_cost: true,
                 sorcery_speed: true,
                 sac_other_filter: Some((R::Artifact.and(R::IsToken), 3)),
+                sac_other_distinct_names: true,
                 effect: Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Artifact,

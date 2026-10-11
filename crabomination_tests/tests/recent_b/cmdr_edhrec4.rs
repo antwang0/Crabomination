@@ -1456,6 +1456,12 @@ fn transmutation_font_mints_then_fetches() {
     activate(&mut g, font, 1).expect("fetch");
     assert_eq!(named(&g, "Sol Ring"), 1);
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 0);
+    // "… with different names": three Treasures can't pay it.
+    for _ in 0..3 {
+        g.add_token_to_battlefield(0, &crabomination_base::tokens::treasure_token());
+    }
+    g.battlefield_find_mut(font).unwrap().tapped = false;
+    assert!(activate(&mut g, font, 1).is_err());
 }
 
 /// Apothecary White: two players attacked, two Foods; then {W} and two
