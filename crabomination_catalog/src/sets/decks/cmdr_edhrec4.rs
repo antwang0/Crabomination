@@ -1246,3 +1246,239 @@ pub fn soulfire_eruption() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── High Perfect Morcant (BG Elves) ─────────────────────────────────────────
+
+fn elf() -> R {
+    R::HasCreatureType(CreatureType::Elf)
+}
+
+fn your_upkeep(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl), effect }
+}
+
+/// Eclipsed Elf — {B/G}{B/G}{B/G} 3/2 Elf Scout. Entering, look at the top
+/// four: you may take an Elf, Swamp or Forest card; the rest go to the bottom
+/// in a random order.
+pub fn eclipsed_elf() -> CardDefinition {
+    use crate::card::LandType;
+    use crate::mana::hybrid;
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            pick_filter: Some(elf().or(R::HasLandType(LandType::Swamp)).or(R::HasLandType(LandType::Forest))),
+            take: Some(Value::ONE),
+            optional: true,
+            rest_bottom_random: true,
+            ..Default::default()
+        })))],
+        ..creature(
+            "Eclipsed Elf",
+            crate::mana::ManaCost::new(vec![
+                hybrid(Color::Black, Color::Green),
+                hybrid(Color::Black, Color::Green),
+                hybrid(Color::Black, Color::Green),
+            ]),
+            vec![CreatureType::Elf, CreatureType::Scout],
+            3,
+            2,
+        )
+    }
+}
+
+/// Elvish Harbinger — {2}{G} 1/2 Elf Druid. Entering, search for an Elf card
+/// and put it on top after shuffling. {T}: Add one mana of any color.
+pub fn elvish_harbinger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: elf(),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
+        ..creature("Elvish Harbinger", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 2)
+    }
+}
+
+/// Crumbling Ashes — {1}{B} Enchantment. At the beginning of your upkeep,
+/// destroy target creature with a -1/-1 counter on it.
+pub fn crumbling_ashes() -> CardDefinition {
+    CardDefinition {
+        name: "Crumbling Ashes",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![your_upkeep(Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::WithCounter(CounterType::MinusOneMinusOne))),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Morcant's Eyes — {1}{G} Kindred Enchantment — Elf. Upkeep: surveil 1.
+/// {4}{G}{G}, sacrifice it: X 2/2 black and green Elves, X = Elf cards in
+/// your graveyard; sorcery speed.
+pub fn morcants_eyes() -> CardDefinition {
+    let elf_token = TokenDefinition {
+        name: "Elf".into(),
+        power: 2,
+        toughness: 2,
+        colors: vec![Color::Black, Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Morcant's Eyes",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Kindred, CardType::Enchantment],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        triggered_abilities: vec![your_upkeep(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: elf() },
+                definition: Arc::new(elf_token),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tyvar Kell — {2}{G}{G} Tyvar, 3 loyalty. Elves you control have "{T}: Add
+/// {B}." +1: a +1/+1 counter on up to one target Elf, untap it, deathtouch
+/// until end of turn. 0: a 1/1 green Elf Warrior. −6: an emblem — an Elf spell
+/// you cast gains haste and you draw two.
+pub fn tyvar_kell() -> CardDefinition {
+    let ability = |loyalty_cost: i32, effect: Effect| LoyaltyAbility { loyalty_cost, effect, ..Default::default() };
+    let warrior = TokenDefinition {
+        name: "Elf Warrior".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Warrior], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Tyvar Kell",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Tyvar], ..Default::default() },
+        base_loyalty: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Elves you control have \"{T}: Add {B}.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(elf().and(R::ControlledByYou)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Black]) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        loyalty_abilities: vec![
+            ability(
+                1,
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::AddCounter {
+                            what: target_filtered(elf()),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        },
+                        Effect::Untap { what: Selector::Target(0), up_to: None },
+                        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+                    ])),
+                },
+            ),
+            ability(0, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(warrior) }),
+            ability(
+                -6,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Tyvar Kell".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: elf() }),
+                        effect: Effect::Seq(vec![
+                            Effect::GrantKeywordsToSpell { what: Selector::TriggerSource, keywords: vec![Keyword::Haste] },
+                            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                        ]),
+                    }],
+                    statics: vec![],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Trystan's Command — {4}{B}{G} Kindred Sorcery — Elf. Choose two: a token
+/// copy of target Elf you control; return one or two permanent cards from your
+/// graveyard to your hand (chosen as it resolves, not targeted); destroy
+/// target creature or enchantment; creatures target player controls get
+/// +3/+3 until end of turn and untap.
+pub fn trystans_command() -> CardDefinition {
+    CardDefinition {
+        name: "Trystan's Command",
+        cost: cost(&[generic(4), b(), g()]),
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        effect: Effect::ChooseModesCast {
+            min: 2,
+            max: 2,
+            allow_repeats: false,
+            modes: vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(elf().and(R::ControlledByYou)),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+                Effect::MoveChosen {
+                    from: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: R::Permanent },
+                    filter: None,
+                    count: Value::Const(2),
+                    up_to: true,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::Destroy { what: target_filtered(R::Creature.or(R::Enchantment)) },
+                Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::Untap {
+                        what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                        up_to: None,
+                    },
+                ]),
+            ],
+        },
+        ..Default::default()
+    }
+}

@@ -808,3 +808,114 @@ fn soulfire_eruption_burns_by_mana_value() {
         assert!(g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some()));
     }
 }
+
+// ── High Perfect Morcant's list ─────────────────────────────────────────────
+
+fn to_upkeep(g: &mut GameState) {
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(g);
+}
+
+/// Eclipsed Elf takes an Elf off the top four; Elvish Harbinger stacks an Elf
+/// on top and taps for any color.
+#[test]
+fn eclipsed_elf_and_harbinger_find_elves() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let elves = g.add_card_to_library(0, catalog::llanowar_elves());
+    let eclipsed = g.add_card_to_hand(0, catalog::eclipsed_elf());
+    flood(&mut g);
+    cast(&mut g, eclipsed);
+    assert!(g.players[0].hand.iter().any(|c| c.id == elves), "an Elf among the top four");
+    let deep = g.add_card_to_library(0, catalog::elvish_mystic());
+    let harbinger = g.add_card_to_hand(0, catalog::elvish_harbinger());
+    flood(&mut g);
+    cast(&mut g, harbinger);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(deep), "the Elf is on top");
+    g.clear_sickness(harbinger);
+    g.players[0].mana_pool.empty();
+    activate(&mut g, harbinger, 0).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+/// Crumbling Ashes destroys a creature with a -1/-1 counter at your upkeep;
+/// Morcant's Eyes surveils then and cashes Elf cards in for 2/2 Elves.
+#[test]
+fn crumbling_ashes_and_morcants_eyes_upkeep() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::crumbling_ashes());
+    let eyes = ready(&mut g, 0, catalog::morcants_eyes());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().add_counters(CounterType::MinusOneMinusOne, 1);
+    let ogre = ready(&mut g, 1, catalog::gray_ogre());
+    to_upkeep(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "the countered creature is destroyed");
+    assert!(g.battlefield_find(ogre).is_some());
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    }
+    flood(&mut g);
+    activate(&mut g, eyes, 0).expect("sacrifice for Elves");
+    assert!(g.battlefield_find(eyes).is_none());
+    // Morcant's Eyes is a Kindred Elf card, sacrificed as a cost, so it counts
+    // itself: three Llanowar Elves and the Eyes.
+    assert_eq!(named(&g, "Elf"), 4, "one 2/2 per Elf card in the graveyard");
+}
+
+/// Tyvar Kell: Elves tap for {B}; +1 grows, untaps and gives an Elf deathtouch.
+#[test]
+fn tyvar_kell_feeds_and_arms_elves() {
+    let mut g = pod(2);
+    let tyvar = ready(&mut g, 0, catalog::tyvar_kell());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    g.players[0].mana_pool.empty();
+    let printed = catalog::llanowar_elves().activated_abilities.len();
+    activate(&mut g, elf, printed).expect("the granted {T}: Add {B}");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    assert!(g.battlefield_find(elf).unwrap().tapped);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: tyvar,
+        ability_index: 0,
+        target: Some(Target::Permanent(elf)),
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(elf).unwrap();
+    assert!(!c.tapped && c.counter_count(CounterType::PlusOnePlusOne) == 1);
+    assert!(has_kw(&g, elf, Keyword::Deathtouch));
+}
+
+/// Trystan's Command: destroy a creature and pump-and-untap a player's
+/// creatures (modes 2 and 3).
+#[test]
+fn trystans_command_destroys_and_pumps() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    let theirs = ready(&mut g, 1, catalog::serra_angel());
+    let command = g.add_card_to_hand(0, catalog::trystans_command());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellSpree {
+        spree_modes: vec![2, 3],
+        card_id: command,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![Target::Player(0)],
+        x_value: None,
+    })
+    .expect("cast two modes");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+    let bears = g.battlefield_find(mine).unwrap();
+    assert!(!bears.tapped);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 5);
+}

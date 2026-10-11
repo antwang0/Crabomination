@@ -1980,5 +1980,9 @@ library-exile event.
 
 ### EDHREC average-deck seats (`decks::cmdr_edhrec3`, 2026-10-11 Commander run) — open residuals
 
-None: Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host
-legality; `ManaWithoutTap`). New seats' residuals go here.
+Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
+`ManaWithoutTap`). New seats' residuals go here.
+
+| Card | Residual | Why |
+|---|---|---|
+| 🟡 Trystan's Command | the "return one or two target permanent cards from your graveyard" mode picks the cards as it resolves (`MoveChosen`, up to two) instead of targeting them | a mode of `ChooseModesCast` holds one target slot; a mode with "one or two" targets of its own needs per-mode slot counts |
