@@ -10711,3 +10711,34 @@ pub const KATARA_THE_FEARLESS_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, island, island,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const AZLASK_COMMANDERS: &[CardFactory] = &[azlask_the_swelling_scourge];
+
+/// **Azlask, the Swelling Scourge**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 90 nonbasic cards + 3 Forests + 2 Islands + 1 Mountain + 1 Plains + 2 Swamps = 99.
+/// Azlask, the Swelling Scourge (WUBRG) colorless swarm: Spawn and Scion fodder dies into
+/// experience counters while Eldrazi titans and colorless copies close it out.
+pub const AZLASK_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, eldrazi_monument, fellwar_stone, forsaken_monument,
+    idol_of_false_gods, idol_of_oblivion, skullclamp, sol_ring, urzas_incubator, adarkar_wastes,
+    battlefield_forge, brushland, cascading_cataracts, caves_of_koilos, command_tower,
+    corrupted_crossroads, eldrazi_temple, exotic_orchard, eye_of_ugin, karplusan_forest,
+    llanowar_wastes, path_of_ancestry, reliquary_tower, secluded_courtyard, shivan_reef,
+    shrine_of_the_forsaken_gods, spawning_bed, sulfurous_springs, the_world_tree,
+    tomb_of_the_spirit_dragon, tranquil_landscape, twisted_landscape, unclaimed_territory,
+    underground_river, yavimaya_coast, brood_monitor, catacomb_sifter, chittering_dispatcher,
+    drowner_of_hope, drowner_of_truth, eldrazi_displacer, eldrazi_repurposer,
+    eldrazi_skyspawner, emrakuls_hatcher, emrakuls_messenger, eyeless_watcher,
+    ezuri_claw_of_progress, glaring_fleshraker, herald_of_kozilek, it_that_heralds_the_end,
+    kozileks_predator, meren_of_clan_nel_toth, minthara_merciless_soul, otharri_suns_glory,
+    propagator_drone, rapacious_one, sifter_of_skulls, sire_of_stagnation,
+    smothering_abomination, snapping_voidcraw, spawn_gang_commander, spawnbed_protector,
+    ulalek_fused_atrocity, vile_redeemer, writhing_chrysalis, awakening_zone, cryptolith_rite,
+    echoes_of_eternity, from_beyond, kindred_discovery, kozileks_unsealing, parallel_lives,
+    path_of_annihilation, eldrazi_confluence, eldritch_immunity, kozileks_command,
+    null_elemental_blast, swords_to_plowshares, ugins_binding, unfathomable_truths,
+    warping_wail, ugin_the_ineffable, all_is_dust, brood_birthing, call_the_scions, farseek,
+    glimpse_the_impossible, growth_spasm, skittering_invasion,
+    // Basics
+    forest, forest, forest, island, island, mountain, plains, swamp, swamp,
+];

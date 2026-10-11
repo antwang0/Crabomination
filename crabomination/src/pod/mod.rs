@@ -2640,6 +2640,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KATARA_THE_FEARLESS_COMMANDERS,
             main: decks::KATARA_THE_FEARLESS_MAIN,
         },
+        // Seat 367: Azlask, the Swelling Scourge's EDHREC average deck. `--pod-decks 367`.
+        PodDeck {
+            name: "Azlask, the Swelling Scourge (WUBRG)",
+            commanders: decks::AZLASK_COMMANDERS,
+            main: decks::AZLASK_MAIN,
+        },
     ]
 }
 
@@ -4724,6 +4730,7 @@ mod tests {
             ("Shilgengar, Sire of Famine", [0x0A92, 364, 9289]),
             ("Norin the Wary", [0x0A93, 365, 9290]),
             ("Katara, the Fearless", [0x0A94, 366, 9291]),
+            ("Azlask, the Swelling Scourge", [0x0A95, 367, 9292]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
