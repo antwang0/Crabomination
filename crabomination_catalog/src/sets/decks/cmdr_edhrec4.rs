@@ -1772,3 +1772,157 @@ pub fn galadriels_dismissal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Skullbriar, the Walking Grave's EDHREC gaps ─────────────────────────────
+
+/// A Mentor of the Duskmourn cycle: entering, a `kw` counter on a target
+/// non-Human creature you control; `{1}{C}, {T}`: a +1/+1 counter on each
+/// creature you control with `kw`.
+fn kw_mentor(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    activation: crate::mana::ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+    kw: Keyword,
+) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::HasCreatureType(CreatureType::Human).negate())),
+            keyword: kw.clone(),
+            amount: Value::ONE,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: activation,
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::HasKeyword(kw))),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(name, mana, types, p, t)
+    }
+}
+
+/// Duskfang Mentor — {2}{B} 1/3 Human Cleric: a lifelink counter; {1}{B}, {T}.
+pub fn duskfang_mentor() -> CardDefinition {
+    kw_mentor(
+        "Duskfang Mentor",
+        cost(&[generic(2), b()]),
+        cost(&[generic(1), b()]),
+        vec![CreatureType::Human, CreatureType::Cleric],
+        1,
+        3,
+        Keyword::Lifelink,
+    )
+}
+
+/// Hornbash Mentor — {2}{G} 3/3 Human Warrior: a trample counter; {2}{G}, {T}.
+pub fn hornbash_mentor() -> CardDefinition {
+    kw_mentor(
+        "Hornbash Mentor",
+        cost(&[generic(2), g()]),
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        3,
+        3,
+        Keyword::Trample,
+    )
+}
+
+/// Thundering Mightmare — {4}{G} 3/3 Horse Spirit, soulbond. Each of the pair
+/// has "Whenever an opponent casts a spell, put a +1/+1 counter on this
+/// creature" (granted to the partner the Mirage Phalanx way).
+pub fn thundering_mightmare() -> CardDefinition {
+    let grow = TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(Predicate::ValueAtLeast(
+            Value::CountOf(Box::new(Selector::SoulbondPartner)),
+            Value::ONE,
+        )),
+        effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Soulbond],
+        static_abilities: vec![StaticAbility {
+            description: "As long as Thundering Mightmare is paired with another creature, that creature has the counter trigger too.",
+            effect: StaticEffect::GrantTriggeredAbility { filter: R::PairedWithSource, ability: Box::new(grow.clone()) },
+        }],
+        triggered_abilities: vec![grow],
+        ..creature("Thundering Mightmare", cost(&[generic(4), g()]), vec![CreatureType::Horse, CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Call of the Death-Dweller — {2}{B} Sorcery. Up to two creature cards with
+/// total mana value 3 or less return from your graveyard; a deathtouch counter
+/// on either of them, then a menace counter on either of them.
+pub fn call_of_the_death_dweller() -> CardDefinition {
+    let counter = |kw: Keyword| Effect::ChooseOneAmong {
+        what: Selector::LastMoved,
+        chooser: PlayerRef::You,
+        chosen: Box::new(Effect::AddKeywordCounter { what: Selector::SeparatedPile { chosen: true }, keyword: kw, amount: Value::ONE }),
+        other: Box::new(Effect::Noop),
+    };
+    CardDefinition {
+        name: "Call of the Death-Dweller",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::Creature.and(R::InYourGraveyard).and(R::SlotsTotalManaValueAtMost(3)),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+            counter(Keyword::Deathtouch),
+            counter(Keyword::Menace),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Increasing Savagery — {2}{G}{G} Sorcery, flashback {5}{G}{G}. Five +1/+1
+/// counters on target creature; ten if cast from a graveyard.
+pub fn increasing_savagery() -> CardDefinition {
+    let put = |n: i32| Effect::AddCounter {
+        what: target_filtered(R::Creature),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Increasing Savagery",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), g(), g()]))],
+        effect: Effect::If { cond: Predicate::CastFromGraveyard, then: Box::new(put(10)), else_: Box::new(put(5)) },
+        ..Default::default()
+    }
+}
+
+/// Visions of Dominance — {2}{G} Sorcery. A +1/+1 counter on target creature,
+/// then double its +1/+1 counters; flashback {8}{G}{G}, {X} less where X is
+/// your commander's greatest mana value.
+pub fn visions_of_dominance() -> CardDefinition {
+    CardDefinition {
+        name: "Visions of Dominance",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(8), g(), g()]))],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast this way, where X is the greatest mana value of a commander you own on the battlefield or in the command zone.",
+            effect: StaticEffect::SelfFlashbackCostsLess {
+                amount: Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You),
+            },
+        }],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::DoubleCountersOnEach { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne },
+        ]),
+        ..Default::default()
+    }
+}

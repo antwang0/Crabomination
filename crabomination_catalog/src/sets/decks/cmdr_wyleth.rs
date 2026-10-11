@@ -394,6 +394,45 @@ pub fn ring_of_valkas() -> CardDefinition {
     }
 }
 
+/// Ring of Kalonia — trample; upkeep counter on a green bearer. Equip {1}.
+pub fn ring_of_kalonia() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![ring_upkeep(Color::Green)],
+        ..equipment(
+            "Ring of Kalonia",
+            cost(&[generic(2)]),
+            cost(&[generic(1)]),
+            EquipBonus { keywords: vec![Keyword::Trample], ..Default::default() },
+        )
+    }
+}
+
+/// Ring of Xathrid — {2}: regenerate the bearer; upkeep counter on a black
+/// bearer. Equip {1}.
+pub fn ring_of_xathrid() -> CardDefinition {
+    let mut def = equipment("Ring of Xathrid", cost(&[generic(2)]), cost(&[generic(1)]), EquipBonus::default());
+    def.triggered_abilities.push(ring_upkeep(Color::Black));
+    def.activated_abilities.push(ActivatedAbility {
+        mana_cost: cost(&[generic(2)]),
+        effect: Effect::Regenerate { what: equipped() },
+        ..Default::default()
+    });
+    def
+}
+
+/// Ring of Evos Isle — {2}: the bearer gains hexproof until end of turn;
+/// upkeep counter on a blue bearer. Equip {1}.
+pub fn ring_of_evos_isle() -> CardDefinition {
+    let mut def = equipment("Ring of Evos Isle", cost(&[generic(2)]), cost(&[generic(1)]), EquipBonus::default());
+    def.triggered_abilities.push(ring_upkeep(Color::Blue));
+    def.activated_abilities.push(ActivatedAbility {
+        mana_cost: cost(&[generic(2)]),
+        effect: Effect::GrantKeyword { what: equipped(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+        ..Default::default()
+    });
+    def
+}
+
 /// Tiana, Ship's Caretaker — flying, first strike; whenever an Aura or
 /// Equipment you control is put into a graveyard from the battlefield, you
 /// may return it to its owner's hand at the beginning of the next end step.

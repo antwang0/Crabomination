@@ -1110,3 +1110,105 @@ fn galadriels_dismissal_one_creature_or_a_whole_side() {
     assert!(g.battlefield_find(b).is_none());
     assert_eq!(g.phased_out.len(), 2);
 }
+
+fn equip_to(g: &mut GameState, eq: CardId, host: CardId) {
+    g.battlefield_find_mut(eq).unwrap().attached_to = Some(host);
+}
+
+/// The Ring cycle's activations: Xathrid regenerates its bearer, Evos Isle
+/// gives it hexproof; Kalonia's trample is static.
+#[test]
+fn rings_of_kalonia_xathrid_and_evos_isle() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let kalonia = ready(&mut g, 0, catalog::ring_of_kalonia());
+    equip_to(&mut g, kalonia, bear);
+    assert!(has_kw(&g, bear, Keyword::Trample));
+    let xathrid = ready(&mut g, 0, catalog::ring_of_xathrid());
+    equip_to(&mut g, xathrid, bear);
+    let evos = ready(&mut g, 0, catalog::ring_of_evos_isle());
+    equip_to(&mut g, evos, bear);
+    flood(&mut g);
+    activate(&mut g, xathrid, 0).expect("regenerate");
+    assert_eq!(g.battlefield_find(bear).unwrap().regeneration_shields, 1);
+    activate(&mut g, evos, 0).expect("hexproof");
+    assert!(has_kw(&g, bear, Keyword::Hexproof));
+}
+
+/// Duskfang Mentor: the lifelink counter skips Humans (itself), and its
+/// activation grows every lifelinker.
+#[test]
+fn duskfang_mentor_marks_a_non_human_then_grows_lifelinkers() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mentor = g.add_card_to_hand(0, catalog::duskfang_mentor());
+    flood(&mut g);
+    cast(&mut g, mentor);
+    assert!(has_kw(&g, bear, Keyword::Lifelink));
+    let mentor = g.battlefield.iter().find(|c| c.definition.name == "Duskfang Mentor").unwrap().id;
+    assert!(!has_kw(&g, mentor, Keyword::Lifelink));
+    g.clear_sickness(mentor);
+    activate(&mut g, mentor, 0).expect("grow");
+    assert_eq!((counters(&g, bear), counters(&g, mentor)), (1, 0));
+}
+
+/// Thundering Mightmare: paired, an opponent's spell grows both of the pair.
+#[test]
+fn thundering_mightmare_grows_the_pair_on_an_opponents_spell() {
+    let mut g = pod(2);
+    let horse = ready(&mut g, 0, catalog::thundering_mightmare());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(horse).unwrap().soulbond_partner = Some(bear);
+    g.battlefield_find_mut(bear).unwrap().soulbond_partner = Some(horse);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!((counters(&g, horse), counters(&g, bear)), (1, 1));
+}
+
+/// Call of the Death-Dweller: two cards totalling MV 3 return; one gets a
+/// deathtouch counter and one a menace counter.
+#[test]
+fn call_of_the_death_dweller_returns_two_and_marks_them() {
+    let mut g = pod(2);
+    let elves = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let call = g.add_card_to_hand(0, catalog::call_of_the_death_dweller());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: call, target: Some(Target::Permanent(elves)), additional_targets: vec![Target::Permanent(bears)], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elves).is_some() && g.battlefield_find(bears).is_some());
+    assert!(has_kw(&g, elves, Keyword::Deathtouch) || has_kw(&g, bears, Keyword::Deathtouch));
+    assert!(has_kw(&g, elves, Keyword::Menace) || has_kw(&g, bears, Keyword::Menace));
+}
+
+/// Increasing Savagery: five counters from hand, ten flashed back.
+#[test]
+fn increasing_savagery_doubles_from_the_graveyard() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sav = g.add_card_to_hand(0, catalog::increasing_savagery());
+    flood(&mut g);
+    cast_at(&mut g, sav, Some(Target::Permanent(bear)));
+    assert_eq!(counters(&g, bear), 5);
+    g.perform_action(GameAction::CastFlashback { card_id: sav, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("flashback");
+    drain_stack(&mut g);
+    assert_eq!(counters(&g, bear), 15);
+}
+
+/// Visions of Dominance: one counter, then double — 2 becomes 6.
+#[test]
+fn visions_of_dominance_adds_then_doubles() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let vis = g.add_card_to_hand(0, catalog::visions_of_dominance());
+    flood(&mut g);
+    cast_at(&mut g, vis, Some(Target::Permanent(bear)));
+    assert_eq!(counters(&g, bear), 6);
+}
