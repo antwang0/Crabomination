@@ -2692,6 +2692,10 @@ pub enum Predicate {
     /// `.0` attacked the controller during the current turn (Faramir's "if
     /// they didn't attack you that turn", read at that player's end step).
     PlayerAttackedYouThisTurn(PlayerRef),
+    /// CR 506.2 — one or more of the controller's opponents (or their
+    /// planeswalkers or battles they protect) is being attacked this combat,
+    /// by anyone (Party Dude's "one or more of your opponents are attacked").
+    AnOpponentIsAttacked,
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
     /// stamped from the resolving `CardInstance.kicked` flag. Used by

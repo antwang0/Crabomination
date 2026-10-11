@@ -3078,6 +3078,8 @@ impl GameState {
                         );
                         etb_ctx.cast_from_hand = cast_from_hand;
                         etb_ctx.cast_from_graveyard = cast_from_graveyard;
+                        // CR 702.33d — "if it was kicked, it enters with …".
+                        etb_ctx.kicked = self.battlefield_find(card_id).is_some_and(|c| c.kicked);
                         let base = self.evaluate_value(&value, &etb_ctx);
                         if base > 0 {
                             // CR 614.16: the counter replacements also apply
