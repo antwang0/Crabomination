@@ -239,6 +239,17 @@ the handoff.
 - **Fuzzed strict sweep 291001** (3/4/6/8 × 15, audit binary at `407aacc84`
   + Tibalt): 4,980 games, **0 aborts, 0 stalls**; 2 undecided, both draws by
   rule (a CR 104.4a simultaneous loss; Polyraptor + Marauding Raptor).
+  **Fuzzed strict sweep 292001** on the afternoon tip (audit binary with the
+  doubler / cast-cap / Bumi changes): 4,980 games, **0 aborts, 0 stalls**; 3
+  undecided, all by rule — Ghostly Dancers + Secret Arcade (Secret Arcade
+  makes each Spirit token an enchantment, so the mandatory Eerie trigger
+  loops: CR 104.4b), a token board cap, and a 401-deep Shalai and Hallar /
+  The Red Terror / All Will Be One stack.
+- **Gates at `bf15ed5f8`:** strict suite 24,979 / 0 / 5; workspace clippy 0;
+  `release-fast` typecheck clean; `--bench` 196,176 / 27.64 / 613.0
+  byte-identical, both determinism checks ok; release pod smoke seed 29301 ×
+  250 at 3/4/6/8 seats 1,000/1,000 decided; 2-player cube/sos/sealed seed
+  29401 × 300 all decided.
 - **Open:** The Soul Stone's "harnessed" is a charge counter (needs a
   designation on the permanent, like a Case's `case_solved`); Etali's
   sticker stand-in; Elrond, Moon-Reader's trigger should count a creature's
