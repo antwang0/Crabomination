@@ -47,6 +47,16 @@ impl PodDeck {
 /// Passes run ~10-65 per play from four seats to thirty-four.
 const PASSES_PER_PLAY_BACKSTOP: usize = 200;
 
+/// Consecutive priority passes with no play between them that call a game an
+/// action cap: a mandatory trigger loop that makes progress (a life total
+/// growing every pass) never repeats a board, so the loop watch can't name
+/// it, and the play-count backstop above let one 8-seat game pass 1.6 M
+/// times — 90 minutes on the audit build (Golgari Grave-Troll under Out of
+/// the Tombs and Moldervine Reclamation, fuzzed seed 19200324, game 7). A
+/// legal trigger chain is far shorter: the board cap stops a stack at
+/// `MAX_STACK_ITEMS` long before.
+const PASS_STREAK_CAP: usize = 50_000;
+
 /// One finished pod game.
 #[derive(Debug, Clone, Copy)]
 pub struct PodOutcome {
@@ -3117,6 +3127,7 @@ fn play_pod_game(
             .collect();
     }
     let (mut actions, mut plays, mut stale) = (0usize, 0usize, 0usize);
+    let mut pass_streak = 0usize;
     let (diag_floor, mut diag_said) = (crate::recommend::cap_diag_floor().flatten(), false);
     let trace_from = pod_trace_from();
     let mut repeats = RepeatGuard::default();
@@ -3135,10 +3146,14 @@ fn play_pod_game(
         if into.is_some() { ActionCensus::forced() } else { ActionCensus::armed() };
     // The budget counts plays, not priority passes (`PodOutcome::plays`), with
     // a total-action backstop far above anything a play budget allows.
-    let spent = |actions: usize, plays: usize| {
-        if actions >= max_actions.saturating_mul(PASSES_PER_PLAY_BACKSTOP) { max_actions } else { plays }
+    let spent = |actions: usize, plays: usize, pass_streak: usize| {
+        if actions >= max_actions.saturating_mul(PASSES_PER_PLAY_BACKSTOP) || pass_streak >= PASS_STREAK_CAP {
+            max_actions
+        } else {
+            plays
+        }
     };
-    while stop_reason(&g, spent(actions, plays), max_actions, stale).is_none() {
+    while stop_reason(&g, spent(actions, plays, pass_streak), max_actions, stale).is_none() {
         let mut any = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
             // Eliminated seats are polled like any other: the bot answers
@@ -3303,6 +3318,7 @@ fn play_pod_game(
                 any = true;
                 actions += 1;
                 plays += usize::from(!is_pass);
+                pass_streak = if is_pass { pass_streak + 1 } else { 0 };
                 if let Some((rate, rng)) = concede.as_mut()
                     && !g.is_game_over()
                     && rng.random_range(0..10_000u32) < *rate
@@ -3989,7 +4005,7 @@ fn play_pod_game(
         }
     }
     crate::server::bot::set_jitter_seed(None);
-    let stop = stop_reason(&g, spent(actions, plays), max_actions, stale).unwrap_or(StopReason::NoLegalMove);
+    let stop = stop_reason(&g, spent(actions, plays, pass_streak), max_actions, stale).unwrap_or(StopReason::NoLegalMove);
     // `CRAB_CAP_DIAG` is the two-player loop's knob and it says the same thing
     // here: what was an undecided game actually doing. One `OnceLock` read a
     // game, on the undecided ones only.
@@ -5406,5 +5422,34 @@ mod tests {
         let t = run_pod(&rofellos_pod(4), 2, 7, 20_000, Pilot::default());
         assert_eq!(t.games, 2);
         assert!(t.total_turns > 0);
+    }
+
+    /// CR 732.4 — a mandatory loop that makes progress (each life gain
+    /// triggers another) repeats no board, so the loop watch can't call it;
+    /// the pass-streak cap ends it as an action cap after `PASS_STREAK_CAP`
+    /// passes rather than at the 200-passes-per-play backstop (1.6 M actions
+    /// in an 8-seat pod).
+    #[test]
+    fn a_progressing_mandatory_loop_stops_at_the_pass_streak_cap() {
+        use crate::card::{CardDefinition, CardType, EventKind, EventScope, EventSpec, TriggeredAbility};
+        use crate::effect::{Effect, Selector, Value};
+        let mut t = build_pod_template(&rofellos_pod(4));
+        let gain = || Effect::GainLife { who: Selector::You, amount: Value::ONE };
+        t.add_card_to_battlefield(0, CardDefinition {
+            name: "Endless Font",
+            card_types: vec![CardType::Enchantment],
+            triggered_abilities: vec![
+                TriggeredAbility {
+                    event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::YourControl),
+                    effect: gain(),
+                },
+                TriggeredAbility { event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl), effect: gain() },
+            ],
+            ..Default::default()
+        });
+        let o = play_pod_game(&t, &vec![Pilot::default(); 4], 4_000, 11, None, None);
+        assert_eq!(o.stop, StopReason::ActionCap);
+        assert!(o.turns <= 2, "the loop starts at the first upkeep, turn {}", o.turns);
+        assert!(o.actions < PASS_STREAK_CAP + 5_000, "{} actions", o.actions);
     }
 }
