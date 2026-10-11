@@ -11472,3 +11472,33 @@ pub const LORD_OF_THE_NAZGUL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const LEONARDO_MICHELANGELO_COMMANDERS: &[CardFactory] = &[leonardo_the_balance, michelangelo_the_heart];
+
+/// **Leonardo, the Balance // Michelangelo, the Heart**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 88 nonbasic cards + 4 Forests + 2 Islands + 1 Mountain + 2 Plains + 1 Swamp = 98.
+/// Leonardo, the Balance // Michelangelo, the Heart (WUBRG) Turtle counters
+pub const LEONARDO_MICHELANGELO_MAIN: &[CardFactory] = &[
+    arcade_cabinet, arcane_signet, chromatic_lantern, coin_of_mastery, everything_pizza,
+    exploding_barrel, sol_ring, the_ooze, ash_barrens, big_apple_3_a_m, cinder_glade,
+    city_of_brass, command_tower, dragonskull_summit, escape_tunnel, evolving_wilds,
+    exotic_orchard, fabled_passage, grand_coliseum, hidden_hideout, hinterland_harbor,
+    path_of_ancestry, rain_slicked_copse, rootbound_crag, smoldering_marsh, sodden_verdure,
+    spire_garden, sunken_hollow, thriving_grove, thriving_isle, turtle_lair,
+    undergrowth_stadium, vernal_fen, vibrant_cityscape, academy_manufactor,
+    april_oneil_live_on_the_scene, baxter_fly_in_the_ointment, bebop_skull_crossbones,
+    big_mother_mouser, casey_jones_back_alley_brute, corpsejack_menace, dark_leo_shredder,
+    dimension_x_pizzasaur, donatello_the_brains, heroes_in_a_half_shell, irma_part_time_mutant,
+    leatherhead_iron_gator, lita_little_orphan_amphibian, michelangelo_mutant_bff,
+    michelangelo_weirdness_to_11, mikey_don_party_planners, mikey_leo_chaos_order,
+    mona_lisa_science_geek, mutagen_man_living_ooze, raphael_the_muscle,
+    raphael_the_nightwatcher, ray_fillet_wave_warrior, rocksteady_mutant_marauder,
+    shredder_shadow_master, splinter_radical_rat, splinter_the_mentor, steelbane_hydra, vigor,
+    all_will_be_one, doubling_season, endless_foot_assault, hardened_scales, high_score,
+    level_up, ninja_pizza, together_forever, assassins_trophy, continue_card,
+    double_jump_flying_kick, inspiring_call, path_to_exile, shellshock, special_move,
+    swift_demise, swords_to_plowshares, blasphemous_act, cultivate, game_over,
+    here_comes_a_new_hero, lessons_from_life, super_combo, vanquish_the_horde, wave_goodbye,
+    // Basics
+    forest, forest, forest, forest, island, island, mountain, plains, plains, swamp,
+];

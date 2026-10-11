@@ -2807,6 +2807,13 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LORD_OF_THE_NAZGUL_COMMANDERS,
             main: decks::LORD_OF_THE_NAZGUL_MAIN,
         },
+        // Seat 393: Leonardo, the Balance // Michelangelo, the Heart's EDHREC
+        // average deck (Partner—Character select). `--pod-decks 393`.
+        PodDeck {
+            name: "Leonardo, the Balance // Michelangelo, the Heart (WUBRG)",
+            commanders: decks::LEONARDO_MICHELANGELO_COMMANDERS,
+            main: decks::LEONARDO_MICHELANGELO_MAIN,
+        },
     ]
 }
 
@@ -4956,6 +4963,7 @@ mod tests {
             ("Captain America, First Avenger", [0x0AAC, 390, 9315]),
             ("Doran, Besieged by Time", [0x0AAD, 391, 9316]),
             ("Lord of the Nazgûl", [0x0AAE, 392, 9317]),
+            ("Leonardo, the Balance", [0x0AAF, 393, 9318]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
