@@ -3331,6 +3331,21 @@ impl HeuristicBot {
                         self.optional_yes_this_step += 1;
                     }
                 }
+                // An "up to N" upside is the same stop (CR 732.2): a token copy
+                // of a nonlegendary Esper Terra takes up to three lore counters
+                // and each chapter copies it again — 800 triggers deep before
+                // the loop watch called it (three-seat audit pod seed 192001).
+                if matches!(
+                    pending.decision,
+                    crate::decision::Decision::ChooseAmount { kind: crate::decision::AmountKind::Upside, .. }
+                ) && matches!(answer, crate::decision::DecisionAnswer::Amount(n) if n > 0)
+                {
+                    if self.optional_yes_this_step >= OPTIONAL_LOOP_CAP {
+                        answer = crate::decision::DecisionAnswer::Amount(0);
+                    } else {
+                        self.optional_yes_this_step += 1;
+                    }
+                }
                 return Some(BotStep::plain(GameAction::SubmitDecision(answer)));
             }
             return None;
@@ -27546,6 +27561,31 @@ mod tests {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![pricey], "a Gain keeps the biggest"),
             other => panic!("expected Cards, got {other:?}"),
         }
+    }
+
+    /// CR 732.2 — an "up to N" upside counts toward the optional-loop cap: past
+    /// it, the bot takes 0 (a nonlegendary Esper Terra copy's lore counters
+    /// re-armed its own copy chapters, 800 triggers deep — audit seed 192001).
+    #[test]
+    fn bot_upside_amounts_stop_at_the_optional_loop_cap() {
+        use crate::decision::{AmountKind, Decision, DecisionAnswer};
+        let mut g = two_player_game();
+        g.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+            decision: Decision::ChooseAmount {
+                source: crate::card::CardId(0),
+                prompt: String::new(),
+                max: 3,
+                kind: AmountKind::Upside,
+            },
+            resume: crate::game::types::ResumeContext::Mulligan { player: 0, mulligans_taken: 0, next_player: None },
+        }));
+        let mut bot = HeuristicBot::new();
+        let answers: Vec<_> = (0..=OPTIONAL_LOOP_CAP).map(|_| bot.next_action(&g, 0)).collect();
+        assert!(matches!(answers[0], Some(GameAction::SubmitDecision(DecisionAnswer::Amount(3)))));
+        assert!(
+            matches!(answers.last().unwrap(), Some(GameAction::SubmitDecision(DecisionAnswer::Amount(0)))),
+            "past the cap the bot stops feeding the loop"
+        );
     }
 
     /// Devour's "Sacrifice how many?" is `AmountKind::Cost` and its `max` is
