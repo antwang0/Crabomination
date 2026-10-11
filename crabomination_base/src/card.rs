@@ -1252,6 +1252,11 @@ pub enum MayPlayDuration {
     /// only while the holder controls a creature of `creature_type` —
     /// checked as the card is played (`GameState::may_play_usable`).
     WhileExiledIfHolderControls { creature_type: CreatureType },
+    /// "During any turn you put a lore counter on this Saga, you may play that
+    /// card" (Summon: Brynhildr): live on the granting turn, parked at
+    /// [`MAY_PLAY_DORMANT`] by the turn sweep, woken for `holder` whenever a
+    /// lore counter goes on `source`. Printed with holder 0 and `CardId(0)`.
+    TurnsLoreCounterPutOnSource { holder: usize, source: CardId },
 }
 
 impl MayPlayDuration {
@@ -1276,6 +1281,9 @@ impl MayPlayDuration {
             Self::HolderTurnsWithFlashWhileSource { source, .. } => {
                 Self::HolderTurnsWithFlashWhileSource { holder: seat, source }
             }
+            Self::TurnsLoreCounterPutOnSource { source, .. } => {
+                Self::TurnsLoreCounterPutOnSource { holder: seat, source }
+            }
             d => d,
         }
     }
@@ -1295,6 +1303,9 @@ impl MayPlayDuration {
             }
             (Self::HolderTurnsWithFlashWhileSource { holder, .. }, Some(source)) => {
                 Self::HolderTurnsWithFlashWhileSource { holder, source }
+            }
+            (Self::TurnsLoreCounterPutOnSource { holder, .. }, Some(source)) => {
+                Self::TurnsLoreCounterPutOnSource { holder, source }
             }
             (d, _) => d,
         }
@@ -3148,6 +3159,11 @@ pub enum SelectionRequirement {
     /// equal toughness" — V.A.T.S.). Vacuously true while that slot is
     /// unchosen; read like `SameControllerAsTargetSlot`.
     SameToughnessAsTargetSlot(u8),
+    /// CR 601.2c — cross-slot filter: shares a creature type with the
+    /// creature already chosen for slot `.0` ("two target creatures you
+    /// control that share a creature type" — Secret Tunnel). Vacuously true
+    /// while that slot is unchosen.
+    SharesCreatureTypeWithTargetSlot(u8),
     /// CR 601.2c — "target cards from **a single graveyard**": in the same
     /// graveyard as the card already chosen for slot `.0`. Vacuously true
     /// while that slot is unchosen; read like `SameControllerAsTargetSlot`.
@@ -4384,6 +4400,7 @@ impl SelectionRequirement {
             Self::SameControllerAsTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
+            | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX => true,
@@ -4403,6 +4420,7 @@ impl SelectionRequirement {
             Self::SameControllerAsTargetSlot(_)
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
+            | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX => Self::Any,
@@ -4422,6 +4440,7 @@ impl SelectionRequirement {
             Self::SameControllerAsTargetSlot(n) => Self::SameControllerAsTargetSlot(s(n)),
             Self::OtherThanTargetSlot(n) => Self::OtherThanTargetSlot(s(n)),
             Self::SameToughnessAsTargetSlot(n) => Self::SameToughnessAsTargetSlot(s(n)),
+            Self::SharesCreatureTypeWithTargetSlot(n) => Self::SharesCreatureTypeWithTargetSlot(s(n)),
             Self::SameGraveyardAsTargetSlot(n) => Self::SameGraveyardAsTargetSlot(s(n)),
             Self::And(a, b) => Self::And(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),
             Self::Or(a, b) => Self::Or(Box::new(a.shift_target_slots(by)), Box::new(b.shift_target_slots(by))),

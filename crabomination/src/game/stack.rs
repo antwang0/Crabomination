@@ -2075,6 +2075,7 @@ impl GameState {
         if after <= before {
             return;
         }
+        self.wake_lore_counter_grants(card_id);
         let Some(card) = self.battlefield.find_by_id(card_id) else {
             return;
         };
@@ -5854,7 +5855,8 @@ impl GameState {
                     crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. }
                     | crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
                     | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
-                    | crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. } => {
+                    | crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. }
+                    | crate::card::MayPlayDuration::TurnsLoreCounterPutOnSource { .. } => {
                         if perm.player != crate::card::MAY_PLAY_DORMANT {
                             c.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                                 player: crate::card::MAY_PLAY_DORMANT,

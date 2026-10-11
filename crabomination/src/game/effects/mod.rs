@@ -40327,6 +40327,7 @@ impl GameState {
                     duration,
                     crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. }
                         | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
+                        | crate::card::MayPlayDuration::TurnsLoreCounterPutOnSource { .. }
                 );
                 if linked && let Some(src) = ctx.source {
                     for c in self.exile.iter_mut().filter(|c| c.exiled_with == Some(src)) {
@@ -41595,6 +41596,13 @@ impl GameState {
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let p = ctx.controller;
                 let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                // "…with a different name than that spell" (Tibalt's
+                // Trickery): `SameNameAsTarget` reads the countered target.
+                let target_name = ctx.targets.iter().find_map(|t| match t {
+                    crate::game::Target::Permanent(id) => self.find_card_anywhere(*id).map(|c| c.definition.name),
+                    _ => None,
+                });
+                let filter = filter.as_ref().map(|f| f.resolve_target_name(target_name));
                 let mut exiled: Vec<crate::card::CardId> = Vec::new();
                 let mut hit: Option<crate::card::CardId> = None;
                 while !self.players[p].library.is_empty() {

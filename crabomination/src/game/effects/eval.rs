@@ -4407,6 +4407,10 @@ impl GameState {
                     self.target_toughness(o).is_some() && self.target_toughness(o) == self.target_toughness(target)
                 })
             }
+            R::SharesCreatureTypeWithTargetSlot(slot) => slots
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|o| self.targets_share_creature_type(o, target)),
             _ => true,
         }
     }
@@ -4423,6 +4427,22 @@ impl GameState {
 
     /// A targeted permanent's current toughness (CR 613); `None` for a player
     /// or an object off the battlefield.
+    /// Two permanent targets share a creature type (a changeling shares all).
+    fn targets_share_creature_type(&self, a: &Target, b: &Target) -> bool {
+        let types = |t: &Target| match t {
+            Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| {
+                (cp.subtypes().creature_types.clone(), cp.keywords().contains(&crate::card::Keyword::Changeling))
+            }),
+            Target::Player(_) => None,
+        };
+        match (types(a), types(b)) {
+            (Some((ta, ca)), Some((tb, cb))) => {
+                (ca && !tb.is_empty()) || (cb && !ta.is_empty()) || (ca && cb) || ta.iter().any(|t| tb.contains(t))
+            }
+            _ => false,
+        }
+    }
+
     fn target_toughness(&self, t: &Target) -> Option<i32> {
         match t {
             Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| cp.toughness),
@@ -5146,6 +5166,11 @@ impl GameState {
                     None => true,
                 }
             }
+            R::SharesCreatureTypeWithTargetSlot(slot) => self
+                .target_slots_scratch
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|other| self.targets_share_creature_type(other, target)),
             R::OtherThanTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => other != target,
@@ -7045,6 +7070,7 @@ impl GameState {
             | R::SameControllerAsTargetSlot(_)
             | R::OtherThanTargetSlot(_)
             | R::SameToughnessAsTargetSlot(_)
+            | R::SharesCreatureTypeWithTargetSlot(_)
             | R::SameGraveyardAsTargetSlot(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {
                 let mine = &card.definition.subtypes.creature_types;

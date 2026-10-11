@@ -50,6 +50,26 @@ impl GameState {
         }
     }
 
+    /// A lore counter went on `source`: wake its dormant
+    /// `TurnsLoreCounterPutOnSource` grants for this turn (Summon: Brynhildr).
+    pub(crate) fn wake_lore_counter_grants(&mut self, source: crate::card::CardId) {
+        let dormant = |perm: &MayPlayPermission| {
+            perm.player == MAY_PLAY_DORMANT
+                && matches!(perm.duration, MayPlayDuration::TurnsLoreCounterPutOnSource { source: s, .. } if s == source)
+        };
+        if !self.exile.iter().any(|c| c.cold_any(|k| k.may_play_until.as_ref().is_some_and(dormant))) {
+            return;
+        }
+        for c in self.exile.iter_mut() {
+            if let Some(perm) = c.may_play_until
+                && dormant(&perm)
+                && let MayPlayDuration::TurnsLoreCounterPutOnSource { holder, .. } = perm.duration
+            {
+                c.may_play_until = Some(MayPlayPermission { player: holder, ..perm });
+            }
+        }
+    }
+
     /// The seat a fresh `HolderTurnsAfterNontokenSacrifice` grant starts
     /// under: awake on the holder's turn once they've sacrificed a nontoken
     /// permanent, else dormant.
