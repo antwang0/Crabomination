@@ -11502,3 +11502,33 @@ pub const LEONARDO_MICHELANGELO_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, forest, forest, island, island, mountain, plains, plains, swamp,
 ];
+
+pub const NORMAN_OSBORN_COMMANDERS: &[CardFactory] = &[norman_osborn];
+
+/// **Norman Osborn**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 85 nonbasic cards + 5 Islands + 4 Mountains + 5 Swamps = 99.
+/// Norman Osborn (UBR) Villains, connive and mayhem
+pub const NORMAN_OSBORN_MAIN: &[CardFactory] = &[
+    arcane_signet, cryptcaller_chariot, fellwar_stone, lightning_greaves, monument_to_endurance,
+    pumpkin_bombs, rocket_powered_goblin_glider, sol_ring, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, blood_crypt, bloodstained_mire,
+    command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard,
+    luxury_suite, morphic_pool, oscorp_industries, polluted_delta, scalding_tarn, shivan_reef,
+    smoldering_marsh, steam_vents, sulfur_falls, sunken_hollow, training_center, watery_grave,
+    xanders_lounge, anger, archfiend_of_ifnir, baron_strucker_hydra_overlord, bone_miser,
+    captain_howler_sea_scourge, carnage_crimson_chaos, chainer_nightmare_adept,
+    chameleon_master_of_disguise, doctor_octopus_master_planner, emet_selch_of_the_third_seat,
+    ghostly_pilferer, glint_horn_buccaneer, green_goblin_nemesis, green_goblin_revenant,
+    hobgoblin_mantled_marauder, kefka_court_mage, leader_super_genius, likeness_looter,
+    magmakin_artillerist, psychic_frog, skirge_familiar, surly_badgersaur,
+    ultimate_green_goblin, cool_but_rude, rhystic_study, secrets_of_the_dead,
+    shadow_of_the_goblin, tevals_judgment, underworld_breach, an_offer_you_cant_refuse,
+    big_score, bitter_triumph, chaos_warp, counterspell, dark_ritual, deflecting_swat,
+    fierce_guardianship, frantic_search, laughing_mad, thrill_of_possibility, tolarian_winds,
+    unexpected_windfall, unstable_experiment, behold_the_sinister_six, blasphemous_act,
+    careful_study, faithless_looting, gamble, jeskas_will, pumpkin_bombardment, reanimate,
+    wheel_of_fortune, will_of_the_jeskai, windfall,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp,
+];

@@ -2814,6 +2814,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LEONARDO_MICHELANGELO_COMMANDERS,
             main: decks::LEONARDO_MICHELANGELO_MAIN,
         },
+        // Seat 394: Norman Osborn's EDHREC average deck. `--pod-decks 394`.
+        PodDeck {
+            name: "Norman Osborn (UBR)",
+            commanders: decks::NORMAN_OSBORN_COMMANDERS,
+            main: decks::NORMAN_OSBORN_MAIN,
+        },
     ]
 }
 
@@ -4964,6 +4970,7 @@ mod tests {
             ("Doran, Besieged by Time", [0x0AAD, 391, 9316]),
             ("Lord of the Nazgûl", [0x0AAE, 392, 9317]),
             ("Leonardo, the Balance", [0x0AAF, 393, 9318]),
+            ("Norman Osborn", [0x0AB0, 394, 9319]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
