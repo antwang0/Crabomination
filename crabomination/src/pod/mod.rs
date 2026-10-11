@@ -2694,6 +2694,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TOPH_FIRST_METALBENDER_COMMANDERS,
             main: decks::TOPH_FIRST_METALBENDER_MAIN,
         },
+        // Seat 376: Wolverine, Best There Is's EDHREC average deck. `--pod-decks 376`.
+        PodDeck {
+            name: "Wolverine, Best There Is (RG)",
+            commanders: decks::WOLVERINE_COMMANDERS,
+            main: decks::WOLVERINE_MAIN,
+        },
+        // Seat 377: Captain Howler, Sea Scourge's EDHREC average deck. `--pod-decks 377`.
+        PodDeck {
+            name: "Captain Howler, Sea Scourge (UR)",
+            commanders: decks::HOWLER_COMMANDERS,
+            main: decks::HOWLER_MAIN,
+        },
+        // Seat 378: Magda, Brazen Outlaw's EDHREC average deck. `--pod-decks 378`.
+        PodDeck {
+            name: "Magda, Brazen Outlaw (R)",
+            commanders: decks::MAGDA_COMMANDERS,
+            main: decks::MAGDA_MAIN,
+        },
     ]
 }
 
@@ -4787,6 +4805,9 @@ mod tests {
             ("Maralen, Fae Ascendant", [0x0A9B, 373, 9298]),
             ("Najeela, the Blade-Blossom", [0x0A9C, 374, 9299]),
             ("Toph, the First Metalbender", [0x0A9D, 375, 9300]),
+            ("Wolverine, Best There Is", [0x0A9E, 376, 9301]),
+            ("Captain Howler, Sea Scourge", [0x0A9F, 377, 9302]),
+            ("Magda, Brazen Outlaw", [0x0AA0, 378, 9303]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

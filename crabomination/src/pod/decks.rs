@@ -10983,3 +10983,90 @@ pub const TOPH_FIRST_METALBENDER_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
     mountain, plains, plains, plains, plains,
 ];
+
+pub const WOLVERINE_COMMANDERS: &[CardFactory] = &[wolverine_best_there_is];
+
+/// **Wolverine, Best There Is**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 80 nonbasic cards + 11 Forests + 8 Mountains = 99.
+/// Wolverine, Best There Is (RG) fights and damage\n/// doubling: Wolverine regenerates,
+/// fights and grows off every creature he hurts.
+pub const WOLVERINE_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, mage_slayer, mithril_coat, mjolnir_hammer_of_thor,
+    ozolith_the_shattered_spire, power_fist, shadowspear, sol_ring, swiftfoot_boots,
+    the_ozolith, cinder_glade, command_tower, cragcrown_pathway, game_trail, karplusan_forest,
+    kessig_wolf_run, mossfire_valley, rockfall_vale, rogues_passage, rootbound_crag,
+    skarrg_the_rage_pits, spire_garden, stomping_ground, thornspire_verge, wooded_foothills,
+    birds_of_paradise, duskshell_crawler, elvish_mystic, fanatic_of_rhonas, forgotten_ancient,
+    goblin_anarchomancer, halana_and_alena, kami_of_whispered_hopes, kediss_emberclaw_familiar,
+    kodama_of_the_west_tree, lizard_blades, llanowar_elves, neyith_of_the_dire_hunt,
+    ulvenwald_tracker, wolverine_claws_out, wolverine_fierce_fighter, xenagos_god_of_revels,
+    bear_umbra, branching_evolution, hardened_scales, hunters_talent, innkeepers_talent,
+    pain_for_all, rancor, rhythm_of_the_wild, rite_of_passage, season_of_growth,
+    unnatural_growth, ancient_animus, beast_within, berserk, chaos_warp, heroic_intervention,
+    hunters_insight, inscription_of_abundance, overprotect, prizefight, ram_through,
+    return_of_the_wildspeaker, snakeskin_veil, temur_battle_rage, titanic_brawl, tyvars_stand,
+    domri_anarch_of_bolas, blasphemous_act, bridgeworks_battle, bushwhack, chandras_ignition,
+    cultivate, epic_fight, natures_lore, rampant_growth, stump_stomp, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const HOWLER_COMMANDERS: &[CardFactory] = &[captain_howler_sea_scourge];
+
+/// **Captain Howler, Sea Scourge**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 80 nonbasic cards + 10 Islands + 9 Mountains = 99.
+/// Captain Howler, Sea Scourge (UR) discard: loot and wheel,\n/// and every discarded card
+/// pumps a shark that draws on connecting.
+pub const HOWLER_MAIN: &[CardFactory] = &[
+    arcane_signet, boosted_sloop, brasss_tunnel_grinder, fellwar_stone, izzet_signet,
+    key_to_the_city, monument_to_endurance, sol_ring, swiftfoot_boots, talisman_of_creativity,
+    thought_vessel, ash_barrens, cascade_bluffs, command_tower, desolate_lighthouse,
+    forgotten_cave, frostboil_snarl, lonely_sandbar, reliquary_tower, riverpyre_verge,
+    rogues_passage, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    anger, brallin_skyshark_rider, conspiracy_theorist, containment_construct,
+    fear_of_missing_out, forgotten_creation, ghost_of_ramirez_depietro, ghostly_pilferer,
+    glint_horn_buccaneer, hobgoblin_mantled_marauder, inti_seneschal_of_the_sun,
+    ivora_insatiable_heir, kiora_the_rising_tide, kitsa_otterball_elite, ledger_shredder,
+    magmakin_artillerist, magus_of_the_wheel, malcolm_alluring_scoundrel,
+    malcolm_keen_eyed_navigator, marauding_mako, mary_read_and_anne_bonny, rielle_the_everwise,
+    scrounging_skyray, surly_badgersaur, wonder, artists_talent, cool_but_rude, ominous_seas,
+    teferis_ageless_insight, an_offer_you_cant_refuse, big_score, broadside_barrage, chaos_warp,
+    counterspell, decaying_time_loop, demand_answers, frantic_search, izzet_charm,
+    prismari_command, refute, temur_battle_rage, thrill_of_possibility, tolarian_winds,
+    unexpected_windfall, kaito_cunning_infiltrator, blasphemous_act, careful_study,
+    cathartic_reunion, chandras_ignition, change_of_fortune, faithless_looting, grab_the_prize,
+    lorien_revealed, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const MAGDA_COMMANDERS: &[CardFactory] = &[magda_brazen_outlaw];
+
+/// **Magda, Brazen Outlaw**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 77 nonbasic cards + 22 Mountains = 99.
+/// Magda, Brazen Outlaw (R) Dwarves and Vehicles: every\n/// tapped Dwarf makes a Treasure,
+/// and crewed Vehicles swing for more.
+pub const MAGDA_MAIN: &[CardFactory] = &[
+    arcane_signet, clock_of_omens, clown_car, cursed_mirror, damping_sphere, firdoch_core,
+    flywheel_racer, god_pharaohs_statue, high_speed_hoverbike, lifecraft_engine,
+    liquimetal_torque, lotus_petal, maskwood_nexus, portal_to_phyrexia, sculpting_steel,
+    smugglers_copter, sol_ring, springleaf_drum, the_one_ring, unlicensed_hearse,
+    cavern_of_souls, dwarven_mine, great_furnace, holdout_settlement, mines_of_moria, mutavault,
+    survivors_encampment, treasure_vault, urzas_saga, volatile_fault, academy_manufactor,
+    adaptive_automaton, axgard_cavalry, barkform_harvester, battered_golem, bloodfire_dwarf,
+    dwarven_armorer, dwarven_bloodboiler, dwarven_grunt, dwarven_mauler, dwarven_scorcher,
+    dwarven_trader, enslaved_dwarf, gimli_of_the_glittering_caves, gloin_dwarf_emissary,
+    goldspan_dragon, hellkite_tyrant, liberated_dwarf, magda_the_hoardmaster, metallic_mimic,
+    plundering_barbarian, professional_face_breaker, roaming_throne, simian_spirit_guide,
+    spark_mage, three_tree_mascot, universal_automaton, vault_robber, xorn, oin_the_brave,
+    blood_moon, sticky_fingers, abrade, bottle_cap_blast, chaos_warp, deflecting_swat,
+    galvanic_blast, lightning_bolt, pyroblast, red_elemental_blast, return_the_favor,
+    untimely_malfunction, blasphemous_act, jeskas_will, seize_the_spoils, sundering_eruption,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
