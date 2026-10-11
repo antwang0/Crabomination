@@ -3428,6 +3428,9 @@ pub enum SelectionRequirement {
     /// damage this turn by a Spider you controlled" (Shelob, Child of
     /// Ungoliant). A creature that just died is read off its death snapshot.
     DamagedThisTurnByMatching(Box<SelectionRequirement>),
+    /// The candidate Vehicle was crewed this turn by a creature matching the
+    /// inner filter ("if an Assassin crewed it this turn" — Adrestia).
+    CrewedThisTurnByMatching(Box<SelectionRequirement>),
     /// The candidate dealt COMBAT damage this turn to the controller of the
     /// ability's source — not the evaluating player, who is the sacrificer in
     /// an edict (Witch-king of Angmar). Battlefield-only.

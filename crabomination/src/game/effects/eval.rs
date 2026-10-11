@@ -5749,6 +5749,10 @@ impl GameState {
                     R::DamagedBySourceThisTurn => {
                         source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
                     }
+                    R::CrewedThisTurnByMatching(inner) => card
+                        .crewed_by
+                        .iter()
+                        .any(|s| self.evaluate_requirement_static(inner, &Target::Permanent(*s), controller, source)),
                     R::DamagedThisTurnByMatching(inner) => card
                         .damaged_by_this_turn
                         .iter()
@@ -7616,6 +7620,7 @@ impl GameState {
             | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::DamagedThisTurnByMatching(_)
+            | R::CrewedThisTurnByMatching(_)
             | R::BlockingOrBlockedBySource
             | R::BlockingHostOfSource
             | R::BlockingOrBlockedByHostOfSource
