@@ -722,6 +722,9 @@ pub enum SpendRestriction {
     AbilitiesOnly,
     /// "Spend this mana only to cast Lesson spells." (Hermitic Herbalist.)
     LessonSpellsOnly,
+    /// "Spend this mana only to cast a Lesson or Shrine spell" (White Lotus
+    /// Hideout).
+    LessonOrShrineSpellsOnly,
     /// "Spend this mana only to cast a spell with devoid." (Corrupted
     /// Crossroads.)
     DevoidSpellsOnly,
@@ -920,6 +923,7 @@ impl SpendRestriction {
             SpendRestriction::AbilitiesOnly => "only activated abilities",
             SpendRestriction::SpellsOnly => "only spells",
             SpendRestriction::LessonSpellsOnly => "only Lesson spells",
+            SpendRestriction::LessonOrShrineSpellsOnly => "only Lesson or Shrine spells",
             SpendRestriction::DevoidSpellsOnly => "only devoid spells",
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
             SpendRestriction::EquipmentOnly => "only Equipment",
@@ -1045,6 +1049,7 @@ impl SpendRestriction {
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
             SpendRestriction::SpellsOnly => !kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,
+            SpendRestriction::LessonOrShrineSpellsOnly => kind.lesson || kind.shrine,
             SpendRestriction::DevoidSpellsOnly => kind.devoid,
             SpendRestriction::ForetellOnly => kind.foretell,
             SpendRestriction::EquipmentOnly => kind.equipment,
@@ -1188,6 +1193,8 @@ pub struct SpellKind {
     pub any_color: bool,
     /// Casting a Lesson spell (Hermitic Herbalist's Lesson-only mana).
     pub lesson: bool,
+    /// Casting a Shrine spell (White Lotus Hideout's "Lesson or Shrine").
+    pub shrine: bool,
     /// Casting a spell with devoid (Corrupted Crossroads).
     pub devoid: bool,
     /// Casting a spell that has foretell, or paying the foretell action's

@@ -7816,6 +7816,7 @@ impl CardDefinition {
             class_level: false,
             any_color: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
+            shrine: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Shrine),
             devoid: self.keywords.has_kw(&Keyword::Devoid),
             foretell: self.foretell_cost.is_some(),
             equipment: self.is_equipment(),

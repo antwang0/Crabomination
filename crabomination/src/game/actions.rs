@@ -24275,6 +24275,10 @@ impl GameState {
         {
             card.exiled_with = Some(card_id);
             self.exile.push(card);
+            // `Selector::ExiledForCost` names it (Jhoira of the Ghitu's
+            // suspend), where `CardExiledWithSource` would find every card
+            // the source ever exiled this way.
+            self.exiled_for_cost_card = Some(hand_cid);
             self.players[p].cards_exiled_this_turn =
                 self.players[p].cards_exiled_this_turn.saturating_add(1);
             events.push(GameEvent::PermanentExiled { card_id: hand_cid });

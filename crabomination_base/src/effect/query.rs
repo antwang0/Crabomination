@@ -922,7 +922,6 @@ impl Effect {
             | Effect::NextSpellGainsImproviseThisTurn
             | Effect::NextInstantOrSorceryGainsStormThisTurn
             | Effect::KeepUnspentColorManaThisTurn { .. }
-            | Effect::ExchangeTextBoxes { .. }
             | Effect::KeywordCountersFromGraveyard { .. }
             | Effect::RevealTopChooseByKeyword { .. }
             | Effect::ChooseCardTypeAmongForSource(_)
@@ -1691,6 +1690,7 @@ impl Effect {
             }
             Effect::ExchangeControl { a, b }
             | Effect::ExchangeSpellAndCreatureControl { a, b }
+            | Effect::ExchangeTextBoxes { a, b }
             | Effect::ExchangePower { a, b, .. } => {
                 sel_has_target(a) || sel_has_target(b)
             }
@@ -2708,6 +2708,7 @@ impl Effect {
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
             Effect::ExchangeControl { a, b }
             | Effect::ExchangeSpellAndCreatureControl { a, b }
+            | Effect::ExchangeTextBoxes { a, b }
             | Effect::ExchangePower { a, b, .. } => {
                 sel_filter(a).or_else(|| sel_filter(b))
             }
@@ -5259,6 +5260,7 @@ impl Effect {
                     .or_else(|| val_find(amount, slot)),
                 Effect::ExchangeControl { a, b }
                 | Effect::ExchangeSpellAndCreatureControl { a, b }
+                | Effect::ExchangeTextBoxes { a, b }
                 | Effect::ExchangePower { a, b, .. } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }

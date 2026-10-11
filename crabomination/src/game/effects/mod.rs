@@ -41666,6 +41666,11 @@ impl GameState {
                             } else {
                                 card.definition.cost.clone()
                             });
+                        } else if card.granted_alt_cast_cost_eot.is_some() {
+                            // The cost's lifetime is the permission's: a free
+                            // grant replacing a paid one is free (Court of
+                            // Locthwain's monarch turn over its own paid grant).
+                            card.granted_alt_cast_cost_eot = None;
                         }
                     }
                 }
