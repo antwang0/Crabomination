@@ -3153,6 +3153,10 @@ release pods     seed 30501 x 250 at 3/4/6/8 seats: 1,000/1,000 decided
                  1,500 / 0, sealed 3,600 / 0
 suite            core_rules + recent_b + engine lib 9,504 / 0 / 6; workspace
                  clippy 0; release-fast typecheck clean
+layer-7 saturate `01d294f4f` (four `saturating_add`s in the 7c modify sum):
+                 --bench 196,176 / 27.64 / 613.0 byte-identical, determinism
+                 ok; bench_ab.py base (the change reverted) vs tip, 16 pairs:
+                 median -1.86 %, mean -0.58 % (sd 7.10) — inside noise
 ```
 
 ### 2026-10-11 (Commander run, `017yfeX4` second firing) — guardrail; answer-log clears, mana burn's sweep, the upside-amount loop cap

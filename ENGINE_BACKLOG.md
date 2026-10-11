@@ -144,7 +144,15 @@ the handoff.
   undecided by rule; `--a dflt` 302001 (3/4/6 × 5, 1,430) the one abort above;
   `--a dflt` 303001 after the fix (4/6/8 × 5, 1,035) 0 aborts, 2 draws by
   rule (a CR 104.4a simultaneous loss; Altar of the Brood milling a
-  Worldspine Wurm that shuffles itself back, CR 104.4b).
+  Worldspine Wurm that shuffles itself back, CR 104.4b). Closing sweeps on
+  the tip build: `--a dflt` fuzzed 305001 (1,675 games) — a CR 712.4 abort
+  (a Saga's transformed return exiled by Containment Priest kept its back
+  face; fixed) — and plain strict 306001 (5,025) — a CR 732.2a loop the
+  repeat guard missed (a free Equip, Puresteel Paladin: 401 equips; the
+  guard now counts Equip / Reconfigure / Crew / Saddle / waterbend
+  activations). Both fixed with tests; the rest board caps.
+- **Layer 7c** summed P/T modifications unsaturated (two end-of-combat pumps
+  at i32::MAX overflowed); now saturating, bench-neutral (PERF).
 - **Census (6 seats × every deck, seed 31001):** the "never activated" rows
   left are situational (Shelldock Isle's library ≤ 20, Halo Fountain's
   fifteen creatures, Kinnan's {5}{G}{U} dig — a seat rarely holds seven mana
