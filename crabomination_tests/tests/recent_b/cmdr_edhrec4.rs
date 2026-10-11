@@ -720,3 +720,91 @@ fn eladamri_drops_a_creature_from_hand_or_top() {
     assert!(g.battlefield_find(angel).is_some(), "the Angel from hand");
     assert_eq!(g.battlefield.iter().filter(|c| c.tapped).count(), 3, "Eladamri and both Bears");
 }
+
+// ── Lorehold, the Historian's list ──────────────────────────────────────────
+
+/// Goliath Daydreamer: an instant cast from hand is exiled with a dream
+/// counter as it resolves; attacking recasts it free from exile, and that
+/// cast (not from hand) goes to the graveyard.
+#[test]
+fn goliath_daydreamer_dreams_a_bolt_and_recasts_it() {
+    let mut g = pod(2);
+    let goliath = ready(&mut g, 0, catalog::goliath_daydreamer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g);
+    let life = g.players[1].life;
+    cast_at(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 3);
+    let exiled = g.exile.iter().find(|c| c.id == bolt).expect("exiled, not in the graveyard");
+    assert_eq!(exiled.counter_count(CounterType::Dream), 1);
+    attack_with(&mut g, &[goliath]);
+    assert_eq!(g.players[1].life, life - 6, "the attack recast the dreamed Bolt");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "a cast from exile isn't dreamed again");
+}
+
+/// Invoke Calamity: up to two instants/sorceries with total mana value 6 or
+/// less, from graveyard and hand, cast free and exiled afterwards; a third
+/// doesn't fit.
+#[test]
+fn invoke_calamity_casts_two_within_six() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let axe = g.add_card_to_hand(0, catalog::lava_axe());
+    let divination = g.add_card_to_hand(0, catalog::divination());
+    let invoke = g.add_card_to_hand(0, catalog::invoke_calamity());
+    flood(&mut g);
+    let life = g.players[1].life;
+    cast(&mut g, invoke);
+    assert_eq!(g.players[1].life, life - 8, "Lava Axe (5) and Bolt (1) total six");
+    assert!(g.players[0].hand.iter().any(|c| c.id == divination), "Divination (3) doesn't fit beside Lava Axe");
+    for id in [bolt, axe, invoke] {
+        assert!(g.exile.iter().any(|c| c.id == id), "exiled instead of the graveyard");
+    }
+}
+
+/// Olórin's Searing Light: each opponent exiles their greatest-power
+/// creature; with spell mastery each takes that creature's power.
+#[test]
+fn olorins_searing_light_exiles_the_biggest_and_burns() {
+    let mut g = pod(3);
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let ogre = ready(&mut g, 2, catalog::gray_ogre());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::shock());
+    let light = g.add_card_to_hand(0, catalog::olorins_searing_light());
+    flood(&mut g);
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    cast(&mut g, light);
+    assert!(g.exile.iter().any(|c| c.id == angel) && g.exile.iter().any(|c| c.id == ogre));
+    assert_eq!(named(&g, "Grizzly Bears"), 1);
+    assert_eq!((g.players[1].life, g.players[2].life), (l1 - 4, l2 - 2));
+}
+
+/// Soulfire Eruption: per target, the top card of the library is exiled and
+/// deals its mana value; the exiled cards stay playable.
+#[test]
+fn soulfire_eruption_burns_by_mana_value() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let ogre = ready(&mut g, 1, catalog::gray_ogre());
+    let eruption = g.add_card_to_hand(0, catalog::soulfire_eruption());
+    flood(&mut g);
+    let life = g.players[1].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: eruption,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(ogre)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 5, "Serra Angel's mana value");
+    assert!(g.battlefield_find(ogre).is_none(), "Grizzly Bears' 2 kills the Ogre");
+    for id in [angel, bears] {
+        assert!(g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some()));
+    }
+}

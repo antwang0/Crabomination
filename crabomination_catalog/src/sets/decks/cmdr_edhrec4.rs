@@ -1136,3 +1136,113 @@ pub fn oin_the_brave() -> CardDefinition {
         ..legend("Óin the Brave", cost(&[generic(1), r()]), vec![CreatureType::Dwarf, CreatureType::Warrior], 1, 3)
     }
 }
+
+// ── Lorehold, the Historian (RW spellslinger) ───────────────────────────────
+
+fn instant_or_sorcery() -> R {
+    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))
+}
+
+/// Goliath Daydreamer — {2}{R}{R} 4/4 Giant Wizard. An instant or sorcery
+/// spell you cast from your hand is exiled with a dream counter as it resolves
+/// instead of going to your graveyard; attacking, you may cast a spell from
+/// among cards you own in exile with dream counters without paying its mana
+/// cost.
+pub fn goliath_daydreamer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: instant_or_sorcery().and(R::Not(Box::new(R::SpellNotCastFromHand))),
+                }),
+                effect: Effect::ExileSpellOnResolveWithCounter { what: Selector::TriggerSource, counter: CounterType::Dream },
+            },
+            crate::effect::shortcut::on_attack(Effect::MayCastFromExileFree {
+                filter: R::OwnedByYou.and(R::WithCounter(CounterType::Dream)),
+            }),
+        ],
+        ..creature("Goliath Daydreamer", cost(&[generic(2), r(), r()]), vec![CreatureType::Giant, CreatureType::Wizard], 4, 4)
+    }
+}
+
+/// Invoke Calamity — {1}{R}{R}{R}{R} Instant. Cast up to two instant and/or
+/// sorcery spells with total mana value 6 or less from your graveyard and/or
+/// hand free; they're exiled instead of going to your graveyard. Exile Invoke
+/// Calamity.
+pub fn invoke_calamity() -> CardDefinition {
+    CardDefinition {
+        name: "Invoke Calamity",
+        cost: cost(&[generic(1), r(), r(), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CastUpToFreeFromHandAndGraveyard { count: 2, filter: instant_or_sorcery(), total_mana_value: 6 },
+        exile_on_resolve: true,
+        ..Default::default()
+    }
+}
+
+/// Olórin's Searing Light — {2}{R}{W} Instant. Each opponent exiles a creature
+/// with the greatest power among creatures they control. Spell mastery: it
+/// deals each of them damage equal to the exiled creature's power (as it last
+/// existed). The opponents choose one at a time in APNAP order, each exile
+/// happening as it is chosen.
+pub fn olorins_searing_light() -> CardDefinition {
+    let that_player = || PlayerRef::Triggerer;
+    CardDefinition {
+        name: "Olórin's Searing Light",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ForEachOpponent {
+            body: Box::new(Effect::If {
+                cond: Predicate::SelectorExists(Selector::ControlledBy { who: that_player(), filter: R::Creature }),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PlayerExilesPermanents {
+                        who: that_player(),
+                        count: Value::ONE,
+                        filter: R::Creature.and(R::HasGreatestPowerAmongControlled(Box::new(R::Creature))),
+                    },
+                    Effect::If {
+                        cond: crate::effect::shortcut::spell_mastery_gate(),
+                        then: Box::new(Effect::DealDamage {
+                            to: Selector::Player(that_player()),
+                            amount: Value::LastExiledPower,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Soulfire Eruption — {6}{R}{R}{R} Sorcery. For each of any number of target
+/// creatures, planeswalkers and/or players: exile the top card of your library
+/// and deal damage equal to its mana value to that target. You may play the
+/// exiled cards until the end of your next turn.
+pub fn soulfire_eruption() -> CardDefinition {
+    CardDefinition {
+        name: "Soulfire Eruption",
+        cost: cost(&[generic(6), r(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 0,
+            filter: R::Creature.or(R::Planeswalker).or(R::Player),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::LastExiledManaValue },
+            ])),
+        },
+        ..Default::default()
+    }
+}
