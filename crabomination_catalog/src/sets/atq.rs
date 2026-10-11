@@ -101,21 +101,27 @@ fn your_upkeep() -> EventSpec {
 
 /// "Whenever [filter] becomes tapped, or its controller activates one of its
 /// abilities without {T} in the cost" — the Antiquities artifact-tax shape.
+/// A mana ability counts (CR 605.1a; none of the three carves it out): a
+/// `{T}` one is the tap, any other `ActivationTrait::ManaWithoutTap`.
 fn tapped_or_activated(filter: R, effect: Effect) -> Vec<TriggeredAbility> {
+    let of = |filter: R| Predicate::EntityMatches { what: Selector::TriggerSource, filter };
     vec![
         TriggeredAbility {
-            event: EventSpec::new(EventKind::Tapped, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: filter.clone() },
-            ),
+            event: EventSpec::new(EventKind::Tapped, EventScope::AnyPlayer).with_filter(of(filter.clone())),
             effect: effect.clone(),
         },
         TriggeredAbility {
             event: EventSpec::new(EventKind::AbilityActivated, EventScope::AnyPlayer)
                 .without_tap_cost()
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter,
-                }),
+                .with_filter(of(filter.clone())),
+            effect: effect.clone(),
+        },
+        TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::AbilityActivatedWith(crate::effect::ActivationTrait::ManaWithoutTap),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(of(filter)),
             effect,
         },
     ]

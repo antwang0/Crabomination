@@ -507,6 +507,18 @@ fn haunting_wind_bites_on_a_tapless_activation() {
     assert_eq!(g.players[0].life, 17, "and the gun fires at them");
 }
 
+/// CR 605.1a — a mana ability is an ability too: sacrificing a creature to
+/// Ashnod's Altar ({T}-less) costs the Altar's controller a point.
+#[test]
+fn haunting_wind_bites_on_a_tapless_mana_ability() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::haunting_wind());
+    let altar = g.add_card_to_battlefield(1, catalog::ashnods_altar());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 1, altar, None);
+    assert_eq!(g.players[1].life, 19, "the Wind bites the Altar's controller");
+}
+
 #[test]
 fn powerleech_only_feeds_off_opposing_artifacts() {
     let mut g = main_phase();
