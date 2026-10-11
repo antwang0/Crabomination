@@ -37,7 +37,7 @@ they call a deck 🟡, the table wins.
 386 / 398 pod decks carry no residual (2026-10-11 night, after Captain America's Throw choice — `01Lnhgw3`, with `01FWi9DN`'s seats 392-398; 384 / 391 after seats 382-391; 380 / 381 after seats 380-381 and `01EvCQ72` / `01Mwhi27`'s evening passes; 374 after `01Mwhi27`'s afternoon pass; 370 at the
 nineteenth Commander run `01Vk2K6g`, concurrent with `017yfeX4`'s second firing). Seats 335-391 are EDHREC average decks, card for card (`scripts/edhrec_deck.py
 --rust`; the seat scan is `scripts/edhrec_scan_top.py`; cards in `decks::cmdr_edhrec2` /
-`cmdr_edhrec3` / `cmdr_edhrec4`). This run's seats 357-368, 372-375 and 379: Fire Lord Zuko, Arna
+`cmdr_edhrec3` / `cmdr_edhrec4` / `cmdr_edhrec5`). This run's seats 357-368, 372-375 and 379: Fire Lord Zuko, Arna
 Kennerüd, Terra, Atreus // Kratos, Kratos, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin,
 Katara, Azlask, The Mycotyrant, Thranduil, Maralen, Najeela, Toph, the First Metalbender and Avatar Aang (~150
 cards); the concurrent run's 369-371 and 376-378: Shroofus Sproutsire, Miirym, Tiamat, Wolverine, Captain

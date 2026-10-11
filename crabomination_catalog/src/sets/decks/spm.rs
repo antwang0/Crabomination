@@ -370,17 +370,14 @@ pub fn romantic_rendezvous() -> CardDefinition {
     }
 }
 
-/// Pumpkin Bombardment — {B/R} Sorcery. Deals 3 damage to target creature.
-/// ("Discard a card or pay {2}" additional cost modeled as discard a card.)
+/// Pumpkin Bombardment — {B/R} Sorcery. As an additional cost, discard a card
+/// or pay {2}. Deals 3 damage to target creature.
 pub fn pumpkin_bombardment() -> CardDefinition {
     CardDefinition {
         name: "Pumpkin Bombardment",
         cost: cost(&[hybrid(Color::Black, Color::Red)]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::Discard {
-            count: 1,
-            filter: None,
-        }],
+        additional_cast_cost: vec![AdditionalCastCost::DiscardOrPay { pay: 2 }],
         effect: Effect::DealDamage {
             to: target_filtered(R::Creature),
             amount: Value::Const(3),

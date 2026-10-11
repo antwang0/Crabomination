@@ -1924,9 +1924,8 @@ pub fn temur_sabertooth() -> CardDefinition {
 /// turn; or it fights target creature you don't control. {2}{R}{G}, Discard
 /// this card: Destroy up to one target artifact or enchantment. Shuffle this
 /// card into your library from your graveyard, then draw a card.
-/// Approximation: "creature you don't control" is `ControlledByOpponent` (the
-/// sibling fight-ETB convention); the shuffle-back moves the card from
-/// wherever it is (normally the graveyard it was just discarded to).
+/// The shuffle-back moves the card from wherever it is (normally the graveyard
+/// it was just discarded to).
 pub fn kogla_and_yidaro() -> CardDefinition {
     CardDefinition {
         name: "Kogla and Yidaro",
@@ -1947,7 +1946,7 @@ pub fn kogla_and_yidaro() -> CardDefinition {
             },
             Effect::Fight {
                 attacker: Selector::This,
-                defender: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                defender: target_filtered(R::Creature.and(R::ControlledByYou.negate())),
             },
         ]))],
         // Trumpeting Carnosaur's "Discard this card:" from-hand shape.

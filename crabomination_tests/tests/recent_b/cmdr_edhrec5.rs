@@ -988,3 +988,32 @@ fn towering_gibbon_and_elephant_mandrill() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(em).unwrap().power, 5, "their Food and Sol Ring");
 }
+
+/// Pumpkin Bombardment (seat 394): "discard a card or pay {2}" — with a card
+/// in hand it is discarded; with an empty hand {2} more mana is paid instead.
+#[test]
+fn pumpkin_bombardment_discards_or_pays() {
+    for spare in [true, false] {
+        let mut g = pod(2);
+        let maw = ready(&mut g, 1, catalog::hill_giant());
+        if spare {
+            g.add_card_to_hand(0, catalog::island());
+        }
+        let pb = g.add_card_to_hand(0, catalog::pumpkin_bombardment());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: pb,
+            target: Some(Target::Permanent(maw)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Pumpkin Bombardment");
+        drain_stack(&mut g);
+        assert!(!on_bf(&g, maw));
+        assert_eq!(g.players[0].mana_pool.total(), if spare { 2 } else { 0 }, "spare {spare}");
+        assert!(g.players[0].hand.is_empty());
+    }
+}
