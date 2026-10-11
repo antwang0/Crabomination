@@ -960,6 +960,28 @@ fn tibalts_trickery_counters_then_cascades_its_controller() {
     assert_eq!(g.players[0].library.len(), 4 - milled, "every passed-over card went to the bottom");
 }
 
+/// Tibalt's Trickery at a spell that can't be countered: the counter does
+/// nothing, but "its controller" still mills and cascades (the printed card
+/// has them do so either way).
+#[test]
+fn tibalts_trickery_still_cascades_an_uncounterable_spells_controller() {
+    let mut g = b_main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    b_flood(&mut g, 0);
+    let decay = g.add_card_to_hand(0, catalog::abrupt_decay());
+    let trick = g.add_card_to_hand(0, catalog::tibalts_trickery());
+    b_cast_by(&mut g, 0, decay, Some(Target::Permanent(rock)));
+    b_cast_by(&mut g, 0, trick, Some(Target::Permanent(decay)));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "Abrupt Decay resolved");
+    assert!(g.battlefield_find(bear).is_some(), "and its controller still cascaded into the Bear");
+}
+
 /// Delayed Blast Fireball deals 2 from hand and 5 when foretold (cast from
 /// exile), to each opponent and their creatures only.
 #[test]

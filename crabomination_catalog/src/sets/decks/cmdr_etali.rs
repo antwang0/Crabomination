@@ -1055,14 +1055,13 @@ pub fn evendo_brushrazer() -> CardDefinition {
 /// than that spell. They may cast that card without paying its mana cost. Then
 /// they put the exiled cards on the bottom of their library in a random order.
 ///
-/// After the counter, `EachPlayerDoes(CounteredSpellController)` runs the rest
-/// as that player (Fold into Aether's player ref). The random 1-3 is a
+/// After the counter, `EachPlayerDoes(ControllerOf(Target(0)))` runs the rest
+/// as the spell's controller — an uncounterable spell's controller still mills
+/// and cascades (the stack's caster), a countered one's is read off the card
+/// (its owner, the same player unless the spell was cast by someone else). The random 1-3 is a
 /// `ChooseModeAtRandom` over three mills (a choice, not a die roll). The
 /// exile-until / may-cast-free / bottom-the-rest sequence is `Cascade` with no
 /// mana-value cap, skipping cards named like the countered spell.
-/// Approximation: if the target spell can't be countered,
-/// `CounteredSpellController` stays unset and the mill/cascade half is
-/// skipped. The printed card still has that player mill and cascade.
 pub fn tibalts_trickery() -> CardDefinition {
     let mill = |n: i32| Effect::Mill { who: Selector::You, amount: Value::Const(n) };
     CardDefinition {
@@ -1072,7 +1071,7 @@ pub fn tibalts_trickery() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
             Effect::EachPlayerDoes {
-                who: PlayerRef::CounteredSpellController,
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 body: Box::new(Effect::Seq(vec![
                     Effect::ChooseModeAtRandom(vec![mill(1), mill(2), mill(3)]),
                     Effect::Cascade { max_mv: Value::Const(1000), filter: Some(R::SameNameAsTarget.negate()) },
