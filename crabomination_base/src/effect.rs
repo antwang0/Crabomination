@@ -2001,6 +2001,9 @@ pub enum Predicate {
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
     /// dealt damage this turn."
     PlayerDamagedThisTurn { who: PlayerRef },
+    /// True if a creature or planeswalker any player matched by `who`
+    /// controlled was dealt excess damage this turn (CR 120.10 — Rith).
+    ExcessDamagedPermanentThisTurn { who: PlayerRef },
     /// True if any player matched by `who` has lost life this turn (damage or
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
     /// Spectacle (CR 702.137) — pair with `who: EachOpponent`.
@@ -7572,6 +7575,10 @@ pub enum Effect {
     /// keyword onto the spell's card, so it holds as the permanent enters
     /// (Bloodlord of Vaasgoth's and Twins of Discord's granted bloodthirst).
     SpellGainsKeyword { what: Selector, keyword: crate::card::Keyword },
+    /// "It gains '[trigger]'" on a spell still on the stack — stamped onto the
+    /// spell's card like `SpellGainsKeyword`, so the permanent it becomes has
+    /// it (Rivaz of the Claw's "When this creature dies, exile it.").
+    SpellGainsTrigger { what: Selector, trigger: Box<crate::card::TriggeredAbility> },
     /// "Exile target [permanent], then search its owner's graveyard, hand,
     /// and library for any number of cards with the same name as that
     /// [permanent] and exile them. Then that player shuffles." Crumble to

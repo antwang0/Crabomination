@@ -996,6 +996,8 @@ pub enum CounterType {
     /// Malcolm, Alluring Scoundrel's tally of its combat hits; four or more
     /// lets the looted card be cast free.
     Chorus,
+    /// The Thallids' spore counters (three buy a Saproling).
+    Spore,
 }
 
 /// Every zone a card can occupy.
@@ -6157,6 +6159,11 @@ pub enum AdditionalCastCost {
     /// caster controls no creature and reveals none. Auto-picks the highest
     /// power (battlefield first, then hand).
     ChooseOrRevealCreature,
+    /// "As an additional cost to cast this spell, you may behold a [filter]"
+    /// whose power the spell then reads (CR 701.4a — Dragon's Fire). Taken
+    /// only for a power of `at_least` or more (where it beats the default the
+    /// body falls back to), threaded into X as `ChooseOrRevealCreature`'s.
+    BeholdPower { filter: SelectionRequirement, at_least: u32 },
     /// "As an additional cost to cast this spell, forage or pay {pay}." (Feed
     /// the Cycle.) When the caster can forage (three cards in the graveyard or a
     /// Food to sacrifice) the forage half is paid; otherwise `pay` generic joins

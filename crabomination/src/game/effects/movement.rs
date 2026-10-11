@@ -416,8 +416,26 @@ impl GameState {
             && let Some(c) = self.battlefield_find_mut(cid)
         {
             c.excess_damage_this_turn = c.excess_damage_this_turn.saturating_add(excess);
+            let seat = c.controller;
+            self.note_excess_damaged_seat(seat);
         }
         excess
+    }
+
+    /// CR 120.4a — damage beyond a planeswalker's loyalty is excess too.
+    pub(crate) fn note_planeswalker_excess(&mut self, cid: CardId, amount: u32) {
+        if let Some(c) = self.battlefield_find(cid)
+            && amount > c.counter_count(CounterType::Loyalty)
+        {
+            let seat = c.controller;
+            self.note_excess_damaged_seat(seat);
+        }
+    }
+
+    fn note_excess_damaged_seat(&mut self, seat: usize) {
+        if !self.turn.excess_damaged_seats.contains(&seat) {
+            self.turn.excess_damaged_seats.push(seat);
+        }
     }
 
     /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
@@ -1856,6 +1874,7 @@ impl GameState {
                     .map(|c| c.definition.is_battle())
                     .unwrap_or(false);
                 if is_pw {
+                    self.note_planeswalker_excess(cid, amount);
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         let current = c.counter_count(CounterType::Loyalty);
                         let new_loyalty = current.saturating_sub(amount);

@@ -1049,6 +1049,10 @@ impl GameState {
                 self.noncreature_spells_cast_this_turn = 0;
                 self.opponent_cast_since_your_turn &=
                     !crate::game::seat_bit(self.active_player_idx);
+                // A funded spell that never entered leaves its grant behind.
+                if !self.pending_etb_keyword_grants.is_empty() {
+                    self.pending_etb_keyword_grants.clear();
+                }
                 for pl in &mut self.players {
                     // One `Player::deref_mut` for the run: `Player` is a CoW
                     // handle, so each write below was its own `Arc::make_mut`.
@@ -2996,6 +3000,21 @@ impl GameState {
                     {
                         for (kind, n) in std::mem::take(&mut c.pending_etb_counters) {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                        }
+                    }
+                    if self.pending_etb_keyword_grants.iter().any(|(id, ..)| *id == card_id) {
+                        let (mine, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.pending_etb_keyword_grants)
+                            .into_iter()
+                            .partition(|(id, ..)| *id == card_id);
+                        self.pending_etb_keyword_grants = rest;
+                        for (_, kw, duration) in mine {
+                            self.keyword_layer_effect(
+                                card_id,
+                                crate::game::layers::Modification::AddKeyword(kw),
+                                duration,
+                                caster,
+                                card_id,
+                            );
                         }
                     }
                     // CR 702.44 — Sunburst: one counter per color of mana
@@ -5560,6 +5579,7 @@ impl GameState {
         // tracker (used by Fractal Tender's end-step trigger). Resetting
         // at cleanup is the canonical "until end of turn" scope.
         clear_turn!(self.permanents_gained_counter_this_turn);
+        clear_turn!(self.excess_damaged_seats);
         clear_cold!(self.permanents_amplified_counter_this_turn);
         // CR 603-style "Nth time this turn" escalation counters reset.
         clear_cold!(self.ability_resolutions_this_turn);

@@ -1458,7 +1458,8 @@ impl Effect {
             Effect::PutFaceDownOntoBattlefield { what } => sel_has_target(what),
             Effect::GrantKeywordsToSpell { what, .. }
             | Effect::SpellEntersWithCounters { what, .. }
-            | Effect::SpellGainsKeyword { what, .. } => sel_has_target(what),
+            | Effect::SpellGainsKeyword { what, .. }
+            | Effect::SpellGainsTrigger { what, .. } => sel_has_target(what),
             Effect::CastFromHandWithoutPaying { .. }
             | Effect::MayCastFromHandOrGraveyardForLife { .. }
             | Effect::GraveyardCardsGainUnearthThisTurn { .. } => false,

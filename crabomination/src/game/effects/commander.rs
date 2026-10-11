@@ -354,6 +354,8 @@ pub(crate) struct CommanderManaScry {
     copies: (u32, Option<CardId>),
     /// Sunken Palace — rider pips that funded any spell, and that spell.
     palace_copies: (u32, Option<CardId>),
+    /// Scaled Nurturer — rider pips that funded a Dragon creature spell.
+    dragon_life: u32,
 }
 
 impl GameState {
@@ -408,6 +410,19 @@ impl GameState {
         if kind.creature && bio > 0 {
             card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, bio));
         }
+        // Jade Orb of Dragonkind — a Dragon creature spell enters with a
+        // counter per pip and hexproof until its caster's next turn.
+        let dragon = kind.creature
+            && (kind.changeling || kind.creature_types.contains(&CreatureType::Dragon));
+        let jade = spent.spent_count(SpendRestriction::DragonCreatureCounterHexproof);
+        if dragon && jade > 0 {
+            card.pending_etb_counters.push((crate::card::CounterType::PlusOnePlusOne, jade));
+            self.pending_etb_keyword_grants.push((
+                card.id,
+                Keyword::Hexproof,
+                crate::effect::Duration::UntilNextTurn,
+            ));
+        }
         // Forger's Foundry — the same provenance hook: the rider names the
         // cast object (CR 106.6), so it rides the card like Opal Palace's.
         if kind.instant_or_sorcery
@@ -448,6 +463,7 @@ impl GameState {
             study,
             copies,
             palace_copies,
+            dragon_life: if dragon { spent.spent_count(SpendRestriction::DragonCreatureGainTwo) } else { 0 },
         }
     }
 
@@ -500,6 +516,22 @@ impl GameState {
                         },
                     )
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(spell)))
+                    .build(),
+                );
+            }
+        }
+        // Scaled Nurturer — "you gain 2 life", one trigger per pip.
+        if riders.dragon_life > 0 {
+            let source = self
+                .restricted_mana_source(seat, SpendRestriction::DragonCreatureGainTwo)
+                .unwrap_or(CardId(0));
+            for _ in 0..riders.dragon_life {
+                self.push_stack(
+                    TriggerPush::new(
+                        source,
+                        seat,
+                        Effect::GainLife { who: crate::effect::Selector::You, amount: Value::Const(2) },
+                    )
                     .build(),
                 );
             }

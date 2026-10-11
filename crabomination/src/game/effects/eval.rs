@@ -2728,6 +2728,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].was_dealt_damage_this_turn),
+            Predicate::ExcessDamagedPermanentThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.turn.excess_damaged_seats.contains(&p)),
             Predicate::PlayerLostLifeThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

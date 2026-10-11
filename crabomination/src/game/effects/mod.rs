@@ -18993,6 +18993,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SpellGainsTrigger { what, trigger } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    for it in self.stack.iter_mut() {
+                        if let StackItem::Spell { card, .. } = it
+                            && card.id == cid
+                        {
+                            card.definition_make_mut().triggered_abilities.push((**trigger).clone());
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SpellEntersWithCounters { what, kind, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n == 0 {

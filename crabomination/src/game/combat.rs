@@ -6146,6 +6146,7 @@ impl GameState {
                     }
                 }
                 let amount = amount - spill;
+                self.note_planeswalker_excess(pw_id, amount);
                 if let Some(pw) = self.battlefield_find_mut(pw_id) {
                     let current = pw.counter_count(crate::card::CounterType::Loyalty);
                     let new_loyalty = current.saturating_sub(amount);

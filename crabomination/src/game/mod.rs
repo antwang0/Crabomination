@@ -1454,6 +1454,10 @@ pub struct TurnRegistries {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub permanents_gained_counter_this_turn: crate::game::types::IdSet<CardId>,
+    /// Seats whose creature or planeswalker was dealt excess damage this
+    /// turn (CR 120.4a/120.10 — Rith, Liberated Primeval). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) excess_damaged_seats: Vec<usize>,
     /// Distinct (controller, source) pairs that have dealt damage this turn.
     /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
     /// (Case of the Burning Masks). Cleared at the turn boundary.
@@ -1582,6 +1586,11 @@ pub(crate) type DeferredLegendChoice = (usize, String, Vec<(CardId, String)>);
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
+    /// Keyword grants a spell's funding mana owes the permanent it becomes
+    /// (Jade Orb of Dragonkind's hexproof until your next turn): drained as
+    /// that card enters, dropped at the next turn's start.
+    #[serde(default)]
+    pub(crate) pending_etb_keyword_grants: Vec<(CardId, crate::card::Keyword, crate::effect::Duration)>,
     /// Mana sources the auto-tapper is activating right now whose mana
     /// ability itself costs mana (Blood Celebrant's {B}, a Signet's {1}): such
     /// a source is never re-entered to pay its own cost — it recursed until

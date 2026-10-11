@@ -11819,6 +11819,8 @@ impl GameState {
                 self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c))
                     || self.players[p].hand.iter().any(|c| self.computed_is_creature(c))
             }
+            // Optional: beholding nothing is legal.
+            A::BeholdPower { .. } => true,
             // Handing an opponent life is always payable.
             A::OpponentGainsLife { .. } => true,
             // Removing "any number" of counters — zero is legal.
@@ -12339,6 +12341,27 @@ impl GameState {
                         if sac_power.is_none() {
                             sac_power = sp;
                         }
+                    }
+                }
+                A::BeholdPower { filter, at_least } => {
+                    // CR 701.4a — choose a matching permanent you control or
+                    // reveal a matching card from hand: the strongest, if it
+                    // clears the bar. Nothing moves.
+                    let on_bf = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && self.evaluate_requirement_on_card(filter, c, p))
+                        .map(|c| self.effective_power_on(c).max(0) as u32)
+                        .max();
+                    let in_hand = self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .map(|c| c.definition.power.max(0) as u32)
+                        .max();
+                    let power = on_bf.max(in_hand).filter(|n| n >= at_least);
+                    if sac_power.is_none() {
+                        sac_power = power;
                     }
                 }
                 A::ChooseOrRevealCreature => {

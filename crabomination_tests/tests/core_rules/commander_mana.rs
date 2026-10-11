@@ -664,7 +664,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | PlaneswalkerSpellsOnly
                 | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
                 | RoomSpellsOrDoors
-                | FaceDownSpellsOrTurnFaceUp | TurnFaceUpOnly | CreatureHaste | DragonCreatureHaste | CommanderTypeScry
+                | FaceDownSpellsOrTurnFaceUp | TurnFaceUpOnly | CreatureHaste | DragonCreatureHaste | DragonCreatureCounterHexproof | DragonCreatureGainTwo | CommanderTypeScry
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
                 | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
@@ -725,6 +725,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
             FaceDownSpellsOrTurnFaceUp,
             CreatureHaste,
             DragonCreatureHaste,
+            DragonCreatureCounterHexproof,
+            DragonCreatureGainTwo,
             CommanderTypeScry,
             CommanderCastCounters,
             CommanderCastScry,

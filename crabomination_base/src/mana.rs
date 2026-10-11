@@ -799,6 +799,14 @@ pub enum SpendRestriction {
     /// haste until end of turn." (Carnelian Orb of Dragonkind.) The
     /// Dragon-only `CreatureHaste`; unrestricted spend.
     DragonCreatureHaste,
+    /// "When you spend this mana to cast a Dragon creature spell, it enters
+    /// with an additional +1/+1 counter on it and gains hexproof until your
+    /// next turn." (Jade Orb of Dragonkind.) Unrestricted spend.
+    DragonCreatureCounterHexproof,
+    /// "When you spend this mana to cast a Dragon creature spell, you gain 2
+    /// life." (Scaled Nurturer.) Unrestricted spend; the trigger goes on the
+    /// stack above the spell it funded.
+    DragonCreatureGainTwo,
     /// "When that mana is spent to cast a creature spell that shares a
     /// creature type with your commander, scry 1." (Path of Ancestry.)
     /// Unrestricted spend; the shared-type check and the trigger live in
@@ -944,6 +952,8 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryUncounterable
             | SpendRestriction::CreatureHaste
             | SpendRestriction::DragonCreatureHaste
+            | SpendRestriction::DragonCreatureCounterHexproof
+            | SpendRestriction::DragonCreatureGainTwo
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
@@ -1099,6 +1109,8 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryUncounterable
             | SpendRestriction::CreatureHaste
             | SpendRestriction::DragonCreatureHaste
+            | SpendRestriction::DragonCreatureCounterHexproof
+            | SpendRestriction::DragonCreatureGainTwo
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
             | SpendRestriction::CreatureCastCounter
