@@ -6079,8 +6079,8 @@ pub fn zhao_the_moon_slayer() -> CardDefinition {
 
 /// Toph, Hardheaded Teacher — {2}{R}{G} 3/4 Legendary Human Warrior Ally. ETB
 /// you may discard a card; if you do, return target instant or sorcery card from
-/// your graveyard to your hand. Whenever you cast a spell, earthbend 1. (The
-/// "extra +1/+1 counter if that spell is a Lesson" rider is dropped.)
+/// your graveyard to your hand. Whenever you cast a spell, earthbend 1; if
+/// that spell is a Lesson, the land gets an additional +1/+1 counter.
 pub fn toph_hardheaded_teacher() -> CardDefinition {
     CardDefinition {
         name: "Toph, Hardheaded Teacher",
@@ -6116,7 +6116,15 @@ pub fn toph_hardheaded_teacher() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
-                effect: Effect::Earthbend { n: Value::ONE },
+                effect: Effect::Earthbend {
+                    n: Value::IfPred {
+                        pred: Box::new(Predicate::CastSpellMatches(SelectionRequirement::HasSpellSubtype(
+                            SpellSubtype::Lesson,
+                        ))),
+                        then: Box::new(Value::Const(2)),
+                        else_: Box::new(Value::ONE),
+                    },
+                },
             },
         ],
         ..Default::default()

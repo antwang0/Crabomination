@@ -3582,6 +3582,31 @@ fn toph_hardheaded_returns_is_and_earthbends() {
     );
 }
 
+/// Toph, Hardheaded Teacher: a Lesson spell earthbends with one additional
+/// +1/+1 counter on that land (Introduction to Prophecy is a Lesson).
+#[test]
+fn toph_hardheaded_lesson_adds_a_counter() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::toph_hardheaded_teacher());
+    let lesson = g.add_card_to_hand(0, catalog::introduction_to_prophecy());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: lesson,
+        target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Lesson");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
 /// Avatar Destiny buffs its host by graveyard-creature count and makes it an
 /// Avatar; when the host dies it returns to hand and reanimates a gy creature.
 #[test]
