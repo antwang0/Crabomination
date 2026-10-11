@@ -1536,14 +1536,10 @@ pub fn scrounging_bandar() -> CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::MayDo {
-                description: "Move this creature's +1/+1 counters onto another creature?".into(),
-                body: Box::new(Effect::MoveCounters {
-                    from: Selector::This,
-                    to: target_filtered(R::Creature.and(R::OtherThanSource)),
-                    counter: CounterType::PlusOnePlusOne,
-                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
-                }),
+            // CR 122.5 — how many (zero declines) is the controller's pick.
+            effect: Effect::MoveAnyNumberOfCounters {
+                from: Selector::This,
+                to: target_filtered(R::Creature.and(R::OtherThanSource)),
             },
         }],
         ..creature("Scrounging Bandar", cost(&[generic(1), g()]), vec![CreatureType::Cat, CreatureType::Monkey], 0, 0)
