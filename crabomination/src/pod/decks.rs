@@ -10892,3 +10892,34 @@ pub const THRANDUIL_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const MARALEN_COMMANDERS: &[CardFactory] = &[maralen_fae_ascendant];
+
+/// **Maralen, Fae Ascendant**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 84 nonbasic cards + 6 Forests + 5 Islands + 4 Swamps = 99.
+/// Maralen, Fae Ascendant (BGU) Elves and Faeries: every Elf or Faerie entering exiles
+/// opponents' cards for a free cast while flash Faeries counter and Elves go wide.
+pub const MARALEN_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, maskwood_nexus, panharmonicon, sol_ring, vedalken_orrery,
+    breeding_pool, command_tower, dreamroot_cascade, drowned_catacomb, eclipsed_realms,
+    exotic_orchard, hinterland_harbor, llanowar_wastes, misty_rainforest, opulent_palace,
+    overgrown_tomb, path_of_ancestry, polluted_delta, rejuvenating_springs, undergrowth_stadium,
+    verdant_catacombs, watery_grave, woodland_cemetery, zagoth_triome, alela_cunning_conqueror,
+    beast_whisperer, bitterbloom_bearer, bloom_tender, champions_of_the_perfect,
+    chomping_changeling, cloud_of_faeries, elves_of_deep_shadow, elvish_archdruid,
+    elvish_mystic, elvish_warmaster, faerie_mastermind, formidable_speaker, fyndhorn_elves,
+    glen_elendra_archmage, glen_elendra_guardian, high_fae_trickster, high_perfect_morcant,
+    imperious_perfect, lathril_blade_of_the_elves, llanowar_elves, maraleaf_pixie,
+    morcants_loyalist, obyra_dreaming_duelist, oona_queen_of_the_fae, priest_of_titania,
+    reclamation_sage, scion_of_oona, selfless_safewright, spellstutter_sprite,
+    talion_the_kindly_lord, tegwyll_duke_of_splendor, thranduil_sindarin_liege,
+    voracious_tome_skimmer, bitterblossom, kindred_discovery, leyline_of_anticipation,
+    reflections_of_littjara, rhystic_study, springleaf_parade, an_offer_you_cant_refuse,
+    arcane_denial, assassins_trophy, beast_within, counterspell, faebloom_trick,
+    galadhrim_ambush, glen_elendras_answer, harmonized_crescendo, heroic_intervention,
+    spell_stutter, swan_song, cultivate, distant_melody, farseek, natures_lore,
+    notorious_throng, stolen_by_the_fae, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    swamp, swamp, swamp, swamp,
+];

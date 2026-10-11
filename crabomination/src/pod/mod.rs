@@ -2676,6 +2676,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THRANDUIL_COMMANDERS,
             main: decks::THRANDUIL_MAIN,
         },
+        // Seat 373: Maralen, Fae Ascendant's EDHREC average deck. `--pod-decks 373`.
+        PodDeck {
+            name: "Maralen, Fae Ascendant (BGU)",
+            commanders: decks::MARALEN_COMMANDERS,
+            main: decks::MARALEN_MAIN,
+        },
     ]
 }
 
@@ -4766,6 +4772,7 @@ mod tests {
             ("Miirym, Sentinel Wyrm", [0x0A98, 370, 9295]),
             ("Tiamat", [0x0A99, 371, 9296]),
             ("Thranduil, the Elvenking", [0x0A9A, 372, 9297]),
+            ("Maralen, Fae Ascendant", [0x0A9B, 373, 9298]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
