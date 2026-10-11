@@ -193,6 +193,9 @@ the handoff.
   hand (CR 400.7, fixed `ba8528023`); the rest draws by rule (Zellix + Altar
   of the Brood milling a self-shuffling Blightsteel — CR 701.17c counts it as
   milled — Polyraptor, Ghostly Dancers + Doomwake Giant) and board caps.
+  Then 309001 (`--a dflt` fuzzed, 1,705) **0 flagged** and 310001 (plain,
+  5,115) 0 aborts, 3 undecided (a CR 104.4a simultaneous loss, two token
+  board caps): the finds per sweep have dropped to nothing at this tip.
 - **Layer 7c** summed P/T modifications unsaturated (two end-of-combat pumps
   at i32::MAX overflowed); now saturating, bench-neutral (PERF).
 - **Census (6 seats × every deck, seed 31001):** the "never activated" rows
