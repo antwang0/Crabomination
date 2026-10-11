@@ -14402,7 +14402,10 @@ impl GameState {
         }
         card.may_play_until = None;
         card.granted_alt_cast_cost_eot = None;
-        // Stamp the cast-zone flag for "cast a spell from exile" payoffs.
+        // Stamp the cast-zone flag for "cast a spell from exile" payoffs —
+        // and the hand flag with it, which a card cast from hand earlier still
+        // carried into exile (a Goliath Daydreamer's dreamed spell recast).
+        card.cast_from_hand = matches!(source_zone, Zone::Hand);
         card.cast_from_exile = matches!(source_zone, Zone::Exile);
         card.cast_from_library = matches!(source_zone, Zone::Library);
         card.cast_from_graveyard = matches!(source_zone, Zone::Graveyard);
