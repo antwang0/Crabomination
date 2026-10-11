@@ -3155,6 +3155,11 @@ release pods     seats 392-400 (nine-seat pods) seeds 40101 x 400 + 40102 x 300:
                  6,000 / 0, sealed 14,400 / 0
 suite            strict 25,109 / 0 / 5 at `e639d0671` (long pole 2,772 s run);
                  workspace clippy 0; release-fast typecheck clean
+re-gate          at `6b53c0ec0` (seats 401-402 + three audit fixes): suite
+                 25,127 / 0 / 5 (four structural audits red at `7b82b3e80`,
+                 fixed and re-run green); clippy 0; release-fast clean;
+                 --bench 27.64 / 613.0, determinism + thread_determinism ok,
+                 peak_rss 30.6 MiB (games/s not read: contended run)
 ```
 
 ### 2026-10-11 (Commander run, `01EvCQ72`) — guardrail; harness, attach legality, tapless mana activations, stickers
