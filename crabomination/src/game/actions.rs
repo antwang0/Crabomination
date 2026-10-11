@@ -3133,6 +3133,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyTypeSacrificedLandProduces
         | ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorOfSource
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents
         // Vivid adds up to five pips and asks nobody; "multiple" here is
@@ -4786,8 +4787,10 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         | ManaPayload::AnyColorAGateYouControlCouldProduce
         | ManaPayload::AnyTypeALandYouControlCouldProduce(_)
         | ManaPayload::AnyTypeAGateYouControlCouldProduce => ColorSet::all(),
-        // Color set depends on live board state — not auto-tapped.
+        // Color set depends on live board state — not auto-tapped. (The
+        // source table reads `AnyColorOfSource` off its source instead.)
         ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorOfSource
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents
         | ManaPayload::OneOfEachColorAmongYourPermanents
@@ -18509,7 +18512,12 @@ impl GameState {
                     }
                 }
                 let amount = crate::game::mana_shape::mana_ability_output(&a.effect).0;
-                for col in effect_produced_colors(&a.effect).iter() {
+                let produced = if matches!(a.effect, Effect::AddMana { pool: ManaPayload::AnyColorOfSource, .. }) {
+                    self.computed_permanent(c.id).map_or(crate::mana::ColorSet::empty(), |cp| cp.colors)
+                } else {
+                    effect_produced_colors(&a.effect)
+                };
+                for col in produced.iter() {
                     let k = color_index(col);
                     if !colors.contains(col) {
                         colors.insert(col);

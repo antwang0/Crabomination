@@ -3752,6 +3752,10 @@ impl GameState {
                 .opponents_of(ctx.controller)
                 .into_iter()
                 .any(|p| self.players[p].spells_cast_this_game_turn > 0),
+            Predicate::PlayerAttackedYouThisTurn(who) => self
+                .resolve_player(who, ctx)
+                .and_then(|p| self.players.get(p))
+                .is_some_and(|p| p.attacked_players_this_turn.contains(&ctx.controller)),
             Predicate::APlayerAttackedYouLastTurn => {
                 self.players.iter().any(|p| p.attacked_players_this_turn.contains(&ctx.controller))
             }

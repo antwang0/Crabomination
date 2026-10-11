@@ -1888,6 +1888,7 @@ impl Effect {
                     | ManaPayload::AnyColorABasicLandYouControlCouldProduce
                     | ManaPayload::AnyColorAGateYouControlCouldProduce
                     | ManaPayload::AnyColorAmongLegendaries
+                    | ManaPayload::AnyColorOfSource
                     | ManaPayload::AnyColorInCommanderIdentity
                     | ManaPayload::DraftNotedColorOfSource => false,
                 }
@@ -2030,6 +2031,7 @@ impl Effect {
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
             | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
+            | Effect::GrantProtectionFromChosenCardType { what, .. }
             | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. }
@@ -2927,6 +2929,7 @@ impl Effect {
             | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. }
             | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
+            | Effect::GrantProtectionFromChosenCardType { what, .. }
             | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. } => sel_filter(what),
@@ -5524,6 +5527,7 @@ impl Effect {
                 | Effect::GrantKeywords { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. }
                 | Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
+                | Effect::GrantProtectionFromChosenCardType { what, .. }
                 | Effect::GrantHexproofAndEvasionFromChosenColor { what, .. }
                 | Effect::GainProtectionFromPlayer { what, .. }
                 | Effect::CantBeBlockedByPlayer { what, .. }

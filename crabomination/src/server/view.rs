@@ -3155,6 +3155,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::LookPickToHand { .. } => "Look and take a card",
         Effect::GrantProtectionFromChosenColor { .. }
         | Effect::GrantProtectionFromChosenColorOrColorless { .. }
+        | Effect::GrantProtectionFromChosenCardType { .. }
         | Effect::GrantHexproofAndEvasionFromChosenColor { .. }
         | Effect::GrantProtectionFromColorsOf { .. } => "Grant protection",
         Effect::BecomeChosenCreatureType { .. } => "Change creature type",

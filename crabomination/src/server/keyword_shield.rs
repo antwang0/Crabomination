@@ -125,7 +125,8 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
             for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
                 let what = match &ab.effect {
                     Effect::GrantProtectionFromChosenColor { what, .. } if colored => what,
-                    Effect::GrantProtectionFromChosenColorOrColorless { what, .. } => what,
+                    Effect::GrantProtectionFromChosenColorOrColorless { what, .. }
+                    | Effect::GrantProtectionFromChosenCardType { what, .. } => what,
                     _ => continue,
                 };
                 let aim = match what {

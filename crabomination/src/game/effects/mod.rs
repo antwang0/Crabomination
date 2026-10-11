@@ -14480,6 +14480,22 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    ManaPayload::AnyColorOfSource => {
+                        let legal: Vec<Color> = ctx
+                            .source
+                            .and_then(|s| self.computed_permanent(s))
+                            .map(|cp| cp.colors.iter().collect())
+                            .unwrap_or_default();
+                        if !legal.is_empty() {
+                            let color = if legal.len() == 1 {
+                                legal[0]
+                            } else {
+                                self.chosen_mana_color(p, &legal, ctx.source)
+                            };
+                            add_one(self, p, color);
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                        }
+                    }
                     ManaPayload::AnyColorAmongLegendaries => {
                         // Mox Amber — union of colors among legendary
                         // creatures/planeswalkers you control; no mana if none.
@@ -19627,6 +19643,51 @@ impl GameState {
                         None => self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true),
                     })
                 };
+                for cid in ids {
+                    self.grant_keyword_for(cid, kw.clone(), *duration, ctx);
+                }
+                Ok(())
+            }
+
+            Effect::GrantProtectionFromChosenCardType { what, duration } => {
+                use crate::card::CardType;
+                let Some(source) = ctx.source else { return Ok(()) };
+                let ids: Vec<_> =
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect();
+                // The type of the spell aimed at one of them leads the list,
+                // so a headless seat blanks the threat; else creatures.
+                let threat = self.stack.iter().rev().find_map(|si| match si {
+                    StackItem::Spell { card, target, additional_targets, .. }
+                        if card.owner != ctx.controller
+                            && target.iter().chain(additional_targets.iter())
+                                .any(|t| matches!(t, Target::Permanent(id) if ids.contains(id))) =>
+                    {
+                        card.definition.card_types.first().cloned()
+                    }
+                    _ => None,
+                });
+                let mut options = vec![
+                    CardType::Creature,
+                    CardType::Instant,
+                    CardType::Sorcery,
+                    CardType::Artifact,
+                    CardType::Enchantment,
+                    CardType::Planeswalker,
+                    CardType::Land,
+                ];
+                if let Some(t) = threat
+                    && let Some(i) = options.iter().position(|o| *o == t)
+                {
+                    let t = options.remove(i);
+                    options.insert(0, t);
+                }
+                let texts = options.iter().map(|t| format!("{t:?}")).collect();
+                let Some(n) = self.ask_controller_mode(ctx.controller, source, texts, effect) else {
+                    return Ok(());
+                };
+                let kw = Keyword::ProtectionFromMatching(Box::new(SelectionRequirement::HasCardType(
+                    options[n.min(options.len() - 1)].clone(),
+                )));
                 for cid in ids {
                     self.grant_keyword_for(cid, kw.clone(), *duration, ctx);
                 }

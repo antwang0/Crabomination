@@ -2688,6 +2688,9 @@ pub enum Predicate {
     /// (Avenge — `attacked_players_this_turn`, rolled over as their turn
     /// begins).
     APlayerAttackedYouLastTurn,
+    /// `.0` attacked the controller during the current turn (Faramir's "if
+    /// they didn't attack you that turn", read at that player's end step).
+    PlayerAttackedYouThisTurn(PlayerRef),
     /// True when the resolving spell was kicked (CR 702.32) — its optional
     /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
     /// stamped from the resolving `CardInstance.kicked` flag. Used by
@@ -3266,6 +3269,10 @@ pub enum ManaPayload {
     /// you control (Mox Amber). The legal-color set is the union of those
     /// permanents' colors; produces nothing when empty.
     AnyColorAmongLegendaries,
+    /// "Add one mana of any of this creature's colors" — the source
+    /// permanent's own computed colors (Katilda's granted Human ability);
+    /// nothing off a colorless source.
+    AnyColorOfSource,
     /// "Choose a color of a permanent you control. Add one mana of that color"
     /// (Meteor Crater). Colorless-only boards produce nothing.
     AnyColorAmongYourPermanents,
@@ -8600,6 +8607,9 @@ pub enum Effect {
     /// choice (Giver of Runes): taken when the threat on the stack is
     /// colorless.
     GrantProtectionFromChosenColorOrColorless { what: Selector, duration: Duration },
+    /// "… gains protection from the card type of your choice" (Pippin, Guard
+    /// of the Citadel): the controller names a card type as this resolves.
+    GrantProtectionFromChosenCardType { what: Selector, duration: Duration },
     /// "Choose a color. [Target] gains hexproof from that color until end of
     /// turn. It can't be blocked by creatures of that color this turn"
     /// (Skrelv, Defector Mite). The color is picked as for
