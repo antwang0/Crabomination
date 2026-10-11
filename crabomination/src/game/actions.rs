@@ -20809,6 +20809,7 @@ impl GameState {
         let chosen_exile_other = take_opt_scratch!(self.pending_ability_exile_other);
         let chosen_sac_any = take_opt_scratch!(self.pending_ability_sac_any);
         let chosen_exile_permanent = take_opt_scratch!(self.pending_ability_exile_permanent);
+        let chosen_unattach = take_opt_scratch!(self.pending_ability_unattach);
         let chosen_exiled_with = take_opt_scratch!(self.pending_ability_exiled_with);
         // CR 601.2g float-spend choice (None until answered; consumed up front
         // so a failure can't leak it onto a later activation).
@@ -22037,6 +22038,50 @@ impl GameState {
         // Pre-flight "Exile a [filter] you control:" gate (Food Chain). Rejects
         // cleanly when too few match; the auto-picker takes the lowest-power
         // candidates so better creatures stay on the battlefield.
+        // "Unattach an Equipment from [this]" (CR 602.5b): the activator
+        // picks which; a UI seat with a real choice is asked, everyone else
+        // throws the greatest mana value. Paid below with the other costs.
+        let unattach_pick: Option<(CardId, i32)> = if ability.unattach_equipment_cost {
+            let attached: Vec<(CardId, i32)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to == Some(card_id) && c.definition.is_equipment())
+                .map(|c| (c.id, c.definition.cost.cmc() as i32))
+                .collect();
+            if attached.is_empty() {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            if let Some(pick) = chosen_unattach.and_then(|id| attached.iter().find(|(c, _)| *c == id)) {
+                Some(*pick)
+            } else if attached.len() > 1 && self.players[p].manual_mana {
+                let source_name =
+                    self.battlefield_find(card_id).map(|c| c.definition.name.to_string()).unwrap_or_default();
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseTarget {
+                        optional: false,
+                        source: card_id,
+                        legal: attached.iter().map(|(id, _)| Target::Permanent(*id)).collect(),
+                        source_name,
+                        description: "choose an Equipment to unattach (cost)".into(),
+                        extra_cast_slot: false,
+                    },
+                    resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                        activator: p,
+                        card_id,
+                        ability_index,
+                        target,
+                        additional_targets: additional_targets.clone(),
+                        x_value,
+                        kind: crate::game::types::AbilityCostChoice::UnattachEquipment,
+                    },
+                }));
+                return Ok(());
+            } else {
+                attached.into_iter().max_by_key(|&(id, mv)| (mv, std::cmp::Reverse(id)))
+            }
+        } else {
+            None
+        };
         let exile_permanent_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.exile_permanent_cost.as_ref()
         {
@@ -23843,16 +23888,9 @@ impl GameState {
                 self.exiled_for_cost_card = Some(cid);
             }
         }
-        // "Unattach an Equipment from [this]" as a cost: the greatest mana
-        // value one goes, and its MV rides `Value::ExiledForCostManaValue`.
-        if ability.unattach_equipment_cost {
-            let pick = self
-                .battlefield
-                .iter()
-                .filter(|c| c.attached_to == Some(card_id) && c.definition.is_equipment())
-                .max_by_key(|c| (c.definition.cost.cmc(), std::cmp::Reverse(c.id)))
-                .map(|c| (c.id, c.definition.cost.cmc() as i32));
-            let Some((eq, mv)) = pick else { return Err(GameError::SelectionRequirementViolated) };
+        // "Unattach an Equipment from [this]" as a cost: the pre-flight pick
+        // goes, and its MV rides `Value::ExiledForCostManaValue`.
+        if let Some((eq, mv)) = unattach_pick {
             if let Some(c) = self.battlefield.find_by_id_mut(eq)
                 && let Some(host) = c.attached_to.take()
             {

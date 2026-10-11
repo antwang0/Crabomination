@@ -1928,6 +1928,31 @@ fn captain_america_catches_and_throws() {
     assert!(activate(&mut g, cap, 0).is_err());
 }
 
+/// CR 602.5b — Throw's "unattach an Equipment" is the activator's pick: a
+/// UI seat wearing the Shield (MV 2) and Argentum Armor (MV 6) throws the
+/// Shield, and the Armor stays on.
+#[test]
+fn cr_602_5b_captain_america_asks_which_equipment_to_throw() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = pod(2);
+    let cap = ready(&mut g, 0, catalog::captain_america_first_avenger());
+    let shield = ready(&mut g, 0, catalog::captain_americas_shield());
+    let armor = ready(&mut g, 0, catalog::argentum_armor());
+    equip_to(&mut g, shield, cap);
+    equip_to(&mut g, armor, cap);
+    flood(&mut g);
+    g.players[0].manual_mana = true;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: cap, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("suspends for the pick");
+    assert!(g.pending_decision.is_some(), "asked which Equipment");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(shield)))).expect("answer");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "the Shield's mana value");
+    assert_eq!(g.battlefield_find(shield).unwrap().attached_to, None);
+    assert_eq!(g.battlefield_find(armor).unwrap().attached_to, Some(cap));
+}
+
 /// Bruenor: +2/+0 per Equipment on each of your creatures; the first equip
 /// each turn is free; Bureau Headmaster takes {1} off the rest.
 #[test]

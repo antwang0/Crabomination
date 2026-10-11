@@ -1993,5 +1993,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Scuttlemutt | "the color or colors of your choice" names one color | `BecomeChosenColor` asks for a single color |
 | 🟡 Scrounging Bandar | "move any number of +1/+1 counters" moves all of them or none | no "choose how many counters" decision under `MoveCounters` |
 | 🟡 Court of Locthwain | on a monarch upkeep the turn's free-cast grant replaces the exiled cards' lasting "play it while it stays exiled" permission, so they can't be cast after that turn | one `may_play_until` permission per card |
-| 🟡 Captain America, First Avenger | Throw unattaches the attached Equipment with the greatest mana value; the player does not choose which | `unattach_equipment_cost` picks with no `Decision`; a choose-one cost decision would let a player throw a lesser Equipment |
 | 🟡 Elemental Teachings | the four lands and the opponent's two are picked by `SearchSplitWithOpponent`'s heuristic (library order; the first two denied), not asked of either seat | the split has no decision of its own; Ecological Appreciation shares it |

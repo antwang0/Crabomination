@@ -136,7 +136,8 @@ the handoff.
   `GrantProtectionFromChosenCardType` (Pippin; the keyword shield answers removal with it),
   `Predicate::PlayerAttackedYouThisTurn` (Faramir), `CardDefinition::dies_to_exile_extra_turn` (Ugin's
   Nexus), `DelayedTriggerKind::TargetsNextUpkeep` (Plague Reaver), `R::DifferentControllerFromTargetSlot`,
-  `ActivatedAbility::unattach_equipment_cost` (Captain America's Throw), `PumpTeamPerAttachmentOnSource
+  `ActivatedAbility::unattach_equipment_cost` (Captain America's Throw — a CR 602.5b cost choice,
+  `AbilityCostChoice::UnattachEquipment`, for a UI seat), `PumpTeamPerAttachmentOnSource
   { each_counts_its_own }` (Bruenor), `R::ToughnessLessThanTriggerSubject` (Colfenor).
 - **Bug classes fixed:** ① a failed NESTED payment (a mana ability's own cost, Cascading Cataracts'
   {5}) rolled back the pool and the taps but not a sacrificed Spawn — it sat in the graveyard with no
@@ -155,7 +156,7 @@ the handoff.
   `--a dflt` 392001 (all decks): stopped at the 2-hour task limit, no aborts in what ran (two draws, one board cap).
 - **Open (INCOMPLETE_CARDS "EDHREC average-deck seats"):** Elemental Teachings' split is heuristic,
   Galadriel's Dismissal kicked targets only the player, Esoteric Duplicator can't copy a sacrificed
-  TOKEN (no LKI past the trigger), Captain America's Throw picks the Equipment, Exchange of Words outlasts the enchantment, Court of Locthwain's monarch grant replaces the
+  TOKEN (no LKI past the trigger), Exchange of Words outlasts the enchantment, Court of Locthwain's monarch grant replaces the
   lasting one. A top-level auto-tap that sacrifices a source and then fails has the same rollback gap
   as ①; bots never reach it (their casts are probed first).
 

@@ -2605,6 +2605,10 @@ pub struct ResolutionScratch {
     /// ability's "Exile a [filter] you control" cost (`exile_permanent_cost`).
     #[serde(skip, default)]
     pub(crate) pending_ability_exile_permanent: Option<CardId>,
+    /// Transient sibling of [`pending_ability_sac_other`] for "Unattach an
+    /// Equipment from [this]" (`unattach_equipment_cost` — Captain America).
+    #[serde(skip, default)]
+    pub(crate) pending_ability_unattach: Option<CardId>,
     /// Transient sibling of [`pending_ability_sac_other`] for "Put a [filter]
     /// card exiled with this into its owner's graveyard" (Shelob).
     #[serde(skip, default)]
@@ -28848,6 +28852,13 @@ impl GameState {
                         }
                         self.scratch.pending_ability_exile_permanent = Some(id);
                     }
+                    K::UnattachEquipment => {
+                        let DecisionAnswer::Target(Target::Permanent(id)) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        // `activate_ability` re-checks it is still attached.
+                        self.scratch.pending_ability_unattach = Some(id);
+                    }
                     K::ExiledWithToGraveyard => {
                         let DecisionAnswer::Cards(ids) = answer else {
                             return Err(GameError::DecisionAnswerMismatch);
@@ -28953,6 +28964,9 @@ impl GameState {
         }
         if self.scratch.pending_ability_exile_permanent.is_some() {
             self.scratch.pending_ability_exile_permanent = None;
+        }
+        if self.scratch.pending_ability_unattach.is_some() {
+            self.scratch.pending_ability_unattach = None;
         }
         r
     }

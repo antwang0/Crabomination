@@ -1749,6 +1749,10 @@ pub enum AbilityCostChoice {
     /// `exiled_with_self_to_graveyard_cost` — "Put a creature card exiled
     /// with this into its owner's graveyard:" (Shelob). Answered as `Cards`.
     ExiledWithToGraveyard,
+    /// `unattach_equipment_cost` — "Unattach an Equipment from [this]:"
+    /// (Captain America, First Avenger's Throw). Answered as a battlefield
+    /// `Target`.
+    UnattachEquipment,
 }
 
 impl ResumeContext {
