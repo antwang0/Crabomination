@@ -589,6 +589,9 @@ fn no_cost_sacrifice_is_spelled_as_the_first_step_of_the_effect() {
         // effect, not a cost.
         "Blood for the Blood God!",
         "Bound // Determined",
+        // "Discard your hand, then draw a card for each card you've discarded
+        // this turn" — the discard is the effect, and the draw reads it.
+        "Change of Fortune",
         "Contract from Below",
         "Cycle of Renewal",
         // "Sacrifice X Zombies, then reveal …" — the sacrifice is the effect.
