@@ -1986,4 +1986,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | Card | Residual | Why |
 |---|---|---|
 | 🟡 Trystan's Command | the "return one or two target permanent cards from your graveyard" mode picks the cards as it resolves (`MoveChosen`, up to two) instead of targeting them | a mode of `ChooseModesCast` holds one target slot; a mode with "one or two" targets of its own needs per-mode slot counts |
+| 🟡 Galadriel's Dismissal | kicked, the cast targets only the player (the creature target the printed text still names is not chosen) | modelled as `If SpellWasKicked { TargetPlayerThen } else { target creature }`; a kicker-only extra slot beside a required one needs per-branch slot counts |
+| 🟡 Transmutation Font | the second ability's "three artifact tokens with different names" sacrifices any three artifact tokens | `sac_other_filter` has no distinct-name rule for its picks |
 | 🟡 Elemental Teachings | the four lands and the opponent's two are picked by `SearchSplitWithOpponent`'s heuristic (library order; the first two denied), not asked of either seat | the split has no decision of its own; Ecological Appreciation shares it |

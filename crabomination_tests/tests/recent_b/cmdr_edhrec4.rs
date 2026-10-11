@@ -1379,3 +1379,142 @@ fn friendly_rivalry_two_sources_one_victim() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(angel).is_none());
 }
+
+fn destroy(g: &mut GameState, id: CardId) {
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![id]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    let swept = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&swept);
+    drain_stack(g);
+}
+
+/// Prized Statue and Nimblewright Schematic: one token entering, another
+/// dying.
+#[test]
+fn statue_and_schematic_pay_twice() {
+    for (def, token) in [(catalog::prized_statue(), "Treasure"), (catalog::nimblewright_schematic(), "Construct")] {
+        let mut g = pod(2);
+        let id = g.add_card_to_hand(0, def);
+        flood(&mut g);
+        cast(&mut g, id);
+        assert_eq!(named(&g, token), 1, "{token}");
+        destroy(&mut g, id);
+        assert_eq!(named(&g, token), 2, "{token}");
+    }
+}
+
+/// Implement of Improvement: sacrificed, 2 life and a card.
+#[test]
+fn implement_of_improvement_gains_and_draws() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 3);
+    let imp = ready(&mut g, 0, catalog::implement_of_improvement());
+    flood(&mut g);
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    activate(&mut g, imp, 0).expect("sacrifice");
+    assert_eq!((g.players[0].life, g.players[0].hand.len()), (life + 2, hand + 1));
+}
+
+/// Caduceus: lifelink always; at 30+ life +5/+5, indestructible and damage
+/// prevented.
+#[test]
+fn caduceus_wakes_at_thirty_life() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let staff = ready(&mut g, 0, catalog::caduceus_staff_of_hermes());
+    equip_to(&mut g, staff, bear);
+    g.players[0].life = 29;
+    assert!(has_kw(&g, bear, Keyword::Lifelink));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2);
+    g.players[0].life = 30;
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 7);
+    assert!(has_kw(&g, bear, Keyword::Indestructible));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "prevented");
+}
+
+/// Transmutation Font: {T} mints a token; three artifact tokens and {3}
+/// fetch an artifact card onto the battlefield.
+#[test]
+fn transmutation_font_mints_then_fetches() {
+    let mut g = pod(2);
+    let font = ready(&mut g, 0, catalog::transmutation_font());
+    g.add_card_to_library(0, catalog::sol_ring());
+    flood(&mut g);
+    activate(&mut g, font, 0).expect("mint");
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
+    for t in [crabomination_base::tokens::clue_token(), crabomination_base::tokens::food_token()] {
+        g.add_token_to_battlefield(0, &t);
+    }
+    g.battlefield_find_mut(font).unwrap().tapped = false;
+    activate(&mut g, font, 1).expect("fetch");
+    assert_eq!(named(&g, "Sol Ring"), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 0);
+}
+
+/// Apothecary White: two players attacked, two Foods; then {W} and two
+/// tapped Foods make two Humans.
+#[test]
+fn apothecary_white_feeds_per_defender() {
+    let mut g = pod(3);
+    let ap = ready(&mut g, 0, catalog::apothecary_white());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: ap, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(2) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Food"), 2);
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility { card_id: ap, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2), mode: None })
+        .expect("tap two Foods");
+    drain_stack(&mut g);
+    assert_eq!(named(&g, "Human"), 2);
+}
+
+/// Ratchet, Field Medic: gaining 3 life converts it and returns a 3-mana
+/// artifact from the graveyard tapped.
+#[test]
+fn ratchet_converts_and_rescues_on_life_gain() {
+    let mut g = pod(2);
+    let ratchet = ready(&mut g, 0, catalog::ratchet_field_medic());
+    let font = g.add_card_to_graveyard(0, catalog::prized_statue());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&Effect::GainLife { who: Selector::You, amount: Value::Const(3) }, &ctx).expect("gain");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ratchet).unwrap().transformed, "converted");
+    assert!(g.battlefield_find(font).is_some_and(|c| c.tapped), "the Statue returned tapped");
+}
+
+/// Spirit Loop: the enchanted creature's damage is life; the Loop comes back
+/// to hand when it goes to the graveyard.
+#[test]
+fn spirit_loop_links_and_returns() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let lp = g.add_card_to_hand(0, catalog::spirit_loop());
+    flood(&mut g);
+    cast_at(&mut g, lp, Some(Target::Permanent(bear)));
+    let life = g.players[0].life;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(&Effect::DealDamageFrom { source: Selector::ExactObjects(vec![bear]), to: Selector::Player(crabomination::effect::PlayerRef::Seat(1)), amount: Value::Const(2) }, &ctx)
+        .expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+    destroy(&mut g, bear);
+    assert!(g.players[0].hand.iter().any(|c| c.id == lp), "back to hand");
+}

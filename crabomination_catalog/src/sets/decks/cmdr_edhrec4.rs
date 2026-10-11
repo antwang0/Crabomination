@@ -2143,3 +2143,246 @@ pub fn friendly_rivalry() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ragost, Deft Gastronaut's EDHREC gaps ───────────────────────────────────
+
+fn artifact(name: &'static str, mana: crate::mana::ManaCost) -> CardDefinition {
+    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+}
+
+/// "When this artifact enters or is put into a graveyard from the
+/// battlefield, `effect`" — the two triggers of the Statue / Schematic shape.
+fn enters_or_dies(effect: Effect) -> Vec<TriggeredAbility> {
+    vec![
+        etb(effect.clone()),
+        TriggeredAbility { event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource), effect },
+    ]
+}
+
+/// Caduceus, Staff of Hermes — {2}{W} legendary Equipment. Lifelink; at 30 or
+/// more life the bearer gets +5/+5, indestructible and "prevent all damage
+/// that would be dealt to this creature". Equip {W}{W}.
+pub fn caduceus_staff_of_hermes() -> CardDefinition {
+    use crate::card::{ConditionalEquipBonus, EquipBonus};
+    let thirty = || Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life: 30 };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[w(), w()]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Lifelink],
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: R::Creature,
+                power: 5,
+                toughness: 5,
+                keywords: vec![Keyword::Indestructible],
+                condition: Some(thirty()),
+                set_base_pt: None,
+                activated_abilities: vec![],
+            }],
+            ..Default::default()
+        }),
+        static_abilities: vec![StaticAbility {
+            description: "As long as you have 30 or more life, prevent all damage that would be dealt to equipped creature.",
+            effect: StaticEffect::WhileCondition {
+                condition: thirty(),
+                inner: Box::new(StaticEffect::PreventAllDamageToEnchanted),
+            },
+        }],
+        ..artifact("Caduceus, Staff of Hermes", cost(&[generic(2), w()]))
+    }
+}
+
+/// Implement of Improvement — {1}. {W}, sacrifice: gain 2 life; put into a
+/// graveyard from the battlefield, draw a card.
+pub fn implement_of_improvement() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            sac_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..artifact("Implement of Improvement", cost(&[generic(1)]))
+    }
+}
+
+/// Nimblewright Schematic — {2}. Entering or dying, a 1/1 colorless Construct
+/// artifact creature token.
+pub fn nimblewright_schematic() -> CardDefinition {
+    let construct = Arc::new(TokenDefinition {
+        name: "Construct".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        triggered_abilities: enters_or_dies(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: construct }),
+        ..artifact("Nimblewright Schematic", cost(&[generic(2)]))
+    }
+}
+
+/// Prized Statue — {2}. Entering or dying, a Treasure.
+pub fn prized_statue() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: enters_or_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: Arc::new(crabomination_base::tokens::treasure_token()),
+        }),
+        ..artifact("Prized Statue", cost(&[generic(2)]))
+    }
+}
+
+/// Transmutation Font — {5}. {T}: a Blood, Clue or Food token. {3}, {T},
+/// sacrifice three artifact tokens with different names: search for an
+/// artifact card onto the battlefield; sorcery speed.
+pub fn transmutation_font() -> CardDefinition {
+    use crabomination_base::tokens::{blood_token, clue_token, food_token};
+    let make = |t: TokenDefinition| Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(t) };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::ChooseMode(vec![make(blood_token()), make(clue_token()), make(food_token())]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                sorcery_speed: true,
+                sac_other_filter: Some((R::Artifact.and(R::IsToken), 3)),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Artifact,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+        ],
+        ..artifact("Transmutation Font", cost(&[generic(5)]))
+    }
+}
+
+/// Apothecary White — {3}{W} 3/4 vigilance. Whenever you attack, a Food per
+/// player being attacked; {W}, {T}, tap X untapped Foods: X 1/1 white Humans.
+pub fn apothecary_white() -> CardDefinition {
+    use crate::effect::shortcut::on_you_attack;
+    let human = Arc::new(TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![on_you_attack(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::OpponentsAttackedThisCombat,
+            definition: Arc::new(crabomination_base::tokens::food_token()),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            tap_cost: true,
+            tap_n_filter: Some((R::HasArtifactSubtype(ArtifactSubtype::Food), 0)),
+            tap_n_x: true,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::XFromCost, definition: human },
+            ..Default::default()
+        }],
+        ..legend("Apothecary White", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Cleric], 3, 4)
+    }
+}
+
+/// Ratchet, Rescue Racer — the Vehicle back: living metal, lifelink; one or
+/// more of your nontoken artifacts going to a graveyard converts it, once a
+/// turn.
+pub fn ratchet_rescue_racer() -> CardDefinition {
+    CardDefinition {
+        name: "Ratchet, Rescue Racer",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        color_indicator: vec![Color::White],
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::LivingMetal, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact.and(R::NotToken) })
+                .once_per_turn(),
+            effect: Effect::Transform { what: Selector::This },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ratchet, Field Medic — {2}{W} 2/4 Robot, More Than Meets the Eye {1}{W},
+/// lifelink. Whenever you gain life, you may convert it; when you do, return
+/// target artifact card with mana value at most the life gained this turn
+/// from your graveyard to the battlefield tapped.
+pub fn ratchet_field_medic() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Ratchet, Field Medic",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        alternative_cost: Some(AlternativeCost { mana_cost: cost(&[generic(1), w()]), converted: true, ..Default::default() }),
+        back_face: Some(Box::new(ratchet_rescue_racer())),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Convert Ratchet and return an artifact?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Transform { what: Selector::This },
+                    Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(R::Artifact.and(R::InYourGraveyard).and(R::ManaValueAtMostLifeGainedThisTurn)),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        }),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spirit Loop — {1}{W} Aura, enchant creature you control. Whenever the
+/// enchanted creature deals damage, gain that much life; put into a graveyard
+/// from the battlefield, it returns to its owner's hand.
+pub fn spirit_loop() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Spirit Loop",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
+        equipped_bonus: Some(EquipBonus::default()),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsDamage, EventScope::EnchantedBySource),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+                effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))) },
+            },
+        ],
+        ..Default::default()
+    }
+}
