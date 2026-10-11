@@ -3134,6 +3134,29 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-11 (Commander run, `01FWi9DN`) — guardrail; nine seats, sneak/mayhem/excess-damage events
+
+Hot-path touch: a noncombat damage event pushes `ExcessNoncombatDamage` only when
+there is excess; `remove_all_from_combat` clears one more (empty) `Vec`; the
+connive path counts `ConniveDrawsFirst` statics (connive only). Release
+`bot_ladder` at `502975a19`, Xeon @ 2.10 GHz (4 cores, 15 GB).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); peak_rss 30.5 MiB; games_per_s 279.66
+audit pods       overflow + debug-assertions over seats 392-400 (3/4/6/8 x 30):
+                 plain 410001, --a dflt 411001, fuzzed strict 412001 — 900
+                 games, 0 aborts, 1 undecided (a CR 104.4 draw)
+release pods     seats 392-400 (nine-seat pods) seeds 40101 x 400 + 40102 x 300:
+                 698 decided, 2 CR 104.4 draws, 0 stalls; seed 40103 x 500
+                 4-seat over the field: 500/500
+2-player         --a gang --b gang --seed 40201 x 1,200: cube 9,600 / 0, sos
+                 6,000 / 0, sealed 14,400 / 0
+suite            strict 25,109 / 0 / 5 at `e639d0671` (long pole 2,772 s run);
+                 workspace clippy 0; release-fast typecheck clean
+```
+
 ### 2026-10-11 (Commander run, `01EvCQ72`) — guardrail; harness, attach legality, tapless mana activations, stickers
 
 Hot-path touch: `leave_battlefield_state` reads four designation flags (one

@@ -119,6 +119,39 @@ the handoff.
 
 # Bugs & robustness
 
+## The Commander NEXT's session lines as `01FWi9DN` found them (moved verbatim)
+
+8. **The concurrent eighteenth run (`01Xu59CH`, ENGINE_BACKLOG "eighteenth Commander run"):** CR 601.2c (every required slot at cast; ratchet `spells_requiring_two_targets_print_no_optional_target`), CR 701.21a (only a controller sacrifices), CR 115.3 (an "up to N" instance under an `If`), `LastMoved` never names a commander gone home (Tinybones), Gishath's "any number" pick + the bot declining a loop-starting entry (Polyraptor), loop watch sees face-down faces, Soul Cauldron sink gate, Subtlety, seat 356 Anti-Venom; `audit_cr_citations.py` catches a real-but-wrong keyword number (report 0; absent numbers 61 → 48). **Sweeps: plain 181001/182001/187001, `--a dflt` 183001, fuzzed strict 184001/185001/186001 — ~48,000 pod games, 6 aborts, all fixed.** Fuzz (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`) found 4 of the 6: run it every session. **Gates at `80eea8640`:** strict suite 24,889 / 2 / 5 (both the reveal answer-log leak, fixed concurrently); workspace clippy 0; `--bench` 196,176 / 27.64 / 613.0 byte-identical, both determinism checks ok; paired A/B vs the run's base +3.3 % (PERF). (Both of its open rows are closed: a `TriggerSource` that left its graveyard before resolution is a new object (CR 400.7), and a counter is now growth to the loop watch.)
+9. **The concurrent nineteenth run (`01Vk2K6g`, ENGINE_BACKLOG "nineteenth Commander run"):** seats 357-368, 372-375 and 379 (Avatar Aang: bending events, `KeywordAct::Bent`) (Fire Lord Zuko … Toph, the First Metalbender; ~140 cards in `decks::cmdr_edhrec3`, 20 primitives), each 40 debug pod games decided. ⚠ It built Miirym + Tiamat in parallel with the other session; its copies were dropped at the rebase — fetch before *starting* a deck. Gates at `f2d66e817`: suite 25,282 / 0 / 6 (after registering Avatar Kyoshi) + the long-pole `cr_903_5a_the_official_precon_seats_play_pod_games` (2,011 s), clippy 0, `--bench` byte-identical + both determinism checks, release pod smoke 970 games (4/6/19 seats + the new seats) 0 panics, 1 undecided (a Miirym / Astral Dragon / Ureni token board cap). Final tip `5ccaee51b`: suite 25,316 / 0 / 6, clippy 0, `--bench` byte-identical. Then audit sweeps 197001 + fuzzed 198001 over seats 335-378 only (`pod_sweep.py --decks 335-378`, 2,220 games): 0 aborts; an Anti-Venom / All Will Be One loop fixed (CR 109.5: a damage-to-counters replacement's controller puts the counters). Scan after seat 379: Iroh 4, Lorehold 4, High Perfect Morcant 6, Obeka 7, Galadriel 7 (scry triggers, the Ring).
+
+## FIXED/OPEN 2026-10-11 (Commander run, `01FWi9DN`, concurrent with `01Lnhgw3`) — nine EDHREC seats, the primitives under them
+
+- **Seats 392-400** (EDHREC average decks, `decks::cmdr_edhrec5`, tests `recent_b/cmdr_edhrec5.rs`):
+  Lord of the Nazgûl; Leonardo, the Balance // Michelangelo, the Heart; Norman Osborn; Reaper King;
+  Sauron, the Dark Lord; Saruman, the White Hand; Kibo, Uktabi Prince; Shelob, Child of Ungoliant;
+  Marvo, Deep Operative. ~95 cards; each seat 40 debug pod games (4 and 6 seats) decided.
+- **Rules features:** CR 702.190b (a sneaked permanent enters tapped and attacking the returned
+  creature's defender — `AlternativeCost::sneak`, `GameState::sneak_defenders`); CR 702.187 granted
+  mayhem (`StaticEffect::GraveyardNonlandHaveMayhem`, `GameState::effective_mayhem_cost`, read by the
+  cast path, the bot's GY_RECAST gate and the view) and land mayhem; CR 120.10
+  `EventKind::DealtExcessNoncombatDamage`; CR 506.2 `Predicate::AnOpponentIsAttacked`; CR 701.30
+  clash's "otherwise" (`ClashWithOpponent::on_lose`); CR 614.1a `StaticEffect::ConniveDrawsFirst`;
+  CR 702.33d — an enters-with count reads the cast's kicked flag; CR 122.1b
+  `ActivatedAbility::remove_keyword_counter_cost`.
+- **Primitives:** `R::{HasLeastPowerAmongControlled, CombatDamagedSourceControllerThisTurn,
+  SharesColorWithYourPermanentMatching, WasCastFromLibrary, WasCastFromGraveyard,
+  DamagedThisTurnByMatching}`, `AdditionalCastCost::DiscardOrPay`, `Effect::BecomeFoodArtifact`,
+  `EventScope::YourCreatureCombatDamagedOpponent`, `PlaneswalkerSubtype::Lolth`.
+- **Bugs found and fixed:** the bot's graveyard-cast gate missed granted mayhem (the debug gate audit
+  fired in seat 394's first pod); emblem triggers carried no event actor, so
+  `PlayerRef::TriggerEventPlayer` was `None` in every emblem body; three seat residuals closed
+  (Pumpkin Bombardment's {2} half, Kogla and Yidaro's "you don't control", Scrounging Bandar's
+  any-number move).
+- **Open (INCOMPLETE_CARDS):** Mikey & Don's extra counter keys on any library-top cast; Scuttlemutt
+  names one color; Shelob's and Supper for Spiders' Foods enter as creatures first; Myojin of Cryptic
+  Dreams' counter is an ETB trigger; Minas Morgul's Wraith type outlives the shadow counter (needs a
+  keyword-counter `Duration`).
+
 ## FIXED/OPEN 2026-10-11 (Commander run, `01Lnhgw3`) — ten EDHREC seats, CR 723.2, and five bug classes the sweeps and seats found
 
 - **Seats 382-391** (EDHREC average decks, `decks::cmdr_edhrec4`): Iroh, Grand Lotus; Galadriel, Light
