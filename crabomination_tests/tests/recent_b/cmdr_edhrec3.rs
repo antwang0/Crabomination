@@ -2801,3 +2801,87 @@ fn glen_elendras_answer_counters_and_makes_faeries() {
     assert_eq!(g.players[0].life, life);
     assert_eq!(named(&g, "Faerie"), 1);
 }
+
+// ── Najeela, the Blade-Blossom's list ───────────────────────────────────────
+
+fn attack_with(g: &mut GameState, attackers: &[CardId]) {
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(
+        attackers.iter().map(|&attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
+    drain_stack(g);
+}
+
+/// Blood-Chin Rager: attacking gives your Warriors menace (CR 702.111).
+#[test]
+fn blood_chin_rager_gives_warriors_menace() {
+    let mut g = pod(2);
+    let rager = ready(&mut g, 0, catalog::blood_chin_rager());
+    let warleader = ready(&mut g, 0, catalog::kargan_warleader());
+    attack_with(&mut g, &[rager]);
+    let v = g.compute_battlefield();
+    assert!(v.iter().find(|c| c.id == warleader).unwrap().keywords().contains(&crabomination::card::Keyword::Menace));
+}
+
+/// Grand Warlord Radha: two attackers add two red/green mana that survives
+/// the step's end (CR 500.4 exception).
+#[test]
+fn grand_warlord_radha_adds_mana_per_attacker() {
+    let mut g = pod(2);
+    let radha = ready(&mut g, 0, catalog::grand_warlord_radha());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    attack_with(&mut g, &[radha, bear]);
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].mana_pool.total(), 2, "kept through combat");
+}
+
+/// Herald of Dromoka, Kargan Warleader, Rushblade Commander: the Warrior
+/// lords grant vigilance, +1/+1 and haste to other Warriors.
+#[test]
+fn warrior_lords_pump_and_grant() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::herald_of_dromoka());
+    ready(&mut g, 0, catalog::kargan_warleader());
+    ready(&mut g, 0, catalog::rushblade_commander());
+    let rager = ready(&mut g, 0, catalog::blood_chin_rager());
+    let v = g.compute_battlefield();
+    let r = v.iter().find(|c| c.id == rager).unwrap();
+    assert_eq!((r.power, r.toughness), (3, 3));
+    assert!(r.keywords().contains(&crabomination::card::Keyword::Vigilance));
+    assert!(r.keywords().contains(&crabomination::card::Keyword::Haste));
+}
+
+/// Samut, Vizier of Naktamun: a creature that entered this turn connecting
+/// draws a card; Samut (haste) qualifies on the turn it arrives.
+#[test]
+fn samut_draws_for_fresh_attackers() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    let samut = g.add_card_to_hand(0, catalog::samut_vizier_of_naktamun());
+    flood(&mut g);
+    cast_on(&mut g, samut, None);
+    let hand = g.players[0].hand.len();
+    connect(&mut g, samut);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Druids' Repository: each attacker adds a charge counter; removing one adds
+/// a mana (CR 605.1a mana ability).
+#[test]
+fn druids_repository_banks_attack_counters() {
+    let mut g = pod(2);
+    let repo = ready(&mut g, 0, catalog::druids_repository());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    attack_with(&mut g, &[a, b]);
+    assert_eq!(g.battlefield_find(repo).unwrap().counter_count(crabomination::card::CounterType::Charge), 2);
+    g.players[0].mana_pool.empty();
+    activate(&mut g, repo, 0);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}

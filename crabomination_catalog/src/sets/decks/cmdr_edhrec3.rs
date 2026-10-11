@@ -6,7 +6,7 @@
 //! Zuko, Arna Kennerüd, Terra, Magical Adept, Atreus // Kratos, Kratos, God of
 //! War, Eddie Brock, Nicol Bolas, the Ravager, Shilgengar, Norin, Katara, the
 //! Fearless, Azlask, the Swelling Scourge, The Mycotyrant, Thranduil, the
-//! Elvenking and Maralen, Fae Ascendant. Tests in
+//! Elvenking, Maralen, Fae Ascendant and Najeela, the Blade-Blossom. Tests in
 //! `tests/recent_b/cmdr_edhrec3.rs`.
 
 use crate::card::{
@@ -4014,6 +4014,129 @@ pub fn glen_elendras_answer() -> CardDefinition {
                 ..Default::default()
             }),
         },
+        ..Default::default()
+    }
+}
+
+// ── Najeela, the Blade-Blossom (WUBRG) ──────────────────────────────────────
+
+fn warrior() -> R {
+    R::HasCreatureType(CreatureType::Warrior)
+}
+
+/// Blood-Chin Rager — {1}{B} 2/2 Human Warrior. Attacking gives Warrior
+/// creatures you control menace until end of turn.
+pub fn blood_chin_rager() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: yours(R::Creature.and(warrior())),
+                keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Blood-Chin Rager", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Grand Warlord Radha — {2}{R}{G} 3/4 legendary Elf Warrior. Haste. Whenever
+/// one or more creatures you control attack, add that much mana in any
+/// combination of {R} and/or {G}, kept through step and phase ends this turn.
+pub fn grand_warlord_radha() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![crate::effect::shortcut::on_you_attack(Effect::AddManaKeptThisTurnOfColors {
+            who: PlayerRef::You,
+            colors: vec![Color::Red, Color::Green],
+            amount: Value::CountOf(Box::new(yours(R::Creature.and(R::IsAttacking)))),
+        })],
+        ..legend("Grand Warlord Radha", cost(&[generic(2), r(), g()]), vec![CreatureType::Elf, CreatureType::Warrior], 3, 4)
+    }
+}
+
+/// Herald of Dromoka — {1}{W} 2/2 Human Warrior. Vigilance; other Warriors
+/// you control have vigilance.
+pub fn herald_of_dromoka() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Other Warrior creatures you control have vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: yours(R::Creature.and(warrior()).and(R::OtherThanSource)),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        ..creature("Herald of Dromoka", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Kargan Warleader — {1}{R}{W} 3/3 Human Warrior. Other Warriors you control
+/// get +1/+1.
+pub fn kargan_warleader() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other Warriors you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: yours(R::Creature.and(warrior()).and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..creature("Kargan Warleader", cost(&[generic(1), r(), w()]), vec![CreatureType::Human, CreatureType::Warrior], 3, 3)
+    }
+}
+
+/// Rushblade Commander — {B}{R} 2/2 Azra Warrior. Warriors your team controls
+/// have haste (outside Two-Headed Giant your team is you, CR 810.1).
+pub fn rushblade_commander() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Warriors your team controls have haste.",
+            effect: StaticEffect::GrantKeyword { applies_to: yours(R::Creature.and(warrior())), keyword: Keyword::Haste },
+        }],
+        ..creature("Rushblade Commander", cost(&[b(), r()]), vec![CreatureType::Azra, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Samut, Vizier of Naktamun — {1}{R}{G} 2/3 legendary Human Warrior Cleric.
+/// First strike, vigilance, haste. A creature of yours that entered this turn
+/// dealing combat damage to a player draws a card.
+pub fn samut_vizier_of_naktamun() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::EnteredThisTurn) },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..legend(
+            "Samut, Vizier of Naktamun",
+            cost(&[generic(1), r(), g()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Cleric],
+            2,
+            3,
+        )
+    }
+}
+
+/// Druids' Repository — {1}{G}{G} Enchantment. A creature of yours attacking
+/// puts a charge counter on it; remove one: add one mana of any color.
+pub fn druids_repository() -> CardDefinition {
+    CardDefinition {
+        name: "Druids' Repository",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::AddCounter { what: Selector::This, kind: crate::card::CounterType::Charge, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((crate::card::CounterType::Charge, 1)),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
