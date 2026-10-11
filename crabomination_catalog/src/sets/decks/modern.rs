@@ -16857,8 +16857,8 @@ pub fn golgari_brownscale() -> CardDefinition {
 }
 
 /// Golgari Grave-Troll — {4}{G} Creature — Skeleton Troll. 0/0, enters
-/// with X +1/+1 counters. Dredge 6. `{1}`, remove a +1/+1 counter:
-/// regenerate this creature.
+/// with a +1/+1 counter for each creature card in your graveyard. Dredge 6.
+/// `{1}`, remove a +1/+1 counter: regenerate this creature.
 pub fn golgari_grave_troll() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
@@ -16870,7 +16870,10 @@ pub fn golgari_grave_troll() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Dredge(6)],
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CardsInGraveyardMatching { who: crate::effect::PlayerRef::You, filter: SelectionRequirement::Creature },
+        )),
         // {T}, Remove four +1/+1 counters: Regenerate this creature.
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,

@@ -383,20 +383,27 @@ fn golgari_brownscale_can_dredge_two() {
         "Dredge 2 mills two");
 }
 
+/// "Enters with a +1/+1 counter on it for each creature card in your
+/// graveyard" — it shipped reading a cast X it doesn't have, so it entered as
+/// a 0/0, and Out of the Tombs reanimated it into a death loop (fuzzed pod
+/// seed 19200324, game 7: 70,000 Moldervine Reclamation triggers).
 #[test]
-fn golgari_grave_troll_enters_with_x_plus_one_counters() {
+fn golgari_grave_troll_counts_creature_cards_in_your_graveyard() {
     let mut g = two_player_game();
     let troll = g.add_card_to_hand(0, catalog::golgari_grave_troll());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    g.players[0].mana_pool.add_colorless(3); // X = 3
     g.perform_action(GameAction::CastSpell {
-        card_id: troll, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
-    }).expect("Grave-Troll castable with X=3");
+        card_id: troll, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Grave-Troll castable");
     drain_stack(&mut g);
     let view = g.compute_battlefield();
     let t = view.iter().find(|c| c.id == troll).expect("troll present");
-    assert_eq!((t.power, t.toughness), (3, 3), "0/0 base + three +1/+1 counters = 3/3");
+    assert_eq!((t.power, t.toughness), (3, 3), "three creature cards in your graveyard; not the Bolt, not theirs");
 }
 
 /// "{1}, Remove a +1/+1 counter from this creature: Regenerate this
