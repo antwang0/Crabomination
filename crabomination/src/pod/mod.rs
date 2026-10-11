@@ -2670,6 +2670,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TIAMAT_COMMANDERS,
             main: decks::TIAMAT_MAIN,
         },
+        // Seat 372: Thranduil, the Elvenking's EDHREC average deck. `--pod-decks 372`.
+        PodDeck {
+            name: "Thranduil, the Elvenking (BGU)",
+            commanders: decks::THRANDUIL_COMMANDERS,
+            main: decks::THRANDUIL_MAIN,
+        },
     ]
 }
 
@@ -4759,6 +4765,7 @@ mod tests {
             ("Shroofus Sproutsire", [0x0A97, 369, 9294]),
             ("Miirym, Sentinel Wyrm", [0x0A98, 370, 9295]),
             ("Tiamat", [0x0A99, 371, 9296]),
+            ("Thranduil, the Elvenking", [0x0A9A, 372, 9297]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

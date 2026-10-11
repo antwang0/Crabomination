@@ -10862,3 +10862,33 @@ pub const TIAMAT_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, mountain, mountain, mountain, mountain, plains,
     plains, swamp, swamp,
 ];
+
+pub const THRANDUIL_COMMANDERS: &[CardFactory] = &[thranduil_the_elvenking];
+
+/// **Thranduil, the Elvenking**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 84 nonbasic cards + 7 Forests + 4 Islands + 4 Swamps = 99.
+/// Thranduil, the Elvenking (BGU) Elf value: Elves loot their abilities back from the
+/// graveyard for Thranduil while mana Elves ramp into Maralen and big legends.
+pub const THRANDUIL_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, sol_ring, staff_of_domination, swiftfoot_boots,
+    thousand_year_elixir, breeding_pool, command_tower, deathcap_glade, dreamroot_cascade,
+    elven_passage, exotic_orchard, hinterland_harbor, llanowar_wastes, misty_rainforest,
+    opulent_palace, overgrown_tomb, path_of_ancestry, polluted_delta, rejuvenating_springs,
+    undergrowth_stadium, verdant_catacombs, watery_grave, wirewood_lodge, woodland_cemetery,
+    yavimaya_cradle_of_growth, abomination_of_llanowar, beast_whisperer, bloom_tender,
+    deathrite_shaman, devoted_druid, dionus_elvish_archdruid, eladamri_korvecdal,
+    elrond_moon_reader, elves_of_deep_shadow, elvish_archdruid, elvish_mystic, elvish_warmaster,
+    ezuri_renegade_leader, fauna_shaman, formidable_speaker, fyndhorn_elves,
+    high_perfect_morcant, immaculate_magistrate, imperious_perfect, incubation_druid,
+    jarad_golgari_lich_lord, lathril_blade_of_the_elves, leaf_crowned_visionary, llanowar_elves,
+    maralen_fae_ascendant, marwyn_the_nurturer, priest_of_titania, prime_speaker_vannifar,
+    reclamation_sage, selvala_heart_of_the_wilds, thranduils_company, thranduil_sindarin_liege,
+    tyvar_the_pummeler, woodland_weavemaster, elven_chorus, kindred_discovery, rhystic_study,
+    ripples_of_undeath, an_offer_you_cant_refuse, assassins_trophy, beast_within, counterspell,
+    dark_ritual, dinas_guidance, entomb, frantic_search, galadhrim_ambush, heroic_intervention,
+    swan_song, tyvar_jubilant_brawler, bloodline_bidding, buried_alive, cultivate, farseek,
+    finale_of_devastation, natures_lore, raise_the_palisade, reanimate,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, island, island, island, island,
+    swamp, swamp, swamp, swamp,
+];
