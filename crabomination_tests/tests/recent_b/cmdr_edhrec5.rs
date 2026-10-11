@@ -830,3 +830,80 @@ fn foray_of_orcs_and_warg_rider() {
     let army = g.battlefield.iter().find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Army)).unwrap().id;
     assert!(g.computed_permanent(army).unwrap().keywords().contains(&Keyword::Menace), "an Orc Army");
 }
+
+fn ping(g: &mut GameState, id: CardId, n: i32) {
+    run(
+        g,
+        &crabomination::effect::Effect::DealDamage {
+            to: crabomination::effect::Selector::ExactObjects(vec![id]),
+            amount: crabomination::card::Value::Const(n),
+        },
+    );
+}
+
+/// CR 120.10 — Fall of Cair Andros amasses the excess noncombat damage dealt
+/// to an opponent's creature: 5 to a 2/2 is 3 excess. Your own creature, or
+/// damage that isn't excess, amasses nothing.
+#[test]
+fn cr_120_10_fall_of_cair_andros_amasses_the_excess() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::fall_of_cair_andros());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    ping(&mut g, mine, 5);
+    assert_eq!(army_power(&g), None, "not an opponent's");
+    let maw = ready(&mut g, 2, catalog::colossal_dreadmaw());
+    ping(&mut g, maw, 5);
+    assert_eq!(army_power(&g), None, "no excess");
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    ping(&mut g, bear, 5);
+    assert_eq!(army_power(&g), Some(3));
+}
+
+/// Storm of Saruman copies the second spell you cast in a turn, not the first
+/// or third.
+#[test]
+fn storm_of_saruman_copies_the_second_spell() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::storm_of_saruman());
+    for n in 1..=3 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, 0, bolt, Some(Target::Player(1))).expect("bolt");
+        let expected = 20 - 3 * n - if n >= 2 { 3 } else { 0 };
+        assert_eq!(g.players[1].life, expected, "after bolt {n}");
+    }
+}
+
+/// Soul's Fire: your creature deals its power to any target; Surrounded by
+/// Orcs mills the amassed Army's power; Bothersome Noisemaker amasses Goblins
+/// off a noncreature spell only.
+#[test]
+fn souls_fire_surrounded_by_orcs_and_the_noisemaker() {
+    let mut g = pod(2);
+    let maw = ready(&mut g, 0, catalog::colossal_dreadmaw());
+    let fire = g.add_card_to_hand(0, catalog::souls_fire());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fire,
+        target: Some(Target::Permanent(maw)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Soul's Fire");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14);
+
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::bothersome_noisemaker());
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, 0, bear, None).expect("a creature spell");
+    assert_eq!(army_power(&g), None);
+    let orcs = g.add_card_to_hand(0, catalog::surrounded_by_orcs());
+    cast(&mut g, 0, orcs, Some(Target::Player(1))).expect("Surrounded by Orcs");
+    assert_eq!(army_power(&g), Some(4), "the Noisemaker's 1, then 3");
+    assert_eq!(g.players[1].library.len(), 2);
+}

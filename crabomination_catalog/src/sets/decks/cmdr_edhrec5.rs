@@ -3,7 +3,7 @@
 //! fourth). Lord of the Nazgûl's Wraiths and Ring spells; Leonardo and
 //! Michelangelo's Turtles, Ninjas and Mutagen; Norman Osborn's Villains,
 //! connive and mayhem; Reaper King's Scarecrows; Sauron, the Dark Lord's
-//! Orc Armies. Tests in
+//! Orc Armies; Saruman, the White Hand's spells. Tests in
 //! `tests/recent_b/cmdr_edhrec5.rs`.
 
 use crate::card::{
@@ -1290,11 +1290,168 @@ pub fn foray_of_orcs() -> CardDefinition {
             amass(Value::Const(2)),
             Effect::DealDamage {
                 to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-                // The amassed Army: the only one a player normally controls.
-                amount: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(
-                    R::HasCreatureType(CreatureType::Army),
-                ))),
+                amount: army_power(),
             },
+        ]),
+    )
+}
+
+// ── Saruman, the White Hand (UBR) ────────────────────────────────────────────
+
+/// Amass Goblins `n` (CR 701.47).
+fn amass_goblins(count: Value) -> Effect {
+    Effect::Amass { who: PlayerRef::You, count, extra_type: Some(CreatureType::Goblin) }
+}
+
+/// The amassed Army: the one a player normally controls.
+fn army_power() -> Value {
+    Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(R::HasCreatureType(CreatureType::Army))))
+}
+
+fn team_eot(keyword: Keyword) -> Effect {
+    Effect::GrantKeyword { what: Selector::EachPermanent(yours(R::Creature)), keyword, duration: Duration::EndOfTurn }
+}
+
+/// Bothersome Noisemaker — {1}{R} 2/2. Each noncreature spell you cast amasses
+/// Goblins 1.
+pub fn bothersome_noisemaker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCardType(CardType::Creature).negate(),
+            }),
+            effect: amass_goblins(Value::ONE),
+        }],
+        ..creature("Bothersome Noisemaker", cost(&[generic(1), r()]), vec![CreatureType::Goblin, CreatureType::Bard], 2, 2)
+    }
+}
+
+/// Book of Mazarbul — {2}{R} Saga. I: amass Orcs 1. II: amass Orcs 2. III:
+/// your creatures get +1/+0 and menace until end of turn.
+pub fn book_of_mazarbul() -> CardDefinition {
+    CardDefinition {
+        name: "Book of Mazarbul",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (1, amass(Value::ONE)),
+            (2, amass(Value::Const(2))),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::EachPermanent(yours(R::Creature)),
+                        power: Value::ONE,
+                        toughness: Value::ZERO,
+                        duration: Duration::EndOfTurn,
+                    },
+                    team_eot(Keyword::Menace),
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fall of Cair Andros — {2}{R} enchantment. Excess noncombat damage to an
+/// opponent's creature amasses Orcs that much; {7}{R}: 7 damage to a creature.
+pub fn fall_of_cair_andros() -> CardDefinition {
+    CardDefinition {
+        name: "Fall of Cair Andros",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            // CR 120.10 — the excess is the event's amount.
+            event: EventSpec::new(EventKind::DealtExcessNoncombatDamage, EventScope::OpponentControl),
+            effect: amass(Value::TriggerEventAmount),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7), r()]),
+            effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(7) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Storm of Saruman — {4}{U}{U} enchantment, ward {3}. Your second spell each
+/// turn is copied, and the copy isn't legendary.
+pub fn storm_of_saruman() -> CardDefinition {
+    CardDefinition {
+        name: "Storm of Saruman",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Ward(WardCost::generic(3))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) }),
+            effect: Effect::CopySpellNotLegendary { what: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soul's Fire — {2}{R} instant. A creature you control deals damage equal to
+/// its power to any target.
+pub fn souls_fire() -> CardDefinition {
+    spell(
+        "Soul's Fire",
+        cost(&[generic(2), r()]),
+        CardType::Instant,
+        Effect::DealDamageEqualToPower {
+            source: Selector::TargetFiltered { slot: 0, filter: yours(R::Creature) },
+            target: Selector::TargetFiltered { slot: 1, filter: R::any_target() },
+        },
+    )
+}
+
+/// Assault on Osgiliath — {X}{R}{R}{R} sorcery. Amass Orcs X, then your
+/// Goblins and Orcs gain double strike and haste until end of turn.
+pub fn assault_on_osgiliath() -> CardDefinition {
+    let kin = || {
+        Selector::EachPermanent(yours(
+            R::Creature.and(R::HasCreatureType(CreatureType::Goblin).or(R::HasCreatureType(CreatureType::Orc))),
+        ))
+    };
+    spell(
+        "Assault on Osgiliath",
+        cost(&[x(), r(), r(), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            amass(Value::XFromCost),
+            Effect::GrantKeyword { what: kin(), keyword: Keyword::DoubleStrike, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: kin(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+        ]),
+    )
+}
+
+/// Rage into the Valley — {2}{B} sorcery. Draw a card, lose 1 life, amass
+/// Goblins 2.
+pub fn rage_into_the_valley() -> CardDefinition {
+    spell(
+        "Rage into the Valley",
+        cost(&[generic(2), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            amass_goblins(Value::Const(2)),
+        ]),
+    )
+}
+
+/// Surrounded by Orcs — {3}{U} sorcery. Amass Orcs 3, then target player
+/// mills the Army's power.
+pub fn surrounded_by_orcs() -> CardDefinition {
+    spell(
+        "Surrounded by Orcs",
+        cost(&[generic(3), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            amass(Value::Const(3)),
+            Effect::Mill { who: target_filtered(R::Player), amount: army_power() },
         ]),
     )
 }
