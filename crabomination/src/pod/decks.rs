@@ -11359,3 +11359,31 @@ pub const JON_IRENICUS_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const OBEKA_COMMANDERS: &[CardFactory] = &[obeka_splitter_of_seconds];
+
+/// **Obeka, Splitter of Seconds**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 83 nonbasic cards + 7 Islands + 5 Mountains + 4 Swamps = 99.
+/// Obeka, Splitter of Seconds (UBR) extra upkeeps
+pub const OBEKA_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, dimir_signet, fellwar_stone, izzet_signet,
+    lightning_greaves, rakdos_signet, replicating_ring, ring_of_evos_isle, ring_of_valkas,
+    ring_of_xathrid, sol_ring, swiftfoot_boots, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, whispersilk_cloak, winged_boots, blood_crypt, command_tower,
+    crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard, luxury_suite,
+    morphic_pool, reliquary_tower, rogues_passage, shipwreck_marsh, shivan_reef,
+    smoldering_marsh, steam_vents, stormcarved_coast, sulfur_falls, sunken_hollow,
+    training_center, watery_grave, xanders_lounge, bonehoard_dracosaur, braids_conjurer_adept,
+    creeping_bloodsucker, dragonmaster_outcast, generous_plunderer, indulgent_tormentor,
+    jhoira_of_the_ghitu, laughing_jasper_flint, lizard_blades, nightscape_familiar,
+    plargg_and_nassari, rilsa_rael_kingpin, scrawling_crawler, silent_arbiter, skyline_despot,
+    thassa_god_of_the_sea, twilight_prophet, aether_tunnel, aqueous_form, as_foretold,
+    court_of_ambition, court_of_cunning, court_of_embereth, court_of_ire, court_of_locthwain,
+    court_of_vantress, extravagant_replication, mechanized_production, palace_siege,
+    paradox_haze, phyrexian_arena, an_offer_you_cant_refuse, arcane_denial, bedevil, chaos_warp,
+    counterspell, negate, suspended_sentence, terminate, ancestral_vision, blasphemous_act,
+    feed_the_swarm, inspiring_refrain, profane_tutor, rousing_refrain,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp,
+];
