@@ -10923,3 +10923,33 @@ pub const MARALEN_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, island, island, island, island, island,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const NAJEELA_COMMANDERS: &[CardFactory] = &[najeela_the_blade_blossom];
+
+/// **Najeela, the Blade-Blossom**'s EDHREC average deck (fetched 2026-10-11), card for card:
+/// 90 nonbasic cards + 2 Forests + 1 Island + 2 Mountains + 2 Plains + 2 Swamps = 99.
+/// Najeela, the Blade-Blossom (WUBRG) Warriors: every attacking Warrior makes another,
+/// and WUBRG untaps the team for extra combats behind Warrior lords and haste.
+pub const NAJEELA_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, chrome_mox, fellwar_stone, lightning_greaves, lotus_petal,
+    mox_diamond, skullclamp, sol_ring, arid_mesa, blood_crypt, bloodstained_mire, breeding_pool,
+    city_of_brass, command_tower, exotic_orchard, flooded_strand, godless_shrine,
+    hallowed_fountain, mana_confluence, marsh_flats, misty_rainforest, overgrown_tomb,
+    path_of_ancestry, polluted_delta, sacred_foundry, scalding_tarn, steam_vents,
+    stomping_ground, taiga, temple_garden, verdant_catacombs, windswept_heath, wooded_foothills,
+    birds_of_paradise, blood_chin_rager, bramblewood_paragon, brutal_hordechief,
+    champion_of_lambholt, chatterfang_squirrel_general, combat_celebrant, delighted_halfling,
+    derevi_empyrial_tactician, devilish_valet, esper_sentinel, gornog_the_red_reaper,
+    grand_warlord_radha, grim_hireling, herald_of_dromoka, ignoble_hierarch,
+    isshin_two_heavens_as_one, kargan_warleader, kutzil_malamet_exemplar, mindblade_render,
+    mirri_weatherlight_duelist, noble_hierarch, professional_face_breaker, rushblade_commander,
+    samut_hazorets_champion, samut_vizier_of_naktamun, simian_spirit_guide, voice_of_victory,
+    druids_repository, impact_tremors, mystic_remora, natures_will, rhystic_study,
+    shared_animosity, smothering_tithe, warleaders_call, an_offer_you_cant_refuse,
+    cyclonic_rift, deflecting_swat, eladamris_call, enlightened_tutor, fierce_guardianship,
+    flusterstorm, heroic_intervention, path_to_exile, silence, swan_song, swords_to_plowshares,
+    vampiric_tutor, worldly_tutor, cultivate, demonic_tutor, diabolic_intent,
+    eldritch_evolution, farseek, natures_lore,
+    // Basics
+    forest, forest, island, mountain, mountain, plains, plains, swamp, swamp,
+];

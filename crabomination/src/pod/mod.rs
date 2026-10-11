@@ -2682,6 +2682,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MARALEN_COMMANDERS,
             main: decks::MARALEN_MAIN,
         },
+        // Seat 374: Najeela, the Blade-Blossom's EDHREC average deck. `--pod-decks 374`.
+        PodDeck {
+            name: "Najeela, the Blade-Blossom (WUBRG)",
+            commanders: decks::NAJEELA_COMMANDERS,
+            main: decks::NAJEELA_MAIN,
+        },
     ]
 }
 
@@ -4773,6 +4779,7 @@ mod tests {
             ("Tiamat", [0x0A99, 371, 9296]),
             ("Thranduil, the Elvenking", [0x0A9A, 372, 9297]),
             ("Maralen, Fae Ascendant", [0x0A9B, 373, 9298]),
+            ("Najeela, the Blade-Blossom", [0x0A9C, 374, 9299]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
