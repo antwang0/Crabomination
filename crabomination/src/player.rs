@@ -1121,6 +1121,10 @@ pub struct PlayerData {
     /// `permanents_sacrificed_this_turn`; Elanor Gardner). Same clock.
     #[serde(default)]
     pub foods_sacrificed_this_turn: u32,
+    /// Clues this player has sacrificed this turn (Briarbridge Patrol's
+    /// "if you sacrificed three or more Clues this turn"). Same clock.
+    #[serde(default)]
+    pub clues_sacrificed_this_turn: u32,
     /// Artifacts and/or creatures this player has sacrificed this turn (a
     /// subset of `permanents_sacrificed_this_turn`; Dargo, the Shipwrecker).
     /// Same clock.
@@ -1826,6 +1830,7 @@ impl Player {
             artifacts_sacrificed_this_turn: 0,
             nontoken_sacrificed_this_turn: 0,
             foods_sacrificed_this_turn: 0,
+            clues_sacrificed_this_turn: 0,
             artifacts_or_creatures_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,
             historic_spells_cast_this_turn: 0,

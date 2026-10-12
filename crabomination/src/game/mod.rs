@@ -24860,8 +24860,12 @@ impl GameState {
                         .get(card_id)
                         .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Creature));
                     let was_token = self.died_card_snapshots.get(card_id).is_some_and(|c| c.is_token);
-                    let was_food = self.died_card_snapshots.get(card_id).is_some_and(|c| {
-                        c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Food)
+                    let (was_food, was_clue) = self.died_card_snapshots.get(card_id).map_or((false, false), |c| {
+                        let subs = &c.definition.subtypes.artifact_subtypes;
+                        (
+                            subs.contains(&crate::card::ArtifactSubtype::Food),
+                            subs.contains(&crate::card::ArtifactSubtype::Clue),
+                        )
                     });
                     if let Some(pl) = self.players.get_mut(*who) {
                         pl.permanents_sacrificed_this_turn =
@@ -24875,6 +24879,9 @@ impl GameState {
                         }
                         if was_food {
                             pl.foods_sacrificed_this_turn = pl.foods_sacrificed_this_turn.saturating_add(1);
+                        }
+                        if was_clue {
+                            pl.clues_sacrificed_this_turn = pl.clues_sacrificed_this_turn.saturating_add(1);
                         }
                         if was_artifact || was_creature {
                             pl.artifacts_or_creatures_sacrificed_this_turn =

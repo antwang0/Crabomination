@@ -2090,6 +2090,15 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].cards_drawn_this_turn as i32)
                 .unwrap_or(0),
+            Value::CluesSacrificedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].clues_sacrificed_this_turn as i32)
+                .unwrap_or(0),
+            Value::CardsDrawnThisTurnByOpponents => self
+                .living_seats()
+                .filter(|&q| q != ctx.controller && !self.same_team(q, ctx.controller))
+                .map(|q| self.players[q].cards_drawn_this_turn as i32)
+                .sum(),
             Value::CardsDrawnThisStep(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].cards_drawn_this_step as i32)

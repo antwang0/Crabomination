@@ -5177,6 +5177,7 @@ impl GameState {
             pl.artifacts_sacrificed_this_turn = 0;
             pl.nontoken_sacrificed_this_turn = 0;
             pl.foods_sacrificed_this_turn = 0;
+            pl.clues_sacrificed_this_turn = 0;
             pl.artifacts_or_creatures_sacrificed_this_turn = 0;
             pl.dealt_combat_damage_to_player_this_turn = false;
             // CR 702.173a — Freerunning's combat-damage gate is per-turn.

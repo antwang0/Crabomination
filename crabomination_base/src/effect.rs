@@ -1500,6 +1500,13 @@ pub enum Value {
     /// and similar payoffs. Backed by `Player.cards_drawn_this_turn`,
     /// reset on the player's untap.
     CardsDrawnThisTurn(PlayerRef),
+    /// "for each card your opponents have drawn this turn" — the sum of
+    /// `cards_drawn_this_turn` over the controller's living opponents
+    /// (Heliod, the Warped Eclipse).
+    CardsDrawnThisTurnByOpponents,
+    /// Clues `who` has sacrificed this turn (`Player.clues_sacrificed_this_turn`;
+    /// Briarbridge Patrol).
+    CluesSacrificedThisTurn(PlayerRef),
     /// Cards `who` has drawn during the current step. Backed by
     /// `Player.cards_drawn_this_step`, reset on every step change.
     /// Powers Orcish Bowmasters' "except the first one they draw in
@@ -13433,6 +13440,13 @@ pub enum Effect {
     /// the source permanent (`CardInstance.remembered_amount`), replacing any
     /// earlier note; read back by [`Value::RememberedAmountOfSource`].
     NoteAmountOnSource { amount: Value },
+
+    /// A damage trigger's "noncombat" gate (Smaug, the Impenetrable — "is
+    /// dealt noncombat damage"): rewritten per event as the trigger is
+    /// collected (`for_trigger_event`) into `body` for noncombat damage and
+    /// `Noop` for combat damage. `EventKind` has no bit left for a noncombat
+    /// kind of its own.
+    IfTriggerDamageNoncombat { body: Box<Effect> },
 
     /// "Counter target spell. If that spell is countered this way, exile it
     /// instead… You may play it without paying its mana cost for as long as it

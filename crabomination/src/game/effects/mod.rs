@@ -31807,6 +31807,8 @@ impl GameState {
                 Ok(())
             }
 
+            // Rewritten at trigger collection; a stray one runs its body.
+            Effect::IfTriggerDamageNoncombat { body } => self.run_effect(body, ctx, events),
             Effect::NoteAmountOnSource { amount } => {
                 let n = self.evaluate_value(amount, ctx);
                 if let Some(src) = ctx.source
@@ -46907,6 +46909,12 @@ const CROWDED_COPY_BOARD: usize = 150;
 /// `Effect::AddCounterOfTriggerKind` to the kind it put ("the same number and
 /// kind of counters" — Bold Plagiarist). Any other pair is a plain clone.
 pub(crate) fn for_trigger_event(state: &GameState, effect: &Effect, ev: &GameEvent) -> Effect {
+    if let Effect::IfTriggerDamageNoncombat { body } = effect {
+        return match ev {
+            GameEvent::DamageDealt { combat: true, .. } => Effect::Noop,
+            _ => (**body).clone(),
+        };
+    }
     // The kind a counter event put: a plain counter or a keyword counter.
     #[derive(Clone)]
     enum Kind {

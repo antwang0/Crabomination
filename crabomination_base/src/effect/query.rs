@@ -1049,6 +1049,7 @@ impl Effect {
             }
             Effect::CounterSpellExileMayPlayFree { what } => sel_has_target(what),
             Effect::NoteAmountOnSource { .. } => false,
+            Effect::IfTriggerDamageNoncombat { body } => body.requires_target(),
             Effect::MayPlayLibraryTopOfThisTurn { who } | Effect::MayPlayHandOfThisTurn { who } => player_has_target(who),
             Effect::ExileTopRepeatOnDuplicateNames { who, .. }
             | Effect::LoseAllButLifeRemembered { who, .. }
