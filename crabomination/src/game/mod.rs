@@ -10137,6 +10137,14 @@ impl GameState {
                         {
                             d += 1;
                         }
+                        StaticEffect::DoubleDamageToYou
+                            if c.controller == p && matches!(ent, EntityRef::Player(_)) =>
+                        {
+                            d += 1;
+                        }
+                        StaticEffect::DoubleDamageToThis if matches!(ent, EntityRef::Permanent(id) if id == c.id) => {
+                            d += 1;
+                        }
                         StaticEffect::DoubleDamageToChosenPlayer if c.chosen_player == Some(p) => {
                             d += 1;
                         }
@@ -32955,6 +32963,8 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::DoubleDamageToOpponents
         | SE::DoubleDamageToOpponentPlayers
         | SE::DoubleDamageToEnchantedPlayer
+        | SE::DoubleDamageToYou
+        | SE::DoubleDamageToThis
         | SE::AttachedDealsDoubleCombatDamage
         | SE::AttachedDealsDoubleDamage
         | SE::AttachedTakesDoubleCombatDamage
@@ -34727,6 +34737,8 @@ fn static_effect_to_effects(
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer
+            | StaticEffect::DoubleDamageToYou
+            | StaticEffect::DoubleDamageToThis
             | StaticEffect::AttachedDealsDoubleCombatDamage
             | StaticEffect::AttachedDealsDoubleDamage
             | StaticEffect::NewDamageHealsOldDamage

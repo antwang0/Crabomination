@@ -140,6 +140,7 @@ pub fn force_bubble() -> CardDefinition {
                           this enchantment instead.",
             effect: StaticEffect::ReplaceDamageToYouWithCountersOnSource {
                 kind: CounterType::Depletion,
+                one: false,
             },
         }],
         state_trigger: Some(StateTriggeredAbility {

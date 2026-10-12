@@ -62,6 +62,7 @@ pub fn delaying_shield() -> CardDefinition {
                           enchantment instead.",
             effect: StaticEffect::ReplaceDamageToYouWithCountersOnSource {
                 kind: CounterType::Delay,
+                one: false,
             },
         }],
         triggered_abilities: vec![upkeep(

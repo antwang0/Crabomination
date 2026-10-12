@@ -1020,6 +1020,8 @@ pub enum CounterType {
     Discovery,
     /// Tetzimoc, Primal Death's mark (its entry destroys the marked).
     Prey,
+    /// Nine Lives' tally of prevented damage events (nine exiles it).
+    Incarnation,
 }
 
 /// Every zone a card can occupy.

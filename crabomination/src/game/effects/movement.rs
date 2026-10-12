@@ -174,15 +174,15 @@ impl GameState {
                 c.definition.static_abilities.iter().find_map(|sa| {
                     match &sa.effect {
                         crate::effect::StaticEffect::
-                            ReplaceDamageToYouWithCountersOnSource { kind } =>
-                            Some((c.id, *kind)),
+                            ReplaceDamageToYouWithCountersOnSource { kind, one } =>
+                            Some((c.id, *kind, *one)),
                         _ => None,
                     }
                 })
             }).flatten()
         }) {
-            let (cid, kind) = shield;
-            let n = self.place_counters(cid, kind, amount);
+            let (cid, kind, one) = shield;
+            let n = self.place_counters(cid, kind, if one { 1 } else { amount });
             if n > 0 {
                 events.push(GameEvent::CounterAdded {
                     card_id: cid,

@@ -1713,6 +1713,13 @@ pub enum StaticEffect {
     /// CR 614.5 / 303.4a — "If a source would deal damage to enchanted player,
     /// it deals double that damage instead" (Curse of Bloodletting).
     DoubleDamageToEnchantedPlayer,
+    /// CR 614.5 — "If a source would deal damage to you, it deals double that
+    /// damage to you instead" (Goldnight Castigator): the static's controller,
+    /// players only.
+    DoubleDamageToYou,
+    /// CR 614.5 — "If a source would deal damage to this creature, it deals
+    /// double that damage to this creature instead" (Goldnight Castigator).
+    DoubleDamageToThis,
     /// CR 614.1a — "If enchanted creature would deal combat damage to a
     /// permanent or player, it deals double that damage instead" (The Sound
     /// of Drums): one doubling per such attachment, at the combat funnels
@@ -3258,8 +3265,14 @@ pub enum StaticEffect {
     /// same two damage sites.
     ReplaceDamageToOtherCreaturesYouControlWithCounters { kind: CounterType, how: DamageToCounters },
     /// CR 614 — "If damage would be dealt to you, put that many `kind`
-    /// counters on this permanent instead" (Delaying Shield).
-    ReplaceDamageToYouWithCountersOnSource { kind: CounterType },
+    /// counters on this permanent instead" (Delaying Shield). With `one`,
+    /// each damage event puts a single counter instead of that many (Nine
+    /// Lives' "prevent that damage and put an incarnation counter").
+    ReplaceDamageToYouWithCountersOnSource {
+        kind: CounterType,
+        #[serde(default)]
+        one: bool,
+    },
     /// CR 614 — "If damage would be dealt to you, exile that many cards from
     /// your graveyard instead. If you can't, you lose the game" (Nefarious
     /// Lich).
