@@ -4,10 +4,10 @@
 //! `tests/recent_b/cmdr_edhrec10.rs`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CounterType, EnchantmentSubtype, EntersAsCopy, EquipBonus, SplitCard,
+    AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, EnchantmentSubtype, EntersAsCopy, EquipBonus, SplitCard,
     SplitHalf, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
     LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone, MayPlayDuration,
 };
 use crate::effect::shortcut::{colored_animation, etb, on_attack, target_any, target_filtered, tokens_gain_until_eot};
 use crate::effect::{
@@ -1119,5 +1119,261 @@ pub fn evil_twin() -> CardDefinition {
             ..Default::default()
         }),
         ..creature("Evil Twin", cost(&[generic(2), u(), b()]), vec![CreatureType::Shapeshifter], 0, 0)
+    }
+}
+
+// ── Batch 6 ─────────────────────────────────────────────────────────────────
+
+/// The Mind Stone — {1}{W} legendary indestructible Infinity Stone artifact.
+/// {T}: Add {W}. {5}{W}, {T}: harness it. ∞ — at your end step, blink up to
+/// one other target nonland permanent you control.
+pub fn the_mind_stone() -> CardDefinition {
+    CardDefinition {
+        name: "The Mind Stone",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Infinity, ArtifactSubtype::Stone], ..Default::default() },
+        keywords: vec![Keyword::Indestructible],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::White]) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(5), w()]),
+                effect: Effect::Harness { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::SourceIsHarnessed),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::ExileAndReturnToOwner {
+                    what: target_filtered(R::Permanent.and(R::Nonland).and(R::ControlledByYou).and(R::OtherThanSource)),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Claim the Kingdom — {1}{G} enchantment — Plan. Landfall: a +1/+1 counter
+/// on target creature you control and a plan counter here. The fourth plan
+/// counter sacrifices it; when you do, an indestructible counter on target
+/// creature you control.
+pub fn claim_the_kingdom() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Plan], ..Default::default() },
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land }),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter { what: target_filtered(yours()), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    Effect::AddCounter { what: Selector::This, kind: CounterType::Plan, amount: Value::ONE },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CounterAdded(CounterType::Plan), EventScope::SelfSource)
+                    .with_filter(Predicate::SourceHasCountersAtLeast { counter: CounterType::Plan, n: 4 }),
+                effect: Effect::Seq(vec![
+                    Effect::SacrificeSource,
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                        then: Box::new(Effect::ReflexiveTrigger {
+                            body: Box::new(Effect::AddCounter {
+                                what: target_filtered(yours()),
+                                kind: CounterType::Indestructible,
+                                amount: Value::ONE,
+                            }),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
+        ..spell("Claim the Kingdom", cost(&[generic(1), g()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Lady Octopus, Inspired Inventor — {U} 0/2 legendary Human Scientist
+/// Villain. Your first and second draws each turn add an ingenuity counter;
+/// {T}: you may cast an artifact spell from your hand with mana value up to
+/// her ingenuity counters without paying its mana cost.
+pub fn lady_octopus_inspired_inventor() -> CardDefinition {
+    let counter = || Effect::AddCounter { what: Selector::This, kind: CounterType::Ingenuity, amount: Value::ONE };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::FirstCardDrawnThisTurn, EventScope::YourControl),
+                effect: counter(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
+                effect: counter(),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::MayCastFromHandFreeMatching {
+                filter: R::Artifact,
+                max_mv: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Ingenuity },
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Lady Octopus, Inspired Inventor",
+            cost(&[u()]),
+            vec![CreatureType::Human, CreatureType::Scientist, CreatureType::Villain],
+            0,
+            2,
+        )
+    }
+}
+
+/// Lara Croft, Tomb Raider — {G}{U}{R} 3/4 legendary Human Ranger with first
+/// strike and reach. Attacking, she exiles up to one target legendary
+/// artifact or land card from a graveyard with a discovery counter; you may
+/// play a card with a discovery counter from exile this turn. Raid — at end
+/// of combat on your turn, if you attacked, a Treasure. Residual: every
+/// discovery card is playable that turn, not "a card" (one).
+pub fn lara_croft_tomb_raider() -> CardDefinition {
+    let relic = R::HasSupertype(Supertype::Legendary).and(R::Artifact.or(R::Land)).and(R::InGraveyard);
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Reach],
+        triggered_abilities: vec![
+            on_attack(Effect::Seq(vec![
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: target_filtered(relic), to: ZoneDest::Exile },
+                        Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Discovery, amount: Value::ONE },
+                    ])),
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::EachPlayer,
+                        zone: Zone::Exile,
+                        filter: R::WithCounter(CounterType::Discovery),
+                    },
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::EndCombat), EventScope::YourControl)
+                    .with_filter(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+                effect: make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token()),
+            },
+        ],
+        ..legend(
+            "Lara Croft, Tomb Raider",
+            cost(&[g(), u(), r()]),
+            vec![CreatureType::Human, CreatureType::Ranger],
+            3,
+            4,
+        )
+    }
+}
+
+/// Widespread Thieving — {2}{R} enchantment, hideaway 5. Casting a
+/// multicolored spell makes a Treasure; then you may pay {W}{U}{B}{R}{G} to
+/// play the hidden card free.
+pub fn widespread_thieving() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::Hideaway { count: Value::Const(5) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellMatches(R::Multicolored)),
+                effect: Effect::Seq(vec![
+                    make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token()),
+                    Effect::MayPay {
+                        description: "Pay {W}{U}{B}{R}{G} to play the hidden card free?".into(),
+                        mana_cost: cost(&[w(), u(), b(), r(), g()]),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::PlayLandAmongNow { what: Selector::CardExiledWithSource },
+                            Effect::CastWithoutPayingImmediate {
+                                reduce_generic: 0,
+                                pay_own_cost: false,
+                                what: Selector::CardExiledWithSource,
+                                source_zone: Zone::Exile,
+                                exile_after: false,
+                                copy: false,
+                            },
+                        ])),
+                        else_: None,
+                    },
+                ]),
+            },
+        ],
+        ..spell("Widespread Thieving", cost(&[generic(2), r()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// The Watcher in the Water — {3}{U}{U} 9/9 legendary Kraken. Enters tapped
+/// with nine stun counters. Drawing during an opponent's turn makes a 1/1
+/// blue Tentacle; a Tentacle of yours dying untaps up to one target Kraken
+/// and puts a stun counter on up to one target nonland permanent.
+pub fn the_watcher_in_the_water() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Stun, Value::Const(9))),
+        static_abilities: vec![crate::sets::enters_tapped()],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                    .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+                effect: make(PlayerRef::You, Value::ONE, token("Tentacle", 1, 1, vec![Color::Blue], vec![CreatureType::Tentacle])),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Tentacle),
+                }),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Untap {
+                            what: Selector::TargetFiltered { slot: 0, filter: R::HasCreatureType(CreatureType::Kraken) },
+                            up_to: None,
+                        },
+                        Effect::AddCounter {
+                            what: Selector::TargetFiltered { slot: 1, filter: R::Permanent.and(R::Nonland) },
+                            kind: CounterType::Stun,
+                            amount: Value::ONE,
+                        },
+                    ])),
+                },
+            },
+        ],
+        ..legend("The Watcher in the Water", cost(&[generic(3), u(), u()]), vec![CreatureType::Kraken], 9, 9)
+    }
+}
+
+/// Corporeal Projection — {U}{R} sorcery: target creature you control gains
+/// myriad until end of turn. Overload {3}{U}{U}{R}{R}: each creature you
+/// control does.
+pub fn corporeal_projection() -> CardDefinition {
+    let grant = |what: Selector| Effect::GrantTriggeredAbility {
+        what,
+        trigger: Box::new(crate::effect::shortcut::myriad()),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(3), u(), u(), r(), r()]),
+            effect_override: Some(grant(Selector::EachPermanent(yours()))),
+            ..Default::default()
+        }),
+        ..spell("Corporeal Projection", cost(&[u(), r()]), CardType::Sorcery, grant(target_filtered(yours())))
     }
 }

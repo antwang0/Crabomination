@@ -13519,6 +13519,13 @@ static DECKS: &[Factory] = &[
     super::decks::astor_bearer_of_blades,
     super::decks::claim_fame,
     super::decks::evil_twin,
+    super::decks::the_mind_stone,
+    super::decks::claim_the_kingdom,
+    super::decks::lady_octopus_inspired_inventor,
+    super::decks::lara_croft_tomb_raider,
+    super::decks::widespread_thieving,
+    super::decks::the_watcher_in_the_water,
+    super::decks::corporeal_projection,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

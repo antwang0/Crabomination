@@ -768,3 +768,139 @@ fn evil_twin_kills_its_original() {
     activate(&mut g, t, n.saturating_sub(1), Some(perm(orig))).expect("destroy the original");
     assert!(g.battlefield_find(orig).is_none());
 }
+
+/// The Mind Stone: harnessed, it blinks another nonland permanent at your end
+/// step (the blinked creature is a new object, CR 400.7).
+#[test]
+fn the_mind_stone_blinks_once_harnessed() {
+    let mut g = pod(2);
+    let stone = ready(&mut g, 0, catalog::the_mind_stone());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "not harnessed");
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, stone, 1, None).expect("harness");
+    assert!(g.battlefield_find(stone).unwrap().harnessed);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("returned");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 0, "a new object");
+}
+
+/// Claim the Kingdom: four landfalls grow a creature four times, then the
+/// Plan is sacrificed for an indestructible counter.
+#[test]
+fn claim_the_kingdom_pays_off_on_the_fourth_land() {
+    let mut g = pod(2);
+    let ck = ready(&mut g, 0, catalog::claim_the_kingdom());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    for _ in 0..4 {
+        let f = g.add_card_to_hand(0, catalog::forest());
+        g.players[0].lands_played_this_turn = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::PlayLand(f)).expect("land");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(ck).is_none(), "sacrificed");
+    let b = g.battlefield_find(bears).unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 4);
+    assert_eq!(b.counter_count(CounterType::Indestructible), 1);
+}
+
+/// Lady Octopus: the first two draws a turn add ingenuity counters; her tap
+/// casts an artifact up to that mana value free.
+#[test]
+fn lady_octopus_builds_free_artifacts() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let lo = ready(&mut g, 0, catalog::lady_octopus_inspired_inventor());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    cast(&mut g, div, &[]).expect("draw two");
+    assert_eq!(g.battlefield_find(lo).unwrap().counter_count(CounterType::Ingenuity), 2);
+    let thopter = g.add_card_to_hand(0, catalog::ornithopter());
+    let vault = g.add_card_to_hand(0, catalog::loxodon_warhammer());
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: lo, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thopter).is_some(), "Ornithopter cast free");
+    assert!(g.battlefield_find(vault).is_none());
+}
+
+/// Lara Croft: attacking exiles a legendary artifact from a graveyard with a
+/// discovery counter, playable this turn; raid makes a Treasure at end of
+/// combat.
+#[test]
+fn lara_croft_raids_tombs() {
+    let mut g = pod(2);
+    let lara = ready(&mut g, 0, catalog::lara_croft_tomb_raider());
+    let relic = g.add_card_to_graveyard(1, catalog::the_millennium_calendar());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: lara, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let c = g.exile.iter().find(|c| c.id == relic).expect("exiled");
+    assert_eq!(c.counter_count(CounterType::Discovery), 1);
+    assert!(c.may_play_until.is_some_and(|p| p.player == 0));
+    g.step = TurnStep::EndCombat;
+    g.fire_step_triggers(TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
+}
+
+/// Widespread Thieving: a multicolored spell makes a Treasure.
+#[test]
+fn widespread_thieving_pays_for_gold_spells() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    let w = g.add_card_to_hand(0, catalog::widespread_thieving());
+    cast(&mut g, w, &[]).expect("cast");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(w)).count(), 1, "hideaway 5");
+    let gold = g.add_card_to_hand(0, catalog::anje_maid_of_dishonor());
+    cast(&mut g, gold, &[]).expect("a gold spell");
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
+}
+
+/// The Watcher in the Water enters tapped with nine stun counters; a draw on
+/// an opponent's turn makes a Tentacle, not one on yours.
+#[test]
+fn the_watcher_in_the_water_grows_tentacles() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let w = g.add_card_to_hand(0, catalog::the_watcher_in_the_water());
+    cast(&mut g, w, &[]).expect("cast");
+    let c = g.battlefield_find(w).unwrap();
+    assert!(c.tapped);
+    assert_eq!(c.counter_count(CounterType::Stun), 9);
+    let div = g.add_card_to_hand(0, catalog::divination());
+    cast(&mut g, div, &[]).expect("my turn");
+    assert_eq!(tokens_of(&g, 0, "Tentacle"), 0);
+    g.active_player_idx = 1;
+    let opt = g.add_card_to_hand(0, catalog::union_of_the_third_path());
+    cast(&mut g, opt, &[]).expect("their turn");
+    assert_eq!(tokens_of(&g, 0, "Tentacle"), 1);
+}
+
+/// Corporeal Projection: the granted myriad copies an attacker at each other
+/// opponent (three seats: one copy).
+#[test]
+fn corporeal_projection_grants_myriad() {
+    let mut g = pod(3);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let cp = g.add_card_to_hand(0, catalog::corporeal_projection());
+    cast(&mut g, cp, &[perm(bears)]).expect("cast");
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 4]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(copies, 1);
+}
