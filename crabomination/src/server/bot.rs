@@ -86,11 +86,16 @@ pub(crate) fn jitter_pinned() -> bool {
     JITTER.with(|j| j.borrow().is_some())
 }
 
+/// Combats in one turn past which a Commander bot stops attacking
+/// voluntarily (the `DeclareAttackers` arm of `HeuristicBot::next_action_inner`).
+const MAX_VOLUNTARY_COMBATS_PER_TURN: u32 = 12;
+
 /// A creature's printed keywords that do something in play — the count the
 /// threat / removal-value heuristics score. Partner and its kin are
 /// deck-construction only ([`Keyword::is_deck_construction`]).
 ///
 /// [`Keyword::is_deck_construction`]: crate::card::Keyword::is_deck_construction
+
 fn in_game_keyword_count(def: &crate::card::CardDefinition) -> usize {
     def.keywords.iter().filter(|k| !k.is_deck_construction()).count()
 }
@@ -3432,6 +3437,15 @@ impl HeuristicBot {
             TurnStep::DeclareAttackers if is_active && state.attack_declarer() == seat => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
+                    // CR 104.4b — an optional attack loop the bot isn't
+                    // winning (Godo + Helm of the Host: every fresh token's
+                    // first attack banks another combat) ends with the bot:
+                    // past the cap it declares only the forced attackers.
+                    if !state.players[seat].commanders.is_empty()
+                        && state.combat_phases_this_turn > MAX_VOLUNTARY_COMBATS_PER_TURN
+                    {
+                        return Some(BotStep::plain(GameAction::DeclareAttackers(forced_attacks(state))));
+                    }
                     let attacks = board_bound_attacks(state, pick_attacks_scored(state, seat, &self.weights));
                     let attacks = super::tap_maker::hold_tap_token_makers(state, seat, attacks, &self.weights);
                     Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))

@@ -475,5 +475,29 @@ mod tests {
         assert!(!self_feeding(&g, 0));
         assert!(self_feeding(&post, 0));
     }
-}
 
+    /// CR 104.4b — Godo + Helm of the Host banks a combat for every fresh
+    /// token's first attack, so a Commander bot that keeps swinging into a
+    /// wall never ends its turn. Past the per-turn cap it attacks only when
+    /// forced; under the cap the same board attacks.
+    #[test]
+    fn a_commander_bot_stops_attacking_after_a_dozen_combats() {
+        use crate::server::bot::HeuristicBot;
+        use crate::server::bot::Bot as _;
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let angel = g.add_card_to_battlefield(0, crate::catalog::serra_angel());
+        g.clear_sickness(angel);
+        let attacks = |g: &GameState| match HeuristicBot::new().next_action(g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => a.len(),
+            other => panic!("expected DeclareAttackers, got {other:?}"),
+        };
+        g.combat_phases_this_turn = 2;
+        assert_eq!(attacks(&g), 1, "an open board is attacked");
+        g.combat_phases_this_turn = 13;
+        assert_eq!(attacks(&g), 0, "the thirteenth combat is skipped");
+    }
+}
