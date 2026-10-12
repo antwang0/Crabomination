@@ -6012,6 +6012,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OLAG_AND_MIAU_COMMANDERS,
             main: decks::OLAG_AND_MIAU_MAIN,
         },
+        // Seat 927: Lagrella, the Magpie's EDHREC average deck. `--pod-decks 927`.
+        PodDeck {
+            name: "Lagrella, the Magpie (WUG)",
+            commanders: decks::LAGRELLA_COMMANDERS,
+            main: decks::LAGRELLA_MAIN,
+        },
+        // Seat 928: Caradora, Heart of Alacria's EDHREC average deck. `--pod-decks 928`.
+        PodDeck {
+            name: "Caradora, Heart of Alacria (WG)",
+            commanders: decks::CARADORA_COMMANDERS,
+            main: decks::CARADORA_MAIN,
+        },
+        // Seat 929: Ezuri, Stalker of Spheres's EDHREC average deck. `--pod-decks 929`.
+        PodDeck {
+            name: "Ezuri, Stalker of Spheres (UG)",
+            commanders: decks::EZURI_3_COMMANDERS,
+            main: decks::EZURI_3_MAIN,
+        },
+        // Seat 930: Toluz, Clever Conductor's EDHREC average deck. `--pod-decks 930`.
+        PodDeck {
+            name: "Toluz, Clever Conductor (WUB)",
+            commanders: decks::TOLUZ_COMMANDERS,
+            main: decks::TOLUZ_MAIN,
+        },
+        // Seat 931: Urianger Augurelt's EDHREC average deck. `--pod-decks 931`.
+        PodDeck {
+            name: "Urianger Augurelt (WU)",
+            commanders: decks::URIANGER_AUGURELT_COMMANDERS,
+            main: decks::URIANGER_AUGURELT_MAIN,
+        },
     ]
 }
 
@@ -8703,6 +8733,11 @@ mod tests {
             ("Skrelv, Defector Mite", &[0x0CC2]),
             ("Orthion, Hero of Lavabrink", &[0x0CC3]),
             ("Olag and Miau, New Friends", &[0x0CC4]),
+            ("Lagrella, the Magpie", &[0x0CC5]),
+            ("Caradora, Heart of Alacria", &[0x0CC6]),
+            ("Ezuri, Stalker of Spheres", &[0x0CC7]),
+            ("Toluz, Clever Conductor", &[0x0CC8]),
+            ("Urianger Augurelt", &[0x0CC9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -26464,3 +26464,142 @@ pub const OLAG_AND_MIAU_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, plains, plains, plains, plains, plains, plains, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const LAGRELLA_COMMANDERS: &[CardFactory] = &[lagrella_the_magpie];
+
+/// **Lagrella, the Magpie**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Forests + 5 Islands + 7 Plains = 99.
+/// Lagrella, the Magpie (EDHREC, fetched 2026-10-12).
+pub const LAGRELLA_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, conjurers_closet, panharmonicon, sol_ring,
+    adarkar_wastes, breeding_pool, canopy_vista, command_tower, exotic_orchard, flooded_strand,
+    glacial_fortress, hallowed_fountain, hinterland_harbor, prairie_stream,
+    rejuvenating_springs, reliquary_tower, seaside_citadel, sparas_headquarters, sunpetal_grove,
+    temple_garden, windswept_heath, yavimaya_coast, abdel_adrian_gorions_ward, aether_channeler,
+    archaeomancer, charming_prince, clifftop_lookout, cloudblazer, coiling_oracle,
+    dour_port_mage, elvish_visionary, eternal_witness, farhaven_elf, felidar_guardian,
+    fiend_hunter, flickering_hound, flickerwisp, glorious_protector, karmic_guide,
+    knight_of_autumn, loran_of_the_third_path, mulldrifter, peregrine_drake, reclamation_sage,
+    reflector_mage, restoration_angel, skyclave_apparition, soulherder, spirited_companion,
+    starfield_vocalist, sun_titan, thassa_deep_dwelling, venser_shaper_savant, wall_of_blossoms,
+    wall_of_omens, wood_elves, yorion_sky_nomad, airbender_ascension, candlekeep_sage,
+    guardian_project, teleportation_circle, virtue_of_knowledge, an_offer_you_cant_refuse,
+    cloudshift, counterspell, displace, eerie_interlude, ephemerate, essence_flux,
+    flicker_of_fate, ghostly_flicker, laezels_acrobatics, momentary_blink, path_to_exile,
+    swords_to_plowshares, cultivate, farseek, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const CARADORA_COMMANDERS: &[CardFactory] = &[caradora_heart_of_alacria];
+
+/// **Caradora, Heart of Alacria**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Forests + 10 Plains = 99.
+/// Caradora, Heart of Alacria (EDHREC, fetched 2026-10-12).
+pub const CARADORA_MAIN: &[CardFactory] = &[
+    alacrian_armory, arcane_signet, esikas_chariot, golden_argosy, guidelight_matrix,
+    lumbering_worldwagon, parhelion_ii, salvation_engine, skysovereign_consul_flagship,
+    sol_ring, thunderous_velocipede, unidentified_hovership, valors_flagship, veloheart_bike,
+    brushland, canopy_vista, command_tower, country_roads, fortified_village, gavony_township,
+    hushwood_verge, overgrown_farmland, selesnya_sanctuary, sungrass_prairie, sunpetal_grove,
+    temple_garden, temple_of_plenty, wild_roads, abzan_falconer, avacyns_pilgrim,
+    bounding_felidar, brightfield_mustang, bulwark_ox, canyon_vaulter, cloudspire_captain,
+    conclave_mentor, congregation_gryff, district_mascot, drover_grizzly,
+    emmara_soul_of_the_accord, fortune_loyal_steed, gloryheath_lynx, guardian_sunmare,
+    interface_ace, intrepid_stablemaster, kami_of_whispered_hopes, kona_rescue_beastie,
+    kutzil_malamet_exemplar, lagorin_soul_of_alacria, miriam_herd_whisperer, ornery_tumblewagg,
+    oviya_automech_artisan, reluctant_role_model, rip_spawn_hunter, seraphic_steed,
+    unswerving_sloth, veteran_beastrider, wylie_duke_atiin_hero, branching_evolution,
+    far_traveler, felidar_retreat, hardened_scales, innkeepers_talent, beast_within,
+    defend_the_rider, ephemerate, generous_gift, inspiring_call, path_to_exile, run_over,
+    swords_to_plowshares, cultivate, farseek, natures_lore, one_last_job, rampant_growth,
+    requisition_raid, split_up,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const EZURI_3_COMMANDERS: &[CardFactory] = &[ezuri_stalker_of_spheres];
+
+/// **Ezuri, Stalker of Spheres**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Forests + 11 Islands = 99.
+/// Ezuri, Stalker of Spheres (EDHREC, fetched 2026-10-12).
+pub const EZURI_3_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, contagion_clasp, contagion_engine, everflowing_chalice,
+    glistening_sphere, replicating_ring, simic_signet, sol_ring, staff_of_compleation,
+    breeding_pool, command_tower, dreamroot_cascade, exotic_orchard, flooded_grove,
+    hinterland_harbor, karns_bastion, misty_rainforest, rejuvenating_springs, reliquary_tower,
+    simic_growth_chamber, temple_of_mystery, vineglimmer_snarl, yavimaya_coast, blighted_agent,
+    bloated_contaminator, cankerbloom, contaminant_grafter, deepglow_skate, dreamtide_whale,
+    evolution_sage, evolution_witness, fathom_mage, flux_channeler, forgotten_ancient,
+    guildpact_informant, gyre_sage, incubation_druid, kami_of_whispered_hopes, master_biomancer,
+    merfolk_skydiver, pollenbright_druid, rishkar_peema_renegade, roalesk_apex_hybrid,
+    tainted_observer, tekuthal_inquiry_dominus, thrummingbird, venerated_rotpriest, viral_drake,
+    as_foretold, hardened_scales, inexorable_tide, mesmerizing_dose, simic_ascendancy,
+    beast_within, counterspell, experimental_augury, fuel_for_the_cause, infectious_bite,
+    prologue_to_phyresis, radstorm, reject_imperfection, ripples_of_potential, serum_snare,
+    steady_progress, nissa_voice_of_zendikar, tamiyo_compleated_sage, teferi_master_of_time,
+    contentious_plan, cultivate, expand_the_sphere, expansion_algorithm, rampant_growth,
+    smell_fear, tezzerets_gambit, thirsting_roots, unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    island, island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const TOLUZ_COMMANDERS: &[CardFactory] = &[toluz_clever_conductor];
+
+/// **Toluz, Clever Conductor**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 5 Islands + 3 Plains + 4 Swamps = 99.
+/// Toluz, Clever Conductor (EDHREC, fetched 2026-10-12).
+pub const TOLUZ_MAIN: &[CardFactory] = &[
+    arcane_signet, cryptcaller_chariot, dimir_signet, fluctuator, monument_to_endurance,
+    sol_ring, talisman_of_dominance, talisman_of_progress, thought_vessel, arcane_sanctum,
+    ash_barrens, barren_moor, command_tower, contaminated_landscape, drifting_meadow,
+    exotic_orchard, fetid_pools, flooded_strand, godless_shrine, hallowed_fountain,
+    irrigated_farmland, lonely_sandbar, polluted_delta, polluted_mire, raffines_tower,
+    reliquary_tower, remote_isle, secluded_steppe, sunken_hollow, watery_grave,
+    angel_of_the_ruins, archfiend_of_ifnir, bone_miser, chasm_skulker, curator_of_mysteries,
+    forgotten_creation, ghostly_pilferer, ketramose_the_new_dawn, ledger_shredder,
+    likeness_looter, nimble_obstructionist, psychic_frog, psychosis_crawler,
+    queza_augur_of_agonies, raffine_scheming_seer, rona_herald_of_invasion, skirge_familiar,
+    street_wraith, syr_konrad_the_grim, the_queen_of_dale, tormod_the_desecrator, viscera_seer,
+    vohar_vodalian_desecrator, astral_drift, drake_haven, faith_of_the_devoted, feast_of_sanity,
+    ominous_seas, on_wings_of_gold, teferis_ageless_insight, tevals_judgment,
+    ancient_excavation, corrupted_conviction, counterspell, deadly_dispute, faithful_mending,
+    forsake_the_worldly, frantic_search, lethal_scheme, nasty_end, neutralize, obscura_charm,
+    path_to_exile, swords_to_plowshares, tolarian_winds, village_rites, void_rend,
+    teferi_master_of_time, dark_deal, decree_of_pain, lorien_revealed, reanimate,
+    sickening_dreams, spectacular_pileup, unearth, whispering_madness, windfall,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, swamp, swamp, swamp, swamp,
+];
+
+pub const URIANGER_AUGURELT_COMMANDERS: &[CardFactory] = &[urianger_augurelt];
+
+/// **Urianger Augurelt**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Islands + 9 Plains = 99.
+/// Urianger Augurelt (EDHREC, fetched 2026-10-12).
+pub const URIANGER_AUGURELT_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, azorius_signet, fellwar_stone, illusionists_bracers,
+    lightning_greaves, patriars_seal, senseis_divining_top, sol_ring, sting_the_glinting_dagger,
+    swiftfoot_boots, talisman_of_progress, thought_vessel, thousand_year_elixir, adarkar_wastes,
+    azorius_chancery, command_tower, deserted_beach, flooded_strand, floodfarm_verge,
+    glacial_fortress, hallowed_fountain, minamo_school_at_waters_edge, port_town,
+    prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse, temple_of_enlightenment,
+    alisaie_leveilleur, alphinaud_leveilleur, aphetto_alchemist, captain_america_living_legend,
+    chakram_retriever, drogskol_reaver, drumbellower, ethereal_valkyrie, exemplar_of_light,
+    forensic_researcher, gold_myr, high_fae_trickster, ioreth_of_the_healing_house,
+    kelpie_guide, marvin_murderous_mimic, ornithopter_of_paradise, sage_of_the_beyond,
+    silver_myr, vega_the_watcher, vizier_of_tumbling_sands, white_plume_adventurer,
+    will_scion_of_peace, dazzling_theater_prop_room, fortune_tellers_talent,
+    freed_from_the_real, pemmins_aura, propaganda, retreat_to_coralhelm, unstoppable_plan,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, brainsurge, counterspell, dovins_veto,
+    dramatic_reversal, frantic_search, generous_gift, path_to_exile, saw_it_coming,
+    stroke_of_midnight, surge_of_brilliance, swords_to_plowshares, ultimate_magic_holy,
+    teferi_who_slows_the_sunset, approach_of_the_second_sun, avatars_wrath, doomskar, ponder,
+    ravenform, see_the_truth,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
