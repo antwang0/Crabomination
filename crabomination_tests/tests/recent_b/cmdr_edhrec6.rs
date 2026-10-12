@@ -657,3 +657,109 @@ fn altair_attacks_with_its_memories() {
     assert_eq!(copies.len(), 1);
     assert!(copies[0].tapped && g.attacking.iter().any(|a| a.attacker == copies[0].id));
 }
+
+// ── Tovolar, Dire Overlord ──────────────────────────────────────────────────
+
+fn transformed(g: &GameState, id: CardId) -> bool {
+    g.battlefield_find(id).is_some_and(|c| c.transformed)
+}
+
+fn wolves(g: &GameState, seat: usize) -> usize {
+    g.battlefield.iter().filter(|c| c.controller == seat && c.is_token && c.definition.name == "Wolf").count()
+}
+
+/// CR 701.27 — Immerwolf: your non-Human Werewolves can't transform; a Human
+/// Werewolf still can.
+#[test]
+fn cr_701_27_immerwolf_pins_the_night_faces() {
+    let mut g = pod(2);
+    let rider = ready(&mut g, 0, catalog::breakneck_rider());
+    let gang = ready(&mut g, 0, catalog::instigator_gang());
+    g.transform_permanent(rider, &mut vec![]);
+    assert!(transformed(&g, rider), "no Immerwolf yet");
+    ready(&mut g, 0, catalog::immerwolf());
+    g.transform_permanent(rider, &mut vec![]);
+    assert!(transformed(&g, rider), "Neck Breaker is a non-Human Werewolf: pinned");
+    g.transform_permanent(gang, &mut vec![]);
+    assert!(transformed(&g, gang), "Instigator Gang is a Human Werewolf: it transforms");
+}
+
+/// Tovolar: three Wolves or Werewolves at your upkeep make it night, and your
+/// Human Werewolves transform (the daybound ones by night, the classic one by
+/// Tovolar's own pick).
+#[test]
+fn tovolar_calls_the_night() {
+    let mut g = pod(2);
+    let tov = ready(&mut g, 0, catalog::tovolar_dire_overlord());
+    let gang = ready(&mut g, 0, catalog::instigator_gang());
+    ready(&mut g, 0, catalog::immerwolf());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(transformed(&g, tov), "night: Tovolar is the Midnight Scourge");
+    assert!(transformed(&g, gang), "Instigator Gang chosen and transformed");
+}
+
+/// Cult of the Waxing Moon: a permanent of yours transforming into a
+/// non-Human creature makes a Wolf; transforming back into a Human doesn't.
+#[test]
+fn cult_of_the_waxing_moon_howls_at_a_transform() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::cult_of_the_waxing_moon());
+    let gang = ready(&mut g, 0, catalog::instigator_gang());
+    let mut ev = vec![];
+    g.transform_permanent(gang, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(wolves(&g, 0), 1);
+    let mut ev = vec![];
+    g.transform_permanent(gang, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(wolves(&g, 0), 1, "back to a Human: nothing");
+}
+
+/// Huntmaster of the Fells: entering makes a Wolf and gains 2; transforming
+/// into Ravager deals 2 to an opponent and 2 to a creature of theirs.
+#[test]
+fn huntmaster_of_the_fells_howls_then_ravages() {
+    let mut g = pod(2);
+    let life = g.players[0].life;
+    let hm = g.add_card_to_hand(0, catalog::huntmaster_of_the_fells());
+    cast(&mut g, hm, &[]).expect("cast");
+    assert_eq!((wolves(&g, 0), g.players[0].life), (1, life + 2));
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let them = g.players[1].life;
+    let mut ev = vec![];
+    g.transform_permanent(hm, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, them - 2);
+    assert!(g.battlefield_find(bear).is_none(), "2 to the Bears");
+}
+
+/// Moonlight Hunt: each Wolf and Werewolf of yours deals its power to the
+/// target.
+#[test]
+fn moonlight_hunt_gangs_up() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::immerwolf());
+    ready(&mut g, 0, catalog::nightpack_ambusher());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let hunt = g.add_card_to_hand(0, catalog::moonlight_hunt());
+    cast(&mut g, hunt, &[perm(wurm)]).expect("cast");
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(wurm).is_none(), "3 + 5 to a 6/4");
+}
+
+/// The Celestus flips day and night; each flip gains its controller 1 life.
+#[test]
+fn the_celestus_flips_the_sky() {
+    let mut g = pod(2);
+    let cel = g.add_card_to_hand(0, catalog::the_celestus());
+    cast(&mut g, cel, &[]).expect("cast");
+    let life = g.players[0].life;
+    flood(&mut g, 0);
+    activate(&mut g, cel, 1, None).expect("flip");
+    assert_eq!(g.players[0].life, life + 1);
+}

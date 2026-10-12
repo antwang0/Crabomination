@@ -1833,3 +1833,801 @@ pub fn the_revelations_of_ezio() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Tovolar, Dire Overlord (RG) ──────────────────────────────────────────────
+
+fn wolfish() -> R {
+    R::HasCreatureType(CreatureType::Wolf).or(R::HasCreatureType(CreatureType::Werewolf))
+}
+
+fn your_wolfish() -> R {
+    R::Creature.and(wolfish()).and(R::ControlledByYou)
+}
+
+fn wolf_token() -> TokenDefinition {
+    token("Wolf", 2, 2, Color::Green, vec![CreatureType::Wolf])
+}
+
+/// A night face: a Werewolf creature with the day face's colors (CR 105.2c).
+fn night(name: &'static str, day_cost: &ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        color_indicator: day_cost.colors(),
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+/// CR 702.145 — a daybound front over a nightbound back.
+fn daybound(mut front: CardDefinition, mut back: CardDefinition) -> CardDefinition {
+    front.keywords.push(Keyword::Daybound);
+    back.keywords.push(Keyword::Nightbound);
+    CardDefinition { back_face: Some(Box::new(back)), ..front }
+}
+
+/// The classic werewolf pair: no spells last turn flips it, two or more
+/// flips it back.
+fn classic_werewolf(mut front: CardDefinition, mut back: CardDefinition) -> CardDefinition {
+    front.triggered_abilities.push(crate::effect::shortcut::werewolf_day_transform());
+    back.triggered_abilities.push(crate::effect::shortcut::werewolf_night_transform());
+    CardDefinition { back_face: Some(Box::new(back)), ..front }
+}
+
+fn human_werewolf(name: &'static str, mana: ManaCost, more: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    let mut types = vec![CreatureType::Human];
+    types.extend(more);
+    types.push(CreatureType::Werewolf);
+    creature(name, mana, types, p, t)
+}
+
+/// "Whenever this creature transforms into [this face]".
+fn on_transform(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource), effect }
+}
+
+fn anthem(filter: R, power: i32, toughness: i32, keywords: Vec<Keyword>) -> StaticEffect {
+    StaticEffect::AnthemForFilter {
+        filter,
+        power,
+        toughness,
+        keywords,
+        opponents: false,
+        all_players: false,
+        only_your_turn: false,
+        scale_by_counters_on_self: None,
+    }
+}
+
+fn other_wolfish_get(p: i32, t: i32) -> StaticAbility {
+    static_ab(
+        "Other Wolves and Werewolves you control get the bonus.",
+        anthem(R::Creature.and(wolfish()).and(R::OtherThanSource), p, t, vec![]),
+    )
+}
+
+fn attacking_get(p: i32, keywords: Vec<Keyword>) -> StaticAbility {
+    static_ab("Attacking creatures you control get the bonus.", anthem(R::Creature.and(R::IsAttacking), p, 0, keywords))
+}
+
+fn begin_your_combat(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+        effect,
+    }
+}
+
+fn wolf_draw() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl).dealt_by(R::Creature.and(wolfish())),
+        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+    }
+}
+
+/// Tovolar, Dire Overlord // Tovolar, the Midnight Scourge — {1}{R}{G} 3/3
+/// legendary Human Werewolf, daybound. A Wolf or Werewolf of yours connecting
+/// draws; your upkeep with three or more makes it night and transforms any
+/// number of your Human Werewolves. Night: 4/4, {X}{R}{G}: +X/+0 and trample.
+pub fn tovolar_dire_overlord() -> CardDefinition {
+    let pack = || Predicate::SelectorCountAtLeast { sel: Selector::EachPermanent(your_wolfish()), n: Value::Const(3) };
+    let front = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            wolf_draw(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(pack()),
+                effect: Effect::If {
+                    cond: pack(),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::BecomeNight,
+                        Effect::ForEachChosen {
+                            from: Selector::EachPermanent(
+                                R::Creature
+                                    .and(R::HasCreatureType(CreatureType::Human))
+                                    .and(R::HasCreatureType(CreatureType::Werewolf))
+                                    .and(R::ControlledByYou),
+                            ),
+                            body: Box::new(Effect::Transform { what: Selector::TriggerSource }),
+                            headless_takes: Some(R::Creature),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..human_werewolf("Tovolar, Dire Overlord", cost(&[generic(1), r(), g()]), vec![], 3, 3)
+    };
+    let pumped = || target_filtered(R::Creature.and(wolfish()).and(R::ControlledByYou));
+    let back = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![wolf_draw()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), r(), g()]),
+            effect: Effect::Seq(vec![
+                pump(pumped(), Value::XFromCost, Value::ZERO),
+                until_eot(Selector::Target(0), Keyword::Trample),
+            ]),
+            ..Default::default()
+        }],
+        ..night("Tovolar, the Midnight Scourge", &cost(&[generic(1), r(), g()]), 4, 4)
+    };
+    daybound(front, back)
+}
+
+/// The Celestus — {3} legendary Artifact. Day as it enters if neither; {T}:
+/// any color; {3}, {T}: flip day and night (sorcery speed); each flip gains
+/// you 1 and you may loot.
+pub fn the_celestus() -> CardDefinition {
+    CardDefinition {
+        name: "The Celestus",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        as_enters_effect: Some(Effect::If {
+            cond: Predicate::Not(Box::new(Predicate::Any(vec![Predicate::IsDay, Predicate::IsNight]))),
+            then: Box::new(Effect::BecomeDay),
+            else_: Box::new(Effect::Noop),
+        }),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::If {
+                    cond: Predicate::IsNight,
+                    then: Box::new(Effect::BecomeDay),
+                    else_: Box::new(Effect::BecomeNight),
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::MayDo {
+                    description: "The Celestus: draw a card, then discard a card?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    ])),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Avabruck Caretaker // Hollowhenge Huntmaster — {4}{G}{G} 4/4 hexproof,
+/// daybound: two +1/+1 counters on another creature of yours each combat.
+/// Night: 6/6 hexproof, your other permanents have hexproof, two counters on
+/// each creature you control.
+pub fn avabruck_caretaker() -> CardDefinition {
+    let mana = cost(&[generic(4), g(), g()]);
+    let front = CardDefinition {
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![begin_your_combat(Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        ..human_werewolf("Avabruck Caretaker", mana.clone(), vec![], 4, 4)
+    };
+    let back = CardDefinition {
+        keywords: vec![Keyword::Hexproof],
+        static_abilities: vec![static_ab(
+            "Other permanents you control have hexproof.",
+            StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::ControlledByYou.and(R::OtherThanSource)),
+                keyword: Keyword::Hexproof,
+            },
+        )],
+        triggered_abilities: vec![begin_your_combat(Effect::AddCounter {
+            what: Selector::EachMatching { zone: ZoneRef::Battlefield, filter: R::Creature.and(R::ControlledByYou) },
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        ..night("Hollowhenge Huntmaster", &mana, 6, 6)
+    };
+    daybound(front, back)
+}
+
+/// Breakneck Rider // Neck Breaker — {1}{R}{R} 3/3; night 4/3, attacking
+/// creatures you control get +1/+0 and trample.
+pub fn breakneck_rider() -> CardDefinition {
+    let mana = cost(&[generic(1), r(), r()]);
+    classic_werewolf(
+        human_werewolf("Breakneck Rider", mana.clone(), vec![CreatureType::Scout], 3, 3),
+        CardDefinition {
+            static_abilities: vec![attacking_get(1, vec![Keyword::Trample])],
+            ..night("Neck Breaker", &mana, 4, 3)
+        },
+    )
+}
+
+/// Child of the Pack // Savage Packmate — {2}{R}{G} 2/5, {2}{R}{G}: a 2/2
+/// Wolf; night 5/5 trample, other creatures you control get +1/+0.
+pub fn child_of_the_pack() -> CardDefinition {
+    let mana = cost(&[generic(2), r(), g()]);
+    daybound(
+        CardDefinition {
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(2), r(), g()]),
+                effect: make(1, wolf_token()),
+                ..Default::default()
+            }],
+            ..human_werewolf("Child of the Pack", mana.clone(), vec![], 2, 5)
+        },
+        CardDefinition {
+            keywords: vec![Keyword::Trample],
+            static_abilities: vec![static_ab(
+                "Other creatures you control get +1/+0.",
+                anthem(R::Creature.and(R::OtherThanSource), 1, 0, vec![]),
+            )],
+            ..night("Savage Packmate", &mana, 5, 5)
+        },
+    )
+}
+
+/// Cult of the Waxing Moon — {4}{G} 5/4 Human Shaman. A permanent of yours
+/// transforming into a non-Human creature makes a 2/2 Wolf.
+pub fn cult_of_the_waxing_moon() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Transformed, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::Not(Box::new(R::HasCreatureType(CreatureType::Human)))),
+            }),
+            effect: make(1, wolf_token()),
+        }],
+        ..creature("Cult of the Waxing Moon", cost(&[generic(4), g()]), vec![CreatureType::Human, CreatureType::Shaman], 5, 4)
+    }
+}
+
+/// Duskwatch Recruiter // Krallenhorde Howler — {1}{G} 2/2, {2}{G}: a creature
+/// from the top three; night 3/3, your creature spells cost {1} less.
+pub fn duskwatch_recruiter() -> CardDefinition {
+    let mana = cost(&[generic(1), g()]);
+    classic_werewolf(
+        CardDefinition {
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(2), g()]),
+                effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    pick_filter: Some(R::Creature),
+                    optional: true,
+                    ..Default::default()
+                })),
+                ..Default::default()
+            }],
+            ..human_werewolf("Duskwatch Recruiter", mana.clone(), vec![CreatureType::Warrior], 2, 2)
+        },
+        CardDefinition {
+            static_abilities: vec![static_ab(
+                "Creature spells you cast cost {1} less to cast.",
+                StaticEffect::CostReduction { filter: R::Creature, amount: 1 },
+            )],
+            ..night("Krallenhorde Howler", &mana, 3, 3)
+        },
+    )
+}
+
+/// Hermit of the Natterknolls // Lone Wolf of the Natterknolls — {2}{G} 2/3:
+/// an opponent's spell on your turn draws you one (night 3/5: two).
+pub fn hermit_of_the_natterknolls() -> CardDefinition {
+    let mana = cost(&[generic(2), g()]);
+    let punish = |n: i32| TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(n) },
+    };
+    classic_werewolf(
+        CardDefinition {
+            triggered_abilities: vec![punish(1)],
+            ..human_werewolf("Hermit of the Natterknolls", mana.clone(), vec![], 2, 3)
+        },
+        CardDefinition { triggered_abilities: vec![punish(2)], ..night("Lone Wolf of the Natterknolls", &mana, 3, 5) },
+    )
+}
+
+/// Hound Tamer // Untamed Pup — {2}{G} 3/3 trample, {3}{G}: a +1/+1 counter;
+/// night 4/4, your other Wolves and Werewolves have trample.
+pub fn hound_tamer() -> CardDefinition {
+    let mana = cost(&[generic(2), g()]);
+    let grow = || ActivatedAbility {
+        mana_cost: cost(&[generic(3), g()]),
+        effect: Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        ..Default::default()
+    };
+    daybound(
+        CardDefinition {
+            keywords: vec![Keyword::Trample],
+            activated_abilities: vec![grow()],
+            ..human_werewolf("Hound Tamer", mana.clone(), vec![], 3, 3)
+        },
+        CardDefinition {
+            keywords: vec![Keyword::Trample],
+            static_abilities: vec![static_ab(
+                "Other Wolves and Werewolves you control have trample.",
+                StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(your_wolfish().and(R::OtherThanSource)),
+                    keyword: Keyword::Trample,
+                },
+            )],
+            activated_abilities: vec![grow()],
+            ..night("Untamed Pup", &mana, 4, 4)
+        },
+    )
+}
+
+/// Howlpack Piper // Wildsong Howler — {3}{G} 2/2, can't be countered;
+/// {1}{G}, {T}: a creature from hand onto the battlefield, untapping it for a
+/// Wolf or Werewolf (sorcery speed). Night 4/4: entering or transforming,
+/// a creature from the top six.
+pub fn howlpack_piper() -> CardDefinition {
+    let mana = cost(&[generic(3), g()]);
+    let dig = || {
+        Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(6),
+            pick_filter: Some(R::Creature),
+            optional: true,
+            rest_bottom_random: true,
+            ..Default::default()
+        }))
+    };
+    daybound(
+        CardDefinition {
+            keywords: vec![Keyword::CantBeCountered],
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                mana_cost: cost(&[generic(1), g()]),
+                effect: Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                    return_eot: false,
+                    then: Some(Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::LastMoved, filter: wolfish() },
+                        then: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                        else_: Box::new(Effect::Noop),
+                    })),
+                },
+                ..Default::default()
+            }],
+            ..human_werewolf("Howlpack Piper", mana.clone(), vec![], 2, 2)
+        },
+        CardDefinition { triggered_abilities: vec![etb(dig()), on_transform(dig())], ..night("Wildsong Howler", &mana, 4, 4) },
+    )
+}
+
+/// Huntmaster of the Fells // Ravager of the Fells — {2}{R}{G} 2/2: entering
+/// or transforming in, a 2/2 Wolf and 2 life. Night 4/4 trample: transforming
+/// in, 2 to an opponent or planeswalker and 2 to up to one creature of theirs.
+pub fn huntmaster_of_the_fells() -> CardDefinition {
+    let mana = cost(&[generic(2), r(), g()]);
+    let howl = || Effect::Seq(vec![make(1, wolf_token()), Effect::GainLife { who: Selector::You, amount: Value::Const(2) }]);
+    let ravage = Effect::OptionalTargets {
+        min: 1,
+        body: Box::new(Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)), amount: Value::Const(2) },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::SameControllerAsTargetSlot(0)) },
+                amount: Value::Const(2),
+            },
+        ])),
+    };
+    classic_werewolf(
+        CardDefinition {
+            triggered_abilities: vec![etb(howl()), on_transform(howl())],
+            ..human_werewolf("Huntmaster of the Fells", mana.clone(), vec![], 2, 2)
+        },
+        CardDefinition {
+            keywords: vec![Keyword::Trample],
+            triggered_abilities: vec![on_transform(ravage)],
+            ..night("Ravager of the Fells", &mana, 4, 4)
+        },
+    )
+}
+
+/// Ill-Tempered Loner // Howlpack Avenger — {2}{R}{R} 3/3: damage dealt to it
+/// is dealt again to any target; {1}{R}: +2/+0. Night 4/4: damage to any
+/// permanent of yours.
+pub fn ill_tempered_loner() -> CardDefinition {
+    let mana = cost(&[generic(2), r(), r()]);
+    let firebreathe = || ActivatedAbility {
+        mana_cost: cost(&[generic(1), r()]),
+        effect: pump(Selector::This, Value::Const(2), Value::ZERO),
+        ..Default::default()
+    };
+    let retort = || Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::TriggerEventAmount };
+    daybound(
+        CardDefinition {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+                effect: retort(),
+            }],
+            activated_abilities: vec![firebreathe()],
+            ..human_werewolf("Ill-Tempered Loner", mana.clone(), vec![], 3, 3)
+        },
+        CardDefinition {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Permanent.and(R::ControlledByYou),
+                }),
+                effect: retort(),
+            }],
+            activated_abilities: vec![firebreathe()],
+            ..night("Howlpack Avenger", &mana, 4, 4)
+        },
+    )
+}
+
+/// Immerwolf — {1}{R}{G} 2/2 Wolf, intimidate. Your other Wolves and
+/// Werewolves get +1/+1; your non-Human Werewolves can't transform.
+pub fn immerwolf() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Intimidate],
+        static_abilities: vec![
+            other_wolfish_get(1, 1),
+            static_ab(
+                "Non-Human Werewolves you control can't transform.",
+                StaticEffect::CantTransform {
+                    filter: R::HasCreatureType(CreatureType::Werewolf)
+                        .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Human))))
+                        .and(R::ControlledByYou),
+                },
+            ),
+        ],
+        ..creature("Immerwolf", cost(&[generic(1), r(), g()]), vec![CreatureType::Wolf], 2, 2)
+    }
+}
+
+/// Instigator Gang // Wildblood Pack — {3}{R} 2/3, attacking creatures you
+/// control get +1/+0; night 5/5 trample, +3/+0.
+pub fn instigator_gang() -> CardDefinition {
+    let mana = cost(&[generic(3), r()]);
+    classic_werewolf(
+        CardDefinition { static_abilities: vec![attacking_get(1, vec![])], ..human_werewolf("Instigator Gang", mana.clone(), vec![], 2, 3) },
+        CardDefinition {
+            keywords: vec![Keyword::Trample],
+            static_abilities: vec![attacking_get(3, vec![])],
+            ..night("Wildblood Pack", &mana, 5, 5)
+        },
+    )
+}
+
+/// Kessig Naturalist // Lord of the Ulvenwald — {R}{G} 2/2: attacking, add {R}
+/// or {G} that lasts the turn. Night 3/3: also your other Wolves and Werewolves
+/// get +1/+1.
+pub fn kessig_naturalist() -> CardDefinition {
+    let mana = cost(&[r(), g()]);
+    let rush = || {
+        on_attack(Effect::AddManaKeptThisTurnOfColors {
+            who: PlayerRef::You,
+            colors: vec![Color::Red, Color::Green],
+            amount: Value::ONE,
+        })
+    };
+    daybound(
+        CardDefinition { triggered_abilities: vec![rush()], ..human_werewolf("Kessig Naturalist", mana.clone(), vec![], 2, 2) },
+        CardDefinition {
+            static_abilities: vec![other_wolfish_get(1, 1)],
+            triggered_abilities: vec![rush()],
+            ..night("Lord of the Ulvenwald", &mana, 3, 3)
+        },
+    )
+}
+
+/// Nightpack Ambusher — {2}{G}{G} 4/4 Wolf, flash. Your other Wolves and
+/// Werewolves get +1/+1; an end step you cast nothing in makes a 2/2 Wolf.
+pub fn nightpack_ambusher() -> CardDefinition {
+    let quiet = || Predicate::Not(Box::new(Predicate::SpellsCastThisTurnAtLeast { who: PlayerRef::You, at_least: Value::ONE }));
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![other_wolfish_get(1, 1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(quiet()),
+            effect: Effect::If { cond: quiet(), then: Box::new(make(1, wolf_token())), else_: Box::new(Effect::Noop) },
+        }],
+        ..creature("Nightpack Ambusher", cost(&[generic(2), g(), g()]), vec![CreatureType::Wolf], 4, 4)
+    }
+}
+
+/// Sage of Ancient Lore // Werewolf of Ancient Hunger — {4}{G} */* (your hand
+/// size); entering, draw. Night: vigilance, trample, */* every hand together.
+pub fn sage_of_ancient_lore() -> CardDefinition {
+    let mana = cost(&[generic(4), g()]);
+    classic_werewolf(
+        CardDefinition {
+            dynamic_pt: Some(crate::card::DynamicPt::ControllerHandSize),
+            triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+            ..human_werewolf("Sage of Ancient Lore", mana.clone(), vec![CreatureType::Shaman], 0, 0)
+        },
+        CardDefinition {
+            keywords: vec![Keyword::Vigilance, Keyword::Trample],
+            dynamic_pt: Some(crate::card::DynamicPt::AllPlayersHandTotal),
+            ..night("Werewolf of Ancient Hunger", &mana, 0, 0)
+        },
+    )
+}
+
+/// Scorned Villager // Moonscarred Werewolf — {1}{G} 1/1, {T}: {G}; night 2/2
+/// vigilance, {T}: {G}{G}.
+pub fn scorned_villager() -> CardDefinition {
+    let mana = cost(&[generic(1), g()]);
+    classic_werewolf(
+        CardDefinition {
+            activated_abilities: vec![crate::sets::tap_add(Color::Green)],
+            ..human_werewolf("Scorned Villager", mana.clone(), vec![], 1, 1)
+        },
+        CardDefinition {
+            keywords: vec![Keyword::Vigilance],
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Green, Color::Green]) },
+                ..Default::default()
+            }],
+            ..night("Moonscarred Werewolf", &mana, 2, 2)
+        },
+    )
+}
+
+/// Silverfur Partisan — {2}{G} 2/2 Wolf Warrior, trample. A Wolf or Werewolf
+/// of yours becoming the target of an instant or sorcery spell makes a Wolf.
+pub fn silverfur_partisan() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: wolfish() })
+                .caused_by(R::IsSpellOnStack.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))),
+            effect: make(1, wolf_token()),
+        }],
+        ..creature("Silverfur Partisan", cost(&[generic(2), g()]), vec![CreatureType::Wolf, CreatureType::Warrior], 2, 2)
+    }
+}
+
+/// Ulrich of the Krallenhorde // Ulrich, Uncontested Alpha — {3}{R}{G} 4/4
+/// legendary: entering or transforming in, a creature gets +4/+4. Night 6/6:
+/// transforming in, it may fight a non-Werewolf creature you don't control.
+pub fn ulrich_of_the_krallenhorde() -> CardDefinition {
+    let mana = cost(&[generic(3), r(), g()]);
+    let rouse = || pump(target_filtered(R::Creature), Value::Const(4), Value::Const(4));
+    classic_werewolf(
+        CardDefinition {
+            supertypes: vec![Supertype::Legendary],
+            triggered_abilities: vec![etb(rouse()), on_transform(rouse())],
+            ..human_werewolf("Ulrich of the Krallenhorde", mana.clone(), vec![], 4, 4)
+        },
+        CardDefinition {
+            supertypes: vec![Supertype::Legendary],
+            triggered_abilities: vec![on_transform(Effect::MayDo {
+                description: "Ulrich fights?".into(),
+                body: Box::new(Effect::Fight {
+                    attacker: Selector::This,
+                    defender: target_filtered(
+                        R::Creature
+                            .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Werewolf))))
+                            .and(R::Not(Box::new(R::ControlledByYou))),
+                    ),
+                }),
+            })],
+            ..night("Ulrich, Uncontested Alpha", &mana, 6, 6)
+        },
+    )
+}
+
+/// Volatile Arsonist // Dire-Strain Anarchist — {3}{R}{R} 4/4 menace, haste:
+/// attacking, 1 damage to each of up to one creature, player and planeswalker
+/// (night 5/5: 2).
+pub fn volatile_arsonist() -> CardDefinition {
+    let mana = cost(&[generic(3), r(), r()]);
+    let burn = |n: i32| {
+        on_attack(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::TargetFiltered { slot: 0, filter: R::Creature }, amount: Value::Const(n) },
+                Effect::DealDamage { to: Selector::TargetFiltered { slot: 1, filter: R::Player }, amount: Value::Const(n) },
+                Effect::DealDamage { to: Selector::TargetFiltered { slot: 2, filter: R::Planeswalker }, amount: Value::Const(n) },
+            ])),
+        })
+    };
+    daybound(
+        CardDefinition {
+            keywords: vec![Keyword::Menace, Keyword::Haste],
+            triggered_abilities: vec![burn(1)],
+            ..human_werewolf("Volatile Arsonist", mana.clone(), vec![], 4, 4)
+        },
+        CardDefinition {
+            keywords: vec![Keyword::Menace, Keyword::Haste],
+            triggered_abilities: vec![burn(2)],
+            ..night("Dire-Strain Anarchist", &mana, 5, 5)
+        },
+    )
+}
+
+/// Weaver of Blossoms // Blossom-Clad Werewolf — {2}{G} 2/3, {T}: any color;
+/// night 3/4, {T}: two mana of any one color.
+pub fn weaver_of_blossoms() -> CardDefinition {
+    let mana = cost(&[generic(2), g()]);
+    let tap_for = |n: i32| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(n)) },
+        ..Default::default()
+    };
+    daybound(
+        CardDefinition { activated_abilities: vec![tap_for(1)], ..human_werewolf("Weaver of Blossoms", mana.clone(), vec![], 2, 3) },
+        CardDefinition { activated_abilities: vec![tap_for(2)], ..night("Blossom-Clad Werewolf", &mana, 3, 4) },
+    )
+}
+
+/// Full Moon's Rise — {1}{G} Enchantment. Your Werewolves get +1/+0 and
+/// trample; sacrifice it: regenerate them all.
+pub fn full_moons_rise() -> CardDefinition {
+    let werewolves = || R::Creature.and(R::HasCreatureType(CreatureType::Werewolf));
+    CardDefinition {
+        name: "Full Moon's Rise",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![static_ab(
+            "Werewolf creatures you control get +1/+0 and have trample.",
+            anthem(werewolves(), 1, 0, vec![Keyword::Trample]),
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Regenerate { what: Selector::EachPermanent(werewolves().and(R::ControlledByYou)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Howlpack Resurgence — {2}{G} Enchantment, flash. Your Wolves and Werewolves
+/// get +1/+1 and trample.
+pub fn howlpack_resurgence() -> CardDefinition {
+    CardDefinition {
+        name: "Howlpack Resurgence",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![static_ab(
+            "Each creature you control that's a Wolf or a Werewolf gets +1/+1 and has trample.",
+            anthem(R::Creature.and(wolfish()), 1, 1, vec![Keyword::Trample]),
+        )],
+        ..Default::default()
+    }
+}
+
+/// Ranger Class — {1}{G} Class. Entering, a 2/2 Wolf. Level 2 ({1}{G}): your
+/// attacks put a +1/+1 counter on an attacker. Level 3 ({3}{G}): look at and
+/// cast creature spells from the top of your library.
+pub fn ranger_class() -> CardDefinition {
+    let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
+        mana_cost: mana,
+        sorcery_speed: true,
+        condition: Some(Predicate::SourceClassLevelIs(from)),
+        effect: Effect::AdvanceClassLevel,
+        ..Default::default()
+    };
+    let at_three = |effect: StaticEffect| StaticEffect::WhileClassLevelAtLeast { n: 3, inner: Box::new(effect) };
+    CardDefinition {
+        name: "Ranger Class",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Class], ..Default::default() },
+        triggered_abilities: vec![
+            etb(make(1, wolf_token())),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl)
+                    .with_filter(Predicate::SourceClassLevelAtLeast(2)),
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature.and(R::IsAttacking).and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
+        static_abilities: vec![
+            static_ab("You may look at the top card of your library any time.", at_three(StaticEffect::MayLookAtOwnLibraryTop)),
+            static_ab(
+                "You may cast creature spells from the top of your library.",
+                at_three(StaticEffect::PlayFromLibraryTop { filter: R::Creature }),
+            ),
+        ],
+        activated_abilities: vec![level_up(cost(&[generic(1), g()]), 1), level_up(cost(&[generic(3), g()]), 2)],
+        ..Default::default()
+    }
+}
+
+/// Moonlight Hunt — {1}{G} Instant. Each Wolf and Werewolf of yours deals
+/// damage equal to its power to target creature you don't control.
+pub fn moonlight_hunt() -> CardDefinition {
+    spell(
+        "Moonlight Hunt",
+        cost(&[generic(1), g()]),
+        CardType::Instant,
+        Effect::EachDealsDamageEqualToPower {
+            dealers: Selector::EachPermanent(your_wolfish()),
+            target: target_filtered(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))),
+        },
+    )
+}
+
+/// Waxing Moon — {1}{G} Instant. Transform up to one Werewolf of yours; your
+/// creatures gain trample until end of turn.
+pub fn waxing_moon() -> CardDefinition {
+    spell(
+        "Waxing Moon",
+        cost(&[generic(1), g()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature.and(R::HasCreatureType(CreatureType::Werewolf)).and(R::ControlledByYou),
+                effect: Box::new(Effect::Transform { what: Selector::Target(0) }),
+            },
+            until_eot(
+                Selector::EachMatching { zone: ZoneRef::Battlefield, filter: R::Creature.and(R::ControlledByYou) },
+                Keyword::Trample,
+            ),
+        ]),
+    )
+}
+
+/// Unnatural Moonrise — {R}{G} Sorcery, flashback {2}{R}{G}. It becomes night;
+/// a creature gets +1/+0, trample and "connecting draws a card" this turn.
+pub fn unnatural_moonrise() -> CardDefinition {
+    let it = || target_filtered(R::Creature);
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), r(), g()]))],
+        ..spell(
+            "Unnatural Moonrise",
+            cost(&[r(), g()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::BecomeNight,
+                pump(it(), Value::ONE, Value::ZERO),
+                until_eot(it(), Keyword::Trample),
+                Effect::GrantTriggeredAbility {
+                    what: it(),
+                    trigger: Box::new(on_hit(Effect::Draw { who: Selector::You, amount: Value::ONE })),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        )
+    }
+}

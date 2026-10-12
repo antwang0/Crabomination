@@ -11848,3 +11848,32 @@ pub const EZIO_MAIN: &[CardFactory] = &[
     forest, forest, island, island, island, mountain, mountain, plains, plains, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const TOVOLAR_COMMANDERS: &[CardFactory] = &[tovolar_dire_overlord];
+
+/// **Tovolar, Dire Overlord**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 78 nonbasic cards + 12 Forests + 9 Mountains = 99.
+/// Tovolar, Dire Overlord (RG) Werewolves
+pub const TOVOLAR_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, heralds_horn, sol_ring, swiftfoot_boots, the_celestus,
+    cinder_glade, command_tower, game_trail, gruul_turf, karplusan_forest, kessig_wolf_run,
+    mossfire_valley, path_of_ancestry, reliquary_tower, rockfall_vale, rootbound_crag,
+    spire_garden, stomping_ground, temple_of_abandon, avabruck_caretaker, breakneck_rider,
+    cemetery_prowler, child_of_the_pack, cult_of_the_waxing_moon, duskwatch_recruiter,
+    geier_reach_bandit, hermit_of_the_natterknolls, hollowhenge_overlord, hound_tamer,
+    howlpack_piper, huntmaster_of_the_fells, ill_tempered_loner, immerwolf, instigator_gang,
+    kessig_naturalist, kruin_outlaw, mayor_of_avabruck, nightpack_ambusher, outland_liberator,
+    packsong_pup, reckless_stormseeker, sage_of_ancient_lore, scorned_villager,
+    silverfur_partisan, torgal_a_fine_hound, tovolars_huntmaster, ulrich_of_the_krallenhorde,
+    village_watch, volatile_arsonist, weaver_of_blossoms, werewolf_pack_leader,
+    beastmaster_ascension, berserkers_onslaught, full_moons_rise, howling_moon,
+    howlpack_resurgence, ranger_class, rhythm_of_the_wild, unnatural_growth, beast_within,
+    chaos_warp, heroic_intervention, moonlight_hunt, moonmist, return_of_the_wildspeaker,
+    return_to_nature, waxing_moon, arlinn_kord, arlinn_the_packs_hope, blasphemous_act,
+    cultivate, decimate, into_the_night, kodamas_reach, natures_lore, rampant_growth,
+    unnatural_moonrise,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

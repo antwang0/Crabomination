@@ -2886,6 +2886,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EZIO_COMMANDERS,
             main: decks::EZIO_MAIN,
         },
+        // Seat 406: Tovolar, Dire Overlord's EDHREC average deck. `--pod-decks 406`.
+        PodDeck {
+            name: "Tovolar, Dire Overlord (RG)",
+            commanders: decks::TOVOLAR_COMMANDERS,
+            main: decks::TOVOLAR_MAIN,
+        },
     ]
 }
 
@@ -5049,6 +5055,7 @@ mod tests {
             ("Hylda of the Icy Crown", [0x0AB9, 403, 9328]),
             ("Mr. House, President and CEO", [0x0ABA, 404, 9329]),
             ("Ezio Auditore da Firenze", [0x0ABB, 405, 9330]),
+            ("Tovolar, Dire Overlord", [0x0ABC, 406, 9331]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
