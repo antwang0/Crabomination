@@ -1,7 +1,9 @@
-//! "As long as [this] hasn't dealt damage yet" (Ratonhnhaké꞉ton): a permanent
-//! that asks (`CardDefinition::tracks_own_damage`) is stamped
-//! `has_dealt_damage` as soon as a `DamageDealt` event names it, combat or
-//! not. Read at trigger dispatch, which every damage path reaches.
+//! Two per-permanent rule reads. "As long as [this] hasn't dealt damage yet"
+//! (Ratonhnhaké꞉ton): a permanent that asks
+//! (`CardDefinition::tracks_own_damage`) is stamped `has_dealt_damage` as soon
+//! as a `DamageDealt` event names it, combat or not — read at trigger
+//! dispatch, which every damage path reaches. And CR 701.27's "can't
+//! transform" statics (Immerwolf).
 
 use super::GameState;
 use super::types::GameEvent;
@@ -22,5 +24,24 @@ impl GameState {
                 c.has_dealt_damage = true;
             }
         }
+    }
+}
+
+impl GameState {
+    /// CR 701.27 — a `StaticEffect::CantTransform` on the battlefield names
+    /// `id` (Immerwolf).
+    pub(crate) fn transform_prohibited(&self, id: crate::card::CardId) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|src| {
+            src.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                StaticEffect::CantTransform { filter } => self.evaluate_requirement_static(
+                    filter,
+                    &crate::game::types::Target::Permanent(id),
+                    src.controller,
+                    Some(src.id),
+                ),
+                _ => false,
+            })
+        })
     }
 }

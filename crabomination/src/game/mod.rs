@@ -4965,6 +4965,9 @@ impl GameState {
     }
 
     pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+        if self.transform_prohibited(id) {
+            return;
+        }
         let Some(c) = self.battlefield_find_mut(id) else { return };
         if !c.transformed {
             let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) else { return };
@@ -33786,6 +33789,7 @@ fn static_effect_to_effects(
             | StaticEffect::HalveDamageDealt
             | StaticEffect::RollExtraDiceIgnoreLowest(_)
             | StaticEffect::PayLifeToShiftDieOnceEachTurn
+            | StaticEffect::CantTransform { .. }
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllCombatDamageToAndFromEnchanted

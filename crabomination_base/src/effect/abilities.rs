@@ -1616,6 +1616,10 @@ pub enum StaticEffect {
     /// increase or decrease the result by 1. Do this only once each turn"
     /// (Night Shift of the Living Dead). Read by the `RollDie` resolver.
     PayLifeToShiftDieOnceEachTurn,
+    /// CR 701.27 — "[filter] can't transform" (Immerwolf: "Non-Human
+    /// Werewolves you control can't transform"), the filter read from this
+    /// permanent's controller. Checked by `GameState::transform_permanent`.
+    CantTransform { filter: SelectionRequirement },
     /// CR 615 — "Prevent all combat damage that would be dealt to this." A
     /// self-static the combat-damage resolver honors (zeroing damage marked on
     /// the permanent) unless combat damage can't be prevented this turn (615.12).
