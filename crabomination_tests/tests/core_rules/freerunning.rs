@@ -1,4 +1,4 @@
-//! Functionality tests for the Freerunning batch (CR 702.179) in
+//! Functionality tests for the Freerunning batch (CR 702.173) in
 //! `catalog::sets::decks::freerunning`.
 
 use crabomination::card::{CreatureType, Keyword};
@@ -13,10 +13,15 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     }
 }
 
-/// Drive a creature the active player (seat 0) controls into the opponent so the
-/// combat-damage gate (`dealt_combat_damage_to_player_this_turn`) gets set.
+/// Drive an Assassin the active player (seat 0) controls into the opponent so
+/// the freerunning gate (`freerunning_unlocked_this_turn`) gets set.
 fn deal_combat_damage(g: &mut GameState) {
-    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    hit_with(g, catalog::merciless_harlequin());
+}
+
+/// Seat 0 hits seat 1 with a fresh `def`; returns the attacker.
+fn hit_with(g: &mut GameState, def: crabomination::card::CardDefinition) -> crabomination::card::CardId {
+    let atk = g.add_card_to_battlefield(0, def);
     g.clear_sickness(atk);
     advance_to(g, TurnStep::DeclareAttackers);
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -24,6 +29,7 @@ fn deal_combat_damage(g: &mut GameState) {
     }])).expect("attack");
     drain_stack(g);
     advance_to(g, TurnStep::PostCombatMain);
+    atk
 }
 
 /// Brotherhood Ambushers can be cast for its freerunning cost {3}{B} after a
@@ -32,7 +38,7 @@ fn deal_combat_damage(g: &mut GameState) {
 fn brotherhood_ambushers_freeruns_after_combat_damage() {
     let mut g = two_player_game();
     deal_combat_damage(&mut g);
-    assert!(g.players[0].dealt_combat_damage_to_player_this_turn, "gate set");
+    assert!(g.players[0].freerunning_unlocked_this_turn, "gate set");
     let id = g.add_card_to_hand(0, catalog::brotherhood_ambushers());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3); // {3}{B}
@@ -57,6 +63,36 @@ fn brotherhood_ambushers_freerun_blocked_without_combat_damage() {
         additional_targets: vec![], mode: None, x_value: None,
     });
     assert!(r.is_err(), "no combat damage this turn → freerunning rejected");
+}
+
+/// CR 702.173a — only an Assassin or a commander opens freerunning: a Grizzly
+/// Bears' hit leaves it closed, the same Bears as a commander opens it.
+#[test]
+fn cr_702_173a_freerunning_wants_an_assassin_or_commander_hit() {
+    let mut g = two_player_game();
+    hit_with(&mut g, catalog::grizzly_bears());
+    assert!(g.players[0].dealt_combat_damage_to_player_this_turn);
+    assert!(!g.players[0].freerunning_unlocked_this_turn, "a non-Assassin's hit doesn't count");
+    let id = g.add_card_to_hand(0, catalog::brotherhood_ambushers());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let cast = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(cast.is_err(), "freerunning stays closed");
+
+    let mut g = two_player_game();
+    let cmd = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].commanders.push(cmd);
+    g.clear_sickness(cmd);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cmd, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(g.players[0].freerunning_unlocked_this_turn, "a commander's hit does");
 }
 
 /// Achilles Davenport has Menace and pumps other Assassins you control.

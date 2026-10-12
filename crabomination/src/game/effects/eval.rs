@@ -3055,6 +3055,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].dealt_combat_damage_to_player_this_turn),
+            Predicate::FreerunningUnlocked { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].freerunning_unlocked_this_turn),
             Predicate::AnotherCreatureEnteredControlLastTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -5823,6 +5827,7 @@ impl GameState {
                     R::HasModular => has_kw_tag(&crate::card::Keyword::Modular(0)),
                     R::HasMutate => card.definition.mutate.is_some(),
                     R::HasMorphAbility => card.definition.has_morph_ability(),
+                    R::HasFreerunning => card.definition.alternative_cost.as_ref().is_some_and(|a| a.freerunning),
                     R::HasNoAbilities => card.definition.has_no_abilities(),
                     R::HasCyclingAbility => card.definition.has_cycling_ability(),
                     R::HasDisturb => card.definition.has_disturb(),
@@ -7037,6 +7042,7 @@ impl GameState {
             R::IsSuspended => card.is_suspended() && self.exile.iter().any(|c| c.id == card.id),
             R::HasMutate => card.definition.mutate.is_some(),
             R::HasMorphAbility => card.definition.has_morph_ability(),
+            R::HasFreerunning => card.definition.alternative_cost.as_ref().is_some_and(|a| a.freerunning),
             R::HasNoAbilities => card.definition.has_no_abilities(),
             R::HasCyclingAbility => card.definition.has_cycling_ability(),
             R::HasDisturb => card.definition.has_disturb(),

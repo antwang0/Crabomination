@@ -835,10 +835,15 @@ pub struct PlayerData {
     #[serde(default)]
     pub creatures_attacked_this_turn: u32,
     /// True once a creature this player controlled dealt combat damage to a
-    /// player this turn (CR 702.173 — Freerunning). Set in
-    /// `fire_combat_damage_to_player_triggers`, reset at the turn boundary.
+    /// player this turn. Set in `fire_combat_damage_to_player_triggers`,
+    /// reset at the turn boundary.
     #[serde(default)]
     pub dealt_combat_damage_to_player_this_turn: bool,
+    /// CR 702.173a — a player was dealt combat damage this turn by an Assassin
+    /// creature or a commander this player controlled: their freerunning
+    /// costs are open. Reset at the turn boundary.
+    #[serde(default)]
+    pub freerunning_unlocked_this_turn: bool,
     /// CR 614.5 — "sources you control deal double damage this turn" (Quest
     /// for Pure Flame). Read in `scale_damage_to`, reset at the turn boundary.
     #[serde(default)]
@@ -1750,6 +1755,7 @@ impl Player {
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
             dealt_combat_damage_to_player_this_turn: false,
+            freerunning_unlocked_this_turn: false,
             double_your_source_damage_this_turn: false,
             committed_crime_this_turn: false,
             investigated_this_turn: false,

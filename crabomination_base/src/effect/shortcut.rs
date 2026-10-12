@@ -118,6 +118,16 @@ pub fn add_any_one_color(n: i32) -> Effect {
 
 /// Dash (CR 702.109) alternative cost: cast for `mana_cost`; the creature
 /// gains haste and returns to its owner's hand at the next end step.
+/// CR 702.173 — freerunning [cost]: legal once an Assassin or a commander you
+/// controlled dealt combat damage to a player this turn.
+pub fn freerunning(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        condition: Some(crate::effect::Predicate::FreerunningUnlocked { who: PlayerRef::You }),
+        freerunning: true,
+        ..Default::default()
+    }
+}
 pub fn dash(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, dash: true, ..Default::default() }
 }

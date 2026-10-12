@@ -2908,6 +2908,9 @@ pub enum SelectionRequirement {
     HasCyclingAbility,
     /// Has a Morph / Megamorph / Disguise ability (Backslide).
     HasMorphAbility,
+    /// CR 702.173 — has freerunning, printed ("a card with freerunning" —
+    /// Jacob Frye).
+    HasFreerunning,
     /// "…with no abilities" (Rise from the Wreck) — no printed keywords,
     /// static, triggered or activated abilities.
     HasNoAbilities,
@@ -7078,6 +7081,10 @@ pub struct AlternativeCost {
     /// once-each-turn `ZeroAlternativeCostOncePerTurn` grant.
     #[serde(default)]
     pub once_per_turn_zero: bool,
+    /// CR 702.173 — this is a freerunning cost ("a card with freerunning" —
+    /// Jacob Frye; Brotherhood Headquarters' mana).
+    #[serde(default)]
+    pub freerunning: bool,
 }
 
 /// The bits [`CardDefinition::debug_flags`] answers. One `{:?}` scan and one

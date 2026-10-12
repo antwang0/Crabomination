@@ -6886,11 +6886,18 @@ impl GameState {
         damaged_player: usize,
         damage_amount: u32,
     ) {
-        // CR 702.179 — the dealing creature's controller has now dealt combat
-        // damage to a player this turn (Freerunning's alt-cost gate).
+        // The dealing creature's controller has now dealt combat damage to a
+        // player this turn; an Assassin or a commander also opens their
+        // freerunning costs (CR 702.173a — its types as it dealt the damage).
         if let Some(c) = self.battlefield_find(source) {
             let controller = c.controller;
             self.players[controller].dealt_combat_damage_to_player_this_turn = true;
+            if !self.players[controller].freerunning_unlocked_this_turn
+                && (self.permanent_has_creature_type(source, crate::card::CreatureType::Assassin)
+                    || self.is_commander(source))
+            {
+                self.players[controller].freerunning_unlocked_this_turn = true;
+            }
             // CR 603.4 — turn-scoped "whenever a creature you control deals
             // combat damage to a player" delayed triggers (Mistway Spy).
             let watchers: Vec<crate::game::types::DelayedTrigger> = self

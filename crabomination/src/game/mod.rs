@@ -34458,6 +34458,7 @@ fn static_effect_to_effects(
             // Kentaro / Dream Halls — consulted by `effective_alternative_cost`.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
             | StaticEffect::GrantWarpToHandCards { .. }
+            | StaticEffect::GrantFreerunningToSpells { .. }
             | StaticEffect::LifeAlternativeCostOncePerYourTurn { .. }
             | StaticEffect::ZeroAlternativeCostOncePerTurn { .. }
             | StaticEffect::ZeroCostOncePerTurnMvAtMostSourceCounters(_)

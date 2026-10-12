@@ -3040,6 +3040,9 @@ pub enum StaticEffect {
     /// warp alternative cost (exiled at the next end step, recastable from
     /// exile later). Read by `effective_alternative_cost`.
     GrantWarpToHandCards { filter: SelectionRequirement, cost: crate::mana::ManaCost },
+    /// CR 702.173 — "[filter] spells you cast have freerunning [cost]" (Ezio
+    /// Auditore da Firenze). Read by `granted_alternative_cost_in`.
+    GrantFreerunningToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// CR 118.9 — "You may pay `energy` {E} rather than pay the mana cost for
     /// [filter] spells you cast" (Nissa, Worldsoul Speaker). Read by
     /// `effective_alternative_cost`.

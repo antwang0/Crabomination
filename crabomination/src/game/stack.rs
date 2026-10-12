@@ -5178,8 +5178,11 @@ impl GameState {
             pl.nontoken_sacrificed_this_turn = 0;
             pl.foods_sacrificed_this_turn = 0;
             pl.artifacts_or_creatures_sacrificed_this_turn = 0;
-            // CR 702.173 — Freerunning's combat-damage gate is per-turn.
             pl.dealt_combat_damage_to_player_this_turn = false;
+            // CR 702.173a — Freerunning's combat-damage gate is per-turn.
+            if pl.freerunning_unlocked_this_turn {
+                pl.freerunning_unlocked_this_turn = false;
+            }
             // Quest for Pure Flame's turn-scoped source-damage doubling.
             pl.double_your_source_damage_this_turn = false;
             // Turf Wound's land-play lock is turn-scoped.

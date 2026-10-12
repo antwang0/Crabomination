@@ -1,10 +1,9 @@
 //! **Freerunning** cards (CR 702.179, Assassin's Creed). A static ability on
 //! the stack: "You may cast this spell for its freerunning cost if you dealt
 //! combat damage to a player this turn with an Assassin or commander."
-//! Modeled on the shared alternative-cost primitive — `AlternativeCost.mana_cost`
-//! gated on `Predicate::DealtCombatDamageToPlayerThisTurn`. The "with an Assassin
-//! or commander" sub-clause is approximated as "with any creature" (the engine
-//! tracks the dealing creature's controller, not its type).
+//! Modeled on the shared alternative-cost primitive (`shortcut::freerunning`),
+//! gated on `Predicate::FreerunningUnlocked` — an Assassin or a commander you
+//! controlled dealt the damage (CR 702.173a).
 
 use crate::card::{
     AlternativeCost, CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate,
@@ -13,19 +12,9 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
-/// CR 702.179 — the freerunning alternative cost: pay `mana`, legal only if a
-/// creature you control dealt combat damage to a player this turn.
-fn freerunning(mana: ManaCost) -> AlternativeCost {
-    AlternativeCost {
-        mana_cost: mana,
-        condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn {
-            who: PlayerRef::You,
-        }),
-        ..Default::default()
-    }
-}
+use crate::effect::shortcut::freerunning;
 
 /// Brotherhood Ambushers — {4}{B} 6/3 Human Assassin. Freerunning {3}{B}.
 pub fn brotherhood_ambushers() -> CardDefinition {
@@ -222,9 +211,8 @@ pub fn escape_detection() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Blue)),
                 1,
             )),
-            condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn {
-                who: PlayerRef::You,
-            }),
+            condition: Some(Predicate::FreerunningUnlocked { who: PlayerRef::You }),
+            freerunning: true,
             ..Default::default()
         }),
         ..Default::default()

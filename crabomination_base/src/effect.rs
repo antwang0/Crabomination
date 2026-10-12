@@ -2229,9 +2229,12 @@ pub enum Predicate {
     /// Activate only if you've paid or lost four or more {E} this turn").
     EnergyPaidThisTurnAtLeast { who: PlayerRef, n: u32 },
     /// True if a creature `who` controlled dealt combat damage to a player
-    /// this turn (CR 702.173 — Freerunning's alt-cost gate). Backed by
-    /// `Player.dealt_combat_damage_to_player_this_turn`.
+    /// this turn. Backed by `Player.dealt_combat_damage_to_player_this_turn`.
     DealtCombatDamageToPlayerThisTurn { who: PlayerRef },
+    /// CR 702.173a — a player was dealt combat damage this turn by an Assassin
+    /// creature or a commander `who` controlled (Freerunning's alt-cost gate).
+    /// Backed by `Player.freerunning_unlocked_this_turn`.
+    FreerunningUnlocked { who: PlayerRef },
     /// True if a creature other than the predicate's source entered the
     /// battlefield under `who`'s control last turn (Ephara, God of the
     /// Polis). Backed by `Player.creatures_entered_last_turn`.
