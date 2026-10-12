@@ -3079,3 +3079,48 @@ pub fn pias_revolution() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Goldnight Castigator — {2}{R}{R} 4/9 flying, haste Angel. Damage to you
+/// and damage to it are each doubled.
+pub fn goldnight_castigator() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        static_abilities: vec![
+            static_ab(
+                "If a source would deal damage to you, it deals double that damage to you instead.",
+                StaticEffect::DoubleDamageToYou,
+            ),
+            static_ab(
+                "If a source would deal damage to this creature, it deals double that damage to this creature instead.",
+                StaticEffect::DoubleDamageToThis,
+            ),
+        ],
+        ..creature("Goldnight Castigator", cost(&[generic(2), r(), r()]), vec![CreatureType::Angel], 4, 9)
+    }
+}
+
+/// Nine Lives — {1}{W}{W} enchantment with hexproof. Damage to you is
+/// prevented and puts an incarnation counter on it; at nine it's exiled; when
+/// it leaves the battlefield, you lose the game.
+pub fn nine_lives() -> CardDefinition {
+    CardDefinition {
+        name: "Nine Lives",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Hexproof],
+        static_abilities: vec![static_ab(
+            "If a source would deal damage to you, prevent that damage and put an incarnation counter on this \
+             enchantment.",
+            StaticEffect::ReplaceDamageToYouWithCountersOnSource { kind: CounterType::Incarnation, one: true },
+        )],
+        state_trigger: Some(crate::card::StateTriggeredAbility {
+            condition: Predicate::SourceHasCountersAtLeast { counter: CounterType::Incarnation, n: 9 },
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::LoseGame { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}

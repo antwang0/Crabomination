@@ -13679,6 +13679,8 @@ static DECKS: &[Factory] = &[
     super::decks::termination_facilitator,
     super::decks::scrapyard_recombiner,
     super::decks::pias_revolution,
+    super::decks::goldnight_castigator,
+    super::decks::nine_lives,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

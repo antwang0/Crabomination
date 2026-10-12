@@ -1670,3 +1670,41 @@ fn pias_revolution_punishes_artifact_removal() {
     let back = g.players[0].hand.iter().any(|c| c.id == ring);
     assert!(back != (g.players[1].life == life - 3), "exactly one: hand or 3 damage");
 }
+
+/// Goldnight Castigator doubles damage to its controller and to itself
+/// (CR 614.5), not to other players.
+#[test]
+fn goldnight_castigator_doubles_damage_to_you_and_it() {
+    let mut g = pod(2);
+    let gc = ready(&mut g, 0, catalog::goldnight_castigator());
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    for t in [Target::Player(0), Target::Player(1), perm(gc)] {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, &[t]).expect("bolt");
+    }
+    assert_eq!(g.players[0].life, mine - 6);
+    assert_eq!(g.players[1].life, theirs - 3);
+    assert_eq!(g.battlefield_find(gc).unwrap().damage, 6);
+}
+
+/// Nine Lives: each damage event to you is prevented for one incarnation
+/// counter; the ninth exiles it and its leaving loses you the game
+/// (CR 104.3e).
+#[test]
+fn nine_lives_counts_down_to_a_loss() {
+    let mut g = pod(3);
+    let nl = ready(&mut g, 0, catalog::nine_lives());
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(0)]).expect("bolt");
+    assert_eq!(g.players[0].life, life, "prevented");
+    assert_eq!(g.battlefield_find(nl).unwrap().counter_count(CounterType::Incarnation), 1);
+    g.battlefield_find_mut(nl).unwrap().counters.insert(CounterType::Incarnation, 8);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(0)]).expect("bolt");
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(nl).is_none(), "nine counters exile it");
+    assert!(!g.players[0].is_alive());
+}
