@@ -1361,3 +1361,28 @@ pub fn ertais_scorn() -> CardDefinition {
         )
     }
 }
+
+/// Loki, God of Mischief — {1}{U} 2/1 God Sorcerer Villain. Once each turn,
+/// a player or permanent becoming the target of an ability you control draws
+/// you a card. The targeting is CR 601.2c's per-object choice: a spell chose
+/// it when the chooser is a spell on the stack, otherwise an ability did.
+pub fn loki_god_of_mischief() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ChoseTargets, EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::IsSpellOnStack,
+                })))
+                .once_per_turn(),
+            effect: draw(1),
+        }],
+        ..legend(
+            "Loki, God of Mischief",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::God, CreatureType::Sorcerer, CreatureType::Villain],
+            2,
+            1,
+        )
+    }
+}

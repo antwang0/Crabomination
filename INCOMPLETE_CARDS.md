@@ -2014,3 +2014,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Rhys, the Evermore | "remove any number of counters" removes all of them | `Effect::RemoveAllCounters`; there is no any-number counter choice |
 | 🟡 Nim Deathmantle | a nontoken creature you *control* dying triggers it, rather than one put into your graveyard (an owner's) | `CreatureDied` scoped `YourControl` |
 | 🟡 Lara Croft, Tomb Raider | "you may play a card from exile with a discovery counter on it this turn" lets every such card be played, not one | the attack trigger grants `GrantMayPlay` (pay its cost, this turn) over every discovery-counter card in exile; there is no one-of-many cap on a may-play grant set |
+| 🟡 Loki, God of Mischief | an ability of yours targeting only cards in graveyards or on the stack draws too | the trigger is `ChoseTargets` from a non-spell source; the targeted objects' kinds aren't read |

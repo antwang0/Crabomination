@@ -393,3 +393,19 @@ fn ertais_scorn_gets_cheaper_after_two_opposing_spells() {
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
+
+/// Loki: an ability of yours targeting draws a card, once a turn; a spell
+/// targeting doesn't.
+#[test]
+fn loki_draws_when_an_ability_targets() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::loki_god_of_mischief());
+    let hand = g.players[0].hand.len();
+    bolt(&mut g, 0, Target::Player(1));
+    assert_eq!(g.players[0].hand.len(), hand, "a spell's targeting doesn't count");
+    let plagon = ready(&mut g, 0, catalog::plagon_lord_of_the_beach());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, plagon, 0, Some(perm(bear))).expect("Plagon's ability targets");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}

@@ -5380,6 +5380,7 @@ static DECKS: &[Factory] = &[
     super::decks::rhys_the_evermore,
     super::decks::guile,
     super::decks::ertais_scorn,
+    super::decks::loki_god_of_mischief,
     super::decks::demonic_taskmaster,
     super::decks::lord_of_the_pit,
     super::decks::evil_eye_of_urborg,
