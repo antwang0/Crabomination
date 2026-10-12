@@ -4,12 +4,12 @@
 //! `tests/recent_b/cmdr_edhrec10.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
+    LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered, tokens_gain_until_eot};
-use crate::effect::{ActivatedAbility, Duration, Effect, PlayerRef, ZoneDest};
+use crate::effect::shortcut::{colored_animation, etb, target_any, target_filtered, tokens_gain_until_eot};
+use crate::effect::{ActivatedAbility, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
 use std::sync::Arc;
@@ -351,4 +351,222 @@ pub fn eiganjo_uprising() -> CardDefinition {
             ),
         ]),
     )
+}
+
+// ── Planeswalkers ───────────────────────────────────────────────────────────
+
+fn walker(
+    name: &'static str,
+    mana: ManaCost,
+    kind: PlaneswalkerSubtype,
+    loyalty: u32,
+    abilities: Vec<LoyaltyAbility>,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![kind], ..Default::default() },
+        base_loyalty: loyalty,
+        loyalty_abilities: abilities,
+        ..Default::default()
+    }
+}
+
+fn loyalty(cost: i32, effect: Effect) -> LoyaltyAbility {
+    LoyaltyAbility { loyalty_cost: cost, effect, ..Default::default() }
+}
+
+fn emblem(name: &'static str, triggered: Vec<TriggeredAbility>, statics: Vec<StaticAbility>) -> Effect {
+    Effect::CreateEmblem { who: PlayerRef::You, name: name.into(), triggered, statics }
+}
+
+fn lands_of(kind: LandType) -> R {
+    R::Land.and(R::HasLandType(kind)).and(R::ControlledByYou)
+}
+
+/// "Lands of `kind` you control have '{T}: `ability`'" — an emblem's grant.
+fn land_grant(description: &'static str, kind: LandType, effect: Effect) -> StaticAbility {
+    static_ab(
+        description,
+        StaticEffect::GrantActivatedAbility {
+            applies_to: Selector::EachPermanent(lands_of(kind)),
+            ability: ActivatedAbility { tap_cost: true, effect, ..Default::default() },
+            condition: None,
+        },
+    )
+}
+
+/// Liliana of the Dark Realms — {2}{B}{B}, loyalty 3. +1: a Swamp card to
+/// hand. −3: target creature gets +X/+X or −X/−X (X = your Swamps). −6: your
+/// Swamps tap for {B}{B}{B}{B}. Residual: the −3's sign follows the target's
+/// controller (+X on yours, −X on anyone else's) rather than a free choice.
+pub fn liliana_of_the_dark_realms() -> CardDefinition {
+    let swamps = || Value::PermanentCountControlledByMatching(PlayerRef::You, lands_of(LandType::Swamp));
+    let pump = |sign: bool| Effect::PumpPT {
+        what: target_filtered(R::Creature),
+        power: if sign { swamps() } else { Value::Diff(Box::new(Value::Const(0)), Box::new(swamps())) },
+        toughness: if sign { swamps() } else { Value::Diff(Box::new(Value::Const(0)), Box::new(swamps())) },
+        duration: Duration::EndOfTurn,
+    };
+    walker(
+        "Liliana of the Dark Realms",
+        cost(&[generic(2), b(), b()]),
+        PlaneswalkerSubtype::Liliana,
+        3,
+        vec![
+            loyalty(1, Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasLandType(LandType::Swamp),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            loyalty(-3, Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::ControlledByYou },
+                then: Box::new(pump(true)),
+                else_: Box::new(pump(false)),
+            }),
+            loyalty(-6, emblem("Liliana of the Dark Realms", vec![], vec![land_grant(
+                "Swamps you control have '{T}: Add {B}{B}{B}{B}.'",
+                LandType::Swamp,
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Black, Value::Const(4)) },
+            )])),
+        ],
+    )
+}
+
+/// Koth of the Hammer — {2}{R}{R}, loyalty 3. +1: untap target Mountain; it
+/// becomes a 4/4 red Elemental until end of turn. −2: {R} per Mountain you
+/// control. −5: your Mountains gain "{T}: 1 damage to any target".
+pub fn koth_of_the_hammer() -> CardDefinition {
+    let mountain = R::Land.and(R::HasLandType(LandType::Mountain));
+    walker(
+        "Koth of the Hammer",
+        cost(&[generic(2), r(), r()]),
+        PlaneswalkerSubtype::Koth,
+        3,
+        vec![
+            loyalty(1, Effect::Seq(vec![
+                Effect::Untap { what: target_filtered(mountain), up_to: None },
+                colored_animation(
+                    Effect::BecomeCreature {
+                        what: Selector::Target(0),
+                        power: Value::Const(4),
+                        toughness: Value::Const(4),
+                        creature_types: vec![CreatureType::Elemental],
+                        keywords: vec![],
+                        duration: Duration::EndOfTurn,
+                    },
+                    &[Color::Red],
+                ),
+            ])),
+            loyalty(-2, Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Red,
+                    Value::PermanentCountControlledByMatching(PlayerRef::You, lands_of(LandType::Mountain)),
+                ),
+            }),
+            loyalty(-5, emblem("Koth of the Hammer", vec![], vec![land_grant(
+                "Mountains you control have '{T}: This land deals 1 damage to any target.'",
+                LandType::Mountain,
+                Effect::DealDamage { to: target_any(), amount: Value::ONE },
+            )])),
+        ],
+    )
+}
+
+/// Basri Ket — {1}{W}{W}, loyalty 3. +1: a +1/+1 counter and indestructible
+/// on up to one target creature. −2: this turn, each attacking nontoken
+/// creature brings a tapped and attacking 1/1 Soldier (one trigger per
+/// attacker — the count matches "that many"). −6: a combat-step emblem.
+pub fn basri_ket() -> CardDefinition {
+    let soldier = || token("Soldier", 1, 1, vec![Color::White], vec![CreatureType::Soldier]);
+    walker(
+        "Basri Ket",
+        cost(&[generic(1), w(), w()]),
+        PlaneswalkerSubtype::Basri,
+        3,
+        vec![
+            loyalty(1, Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(R::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            }),
+            loyalty(-2, Effect::OnMatchingAttacksThisTurn {
+                filter: R::Creature.and(R::Not(Box::new(R::IsToken))).and(R::ControlledByYou),
+                body: Box::new(Effect::CreateTokenAttacking {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(soldier()),
+                    cleanup: Default::default(),
+                    defender: None,
+                }),
+            }),
+            loyalty(-6, emblem(
+                "Basri Ket",
+                vec![at_your(TurnStep::BeginCombat, Effect::Seq(vec![
+                    make(PlayerRef::You, Value::ONE, soldier()),
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(yours()),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ]))],
+                vec![],
+            )),
+        ],
+    )
+}
+
+/// Teferi, Temporal Pilgrim — {3}{U}{U}, loyalty 4. Each card you draw adds a
+/// loyalty counter. 0: draw. −2: a 2/2 vigilance Spirit that grows as you
+/// draw. −12: target opponent shuffles each nonland permanent they control
+/// into its owner's library. Residual: the −12's "chooses a permanent they
+/// control and returns it to its owner's hand" first is not modelled.
+pub fn teferi_temporal_pilgrim() -> CardDefinition {
+    let on_draw = |effect: Effect| TriggeredAbility { event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl), effect };
+    let spirit = TokenDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![on_draw(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..token("Spirit", 2, 2, vec![Color::Blue], vec![CreatureType::Spirit])
+    };
+    CardDefinition {
+        triggered_abilities: vec![on_draw(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Loyalty,
+            amount: Value::ONE,
+        })],
+        ..walker(
+            "Teferi, Temporal Pilgrim",
+            cost(&[generic(3), u(), u()]),
+            PlaneswalkerSubtype::Teferi,
+            4,
+            vec![
+                loyalty(0, draw(1)),
+                loyalty(-2, make(PlayerRef::You, Value::ONE, spirit)),
+                loyalty(-12, Effect::TargetPlayerThen {
+                    filter: R::OpponentPlayer,
+                    then: Box::new(Effect::Move {
+                        what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Permanent.and(R::Not(Box::new(R::Land))) },
+                        to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Shuffled },
+                    }),
+                }),
+            ],
+        )
+    }
 }

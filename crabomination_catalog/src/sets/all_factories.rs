@@ -13445,6 +13445,10 @@ static DECKS: &[Factory] = &[
     super::decks::scrollshift,
     super::decks::dragon_turtle,
     super::decks::eiganjo_uprising,
+    super::decks::liliana_of_the_dark_realms,
+    super::decks::koth_of_the_hammer,
+    super::decks::basri_ket,
+    super::decks::teferi_temporal_pilgrim,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

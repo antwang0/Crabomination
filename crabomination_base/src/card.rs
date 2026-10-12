@@ -533,6 +533,8 @@ pub enum PlaneswalkerSubtype {
     Comet,
     // Serra the Benevolent (the one-card gaps of EDHREC's top 600).
     Serra,
+    // Basri Ket (Lae'zel's EDHREC deck).
+    Basri,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

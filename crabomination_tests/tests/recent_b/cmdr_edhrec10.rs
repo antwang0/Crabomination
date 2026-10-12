@@ -1,9 +1,9 @@
 //! Commander: one-card EDHREC gaps of EDHREC's top-1000 commanders
 //! (`decks::cmdr_edhrec10`).
 
-use crabomination::card::{CardId, Keyword};
+use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -272,4 +272,107 @@ fn selfless_savior_shields_another() {
     activate(&mut g, s, 0, Some(perm(bears))).expect("activate");
     assert!(g.battlefield_find(s).is_none());
     assert!(has_kw(&g, bears, Keyword::Indestructible));
+}
+
+fn walk(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: id, ability_index: index, target, x_value: None })
+        .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+fn walker(g: &mut GameState, def: crabomination::card::CardDefinition, loyalty: u32) -> CardId {
+    let id = ready(g, 0, def);
+    g.battlefield_find_mut(id).unwrap().counters.insert(CounterType::Loyalty, loyalty);
+    id
+}
+
+/// Liliana of the Dark Realms: +1 tutors a Swamp; −3 is +X/+X on your
+/// creature and −X/−X on an opponent's (X = your Swamps); the emblem makes a
+/// Swamp tap for {B}{B}{B}{B}.
+#[test]
+fn liliana_of_the_dark_realms_counts_swamps() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::swamp());
+    let lili = walker(&mut g, catalog::liliana_of_the_dark_realms(), 12);
+    walk(&mut g, lili, 0, None).expect("+1");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Swamp"));
+    let swamp = ready(&mut g, 0, catalog::swamp());
+    ready(&mut g, 0, catalog::swamp());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let reset = |g: &mut GameState| g.battlefield_find_mut(lili).unwrap().loyalty_uses_this_turn = 0;
+    reset(&mut g);
+    walk(&mut g, lili, 1, Some(perm(mine))).expect("-3 on mine");
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 4);
+    reset(&mut g);
+    walk(&mut g, lili, 1, Some(perm(theirs))).expect("-3 on theirs");
+    assert!(g.battlefield_find(theirs).is_none(), "-2/-2 kills a 2/2");
+    reset(&mut g);
+    walk(&mut g, lili, 2, None).expect("-6");
+    g.priority.player_with_priority = 0;
+    let pool = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: swamp,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the emblem's granted ability");
+    assert_eq!(g.players[0].mana_pool.total(), pool + 4);
+}
+
+/// Koth of the Hammer: +1 untaps and animates a Mountain into a 4/4 red
+/// Elemental; −2 adds {R} per Mountain.
+#[test]
+fn koth_of_the_hammer_animates_and_ramps() {
+    let mut g = pod(2);
+    let koth = walker(&mut g, catalog::koth_of_the_hammer(), 10);
+    let m = ready(&mut g, 0, catalog::mountain());
+    ready(&mut g, 0, catalog::mountain());
+    g.battlefield_find_mut(m).unwrap().tapped = true;
+    walk(&mut g, koth, 0, Some(perm(m))).expect("+1");
+    let cp = g.computed_permanent(m).unwrap();
+    assert!(!g.battlefield_find(m).unwrap().tapped);
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.colors.contains(Color::Red));
+    g.battlefield_find_mut(koth).unwrap().loyalty_uses_this_turn = 0;
+    let pool = g.players[0].mana_pool.total();
+    walk(&mut g, koth, 1, None).expect("-2");
+    assert_eq!(g.players[0].mana_pool.total(), pool + 2);
+}
+
+/// Basri Ket −2: each nontoken attacker this turn brings a tapped,
+/// attacking Soldier.
+#[test]
+fn basri_ket_rallies_soldiers_to_the_attack() {
+    let mut g = pod(2);
+    let basri = walker(&mut g, catalog::basri_ket(), 3);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::savannah_lions());
+    walk(&mut g, basri, 1, None).expect("-2");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let soldiers: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Soldier").collect();
+    assert_eq!(soldiers.len(), 2);
+    assert!(soldiers.iter().all(|c| c.tapped));
+}
+
+/// Teferi, Temporal Pilgrim: drawing a card adds loyalty.
+#[test]
+fn teferi_temporal_pilgrim_grows_on_draws() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let t = walker(&mut g, catalog::teferi_temporal_pilgrim(), 4);
+    walk(&mut g, t, 0, None).expect("0: draw");
+    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::Loyalty), 5);
 }
