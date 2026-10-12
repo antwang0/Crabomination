@@ -273,3 +273,43 @@ fn phyrexian_censor_locks_non_phyrexian_spells_and_taps_entrants() {
     cast(&mut g, censor, None).expect("a Phyrexian spell isn't limited");
     assert!(!g.battlefield_find(censor).unwrap().tapped, "a Phyrexian creature enters untapped");
 }
+
+/// Golden Argosy (CR 702.122): attacking exiles each creature that crewed it
+/// this turn, and they come back tapped at the next end step.
+#[test]
+fn golden_argosy_flickers_its_crew_at_end_step() {
+    let mut g = pod(2);
+    let argosy = ready(&mut g, 0, catalog::golden_argosy());
+    let crew = ready(&mut g, 0, catalog::grizzly_bears());
+    let idle = ready(&mut g, 0, catalog::grizzly_bears());
+    act(&mut g, GameAction::Crew { vehicle: argosy, crew_creatures: vec![crew] }).expect("crew");
+    g.step = TurnStep::DeclareAttackers;
+    act(&mut g, GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: argosy,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    assert!(g.exile.iter().any(|c| c.id == crew), "the crew is exiled");
+    assert!(g.battlefield_find(idle).is_some(), "a creature that didn't crew stays");
+}
+
+/// Teferi, Who Slows the Sunset +1: of the chosen artifact, creature and land,
+/// yours untap and the others tap; you gain 2 life.
+#[test]
+fn teferi_who_slows_the_sunset_untaps_yours_and_taps_theirs() {
+    let mut g = pod(2);
+    let teferi = ready(&mut g, 0, catalog::teferi_who_slows_the_sunset());
+    let my_land = ready(&mut g, 0, catalog::wastes());
+    g.battlefield_find_mut(my_land).unwrap().tapped = true;
+    let their_bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    act(&mut g, GameAction::ActivateLoyaltyAbility {
+        card_id: teferi,
+        ability_index: 0,
+        target: Some(Target::Permanent(their_bear)),
+        x_value: None,
+    })
+    .expect("+1");
+    assert!(g.battlefield_find(their_bear).unwrap().tapped, "their creature taps");
+    assert_eq!(g.players[0].life, life + 2);
+}

@@ -1886,3 +1886,137 @@ pub fn harald_unites_the_elves() -> CardDefinition {
         ..permanent("Harald Unites the Elves", cost(&[generic(2), b(), g()]), CardType::Enchantment)
     }
 }
+
+/// Golden Argosy — {4} 3/6 legendary artifact Vehicle, crew 1. Whenever it
+/// attacks, exile each creature that crewed it this turn; return them tapped
+/// under their owners' control at the beginning of the next end step.
+pub fn golden_argosy() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 3,
+        toughness: 6,
+        keywords: vec![Keyword::Crew(1)],
+        triggered_abilities: vec![on_attack(Effect::ExileReturnToOwnerNextEndStep {
+            what: Selector::EachPermanent(R::Creature.and(R::CrewedSourceThisTurn)),
+            tapped: true,
+        })],
+        ..permanent("Golden Argosy", cost(&[generic(4)]), CardType::Artifact)
+    }
+}
+
+/// Tamiyo, Compleated Sage — {2}{G}{G/U/P}{U} planeswalker, loyalty 5,
+/// compleated. +1: tap up to one target artifact or creature; it doesn't untap
+/// during its controller's next untap step. −X: exile target nonland permanent
+/// card with mana value X from your graveyard; create a token copy of it.
+/// −7: create Tamiyo's Notebook.
+pub fn tamiyo_compleated_sage() -> CardDefinition {
+    let loyalty = |cost: i32, effect: Effect| crate::card::LoyaltyAbility { loyalty_cost: cost, effect, ..Default::default() };
+    let notebook = TokenDefinition {
+        name: "Tamiyo's Notebook".into(),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Book], ..Default::default() },
+        static_abilities: vec![static_ab(
+            "Spells you cast cost {2} less to cast.",
+            StaticEffect::CostReduction { filter: R::Any, amount: 2 },
+        )],
+        activated_abilities: vec![ActivatedAbility { tap_cost: true, effect: draw(1), ..Default::default() }],
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Tamiyo],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Compleated],
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Artifact.or(R::Creature),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::Target(0) },
+                        Effect::SkipNextUntap { what: Selector::Target(0) },
+                    ])),
+                },
+            ),
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 0,
+                x_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(
+                            R::Permanent.and(R::Nonland).and(R::ManaValueExactlyXFromCost).from_your_graveyard(),
+                        ),
+                        to: ZoneDest::Exile,
+                    },
+                    crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, Selector::Target(0)),
+                ]),
+            },
+            loyalty(-7, make(1, notebook)),
+        ],
+        ..permanent(
+            "Tamiyo, Compleated Sage",
+            cost(&[generic(2), g(), crate::mana::phyrexian_hybrid(Color::Green, Color::Blue), u()]),
+            CardType::Planeswalker,
+        )
+    }
+}
+
+/// Teferi, Who Slows the Sunset — {2}{W}{U} planeswalker, loyalty 4. +1: up to
+/// one target artifact, creature and land — untap yours, tap the rest; gain 2
+/// life. −2: top three, one to hand, the rest on the bottom. −7: an emblem
+/// untapping your permanents and drawing you a card on each opponent's turn.
+pub fn teferi_who_slows_the_sunset() -> CardDefinition {
+    let loyalty = |cost: i32, effect: Effect| crate::card::LoyaltyAbility { loyalty_cost: cost, effect, ..Default::default() };
+    let toggle = |filter: R| Effect::ApplyToTargets {
+        max_targets: 3,
+        min_targets: 0,
+        filter,
+        effect: Box::new(Effect::If {
+            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::ControlledByYou },
+            then: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+            else_: Box::new(Effect::Tap { what: Selector::Target(0) }),
+        }),
+    };
+    let on_their_step = |step: TurnStep, effect: Effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(step), EventScope::OpponentControl),
+        effect,
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Teferi],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            loyalty(1, Effect::Seq(vec![toggle(R::Artifact.or(R::Creature).or(R::Land)), gain(2)])),
+            loyalty(
+                -2,
+                Effect::LookPickToHand(Box::new(crate::effect::LookPick { count: Value::Const(3), ..Default::default() })),
+            ),
+            loyalty(
+                -7,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Teferi, Who Slows the Sunset".into(),
+                    triggered: vec![
+                        on_their_step(
+                            TurnStep::Upkeep,
+                            Effect::Untap { what: Selector::EachPermanent(R::ControlledByYou), up_to: None },
+                        ),
+                        on_their_step(TurnStep::Draw, draw(1)),
+                    ],
+                    statics: vec![],
+                },
+            ),
+        ],
+        ..permanent("Teferi, Who Slows the Sunset", cost(&[generic(2), w(), u()]), CardType::Planeswalker)
+    }
+}
