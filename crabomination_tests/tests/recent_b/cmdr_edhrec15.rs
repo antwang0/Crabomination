@@ -849,7 +849,13 @@ fn runadi_grows_big_creature_spells() {
     cast(&mut g, hoof, &[]).expect("craterhoof");
     let c = g.battlefield_find(hoof).unwrap();
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 4);
-    assert!(g.computed_permanent(hoof).unwrap().keywords().contains(&Keyword::Haste));
+    // Haste from the counters, on a creature that has none of its own.
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let haste = |g: &GameState| g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste);
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    assert!(!haste(&g), "two counters");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(haste(&g), "three counters");
 }
 
 /// Vraska, the Cutting Glare: with six lands, ETB destroys an opponent's
@@ -1225,4 +1231,92 @@ fn grafted_butcher_returns_for_a_sacrifice() {
     activate(&mut g, gb, 0, None).expect("return");
     assert!(g.battlefield_find(gb).is_some());
     assert!(g.battlefield_find(fodder).is_none());
+}
+
+/// Nevinyrral, Urborg Tyrant (CR 702.11d): an opponent's creature ability
+/// can't target it, an opponent's instant can. ETB makes a tapped Zombie per
+/// creature that died this turn.
+#[test]
+fn nevinyrral_is_hexproof_from_permanents_and_counts_the_dead() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[perm(bear)]).expect("one died");
+    let nev = g.add_card_to_hand(0, catalog::nevinyrral_urborg_tyrant());
+    cast(&mut g, nev, &[]).expect("nevinyrral");
+    let zombies: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Zombie").collect();
+    assert_eq!(zombies.len(), 1);
+    assert!(zombies[0].tapped);
+    let pinger = ready(&mut g, 1, catalog::prodigal_pyromancer());
+    g.priority.player_with_priority = 1;
+    let ping = |t: Target| GameAction::ActivateAbility {
+        card_id: pinger,
+        ability_index: 0,
+        target: Some(t),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    assert!(g.clone().perform_action(ping(perm(nev))).is_err(), "a creature's ability can't target it");
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    cast_as(&mut g, 1, shock, &[perm(nev)]).expect("an instant can");
+}
+
+/// Rise of the Dread Marn: a Zombie Berserker per nontoken creature that died
+/// this turn.
+#[test]
+fn rise_of_the_dread_marn_counts_nontoken_deaths() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        let b = ready(&mut g, 1, catalog::grizzly_bears());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, &[perm(b)]).expect("bolt");
+    }
+    let r = g.add_card_to_hand(0, catalog::rise_of_the_dread_marn());
+    cast(&mut g, r, &[]).expect("rise");
+    assert_eq!(tokens_named(&g, "Zombie Berserker"), 2);
+}
+
+/// Bane, Lord of Darkness: indestructible at half life; a nontoken creature
+/// of yours dying draws.
+#[test]
+fn bane_turns_indestructible_at_half_life() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let bane = ready(&mut g, 0, catalog::bane_lord_of_darkness());
+    let ind = |g: &GameState| g.computed_permanent(bane).unwrap().keywords().contains(&Keyword::Indestructible);
+    assert!(!ind(&g));
+    g.players[0].life = 10;
+    assert!(ind(&g), "10 of 20");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast_as(&mut g, 1, bolt, &[perm(bear)]).expect("bolt");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Body Launderer: dying returns a non-Rogue creature card with lesser or
+/// equal power.
+#[test]
+fn body_launderer_returns_a_smaller_creature() {
+    let mut g = pod(2);
+    let bl = ready(&mut g, 0, catalog::body_launderer());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast_as(&mut g, 1, bolt, &[perm(bl)]).expect("bolt the 3/3");
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Adept Watershaper: your other tapped creatures are indestructible, the
+/// untapped ones aren't.
+#[test]
+fn adept_watershaper_shields_tapped_creatures() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::adept_watershaper());
+    let tapped = ready(&mut g, 0, catalog::grizzly_bears());
+    let untapped = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let ind = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Indestructible);
+    assert!(ind(&g, tapped));
+    assert!(!ind(&g, untapped));
 }

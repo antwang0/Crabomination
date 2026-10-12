@@ -3206,3 +3206,109 @@ pub fn grafted_butcher() -> CardDefinition {
         ..creature("Grafted Butcher", cost(&[generic(1), b()]), vec![CreatureType::Phyrexian, CreatureType::Samurai], 2, 2)
     }
 }
+
+// ── Batch I ──────────────────────────────────────────────────────────────────
+
+/// Nevinyrral, Urborg Tyrant — {3}{W}{U}{B} 3/6 legendary Zombie Wizard,
+/// hexproof from artifacts, creatures and enchantments. ETB: a tapped 2/2
+/// black Zombie for each creature that died this turn. Dies: you may pay {1}
+/// to destroy all artifacts, creatures and enchantments.
+pub fn nevinyrral_urborg_tyrant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::HexproofFromArtifactsCreaturesEnchantments],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                make(
+                    Value::CreaturesDiedThisTurnTotal,
+                    token("Zombie", 2, 2, vec![Color::Black], vec![CreatureType::Zombie]),
+                ),
+                Effect::Tap { what: Selector::LastCreatedTokens },
+            ])),
+            crate::effect::shortcut::on_dies(Effect::MayPay {
+                description: "Pay {1} to destroy all artifacts, creatures, and enchantments?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::EachPermanent(R::Artifact.or(R::Creature).or(R::Enchantment)),
+                }),
+                else_: None,
+            }),
+        ],
+        ..legend(
+            "Nevinyrral, Urborg Tyrant",
+            cost(&[generic(3), w(), u(), b()]),
+            vec![CreatureType::Zombie, CreatureType::Wizard],
+            3,
+            6,
+        )
+    }
+}
+
+/// Rise of the Dread Marn — {2}{B} instant. X 2/2 black Zombie Berserkers, X =
+/// nontoken creatures that died this turn. Foretell {B}.
+pub fn rise_of_the_dread_marn() -> CardDefinition {
+    CardDefinition {
+        foretell_cost: Some(cost(&[b()])),
+        ..spell(
+            "Rise of the Dread Marn",
+            cost(&[generic(2), b()]),
+            CardType::Instant,
+            make(
+                Value::CreatureDeathsThisTurnMatching { filter: R::Not(Box::new(R::IsToken)) },
+                token("Zombie Berserker", 2, 2, vec![Color::Black], vec![CreatureType::Zombie, CreatureType::Berserker]),
+            ),
+        )
+    }
+}
+
+/// Bane, Lord of Darkness — {1}{W}{U}{B} 5/2 legendary God. Indestructible
+/// while your life is at most half your starting life. Another nontoken
+/// creature of yours dying draws you a card (the opponent's choice to offer a
+/// creature from your hand instead isn't modeled).
+pub fn bane_lord_of_darkness() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "As long as your life total is less than or equal to half your starting life total, Bane has indestructible.",
+            StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Indestructible,
+                condition: Predicate::ValueAtMost(
+                    Value::Times(Box::new(Value::Const(2)), Box::new(Value::LifeOf(PlayerRef::You))),
+                    Value::StartingLifeTotal,
+                ),
+            },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(trigger_is(R::Not(Box::new(R::IsToken)).and(R::OtherThanSource))),
+            effect: draw(1),
+        }],
+        ..legend("Bane, Lord of Darkness", cost(&[generic(1), w(), u(), b()]), vec![CreatureType::God], 5, 2)
+    }
+}
+
+/// Body Launderer — {2}{B}{B} 3/3 Ogre Rogue, deathtouch. Another nontoken
+/// creature of yours dying: it connives. Dies: return another target
+/// non-Rogue creature card with lesser or equal power from your graveyard to
+/// the battlefield.
+pub fn body_launderer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(trigger_is(R::Not(Box::new(R::IsToken)).and(R::OtherThanSource))),
+                effect: Effect::Connive { what: Selector::This, amount: Value::ONE },
+            },
+            crate::effect::shortcut::on_dies(Effect::Move {
+                what: target_filtered(
+                    R::Creature
+                        .and(R::InYourGraveyard)
+                        .and(R::OtherThanSource)
+                        .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Rogue))))
+                        .and(R::PowerAtMostSourcePower),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+        ],
+        ..creature("Body Launderer", cost(&[generic(2), b(), b()]), vec![CreatureType::Ogre, CreatureType::Rogue], 3, 3)
+    }
+}
