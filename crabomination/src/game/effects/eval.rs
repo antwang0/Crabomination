@@ -6283,6 +6283,9 @@ impl GameState {
                     R::SaddledSourceThisTurn => source.is_some_and(|s| {
                         self.battlefield_find(s).is_some_and(|m| m.saddled_by.contains(cid))
                     }),
+                    R::CrewedSourceThisTurn => source.is_some_and(|s| {
+                        self.battlefield_find(s).is_some_and(|m| m.crewed_by.contains(cid))
+                    }),
                     R::SpellNotCastFromHand => self.stack.iter().any(|si| matches!(
                         si,
                         StackItem::Spell { card: c, .. } if c.id == card.id && !c.cast_from_hand
@@ -7669,7 +7672,8 @@ impl GameState {
             | R::BlockedBySourceNowOrAsItLeft
             | R::BlockedSourceThisTurn
             | R::PlayerDamagedBySourceThisTurn | R::ControllerCombatDamagedBySourceThisTurn
-            | R::SaddledSourceThisTurn => false,
+            | R::SaddledSourceThisTurn
+            | R::CrewedSourceThisTurn => false,
         }
     }
 }

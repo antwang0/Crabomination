@@ -3547,6 +3547,10 @@ pub enum SelectionRequirement {
     /// CR 702.171 — this creature saddled the evaluating source this turn
     /// (`CardInstance.saddled_by`; The Gitrog's sacrifice filter).
     SaddledSourceThisTurn,
+    /// CR 702.122 — this creature crewed the evaluating source this turn
+    /// (`CardInstance.crewed_by`; Golden Argosy's "each creature that crewed
+    /// it this turn").
+    CrewedSourceThisTurn,
     ManaValueAtMost(u32),
     /// "…with mana value X or less, where X is the number of players you
     /// attacked this combat" (Custodi Soulcaller).
