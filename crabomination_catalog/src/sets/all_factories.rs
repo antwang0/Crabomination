@@ -13558,6 +13558,7 @@ static DECKS: &[Factory] = &[
     super::decks::sword_of_wealth_and_power,
     super::decks::relentless_dead,
     super::decks::chiss_goria_forge_tyrant,
+    super::decks::the_ghoul_gunslinger,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

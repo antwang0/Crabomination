@@ -1803,3 +1803,34 @@ pub fn chiss_goria_forge_tyrant() -> CardDefinition {
         ..legend("Chiss-Goria, Forge Tyrant", cost(&[generic(6), r(), r(), r()]), vec![CreatureType::Dragon], 5, 4)
     }
 }
+
+/// The Ghoul, Gunslinger — {1}{B}{B} 2/3 legendary first-strike Zombie
+/// Mutant Rogue. Whenever it or another nontoken Zombie or Mutant you control
+/// dies, target player gets two rad counters; if that's you, a Treasure.
+pub fn the_ghoul_gunslinger() -> CardDefinition {
+    let zombie_or_mutant = R::HasCreatureType(CreatureType::Zombie).or(R::HasCreatureType(CreatureType::Mutant));
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: zombie_or_mutant.and(R::Not(Box::new(R::IsToken))),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::AddRadCounters { who: target_filtered(R::Player), amount: Value::Const(2) },
+                Effect::If {
+                    cond: Predicate::SamePlayer(PlayerRef::Target(0), PlayerRef::You),
+                    then: Box::new(make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token())),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..legend(
+            "The Ghoul, Gunslinger",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Zombie, CreatureType::Mutant, CreatureType::Rogue],
+            2,
+            3,
+        )
+    }
+}

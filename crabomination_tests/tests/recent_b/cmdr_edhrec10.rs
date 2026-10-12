@@ -1199,3 +1199,19 @@ fn chiss_goria_forges_from_the_top() {
     assert!(granted(ring) && granted(ring2));
     assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(cg)).count(), 5);
 }
+
+/// The Ghoul, Gunslinger: a nontoken Zombie of yours dying gives a target
+/// player two rad counters (a Treasure when it's you).
+#[test]
+fn the_ghoul_irradiates() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_ghoul_gunslinger());
+    let z = ready(&mut g, 0, catalog::relentless_dead());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].hostile_player_targets = true;
+    cast(&mut g, bolt, &[perm(z)]).expect("bolt");
+    assert_eq!(g.players[1].rad_counters + g.players[0].rad_counters, 2);
+    if g.players[0].rad_counters == 2 {
+        assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
+    }
+}
