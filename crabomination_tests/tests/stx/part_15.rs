@@ -540,9 +540,9 @@ fn cr_706_2_no_modifier_stays_in_low_arm() {
 }
 
 #[test]
-fn cr_706_2_negative_modifier_floors_at_one() {
-    // Natural 1 with a -5 modifier floors at 1 (a die result is never
-    // reduced below 1), so it lands in the 1-6 arm (lose 1).
+fn cr_706_2_negative_modifier_floors_at_zero() {
+    // Natural 1 with a -5 modifier is a result of 0 (CR 706.2 — a modified
+    // result can be 0 or less), below the table's 1-6 arm: nothing happens.
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::DieRoll(1)]));
@@ -553,8 +553,7 @@ fn cr_706_2_negative_modifier_floors_at_one() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("die roll sorcery castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, you_before - 1,
-        "1 - 5 floors at 1, still in the 1-6 arm");
+    assert_eq!(g.players[0].life, you_before, "1 - 5 is 0, outside every arm");
 }
 
 #[test]

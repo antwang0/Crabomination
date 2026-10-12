@@ -669,7 +669,7 @@ fn plumb_the_forbidden_at_x_two_sacs_two_draws_three_loses_three() {
 }
 
 #[test]
-fn frost_trickster_taps_and_stuns_target_on_etb() {
+fn frost_trickster_taps_and_freezes_target_on_etb() {
     let mut g = two_player_game();
     // Untapped creature on opponent's battlefield.
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -686,8 +686,10 @@ fn frost_trickster_taps_and_stuns_target_on_etb() {
 
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert!(bear_card.tapped, "target should be tapped");
-    assert_eq!(bear_card.counter_count(CounterType::Stun), 1,
-        "target should have a stun counter");
+    // CR 502.3 — "doesn't untap during its controller's next untap step",
+    // not a stun counter.
+    assert!(bear_card.skip_next_untap, "target skips its next untap");
+    assert_eq!(bear_card.counter_count(CounterType::Stun), 0);
 }
 
 #[test]
