@@ -97,7 +97,7 @@ impl GameState {
             return false;
         }
         let Some(c) = self.battlefield.find_by_id(card_id) else { return false };
-        if !(c.definition.is_creature() || c.definition.is_planeswalker()) {
+        if !(self.computed_is_creature(c) || self.computed_has_card_type(c, crate::card::CardType::Planeswalker)) {
             return false;
         }
         // A card model reads from its new zone; a token that left is gone.
