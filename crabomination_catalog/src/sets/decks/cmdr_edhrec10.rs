@@ -1703,3 +1703,40 @@ pub fn tetzimoc_primal_death() -> CardDefinition {
         )
     }
 }
+
+/// Sword of Wealth and Power — {3} Equipment, equip {2}. Equipped creature
+/// gets +2/+2 and protection from instants and from sorceries; its combat
+/// damage to a player makes a Treasure and copies your next instant or
+/// sorcery spell this turn.
+pub fn sword_of_wealth_and_power() -> CardDefinition {
+    CardDefinition {
+        name: "Sword of Wealth and Power",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![
+                Keyword::ProtectionFromCardType(CardType::Instant),
+                Keyword::ProtectionFromCardType(CardType::Sorcery),
+            ],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token()),
+                    Effect::OnYourNextInstantSorceryThisTurn {
+                        body: Box::new(Effect::CopySpellMayChooseTargets {
+                            what: Selector::TriggerSource,
+                            count: Value::ONE,
+                        }),
+                    },
+                ]),
+            }],
+            triggers_on_equipment: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

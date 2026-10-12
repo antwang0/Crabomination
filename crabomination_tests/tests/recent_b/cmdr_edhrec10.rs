@@ -1126,3 +1126,33 @@ fn tetzimoc_hunts_its_prey() {
     cast(&mut g, t, &[]).expect("cast");
     assert!(g.battlefield_find(foe).is_none());
 }
+
+/// Sword of Wealth and Power: a hit makes a Treasure and copies the next
+/// instant cast this turn.
+#[test]
+fn sword_of_wealth_and_power_copies_the_next_instant() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    let sword = ready(&mut g, 0, catalog::sword_of_wealth_and_power());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: sword, target: bears }).expect("equip");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    for _ in 0..12 {
+        if tokens_of(&g, 0, "Treasure") > 0 {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
+    drain_stack(&mut g);
+    g.step = TurnStep::PostCombatMain;
+    let hand = g.players[0].hand.len();
+    let u = g.add_card_to_hand(0, catalog::union_of_the_third_path());
+    cast(&mut g, u, &[]).expect("cast");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the copy drew too");
+}
