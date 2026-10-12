@@ -4884,6 +4884,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BORBORYGMOS_ENRAGED_COMMANDERS,
             main: decks::BORBORYGMOS_ENRAGED_MAIN,
         },
+        // Seat 739: Tyvar the Bellicose's EDHREC average deck. `--pod-decks 739`.
+        PodDeck {
+            name: "Tyvar the Bellicose (BG)",
+            commanders: decks::TYVAR_THE_BELLICOSE_COMMANDERS,
+            main: decks::TYVAR_THE_BELLICOSE_MAIN,
+        },
+        // Seat 740: Avacyn, Angel of Hope's EDHREC average deck. `--pod-decks 740`.
+        PodDeck {
+            name: "Avacyn, Angel of Hope (W)",
+            commanders: decks::AVACYN_COMMANDERS,
+            main: decks::AVACYN_MAIN,
+        },
+        // Seat 741: Ultima, Origin of Oblivion's EDHREC average deck. `--pod-decks 741`.
+        PodDeck {
+            name: "Ultima, Origin of Oblivion (C)",
+            commanders: decks::ULTIMA_COMMANDERS,
+            main: decks::ULTIMA_MAIN,
+        },
+        // Seat 742: Esix, Fractal Bloom's EDHREC average deck. `--pod-decks 742`.
+        PodDeck {
+            name: "Esix, Fractal Bloom (UG)",
+            commanders: decks::ESIX_COMMANDERS,
+            main: decks::ESIX_MAIN,
+        },
+        // Seat 743: Teysa, Orzhov Scion's EDHREC average deck. `--pod-decks 743`.
+        PodDeck {
+            name: "Teysa, Orzhov Scion (WB)",
+            commanders: decks::TEYSA_2_COMMANDERS,
+            main: decks::TEYSA_2_MAIN,
+        },
     ]
 }
 
@@ -7387,6 +7417,11 @@ mod tests {
             ("Pir, Imaginative Rascal and Toothy, Imaginary Friend", &[0x0C06]),
             ("Iroh, Tea Master", &[0x0C07]),
             ("Borborygmos Enraged", &[0x0C08]),
+            ("Tyvar the Bellicose", &[0x0C09]),
+            ("Avacyn, Angel of Hope", &[0x0C0A]),
+            ("Ultima, Origin of Oblivion", &[0x0C0B]),
+            ("Esix, Fractal Bloom", &[0x0C0C]),
+            ("Teysa, Orzhov Scion", &[0x0C0D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
