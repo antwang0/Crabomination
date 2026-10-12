@@ -35104,6 +35104,8 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::IsSource
         | R::TurnedFaceUpThisTurn
         | R::FoughtThisTurn
+        // A counter-count threshold (Runadi's "three or more +1/+1 counters").
+        | R::WithCounterAtLeast(..)
         | R::HasSuspend
         | R::HasAdventure
         | R::PairedWithSource

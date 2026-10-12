@@ -748,3 +748,16 @@ fn seat_residuals_steel_seraph_axe_firebolt() {
     cast(&mut g, ff, &[perm(giant)]).expect("firebolt");
     assert!(g.battlefield_find(giant).is_none(), "2 + the Adventure card = 3");
 }
+
+/// Runadi's haste grant reads a live counter count: a creature with three
+/// +1/+1 counters has haste, one with two doesn't.
+#[test]
+fn runadi_grants_haste_at_three_counters() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::runadi_behemoth_caller());
+    let (a, b) = (ready(&mut g, 0, catalog::grizzly_bears()), ready(&mut g, 0, catalog::grizzly_bears()));
+    g.battlefield_find_mut(a).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    g.battlefield_find_mut(b).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let haste = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste);
+    assert!(haste(&g, a) && !haste(&g, b));
+}
