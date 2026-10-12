@@ -5995,10 +5995,12 @@ impl GameState {
                         self.computed_is_creature(card) && self.effective_power(card) <= *n
                     }
                     R::PowerAtMostSourcePower => {
+                        // A death trigger's source has left the battlefield
+                        // (Body Launderer): read the card where it now is.
                         self.computed_is_creature(card)
-                            && source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
-                                self.effective_power(card) <= self.effective_power(src)
-                            })
+                            && source
+                                .and_then(|s| self.battlefield_find(s).or_else(|| self.find_card_anywhere(s)))
+                                .is_some_and(|src| self.effective_power(card) <= self.effective_power(src))
                     }
                     R::ToughnessAtMost(n) => {
                         self.computed_is_creature(card) && self.effective_toughness(card) <= *n

@@ -854,6 +854,9 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::HexproofFromColor(_) => "Can't be targeted by that color's spells or abilities opponents control.",
         K::HexproofExceptColors(_) => "Can't be targeted by opponents' spells or abilities unless they include one of the listed colors.",
         K::HexproofFromAbilities => "Can't be the target of activated or triggered abilities opponents control.",
+        K::HexproofFromArtifactsCreaturesEnchantments => {
+            "Can't be the target of artifact, creature, or enchantment spells or abilities opponents control."
+        }
         K::Shroud => "Can't be the target of any spells or abilities.",
         K::Infect => "Damages creatures with -1/-1 counters and players with poison.",
         K::Wither => "Damages creatures as -1/-1 counters instead.",
@@ -1420,6 +1423,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Replicate(c) => format!("Replicate {}", c.summary()),
         K::ReplicateEnergy(n) => format!("Replicate—Pay {}", "{E}".repeat(*n as usize)),
         K::HexproofFromAbilities => "Hexproof from abilities".into(),
+        K::HexproofFromArtifactsCreaturesEnchantments => "Hexproof from artifacts, creatures, and enchantments".into(),
         K::Mayhem(c) => format!("Mayhem {}", c.summary()),
         K::Harmonize(c) => format!("Harmonize {}", c.summary()),
         K::Disturb(c) => format!("Disturb {}", c.summary()),

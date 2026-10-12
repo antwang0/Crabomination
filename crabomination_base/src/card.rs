@@ -1830,6 +1830,10 @@ pub enum Keyword {
     /// includes *none* of the listed colors. `HexproofExceptColors(vec![Green])`
     /// = hexproof from nongreen opponents.
     HexproofExceptColors(Vec<Color>),
+    /// CR 702.11d — "hexproof from artifacts, creatures, and enchantments"
+    /// (Nevinyrral, Urborg Tyrant): an opponent's artifact, creature or
+    /// enchantment spell, or an ability whose source is one, can't target it.
+    HexproofFromArtifactsCreaturesEnchantments,
     /// CR 702.11d — "hexproof from [quality]" specialized to abilities: can't
     /// be the target of activated or triggered abilities opponents control
     /// (still targetable by spells). Volatile Stormdrake.

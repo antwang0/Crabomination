@@ -81,6 +81,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         HexproofFromColor(_) => "HexC",
         HexproofExceptColors(_) => "HexX",
         HexproofFromAbilities => "HexA",
+        HexproofFromArtifactsCreaturesEnchantments => "HexACE",
         HexproofFromMonocolored => "HexM",
         Shroud => "Shr",
         Unblockable => "Unb",

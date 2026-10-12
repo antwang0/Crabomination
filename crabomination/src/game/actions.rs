@@ -10038,6 +10038,16 @@ impl GameState {
                         Keyword::HexproofFromItsColors => cp.as_ref().is_some_and(|cp| {
                             cp.colors.iter().any(|c| spell_colors.contains(c))
                         }),
+                        Keyword::HexproofFromArtifactsCreaturesEnchantments => {
+                            card.definition.card_types.iter().any(|t| {
+                                matches!(
+                                    t,
+                                    crate::card::CardType::Artifact
+                                        | crate::card::CardType::Creature
+                                        | crate::card::CardType::Enchantment
+                                )
+                            })
+                        }
                         _ => false,
                     })
                 }),
@@ -16556,6 +16566,7 @@ impl GameState {
                     | Keyword::ProtectionFromColorsOutsideCommanderIdentity
                     | Keyword::ProtectionFromEverything
                     | Keyword::HexproofExceptColors(_)
+                    | Keyword::HexproofFromArtifactsCreaturesEnchantments
             )
         }) && !(src_is_opponent && (printed_hexproof_color || turn_hexproof_color))
         {
@@ -16585,6 +16596,10 @@ impl GameState {
                 Keyword::HexproofFromMonocolored => src.colors.len() == 1,
                 Keyword::HexproofFromMulticolored => src.colors.len() >= 2,
                 Keyword::HexproofFromItsColors => tgt.colors.iter().any(|c| src.colors.contains(c)),
+                Keyword::HexproofFromArtifactsCreaturesEnchantments => src
+                    .card_types()
+                    .iter()
+                    .any(|t| matches!(t, CardType::Artifact | CardType::Creature | CardType::Enchantment)),
                 _ => false,
             }) {
                 return true;

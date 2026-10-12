@@ -64,6 +64,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::HexproofFromMonocolored | Keyword::HexproofFromMulticolored => "Hexproof from",
         Keyword::HexproofExceptColors(_) => "Hexproof except",
         Keyword::HexproofFromAbilities => "Hexproof from abilities",
+        Keyword::HexproofFromArtifactsCreaturesEnchantments => "Hexproof from artifacts, creatures, and enchantments",
         Keyword::Shroud => "Shroud",
         Keyword::Flash => "Flash",
         Keyword::Defender => "Defender",
