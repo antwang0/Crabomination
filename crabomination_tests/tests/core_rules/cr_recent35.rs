@@ -6,7 +6,7 @@
 //! - CR 506.4 — a blocker leaving combat stops blocking every attacker.
 //! - CR 603.6e — Lumbering Battlement's any-number exile-until-it-leaves.
 
-use crabomination::card::{CardDefinition, CounterType, Keyword};
+use crabomination::card::{CardDefinition, Keyword};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
@@ -164,7 +164,7 @@ fn cr_509_3b_blocks_a_creature_reaches_every_blocked_attacker() {
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     for a in [a1, a2] {
-        assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::Stun), 1);
+        assert!(g.battlefield_find(a).unwrap().skip_next_untap);
     }
 }
 

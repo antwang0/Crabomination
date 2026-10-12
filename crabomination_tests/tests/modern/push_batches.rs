@@ -1682,11 +1682,10 @@ fn convolute_counters_unpaid_spell() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "uncounterable-pay failed → countered");
 }
 
-/// Frost Breath taps two creatures and stuns them (skip-next-untap).
+/// Frost Breath taps two creatures; they skip their next untap.
 #[test]
 fn frost_breath_taps_and_stuns() {
     use crabomination::game::types::Target;
-    use crabomination::card::CounterType;
     let mut g = two_player_game();
     let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -1700,7 +1699,7 @@ fn frost_breath_taps_and_stuns() {
     drain_stack(&mut g);
     let ra = g.battlefield_find(a).unwrap();
     assert!(ra.tapped, "tapped");
-    assert_eq!(ra.counter_count(CounterType::Stun), 1, "stun counter applied");
+    assert!(ra.skip_next_untap, "skips its next untap");
 }
 
 /// CR 601.2c — "up to two target creatures": one target, or none, is a
@@ -1708,7 +1707,6 @@ fn frost_breath_taps_and_stuns() {
 #[test]
 fn cr_601_2c_frost_breath_up_to_two_takes_one_or_none() {
     use crabomination::game::types::Target;
-    use crabomination::card::CounterType;
     let mut g = two_player_game();
     let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     for target in [Some(Target::Permanent(a)), None] {
@@ -1723,7 +1721,7 @@ fn cr_601_2c_frost_breath_up_to_two_takes_one_or_none() {
     }
     let ra = g.battlefield_find(a).unwrap();
     assert!(ra.tapped);
-    assert_eq!(ra.counter_count(CounterType::Stun), 1);
+    assert!(ra.skip_next_untap);
 }
 
 /// Furnace of Rath doubles damage: a 3-damage bolt deals 6.
@@ -2104,10 +2102,9 @@ fn phyrexian_gargantua_etb_draws_two_loses_two() {
     assert_eq!(g.players[0].life, life - 2, "lost 2");
 }
 
-/// Frost Lynx taps and stuns an opponent's creature on ETB.
+/// Frost Lynx taps an opponent's creature on ETB; it skips its next untap.
 #[test]
 fn frost_lynx_taps_and_stuns() {
-    use crabomination::card::CounterType;
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -2120,7 +2117,7 @@ fn frost_lynx_taps_and_stuns() {
     }).expect("castable");
     drain_stack(&mut g);
     let b = g.battlefield_find(bear).unwrap();
-    assert!(b.tapped && b.counter_count(CounterType::Stun) == 1, "tapped + stunned");
+    assert!(b.tapped && b.skip_next_untap, "tapped and held");
 }
 
 /// Veteran Armorer gives other creatures you control +0/+1 (continuous).
@@ -2149,10 +2146,9 @@ fn attended_knight_etb_makes_soldier() {
         && c.definition.name == "Soldier").count(), 1, "made a Soldier token");
 }
 
-/// Kor Hookmaster taps an opponent's creature and stuns it on ETB.
+/// Kor Hookmaster taps an opponent's creature on ETB; it skips its next untap.
 #[test]
 fn kor_hookmaster_taps_and_stuns() {
-    use crabomination::card::CounterType;
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -2166,7 +2162,7 @@ fn kor_hookmaster_taps_and_stuns() {
     drain_stack(&mut g);
     let b = g.battlefield_find(bear).unwrap();
     assert!(b.tapped, "opp creature tapped");
-    assert_eq!(b.counter_count(CounterType::Stun), 1, "got a stun counter");
+    assert!(b.skip_next_untap, "skips its next untap");
 }
 
 /// Indrik Stomphowler destroys a target artifact or enchantment on ETB.

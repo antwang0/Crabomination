@@ -182,11 +182,7 @@ pub fn frost_trickster() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByOpponent),
                     ),
                 },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
             ]),
         }],
         ..Default::default()

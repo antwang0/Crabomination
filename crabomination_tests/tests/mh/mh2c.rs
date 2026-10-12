@@ -401,7 +401,7 @@ fn rishadan_dockhand_taps_land() {
     assert!(g.battlefield_find(land).unwrap().tapped);
 }
 
-/// Said returns an instant/sorcery from the graveyard; Done stuns two.
+/// Said returns an instant/sorcery from the graveyard; Done taps and holds two.
 #[test]
 fn said_done_halves() {
     let mut g = two_player_game();
@@ -418,7 +418,7 @@ fn said_done_halves() {
     g.dispatch_triggers_for_events(&events);
     let tapped = g.battlefield_find(a).unwrap();
     assert!(tapped.tapped, "Done taps");
-    assert_eq!(tapped.counter_count(CounterType::Stun), 1, "and stuns");
+    assert!(tapped.skip_next_untap, "and holds");
 }
 
 /// Slag Strider's affinity discounts and its sac-ability pings.

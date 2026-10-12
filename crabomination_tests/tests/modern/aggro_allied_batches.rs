@@ -615,11 +615,10 @@ fn patchwork_automaton_grows_on_artifact_cast() {
         "gained a +1/+1 counter when an artifact spell was cast");
 }
 
-/// Sleep taps every creature the target player controls and stuns them all
-/// (skip-next-untap via a Stun counter).
+/// Sleep taps every creature the target player controls; they skip their
+/// next untap step.
 #[test]
 fn sleep_taps_and_stuns_all_target_player_creatures() {
-    use crabomination::card::CounterType;
     let mut g = two_player_game();
     let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -631,10 +630,10 @@ fn sleep_taps_and_stuns_all_target_player_creatures() {
     for c in [a, b] {
         let r = g.battlefield_find(c).unwrap();
         assert!(r.tapped, "opponent creature tapped");
-        assert_eq!(r.counter_count(CounterType::Stun), 1, "stun counter applied");
+        assert!(r.skip_next_untap, "skips its next untap");
     }
     let mine = g.battlefield_find(own).unwrap();
-    assert!(!mine.tapped && mine.counter_count(CounterType::Stun) == 0,
+    assert!(!mine.tapped && !mine.skip_next_untap,
         "our own creature is untouched");
 }
 

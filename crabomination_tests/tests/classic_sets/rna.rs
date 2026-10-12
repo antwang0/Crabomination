@@ -650,7 +650,7 @@ fn grotesque_demise_exiles_small() {
     assert!(g.exile.iter().any(|c| c.id == small), "power-2 creature exiled");
 }
 
-/// Chillbringer taps an opponent's creature and stuns it.
+/// Chillbringer taps an opponent's creature, which skips its next untap.
 #[test]
 fn chillbringer_taps_and_stuns() {
     let mut g = two_player_game();
@@ -660,7 +660,7 @@ fn chillbringer_taps_and_stuns() {
     g.resolve_effect(&effect, &ctx).unwrap();
     let c = g.battlefield_find(foe).unwrap();
     assert!(c.tapped, "opponent creature tapped");
-    assert_eq!(c.counter_count(CounterType::Stun), 1, "gets a stun counter");
+    assert!(c.skip_next_untap, "skips its next untap");
 }
 
 /// Haazda Officer pumps a creature you control on entry.
@@ -1585,7 +1585,7 @@ fn incubation_incongruity_frog() {
     assert_eq!(frogs, 1, "controller gets a 3/3 Frog Lizard");
 }
 
-/// Sharktocrab taps and stuns an opponent's creature when it adapts.
+/// Sharktocrab taps an opponent's creature when it adapts; it skips its next untap.
 #[test]
 fn sharktocrab_taps_on_counter() {
     let mut g = two_player_game();
@@ -1597,7 +1597,7 @@ fn sharktocrab_taps_on_counter() {
     let _ = shark;
     g.resolve_effect(&eff, &ctx).unwrap();
     assert!(g.battlefield_find(victim).unwrap().tapped, "opponent creature tapped");
-    assert_eq!(g.battlefield_find(victim).unwrap().counters.get(&CounterType::Stun).copied().unwrap_or(0), 1, "stunned");
+    assert!(g.battlefield_find(victim).unwrap().skip_next_untap, "held");
 }
 
 /// Growth-Chamber Guardian's counter trigger tutors another copy by name.

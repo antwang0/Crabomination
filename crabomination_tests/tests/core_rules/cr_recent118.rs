@@ -1539,3 +1539,64 @@ fn cr_608_2_a_reveal_pick_and_a_counter_count_spend_their_answers() {
     assert!(g.battlefield_find(bear).is_some());
     assert_eq!(g.battlefield_find(ox).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ── CR 502.3: "doesn't untap during its controller's next untap step" ──────
+
+fn cast_at(g: &mut GameState, id: crabomination::card::CardId, target: Option<Target>) {
+    for c in [crabomination::mana::Color::Blue, crabomination::mana::Color::White] {
+        g.players[0].mana_pool.add(c, 10);
+    }
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(crabomination::game::types::GameAction::CastSpell {
+        card_id: id,
+        target,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(g);
+}
+
+fn untap_step(g: &mut GameState, seat: usize) {
+    g.active_player_idx = seat;
+    g.do_untap();
+}
+
+fn tapped(g: &GameState, id: crabomination::card::CardId) -> bool {
+    g.battlefield_find(id).expect("on the battlefield").tapped
+}
+
+/// CR 502.3 — the rider is one skipped untap and no counter (a stun counter,
+/// CR 122.1d, is a different rule): sixteen cards used to fake it with one.
+#[test]
+fn cr_502_3_frost_titans_hold_skips_one_untap_and_leaves_no_counter() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let titan = g.add_card_to_hand(0, catalog::frost_titan());
+    cast_at(&mut g, titan, None);
+    assert!(tapped(&g, bear));
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 0);
+    untap_step(&mut g, 1);
+    assert!(tapped(&g, bear), "the next untap step is skipped");
+    untap_step(&mut g, 1);
+    assert!(!tapped(&g, bear), "and only that one");
+}
+
+/// CR 502.3 — the skip names *its controller's* untap step: a Seedborn Muse
+/// untap during another player's step untaps it and doesn't spend the skip.
+#[test]
+fn cr_502_3_skip_next_untap_ignores_a_seedborn_untap() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::seedborn_muse());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let breath = g.add_card_to_hand(0, catalog::frost_breath());
+    cast_at(&mut g, breath, Some(Target::Permanent(bear)));
+    assert!(tapped(&g, bear));
+    untap_step(&mut g, 0);
+    assert!(!tapped(&g, bear), "seat 0's untap step isn't the bear's controller's");
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    untap_step(&mut g, 1);
+    assert!(tapped(&g, bear), "the skip still waits for seat 1's own step");
+}

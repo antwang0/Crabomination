@@ -1178,11 +1178,7 @@ pub fn chillbringer() -> CardDefinition {
             Effect::Tap {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::ONE,
-            },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
         ]))],
         ..body(
             "Chillbringer",
@@ -3817,11 +3813,7 @@ pub fn sharktocrab() -> CardDefinition {
                 Effect::Tap {
                     what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::ONE,
-                },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
             ]),
         }],
         ..body(
@@ -4374,7 +4366,7 @@ pub fn swirling_torrent() -> CardDefinition {
 }
 
 /// Mesmerizing Benthid — {3}{U}{U} 4/5 Octopus. ETB create two 0/2 blue Illusion
-/// tokens whose block stuns the blocked creature. It has hexproof as long as
+/// tokens whose block keeps the blocked creature tapped through its next untap. It has hexproof as long as
 /// you control an Illusion.
 pub fn mesmerizing_benthid() -> CardDefinition {
     let illusion = || TokenDefinition {
@@ -4386,11 +4378,7 @@ pub fn mesmerizing_benthid() -> CardDefinition {
         subtypes: creatures(vec![CreatureType::Illusion]),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: Selector::BlockedAttacker,
-                kind: CounterType::Stun,
-                amount: Value::ONE,
-            },
+            effect: Effect::SkipNextUntap { what: Selector::BlockedAttacker },
         }],
         ..Default::default()
     };

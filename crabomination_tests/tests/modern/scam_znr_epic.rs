@@ -637,7 +637,7 @@ fn floodpits_drowner_stuns_then_shuffles_both_away() {
     g.players[0].mana_pool.add_colorless(1);
     cast_at(&mut g, fish, Target::Permanent(bear));
     let b = g.battlefield_find(bear).unwrap();
-    assert!(b.tapped && b.counter_count(crabomination::card::CounterType::Stun) == 1, "tapped + stunned");
+    assert!(b.tapped && b.counter_count(crabomination::card::CounterType::Stun) == 1, "tapped and held");
 
     let fish_id = g.battlefield.iter().find(|c| c.definition.name == "Floodpits Drowner").unwrap().id;
     g.battlefield_find_mut(fish_id).unwrap().summoning_sick = false;
@@ -1283,10 +1283,9 @@ fn stonework_packbeast_adds_mana_for_two_with_no_tap() {
     assert!(!g.battlefield_find(pb).unwrap().tapped, "no tap in the cost");
 }
 
-/// Cleric of Chill Depths stuns what it blocks.
+/// Cleric of Chill Depths holds what it blocks through its next untap.
 #[test]
 fn cleric_of_chill_depths_stuns_blocked() {
-    use crabomination::card::CounterType;
     use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
     let cleric = g.add_card_to_battlefield(0, catalog::cleric_of_chill_depths());
@@ -1301,8 +1300,7 @@ fn cleric_of_chill_depths_stuns_blocked() {
     g.step = TurnStep::DeclareBlockers;
     g.perform_action(GameAction::DeclareBlockers(vec![(cleric, attacker)])).expect("block");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(attacker).unwrap().counter_count(CounterType::Stun), 1,
-        "blocked attacker is stunned");
+    assert!(g.battlefield_find(attacker).unwrap().skip_next_untap, "blocked attacker skips its next untap");
 }
 
 /// Anticognition counters a creature spell unless its controller pays {2}.

@@ -1855,11 +1855,7 @@ pub fn kor_hookmaster() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByOpponent),
                     ),
                 },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
             ]),
         }],
         ..Default::default()
@@ -1949,11 +1945,7 @@ pub fn frost_lynx() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByOpponent),
                     ),
                 },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
             ]),
         }],
         ..Default::default()

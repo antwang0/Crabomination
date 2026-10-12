@@ -1102,7 +1102,6 @@ fn cr_505_1b_additional_combat_phase_lets_attacker_strike_twice() {
 
 #[test]
 fn wall_of_frost_stuns_the_creature_it_blocks() {
-    use crabomination::card::CounterType;
     let mut g = two_player_game();
     // P0 attacks with a 2/2; P1's Wall of Frost blocks it.
     let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1117,10 +1116,10 @@ fn wall_of_frost_stuns_the_creature_it_blocks() {
     advance_to(&mut g, TurnStep::DeclareBlockers);
     g.perform_action(GameAction::DeclareBlockers(vec![(wall, atk)])).expect("wall blocks");
     drain_stack(&mut g);
-    // The blocked attacker carries a Stun counter (the BlockedAttacker selector
+    // The blocked attacker skips its next untap (the BlockedAttacker selector
     // bound it correctly), and survives the 0-power wall.
     let a = g.battlefield_find(atk).expect("attacker survives the 0/7 wall");
-    assert_eq!(a.counter_count(CounterType::Stun), 1, "blocked creature got a Stun counter");
+    assert!(a.skip_next_untap, "blocked creature skips its next untap");
 }
 
 // ── CR 508.1 attack tax (Propaganda / Ghostly Prison) ───────────────────────

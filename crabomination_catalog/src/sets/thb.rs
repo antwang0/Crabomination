@@ -5276,11 +5276,7 @@ pub fn sleep_of_the_dead() -> CardDefinition {
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::ONE,
-            },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
         ]),
         ..Default::default()
     }
@@ -5685,11 +5681,7 @@ pub fn kiora_bests_the_sea_god() -> CardDefinition {
                         Effect::Tap {
                             what: opp_nonland(),
                         },
-                        Effect::AddCounter {
-                            what: opp_nonland(),
-                            kind: CounterType::Stun,
-                            amount: Value::ONE,
-                        },
+                        Effect::SkipNextUntap { what: opp_nonland() },
                     ])),
                 },
             ),

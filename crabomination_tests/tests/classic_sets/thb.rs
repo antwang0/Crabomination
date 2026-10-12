@@ -2861,7 +2861,7 @@ fn thryx_reduces_big_spells() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Shivan Dragon"));
 }
 
-/// Sleep of the Dead taps a creature and stuns it.
+/// Sleep of the Dead taps a creature, which skips its next untap.
 #[test]
 fn sleep_of_the_dead_taps_and_stuns() {
     let mut g = two_player_game();
@@ -2874,7 +2874,7 @@ fn sleep_of_the_dead_taps_and_stuns() {
     drain_stack(&mut g);
     let c = g.battlefield_find(bear).unwrap();
     assert!(c.tapped, "creature tapped");
-    assert_eq!(c.counter_count(CounterType::Stun), 1, "stun counter applied");
+    assert!(c.skip_next_untap, "skips its next untap");
 }
 
 /// Inevitable End forces the enchanted creature's controller to sacrifice a

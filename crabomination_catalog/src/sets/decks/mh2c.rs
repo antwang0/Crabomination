@@ -740,11 +740,7 @@ pub fn said_done() -> CardDefinition {
                         Effect::Tap {
                             what: Selector::Target(0),
                         },
-                        Effect::AddCounter {
-                            what: Selector::Target(0),
-                            kind: CounterType::Stun,
-                            amount: Value::ONE,
-                        },
+                        Effect::SkipNextUntap { what: Selector::Target(0) },
                     ])),
                 },
             },

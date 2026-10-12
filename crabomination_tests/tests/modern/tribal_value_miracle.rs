@@ -1210,7 +1210,6 @@ fn sphinx_of_the_steel_wind_has_its_keyword_suite() {
 
 #[test]
 fn frost_titan_etb_taps_and_stuns_a_permanent() {
-    use crabomination::card::CounterType;
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(1, catalog::island());
     let titan = g.add_card_to_battlefield(0, catalog::frost_titan());
@@ -1218,7 +1217,7 @@ fn frost_titan_etb_taps_and_stuns_a_permanent() {
     drain_stack(&mut g);
     let l = g.battlefield_find(land).unwrap();
     assert!(l.tapped, "tapped the target permanent");
-    assert_eq!(l.counter_count(CounterType::Stun), 1, "placed a stun counter");
+    assert!(l.skip_next_untap, "skips its next untap");
 }
 
 #[test]

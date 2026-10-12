@@ -433,11 +433,7 @@ pub fn wavecrash_triton() -> CardDefinition {
             Effect::Tap {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::ONE,
-            },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
         ]))],
         ..creature(
             "Wavecrash Triton",

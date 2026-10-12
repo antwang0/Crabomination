@@ -1348,7 +1348,7 @@ fn hands_of_binding_taps_and_stuns() {
     crabomination::game::cast_at(&mut g, spell, Target::Permanent(victim));
     let v = g.battlefield_find(victim).unwrap();
     assert!(v.tapped, "victim tapped");
-    assert_eq!(v.counter_count(CounterType::Stun), 1, "stun counter applied");
+    assert!(v.skip_next_untap, "skips its next untap");
 }
 
 #[test]

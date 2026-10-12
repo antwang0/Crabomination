@@ -219,11 +219,10 @@ fn world_rule_keeps_only_the_newest_world_permanent() {
 // ── Adventure (CR 715) ───────────────────────────────────────────────────────
 
 /// Stomp (Bonecrusher Giant's adventure) deals 2 damage and exiles the card,
-/// Queen of Ice's Rage of Winter taps a creature and stuns it (Stun counter),
-/// so it stays tapped through its controller's next untap step.
+/// Queen of Ice's Rage of Winter taps a creature, which stays tapped through
+/// its controller's next untap step (and no further).
 #[test]
 fn adventure_queen_of_ice_rage_taps_and_stuns() {
-    use crabomination::card::CounterType;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let qoi = g.add_card_to_hand(0, catalog::queen_of_ice());
@@ -235,12 +234,12 @@ fn adventure_queen_of_ice_rage_taps_and_stuns() {
     }).expect("cast Rage of Winter");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped, "bear tapped");
-    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 1, "stunned");
-    // Controller's untap step removes the Stun counter instead of untapping.
+    assert!(g.battlefield_find(bear).unwrap().skip_next_untap, "held");
     g.active_player_idx = 1;
     g.do_untap();
-    assert!(g.battlefield_find(bear).unwrap().tapped, "still tapped (stun consumed)");
-    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 0, "stun gone");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "still tapped through the next untap step");
+    g.do_untap();
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "and only that one");
 }
 
 /// which can then be cast as the creature half from exile.
@@ -1414,7 +1413,7 @@ fn queen_of_ice_taps_and_stuns_a_creature_it_deals_combat_damage_to() {
     drain_stack(&mut g);
     let w = g.battlefield_find(wall).expect("the 0/4 survives 2");
     assert!(w.tapped, "tapped by the trigger");
-    assert_eq!(w.counter_count(CounterType::Stun), 1, "and stunned");
+    assert!(w.skip_next_untap, "and held");
 }
 
 /// Merchant of the Vale's creature half — "{2}{R}, Discard a card: Draw a

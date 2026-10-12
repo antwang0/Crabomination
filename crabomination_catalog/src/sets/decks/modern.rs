@@ -22785,11 +22785,7 @@ pub fn queen_of_ice() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::Tap { what: Selector::Target(0) },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
             ]),
         }],
         adventure: Some(Box::new(Adventure {
@@ -22800,11 +22796,7 @@ pub fn queen_of_ice() -> CardDefinition {
                 Effect::Tap {
                     what: target_filtered(SelectionRequirement::Creature),
                 },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
             ]),
         })),
         ..Default::default()
@@ -29616,7 +29608,6 @@ pub fn legion_warboss() -> CardDefinition {
 /// creature, that creature doesn't untap during its controller's next untap
 /// step (a Stun counter, CR 701.46a / 122.1d).
 pub fn wall_of_frost() -> CardDefinition {
-    use crate::card::CounterType;
     use crate::effect::shortcut::blocks;
     CardDefinition {
         name: "Wall of Frost",
@@ -29628,11 +29619,7 @@ pub fn wall_of_frost() -> CardDefinition {
         },
         toughness: 7,
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![blocks(Effect::AddCounter {
-            what: Selector::BlockedAttacker,
-            kind: CounterType::Stun,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![blocks(Effect::SkipNextUntap { what: Selector::BlockedAttacker })],
         ..Default::default()
     }
 }
@@ -30607,8 +30594,7 @@ pub fn crimson_wisps() -> CardDefinition {
 }
 
 /// Sleep — {2}{U}{U} Sorcery. Tap all creatures target player controls. Those
-/// creatures don't untap during that player's next untap step (modeled via a
-/// stun counter — CR 122.1c).
+/// creatures don't untap during that player's next untap step.
 pub fn sleep() -> CardDefinition {
     CardDefinition {
         name: "Sleep",
@@ -30621,14 +30607,10 @@ pub fn sleep() -> CardDefinition {
                     filter: SelectionRequirement::Creature,
                 },
             },
-            Effect::AddCounter {
-                what: Selector::ControlledBy {
+            Effect::SkipNextUntap { what: Selector::ControlledBy {
                     who: PlayerRef::Target(0),
                     filter: SelectionRequirement::Creature,
-                },
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
-            },
+                } },
         ]),
         ..Default::default()
     }
@@ -33091,11 +33073,7 @@ pub fn cleric_of_chill_depths() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![blocks(Effect::AddCounter {
-            what: Selector::BlockedAttacker,
-            kind: CounterType::Stun,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![blocks(Effect::SkipNextUntap { what: Selector::BlockedAttacker })],
         ..Default::default()
     }
 }
@@ -39615,19 +39593,15 @@ pub fn sphinx_of_the_steel_wind() -> CardDefinition {
 
 /// Frost Titan — {4}{U}{U} 6/6 Giant. Ward {2} (CR's "counter unless pay {2}"
 /// targeting clause). When it enters or attacks, tap target permanent; it
-/// doesn't untap during its controller's next untap step (a stun counter).
+/// doesn't untap during its controller's next untap step.
 pub fn frost_titan() -> CardDefinition {
     use crate::card::WardCost;
-    let tap_and_stun = || {
+    let tap_and_hold = || {
         Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Permanent),
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
-            },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
         ])
     };
     CardDefinition {
@@ -39644,11 +39618,11 @@ pub fn frost_titan() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: tap_and_stun(),
+                effect: tap_and_hold(),
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: tap_and_stun(),
+                effect: tap_and_hold(),
             },
         ],
         ..Default::default()
@@ -44324,10 +44298,9 @@ pub fn midnight_recovery() -> CardDefinition {
 }
 
 /// Hands of Binding — {1}{U} Sorcery. Tap target creature an opponent controls;
-/// it doesn't untap during its controller's next untap step (a stun counter).
+/// it doesn't untap during its controller's next untap step.
 /// Cipher (CR 702.99).
 pub fn hands_of_binding() -> CardDefinition {
-    use crate::card::CounterType;
     CardDefinition {
         name: "Hands of Binding",
         cost: cost(&[generic(1), u()]),
@@ -44338,11 +44311,7 @@ pub fn hands_of_binding() -> CardDefinition {
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
-            },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
             Effect::Cipher,
         ]),
         ..Default::default()

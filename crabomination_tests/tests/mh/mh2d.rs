@@ -193,7 +193,7 @@ fn glorious_enforcer_life_gate() {
     assert!(g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
-/// Junk Winder's affinity counts tokens, and a token ETB stuns a permanent.
+/// Junk Winder's affinity counts tokens, and a token ETB taps and holds a permanent.
 #[test]
 fn junk_winder() {
     let mut g = two_player_game();
@@ -209,7 +209,7 @@ fn junk_winder() {
     drain_stack(&mut g);
     let c = g.battlefield_find(their_land).unwrap();
     assert!(c.tapped, "tapped");
-    assert_eq!(c.counter_count(CounterType::Stun), 1, "stunned");
+    assert!(c.skip_next_untap, "held");
 }
 
 /// Lazotep Chancellor amasses on discard when the {1} is paid.

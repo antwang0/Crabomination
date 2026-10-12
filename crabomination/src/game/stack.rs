@@ -4716,8 +4716,10 @@ impl GameState {
                 }
                 // CR 702.83 — an exerted creature skips this untap. The flag
                 // is one-shot: clear it so the creature untaps normally next
-                // turn. No tapped→untapped flip, so no Inspired trigger.
-                if card.skip_next_untap {
+                // turn. No tapped→untapped flip, so no Inspired trigger. It
+                // names *its controller's* untap step: a Seedborn untap on
+                // another player's step neither honours nor spends it.
+                if card.skip_next_untap && active {
                     card.skip_next_untap = false;
                     if active {
                         card.clear_summoning_sickness();

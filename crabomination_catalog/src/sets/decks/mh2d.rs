@@ -309,8 +309,8 @@ pub fn gouged_zealot() -> CardDefinition {
     }
 }
 
-/// Junk Winder — {5}{U}{U} 5/6, affinity for tokens. Token ETB: tap + stun
-/// target nonland permanent an opponent controls.
+/// Junk Winder — {5}{U}{U} 5/6, affinity for tokens. Token ETB: tap target
+/// nonland permanent an opponent controls; it skips its next untap.
 pub fn junk_winder() -> CardDefinition {
     CardDefinition {
         name: "Junk Winder",
@@ -337,11 +337,7 @@ pub fn junk_winder() -> CardDefinition {
                             .and(R::ControlledByOpponent),
                     ),
                 },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::ONE,
-                },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
             ]),
         }],
         ..Default::default()

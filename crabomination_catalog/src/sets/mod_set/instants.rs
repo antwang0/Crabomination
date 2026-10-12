@@ -1612,22 +1612,16 @@ pub fn convolute() -> CardDefinition {
 }
 
 /// Frost Breath — {2}{U} Instant. "Tap up to two target creatures. Those
-/// creatures don't untap during their controller's next untap step." The
-/// "skip next untap" rider rides a Stun counter (removed instead of untapping).
+/// creatures don't untap during their controller's next untap step."
 pub fn frost_breath() -> CardDefinition {
-    use crate::card::CounterType;
-    let tap_and_stun = |slot: u8| {
+    let tap_and_hold = |slot: u8| {
         let sel = Selector::TargetFiltered {
             slot,
             filter: SelectionRequirement::Creature,
         };
         Effect::Seq(vec![
             Effect::Tap { what: sel.clone() },
-            Effect::AddCounter {
-                what: sel,
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
-            },
+            Effect::SkipNextUntap { what: sel },
         ])
     };
     CardDefinition {
@@ -1636,7 +1630,7 @@ pub fn frost_breath() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::OptionalTargets {
             min: 0,
-            body: Box::new(Effect::Seq(vec![tap_and_stun(0), tap_and_stun(1)])),
+            body: Box::new(Effect::Seq(vec![tap_and_hold(0), tap_and_hold(1)])),
         },
         ..Default::default()
     }
