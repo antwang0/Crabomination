@@ -2005,3 +2005,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Animation Module | "target permanent or player" targets permanents only (a player's poison, energy or experience counters can't be chosen) | `Effect::AddCounterOfPresentKind` walks a permanent's counter bag |
 | 🟡 Bramble Familiar // Fetch Quest | the milled card put onto the battlefield is the engine's pick (the priciest creature, enchantment or land), not asked of its controller | `Selector::best_of` over `MatchingAmong { LastMoved }`; the post-mill choice has no decision of its own |
 | 🟡 Chandra, Acolyte of Flame | −2 grants the card flashback for the turn instead of casting it while the ability resolves | `Effect::GrantFlashbackThisTurn` stands in for a paid cast-now from the graveyard |
+| 🟡 Sen Triplets | the chosen opponent can still activate mana abilities | `PlayerCantActivateNonManaAbilitiesThisTurn` (Abeyance's lock) is the nearest; there is no all-abilities lock |

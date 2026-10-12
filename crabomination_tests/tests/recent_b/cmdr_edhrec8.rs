@@ -300,3 +300,53 @@ fn distinguished_conjurer_gains_on_arrivals() {
     cast(&mut g, bear, &[]).expect("cast");
     assert_eq!(g.players[0].life, life + 1);
 }
+
+/// Xanathar: your upkeep picks an opponent; you cast the top of their
+/// library with mana of any color, and the card stays theirs (CR 108.3);
+/// they can't cast spells this turn.
+#[test]
+fn xanathar_casts_the_opponents_top_card() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::xanathar_guild_kingpin());
+    let bear = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast their Bears with blue mana");
+    drain_stack(&mut g);
+    let p = g.battlefield_find(bear).expect("on the battlefield");
+    assert_eq!((p.controller, p.owner), (0, 1));
+    let shock = g.add_card_to_hand(1, catalog::lightning_bolt());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: shock, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "the chosen opponent can't cast spells this turn"
+    );
+}
+
+/// Sen Triplets: you may play lands and cast spells from the chosen
+/// opponent's hand this turn, and that hand is revealed.
+#[test]
+fn sen_triplets_plays_from_the_opponents_hand() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::sen_triplets());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(1, catalog::forest());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.hand_visible_to(0, 1));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("their land");
+    cast(&mut g, bear, &[]).expect("their Bears");
+    assert_eq!(g.battlefield_find(bear).map(|c| (c.controller, c.owner)), Some((0, 1)));
+    assert_eq!(g.battlefield_find(land).map(|c| c.controller), Some(0));
+}

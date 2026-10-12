@@ -828,3 +828,56 @@ pub fn talent_of_the_telepath() -> CardDefinition {
         },
     )
 }
+
+/// Xanathar, Guild Kingpin — {4}{U}{B} 5/6 Beholder. Each upkeep of yours, a
+/// target opponent can't cast spells this turn, and you may look at and play
+/// the top card of their library, spending mana as though any color.
+pub fn xanathar_guild_kingpin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![at_your(
+            TurnStep::Upkeep,
+            Effect::TargetPlayerThen {
+                filter: R::OpponentPlayer,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PlayerCantCastMatchingThisTurn { who: PlayerRef::Target(0), filter: R::Any },
+                    Effect::MayPlayLibraryTopOfThisTurn { who: PlayerRef::Target(0) },
+                ])),
+            },
+        )],
+        ..legend(
+            "Xanathar, Guild Kingpin",
+            cost(&[generic(4), u(), b()]),
+            vec![CreatureType::Beholder],
+            5,
+            6,
+        )
+    }
+}
+
+/// Sen Triplets — {2}{W}{U}{B} 3/3 legendary artifact creature, Human Wizard.
+/// Each upkeep of yours, a target opponent can't cast spells or activate
+/// abilities this turn and plays with their hand revealed, and you may play
+/// lands and cast spells from that hand this turn.
+pub fn sen_triplets() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![at_your(
+            TurnStep::Upkeep,
+            Effect::TargetPlayerThen {
+                filter: R::OpponentPlayer,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PlayerCantCastMatchingThisTurn { who: PlayerRef::Target(0), filter: R::Any },
+                    Effect::PlayerCantActivateNonManaAbilitiesThisTurn { who: PlayerRef::Target(0) },
+                    Effect::MayPlayHandOfThisTurn { who: PlayerRef::Target(0) },
+                ])),
+            },
+        )],
+        ..legend(
+            "Sen Triplets",
+            cost(&[generic(2), w(), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            3,
+        )
+    }
+}

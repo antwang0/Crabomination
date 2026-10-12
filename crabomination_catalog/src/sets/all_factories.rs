@@ -5329,6 +5329,8 @@ static DECKS: &[Factory] = &[
     super::decks::evereth_viceroy_of_plunder,
     super::decks::bramble_familiar,
     super::decks::talent_of_the_telepath,
+    super::decks::xanathar_guild_kingpin,
+    super::decks::sen_triplets,
     super::decks::demonic_taskmaster,
     super::decks::lord_of_the_pit,
     super::decks::evil_eye_of_urborg,
