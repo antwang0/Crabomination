@@ -237,12 +237,16 @@ impl GameState {
     /// of up to `count` matching hand and graveyard cards, kept in pick order
     /// while their total mana value stays within `cap` (a headless seat takes
     /// the costliest that fit), then each is cast free and exiled instead of
-    /// going to the graveyard.
+    /// going to the graveyard. `kaya`: face-up exiled cards the caster owns
+    /// join the pool and nothing is exiled after (Kaya the Inexorable's
+    /// emblem).
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn cast_up_to_free_from_hand_and_graveyard(
         &mut self,
         count: u32,
         filter: &crate::card::SelectionRequirement,
         cap: u32,
+        kaya: bool,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -254,6 +258,12 @@ impl GameState {
             .iter()
             .map(|c| (c, crate::card::Zone::Hand))
             .chain(self.players[me].graveyard.iter().map(|c| (c, crate::card::Zone::Graveyard)))
+            .chain(
+                self.exile
+                    .iter()
+                    .filter(|c| kaya && c.owner == me && !c.face_down)
+                    .map(|c| (c, crate::card::Zone::Exile)),
+            )
             .filter(|(c, _)| Some(c.id) != ctx.source && c.definition.cost.cmc() <= cap)
             .filter(|(c, _)| self.evaluate_requirement_on_card(filter, c, me))
             .map(|(c, z)| (c.id, c.definition.cost.cmc(), z))
@@ -278,10 +288,19 @@ impl GameState {
         let mut by_mv: Vec<CardId> = pool.iter().map(|p| p.0).collect();
         by_mv.sort_by_key(|id| std::cmp::Reverse(pool.iter().find(|p| p.0 == *id).map_or(0, |p| p.1)));
         let auto = fit(&by_mv);
-        let candidates = self.card_id_names(&pool.iter().map(|p| p.0).collect::<Vec<_>>());
+        // Hand, graveyard and exile cards: `card_id_names` names only
+        // permanents, which left a scripted or UI seat no candidates.
+        let candidates: Vec<(CardId, String)> = pool
+            .iter()
+            .filter_map(|p| self.find_card_anywhere(p.0).map(|c| (p.0, c.definition.name.to_string())))
+            .collect();
         let Some(picked) = self.choose_up_to_cards(
             me,
-            format!("Cast up to {count} spells with total mana value {cap} or less free"),
+            if kaya {
+                "Cast a spell from your hand, graveyard or exile free?".to_string()
+            } else {
+                format!("Cast up to {count} spells with total mana value {cap} or less free")
+            },
             source,
             candidates,
             count,
@@ -297,7 +316,7 @@ impl GameState {
                 &Effect::CastWithoutPayingImmediate {
                     what: Selector::Target(0),
                     source_zone: zone,
-                    exile_after: true,
+                    exile_after: !kaya,
                     copy: false,
                     reduce_generic: 0,
                     pay_own_cost: false,

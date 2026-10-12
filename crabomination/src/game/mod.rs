@@ -1544,6 +1544,10 @@ pub struct TurnRegistries {
     /// cleanup.
     #[serde(default)]
     pub(crate) turned_face_up_this_turn: crate::game::types::IdSet<CardId>,
+    /// CR 701.14 — creatures that fought this turn (`R::FoughtThisTurn`,
+    /// Boxing Ring). Stamped by `Effect::Fight`; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) fought_this_turn: crate::game::types::IdSet<CardId>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -8985,6 +8989,13 @@ impl GameState {
                 }
                 CumulativeUpkeepCost::Draw(per) => {
                     self.draw_n(active, (per * n) as usize, &mut events);
+                    true
+                }
+                CumulativeUpkeepCost::AddMana(color) => {
+                    self.players[active].mana_pool.add(*color, n);
+                    for _ in 0..n {
+                        events.push(crate::game::GameEvent::ManaAdded { player: active, color: *color, source: Some(id) });
+                    }
                     true
                 }
                 CumulativeUpkeepCost::PutCounterOnOpponentCreature(kind) => {
@@ -34680,6 +34691,7 @@ fn static_effect_to_effects(
             // Cost reductions read in `cost_reduction_for_spell`; no layer.
             | StaticEffect::YourISSpellsCostLessPerTargetCreature { .. }
             | StaticEffect::SpellsCostLessPerSameNameInYourGraveyard
+            | StaticEffect::PerTargetSpellCost { .. }
             | StaticEffect::ActivationTax { .. }
             | StaticEffect::NamedSourcesActivationTax { .. }
             // Pithing Needle's lock — consulted in `activate_ability`
@@ -35081,6 +35093,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::EnchantedByYourAura
         | R::IsSource
         | R::TurnedFaceUpThisTurn
+        | R::FoughtThisTurn
         | R::HasSuspend
         | R::PairedWithSource
         | R::IsRingBearer

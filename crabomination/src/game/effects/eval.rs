@@ -1900,7 +1900,9 @@ impl GameState {
                 .into_iter()
                 .filter_map(|e| match e {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
-                        self.battlefield_find(cid).map(|c| c.definition.cost.cmc() as i32)
+                        self.battlefield_find(cid)
+                            .or_else(|| self.find_card_anywhere(cid))
+                            .map(|c| c.definition.cost.cmc() as i32)
                     }
                     EntityRef::Player(_) => None,
                 })
@@ -3372,6 +3374,13 @@ impl GameState {
                     _ => false,
                 }
             }
+            Predicate::ResolvingInstantOrSorceryTargetsOnlyTriggerTarget => {
+                let Some(snap) = self.scratch.resolving_spell_snapshot.as_deref() else { return false };
+                let Some(t) = ctx.targets.first() else { return false };
+                (snap.definition.is_instant() || snap.definition.is_sorcery())
+                    && snap.target.as_ref() == Some(t)
+                    && snap.additional_targets.iter().all(|a| a == t)
+            }
             Predicate::CastSpellMatches(filter) => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;
@@ -4529,6 +4538,15 @@ impl GameState {
     /// The trigger subject's toughness, last known: the dying creature's
     /// battlefield snapshot when the dispatch still holds it, else the card's
     /// own (graveyard) toughness.
+    /// The trigger subject's mana value, last known once it has left.
+    pub(crate) fn trigger_subject_mana_value(&self) -> Option<u32> {
+        let id = self.scratch.trigger_subject?;
+        self.find_card_anywhere(id)
+            .or_else(|| self.died_card_snapshots.get(&id))
+            .or_else(|| self.leaves_bf_lki.get(&id))
+            .map(|c| c.definition.cost.cmc())
+    }
+
     pub(crate) fn trigger_subject_toughness(&self) -> Option<i32> {
         let id = self.scratch.trigger_subject?;
         if let Some(cp) = self.computed_permanent(id) {
@@ -5044,8 +5062,12 @@ impl GameState {
                 let t = self.find_card_anywhere(cid).map(|c| self.card_toughness_anywhere(c));
                 Some(t.zip(self.trigger_subject_toughness()).is_some_and(|(t, s)| t < s))
             }
+            R::ManaValueEqualsTriggerSubject => {
+                Some(self.trigger_subject_mana_value().is_some_and(|s| card.definition.cost.cmc() == s))
+            }
             R::IsSource => Some(source == Some(cid)),
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
+            R::FoughtThisTurn => Some(self.turn.fought_this_turn.contains(&cid)),
             R::HasSuspend => Some(self.find_card_anywhere(cid).is_some_and(crate::card::CardInstance::has_suspend)),
             R::PairedWithSource => Some(source.and_then(|s| self.battlefield_find(s)).and_then(|s| s.soulbond_partner) == Some(cid)),
             R::IsRingBearer => Some(self.is_a_ring_bearer(cid)),
@@ -6505,6 +6527,10 @@ impl GameState {
                         let t = self.find_card_anywhere(*cid).map(|c| self.card_toughness_anywhere(c));
                         t.zip(self.trigger_subject_toughness()).is_some_and(|(t, s)| t < s)
                     }
+                    R::ManaValueEqualsTriggerSubject => self
+                        .find_card_anywhere(*cid)
+                        .zip(self.trigger_subject_mana_value())
+                        .is_some_and(|(c, s)| c.definition.cost.cmc() == s),
                     // CR 601.2c — "**another** target": the battlefield walker
                     // reads the same stamp the cast/activation validator
                     // leaves, so the UI's candidate list and the picker agree
@@ -6521,6 +6547,7 @@ impl GameState {
                         .is_none_or(|chosen| *cid != chosen),
                     R::IsSource => source == Some(*cid),
                     R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(cid),
+                    R::FoughtThisTurn => self.turn.fought_this_turn.contains(cid),
                     R::HasSuspend => self.find_card_anywhere(*cid).is_some_and(crate::card::CardInstance::has_suspend),
                     R::PairedWithSource => {
                         source.and_then(|s| self.battlefield_find(s)).and_then(|s| s.soulbond_partner) == Some(*cid)
@@ -7493,11 +7520,15 @@ impl GameState {
             R::ToughnessLessThanTriggerSubject => {
                 self.trigger_subject_toughness().is_some_and(|s| self.card_toughness_anywhere(card) < s)
             }
+            R::ManaValueEqualsTriggerSubject => {
+                self.trigger_subject_mana_value().is_some_and(|s| card.definition.cost.cmc() == s)
+            }
             // Source-less path: no `chosen_permanent` slot to consult.
             R::NotSourcesChosenPermanent => true,
             // A card in another zone is never the battlefield source.
             R::IsSource => false,
             R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(&card.id),
+            R::FoughtThisTurn => self.turn.fought_this_turn.contains(&card.id),
             R::HasSuspend => card.has_suspend(),
             // A card off the battlefield is nobody's soulbond partner.
             R::PairedWithSource => false,

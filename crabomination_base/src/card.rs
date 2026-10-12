@@ -2805,6 +2805,9 @@ pub enum CumulativeUpkeepCost {
     /// controls" (Sheltering Ancient): one `kind` counter per age counter,
     /// each on a creature an opponent controls. Unpayable with none.
     PutCounterOnOpponentCreature(CounterType),
+    /// "Cumulative upkeep—Add {R}" (Braid of Fire): one mana of the color per
+    /// age counter. Always payable.
+    AddMana(crate::mana::Color),
 }
 
 impl CumulativeUpkeepCost {
@@ -2818,6 +2821,7 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::FlipCoin => "Flip a coin".into(),
             CumulativeUpkeepCost::PutCounterOnSelf(k) => format!("Put a {k:?} counter on this"),
             CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
+            CumulativeUpkeepCost::AddMana(c) => format!("Add one {c:?} mana"),
             CumulativeUpkeepCost::PutCounterOnOpponentCreature(k) => {
                 format!("Put a {k:?} counter on a creature an opponent controls")
             }
@@ -3812,6 +3816,10 @@ pub enum SelectionRequirement {
     /// dying creature (Colfenor, the Last Yew's "creature card with lesser
     /// toughness"). Same stamp as `OtherThanTriggerSubject`.
     ToughnessLessThanTriggerSubject,
+    /// Mana value equal to the trigger's subject's — "fights up to one target
+    /// creature you don't control with the same mana value" (Boxing Ring).
+    /// Same stamp as `OtherThanTriggerSubject`.
+    ManaValueEqualsTriggerSubject,
     /// Excludes the permanent stamped on the source's `chosen_permanent` slot
     /// — the "creatures other than this and the chosen creature" half of an
     /// ETB choose-a-creature rider (Zenos yae Galvus).
@@ -3832,6 +3840,9 @@ pub enum SelectionRequirement {
     /// CR 708 — the candidate permanent was turned face up this turn
     /// (`TurnRegistries.turned_face_up_this_turn`; Kaust, Eyes of the Glade).
     TurnedFaceUpThisTurn,
+    /// CR 701.14 — the candidate fought this turn
+    /// (`TurnRegistries.fought_this_turn`; Boxing Ring).
+    FoughtThisTurn,
     /// CR 702.62 — the card has suspend: the printed keyword, or suspend it
     /// gained (`CardInstance.granted_suspend`, CR 702.62a — Kang Prime, The
     /// Tenth Doctor). "If it doesn't have suspend, it gains suspend."
@@ -4454,7 +4465,9 @@ impl SelectionRequirement {
     /// (`OtherThanTriggerSubject`), so the trigger paths stamp it first.
     pub fn mentions_trigger_subject(&self) -> bool {
         match self {
-            Self::OtherThanTriggerSubject | Self::ToughnessLessThanTriggerSubject => true,
+            Self::OtherThanTriggerSubject
+            | Self::ToughnessLessThanTriggerSubject
+            | Self::ManaValueEqualsTriggerSubject => true,
             Self::And(a, b) | Self::Or(a, b) => a.mentions_trigger_subject() || b.mentions_trigger_subject(),
             Self::Not(a) => a.mentions_trigger_subject(),
             _ => false,
@@ -8812,6 +8825,11 @@ pub struct CardCold {
     /// (e.g., for "remove all abilities" effects). Defaults to empty.
     /// Push (modern_decks batch 183): added per CR 122.1b.
     pub keyword_counters: KeywordCounters,
+    /// CR 613.7 — the layer timestamp of the latest keyword counter put on
+    /// this permanent by `Effect::AddKeywordCounter`; a "loses all abilities"
+    /// effect older than it doesn't strip the counters' keywords (Abigale).
+    /// 0 orders before every tracked effect.
+    pub keyword_counters_ts: u64,
     /// "You may cast/play this card without paying its mana cost" permission
     /// granted by Practiced Scrollsmith, Suspend Aggression, Nita, …
     /// Set by `Effect::GrantMayPlay`; consumed by
@@ -12164,6 +12182,7 @@ impl CardInstance {
         }
         if !self.keyword_counters.is_empty() {
             self.keyword_counters.clear();
+            self.keyword_counters_ts = 0;
         }
     }
 

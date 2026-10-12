@@ -102,8 +102,9 @@ impl GameState {
         }
     }
 
-    /// `Effect::CopySpellForPlayer` — one copy of each spell `what` names,
-    /// controlled by `who`, who may choose new targets (CR 707.10c, 115.7).
+    /// `Effect::CopySpellForPlayer` — one copy of each spell `what` names for
+    /// each player `who` resolves to, in APNAP order, each controlling and
+    /// retargeting its own (CR 707.10c, 115.7; Hive Mind's "each other player").
     pub(super) fn copy_spell_for_player(
         &mut self,
         what: &Selector,
@@ -111,13 +112,15 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
-        let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+        let seats = self.resolve_players(who, ctx);
         let ids: Vec<CardId> = match what {
             Selector::TriggerSource => ctx.trigger_source.and_then(|e| e.as_card_id()).into_iter().collect(),
             _ => self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).collect(),
         };
-        for cid in ids {
-            self.copy_stack_spell_controlled(cid, 1, true, Some(seat), None, events);
+        for seat in seats {
+            for &cid in &ids {
+                self.copy_stack_spell_controlled(cid, 1, true, Some(seat), None, events);
+            }
         }
         Ok(())
     }

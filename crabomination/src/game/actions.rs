@@ -1591,6 +1591,46 @@ pub(crate) fn flashback_additional_costs(
 /// CR 601.2f — strive (an ability word, CR 207.2c) and Fireball: "this spell costs
 /// [cost] more to cast for each target beyond the first". Returns the total
 /// surcharge for `extra_targets` filled additional slots.
+/// Hinata, Dawn-Crowned — `(tax, reduction)` in generic mana for a spell
+/// `caster` casts with these targets: {N} less per target for the static's
+/// controller, {N} more for an opponent's. Targets count once each however
+/// many slots name them (2022-02-18 ruling).
+pub fn per_target_cost_shift(
+    state: &crate::game::GameState,
+    caster: usize,
+    target: Option<&Target>,
+    additional_targets: &[Target],
+) -> (u32, u32) {
+    if target.is_none() && additional_targets.is_empty() {
+        return (0, 0);
+    }
+    let (mut tax, mut less) = (0u32, 0u32);
+    for c in state.battlefield.iter().filter(|c| !c.definition.static_abilities.is_empty()) {
+        for sa in &c.definition.static_abilities {
+            if let Some(crate::effect::StaticEffect::PerTargetSpellCost { yours_less, opponents_more }) =
+                state.active_static(&sa.effect, c)
+            {
+                if c.controller == caster {
+                    less += yours_less;
+                } else if !state.same_team(c.controller, caster) {
+                    tax += opponents_more;
+                }
+            }
+        }
+    }
+    if tax == 0 && less == 0 {
+        return (0, 0);
+    }
+    let mut distinct: Vec<&Target> = Vec::with_capacity(1 + additional_targets.len());
+    for t in target.into_iter().chain(additional_targets) {
+        if !distinct.contains(&t) {
+            distinct.push(t);
+        }
+    }
+    let n = distinct.len() as u32;
+    (tax.saturating_mul(n), less.saturating_mul(n))
+}
+
 pub fn strive_cost_for_spell(
     card: &crate::card::CardInstance,
     extra_targets: usize,
@@ -2408,9 +2448,10 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     reduction += amount;
                 }
                 // Elderwood Scion: your spells targeting this permanent cost
-                // {amount} less (the tax half is `TaxOpponentSpellsTargetingThis`).
-                StaticEffect::CostReductionForYourSpellsTargetingThis { amount }
-                    if src.controller == caster
+                // {amount} less (the tax half is `TaxOpponentSpellsTargetingThis`);
+                // Spellwild Ouphe's discount is anyone's.
+                StaticEffect::CostReductionForYourSpellsTargetingThis { amount, any_caster }
+                    if (*any_caster || src.controller == caster)
                         && matches!(target, Some(crate::game::Target::Permanent(pid)) if *pid == src.id) =>
                 {
                     reduction += amount;
@@ -10965,7 +11006,9 @@ impl GameState {
         let destroy_x = |e: &Effect| matches!(e, Effect::DestroyTargets { .. } | Effect::DestroyTargetsPolymorph { .. });
         let exactly_x = match &card.definition.effect {
             Effect::TargetsExactlyX { .. } => true,
-            Effect::ChooseMode(modes) => mode.and_then(|m| modes.get(m)).is_some_and(destroy_x),
+            Effect::ChooseMode(modes) => mode
+                .and_then(|m| modes.get(m))
+                .is_some_and(|e| destroy_x(e) || matches!(e, Effect::TargetsExactlyX { .. })),
             e => destroy_x(e),
         };
         if exactly_x
@@ -11468,10 +11511,12 @@ impl GameState {
         // Strive (CR 702.122) / Fireball — per-extra-target surcharge.
         cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
+        let (per_target_tax, per_target_less) = per_target_cost_shift(self, p, target.as_ref(), &additional_targets);
+        cost.add_generic(per_target_tax);
         // Apply static cost-reduction effects (Killian's "spells that target
         // a creature cost {2} less"). Tax is applied first so reductions
         // never make the spell free of its tax.
-        let mut reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let mut reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()).saturating_add(per_target_less);
         // "…costs {1} less for each permanent sacrificed this way" — the
         // announced sacrifice count rides the cast's X (Rottenmouth Viper).
         if card.definition.self_cost_reduction_per_sacrificed {
@@ -15027,7 +15072,9 @@ impl GameState {
         }
         cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let (per_target_tax, per_target_less) = per_target_cost_shift(self, p, target.as_ref(), &additional_targets);
+        cost.add_generic(per_target_tax);
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()).saturating_add(per_target_less);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -15535,12 +15582,14 @@ impl GameState {
         }
         mana_cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         mana_cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
+        let (per_target_tax, per_target_less) = per_target_cost_shift(self, p, target.as_ref(), &additional_targets);
+        mana_cost.add_generic(per_target_tax);
         // CR 601.2f: cost reductions apply uniformly across cast paths
         // (hand cast / flashback / alt-cost), and `cost_reduction_for_
         // spell` returns the same delta in each. The alt cost is often
         // {0} for pitch spells (Force of Negation, Mystical Dispute), in
         // which case the reduction simply no-ops (clamps at zero).
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction;
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction + per_target_less;
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }

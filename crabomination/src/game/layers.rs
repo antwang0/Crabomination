@@ -1408,6 +1408,7 @@ fn compute_permanent_pass(
     let mut mod_toughness: i32 = 0;
     let mut switched = false;
     let mut lost_all_abilities = false;
+    let mut strip_all_ts = 0u64;
     let mut creature_types_set = false;
     let mut every_creature_type = false;
     let mut cant_have_keywords: Vec<Keyword> = Vec::new();
@@ -1558,6 +1559,7 @@ fn compute_permanent_pass(
             Modification::RemoveAllAbilities => {
                 keywords.clear();
                 lost_all_abilities = true;
+                strip_all_ts = effect.timestamp;
             }
 
             // Layer 7 (modifications arrive in timestamp order; later wins)
@@ -1602,6 +1604,15 @@ fn compute_permanent_pass(
                 }
             }
             Modification::SwitchPowerToughness => switched = !switched,
+        }
+    }
+    // CR 613.7 — keyword counters put after the latest "loses all abilities"
+    // keep their keywords (Abigale, Eloquent First-Year).
+    if lost_all_abilities && !cold_pristine && card.keyword_counters_ts > strip_all_ts {
+        for (kw, count) in &card.keyword_counters {
+            if *count > 0 && !keywords.contains(kw) {
+                keywords.push(kw.clone());
+            }
         }
     }
 

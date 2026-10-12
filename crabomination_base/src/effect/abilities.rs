@@ -854,8 +854,13 @@ pub enum StaticEffect {
     LifeTaxOpponentSpellsTargetingThis { life: u32 },
     /// Elderwood Scion — "spells you cast that target this creature cost
     /// {amount} less". Read with the cast's chosen target by
-    /// `cost_reduction_for_spell`.
-    CostReductionForYourSpellsTargetingThis { amount: u32 },
+    /// `cost_reduction_for_spell`. `any_caster`: any player's spells
+    /// (Spellwild Ouphe).
+    CostReductionForYourSpellsTargetingThis {
+        amount: u32,
+        #[serde(default)]
+        any_caster: bool,
+    },
     /// "Each [`spell_filter`] spell costs {1} more to cast for each
     /// [`count_filter`] its controller controls" (Hum of the Radix). The tax
     /// scales off the *caster's* board, not the source's, and applies to every
@@ -2313,6 +2318,11 @@ pub enum StaticEffect {
     /// CR 601.2f — "Spells you cast cost {1} less to cast for each card with
     /// the same name as that spell in your graveyard" (Locket of Yesterdays).
     SpellsCostLessPerSameNameInYourGraveyard,
+    /// "Spells you cast cost {`yours_less`} less to cast for each target.
+    /// Spells your opponents cast cost {`opponents_more`} more to cast for
+    /// each target." (Hinata, Dawn-Crowned.) Generic only; read by
+    /// `per_target_cost_shift` on every cast path that knows its targets.
+    PerTargetSpellCost { yours_less: u32, opponents_more: u32 },
     /// "Abilities you activate that aren't mana abilities cost {N} less to
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).

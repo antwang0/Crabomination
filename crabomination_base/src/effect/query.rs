@@ -281,6 +281,25 @@ fn implicit_any_target_if_bare(what: &Selector) -> Option<&'static SelectionRequ
 }
 
 impl Effect {
+    /// True when the effect copies a target spell (Reverberate, Twincast,
+    /// Tempt with Mayhem's tempting offer) — the first step decides.
+    pub fn copies_target_spell(&self) -> bool {
+        match self {
+            Effect::CopySpell { .. }
+            | Effect::CopySpellMayChooseTargets { .. }
+            | Effect::CopySpellWithRiders { .. } => true,
+            Effect::TemptingOffer { body } => body.copies_target_spell(),
+            // Increasing Vengeance copies once or twice by where it was cast.
+            Effect::If { then, else_, .. } => then.copies_target_spell() && else_.copies_target_spell(),
+            // Wild Ricochet retargets the spell before it copies it.
+            Effect::Seq(v) => match v.as_slice() {
+                [Effect::ChooseNewTargetsForSpell { .. }, copy, ..] => copy.copies_target_spell(),
+                _ => v.first().is_some_and(Effect::copies_target_spell),
+            },
+            _ => false,
+        }
+    }
+
 
     /// True if this effect is an *adapt* effect (CR 702.108) — the
     /// counter-check shape produced by `shortcut::adapt`: "if this creature
@@ -897,6 +916,7 @@ impl Effect {
             | Effect::ExileSpellOnResolveWithCounter { .. }
             | Effect::MayCastFromExileFree { .. }
             | Effect::CastUpToFreeFromHandAndGraveyard { .. }
+            | Effect::CastOneFreeFromHandGraveyardOrExile { .. }
             | Effect::PutLandsFromHandOntoBattlefieldTapped { .. }
             | Effect::MayCastPermanentFromHandFree { .. }
             | Effect::MayCastFromHandFreeMatching { .. }
@@ -1477,6 +1497,7 @@ impl Effect {
             Effect::GrantKeywordsToSpell { what, .. }
             | Effect::SpellEntersWithCounters { what, .. }
             | Effect::SpellGainsKeyword { what, .. }
+            | Effect::SpellReturnsToHandOnResolve { what }
             | Effect::SpellGainsTrigger { what, .. } => sel_has_target(what),
             Effect::CastFromHandWithoutPaying { .. }
             | Effect::MayCastFromHandOrGraveyardForLife { .. }
@@ -1868,7 +1889,9 @@ impl Effect {
             | Effect::AddColorlessKeptThisTurn { who, .. }
             | Effect::CommanderToHand { who }
             | Effect::PutCommanderOntoBattlefield { who, .. } => player_has_target(who),
-            Effect::AddManaEqualToPermanentCost { .. } | Effect::Firebend { .. } => false,
+            Effect::AddManaEqualToPermanentCost { .. }
+            | Effect::Firebend { .. }
+            | Effect::AddRedUntilEndOfCombat { .. } => false,
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
                     ManaPayload::Colorless(v)

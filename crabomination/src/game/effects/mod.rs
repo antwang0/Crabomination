@@ -2209,7 +2209,16 @@ impl GameState {
         // the original first had the new controller keep a Bolt aimed at
         // their own face.
         let default_target = if caster != orig_caster && choose_new_targets {
-            self.auto_target_for_effect_avoiding(&orig_card_def.effect, caster, None).or(target.clone())
+            let picked = self.auto_target_for_effect_avoiding(&orig_card_def.effect, caster, None);
+            // A copied spell-copier (Hive Mind handing out a Reverberate) aimed
+            // at another spell-copier copies copiers for ever; keep the
+            // original's target instead (pod seed 97101, game 15).
+            let copies_a_copier = orig_card_def.effect.copies_target_spell()
+                && matches!(picked, Some(Target::Permanent(id)) if self.stack.iter().any(|s| matches!(
+                    s,
+                    StackItem::Spell { card, .. } if card.id == id && card.definition.effect.copies_target_spell()
+                )));
+            if copies_a_copier { target.clone() } else { picked.or(target.clone()) }
         } else if choose_new_targets
             && Self::copy_spreads_removal(&orig_card_def.effect)
             && let Some(Target::Permanent(first)) = target
@@ -8980,6 +8989,10 @@ impl GameState {
                         self.deal_damage_to_from(ent, dealt, ctx.source, events);
                     }
                     if amt > dealt {
+                        // CR 120.4a — the diverted part is still the excess
+                        // ("if excess damage would be dealt …" — Megatron).
+                        self.excess_damage_this_resolution =
+                            self.excess_damage_this_resolution.saturating_add(amt - dealt);
                         self.deal_damage_to_from(
                             EntityRef::Player(controller), amt - dealt, ctx.source, events);
                     }
@@ -9412,6 +9425,9 @@ impl GameState {
                 for id in [atk_id, def_id] {
                     if let Some(c) = self.battlefield_find(id) {
                         events.push(GameEvent::CreatureFought { card_id: id, controller: c.controller });
+                        if !self.turn.fought_this_turn.contains(&id) {
+                            self.turn.fought_this_turn.insert(id);
+                        }
                     }
                 }
                 if atk_power > 0 {
@@ -14918,6 +14934,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddRedUntilEndOfCombat { amount } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 && self.players.get(p).is_some_and(|pl| pl.is_alive()) {
+                    self.players[p].mana_pool.add(crate::mana::Color::Red, n);
+                    self.players[p].firebending_kept_red = self.players[p].firebending_kept_red.saturating_add(n);
+                    for _ in 0..n {
+                        events.push(GameEvent::ManaAdded { player: p, color: crate::mana::Color::Red, source: ctx.source });
+                    }
+                }
+                Ok(())
+            }
             Effect::Firebend { amount } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
@@ -16796,7 +16824,10 @@ impl GameState {
                 self.may_cast_one_free(candidates, crate::card::Zone::Exile, false, src, effect, ctx, events)
             }
             Effect::CastUpToFreeFromHandAndGraveyard { count, filter, total_mana_value } => {
-                self.cast_up_to_free_from_hand_and_graveyard(*count, filter, *total_mana_value, effect, ctx, events)
+                self.cast_up_to_free_from_hand_and_graveyard(*count, filter, *total_mana_value, false, effect, ctx, events)
+            }
+            Effect::CastOneFreeFromHandGraveyardOrExile { filter } => {
+                self.cast_up_to_free_from_hand_and_graveyard(1, filter, u32::MAX, true, effect, ctx, events)
             }
             Effect::MayCastExiledWithSource { filter } => {
                 // Kaho, Minamo Historian. Offer the exiled cards stamped with
@@ -19259,6 +19290,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SpellReturnsToHandOnResolve { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    for it in self.stack.iter_mut() {
+                        if let StackItem::Spell { card, .. } = it
+                            && card.id == cid
+                        {
+                            card.bought_back = true;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SpellGainsTrigger { what, trigger } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_card_id() else { continue };
@@ -20774,8 +20819,10 @@ impl GameState {
                             base
                         };
                         self.board_instance_keywords = true;
+                        let ts = self.next_timestamp();
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.keyword_counters.add(keyword.clone(), n);
+                            c.keyword_counters_ts = ts;
                             // "This permanent gained a counter this turn"
                             // payoffs count keyword counters too (CR 122.1b).
                             self.turn.permanents_gained_counter_this_turn.insert(cid);

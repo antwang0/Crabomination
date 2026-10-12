@@ -4915,7 +4915,14 @@ fn exactly_x_targets(
     x_max: u32,
     friendly: Option<bool>,
 ) -> Option<(Target, Vec<Target>)> {
-    let Effect::ApplyToTargets { max_targets, filter, .. } = body else { return None };
+    // "X target …" over each target (Icy Blast) or a divided total (Meteor
+    // Swarm's 8 among X targets).
+    let (max_targets, filter) = match body {
+        Effect::ApplyToTargets { max_targets, filter, .. } | Effect::DealDamageDivided { max_targets, filter, .. } => {
+            (max_targets, filter)
+        }
+        _ => return None,
+    };
     let friendly = friendly.unwrap_or_else(|| body.prefers_friendly_target_for_slot(0, None));
     let ok = |t: &Target| {
         state.evaluate_requirement_static(filter, t, seat, Some(source))
@@ -4972,20 +4979,7 @@ fn effect_counters_abilities(eff: &Effect) -> bool {
 /// with Mayhem's tempting offer) — the first step decides, as in
 /// [`effect_counters_spells`].
 fn effect_copies_target_spell(eff: &Effect) -> bool {
-    match eff {
-        Effect::CopySpell { .. }
-        | Effect::CopySpellMayChooseTargets { .. }
-        | Effect::CopySpellWithRiders { .. } => true,
-        Effect::TemptingOffer { body } => effect_copies_target_spell(body),
-        // Increasing Vengeance copies once or twice by where it was cast.
-        Effect::If { then, else_, .. } => effect_copies_target_spell(then) && effect_copies_target_spell(else_),
-        // Wild Ricochet retargets the spell before it copies it.
-        Effect::Seq(v) => match v.as_slice() {
-            [Effect::ChooseNewTargetsForSpell { .. }, copy, ..] => effect_copies_target_spell(copy),
-            _ => v.first().is_some_and(effect_copies_target_spell),
-        },
-        _ => false,
-    }
+    eff.copies_target_spell()
 }
 
 /// CR 707.10 — copy the bot's own instant or sorcery while it is the top of
@@ -7895,6 +7889,24 @@ pub(super) fn cast_candidates<'a>(
             // slots that find no legal target are skipped, matching
             // "up to N target" semantics.
             let mode_effect = mode_branch(&c.definition.effect, mode);
+            // A mode that is "X target …" (Reality Spasm) picks X like the
+            // whole-card shape above.
+            if mode.is_some()
+                && let Effect::TargetsExactlyX { body } = mode_effect
+            {
+                if let Some(x) = x_value
+                    && let Some((t, extras)) = exactly_x_targets(state, seat, c.id, body, x, None)
+                {
+                    unvalidated.push(GameAction::CastSpell {
+                        card_id: c.id,
+                        target: Some(t),
+                        x_value: Some(extras.len() as u32 + 1),
+                        additional_targets: extras,
+                        mode,
+                    });
+                }
+                continue;
+            }
             // `trick_modes_combat_only`: an instant's until-end-of-turn stat
             // change is offered after blocks by `pick_combat_trick`, not
             // here — the main phase cast it as a telegraphed pump and the

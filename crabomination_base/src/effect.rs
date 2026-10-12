@@ -1356,9 +1356,10 @@ pub enum Value {
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
     /// value X) and similar "filter by mana value" effects.
     ManaValueOf(Box<Selector>),
-    /// Highest mana value among the (battlefield) permanents the selector
-    /// resolves to; 0 if none. Rush of Knowledge ("draw cards equal to the
-    /// highest mana value among permanents you control").
+    /// Highest mana value among the permanents or cards the selector
+    /// resolves to, in any zone; 0 if none. Rush of Knowledge ("draw cards
+    /// equal to the highest mana value among permanents you control"), The
+    /// Kenriths' Royal Funeral (cards exiled with it).
     HighestManaValueAmong(Box<Selector>),
     /// Number of distinct colors of the resolved permanent/card (CR 105.2 —
     /// "for each of its colors"). Reads printed colors; a colorless/devoid
@@ -2466,6 +2467,12 @@ pub enum Predicate {
     /// filter ("…that targets only a single creature you control" — Leyline
     /// of Resonance). Counts slot 0 plus every additional target.
     CastSpellTargetsOnlyOneMatching(SelectionRequirement),
+    /// The resolving spell is an instant or sorcery targeting only a single
+    /// object, and it is this trigger's target — "an instant or sorcery spell
+    /// you control that targets only a single creature deals damage to that
+    /// creature" (Imodane). Read off the resolution snapshot: the card is in
+    /// no zone while it resolves.
+    ResolvingInstantOrSorceryTargetsOnlyTriggerTarget,
     /// True if the just-cast spell (located via `ctx.trigger_source`) is
     /// itself a card matching `filter` — e.g. a noncreature spell (Sprite
     /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
@@ -5833,6 +5840,10 @@ pub enum Effect {
     /// graveyard, exile them instead." (Invoke Calamity). The picks are cast
     /// one after another during the resolution (the second resolves first).
     CastUpToFreeFromHandAndGraveyard { count: u32, filter: SelectionRequirement, total_mana_value: u32 },
+    /// "You may cast a [filter] spell from your hand, from your graveyard, or
+    /// from among cards you own in exile without paying its mana cost" (Kaya
+    /// the Inexorable's emblem). One pick; face-down exiles are excluded.
+    CastOneFreeFromHandGraveyardOrExile { filter: SelectionRequirement },
     /// "You may cast a permanent spell with mana value `max_mv` or less from
     /// your hand without paying its mana cost. If you don't, `else_`"
     /// (Kellan, the Kid).
@@ -7495,6 +7506,10 @@ pub enum Effect {
     /// A triggered ability that uses the stack (CR 605.1b: it triggers on an
     /// attack, not on mana), so it can be copied or countered.
     Firebend { amount: Value },
+    /// "Add `amount` {R}. Until end of combat, you don't lose this mana as
+    /// steps end" (Avatar Roku, Firebender) — firebending's mana without
+    /// the CR 702.189b "firebended" event.
+    AddRedUntilEndOfCombat { amount: Value },
     /// Engine-appended to a Saga's final chapter ability (never printed):
     /// emits `GameEvent::SagaFinalChapterResolved` as the chapter resolves,
     /// so a countered chapter emits nothing (CR 714.2e).
@@ -7788,6 +7803,10 @@ pub enum Effect {
     /// keyword onto the spell's card, so it holds as the permanent enters
     /// (Bloodlord of Vaasgoth's and Twins of Discord's granted bloodthirst).
     SpellGainsKeyword { what: Selector, keyword: crate::card::Keyword },
+    /// "Put that card into your hand instead of into your graveyard as it
+    /// resolves" on a spell still on the stack — the buyback routing without
+    /// the cost (CR 702.27; Soulfire Grand Master).
+    SpellReturnsToHandOnResolve { what: Selector },
     /// "It gains '[trigger]'" on a spell still on the stack — stamped onto the
     /// spell's card like `SpellGainsKeyword`, so the permanent it becomes has
     /// it (Rivaz of the Claw's "When this creature dies, exile it.").
@@ -14179,7 +14198,8 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::NamedSpellCostReduction { .. }
         | SE::SharedCreatureTypeSpellCostReduction { .. }
         | SE::YourISSpellsCostLessPerTargetCreature { .. }
-        | SE::SpellsCostLessPerSameNameInYourGraveyard => true,
+        | SE::SpellsCostLessPerSameNameInYourGraveyard
+        | SE::PerTargetSpellCost { .. } => true,
         // Gate wrappers: the reduction loop peels every one through
         // `active_static` (a Class level, CR 716.2; Momo's "during your
         // turn"). The two tax walks peel none — over-approximating is free (a
