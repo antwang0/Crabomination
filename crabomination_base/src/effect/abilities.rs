@@ -2371,6 +2371,10 @@ pub enum StaticEffect {
     /// Gwyn's "equip Knight {0}"). `GameState::equip` pays {0} when the target
     /// matches.
     EquipmentYouControlEquipZeroFor { filter: crate::card::SelectionRequirement },
+    /// CR 702.6 — "Equipment you control have equip `cost`" (Astor, Bearer of
+    /// Blades' {1}): a second equip ability on each of them. `GameState::equip`
+    /// pays it in place of the printed one when it is cheaper.
+    EquipmentYouControlHaveEquip { cost: crate::mana::ManaCost },
     /// CR 613 — "Each noncreature, non-Equipment artifact is an Equipment
     /// with equip {X} and 'Equipped creature gets +X/+0,' where X is that
     /// artifact's mana value" (Bludgeon Brawl). Global; the granted subtype,

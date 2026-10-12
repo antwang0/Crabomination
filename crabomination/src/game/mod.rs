@@ -23190,6 +23190,21 @@ impl GameState {
             .sum()
     }
 
+    /// The cheapest "Equipment you control have equip {N}" a static `player`
+    /// controls grants (Astor, Bearer of Blades).
+    fn granted_equip_cost(&self, player: usize) -> Option<crate::mana::ManaCost> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::EquipmentYouControlHaveEquip { cost } => Some(cost),
+                _ => None,
+            })
+            .min_by_key(|c| c.cmc())
+            .cloned()
+    }
+
     /// Puresteel Paladin / Syr Gwyn — does a static `player` controls give
     /// their Equipment equip {0} onto `target` right now?
     fn equipment_equips_free(&self, player: usize, target: crate::card::CardId) -> bool {
@@ -23276,6 +23291,14 @@ impl GameState {
             && self.evaluate_requirement_static(&filter, &Target::Permanent(target), p, None)
         {
             equip_cost = alt;
+        }
+        // Astor — "Equipment you control have equip {1}": a second equip
+        // ability; the cheaper of the two is the one activated.
+        if fortify.is_none()
+            && let Some(granted) = self.granted_equip_cost(p)
+            && granted.cmc() < equip_cost.cmc()
+        {
+            equip_cost = granted;
         }
         // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper),
         // and Belt of Giant Strength's own "{X} less, where X is the power of
@@ -34740,6 +34763,7 @@ fn static_effect_to_effects(
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::EquipmentYouControlEquipZeroWhile { .. }
             | StaticEffect::EquipmentYouControlEquipZeroFor { .. }
+            | StaticEffect::EquipmentYouControlHaveEquip { .. }
             | StaticEffect::TaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::LifeTaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
