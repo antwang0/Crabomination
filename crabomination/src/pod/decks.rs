@@ -15616,3 +15616,31 @@ pub const BARAL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const MARCHESA_COMMANDERS: &[CardFactory] = &[marchesa_dealer_of_death];
+
+/// **Marchesa, Dealer of Death**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 84 nonbasic cards + 6 Islands + 4 Mountains + 5 Swamps = 99.
+/// Marchesa, Dealer of Death
+pub const MARCHESA_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, ghost_vacuum, glasses_of_urza, izzet_signet,
+    sol_ring, talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence,
+    blood_crypt, bloodstained_mire, bojuka_bog, command_tower, crumbling_necropolis,
+    dragonskull_summit, drowned_catacomb, eroded_canyon, exotic_orchard, jagged_barrens,
+    morphic_pool, polluted_delta, scalding_tarn, shivan_reef, soured_springs, steam_vents,
+    sulfur_falls, sunken_hollow, watery_grave, xanders_lounge, archon_of_cruelty,
+    duelist_of_the_mind, generous_plunderer, gisa_the_hellraiser, hullbreaker_horror,
+    iridescent_vinelasher, kaervek_the_punisher, kess_dissident_mage, laughing_jasper_flint,
+    lazav_familiar_stranger, loki_god_of_mischief, magda_the_hoardmaster, nightscape_familiar,
+    nimble_brigand, orcish_bowmasters, raven_of_fell_omens, red_death_shipwrecker,
+    servant_of_the_stinger, spellskite, storm_kiln_artist, vadmir_new_blood, animate_dead,
+    at_knifepoint, intimidation_campaign, rhystic_study, spatial_binding, abrade,
+    an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell, dark_ritual,
+    deadly_rollick, frantic_search, lightning_bolt, negate, pongify, rakdos_charm,
+    shoot_the_sheriff, snap, swan_song, terminate, withering_torment, geyadrone_dihada,
+    blasphemous_act, faithless_looting, feed_the_swarm, gitaxian_probe, jeskas_will, reanimate,
+    stitch_together, toxic_deluge, vandalblast, victimize,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp,
+];

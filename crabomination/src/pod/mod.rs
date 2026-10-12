@@ -3690,6 +3690,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BARAL_COMMANDERS,
             main: decks::BARAL_MAIN,
         },
+        // Seat 540: Marchesa, Dealer of Death's EDHREC average deck. `--pod-decks 540`.
+        PodDeck {
+            name: "Marchesa, Dealer of Death (UBR)",
+            commanders: decks::MARCHESA_COMMANDERS,
+            main: decks::MARCHESA_MAIN,
+        },
     ]
 }
 
@@ -5993,6 +5999,7 @@ mod tests {
             ("Savra, Queen of the Golgari", &[0x0B3F]),
             ("Lonis, Cryptozoologist", &[0x0B40]),
             ("Baral, Chief of Compliance", &[0x0B41]),
+            ("Marchesa, Dealer of Death", &[0x0B42]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

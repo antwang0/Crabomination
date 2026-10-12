@@ -142,9 +142,10 @@ the handoff.
   so a new event kind needs the mask widened first). **CR 903.9b**: Progenitus's "shuffle into its
   library instead" skipped the commander's command-zone offer (pod invariant, fixed).
 - **Guile** (CR 614.1a): `StaticEffect::CounterBecomesExileFreePlay`, read in
-  `countered_spell_off_stack`; seat 539 Baral.
+  `countered_spell_off_stack`; seat 539 Baral. **Loki**: `ChoseTargets` now binds its chooser as
+  the trigger subject; seat 540 Marchesa.
 - **Open from the rescan:** Pramikon (Suppressor Skyguard's "another opponent isn't attacked"),
-  Marchesa (Loki's "becomes the target of an ability you control"), Karametra (Yasharn's
+  Karametra (Yasharn's
   no-life/no-sacrifice costs — no central gate: life and sacrifice payments are spread over the
   Phyrexian-mana, alternative-cost, activation and additional-cost paths).
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
