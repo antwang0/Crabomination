@@ -3188,6 +3188,30 @@ suite            CRAB_ANSWER_LOG=strict nextest --workspace (no client):
                  at 705 seats (was 3528 s at 684)
 ```
 
+### 2026-10-12 (Commander run, `011PQ8Uk`) — guardrail; 40 cards, seats 1003-1012
+
+Hot-path touches: every cast that names a target walks the battlefield's
+statics once for a Hinata (`per_target_cost_shift`); the layer pass reads a
+keyword-counter timestamp only on a card that lost all abilities; `Fight`
+stamps a turn registry. Release `bot_ladder` at `b177523c1`, toolchain 1.99,
+Xeon @ 2.80 GHz (4 cores).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); peak_rss 32.6 MiB; games_per_s 257.71 (wall 1.24 s,
+                 host_calib_ms 71)
+2-player pools   seed 9811 × 300 an archetype: cube 2,400 / sos 1,500 /
+                 sealed 3,600 decided, 0 undecided
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean
+clippy           workspace --all-targets clean (26 min on this box)
+pods (release)   pod_sweep 9901 every deck × 4,6 × 3 = 1,266 games, 1 draw
+                 (all seats dead at once, CR 104.4a); 9902 × 3,5,8 × 2 =
+                 1,336 games, 1 draw (same shape) and 1 board cap (Najeela +
+                 Champion of Lambholt, the known token-combat class)
+```
+
 ### 2026-10-12 (Commander run, `01L4tuaB`, second leg) — guardrail; 79 cards, seats 932-960
 
 Hot-path touches: the cast path asks the casting card for a self colored
