@@ -11790,3 +11790,32 @@ pub const HYLDA_OF_THE_ICY_CROWN_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const MR_HOUSE_COMMANDERS: &[CardFactory] = &[mr_house_president_and_ceo];
+
+/// **Mr. House, President and CEO**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 84 nonbasic cards + 6 Mountains + 5 Plains + 4 Swamps = 99.
+/// Mr. House, President and CEO (RWB) dice
+pub const MR_HOUSE_MAIN: &[CardFactory] = &[
+    arcane_signet, clown_car, component_pouch, idol_of_oblivion, lightning_greaves,
+    luck_bobblehead, sol_ring, strength_testing_hammer, sword_of_hours, talisman_of_conviction,
+    talisman_of_indulgence, the_deck_of_many_things, treasure_chest, vexing_puzzlebox,
+    wand_of_wonder, blood_crypt, clifftop_retreat, command_tower, dragonskull_summit,
+    evolving_wilds, exotic_orchard, godless_shrine, isolated_chapel, luxury_suite,
+    nomad_outpost, path_of_ancestry, sacred_foundry, savai_triome, smoldering_marsh,
+    spectator_seating, temple_of_triumph, treasure_vault, underdark_rift, vault_of_champions,
+    academy_manufactor, ancient_brass_dragon, ancient_copper_dragon, ancient_gold_dragon,
+    brazen_dwarf, celebr_8000, chaos_channeler, chaos_dragon, crime_novelist, cyberman_patrol,
+    delina_wild_mage, goldspan_dragon, hoarding_ogre, ingenious_artillerist, iron_mastiff,
+    jan_jansen_chaos_crafter, lightfoot_rogue, losheel_clockwork_scholar, mirkwood_bats,
+    mondrak_glory_dominus, professional_face_breaker, reckless_fireweaver, securitron_squadron,
+    wyll_blade_of_frontiers, xorn, barbarian_class, intangible_virtue, maddening_hex,
+    night_shift_of_the_living_dead, revel_in_riches, smothering_tithe, berserkers_frenzy,
+    contraband_livestock, deadly_dispute, dispatch, grave_endeavor, path_to_exile, revivify,
+    six_sided_die, swords_to_plowshares, wylls_reversal, comet_stellar_pup, attempted_murder,
+    circuits_act, danse_macabre, myrkuls_edict, reckless_endeavor, recruitment_drive,
+    ruinous_ultimatum, thunderwave,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp,
+];

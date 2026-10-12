@@ -1699,8 +1699,13 @@ fn every_card_has_the_trigger_limit_it_prints() {
         // reports it as a miss. "Do this only once each turn" may instead
         // spend the use where the "may" is taken
         // (`shortcut::once_each_turn_on_take`), which is the printed limit too.
+        // Night Shift's die shift is a static that spends its own per-turn
+        // flag (`Player::die_shift_used_this_turn`).
         let dbg = format!("{def:?}");
-        if !dbg.contains("once_per_turn: true") && !dbg.contains("MarkDoneThisTurn") {
+        if !dbg.contains("once_per_turn: true")
+            && !dbg.contains("MarkDoneThisTurn")
+            && !dbg.contains("PayLifeToShiftDieOnceEachTurn")
+        {
             missing.push(def.name);
         }
     }

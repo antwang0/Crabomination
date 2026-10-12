@@ -1,17 +1,22 @@
 //! Commander: the cards that stood between a most-built commander's EDHREC
 //! average deck and a complete pod seat, sixth file (`cmdr_edhrec5` is the
-//! fifth). Hylda of the Icy Crown's tappers. Tests in
+//! fifth). Hylda of the Icy Crown's tappers; Mr. House's dice. Tests in
 //! `tests/recent_b/cmdr_edhrec6.rs`.
 
 use crate::card::{
-    Adventure, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword,
+    Adventure, ArtifactSubtype, CardDefinition, CounterType, EquipBonus, TokenDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword,
     LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_attack, target_filtered};
-use crate::effect::{ActivatedAbility, Duration, Effect, PlayerRef, ZoneDest, ZoneRef};
+use crate::card::Zone;
+use crate::effect::shortcut::{etb, on_attack, on_dies, target_filtered, tokens_gain_until_eot};
+use crate::effect::{
+    ActivatedAbility, Duration, Effect, KeywordAct, ManaPayload, PlayerRef, RevealMissDest, ZoneDest, ZoneRef,
+};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, generic, u, w, x, ManaCost};
+use crate::mana::{b, cost, generic, r, u, w, x, Color, ManaCost};
+use crabomination_base::tokens::treasure_token;
+use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition {
@@ -457,5 +462,676 @@ pub fn theft_of_dreams() -> CardDefinition {
                 amount: Value::PermanentCountControlledByMatching(PlayerRef::Target(0), R::Creature.and(R::Tapped)),
             }),
         },
+    )
+}
+
+// ── Mr. House, President and CEO (RWB) ───────────────────────────────────────
+
+fn token(name: &str, p: i32, t: i32, color: Color, types: Vec<CreatureType>) -> TokenDefinition {
+    TokenDefinition {
+        name: name.into(),
+        power: p,
+        toughness: t,
+        colors: vec![color],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        ..Default::default()
+    }
+}
+
+fn make(n: i32, def: TokenDefinition) -> Effect {
+    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(n), definition: Arc::new(def) }
+}
+
+/// Roll `count` `sides`-sided dice against `results` (CR 706.3).
+fn roll(sides: u8, count: Value, results: Vec<(u8, u8, Effect)>) -> Effect {
+    Effect::RollDie {
+        sides,
+        count,
+        modifier: Value::Const(0),
+        reroll_at_most: 0,
+        ignore_lowest: 0,
+        results,
+        on_doubles: None,
+    }
+}
+
+fn d20(results: Vec<(u8, u8, Effect)>) -> Effect {
+    roll(20, Value::ONE, results)
+}
+
+/// "Whenever you roll one or more dice" (CR 706).
+fn on_roll(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::RolledDice, EventScope::YourControl), effect }
+}
+
+fn until_eot(what: Selector, keyword: Keyword) -> Effect {
+    Effect::GrantKeyword { what, keyword, duration: Duration::EndOfTurn }
+}
+
+fn pump(what: Selector, p: Value, t: Value) -> Effect {
+    Effect::PumpPT { what, power: p, toughness: t, duration: Duration::EndOfTurn }
+}
+
+/// Strength-Testing Hammer — {1} Equipment, equip {3}. Equipped creature
+/// attacking rolls a d6 for +X/+0; then, holding the greatest power, it draws.
+pub fn strength_testing_hammer() -> CardDefinition {
+    CardDefinition {
+        name: "Strength-Testing Hammer",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![on_attack(roll(
+                6,
+                Value::ONE,
+                vec![(
+                    1,
+                    u8::MAX,
+                    Effect::Seq(vec![
+                        pump(Selector::This, Value::LastDieRoll, Value::ZERO),
+                        Effect::If {
+                            cond: Predicate::EntityMatches {
+                                what: Selector::This,
+                                filter: R::HasGreatestPowerAmongAllCreatures,
+                            },
+                            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ]),
+                )],
+            ))],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// The Deck of Many Things — {5} legendary Artifact. {2}, {T}: roll a d20 minus
+/// your hand size; 0 or less discards your hand, 1-9 returns a random
+/// graveyard card, 10-19 draws two, 20 reanimates a creature from any
+/// graveyard whose death costs its owner the game.
+pub fn the_deck_of_many_things() -> CardDefinition {
+    let reanimate = Effect::Seq(vec![
+        Effect::MoveChosen {
+            from: Selector::EachMatching { zone: ZoneRef::Graveyard(PlayerRef::EachPlayer), filter: R::Creature },
+            filter: None,
+            count: Value::ONE,
+            up_to: false,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        Effect::GrantTriggeredAbility {
+            what: Selector::LastMoved,
+            trigger: Box::new(on_dies(Effect::LoseGame { who: PlayerRef::OwnerOf(Box::new(Selector::This)) })),
+            duration: Duration::Permanent,
+        },
+    ]);
+    CardDefinition {
+        name: "The Deck of Many Things",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            // CR 706.2 — the hand size is a modifier: a result of 0 or less
+            // matches no arm and discards the hand instead.
+            effect: Effect::RollDie {
+                sides: 20,
+                count: Value::ONE,
+                modifier: Value::Diff(Box::new(Value::ZERO), Box::new(Value::HandSizeOf(PlayerRef::You))),
+                reroll_at_most: 0,
+                ignore_lowest: 0,
+                results: vec![
+                    (
+                        0,
+                        0,
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::HandSizeOf(PlayerRef::You),
+                            random: false,
+                        },
+                    ),
+                    (1, 9, Effect::ReturnRandomFromGraveyard { who: PlayerRef::You, filter: R::Any, count: Value::ONE }),
+                    (10, 19, Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                    (20, 20, reanimate),
+                ],
+                on_doubles: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Treasure Chest — {3} Artifact. {4}, sacrifice: roll a d20 — lose 3 life;
+/// five Treasures; gain 3 and draw three; or tutor (an artifact may enter).
+pub fn treasure_chest() -> CardDefinition {
+    CardDefinition {
+        name: "Treasure Chest",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            mana_cost: cost(&[generic(4)]),
+            effect: d20(vec![
+                (1, 1, Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }),
+                (2, 9, Effect::CreateToken { who: PlayerRef::You, count: Value::Const(5), definition: Arc::new(treasure_token()) }),
+                (
+                    10,
+                    19,
+                    Effect::Seq(vec![
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                        Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    ]),
+                ),
+                (
+                    20,
+                    u8::MAX,
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: R::Any,
+                        to: ZoneDest::IfCard {
+                            filter: Box::new(R::Artifact),
+                            then: Box::new(ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }),
+                            else_: Box::new(ZoneDest::Hand(PlayerRef::You)),
+                        },
+                    },
+                ),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vexing Puzzlebox — {3} Artifact. Your rolls charge it by the result; {T}:
+/// any color, then a d20; {T}, remove 100 charge counters: an artifact from
+/// your library onto the battlefield. Residual: a multi-die roll charges by
+/// its highest result (INCOMPLETE_CARDS).
+pub fn vexing_puzzlebox() -> CardDefinition {
+    CardDefinition {
+        name: "Vexing Puzzlebox",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![on_roll(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Charge,
+            amount: Value::TriggerEventAmount,
+        })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                    d20(vec![]),
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                remove_counter_cost: Some((CounterType::Charge, 100)),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Artifact,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wand of Wonder — {3}{R} Artifact. {4}, {T}: roll a d20; each opponent
+/// exiles to an instant or sorcery and shuffles the rest back; cast up to
+/// X (1 / 2 / 3) of the exiled spells free.
+pub fn wand_of_wonder() -> CardDefinition {
+    let spells = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    let wonder = |x: i32| {
+        Effect::Seq(vec![
+            Effect::EachPlayerDoes {
+                who: PlayerRef::EachOpponent,
+                body: Box::new(Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    find: spells(),
+                    to: ZoneDest::Exile,
+                    cap: Value::Const(1000),
+                    life_per_revealed: 0,
+                    miss_dest: RevealMissDest::ShuffleIntoLibrary,
+                }),
+            },
+            Effect::CastAnyOrderWithoutPaying {
+                what: Selector::ExiledThisResolution { filter: spells() },
+                source_zone: Zone::Exile,
+                filter: None,
+                cap: Some(Value::Const(x)),
+                total_mana_value: None,
+            },
+        ])
+    };
+    CardDefinition {
+        name: "Wand of Wonder",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4)]),
+            effect: d20(vec![(1, 9, wonder(1)), (10, 19, wonder(2)), (20, u8::MAX, wonder(3))]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brazen Dwarf — {1}{R} 1/3 Dwarf Shaman. Your rolls ping each opponent.
+pub fn brazen_dwarf() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_roll(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+        })],
+        ..creature("Brazen Dwarf", cost(&[generic(1), r()]), vec![CreatureType::Dwarf, CreatureType::Shaman], 1, 3)
+    }
+}
+
+/// Celebr-8000 — {5} 3/3 Clown Robot artifact creature. Beginning of combat on
+/// your turn, two d6: each 1 is +1/+1, each other face an ability (2 menace,
+/// 3 vigilance, 4 lifelink, 5 flying, 6 indestructible); doubles add double
+/// strike (CR 706.5).
+pub fn celebr_8000() -> CardDefinition {
+    let me = || Selector::This;
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::RollDie {
+                sides: 6,
+                count: Value::Const(2),
+                modifier: Value::Const(0),
+                reroll_at_most: 0,
+                ignore_lowest: 0,
+                results: vec![
+                    (1, 1, pump(me(), Value::ONE, Value::ONE)),
+                    (2, 2, until_eot(me(), Keyword::Menace)),
+                    (3, 3, until_eot(me(), Keyword::Vigilance)),
+                    (4, 4, until_eot(me(), Keyword::Lifelink)),
+                    (5, 5, until_eot(me(), Keyword::Flying)),
+                    (6, u8::MAX, until_eot(me(), Keyword::Indestructible)),
+                ],
+                on_doubles: Some(Box::new(until_eot(me(), Keyword::DoubleStrike))),
+            },
+        }],
+        ..creature("Celebr-8000", cost(&[generic(5)]), vec![CreatureType::Clown, CreatureType::Robot], 3, 3)
+    }
+}
+
+/// Hoarding Ogre — {3}{R} 3/3 Ogre. Attacking, a d20: one, two or three
+/// Treasures.
+pub fn hoarding_ogre() -> CardDefinition {
+    let treasures = |n: i32| Effect::CreateToken { who: PlayerRef::You, count: Value::Const(n), definition: Arc::new(treasure_token()) };
+    CardDefinition {
+        triggered_abilities: vec![on_attack(d20(vec![(1, 9, treasures(1)), (10, 19, treasures(2)), (20, u8::MAX, treasures(3))]))],
+        ..creature("Hoarding Ogre", cost(&[generic(3), r()]), vec![CreatureType::Ogre], 3, 3)
+    }
+}
+
+/// Iron Mastiff — {4} 4/4 Dog artifact creature. Attacking, a d20 per player
+/// being attacked, keeping only the highest: it hits you, the defending
+/// player, or each opponent for its power.
+pub fn iron_mastiff() -> CardDefinition {
+    let bite = |to: Selector| Effect::DealDamage { to, amount: Value::PowerOf(Box::new(Selector::This)) };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![on_attack(Effect::IgnoreAllButHighestRoll {
+            dice: Value::OpponentsAttackedThisCombat,
+            roll: Box::new(d20(vec![
+                (1, 9, bite(Selector::You)),
+                (10, 19, bite(Selector::Player(PlayerRef::DefendingPlayer))),
+                (20, u8::MAX, bite(Selector::Player(PlayerRef::EachOpponent))),
+            ])),
+        })],
+        ..creature("Iron Mastiff", cost(&[generic(4)]), vec![CreatureType::Dog], 4, 4)
+    }
+}
+
+/// Lightfoot Rogue — {1}{B} 2/1 Halfling Rogue. Attacking, a d20: deathtouch;
+/// +1/+0 too; or +3/+0, first strike too.
+pub fn lightfoot_rogue() -> CardDefinition {
+    let me = || Selector::This;
+    CardDefinition {
+        triggered_abilities: vec![on_attack(d20(vec![
+            (1, 9, until_eot(me(), Keyword::Deathtouch)),
+            (10, 19, Effect::Seq(vec![pump(me(), Value::ONE, Value::ZERO), until_eot(me(), Keyword::Deathtouch)])),
+            (
+                20,
+                u8::MAX,
+                Effect::Seq(vec![
+                    pump(me(), Value::Const(3), Value::ZERO),
+                    until_eot(me(), Keyword::FirstStrike),
+                    until_eot(me(), Keyword::Deathtouch),
+                ]),
+            ),
+        ]))],
+        ..creature("Lightfoot Rogue", cost(&[generic(1), b()]), vec![CreatureType::Halfling, CreatureType::Rogue], 2, 1)
+    }
+}
+
+/// Wyll, Blade of Frontiers — {1}{R} 1/1 legendary Human Warlock. Your rolls
+/// add a die and ignore the lowest (CR 706.6); each roll grows Wyll. Choose a
+/// Background.
+pub fn wyll_blade_of_frontiers() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::ChooseABackground],
+        static_abilities: vec![StaticAbility {
+            description: "If you would roll one or more dice, instead roll that many dice plus one and ignore the lowest roll.",
+            effect: StaticEffect::RollExtraDiceIgnoreLowest(1),
+        }],
+        triggered_abilities: vec![on_roll(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..creature(
+            "Wyll, Blade of Frontiers",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Human, CreatureType::Warlock],
+            1,
+            1,
+        )
+    }
+}
+
+/// Night Shift of the Living Dead — {3}{B} Enchantment. Once each turn you may
+/// pay 1 life to move a die result by one (CR 706.2); every 6 you roll makes a
+/// 2/2 Zombie Employee. Residual: a UI seat takes the headless shift
+/// (INCOMPLETE_CARDS).
+pub fn night_shift_of_the_living_dead() -> CardDefinition {
+    let six = Predicate::All(vec![
+        Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(6)),
+        Predicate::ValueAtMost(Value::TriggerEventAmount, Value::Const(6)),
+    ]);
+    CardDefinition {
+        name: "Night Shift of the Living Dead",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "After you roll a die, you may pay 1 life. If you do, increase or decrease the result by 1. Do this only once each turn.",
+            effect: StaticEffect::PayLifeToShiftDieOnceEachTurn,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Performed(KeywordAct::DieResult), EventScope::YourControl).with_filter(six),
+            effect: make(1, token("Zombie Employee", 2, 2, Color::Black, vec![CreatureType::Zombie, CreatureType::Employee])),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Contraband Livestock — {1}{W} Instant. Exile target creature; a d20 gives
+/// its controller a 4/4 Ox, a 2/2 Boar or a 0/1 Goat.
+pub fn contraband_livestock() -> CardDefinition {
+    let theirs = |def: TokenDefinition| Effect::CreateToken {
+        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+        count: Value::ONE,
+        definition: Arc::new(def),
+    };
+    spell(
+        "Contraband Livestock",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Exile { what: target_filtered(R::Creature) },
+            d20(vec![
+                (1, 9, theirs(token("Ox", 4, 4, Color::Green, vec![CreatureType::Ox]))),
+                (10, 19, theirs(token("Boar", 2, 2, Color::Green, vec![CreatureType::Boar]))),
+                (20, u8::MAX, theirs(token("Goat", 0, 1, Color::White, vec![CreatureType::Goat]))),
+            ]),
+        ]),
+    )
+}
+
+/// Six-Sided Die — {2}{B} Instant. Choose target creature and roll a d6: base
+/// toughness 1; two -1/-1 counters; 3 damage and you gain 3; -4/-4; destroy;
+/// or exile.
+pub fn six_sided_die() -> CardDefinition {
+    let it = || target_filtered(R::Creature);
+    spell(
+        "Six-Sided Die",
+        cost(&[generic(2), b()]),
+        CardType::Instant,
+        roll(
+                6,
+                Value::ONE,
+                vec![
+                    (
+                        1,
+                        1,
+                        Effect::SetBasePT {
+                            what: it(),
+                            power: Value::BasePowerOf(Box::new(it())),
+                            toughness: Value::ONE,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ),
+                    (2, 2, Effect::AddCounter { what: it(), kind: CounterType::MinusOneMinusOne, amount: Value::Const(2) }),
+                    (
+                        3,
+                        3,
+                        Effect::Seq(vec![
+                            Effect::DealDamage { to: it(), amount: Value::Const(3) },
+                            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                        ]),
+                    ),
+                    (4, 4, pump(it(), Value::Const(-4), Value::Const(-4))),
+                    (5, 5, Effect::Destroy { what: it() }),
+                    (6, u8::MAX, Effect::Exile { what: it() }),
+                ],
+            ),
+    )
+}
+
+/// Wyll's Reversal — {2}{R} Instant. Target spell or ability with targets: a
+/// d20 plus your greatest power; you may retarget it, and on 15+ copy it too.
+pub fn wylls_reversal() -> CardDefinition {
+    let retarget = || Effect::ChooseNewTargetsForSpell {
+        what: target_filtered(R::IsSpellOnStack.or(R::HasAbilityOnStack).and(R::SpellWithAnyTarget)),
+    };
+    let copy = Effect::If {
+        cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsSpellOnStack },
+        then: Box::new(Effect::CopySpellMayChooseTargets { what: Selector::Target(0), count: Value::ONE }),
+        else_: Box::new(Effect::CopyAbility { what: Selector::Target(0), times: Value::ONE }),
+    };
+    spell(
+        "Wyll's Reversal",
+        cost(&[generic(2), r()]),
+        CardType::Instant,
+        Effect::RollDie {
+                sides: 20,
+                count: Value::ONE,
+                modifier: Value::GreatestPowerControlled { who: PlayerRef::You },
+                reroll_at_most: 0,
+                ignore_lowest: 0,
+                results: vec![(1, 14, retarget()), (15, u8::MAX, Effect::Seq(vec![retarget(), copy]))],
+                on_doubles: None,
+            },
+    )
+}
+
+/// Comet, Stellar Pup — {2}{R}{W} loyalty 5. 0: roll a d6 — +2 and two hasty
+/// Squirrels; −1 and a card with mana value 2 or less back; his loyalty in
+/// damage to a creature or player, then −2; or +1 and two more activations.
+/// Nothing targets (2022-10-07 ruling).
+pub fn comet_stellar_pup() -> CardDefinition {
+    let me = || Selector::This;
+    let loyalty = |n: i32| {
+        if n >= 0 {
+            Effect::AddCounter { what: me(), kind: CounterType::Loyalty, amount: Value::Const(n) }
+        } else {
+            Effect::RemoveCounter { what: me(), kind: CounterType::Loyalty, amount: Value::Const(-n) }
+        }
+    };
+    let squirrels = tokens_gain_until_eot(
+        make(2, token("Squirrel", 1, 1, Color::Green, vec![CreatureType::Squirrel])),
+        &[Keyword::Haste],
+    );
+    CardDefinition {
+        name: "Comet, Stellar Pup",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Comet], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: 0,
+            effect: roll(
+                6,
+                Value::ONE,
+                vec![
+                    (1, 2, Effect::Seq(vec![loyalty(2), squirrels])),
+                    (
+                        3,
+                        3,
+                        Effect::Seq(vec![
+                            loyalty(-1),
+                            Effect::MoveChosen {
+                                from: Selector::EachMatching {
+                                    zone: ZoneRef::Graveyard(PlayerRef::You),
+                                    filter: R::ManaValueAtMost(2),
+                                },
+                                filter: None,
+                                count: Value::ONE,
+                                up_to: false,
+                                to: ZoneDest::Hand(PlayerRef::You),
+                            },
+                        ]),
+                    ),
+                    (
+                        4,
+                        5,
+                        Effect::Seq(vec![
+                            Effect::DealDamageToChosenCreatureOrPlayer {
+                                amount: Value::CountersOn { what: Box::new(me()), kind: CounterType::Loyalty },
+                            },
+                            loyalty(-2),
+                        ]),
+                    ),
+                    (6, u8::MAX, Effect::Seq(vec![loyalty(1), Effect::LoyaltyTwoMoreTimesThisTurn { what: me() }])),
+                ],
+            ),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Attempted Murder — {X}{B}{B} Sorcery. Choose target creature, roll X d6:
+/// each even result two -1/-1 counters on it, each odd one a 1/2 flying Storm
+/// Crow.
+pub fn attempted_murder() -> CardDefinition {
+    let wither = || Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::MinusOneMinusOne, amount: Value::Const(2) };
+    let crow = || {
+        make(1, TokenDefinition {
+            keywords: vec![Keyword::Flying],
+            ..token("Storm Crow", 1, 2, Color::Blue, vec![CreatureType::Bird])
+        })
+    };
+    spell(
+        "Attempted Murder",
+        cost(&[x(), b(), b()]),
+        CardType::Sorcery,
+        roll(
+                6,
+                Value::XFromCost,
+                vec![(1, 1, crow()), (2, 2, wither()), (3, 3, crow()), (4, 4, wither()), (5, 5, crow()), (6, 6, wither())],
+            ),
+    )
+}
+
+/// Circuits Act — {2}{R} Sorcery. Three d6: a 1/1 Clown Robot per different
+/// result.
+pub fn circuits_act() -> CardDefinition {
+    let clown = TokenDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..token("Clown Robot", 1, 1, Color::White, vec![CreatureType::Clown, CreatureType::Robot])
+    };
+    spell(
+        "Circuits Act",
+        cost(&[generic(2), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            roll(6, Value::Const(3), vec![]),
+            Effect::CreateToken { who: PlayerRef::You, count: Value::LastRollDistinctResults, definition: Arc::new(clown) },
+        ]),
+    )
+}
+
+/// Myrkul's Edict — {1}{B} Sorcery. A d20: a chosen opponent sacrifices a
+/// creature; each opponent does; or each sacrifices their greatest power.
+pub fn myrkuls_edict() -> CardDefinition {
+    let sac = |who: Selector, filter: R| Effect::Sacrifice { who, count: Value::ONE, filter };
+    spell(
+        "Myrkul's Edict",
+        cost(&[generic(1), b()]),
+        CardType::Sorcery,
+        d20(vec![
+            (
+                1,
+                9,
+                Effect::ChooseOpponentThen {
+                    then: Box::new(sac(Selector::Player(PlayerRef::ChosenPlayerOfSource), R::Creature)),
+                },
+            ),
+            (10, 19, sac(Selector::Player(PlayerRef::EachOpponent), R::Creature)),
+            (
+                20,
+                u8::MAX,
+                sac(
+                    Selector::Player(PlayerRef::EachOpponent),
+                    R::Creature.and(R::HasGreatestPowerAmongControlled(Box::new(R::Creature))),
+                ),
+            ),
+        ]),
+    )
+}
+
+/// Recruitment Drive — {2}{W} Sorcery. A d20: two 1/1 Soldiers, two 2/2
+/// Knights, or three Knights.
+pub fn recruitment_drive() -> CardDefinition {
+    let soldier = || token("Soldier", 1, 1, Color::White, vec![CreatureType::Soldier]);
+    let knight = || token("Knight", 2, 2, Color::White, vec![CreatureType::Knight]);
+    spell(
+        "Recruitment Drive",
+        cost(&[generic(2), w()]),
+        CardType::Sorcery,
+        d20(vec![(1, 9, make(2, soldier())), (10, 19, make(2, knight())), (20, u8::MAX, make(3, knight()))]),
+    )
+}
+
+/// Thunderwave — {2}{R}{R} Sorcery. A d20: 3 to each creature; 3 to each but
+/// one you may choose; or 6 to each creature your opponents control.
+pub fn thunderwave() -> CardDefinition {
+    let every = || Selector::EachMatching { zone: ZoneRef::Battlefield, filter: R::Creature };
+    spell(
+        "Thunderwave",
+        cost(&[generic(2), r(), r()]),
+        CardType::Sorcery,
+        d20(vec![
+            (1, 9, Effect::DealDamage { to: every(), amount: Value::Const(3) }),
+            (
+                10,
+                19,
+                Effect::ChooseSomeAmong {
+                    what: every(),
+                    chooser: PlayerRef::You,
+                    count: Value::ONE,
+                    up_to: true,
+                    chosen: Box::new(Effect::Noop),
+                    other: Box::new(Effect::DealDamage { to: Selector::SeparatedPile { chosen: false }, amount: Value::Const(3) }),
+                },
+            ),
+            (20, u8::MAX, Effect::DealDamage { to: their_creatures(), amount: Value::Const(6) }),
+        ]),
     )
 }

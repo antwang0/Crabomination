@@ -2874,6 +2874,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HYLDA_OF_THE_ICY_CROWN_COMMANDERS,
             main: decks::HYLDA_OF_THE_ICY_CROWN_MAIN,
         },
+        // Seat 404: Mr. House, President and CEO's EDHREC average deck. `--pod-decks 404`.
+        PodDeck {
+            name: "Mr. House, President and CEO (RWB)",
+            commanders: decks::MR_HOUSE_COMMANDERS,
+            main: decks::MR_HOUSE_MAIN,
+        },
     ]
 }
 
@@ -5035,6 +5041,7 @@ mod tests {
             ("Tom Bombadil", [0x0AB7, 401, 9326]),
             ("Edward Kenway", [0x0AB8, 402, 9327]),
             ("Hylda of the Icy Crown", [0x0AB9, 403, 9328]),
+            ("Mr. House, President and CEO", [0x0ABA, 404, 9329]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
