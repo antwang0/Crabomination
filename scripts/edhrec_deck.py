@@ -42,14 +42,14 @@ def factories():
 
 
 def by_printed_name():
-    """Card name -> factory, from the first string literal in each factory's
-    body: a factory named apart from its card (`danitha_capashen` for
-    "Danitha Capashen, Paragon")."""
+    """Card name -> factory, from each factory body's `name: "…"` (else its
+    first string literal): a factory named apart from its card
+    (`danitha_capashen` for "Danitha Capashen, Paragon", `uro`)."""
     out = {}
     for p in glob.glob(os.path.join(ROOT, "crabomination_catalog", "src", "**", "*.rs"), recursive=True):
         text = open(p, encoding="utf-8").read()
         for m in re.finditer(r"pub fn (\w+)\(\) -> (?:crate::card::)?CardDefinition \{(.*?)\n\}", text, re.S):
-            lit = re.search(r'"((?:[^"\\]|\\.)*)"', m.group(2))
+            lit = re.search(r'\bname: "((?:[^"\\]|\\.)*)"', m.group(2)) or re.search(r'"((?:[^"\\]|\\.)*)"', m.group(2))
             if lit:
                 out.setdefault(lit.group(1), m.group(1))
     return out

@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -375,4 +376,167 @@ fn teferi_temporal_pilgrim_grows_on_draws() {
     let t = walker(&mut g, catalog::teferi_temporal_pilgrim(), 4);
     walk(&mut g, t, 0, None).expect("0: draw");
     assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::Loyalty), 5);
+}
+
+/// Treefolk Umbra: the host deals combat damage by toughness (0/4 Wall of
+/// Omens + 0/2 hits for 6 — but walls can't attack, so a 2/2 Bears hits for 4).
+#[test]
+fn treefolk_umbra_hits_by_toughness() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let u = g.add_card_to_hand(0, catalog::treefolk_umbra());
+    cast(&mut g, u, &[perm(bears)]).expect("cast");
+    assert_eq!(g.computed_permanent(bears).unwrap().toughness, 4);
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    for _ in 0..12 {
+        if g.players[1].life != life {
+            break;
+        }
+        let p = g.priority.player_with_priority;
+        let _ = p;
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    assert_eq!(g.players[1].life, life - 4);
+}
+
+/// Sigarda's Summons: a creature with a +1/+1 counter is a 4/4 flying Angel
+/// (plus its counter), one without isn't.
+#[test]
+fn sigardas_summons_angels_the_countered() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::sigardas_summons());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::savannah_lions());
+    g.battlefield_find_mut(a).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(has_kw(&g, a, Keyword::Flying));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Angel));
+    assert!(!has_kw(&g, b, Keyword::Flying));
+}
+
+/// Kuldotha Forgemaster: sacrifice three artifacts (itself among them) to
+/// put an artifact from the library onto the battlefield.
+#[test]
+fn kuldotha_forgemaster_trades_three_for_one() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::sol_ring());
+    let k = ready(&mut g, 0, catalog::kuldotha_forgemaster());
+    let a = ready(&mut g, 0, catalog::ornithopter());
+    assert!(activate(&mut g, k, 0, None).is_err(), "two artifacts aren't three");
+    let b = ready(&mut g, 0, catalog::ornithopter());
+    activate(&mut g, k, 0, None).expect("activate");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none() && g.battlefield_find(k).is_none());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Sol Ring"));
+}
+
+/// Outlaws' Merriment makes one hasty red-and-white Human each upkeep.
+#[test]
+fn outlaws_merriment_makes_a_random_human() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::outlaws_merriment());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let t: Vec<_> = g.battlefield.iter().filter(|c| c.is_token).collect();
+    assert_eq!(t.len(), 1);
+    assert!(t[0].definition.name.starts_with("Human"));
+    let id = t[0].id;
+    assert!(has_kw(&g, id, Keyword::Haste));
+}
+
+/// Bard, King of Dale doubles tokens you create.
+#[test]
+fn bard_king_of_dale_doubles_tokens() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::bard_king_of_dale());
+    let p = g.add_card_to_hand(0, catalog::pirates_pillage());
+    g.add_card_to_hand(0, catalog::island());
+    library(&mut g, 0, 6);
+    cast(&mut g, p, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 4);
+}
+
+/// Defiler of Faith: a white permanent spell makes a Soldier; it may pay
+/// 2 life for its {W}.
+#[test]
+fn defiler_of_faith_makes_soldiers() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::defiler_of_faith());
+    let lions = g.add_card_to_hand(0, catalog::savannah_lions());
+    let life = g.players[0].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: lions, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Lions for 2 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2);
+    assert_eq!(tokens_of(&g, 0, "Soldier"), 1);
+}
+
+/// Grimgrin: sacrificing another creature untaps it with a counter.
+#[test]
+fn grimgrin_eats_to_untap() {
+    let mut g = pod(2);
+    let gr = ready(&mut g, 0, catalog::grimgrin_corpse_born());
+    g.battlefield_find_mut(gr).unwrap().tapped = true;
+    let food = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, gr, 0, None).expect("sacrifice");
+    assert!(g.battlefield_find(food).is_none());
+    let c = g.battlefield_find(gr).unwrap();
+    assert!(!c.tapped);
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Inferno of the Star Mounts: the activation that brings it to exactly 20
+/// power deals 20 damage.
+#[test]
+fn inferno_of_the_star_mounts_fires_at_twenty() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    let inf = ready(&mut g, 0, catalog::inferno_of_the_star_mounts());
+    for _ in 0..13 {
+        activate(&mut g, inf, 0, None).expect("pump");
+    }
+    assert_eq!(g.computed_permanent(inf).unwrap().power, 19);
+    let life = g.players[1].life;
+    activate(&mut g, inf, 0, None).expect("pump to 20");
+    assert_eq!(g.players[1].life, life - 20);
+}
+
+/// Guiding Hydra enters with X counters and may shift one onto each other
+/// creature at your beginning of combat.
+#[test]
+fn guiding_hydra_shares_its_counters() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let h = g.add_card_to_hand(0, catalog::guiding_hydra());
+    cast_x(&mut g, h, &[], Some(3)).expect("cast");
+    assert_eq!(g.battlefield_find(h).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(h).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Greasefang returns a Vehicle from your graveyard with haste, back to hand
+/// at the next end step.
+#[test]
+fn greasefang_borrows_a_vehicle_for_the_turn() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::greasefang_okiba_boss());
+    let v = g.add_card_to_graveyard(0, catalog::smugglers_copter());
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(v).is_some(), "Copter returned");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == v), "back to hand");
 }

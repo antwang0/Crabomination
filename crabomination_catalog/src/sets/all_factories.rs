@@ -13449,6 +13449,16 @@ static DECKS: &[Factory] = &[
     super::decks::koth_of_the_hammer,
     super::decks::basri_ket,
     super::decks::teferi_temporal_pilgrim,
+    super::decks::treefolk_umbra,
+    super::decks::sigardas_summons,
+    super::decks::kuldotha_forgemaster,
+    super::decks::outlaws_merriment,
+    super::decks::bard_king_of_dale,
+    super::decks::defiler_of_faith,
+    super::decks::grimgrin_corpse_born,
+    super::decks::inferno_of_the_star_mounts,
+    super::decks::guiding_hydra,
+    super::decks::greasefang_okiba_boss,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

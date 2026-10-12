@@ -4,11 +4,11 @@
 //! `tests/recent_b/cmdr_edhrec10.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
+    ArtifactSubtype, CardDefinition, CardType, CounterType, EnchantmentSubtype, EquipBonus, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
     LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{colored_animation, etb, target_any, target_filtered, tokens_gain_until_eot};
+use crate::effect::shortcut::{colored_animation, etb, on_attack, target_any, target_filtered, tokens_gain_until_eot};
 use crate::effect::{ActivatedAbility, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
@@ -568,5 +568,235 @@ pub fn teferi_temporal_pilgrim() -> CardDefinition {
                 }),
             ],
         )
+    }
+}
+
+// ── Creatures, auras and enchantments ──────────────────────────────────────
+
+/// Treefolk Umbra — {2}{G} Aura. Enchanted creature gets +0/+2 and assigns
+/// combat damage equal to its toughness. Umbra armor.
+pub fn treefolk_umbra() -> CardDefinition {
+    CardDefinition {
+        name: "Treefolk Umbra",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::UmbraArmor],
+        effect: Effect::Attach { what: Selector::This, to: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+        equipped_bonus: Some(EquipBonus {
+            toughness: 2,
+            keywords: vec![Keyword::AssignsCombatDamageByToughness],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Sigarda's Summons — {4}{W}{W} enchantment. Your creatures with +1/+1
+/// counters have base power and toughness 4/4, flying, and are Angels.
+pub fn sigardas_summons() -> CardDefinition {
+    let countered = || Selector::EachPermanent(yours().and(R::WithCounter(CounterType::PlusOnePlusOne)));
+    CardDefinition {
+        static_abilities: vec![
+            static_ab(
+                "Creatures you control with +1/+1 counters on them have base power and toughness 4/4.",
+                StaticEffect::SetBasePtForFilter { applies_to: countered(), power: 4, toughness: 4 },
+            ),
+            static_ab(
+                "… have flying …",
+                StaticEffect::GrantKeyword { applies_to: countered(), keyword: Keyword::Flying },
+            ),
+            static_ab(
+                "… and are Angels in addition to their other types.",
+                StaticEffect::AddCreatureTypeToMatching { applies_to: countered(), creature_type: CreatureType::Angel },
+            ),
+        ],
+        ..spell("Sigarda's Summons", cost(&[generic(4), w(), w()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Kuldotha Forgemaster — {5} 3/5 artifact Construct. {T}, sacrifice three
+/// artifacts: search for an artifact card and put it onto the battlefield.
+pub fn kuldotha_forgemaster() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Artifact.and(R::ControlledByYou), 3)),
+            sac_other_may_be_source: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Artifact,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature("Kuldotha Forgemaster", cost(&[generic(5)]), vec![CreatureType::Construct], 3, 5)
+    }
+}
+
+/// Outlaws' Merriment — {1}{R}{W}{W} enchantment. Each upkeep, a random one
+/// of three red-and-white hasty Human tokens.
+pub fn outlaws_merriment() -> CardDefinition {
+    let human = |name: &str, p: i32, t: i32, kind: CreatureType, extra: Option<Keyword>| TokenDefinition {
+        keywords: [Some(Keyword::Haste), extra].into_iter().flatten().collect(),
+        ..token(name, p, t, vec![Color::Red, Color::White], vec![CreatureType::Human, kind])
+    };
+    let rogue = TokenDefinition {
+        triggered_abilities: vec![etb(Effect::DealDamage { to: target_any(), amount: Value::ONE })],
+        ..human("Human Rogue", 1, 2, CreatureType::Rogue, None)
+    };
+    CardDefinition {
+        triggered_abilities: vec![at_your(TurnStep::Upkeep, Effect::ChooseModeAtRandom(vec![
+            make(PlayerRef::You, Value::ONE, human("Human Warrior", 3, 1, CreatureType::Warrior, Some(Keyword::Trample))),
+            make(PlayerRef::You, Value::ONE, human("Human Cleric", 2, 1, CreatureType::Cleric, Some(Keyword::Lifelink))),
+            make(PlayerRef::You, Value::ONE, rogue),
+        ]))],
+        ..spell("Outlaws' Merriment", cost(&[generic(1), r(), w(), w()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Bard, King of Dale — {4}{W}{U} 3/5 legendary Human Noble Archer with
+/// reach and vigilance. Draws past the first in each draw step are doubled;
+/// tokens created under your control are doubled.
+pub fn bard_king_of_dale() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::Vigilance],
+        static_abilities: vec![
+            static_ab(
+                "If you would draw a card except the first one you draw in each of your draw steps, draw two cards instead.",
+                StaticEffect::ControllerDrawsDoubledExceptFirstEachDrawStep,
+            ),
+            static_ab(
+                "If one or more tokens would be created under your control, twice that many of those tokens are created instead.",
+                StaticEffect::DoubleTokens,
+            ),
+        ],
+        ..legend(
+            "Bard, King of Dale",
+            cost(&[generic(4), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Noble, CreatureType::Archer],
+            3,
+            5,
+        )
+    }
+}
+
+/// Defiler of Faith — {3}{W}{W} 5/5 vigilance Phyrexian Human. White
+/// permanent spells may pay 2 life for {W}; casting one makes a 1/1 Soldier.
+pub fn defiler_of_faith() -> CardDefinition {
+    let white_permanent = || R::HasColor(Color::White).and(R::PermanentCard);
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![static_ab(
+            "White permanent spells may pay 2 life for {W}.",
+            StaticEffect::PhyrexianPipForSpells { filter: white_permanent(), color: Color::White },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(white_permanent())),
+            effect: make(PlayerRef::You, Value::ONE, token("Soldier", 1, 1, vec![Color::White], vec![CreatureType::Soldier])),
+        }],
+        ..creature("Defiler of Faith", cost(&[generic(3), w(), w()]), vec![CreatureType::Phyrexian, CreatureType::Human], 5, 5)
+    }
+}
+
+/// Grimgrin, Corpse-Born — {3}{U}{B} 5/5 legendary Zombie Warrior. Enters
+/// tapped and doesn't untap in your untap step; sacrifice another creature to
+/// untap it with a +1/+1 counter; attacking destroys a creature the defending
+/// player controls, then grows it.
+pub fn grimgrin_corpse_born() -> CardDefinition {
+    let grow = || Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE };
+    CardDefinition {
+        static_abilities: vec![
+            crate::sets::enters_tapped(),
+            static_ab(
+                "Grimgrin doesn't untap during your untap step.",
+                StaticEffect::PreventUntap { applies_to: Selector::This },
+            ),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((yours(), 1)),
+            effect: Effect::Seq(vec![Effect::Untap { what: Selector::This, up_to: None }, grow()]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)) },
+            grow(),
+        ]))],
+        ..legend(
+            "Grimgrin, Corpse-Born",
+            cost(&[generic(3), u(), b()]),
+            vec![CreatureType::Zombie, CreatureType::Warrior],
+            5,
+            5,
+        )
+    }
+}
+
+/// Inferno of the Star Mounts — {4}{R}{R} 6/6 legendary flying, hasty
+/// Dragon that can't be countered. {R}: +1/+0 until end of turn; when its
+/// power becomes 20 this way, it deals 20 damage to any target.
+pub fn inferno_of_the_star_mounts() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::CantBeCountered],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                Effect::If {
+                    cond: Predicate::ValueEquals(Value::PowerOf(Box::new(Selector::This)), Value::Const(20)),
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DealDamage { to: target_any(), amount: Value::Const(20) }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend("Inferno of the Star Mounts", cost(&[generic(4), r(), r()]), vec![CreatureType::Dragon], 6, 6)
+    }
+}
+
+/// Guiding Hydra — {X}{W} 1/0 Hydra Horror; enters with X +1/+1 counters.
+/// At the beginning of combat on your turn you may move one of its counters
+/// onto each other creature you control.
+pub fn guiding_hydra() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![at_your(TurnStep::BeginCombat, Effect::If {
+            cond: Predicate::EntityMatches { what: Selector::This, filter: R::WithCounter(CounterType::PlusOnePlusOne) },
+            then: Box::new(Effect::MayDo {
+                description: "Remove a +1/+1 counter to put one on each other creature you control?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::RemoveCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(yours().and(R::OtherThanSource)),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ])),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature("Guiding Hydra", cost(&[x(), w()]), vec![CreatureType::Hydra, CreatureType::Horror], 1, 0)
+    }
+}
+
+/// Greasefang, Okiba Boss — {1}{W}{B} 4/3 legendary Rat Pilot. At the
+/// beginning of combat on your turn, return target Vehicle card from your
+/// graveyard to the battlefield; it gains haste and returns to its owner's
+/// hand at your next end step.
+pub fn greasefang_okiba_boss() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![at_your(TurnStep::BeginCombat, Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Vehicle).and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+            Effect::ReturnToOwnersHandAtNextEndStep { what: Selector::LastMoved },
+        ]))],
+        ..legend("Greasefang, Okiba Boss", cost(&[generic(1), w(), b()]), vec![CreatureType::Rat, CreatureType::Pilot], 4, 3)
     }
 }
