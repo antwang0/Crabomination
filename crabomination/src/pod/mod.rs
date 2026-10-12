@@ -3696,6 +3696,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MARCHESA_COMMANDERS,
             main: decks::MARCHESA_MAIN,
         },
+        // Seat 541: Grolnok, the Omnivore's EDHREC average deck. `--pod-decks 541`.
+        PodDeck {
+            name: "Grolnok, the Omnivore (UG)",
+            commanders: decks::GROLNOK_COMMANDERS,
+            main: decks::GROLNOK_MAIN,
+        },
+        // Seat 542: Arthur, Marigold Knight's EDHREC average deck. `--pod-decks 542`.
+        PodDeck {
+            name: "Arthur, Marigold Knight (WUR)",
+            commanders: decks::ARTHUR_COMMANDERS,
+            main: decks::ARTHUR_MAIN,
+        },
+        // Seat 543: Uril, the Miststalker's EDHREC average deck. `--pod-decks 543`.
+        PodDeck {
+            name: "Uril, the Miststalker (WRG)",
+            commanders: decks::URIL_COMMANDERS,
+            main: decks::URIL_MAIN,
+        },
+        // Seat 544: Zurgo Helmsmasher's EDHREC average deck. `--pod-decks 544`.
+        PodDeck {
+            name: "Zurgo Helmsmasher (WBR)",
+            commanders: decks::ZURGO_HELMSMASHER_COMMANDERS,
+            main: decks::ZURGO_HELMSMASHER_MAIN,
+        },
+        // Seat 545: Taii Wakeen, Perfect Shot's EDHREC average deck. `--pod-decks 545`.
+        PodDeck {
+            name: "Taii Wakeen, Perfect Shot (WR)",
+            commanders: decks::TAII_WAKEEN_COMMANDERS,
+            main: decks::TAII_WAKEEN_MAIN,
+        },
+        // Seat 546: Silvar, Devourer of the Free // Trynn, Champion of Freedom's EDHREC average deck. `--pod-decks 546`.
+        PodDeck {
+            name: "Silvar, Devourer of the Free // Trynn, Champion of Freedom (WBR)",
+            commanders: decks::SILVAR_COMMANDERS,
+            main: decks::SILVAR_MAIN,
+        },
     ]
 }
 
@@ -6000,6 +6036,12 @@ mod tests {
             ("Lonis, Cryptozoologist", &[0x0B40]),
             ("Baral, Chief of Compliance", &[0x0B41]),
             ("Marchesa, Dealer of Death", &[0x0B42]),
+            ("Grolnok, the Omnivore", &[0x0B43]),
+            ("Arthur, Marigold Knight", &[0x0B44]),
+            ("Uril, the Miststalker", &[0x0B45]),
+            ("Zurgo Helmsmasher", &[0x0B46]),
+            ("Taii Wakeen, Perfect Shot", &[0x0B47]),
+            ("Silvar, Devourer of the Free", &[0x0B48]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

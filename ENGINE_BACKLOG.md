@@ -143,7 +143,8 @@ the handoff.
   library instead" skipped the commander's command-zone offer (pod invariant, fixed).
 - **Guile** (CR 614.1a): `StaticEffect::CounterBecomesExileFreePlay`, read in
   `countered_spell_off_stack`; seat 539 Baral. **Loki**: `ChoseTargets` now binds its chooser as
-  the trigger subject; seat 540 Marchesa.
+  the trigger subject; seat 540 Marchesa. Seats 541-546 the top 600's last two-card gaps
+  (`DeployCreatureFromHandAttacking` now resolves X — Arni Metalbrow).
 - **Open from the rescan:** Pramikon (Suppressor Skyguard's "another opponent isn't attacked"),
   Karametra (Yasharn's
   no-life/no-sacrifice costs — no central gate: life and sacrifice payments are spread over the
