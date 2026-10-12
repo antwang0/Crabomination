@@ -14,11 +14,13 @@ impl GameState {
     /// `Effect::EachPlayerKeepsOneSacrificeRest` — every resolved player
     /// picks their keeper in APNAP order (CR 101.4; a bot keeps its highest
     /// mana value), then the rest go at once (CR 608.2c).
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn each_player_keeps_one(
         &mut self,
         who: &Selector,
         filter: &SelectionRequirement,
         destroy: bool,
+        bounce: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
         effect: &Effect,
@@ -67,7 +69,10 @@ impl GameState {
         }
         self.clear_answer_log();
         for (p, id) in doomed {
-            if destroy {
+            if bounce {
+                let owner = self.battlefield_find(id).map_or(p, |c| c.owner);
+                self.move_card_to(id, &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(owner)), ctx, events);
+            } else if destroy {
                 self.destroy_permanent(id, false, events);
             } else {
                 self.sacrifice_one(id, p, events);

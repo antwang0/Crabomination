@@ -26532,8 +26532,8 @@ impl GameState {
                 self.each_player_keeps_one_per_type(who, false, true, ctx, events, effect)
             }
 
-            Effect::EachPlayerKeepsOneSacrificeRest { who, filter, destroy } => {
-                self.each_player_keeps_one(who, filter, *destroy, ctx, events, effect)
+            Effect::EachPlayerKeepsOneSacrificeRest { who, filter, destroy, bounce } => {
+                self.each_player_keeps_one(who, filter, *destroy, *bounce, ctx, events, effect)
             }
             Effect::EachPlayerChoosesOpponentPermanentExile { filter } => {
                 self.each_player_chooses_opponent_permanent_exile(filter, ctx, events, effect)

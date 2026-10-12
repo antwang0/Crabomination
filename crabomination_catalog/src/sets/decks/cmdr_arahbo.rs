@@ -89,6 +89,7 @@ pub fn divine_reckoning() -> CardDefinition {
             who: Selector::Player(PlayerRef::EachPlayer),
             filter: R::Creature,
             destroy: true,
+            bounce: false,
         },
         ..Default::default()
     }

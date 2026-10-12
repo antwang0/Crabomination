@@ -11390,6 +11390,9 @@ pub enum Effect {
         filter: SelectionRequirement,
         #[serde(default)]
         destroy: bool,
+        /// "Return the rest to their owners' hands" instead (Consuming Tide).
+        #[serde(default)]
+        bounce: bool,
     },
     /// "Starting with you, each player chooses up to one [filter] permanent
     /// from among permanents your opponents control. Exile those permanents."

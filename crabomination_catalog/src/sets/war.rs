@@ -5543,6 +5543,7 @@ pub fn single_combat() -> CardDefinition {
                 who: Selector::Player(PlayerRef::EachPlayer),
                 filter: R::Creature.or(R::Planeswalker),
                 destroy: false,
+                bounce: false,
             },
             Effect::LockCreatureAndPlaneswalkerCasts,
         ]),

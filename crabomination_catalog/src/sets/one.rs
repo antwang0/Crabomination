@@ -6753,6 +6753,7 @@ pub fn the_eternal_wanderer() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachPlayer),
                     filter: SelectionRequirement::Creature,
                     destroy: false,
+                    bounce: false,
                 },
                 ..Default::default()
             },
