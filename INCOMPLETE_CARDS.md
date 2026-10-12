@@ -2041,3 +2041,24 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Brazen Cannonade | the raid card stays playable through your next turn, not only until end of its combat | `MayPlayDuration::EndOfControllersNextTurn` |
 | 🟡 Teferi, Who Slows the Sunset | +1 takes up to three artifacts/creatures/lands in any mix, not one of each; the −7 emblem untaps your permanents at each opponent's upkeep rather than in their untap step | one `ApplyToTargets` slot set; emblem triggers fire at `StepBegins`, and no trigger fires in an untap step |
 | 🟡 Lagrella, the Magpie | exiles only opponents' creatures, and a returning card gets no +1/+1 counters | the "enters under your control" rider has no engine hook; your own creatures would come back without it |
+| 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
+| 🟡 Suppressor Skyguard | the shield lasts the turn, not just that combat | `PreventAllCombatDamageToPlayerThisTurn` has no per-combat duration |
+| 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |
+| 🟡 Yasharn, Implacable Earth | spell additional sacrifice costs (casualty, emerge, bargain, `sacrifice_permanents` alternatives) still accept nonland permanents | the ban rides `cost_life_payable` (every life gate) and `can_be_sacrificed_for_cost` (activation sacrifices only) |
+| 🟡 Karn, Living Legacy | the emblem's ability is granted to each artifact as "{T}: 1 damage": a summoning-sick artifact creature can't use it, and the artifact (not the emblem) is the source | emblems carry no activated abilities; `GrantActivatedAbility` in the emblem's statics is the lane |
+| 🟡 Sakashima's Protege | the copy choice is the engine's pick among permanents that entered this turn | `EntersAsCopy` auto-picks |
+| 🟡 Gilanra, Caller of Wirewood | any `MarksCast` mana (not only Gilanra's) funding a mana value 6+ spell draws | `SpendRestriction::MarksCast` doesn't record its source |
+| 🟡 Rootweaver Druid | the land given away is the engine's pick among the searched ones, not the searching opponent's | `Selector::one_of(LastMoved)` |
+| 🟡 Game Plan | no assist: nobody else may pay toward it | there is no assist keyword |
+| 🟡 Pact Weapon | the drawn card isn't revealed; X is read off the library top before the draw | no "last drawn card" value; Dark Confidant's top-of-library read is the lane |
+| 🟡 Baba Lysaga, Night Witch | can't sacrifice itself; a headless seat sacrifices a full three-type batch or nothing | `sac_any_number_filter` excludes the source; `distinct_type_sac_batch` is the auto-line |
+| 🟡 Sheltering Ancient | every counter of an upkeep goes on the opponents' smallest creature (the engine's pick) | `CumulativeUpkeepCost::PutCounterOnOpponentCreature` auto-pays |
+| 🟡 Tolarian Contempt | the owner's top-or-bottom choice is the engine's | `LibraryPosition::OwnerChoice` auto-picks |
+| 🟡 Rune of Mortality | on an Equipment it grants nothing (the "equipped creature has deathtouch" half) | the Aura's `EquipBonus` keywords reach only the permanent it enchants |
+| 🟡 Disciple of Perdition | at exactly 13 life both modes always happen (the "may choose both" is taken) | `Effect::If` on `PlayerLifeExactly` picks the pair over the one-mode `ChooseMode` |
+| 🟡 Irencrag Feat | the "only one more spell" lock lands when the next spell's cast trigger resolves, so an instant cast in response slips through | `OnYourNextSpellCastThisTurn` + `SilencePlayersThisTurn` |
+| 🟡 Ochre Jelly | the split copy is made as it dies, not at the beginning of the next end step | a captured counter count can't ride `DelayUntilWithCapture` |
+| 🟡 Kenessos, Priest of Thassa | a declined sea creature stays on top (no "may put it on the bottom") | `RevealTopMayPutOntoBattlefield` |
+| 🟡 In Search of Greatness | the free cast takes mana value up to 1 + the greatest (not exactly), and the enchantment counts itself | `MayCastFromHandFreeMatching { max_mv }` over `GreatestManaValueAmongPermanents(You)` |
+| 🟡 Hooded Blightfang | only combat damage to a planeswalker destroys it | `EventKind::DealsCombatDamageToPlaneswalker`; `EventKind` has no bit for the noncombat kind |
+| 🟡 Akroma, Vision of Ixidor | protection is not counted | there is no "has any protection" requirement atom |
