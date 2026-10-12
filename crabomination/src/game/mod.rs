@@ -17049,8 +17049,7 @@ impl GameState {
                         .exile
                         .iter()
                         .filter(|c| c.exiled_with == Some(card.id))
-                        .map(|c| c.definition.power)
-                        .sum();
+                        .fold(0i32, |acc, c| acc.saturating_add(c.definition.power));
                     (pw, pw)
                 }
                 crate::card::DynamicPt::ExiledWithSourceTotals => {

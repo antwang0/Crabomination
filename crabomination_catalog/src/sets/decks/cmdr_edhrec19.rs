@@ -69,6 +69,10 @@ pub fn magar_of_the_magic_strings() -> CardDefinition {
             mana_cost: cost(&[generic(1), b(), r()]),
             effect: Effect::PutFaceDownAsNotedSpell {
                 what: target_filtered(instant_or_sorcery().and(R::InYourGraveyard)),
+                on_hit: Box::new(Effect::MayDo {
+                    description: "Create a copy of the noted card and cast it free?".into(),
+                    body: Box::new(Effect::CopyCardAndCastFree { what: Selector::This }),
+                }),
             },
             ..Default::default()
         }],

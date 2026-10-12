@@ -107,6 +107,7 @@ fn magar_puppet_recasts_its_noted_spell() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
     g.clear_sickness(bolt);
     let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     attack_and_hit(&mut g, bolt, 1);
     assert_eq!(g.players[1].life, life - 6, "3 combat damage, then a free copy of Lightning Bolt");
     run(&mut g, &Effect::Destroy { what: Selector::ExactObjects(vec![bolt]) });

@@ -26700,7 +26700,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PutFaceDownAsNotedSpell { what } => {
+            Effect::PutFaceDownAsNotedSpell { what, on_hit } => {
                 let ids: Vec<CardId> =
                     self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).collect();
                 for cid in ids {
@@ -26719,6 +26719,15 @@ impl GameState {
                         events,
                     );
                     self.exile_if_leaves_battlefield(cid);
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.bake_grant().triggered_abilities.push(crate::card::TriggeredAbility {
+                            event: crate::card::EventSpec::new(
+                                crate::card::EventKind::DealsCombatDamageToPlayer,
+                                crate::card::EventScope::SelfSource,
+                            ),
+                            effect: (**on_hit).clone(),
+                        });
+                    }
                 }
                 Ok(())
             }

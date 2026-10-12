@@ -8432,20 +8432,10 @@ pub fn facedown_cyberman_definition() -> CardDefinition {
     }
 }
 
-/// Magar of the Magic Strings' face-down body: a nameless colorless 3/3 with
-/// "whenever this creature deals combat damage to a player, you may create a
-/// copy of the card with the noted name [and] cast the copy without paying
-/// its mana cost". The noted card is the face-down card itself.
+/// Magar of the Magic Strings' face-down body: a nameless colorless 3/3. Its
+/// combat-damage ability is baked on by `Effect::PutFaceDownAsNotedSpell`.
 pub fn facedown_noted_spell_definition() -> CardDefinition {
-    CardDefinition {
-        power: 3,
-        toughness: 3,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: crate::effect::Effect::CopyCardAndCastFree { what: crate::effect::Selector::This },
-        }],
-        ..facedown_creature_definition()
-    }
+    CardDefinition { power: 3, toughness: 3, ..facedown_creature_definition() }
 }
 
 /// CR 702.166c — a face-down permanent cast/manifested via Disguise (or Cloak)

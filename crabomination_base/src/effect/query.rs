@@ -1494,7 +1494,7 @@ impl Effect {
             Effect::TokenCopyTappedAttacking { source } => sel_has_target(source),
             Effect::OwnerShufflesInExilesTopPlaysOrCasts { what } => sel_has_target(what),
             Effect::DoubleXOfSpell { .. } => false,
-            Effect::PutFaceDownOntoBattlefield { what } | Effect::PutFaceDownAsNotedSpell { what } => {
+            Effect::PutFaceDownOntoBattlefield { what } | Effect::PutFaceDownAsNotedSpell { what, .. } => {
                 sel_has_target(what)
             }
             Effect::GrantKeywordsToSpell { what, .. }
@@ -2916,7 +2916,7 @@ impl Effect {
             | Effect::TurnFaceDownAs { what, .. }
             | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
             | Effect::PutFaceDownOntoBattlefield { what }
-            | Effect::PutFaceDownAsNotedSpell { what }
+            | Effect::PutFaceDownAsNotedSpell { what, .. }
             | Effect::TokenCopyTappedAttacking { source: what }
             | Effect::GrantSuspend { what, .. }
             | Effect::Clockspin { what }
@@ -5573,7 +5573,7 @@ impl Effect {
                 | Effect::TurnFaceUpFree { what, .. }
                 | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
                 | Effect::PutFaceDownOntoBattlefield { what }
-                | Effect::PutFaceDownAsNotedSpell { what }
+                | Effect::PutFaceDownAsNotedSpell { what, .. }
                 | Effect::TokenCopyTappedAttacking { source: what }
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }
