@@ -198,3 +198,42 @@ fn key_to_the_side_door_discards_a_duplicate_legend() {
     draw(&mut g).expect("the duplicate pays");
     assert_eq!(g.players[0].hand.len(), 2);
 }
+
+/// Fatal Grudge: sacrificing an artifact as the cost makes each opponent
+/// sacrifice a permanent sharing a card type with it — their artifact, not
+/// their creature.
+#[test]
+fn fatal_grudge_matches_the_sacrificed_card_type() {
+    let mut g = pod(3);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::sol_ring());
+    let foe_ring = ready(&mut g, 1, catalog::sol_ring());
+    let foe_bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let other_bear = ready(&mut g, 2, catalog::grizzly_bears());
+    let grudge = g.add_card_to_hand(0, catalog::fatal_grudge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, grudge, None).expect("grudge");
+    assert!(g.battlefield_find(foe_ring).is_none(), "the opponent's artifact goes");
+    assert!(g.battlefield_find(foe_bear).is_some() && g.battlefield_find(other_bear).is_some(), "creatures stay");
+}
+
+/// Demonic Gifts: the granted "when this creature dies, return it" brings the
+/// creature back under its owner's control.
+#[test]
+fn demonic_gifts_returns_the_creature_that_dies() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let gifts = g.add_card_to_hand(0, catalog::demonic_gifts());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, gifts, Some(Target::Permanent(bear))).expect("gifts");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("bolt");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0),
+        "the bear came back"
+    );
+}

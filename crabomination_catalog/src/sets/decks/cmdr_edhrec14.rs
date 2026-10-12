@@ -1534,3 +1534,203 @@ pub fn key_to_the_side_door() -> CardDefinition {
         ..permanent("Key to the Side-Door", cost(&[generic(1)]), CardType::Artifact)
     }
 }
+
+/// Demonic Gifts — {1}{B} instant. Until end of turn, target creature gets
+/// +2/+0 and has "when this creature dies, return it to the battlefield under
+/// its owner's control."
+pub fn demonic_gifts() -> CardDefinition {
+    spell(
+        "Demonic Gifts",
+        cost(&[generic(1), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(crate::effect::shortcut::on_dies(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOf(Box::new(Selector::This)), tapped: false },
+                })),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Monumental Corruption — {3}{B}{B} sorcery. Target player draws X cards and
+/// loses X life, X the artifacts you control.
+pub fn monumental_corruption() -> CardDefinition {
+    let x = || Value::count(Selector::EachPermanent(yours(R::Artifact)));
+    spell(
+        "Monumental Corruption",
+        cost(&[generic(3), b(), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: x() },
+            Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: x() },
+        ]),
+    )
+}
+
+/// Fomori Vault — land. {T}: add {C}. {3}, {T}, discard a card: look at the top
+/// X cards, X your artifacts; one to hand, the rest on the bottom at random.
+pub fn fomori_vault() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                discard_cost: Some((R::Any, 1)),
+                effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                    count: Value::count(Selector::EachPermanent(yours(R::Artifact))),
+                    rest_bottom_random: true,
+                    ..Default::default()
+                })),
+                ..Default::default()
+            },
+        ],
+        ..permanent("Fomori Vault", ManaCost::default(), CardType::Land)
+    }
+}
+
+/// Arcbond — {2}{R} instant. Choose target creature; whenever it's dealt
+/// damage this turn, it deals that much damage to each other creature and each
+/// player.
+pub fn arcbond() -> CardDefinition {
+    spell(
+        "Arcbond",
+        cost(&[generic(2), r()]),
+        CardType::Instant,
+        Effect::GrantTriggeredAbility {
+            what: target_filtered(R::Creature),
+            trigger: Box::new(enrage(Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
+                    amount: Value::TriggerEventAmount,
+                },
+                Effect::DealDamage { to: Selector::Player(PlayerRef::EachPlayer), amount: Value::TriggerEventAmount },
+            ]))),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Fatal Grudge — {B}{R} sorcery; as an additional cost, sacrifice a nonland
+/// permanent. Each opponent sacrifices a permanent sharing a card type with
+/// it. Draw a card.
+pub fn fatal_grudge() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Nonland.and(R::ControlledByYou),
+            count: 1,
+        }],
+        ..spell(
+            "Fatal Grudge",
+            cost(&[b(), r()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::EachPlayerDoes {
+                    who: PlayerRef::EachOpponent,
+                    body: Box::new(Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::SharesCardTypeWithFirstSacrificed.and(R::ControlledByYou),
+                    }),
+                },
+                draw(1),
+            ]),
+        )
+    }
+}
+
+/// Outrider en-Kor — {2}{W} 2/2 Kor Rebel Knight with flanking. {0}: the next
+/// 1 damage that would be dealt to it this turn is dealt to target creature
+/// you control instead.
+pub fn outrider_en_kor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flanking],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::RedirectNextDamage {
+                target: Selector::This,
+                to: target_filtered(yours(R::Creature)),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Outrider en-Kor",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Kor, CreatureType::Rebel, CreatureType::Knight],
+            2,
+            2,
+        )
+    }
+}
+
+/// Ballad of the Black Flag — {1}{U}{U} Saga. I, II, III: mill three; you may
+/// put a historic card from among them into your hand. IV: historic spells
+/// you cast this turn cost {2} less.
+pub fn ballad_of_the_black_flag() -> CardDefinition {
+    let dig = || Effect::MillThenToHand { amount: Value::Const(3), filter: R::historic(), otherwise: None };
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (1, dig()),
+            (2, dig()),
+            (3, dig()),
+            (4, Effect::SpellsCostLessThisTurn { filter: R::historic(), amount: 2 }),
+        ],
+        ..permanent("Ballad of the Black Flag", cost(&[generic(1), u(), u()]), CardType::Enchantment)
+    }
+}
+
+/// Zurgo and Ojutai — {2}{U}{R}{W} 4/4 legendary flying, haste Orc Dragon;
+/// hexproof the turn it entered. Whenever one or more Dragons you control deal
+/// combat damage to a player, look at the top three: one to hand, the rest on
+/// the bottom; you may return one of those Dragons to its owner's hand.
+pub fn zurgo_and_ojutai() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        static_abilities: vec![static_ab(
+            "Zurgo and Ojutai has hexproof as long as it entered this turn.",
+            StaticEffect::WhileCondition {
+                condition: Predicate::EntityMatches { what: Selector::This, filter: R::EnteredThisTurn },
+                inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Hexproof }),
+            },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Dragon),
+                })
+                .once_per_batch(),
+            effect: Effect::Seq(vec![
+                Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                    count: Value::Const(3),
+                    ..Default::default()
+                })),
+                may(
+                    "return the Dragon to its owner's hand",
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+                    },
+                ),
+            ]),
+        }],
+        ..legend(
+            "Zurgo and Ojutai",
+            cost(&[generic(2), u(), r(), w()]),
+            vec![CreatureType::Orc, CreatureType::Dragon],
+            4,
+            4,
+        )
+    }
+}
