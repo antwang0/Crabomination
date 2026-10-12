@@ -1627,6 +1627,7 @@ pub(crate) fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Necrodermis => "Necrodermis",
         CounterType::Vow => "Vow",
         CounterType::Duty => "Duty",
+        CounterType::Memory => "Memory",
         CounterType::Slumber => "Slumber",
         CounterType::Story => "Story",
         CounterType::Winch => "Winch",
