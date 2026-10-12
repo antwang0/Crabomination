@@ -7836,8 +7836,14 @@ pub enum Effect {
     /// permanent that just entered.
     MayReturnSharingPermanentType { with: Selector },
     /// Mindleech Mass — look at the resolved player's hand and cast one of the
-    /// cards from it without paying its mana cost.
-    LookAtHandCastFree { who: Selector },
+    /// cards from it without paying its mana cost. `filter` narrows the castable
+    /// cards (Mindclaw Shaman's "an instant or sorcery spell from among
+    /// those cards"); `None` is any nonland card.
+    LookAtHandCastFree {
+        who: Selector,
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     /// Reroute — change the target of the resolved activated ability on the
     /// stack to a new legal one (CR 115.7b). Single-target abilities only.
     ChangeTargetOfAbility { what: Selector },

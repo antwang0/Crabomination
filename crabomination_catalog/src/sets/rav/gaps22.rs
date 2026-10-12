@@ -114,6 +114,7 @@ pub fn mindleech_mass() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::LookAtHandCastFree {
                 who: Selector::Player(PlayerRef::DefendingPlayer),
+                filter: None,
             },
         }],
         ..Default::default()

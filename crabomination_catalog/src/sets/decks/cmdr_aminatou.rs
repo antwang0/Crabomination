@@ -342,7 +342,7 @@ pub fn silent_blade_oni() -> CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[generic(4), u(), b()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::LookAtHandCastFree { who: Selector::Player(PlayerRef::TriggerEventPlayer) },
+            effect: Effect::LookAtHandCastFree { who: Selector::Player(PlayerRef::TriggerEventPlayer), filter: None },
         }],
         ..creature(
             "Silent-Blade Oni",

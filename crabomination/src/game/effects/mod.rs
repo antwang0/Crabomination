@@ -21569,7 +21569,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookAtHandCastFree { who } => {
+            Effect::LookAtHandCastFree { who, filter } => {
                 // Mindleech Mass. The look sticks (CR 701.19) and the caster
                 // may cast one card from the revealed hand for free.
                 let Some(p) = self.resolve_selector(who, ctx).into_iter().find_map(|e| match e {
@@ -21581,14 +21581,15 @@ impl GameState {
                 if p != ctx.controller && !self.hands_revealed_to.contains(&(ctx.controller, p)) {
                     self.hands_revealed_to.push((ctx.controller, p));
                 }
-                // "You may cast a nonland card in it" — the caster picks, or
-                // declines. The default (a headless seat's) is the priciest,
-                // the whole point of the trigger. `CastWithoutPayingImmediate`
-                // re-checks legality.
+                // "You may cast a nonland card in it" (or one matching
+                // `filter`) — the caster picks, or declines. The default (a
+                // headless seat's) is the priciest, the whole point of the
+                // trigger. `CastWithoutPayingImmediate` re-checks legality.
                 let nonland: Vec<(CardId, String, u32)> = self.players[p]
                     .hand
                     .iter()
                     .filter(|c| !c.definition.is_land())
+                    .filter(|c| filter.as_ref().is_none_or(|f| self.evaluate_requirement_on_card(f, c, ctx.controller)))
                     .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
                     .collect();
                 let Some(best) = nonland.iter().max_by_key(|c| c.2).map(|c| c.0) else {

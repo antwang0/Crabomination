@@ -2062,7 +2062,7 @@ impl Effect {
             | Effect::BecomeCopyOfExiledCard { what, .. }
             | Effect::ReturnSameNameFromAllGraveyards { what } => sel_has_target(what),
             Effect::PutTopOnBottom { who }
-            | Effect::LookAtHandCastFree { who } => sel_has_target(who),
+            | Effect::LookAtHandCastFree { who, .. } => sel_has_target(who),
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what } => sel_has_target(what),
             Effect::WishToLibrary { .. }
@@ -2848,7 +2848,7 @@ impl Effect {
             | Effect::GainControlAndReattachAura { what } => sel_filter(what),
             Effect::LookExileAnyNumberRestBack { who, .. }
             | Effect::PutTopOnBottom { who }
-            | Effect::LookAtHandCastFree { who } => sel_filter(who),
+            | Effect::LookAtHandCastFree { who, .. } => sel_filter(who),
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what }
             | Effect::CopySpellForEachOtherLegalCreature { what, .. }
@@ -5451,7 +5451,7 @@ impl Effect {
                 Effect::ExileHandThenReclaimLinked => None,
                 Effect::LookExileAnyNumberRestBack { who, .. }
                 | Effect::PutTopOnBottom { who }
-                | Effect::LookAtHandCastFree { who } => sel_find(who, slot),
+                | Effect::LookAtHandCastFree { who, .. } => sel_find(who, slot),
                 Effect::MayReturnSharingPermanentType { with: what }
                 | Effect::ChangeTargetOfAbility { what } => sel_find(what, slot),
                 Effect::WishToLibrary { .. }
