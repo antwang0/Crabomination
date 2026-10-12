@@ -32688,8 +32688,6 @@ fn event_amount(event: &GameEvent) -> u32 {
         GameEvent::DiceRolled { high, .. } => *high as u32,
         GameEvent::DieResult { result, .. } => *result as u32,
         GameEvent::AbilityActivated { life_paid, .. } => *life_paid,
-        // Mighty Servant of Leuk-o — "crewed by exactly two creatures".
-        GameEvent::VehicleCrewed { crew, .. } => crew.len() as u32,
         _ => 0,
     }
 }

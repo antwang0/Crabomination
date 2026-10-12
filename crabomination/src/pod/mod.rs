@@ -6732,42 +6732,6 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VAAN_COMMANDERS,
             main: decks::VAAN_MAIN,
         },
-        // Seat 971: Magar of the Magic Strings's EDHREC average deck. `--pod-decks 971`.
-        PodDeck {
-            name: "Magar of the Magic Strings (BR)",
-            commanders: decks::MAGAR_OF_THE_MAGIC_STRINGS_COMMANDERS,
-            main: decks::MAGAR_OF_THE_MAGIC_STRINGS_MAIN,
-        },
-        // Seat 972: Narci, Fable Singer's EDHREC average deck. `--pod-decks 972`.
-        PodDeck {
-            name: "Narci, Fable Singer (WBG)",
-            commanders: decks::NARCI_COMMANDERS,
-            main: decks::NARCI_MAIN,
-        },
-        // Seat 973: Yennett, Cryptic Sovereign's EDHREC average deck. `--pod-decks 973`.
-        PodDeck {
-            name: "Yennett, Cryptic Sovereign (WUB)",
-            commanders: decks::YENNETT_COMMANDERS,
-            main: decks::YENNETT_MAIN,
-        },
-        // Seat 974: Maha, Its Feathers Night's EDHREC average deck. `--pod-decks 974`.
-        PodDeck {
-            name: "Maha, Its Feathers Night (B)",
-            commanders: decks::MAHA_COMMANDERS,
-            main: decks::MAHA_MAIN,
-        },
-        // Seat 975: General Ferrous Rokiric's EDHREC average deck. `--pod-decks 975`.
-        PodDeck {
-            name: "General Ferrous Rokiric (WR)",
-            commanders: decks::GENERAL_FERROUS_ROKIRIC_COMMANDERS,
-            main: decks::GENERAL_FERROUS_ROKIRIC_MAIN,
-        },
-        // Seat 976: Greasefang, Okiba Boss's EDHREC average deck. `--pod-decks 976`.
-        PodDeck {
-            name: "Greasefang, Okiba Boss (WB)",
-            commanders: decks::GREASEFANG_COMMANDERS,
-            main: decks::GREASEFANG_MAIN,
-        },
     ]
 }
 

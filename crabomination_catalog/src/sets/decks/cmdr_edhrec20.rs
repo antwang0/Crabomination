@@ -5,7 +5,7 @@
 use crate::card::{
     AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
-    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
+    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{ActivatedAbility, Duration, Effect, PlayerRef};
@@ -288,41 +288,6 @@ pub fn deafening_clarion() -> CardDefinition {
 }
 
 // ── Greasefang, Okiba Boss ───────────────────────────────────────────────────
-
-/// Mighty Servant of Leuk-o — {3} 6/6 Vehicle, trample, ward—discard a card,
-/// crew 4. The first time each turn it's crewed by exactly two creatures, it
-/// gains "deals combat damage to a player: draw two" until end of turn.
-pub fn mighty_servant_of_leuk_o() -> CardDefinition {
-    let draw_two = TriggeredAbility {
-        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-    };
-    CardDefinition {
-        name: "Mighty Servant of Leuk-o",
-        cost: cost(&[generic(3)]),
-        card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
-        power: 6,
-        toughness: 6,
-        keywords: vec![Keyword::Trample, Keyword::Ward(WardCost::Discard(1)), Keyword::Crew(4)],
-        triggered_abilities: vec![TriggeredAbility {
-            // The crew event's subject is the Vehicle; its amount the crew size.
-            event: EventSpec {
-                once_per_turn: true,
-                ..EventSpec::new(EventKind::CrewsOrSaddles, EventScope::YourControl).with_filter(Predicate::All(vec![
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsSource },
-                    Predicate::ValueEquals(Value::TriggerEventAmount, Value::Const(2)),
-                ]))
-            },
-            effect: Effect::GrantTriggeredAbility {
-                what: Selector::This,
-                trigger: Box::new(draw_two),
-                duration: Duration::EndOfTurn,
-            },
-        }],
-        ..Default::default()
-    }
-}
 
 /// Giant Ox — {1}{W} 0/6 Ox. Crews Vehicles using its toughness.
 pub fn giant_ox() -> CardDefinition {

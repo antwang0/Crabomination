@@ -4,7 +4,7 @@
 //! `tests/recent_b/cmdr_edhrec17.rs`.
 
 use crate::card::{
-    AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
+    AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     DynamicPt, EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword, LandType,
     Predicate, SelectionRequirement as R, Selector, SoulbondBonus, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
@@ -25,10 +25,6 @@ fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32
         toughness: t,
         ..Default::default()
     }
-}
-
-fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
-    CardDefinition { supertypes: vec![Supertype::Legendary], ..creature(name, mana, types, p, t) }
 }
 
 fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
@@ -349,24 +345,6 @@ pub fn druids_familiar() -> CardDefinition {
     }
 }
 
-/// Tuya Bearclaw — {1}{R}{G} 2/2 Human Warrior. Attacking, it gets +X/+X
-/// where X is the greatest power among other creatures you control.
-pub fn tuya_bearclaw() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![on_attack(pump(
-            Selector::This,
-            Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(mine().and(R::OtherThanSource)))),
-        ))],
-        ..legend(
-            "Tuya Bearclaw",
-            cost(&[generic(1), r(), g()]),
-            vec![CreatureType::Human, CreatureType::Warrior],
-            2,
-            2,
-        )
-    }
-}
-
 /// Ulvenwald Bear — {2}{G} 2/2 Bear. Morbid — when it enters, if a creature
 /// died this turn, put two +1/+1 counters on target creature.
 pub fn ulvenwald_bear() -> CardDefinition {
@@ -590,17 +568,6 @@ pub fn epitaph_golem() -> CardDefinition {
             ..Default::default()
         }],
         ..creature("Epitaph Golem", cost(&[generic(5)]), vec![CreatureType::Golem], 3, 5)
-    }
-}
-
-/// Braid of Fire — {1}{R} enchantment. Cumulative upkeep — add {R}.
-pub fn braid_of_fire() -> CardDefinition {
-    CardDefinition {
-        name: "Braid of Fire",
-        cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Enchantment],
-        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::AddMana(Color::Red))],
-        ..Default::default()
     }
 }
 
