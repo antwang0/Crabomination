@@ -3684,6 +3684,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LONIS_COMMANDERS,
             main: decks::LONIS_MAIN,
         },
+        // Seat 539: Baral, Chief of Compliance's EDHREC average deck. `--pod-decks 539`.
+        PodDeck {
+            name: "Baral, Chief of Compliance (U)",
+            commanders: decks::BARAL_COMMANDERS,
+            main: decks::BARAL_MAIN,
+        },
     ]
 }
 
@@ -5986,6 +5992,7 @@ mod tests {
             ("Kozilek, the Great Distortion", &[0x0B3E]),
             ("Savra, Queen of the Golgari", &[0x0B3F]),
             ("Lonis, Cryptozoologist", &[0x0B40]),
+            ("Baral, Chief of Compliance", &[0x0B41]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

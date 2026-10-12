@@ -141,9 +141,12 @@ the handoff.
   `Effect::IfTriggerDamageNoncombat` (⚠ `EventKind` is out of bits — the u128 kind mask is full,
   so a new event kind needs the mask widened first). **CR 903.9b**: Progenitus's "shuffle into its
   library instead" skipped the commander's command-zone offer (pod invariant, fixed).
+- **Guile** (CR 614.1a): `StaticEffect::CounterBecomesExileFreePlay`, read in
+  `countered_spell_off_stack`; seat 539 Baral.
 - **Open from the rescan:** Pramikon (Suppressor Skyguard's "another opponent isn't attacked"),
   Marchesa (Loki's "becomes the target of an ability you control"), Karametra (Yasharn's
-  no-life/no-sacrifice costs), Baral (Guile's counter-to-exile replacement; Ertai's Scorn).
+  no-life/no-sacrifice costs — no central gate: life and sacrifice payments are spread over the
+  Phyrexian-mana, alternative-cost, activation and additional-cost paths).
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.

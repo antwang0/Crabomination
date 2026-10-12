@@ -15591,3 +15591,28 @@ pub const LONIS_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, island, island,
     island, island, island, island, island, island,
 ];
+
+pub const BARAL_COMMANDERS: &[CardFactory] = &[baral_chief_of_compliance];
+
+/// **Baral, Chief of Compliance**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Baral, Chief of Compliance
+pub const BARAL_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, isochron_scepter, mind_stone, sapphire_medallion,
+    sky_diamond, sol_ring, thought_vessel, castle_vantress, mystic_sanctuary,
+    otawara_soaring_city, reliquary_tower, rivendell, archaeomancer, archmage_emeritus,
+    archmage_of_runes, eluge_the_shoreless_sea, guile, haughty_djinn, hullbreaker_horror,
+    jin_gitaxias_progress_tyrant, laboratory_maniac, murmuring_mystic, talrand_sky_summoner,
+    thassas_oracle, wavebreak_hippocamp, mystic_remora, propaganda, rhystic_study,
+    teferis_ageless_insight, telepathy, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    cancel, counterspell, cryptic_command, cyclonic_rift, disallow, disdainful_stroke, dispel,
+    dissipate, dissolve, ertais_scorn, essence_scatter, fierce_guardianship, force_of_negation,
+    force_of_will, frantic_search, high_tide, mana_drain, mana_leak, mana_sculpt,
+    mystic_confluence, mystical_tutor, negate, pongify, rewind, saw_it_coming, spell_pierce,
+    swan_song, tales_end, unwind, narset_parter_of_veils, merchant_scroll, ponder, preordain,
+    solve_the_equation, treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
