@@ -27420,3 +27420,59 @@ pub const ODRIC_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const OBOSH_COMMANDERS: &[CardFactory] = &[obosh_the_preypiercer];
+
+/// **Obosh, the Preypiercer**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 15 Mountains + 9 Swamps = 99.
+/// Obosh, the Preypiercer (EDHREC, fetched 2026-10-12).
+pub const OBOSH_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, fellwar_stone, lightning_greaves, mind_stone,
+    rakdos_signet, ruby_medallion, sol_ring, talisman_of_indulgence, blood_crypt, bojuka_bog,
+    command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge, luxury_suite,
+    rakdos_carnarium, smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice,
+    angraths_marauders, blisterspit_gremlin, brash_taunter, drakuseth_maw_of_flames,
+    fire_servant, guttersnipe, heartless_hidetsugu, kaervek_the_merciless, kederekt_parasite,
+    neheb_the_eternal, rampaging_ferocidon, scab_clan_berserker, scytheclaw_raptor, sin_prodder,
+    solphim_mayhem_dominus, stuffy_doll, the_lord_of_pain, tor_wauki_the_younger,
+    torbran_thane_of_red_fell, twinflame_tyrant, vial_smasher_the_fierce, zo_zu_the_punisher,
+    dictate_of_the_twin_gods, fiery_emancipation, fiery_inscription, phyrexian_arena,
+    repercussion, sulfuric_vortex, underworld_dreams, bedevil, breath_of_malfegor, chaos_warp,
+    dark_ritual, flame_spill, lightning_bolt, rakdos_charm, risk_factor, shock, terminate,
+    thrill_of_possibility, blasphemous_act, boltwave, browbeat, extinction_event,
+    faithless_looting, feed_the_swarm, jeskas_will, mana_geyser, nights_whisper,
+    prisoners_dilemma, read_the_bones, sign_in_blood, syphon_soul, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const AMARETH_COMMANDERS: &[CardFactory] = &[amareth_the_lustrous];
+
+/// **Amareth, the Lustrous**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 6 Forests + 5 Islands + 5 Plains = 99.
+/// Amareth, the Lustrous (EDHREC, fetched 2026-10-12).
+pub const AMARETH_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, panharmonicon, senseis_divining_top, simic_signet, sol_ring,
+    talisman_of_curiosity, thought_vessel, bountiful_promenade, breeding_pool, canopy_vista,
+    command_tower, evolving_wilds, exotic_orchard, flooded_strand, glacial_fortress,
+    hallowed_fountain, hinterland_harbor, misty_rainforest, prairie_stream,
+    rejuvenating_springs, reliquary_tower, sea_of_clouds, seaside_citadel, sparas_headquarters,
+    sunpetal_grove, temple_garden, windswept_heath, archon_of_suns_grace, birds_of_paradise,
+    coiling_oracle, courser_of_kruphix, destiny_spinner, dryad_of_the_ilysian_grove,
+    eidolon_of_blossoms, eternal_witness, farhaven_elf, herald_of_the_pantheon,
+    inquisitive_glimmer, jukai_naturalist, karametra_god_of_harvests, kodama_of_the_east_tree,
+    mesa_enchantress, mulldrifter, noble_hierarch, reclamation_sage, sanctum_weaver,
+    satyr_enchanter, setessan_champion, solemn_simulacrum, soulherder, spirited_companion,
+    sun_titan, sythis_harvests_hand, tatyova_benthic_druid, thassa_deep_dwelling, wood_elves,
+    yorion_sky_nomad, darksteel_mutation, enchantresss_presence, exploration, fertile_ground,
+    ghostly_prison, kenriths_transformation, miraris_wake, propaganda,
+    sigil_of_the_empty_throne, sphere_of_safety, sterling_grove, utopia_sprawl, wild_growth,
+    beast_within, counterspell, growth_spiral, heroic_intervention, path_to_exile,
+    swords_to_plowshares, calix_destinys_hand, cultivate, farseek, kodamas_reach, natures_lore,
+    rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    plains, plains, plains, plains, plains,
+];

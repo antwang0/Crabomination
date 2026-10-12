@@ -6216,6 +6216,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ODRIC_COMMANDERS,
             main: decks::ODRIC_MAIN,
         },
+        // Seat 961: Obosh, the Preypiercer's EDHREC average deck. `--pod-decks 961`.
+        PodDeck {
+            name: "Obosh, the Preypiercer (BR)",
+            commanders: decks::OBOSH_COMMANDERS,
+            main: decks::OBOSH_MAIN,
+        },
+        // Seat 962: Amareth, the Lustrous's EDHREC average deck. `--pod-decks 962`.
+        PodDeck {
+            name: "Amareth, the Lustrous (WUG)",
+            commanders: decks::AMARETH_COMMANDERS,
+            main: decks::AMARETH_MAIN,
+        },
     ]
 }
 
@@ -8948,6 +8960,8 @@ mod tests {
             ("Ultron, Artificial Malevolence", &[0x0CE4]),
             ("The Council of Four", &[0x0CE5]),
             ("Odric, Lunarch Marshal", &[0x0CE6]),
+            ("Obosh, the Preypiercer", &[0x0CE7]),
+            ("Amareth, the Lustrous", &[0x0CE8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
