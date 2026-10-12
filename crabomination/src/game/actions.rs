@@ -19467,6 +19467,16 @@ impl GameState {
     ) -> Vec<crate::effect::ActivatedAbility> {
         use crate::card::LandType;
         let printed: &[LandType] = &card.definition.subtypes.land_types;
+        // Thran Portal — its mana abilities cost extra life.
+        let life_cost = card
+            .definition
+            .static_abilities
+            .iter()
+            .find_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::SelfManaAbilitiesCostLife(n) => Some(n),
+                _ => None,
+            })
+            .unwrap_or(0);
         let mut out = Vec::new();
         for lt in computed_land_types {
             if printed.contains(lt) {
@@ -19488,6 +19498,7 @@ impl GameState {
                     who: crate::effect::PlayerRef::You,
                     pool: ManaPayload::Colors(vec![color]),
                 },
+                life_cost,
                 ..Default::default()
             });
         }
@@ -24618,6 +24629,13 @@ impl GameState {
         // cards move straight to exile. Validated by the pre-flight
         // `craft_exile_picks` gate.
         for (other_cid, in_gy) in craft_exile_picks {
+            // CR 702.167c — the exiled cards are "used to craft" the
+            // permanent: linked to it (Wretched Bonemass reads them).
+            let link = |g: &mut Self| {
+                if let Some(c) = g.exile.iter_mut().find(|c| c.id == other_cid) {
+                    c.exiled_with = Some(card_id);
+                }
+            };
             if in_gy {
                 if let Some(card) = Self::take_card(&mut self.players[p].graveyard, other_cid) {
                     self.exile.push(card);
@@ -24635,6 +24653,7 @@ impl GameState {
                     events,
                 );
             }
+            link(self);
         }
 
         // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile

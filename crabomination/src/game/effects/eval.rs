@@ -1694,6 +1694,30 @@ impl GameState {
                 }
                 kinds.len() as i32
             }
+            Value::TypeLineCountOf(what) => {
+                let Some(id) = self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_card_id()) else {
+                    return 0;
+                };
+                let count = |sup: usize, types: usize, sub: &crate::card::Subtypes| {
+                    // Changeling's every-creature-type reads as the listed ones only.
+                    sup + types
+                        + sub.creature_types.len()
+                        + sub.land_types.len()
+                        + sub.artifact_subtypes.len()
+                        + sub.enchantment_subtypes.len()
+                        + sub.spell_subtypes.len()
+                        + sub.planeswalker_subtypes.len()
+                        + sub.battle_subtypes.len()
+                };
+                if let Some(cp) = self.computed_permanent(id) {
+                    count(cp.supertypes().len(), cp.card_types().len(), cp.subtypes()) as i32
+                } else if let Some(c) = self.find_card_anywhere(id) {
+                    let d = &c.definition;
+                    count(d.supertypes.len(), d.card_types.len(), &d.subtypes) as i32
+                } else {
+                    0
+                }
+            }
             Value::CardTypesInGraveyard(who) => self
                 .resolve_player(who, ctx)
                 .map(|p| self.distinct_card_types_in_graveyard(p) as i32)
@@ -6453,7 +6477,7 @@ impl GameState {
                         card.definition.cost.cmc() <= n
                     }
                     // Unresolved X-relative filter (no X in scope here).
-                    R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::PowerExactlyXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged => false,
+                    R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::PowerExactlyXFromCost | R::PowerPlusToughnessExactlyXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
                     R::ManaValueEqualsTriggerAmount => {
@@ -7448,7 +7472,7 @@ impl GameState {
             }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
             // `CastManaSpent` is source-relative; no source here, so vacuous.
-            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::PowerExactlyXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower | R::ManaValueLessThanSourcePower | R::ManaValueAtMostLifeGainedThisTurn | R::ManaValueAtMostLifeLostThisTurn => false,
+            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::PowerExactlyXFromCost | R::PowerPlusToughnessExactlyXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged | R::ManaValueAtMostCastManaSpent | R::ManaValueAtMostSourcePower | R::ManaValueLessThanSourcePower | R::ManaValueAtMostLifeGainedThisTurn | R::ManaValueAtMostLifeLostThisTurn => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ColoredManaSymbolsAtLeast(n) => card.definition.cost.colored_symbol_count() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,

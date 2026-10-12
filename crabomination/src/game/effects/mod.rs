@@ -26887,6 +26887,15 @@ impl GameState {
                 } else {
                     filter
                 };
+                // CR 107.3 — an X-reading filter (Wild Pair's "same total
+                // power and toughness" under a `WithX`) is concretized now.
+                let x_filter;
+                let filter = if filter.names_x_or_converge() {
+                    x_filter = filter.resolve_x(ctx.x_value);
+                    &x_filter
+                } else {
+                    filter
+                };
                 // The library-search prohibitions only bite when a library is
                 // actually being searched; a hand/graveyard-only search
                 // (Dark Supplicant with an empty library clause) goes ahead.
@@ -35765,6 +35774,60 @@ impl GameState {
                     fires_once: true,
                     expires_after_turn: None,
                 });
+                Ok(())
+            }
+
+            Effect::CopyNextInstantSorceryThisTurn { count } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn,
+                    effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: crate::effect::Value::Const(n) },
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                    expires_after_turn: None,
+                });
+                Ok(())
+            }
+
+            Effect::GameOfChaosRound { opponent, stake } => {
+                let me = ctx.controller;
+                let Some(opp) = self.resolve_player(opponent, ctx) else { return Ok(()) };
+                let won = self.flip_one_coin(me);
+                events.push(if won {
+                    GameEvent::CoinFlipWon { player: me }
+                } else {
+                    GameEvent::CoinFlipLost { player: me }
+                });
+                let (winner, loser) = if won { (me, opp) } else { (opp, me) };
+                let amount = crate::game::life_amount(*stake);
+                let applied = self.adjust_life_applied(winner, amount);
+                if applied > 0 {
+                    events.push(GameEvent::LifeGained { player: winner, amount: applied as u32 });
+                }
+                let lost = self.adjust_life_applied(loser, -amount);
+                if lost < 0 {
+                    events.push(GameEvent::LifeLost { player: loser, amount: (-lost) as u32 });
+                }
+                if *stake < (1 << 16) && self.players[me].is_alive() && self.players[opp].is_alive() {
+                    return self.run_effect(
+                        &Effect::AnyPlayerMayAccept {
+                            who: PlayerRef::Seat(winner),
+                            prompt: format!("Game of Chaos: flip again for {} life?", stake * 2),
+                            accepted: Box::new(Effect::GameOfChaosRound {
+                                opponent: PlayerRef::Seat(opp),
+                                stake: stake * 2,
+                            }),
+                            otherwise: Box::new(Effect::Noop),
+                        },
+                        ctx,
+                        events,
+                    );
+                }
                 Ok(())
             }
 

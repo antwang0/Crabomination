@@ -1870,6 +1870,8 @@ impl Effect {
             Effect::ExchangeHandAndGraveyard { who } | Effect::ExchangeHandAndLibrary { who } => {
                 player_has_target(who)
             }
+            Effect::GameOfChaosRound { opponent, .. } => player_has_target(opponent),
+            Effect::CopyNextInstantSorceryThisTurn { .. } => false,
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),

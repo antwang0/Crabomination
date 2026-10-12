@@ -2376,6 +2376,13 @@ pub enum StaticEffect {
     /// "If you would scry a number of cards, scry that many cards plus `n`
     /// instead" (Kenessos, Priest of Thassa), read by `Effect::Scry`.
     ScryLooksExtra { n: u32 },
+    /// Thran Portal — "This land is the chosen type in addition to its other
+    /// types": the source's own `chosen_land_type`, layer 4 (Realmwright's
+    /// `LandsYouControlAreChosenType` covers every land you control).
+    SelfIsChosenLandType,
+    /// Thran Portal — "Mana abilities of this land cost an additional `n`
+    /// life to activate": stamped on its intrinsic (CR 305.6) mana abilities.
+    SelfManaAbilitiesCostLife(u32),
     /// "You may play lands and cast spells from among cards in your graveyard
     /// you've surveilled this turn … pay life equal to its mana value rather
     /// than its mana cost" (Eye of Duskmantle): stamped as a pay-life may-play

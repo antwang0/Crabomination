@@ -899,6 +899,9 @@ pub enum Value {
     /// Distinct card types among cards in `who`'s graveyard (the delirium
     /// count as a number — Lucid Dreams' "draw X").
     CardTypesInGraveyard(PlayerRef),
+    /// Supertypes + card types + subtypes the first entity `what` names has,
+    /// read off its computed type line (Embiggen).
+    TypeLineCountOf(Box<Selector>),
     /// Distinct *permanent* types (artifact, battle, creature, enchantment,
     /// land, planeswalker — CR 110.4a) among cards in `who`'s graveyard
     /// (Matzalantli, the Great Door's transform gate).
@@ -12014,6 +12017,14 @@ pub enum Effect {
     OnYourNextInstantSorceryThisTurn {
         body: Box<Effect>,
     },
+    /// "When you next cast an instant or sorcery spell this turn, copy that
+    /// spell X times" (Storm King's Thunder): `count` is evaluated NOW — a
+    /// delayed body's `XFromCost` reads the storm count, not this spell's X.
+    CopyNextInstantSorceryThisTurn { count: Value },
+    /// Game of Chaos, one round at `stake`: flip a coin; the winner gains
+    /// `stake` life and the loser loses it, then the winner may play the next
+    /// round at twice the stake (asked of them; capped at 2^16).
+    GameOfChaosRound { opponent: PlayerRef, stake: u32 },
     /// CR 603.7e — one-shot "when you next cast a spell of `card_type` this
     /// turn, [body]"; the cast spell is `Selector::TriggerSource`. Casts of
     /// any other type leave it armed, so Smoldering Stagecoach's "the next
@@ -14063,7 +14074,8 @@ pub fn static_effect_changes_land_types(effect: &StaticEffect) -> bool {
         | SE::GrantAllBasicLandTypes { .. }
         | SE::LandTypeChanger { .. }
         | SE::LandTypeChangerWhileCounters { .. }
-        | SE::LandsYouControlAreChosenType => true,
+        | SE::LandsYouControlAreChosenType
+        | SE::SelfIsChosenLandType => true,
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
         | SE::WhileNotYourTurn { inner }

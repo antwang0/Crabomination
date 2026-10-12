@@ -1440,11 +1440,13 @@ pub fn alpha_status() -> CardDefinition {
     }
 }
 
-/// Daru Spiritualist — targeting a Cleric of yours toughens it.
+/// Daru Spiritualist — targeting a Cleric of yours toughens it. (Scoped
+/// `YourCreatureTargeted`: `YourControl` on `BecameTarget` fires only for the
+/// source itself, so a Cleric other than Daru never triggered it.)
 pub fn daru_spiritualist() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl).with_filter(
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::HasCreatureType(CreatureType::Cleric)),

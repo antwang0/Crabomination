@@ -211,6 +211,7 @@ pub enum CreatureType {
     Monkey,
     // Modern supplement: Brazen Scourge.
     Gremlin,
+    Walrus,
     // Strixhaven Elder Dragon legendary creatures (Lorehold, Prismari,
     // Quandrix, Silverquill, Witherbloom, the Balancer).
     Elder,
@@ -3655,6 +3656,9 @@ pub enum SelectionRequirement {
     /// (Localized Destruction's "power equal to the amount of {E} paid");
     /// unresolved instances evaluate false.
     PowerExactlyXFromCost,
+    /// Total power plus toughness exactly X (`resolve_x`) — Wild Pair's "the
+    /// same total power and toughness" under a `WithX`.
+    PowerPlusToughnessExactlyXFromCost,
     /// Toughness ≤ the X paid into the resolving spell/ability's cost. Resolved
     /// to a concrete `ToughnessAtMost(x)` by `resolve_x` (Finale of Eternity's
     /// "destroy up to three target creatures with toughness X or less").
@@ -4308,6 +4312,7 @@ impl SelectionRequirement {
             | Self::ManaValueExactlyXFromCost
             | Self::PowerAtMostXFromCost
             | Self::PowerExactlyXFromCost
+            | Self::PowerPlusToughnessExactlyXFromCost
             | Self::ToughnessAtMostXFromCost
             | Self::SlotsTotalManaValueAtMostX
             | Self::ManaValueAtMostConverged => true,
@@ -4329,6 +4334,10 @@ impl SelectionRequirement {
                 Self::And(Box::new(Self::PowerAtMost(x as i32)), Box::new(Self::PowerAtLeast(x as i32)))
             }
             Self::ToughnessAtMostXFromCost => Self::ToughnessAtMost(x as i32),
+            Self::PowerPlusToughnessExactlyXFromCost => Self::And(
+                Box::new(Self::PowerPlusToughnessAtMost(x as i32)),
+                Box::new(Self::Not(Box::new(Self::PowerPlusToughnessAtMost(x as i32 - 1)))),
+            ),
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),
@@ -6965,6 +6974,9 @@ pub enum DynamicPt {
     /// Power = the total power, toughness = the total toughness, of the cards
     /// exiled with this permanent (`CardInstance.exiled_with`). Sutured Ghoul.
     ExiledWithSourceTotals,
+    /// Power = toughness = the total power of the cards exiled with this
+    /// permanent (Wretched Bonemass — "the exiled cards used to craft it").
+    ExiledWithSourceTotalPower,
     /// Power = toughness = the mana value of the card exiled with this
     /// permanent; 0 with none (Living Lore).
     ExiledWithSourceManaValue,

@@ -17031,6 +17031,15 @@ impl GameState {
                 crate::card::DynamicPt::CardsDrawnThisTurnPower { base_t } => {
                     (self.players[card.controller].cards_drawn_this_turn as i32, base_t)
                 }
+                crate::card::DynamicPt::ExiledWithSourceTotalPower => {
+                    let pw: i32 = self
+                        .exile
+                        .iter()
+                        .filter(|c| c.exiled_with == Some(card.id))
+                        .map(|c| c.definition.power)
+                        .sum();
+                    (pw, pw)
+                }
                 crate::card::DynamicPt::ExiledWithSourceTotals => {
                     // Sutured Ghoul — the pile exiled as it entered.
                     let (mut pw, mut tf) = (0, 0);
@@ -33677,6 +33686,19 @@ fn static_effect_to_effects(
                     modification: Modification::AddCreatureType(ct),
                 });
             },
+            StaticEffect::SelfIsChosenLandType => {
+                if let Some(land_type) = card.chosen_land_type {
+                    out.push(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddLandType(land_type),
+                    });
+                }
+            }
             StaticEffect::LandsYouControlAreChosenType => {
                 // Realmwright — lands the source's controller controls are the
                 // chosen basic type in addition (layer-4 additive). No-op until
@@ -34453,6 +34475,8 @@ fn static_effect_to_effects(
             // Read by `Effect::Surveil` and the surveil answer.
             | StaticEffect::SurveilLooksExtra { .. }
             | StaticEffect::ScryLooksExtra { .. }
+            // Thran Portal — read by `intrinsic_land_mana_abilities_with`.
+            | StaticEffect::SelfManaAbilitiesCostLife(_)
             | StaticEffect::MayPlaySurveilledThisTurnForLife
             // Read in `activate_ability`'s tax block.
             | StaticEffect::TaxOpponentAbilitiesTargeting { .. }
