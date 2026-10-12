@@ -10181,6 +10181,13 @@ impl GameState {
                         StaticEffect::ReduceSpellDamageBy { amount: shave } => {
                             amount = amount.saturating_sub(*shave);
                         }
+                        // Rem Karolus — any spell, aimed at the static
+                        // controller's opponents or their permanents.
+                        StaticEffect::SpellDamageToOpponentsBonus { amount: bonus }
+                            if affected.is_some_and(|p| p != c.controller && !self.same_team(p, c.controller)) =>
+                        {
+                            amount = amount.saturating_add(*bonus);
+                        }
                         _ => {}
                     }
                 }
@@ -10700,6 +10707,12 @@ impl GameState {
 
     /// Controller of a damage source: the battlefield permanent's controller,
     /// else the caster of the spell currently resolving under that id.
+    /// Is damage source `id` a resolving spell (no permanent behind it)?
+    pub(crate) fn damage_source_is_spell(&self, id: crate::card::CardId) -> bool {
+        self.battlefield_find(id).is_none()
+            && matches!(&self.scratch.resolving_source, Some((s, ..)) if *s == id)
+    }
+
     pub(crate) fn damage_source_controller(&self, id: crate::card::CardId) -> Option<usize> {
         self.computed_permanent(id).map(|cp| cp.controller).or_else(|| {
             match &self.scratch.resolving_source {
@@ -32676,6 +32689,8 @@ fn event_amount(event: &GameEvent) -> u32 {
         GameEvent::DiceRolled { high, .. } => *high as u32,
         GameEvent::DieResult { result, .. } => *result as u32,
         GameEvent::AbilityActivated { life_paid, .. } => *life_paid,
+        // Mighty Servant of Leuk-o — "crewed by exactly two creatures".
+        GameEvent::VehicleCrewed { crew, .. } => crew.len() as u32,
         _ => 0,
     }
 }
@@ -33155,6 +33170,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         // Source-scoped.
         | SE::AddDamageFromColorSpells { .. }
         | SE::ReduceSpellDamageBy { .. }
+        | SE::SpellDamageToOpponentsBonus { .. }
         | SE::AddDamageToOpponents { .. }
         | SE::AddDamageToOpponentsPerCounter { .. }
         | SE::AddDamageFromColorToPlayers { .. }
@@ -34113,6 +34129,8 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageToAttachedPerPermanent { .. }
             | StaticEffect::PreventAllButOneDamageToYouAndYourPlaneswalkers
             | StaticEffect::PreventAllDamageToControllerFromOthersSources
+            | StaticEffect::PreventSpellDamageToYouAndYourOtherPermanents
+            | StaticEffect::SpellDamageToOpponentsBonus { .. }
             | StaticEffect::AddDamageFromColorSpells { .. }
             // Read where the matching action happens: the hand-reveal
             // projection, the Cycling cost path, and `tap_for_mana`.

@@ -65,6 +65,8 @@ pub(crate) mod prevent_static {
     /// `AllDamageDealtAsThoughWither` (Everlasting Torment) — not a shield,
     /// but it rides this lane so the damage funnel's read stays one walk.
     pub const ALL_WITHER: u32 = 1 << 12;
+    /// `PreventSpellDamageToYouAndYourOtherPermanents` (Rem Karolus).
+    pub const SPELL_SHIELD: u32 = 1 << 13;
 }
 
 /// See [`prevent_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -103,6 +105,7 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
                 SE::PreventDamageToThisRedirect => prevent_static::THIS_REDIRECT,
                 SE::PreventAllDamageToControllerFromOthersSources => prevent_static::FROM_OTHERS,
                 SE::AllDamageDealtAsThoughWither => prevent_static::ALL_WITHER,
+                SE::PreventSpellDamageToYouAndYourOtherPermanents => prevent_static::SPELL_SHIELD,
                 _ => 0,
             };
         }
@@ -1047,6 +1050,38 @@ impl GameState {
                     amount,
                     to_player: Some(p),
                     to_card: None,
+                });
+                return 0;
+            }
+        }
+        // Rem Karolus — "if a spell would deal damage to you or another
+        // permanent you control, prevent that damage."
+        if statics & prevent_static::SPELL_SHIELD != 0
+            && amount > 0
+            && source.is_some_and(|s| self.damage_source_is_spell(s))
+        {
+            let (side, this) = match ent {
+                EntityRef::Player(p) => (Some(p), None),
+                EntityRef::Permanent(c) => (self.battlefield_find(c).map(|c| c.controller), Some(c)),
+                EntityRef::Card(_) => (None, None),
+            };
+            let shielded = side.is_some_and(|p| {
+                self.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && Some(c.id) != this
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::PreventSpellDamageToYouAndYourOtherPermanents
+                            )
+                        })
+                })
+            });
+            if shielded {
+                events.push(GameEvent::DamagePrevented {
+                    amount,
+                    to_player: if let EntityRef::Player(p) = ent { Some(p) } else { None },
+                    to_card: this,
                 });
                 return 0;
             }

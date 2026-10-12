@@ -1872,6 +1872,15 @@ pub enum StaticEffect {
     /// much damage minus `amount` instead" (Benevolent Unicorn). A global
     /// shave on *spell* damage only, applied to every recipient.
     ReduceSpellDamageBy { amount: u32 },
+    /// "If a spell would deal damage to you or another permanent you control,
+    /// prevent that damage" (Rem Karolus, Stalwart Slayer). Any spell's
+    /// damage, read in `apply_prevention_shields`; the static's own permanent
+    /// is not covered.
+    PreventSpellDamageToYouAndYourOtherPermanents,
+    /// "If a spell would deal damage to an opponent or a permanent an opponent
+    /// controls, it deals that much damage plus `amount` instead" (Rem
+    /// Karolus) — any spell's, not only yours.
+    SpellDamageToOpponentsBonus { amount: u32 },
     /// "If a [colour] source would deal damage to you, prevent `amount` of
     /// that damage" (the Odyssey Sphere cycle). The colour-scoped sibling of
     /// `ReduceDamageToYouBy`.
