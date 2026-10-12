@@ -5069,6 +5069,7 @@ impl GameState {
             R::TurnedFaceUpThisTurn => Some(self.turn.turned_face_up_this_turn.contains(&cid)),
             R::FoughtThisTurn => Some(self.turn.fought_this_turn.contains(&cid)),
             R::HasSuspend => Some(self.find_card_anywhere(cid).is_some_and(crate::card::CardInstance::has_suspend)),
+            R::HasAdventure => Some(card.definition.adventure.is_some()),
             R::PairedWithSource => Some(source.and_then(|s| self.battlefield_find(s)).and_then(|s| s.soulbond_partner) == Some(cid)),
             R::IsRingBearer => Some(self.is_a_ring_bearer(cid)),
             R::PutOntoBattlefieldBySource => {
@@ -6549,6 +6550,9 @@ impl GameState {
                     R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(cid),
                     R::FoughtThisTurn => self.turn.fought_this_turn.contains(cid),
                     R::HasSuspend => self.find_card_anywhere(*cid).is_some_and(crate::card::CardInstance::has_suspend),
+                    R::HasAdventure => {
+                        self.find_card_anywhere(*cid).is_some_and(|c| c.definition.adventure.is_some())
+                    }
                     R::PairedWithSource => {
                         source.and_then(|s| self.battlefield_find(s)).and_then(|s| s.soulbond_partner) == Some(*cid)
                     }
@@ -7530,6 +7534,7 @@ impl GameState {
             R::TurnedFaceUpThisTurn => self.turn.turned_face_up_this_turn.contains(&card.id),
             R::FoughtThisTurn => self.turn.fought_this_turn.contains(&card.id),
             R::HasSuspend => card.has_suspend(),
+            R::HasAdventure => card.definition.adventure.is_some(),
             // A card off the battlefield is nobody's soulbond partner.
             R::PairedWithSource => false,
             R::IsRingBearer => self.is_a_ring_bearer(card.id),

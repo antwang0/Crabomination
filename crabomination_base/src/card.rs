@@ -3843,6 +3843,8 @@ pub enum SelectionRequirement {
     /// CR 708 — the candidate permanent was turned face up this turn
     /// (`TurnRegistries.turned_face_up_this_turn`; Kaust, Eyes of the Glade).
     TurnedFaceUpThisTurn,
+    /// CR 715.1 — the card has an Adventure (Frantic Firebolt's count).
+    HasAdventure,
     /// CR 701.14 — the candidate fought this turn
     /// (`TurnRegistries.fought_this_turn`; Boxing Ring).
     FoughtThisTurn,

@@ -35105,6 +35105,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::TurnedFaceUpThisTurn
         | R::FoughtThisTurn
         | R::HasSuspend
+        | R::HasAdventure
         | R::PairedWithSource
         | R::IsRingBearer
         | R::IsCommander
