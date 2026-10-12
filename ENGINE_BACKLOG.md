@@ -175,10 +175,23 @@ the handoff.
   (`DeployCreatureFromHandAttacking` now resolves X — Arni Metalbrow). **Seats 685-705**: the top
   600's three-card gaps, 63 cards in `decks::cmdr_edhrec11`, no new primitive. Debug pods 150 games,
   all decided. Eleven of those 32 decks wait on primitives (TODO's Commander NEXT item 6).
-- **Open from the rescan:** Pramikon (Suppressor Skyguard's "another opponent isn't attacked"),
-  Karametra (Yasharn's
-  no-life/no-sacrifice costs — no central gate: life and sacrifice payments are spread over the
-  Phyrexian-mana, alternative-cost, activation and additional-cost paths).
+- **Seats 932-960** — the top 600's ≤4-card gaps after the 2026-10-12 rescan (79 cards,
+  `decks::cmdr_edhrec12` + `cmdr_edhrec16`). Primitives: kick and rejection counters; Treasure
+  mana spent is a count (Kalain); CR 302.6 "attack as though it had haste", per defender
+  (Frenzied Saddlebrute); a gate-aware zero-life waiver read by the CR 704.5a SBA (Pact Weapon);
+  a cumulative upkeep paid on an opponent's creature; a capped any-number sacrifice with card
+  types counted (Baba Lysaga); Yasharn's nonland ban folded into `01NRsiVW`'s CR 119.4b gate
+  (`cost_payments_restricted` / `sacrificeable_for_cost` — both sessions had built one);
+  Suppressor Skyguard's "another opponent isn't attacked"; a self colored discount (Even the
+  Score); Averna's cascade land; a mana value 4+ spend restriction; poison ward; hand↔library
+  exchange; Kenessos's scry +1; a filtered once-a-batch turn-scoped combat-damage watcher
+  (Aphelia — the batched-damage ratchet caught the per-creature first cut).
+  `PreventAllCombatDamageByMatchingThisTurn` now pins "you" / "opponent" filters to its
+  controller (it read them against the damage dealer). **Pod invariant:** a this-turn may-play
+  granted to a card already in hand (Zaffai and the Tempests) panicked the CR 400.7 link check
+  in an Ashling pod; exempted. **Open:** Xu-Ifit (Altar of the Wretched's crafted Bonemass);
+  Storm King's Thunder (a delayed body's `XFromCost` reads the storm count, not its own X);
+  Thran Portal (self-only chosen basic type, a life cost on intrinsic mana abilities).
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.

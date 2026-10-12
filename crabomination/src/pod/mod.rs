@@ -6042,6 +6042,180 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::URIANGER_AUGURELT_COMMANDERS,
             main: decks::URIANGER_AUGURELT_MAIN,
         },
+        // Seat 932: Maelstrom Wanderer's EDHREC average deck. `--pod-decks 932`.
+        PodDeck {
+            name: "Maelstrom Wanderer (URG)",
+            commanders: decks::MAELSTROM_WANDERER_COMMANDERS,
+            main: decks::MAELSTROM_WANDERER_MAIN,
+        },
+        // Seat 933: Shirei, Shizo's Caretaker's EDHREC average deck. `--pod-decks 933`.
+        PodDeck {
+            name: "Shirei, Shizo's Caretaker (B)",
+            commanders: decks::SHIREI_COMMANDERS,
+            main: decks::SHIREI_MAIN,
+        },
+        // Seat 934: Gluntch, the Bestower's EDHREC average deck. `--pod-decks 934`.
+        PodDeck {
+            name: "Gluntch, the Bestower (WG)",
+            commanders: decks::GLUNTCH_COMMANDERS,
+            main: decks::GLUNTCH_MAIN,
+        },
+        // Seat 935: Zoraline, Cosmos Caller's EDHREC average deck. `--pod-decks 935`.
+        PodDeck {
+            name: "Zoraline, Cosmos Caller (WB)",
+            commanders: decks::ZORALINE_COMMANDERS,
+            main: decks::ZORALINE_MAIN,
+        },
+        // Seat 936: Raph & Mikey, Troublemakers's EDHREC average deck. `--pod-decks 936`.
+        PodDeck {
+            name: "Raph & Mikey, Troublemakers (RG)",
+            commanders: decks::RAPH_MIKEY_COMMANDERS,
+            main: decks::RAPH_MIKEY_MAIN,
+        },
+        // Seat 937: The Gitrog, Ravenous Ride's EDHREC average deck. `--pod-decks 937`.
+        PodDeck {
+            name: "The Gitrog, Ravenous Ride (BG)",
+            commanders: decks::THE_GITROG_COMMANDERS,
+            main: decks::THE_GITROG_MAIN,
+        },
+        // Seat 938: Thantis, the Warweaver's EDHREC average deck. `--pod-decks 938`.
+        PodDeck {
+            name: "Thantis, the Warweaver (BRG)",
+            commanders: decks::THANTIS_COMMANDERS,
+            main: decks::THANTIS_MAIN,
+        },
+        // Seat 939: Pramikon, Sky Rampart's EDHREC average deck. `--pod-decks 939`.
+        PodDeck {
+            name: "Pramikon, Sky Rampart (WUR)",
+            commanders: decks::PRAMIKON_COMMANDERS,
+            main: decks::PRAMIKON_MAIN,
+        },
+        // Seat 940: Ral, Monsoon Mage's EDHREC average deck. `--pod-decks 940`.
+        PodDeck {
+            name: "Ral, Monsoon Mage (UR)",
+            commanders: decks::RAL_COMMANDERS,
+            main: decks::RAL_MAIN,
+        },
+        // Seat 941: Ruric Thar, the Unbowed's EDHREC average deck. `--pod-decks 941`.
+        PodDeck {
+            name: "Ruric Thar, the Unbowed (RG)",
+            commanders: decks::RURIC_THAR_COMMANDERS,
+            main: decks::RURIC_THAR_MAIN,
+        },
+        // Seat 942: Ognis, the Dragon's Lash's EDHREC average deck. `--pod-decks 942`.
+        PodDeck {
+            name: "Ognis, the Dragon's Lash (BRG)",
+            commanders: decks::OGNIS_COMMANDERS,
+            main: decks::OGNIS_MAIN,
+        },
+        // Seat 943: Zethi, Arcane Blademaster's EDHREC average deck. `--pod-decks 943`.
+        PodDeck {
+            name: "Zethi, Arcane Blademaster (WU)",
+            commanders: decks::ZETHI_COMMANDERS,
+            main: decks::ZETHI_MAIN,
+        },
+        // Seat 944: Karametra, God of Harvests's EDHREC average deck. `--pod-decks 944`.
+        PodDeck {
+            name: "Karametra, God of Harvests (WG)",
+            commanders: decks::KARAMETRA_COMMANDERS,
+            main: decks::KARAMETRA_MAIN,
+        },
+        // Seat 945: Heliod, the Radiant Dawn's EDHREC average deck. `--pod-decks 945`.
+        PodDeck {
+            name: "Heliod, the Radiant Dawn (WU)",
+            commanders: decks::HELIOD_2_COMMANDERS,
+            main: decks::HELIOD_2_MAIN,
+        },
+        // Seat 946: Minn, Wily Illusionist's EDHREC average deck. `--pod-decks 946`.
+        PodDeck {
+            name: "Minn, Wily Illusionist (U)",
+            commanders: decks::MINN_COMMANDERS,
+            main: decks::MINN_MAIN,
+        },
+        // Seat 947: Karn, Legacy Reforged's EDHREC average deck. `--pod-decks 947`.
+        PodDeck {
+            name: "Karn, Legacy Reforged (C)",
+            commanders: decks::KARN_COMMANDERS,
+            main: decks::KARN_MAIN,
+        },
+        // Seat 948: Aeve, Progenitor Ooze's EDHREC average deck. `--pod-decks 948`.
+        PodDeck {
+            name: "Aeve, Progenitor Ooze (G)",
+            commanders: decks::AEVE_COMMANDERS,
+            main: decks::AEVE_MAIN,
+        },
+        // Seat 949: Kelsien, the Plague's EDHREC average deck. `--pod-decks 949`.
+        PodDeck {
+            name: "Kelsien, the Plague (WBR)",
+            commanders: decks::KELSIEN_COMMANDERS,
+            main: decks::KELSIEN_MAIN,
+        },
+        // Seat 950: Mister Negative's EDHREC average deck. `--pod-decks 950`.
+        PodDeck {
+            name: "Mister Negative (WB)",
+            commanders: decks::MISTER_NEGATIVE_COMMANDERS,
+            main: decks::MISTER_NEGATIVE_MAIN,
+        },
+        // Seat 951: Imoti, Celebrant of Bounty's EDHREC average deck. `--pod-decks 951`.
+        PodDeck {
+            name: "Imoti, Celebrant of Bounty (UG)",
+            commanders: decks::IMOTI_COMMANDERS,
+            main: decks::IMOTI_MAIN,
+        },
+        // Seat 952: Averna, the Chaos Bloom's EDHREC average deck. `--pod-decks 952`.
+        PodDeck {
+            name: "Averna, the Chaos Bloom (URG)",
+            commanders: decks::AVERNA_COMMANDERS,
+            main: decks::AVERNA_MAIN,
+        },
+        // Seat 953: Ashling, Rekindled's EDHREC average deck. `--pod-decks 953`.
+        PodDeck {
+            name: "Ashling, Rekindled (UR)",
+            commanders: decks::ASHLING_2_COMMANDERS,
+            main: decks::ASHLING_2_MAIN,
+        },
+        // Seat 954: Kenessos, Priest of Thassa's EDHREC average deck. `--pod-decks 954`.
+        PodDeck {
+            name: "Kenessos, Priest of Thassa (UG)",
+            commanders: decks::KENESSOS_COMMANDERS,
+            main: decks::KENESSOS_MAIN,
+        },
+        // Seat 955: Aphelia, Viper Whisperer's EDHREC average deck. `--pod-decks 955`.
+        PodDeck {
+            name: "Aphelia, Viper Whisperer (BG)",
+            commanders: decks::APHELIA_COMMANDERS,
+            main: decks::APHELIA_MAIN,
+        },
+        // Seat 956: Baba Lysaga, Night Witch's EDHREC average deck. `--pod-decks 956`.
+        PodDeck {
+            name: "Baba Lysaga, Night Witch (BG)",
+            commanders: decks::BABA_LYSAGA_COMMANDERS,
+            main: decks::BABA_LYSAGA_MAIN,
+        },
+        // Seat 957: Kros, Defense Contractor's EDHREC average deck. `--pod-decks 957`.
+        PodDeck {
+            name: "Kros, Defense Contractor (WUG)",
+            commanders: decks::KROS_COMMANDERS,
+            main: decks::KROS_MAIN,
+        },
+        // Seat 958: Ultron, Artificial Malevolence's EDHREC average deck. `--pod-decks 958`.
+        PodDeck {
+            name: "Ultron, Artificial Malevolence (C)",
+            commanders: decks::ULTRON_COMMANDERS,
+            main: decks::ULTRON_MAIN,
+        },
+        // Seat 959: The Council of Four's EDHREC average deck. `--pod-decks 959`.
+        PodDeck {
+            name: "The Council of Four (WU)",
+            commanders: decks::THE_COUNCIL_OF_FOUR_COMMANDERS,
+            main: decks::THE_COUNCIL_OF_FOUR_MAIN,
+        },
+        // Seat 960: Odric, Lunarch Marshal's EDHREC average deck. `--pod-decks 960`.
+        PodDeck {
+            name: "Odric, Lunarch Marshal (W)",
+            commanders: decks::ODRIC_COMMANDERS,
+            main: decks::ODRIC_MAIN,
+        },
     ]
 }
 
@@ -8745,6 +8919,35 @@ mod tests {
             ("Ezuri, Stalker of Spheres", &[0x0CC7]),
             ("Toluz, Clever Conductor", &[0x0CC8]),
             ("Urianger Augurelt", &[0x0CC9]),
+            ("Maelstrom Wanderer", &[0x0CCA]),
+            ("Shirei, Shizo's Caretaker", &[0x0CCB]),
+            ("Gluntch, the Bestower", &[0x0CCC]),
+            ("Zoraline, Cosmos Caller", &[0x0CCD]),
+            ("Raph & Mikey, Troublemakers", &[0x0CCE]),
+            ("The Gitrog, Ravenous Ride", &[0x0CCF]),
+            ("Thantis, the Warweaver", &[0x0CD0]),
+            ("Pramikon, Sky Rampart", &[0x0CD1]),
+            ("Ral, Monsoon Mage", &[0x0CD2]),
+            ("Ruric Thar, the Unbowed", &[0x0CD3]),
+            ("Ognis, the Dragon's Lash", &[0x0CD4]),
+            ("Zethi, Arcane Blademaster", &[0x0CD5]),
+            ("Karametra, God of Harvests", &[0x0CD6]),
+            ("Heliod, the Radiant Dawn", &[0x0CD7]),
+            ("Minn, Wily Illusionist", &[0x0CD8]),
+            ("Karn, Legacy Reforged", &[0x0CD9]),
+            ("Aeve, Progenitor Ooze", &[0x0CDA]),
+            ("Kelsien, the Plague", &[0x0CDB]),
+            ("Mister Negative", &[0x0CDC]),
+            ("Imoti, Celebrant of Bounty", &[0x0CDD]),
+            ("Averna, the Chaos Bloom", &[0x0CDE]),
+            ("Ashling, Rekindled", &[0x0CDF]),
+            ("Kenessos, Priest of Thassa", &[0x0CE0]),
+            ("Aphelia, Viper Whisperer", &[0x0CE1]),
+            ("Baba Lysaga, Night Witch", &[0x0CE2]),
+            ("Kros, Defense Contractor", &[0x0CE3]),
+            ("Ultron, Artificial Malevolence", &[0x0CE4]),
+            ("The Council of Four", &[0x0CE5]),
+            ("Odric, Lunarch Marshal", &[0x0CE6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
