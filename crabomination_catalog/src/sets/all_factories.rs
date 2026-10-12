@@ -13515,6 +13515,10 @@ static DECKS: &[Factory] = &[
     super::decks::emissary_green,
     super::decks::the_millennium_calendar,
     super::decks::confounding_conundrum,
+    super::decks::danitha_new_benalias_light,
+    super::decks::astor_bearer_of_blades,
+    super::decks::claim_fame,
+    super::decks::evil_twin,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

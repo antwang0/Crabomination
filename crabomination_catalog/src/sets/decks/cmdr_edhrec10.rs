@@ -4,13 +4,14 @@
 //! `tests/recent_b/cmdr_edhrec10.rs`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CounterType, EnchantmentSubtype, EquipBonus, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
+    ArtifactSubtype, CardDefinition, CardType, CounterType, EnchantmentSubtype, EntersAsCopy, EquipBonus, SplitCard,
+    SplitHalf, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
     LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{colored_animation, etb, on_attack, target_any, target_filtered, tokens_gain_until_eot};
 use crate::effect::{
-    ActivatedAbility, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, VoteOption, VoteTally, ZoneDest,
+    ActivatedAbility, Duration, Effect, LibraryPosition, LookPick, ManaPayload, PlayerRef, VoteOption, VoteTally, ZoneDest,
 };
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
@@ -1000,5 +1001,123 @@ pub fn confounding_conundrum() -> CardDefinition {
             },
         ],
         ..spell("Confounding Conundrum", cost(&[generic(1), u()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Danitha, New Benalia's Light — {1}{G}{W} 2/2 legendary Human Knight with
+/// vigilance, trample and lifelink. Once during each of your turns you may
+/// cast an Aura or Equipment spell from your graveyard.
+pub fn danitha_new_benalias_light() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Lifelink],
+        static_abilities: vec![static_ab(
+            "Once during each of your turns, you may cast an Aura or Equipment spell from your graveyard.",
+            StaticEffect::GraveyardCastOncePerTurn {
+                filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                    .or(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                exile_after: false,
+                mv_at_most_counters: None,
+                enters_tapped: false,
+            },
+        )],
+        ..legend(
+            "Danitha, New Benalia's Light",
+            cost(&[generic(1), g(), w()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            2,
+            2,
+        )
+    }
+}
+
+/// Astor, Bearer of Blades — {2}{R}{W} 4/4 legendary Human Warrior. ETB:
+/// look at the top seven for an Equipment or Vehicle card (rest on the
+/// bottom). Your Equipment have equip {1}; your Vehicles have crew 1.
+pub fn astor_bearer_of_blades() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            who: PlayerRef::You,
+            count: Value::Const(7),
+            pick_filter: Some(
+                R::HasArtifactSubtype(ArtifactSubtype::Equipment).or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+            ),
+            optional: true,
+            ..Default::default()
+        })))],
+        static_abilities: vec![
+            static_ab(
+                "Equipment you control have equip {1}.",
+                StaticEffect::EquipmentYouControlHaveEquip { cost: cost(&[generic(1)]) },
+            ),
+            static_ab(
+                "Vehicles you control have crew 1.",
+                StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::HasArtifactSubtype(ArtifactSubtype::Vehicle).and(R::ControlledByYou),
+                    ),
+                    keyword: Keyword::Crew(1),
+                },
+            ),
+        ],
+        ..legend(
+            "Astor, Bearer of Blades",
+            cost(&[generic(2), r(), w()]),
+            vec![CreatureType::Human, CreatureType::Warrior],
+            4,
+            4,
+        )
+    }
+}
+
+/// Claim // Fame — {B} sorcery: return target creature card with mana value
+/// 2 or less from your graveyard to the battlefield. Fame ({1}{R}, aftermath
+/// sorcery): target creature gets +2/+0 and haste until end of turn.
+pub fn claim_fame() -> CardDefinition {
+    CardDefinition {
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(R::Creature),
+                        power: Value::Const(2),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ]),
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..spell(
+            "Claim // Fame",
+            cost(&[b()]),
+            CardType::Sorcery,
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(2))),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        )
+    }
+}
+
+/// Evil Twin — {2}{U}{B} 0/0 Shapeshifter. Enters as a copy of any creature,
+/// with "{U}{B}, {T}: Destroy target creature with the same name as this
+/// creature."
+pub fn evil_twin() -> CardDefinition {
+    CardDefinition {
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature,
+            extra_activated: vec![ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[u(), b()]),
+                effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::SharesNameWithSource)) },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..creature("Evil Twin", cost(&[generic(2), u(), b()]), vec![CreatureType::Shapeshifter], 0, 0)
     }
 }

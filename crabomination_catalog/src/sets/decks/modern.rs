@@ -45768,11 +45768,14 @@ pub fn lurrus_of_the_dream_den() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink, Keyword::Companion],
         companion: Some(crate::card::CompanionRule::PermanentsManaValueAtMost(2)),
-        // Graveyard-cast permission rides the Muldrotha-style static; the
-        // once-per-turn-and-MV≤2 gate is approximated (one per permanent type).
         static_abilities: vec![StaticAbility {
             description: "Once during each of your turns, you may cast a permanent spell with mana value 2 or less from your graveyard.",
-            effect: StaticEffect::MayCastPermanentsFromGraveyard,
+            effect: StaticEffect::GraveyardCastOncePerTurn {
+                filter: SelectionRequirement::PermanentCard.and(SelectionRequirement::ManaValueAtMost(2)),
+                exile_after: false,
+                mv_at_most_counters: None,
+                enters_tapped: false,
+            },
         }],
         ..Default::default()
     }

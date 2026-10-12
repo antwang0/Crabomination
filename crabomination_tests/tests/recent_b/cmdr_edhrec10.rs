@@ -669,3 +669,102 @@ fn confounding_conundrum_bounces_the_second_land() {
     drain_stack(&mut g);
     assert_eq!(lands(&g), 1, "the second land bounced one");
 }
+
+fn cast_from(g: &mut GameState, id: CardId, target: Option<Target>) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+        .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Lurrus of the Dream-Den: once each of your turns, a permanent spell with
+/// mana value 2 or less from your graveyard — not a third one, nor a 3-drop.
+/// Bug fix: it rode Muldrotha's static (one per permanent type, any mana
+/// value), so a Lurrus seat recast a five-drop from its graveyard.
+#[test]
+fn lurrus_casts_one_cheap_permanent_a_turn() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::lurrus_of_the_dream_den());
+    let big = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let lions = g.add_card_to_graveyard(0, catalog::savannah_lions());
+    flood(&mut g, 0);
+    assert!(cast_from(&mut g, big, None).is_err(), "mana value 6");
+    cast_from(&mut g, bears, None).expect("a 2-drop");
+    assert!(g.battlefield_find(bears).is_some());
+    assert!(cast_from(&mut g, lions, None).is_err(), "once a turn");
+}
+
+/// Danitha, New Benalia's Light: an Aura from the graveyard, once a turn.
+#[test]
+fn danitha_recasts_an_aura() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::danitha_new_benalias_light());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let p = g.add_card_to_graveyard(0, catalog::pacifism());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    assert!(cast_from(&mut g, bears, None).is_err(), "not an Aura or Equipment");
+    cast_from(&mut g, p, Some(perm(foe))).expect("Pacifism from the graveyard");
+    assert_eq!(g.battlefield_find(p).and_then(|c| c.attached_to), Some(foe));
+}
+
+/// Astor, Bearer of Blades: equip {1} beats Loxodon Warhammer's {3}; the
+/// ETB digs an Equipment out of the top seven.
+#[test]
+fn astor_equips_for_one() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hammer_card = g.add_card_to_library(0, catalog::bonesplitter());
+    let a = g.add_card_to_hand(0, catalog::astor_bearer_of_blades());
+    cast(&mut g, a, &[]).expect("cast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == hammer_card), "dug the Equipment");
+    let hammer = ready(&mut g, 0, catalog::loxodon_warhammer());
+    g.clear_sickness(a);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: hammer, target: a }).expect("equip {1}");
+    assert_eq!(g.battlefield_find(hammer).and_then(|c| c.attached_to), Some(a));
+}
+
+/// Claim // Fame: Claim reanimates a 2-drop; Fame is cast from the graveyard
+/// (aftermath) for +2/+0 and haste.
+#[test]
+fn claim_then_fame() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let c = g.add_card_to_hand(0, catalog::claim_fame());
+    cast(&mut g, c, &[Target::Permanent(bears)]).expect("Claim");
+    assert!(g.battlefield_find(bears).is_some());
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == c));
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAftermath {
+        card_id: c,
+        target: Some(perm(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Fame");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+    assert!(has_kw(&g, bears, Keyword::Haste));
+}
+
+/// Evil Twin copies a creature and can destroy one with the same name.
+#[test]
+fn evil_twin_kills_its_original() {
+    let mut g = pod(2);
+    let orig = ready(&mut g, 1, catalog::craw_wurm());
+    let t = g.add_card_to_hand(0, catalog::evil_twin());
+    cast(&mut g, t, &[]).expect("cast");
+    assert_eq!(g.computed_permanent(t).unwrap().power, 6, "a Craw Wurm");
+    g.clear_sickness(t);
+    let n = g.battlefield_find(t).unwrap().definition.activated_abilities.len();
+    activate(&mut g, t, n.saturating_sub(1), Some(perm(orig))).expect("destroy the original");
+    assert!(g.battlefield_find(orig).is_none());
+}
