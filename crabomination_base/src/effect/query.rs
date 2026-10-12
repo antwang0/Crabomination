@@ -5502,7 +5502,10 @@ impl Effect {
                 // filter ("target opponent loses the game" — Mirrodin
                 // Besieged).
                 | Effect::WinGame { who }
-                | Effect::LoseGame { who } => pref_find(who, slot),
+                | Effect::LoseGame { who }
+                // "Target player searches their library" — the slot rides
+                // `who` (Scheming Symmetry's two target players).
+                | Effect::Search { who, .. } => pref_find(who, slot),
                 Effect::WaiveShroudForPlayerThisTurn { player } => {
                     pref_find(player, slot)
                 }
