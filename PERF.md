@@ -3134,6 +3134,31 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-10-12 (Commander run, `01L4tuaB`) — guardrail; 110 EDHREC seats, emblem floors, graveyard discounts
+
+Hot-path touch: the graveyard ability discount walk folds one more static arm
+(only for `from_graveyard` abilities); the damage life floor also reads the
+seat's emblems; `ReturnAllMatchingFromGraveyardToBattlefield` resolves X in
+its filter. Release `bot_ladder` at `3a2494da0`, Xeon @ 2.80 GHz (4 cores).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); peak_rss 30.4 MiB; games_per_s 261.37
+                 (decisions_per_s 160,233 — a different box from 01FWi9DN's)
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean
+strict suite     25,193 / 1 / 5 at 3fe196e71: the one failure was a card file
+                 created mid-run (registered next commit, audits re-run green);
+                 the long pole cr_903_5a_the_official_precon_seats_play_pod_games
+                 3,632 s — seats 407 on now play one seeded game apiece
+debug pods       seats 449-493: nine five-seat groups, 270 games, all decided;
+                 seats 494-512: four groups, 120 games, 119 decided + one CR
+                 104.4a draw (Descent into Avernus)
+clippy           workspace --all-targets clean (after the client's memory-
+                 counter arms)
+```
+
 ### 2026-10-11 (Commander run, `01FWi9DN`) — guardrail; nine seats, sneak/mayhem/excess-damage events
 
 Hot-path touch: a noncombat damage event pushes `ExcessNoncombatDamage` only when
