@@ -242,7 +242,8 @@ const SINGLE_PLAYER_VALUES: &[&str] = &[
     "MulticoloredSpellsCastThisTurn",
     "NonbasicLandCountControlledBy",
     "PermanentCountControlledBy",
-    "PermanentsSacrificedThisTurn",
+    // `PermanentsSacrificedThisTurn` sums a many-player ref (The Balrog,
+    // Durin's Bane: "each permanent sacrificed this turn"), so it is not here.
     "PlayerSpeed",
     "PoisonCountersOf",
     "SnowPermanentCountControlledBy",

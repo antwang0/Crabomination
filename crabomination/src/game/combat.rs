@@ -832,10 +832,33 @@ impl GameState {
                 _ => {}
             }
         }
-        if card.summoning_sick && !hasted {
+        if card.summoning_sick && !hasted && !self.attack_as_though_haste(p, None) {
             return Some((line!(), GameError::SummoningSickness(id)));
         }
         None
+    }
+
+    /// CR 302.6 — Frenzied Saddlebrute: may a summoning-sick creature `p`
+    /// controls attack `defender` as though it had haste? Each
+    /// `CreaturesAttackYourOpponentsAsThoughHaste` source covers its
+    /// controller's opponents (and their planeswalkers); `None` asks whether
+    /// any live defender is covered, the defender-agnostic gate.
+    pub(crate) fn attack_as_though_haste(&self, p: usize, defender: Option<usize>) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|src| {
+            let q = src.controller;
+            src.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    self.active_static(&sa.effect, src),
+                    Some(StaticEffect::CreaturesAttackYourOpponentsAsThoughHaste)
+                )
+            }) && match defender {
+                Some(d) => d != p && !self.same_team(q, d),
+                None => (0..self.players.len()).any(|d| {
+                    d != p && self.players[d].is_alive() && !self.same_team(p, d) && !self.same_team(q, d)
+                }),
+            }
+        })
     }
 
     /// CR 508.1a — the restrictions on one attacker that depend on *which*
@@ -853,6 +876,16 @@ impl GameState {
             && self.battlefield_find(id).is_some_and(|c| self.obligated_to(c, d))
         {
             return Some((line!(), GameError::CannotAttack(id)));
+        }
+        // CR 302.6 — a summoning-sick attacker past `attacker_self_block` is
+        // there on a Frenzied Saddlebrute waiver, which covers only that
+        // source's controller's opponents.
+        if defender.is_some()
+            && !kws.contains(&Keyword::Haste)
+            && self.battlefield_find(id).is_some_and(|c| c.summoning_sick)
+            && !self.attack_as_though_haste(p, defender)
+        {
+            return Some((line!(), GameError::SummoningSickness(id)));
         }
         // One walk, same reason as `attacker_self_block`.
         for k in kws {
@@ -6924,10 +6957,45 @@ impl GameState {
                 })
                 .cloned()
                 .collect();
-            for dt in watchers {
+            // CR 603.2c — the batched, filtered kind (Aphelia): one fire per
+            // damaged seat per step, keyed in the step's batch set under the
+            // watcher's source and an index no printed trigger uses.
+            let batched: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    dt.controller == controller
+                        && matches!(
+                            &dt.kind,
+                            crate::game::types::DelayedKind::MatchingCreaturesDealCombatDamageBatchThisTurn(f)
+                                if self.battlefield_find(source).is_some_and(|c| {
+                                    self.evaluate_requirement_on_card(f, c, controller)
+                                })
+                        )
+                })
+                .cloned()
+                .collect();
+            for dt in batched {
+                let key = (dt.source, usize::MAX, BatchSubject::Player(damaged_player));
+                if self.combat_trigger_fired_this_step.contains(&key) {
+                    continue;
+                }
+                self.combat_trigger_fired_this_step.push(key);
                 self.push_stack(
                     TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
+                        .trigger_player(Some(damaged_player))
+                        .event_amount(damage_amount)
+                        .build(),
+                );
+            }
+            for dt in watchers {
+                // The damaged seat is `PlayerRef::TriggerEventPlayer`
+                // (Aphelia's "that player loses half their life").
+                self.push_stack(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
+                        .trigger_player(Some(damaged_player))
                         .event_amount(damage_amount)
                         .build(),
                 );

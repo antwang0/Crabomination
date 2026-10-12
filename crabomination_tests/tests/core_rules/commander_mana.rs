@@ -659,7 +659,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | LandAbilitiesOnly | CreatureOnly | CreatureOnlyFromCreature | MarksCast
                 | CreatureSpellsOrAbilities | CreatureAbilitiesOnly | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | LessonOrShrineSpellsOnly | DevoidSpellsOnly | ForetellOnly | InstantSorceryUncounterable
-                | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
+                | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | SpellManaValueAtLeast4 | DragonOrOmenSpell
                 | EnchantmentSpell | NotGeneric | MulticoloredSpell | ColoredSpellWithoutX
                 | PlaneswalkerSpellsOnly
                 | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
@@ -713,6 +713,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureOfEitherTypeOrItsAbility(CreatureType::Bear, CreatureType::Elf),
             ColorlessSpellsOrAbilities,
             HighMvOrX,
+            SpellManaValueAtLeast4,
             DragonOrOmenSpell,
             EnchantmentSpell,
             NotGeneric,

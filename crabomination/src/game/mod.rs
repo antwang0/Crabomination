@@ -8545,6 +8545,12 @@ impl GameState {
                             specs.push((*kind, n));
                         }
                     }
+                    StaticEffect::OtherCreaturesEnterWithCountersPerTreasureMana { kind } => {
+                        let n = u32::from(ec.cast_treasure_mana);
+                        if n > 0 {
+                            specs.push((*kind, n));
+                        }
+                    }
                     StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { kind } => {
                         let n = src.counter_count(*kind);
                         if n > 0 {
@@ -8979,6 +8985,29 @@ impl GameState {
                 CumulativeUpkeepCost::Draw(per) => {
                     self.draw_n(active, (per * n) as usize, &mut events);
                     true
+                }
+                CumulativeUpkeepCost::PutCounterOnOpponentCreature(kind) => {
+                    // The payer's pick: every counter on the opponents'
+                    // smallest creature (lowest id breaks ties).
+                    let pick = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller != active && !self.same_team(active, c.controller))
+                        .filter(|c| self.computed_is_creature(c))
+                        .min_by_key(|c| (self.effective_power_on(c), c.id))
+                        .map(|c| c.id);
+                    match pick {
+                        Some(cid) => {
+                            let put = self.place_counters(cid, *kind, n);
+                            events.push(crate::game::GameEvent::CounterAdded {
+                                card_id: cid,
+                                counter_type: *kind,
+                                count: put, placer: Some(active),
+                            });
+                            true
+                        }
+                        None => false,
+                    }
                 }
                 CumulativeUpkeepCost::GraveyardCardsToBottom(per) => {
                     self.pay_graveyard_cards_to_bottom(active, *per as usize, n as usize, &mut events)
@@ -11902,6 +11931,23 @@ impl GameState {
     #[doc(hidden)]
     pub fn damage_prevented_sources_debug(&self) -> Vec<crate::game::types::PreventedSource> {
         self.damage_prevented_sources.clone()
+    }
+
+    /// CR 704.5a — is the life half of the loss SBA waived for `seat`?
+    /// Phyrexian Unlife's static, or a live (gate-open)
+    /// `ControllerDoesntLoseForZeroLife` (Pact Weapon while attached).
+    pub fn player_zero_life_waived(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.player_unlife_active(seat)
+            || self.battlefield.iter().any(|src| {
+                src.controller == seat
+                    && src.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, src),
+                            Some(StaticEffect::ControllerDoesntLoseForZeroLife)
+                        )
+                    })
+            })
     }
 
     pub fn player_unlife_active(&self, seat: usize) -> bool {
@@ -34338,6 +34384,7 @@ fn static_effect_to_effects(
             | StaticEffect::GainLifeFromRadiation
             // Read by `Effect::Surveil` and the surveil answer.
             | StaticEffect::SurveilLooksExtra { .. }
+            | StaticEffect::ScryLooksExtra { .. }
             | StaticEffect::MayPlaySurveilledThisTurnForLife
             // Read in `activate_ability`'s tax block.
             | StaticEffect::TaxOpponentAbilitiesTargeting { .. }
@@ -34616,6 +34663,10 @@ fn static_effect_to_effects(
             // ControllerCreatureAbilitiesAsThoughHaste (Tyvar) — consulted at
             // the CR 602.5a activation gate; no layer effect.
             | StaticEffect::ControllerCreatureAbilitiesAsThoughHaste
+            // Frenzied Saddlebrute — read at `attack_as_though_haste`.
+            | StaticEffect::CreaturesAttackYourOpponentsAsThoughHaste
+            // Averna — read by `Effect::Cascade`.
+            | StaticEffect::CascadeMayPutExiledLandTapped
             // UntapSelfEachUntapStep (Thousand Moons Infantry) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapSelfEachUntapStep
@@ -34791,6 +34842,7 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCostReducedIfControlEach { .. }
             // SelfCostReducedIf (Gigastorm Titan) — read off the spell.
             | StaticEffect::SelfCostReducedIf { .. }
+            | StaticEffect::SelfColoredCostReducedIf { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty
             | StaticEffect::ReanimateInsteadOfDrawFromEmpty
             // CR 104.3d — consulted at the loss/win sites, no layer effect.
@@ -34802,6 +34854,9 @@ fn static_effect_to_effects(
             | StaticEffect::ReduceDamageToControllerFromSource { .. }
             // Phyrexian Unlife — consulted at the loss SBA + damage funnels.
             | StaticEffect::ControllerDoesntLoseFromLife
+            | StaticEffect::ControllerDoesntLoseForZeroLife
+            // Yasharn — read by `cost_life_payable` / `can_be_sacrificed_for_cost`.
+            | StaticEffect::PlayersCantPayLifeOrSacrificeNonlandForCosts
             // Consulted at the damage-to-player life sites.
             | StaticEffect::DamageWontReduceControllerLifeBelowOne { .. }
             | StaticEffect::DamageDoesntCauseControllerLifeLoss
@@ -34870,6 +34925,7 @@ fn static_effect_to_effects(
             | StaticEffect::MatchingEntersWith { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceToughness { .. }
             | StaticEffect::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
+            | StaticEffect::OtherCreaturesEnterWithCountersPerTreasureMana { .. }
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::EquipmentYouControlEquipZeroWhile { .. }

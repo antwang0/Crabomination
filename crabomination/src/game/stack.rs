@@ -5682,6 +5682,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn
                         | crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(_)
                         | crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn
+                        | crate::game::types::DelayedKind::MatchingCreaturesDealCombatDamageBatchThisTurn(_)
                         | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
                         | crate::game::types::DelayedKind::YourNextAttackThisTurn
                         | crate::game::types::DelayedKind::YourNextExhaustActivationThisTurn
@@ -8707,7 +8708,7 @@ impl GameState {
             // healthy board the walk never runs at all, instead of twice a
             // sweep per seat. `&Self` rather than a capture, because the
             // enclosing `self` is `&mut`.
-            let unlife = |g: &Self| g.player_unlife_active(i);
+            let unlife = |g: &Self| g.player_zero_life_waived(i);
             // CR 104.3c — a player who tried to draw from an empty library
             // loses here, not inside the draw. `lose_to_empty_draw` arms the
             // flag; this is the only place it becomes an elimination, so a

@@ -299,7 +299,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         // Discarding your hand is never trivial as a Perplex-style counter cost,
         // but as a Ward tax it's free when the hand is already empty.
         WardCost::DiscardHand => false,
-        WardCost::Blight(n) => *n == 0,
+        WardCost::Blight(n) | WardCost::Poison(n) => *n == 0,
         WardCost::CollectEvidence(n) => *n == 0,
         WardCost::ExileFromGraveyard(n)
         | WardCost::BottomFromGraveyard(n)
@@ -1954,6 +1954,14 @@ pub fn colored_cost_reduction_for_spell(
 ) -> crate::mana::ManaCost {
     use crate::effect::StaticEffect;
     let mut out = crate::mana::ManaCost::default();
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfColoredCostReducedIf { condition, less } = &sa.effect {
+            let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
+            if state.evaluate_predicate(condition, &ctx) {
+                out.symbols.extend(less.symbols.iter().cloned());
+            }
+        }
+    }
     for src in &state.battlefield {
         if src.controller != caster {
             continue;
@@ -3889,8 +3897,10 @@ impl crate::game::GameState {
         // Alchemist's Talent / Rain of Riches — "if mana from a Treasure was
         // spent to cast it": the pool's Treasure provenance fell.
         let p = self.priority.player_with_priority;
-        if receipt.pool_before.treasure_amount() > self.players[p].mana_pool.treasure_amount() {
-            self.players[p].cast_paid_with_treasure = true;
+        let treasure_spent =
+            receipt.pool_before.treasure_amount().saturating_sub(self.players[p].mana_pool.treasure_amount());
+        if treasure_spent > 0 {
+            self.players[p].cast_paid_with_treasure += treasure_spent;
         }
         if receipt.side_effects.spent(SpendRestriction::MarksCast) {
             self.players[p].cast_paid_marked = true;
@@ -10190,6 +10200,14 @@ impl GameState {
         // One battlefield walk for the six cost-pipeline statics this
         // function used to ask about separately — see `cast_cost_scan`.
         let cost_statics = cast_cost_scan(self);
+        // A card-intrinsic colored discount (Even the Score) is the casting
+        // card's own static, outside the battlefield walk.
+        let self_colored = self.players[p].hand.iter().find(|c| c.id == card_id).is_some_and(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::SelfColoredCostReducedIf { .. }))
+        });
 
         // The four name locks below are the same shape as the cost statics
         // above — three battlefield walks and a hand lookup, per cast, for
@@ -11455,14 +11473,14 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         debug_assert!(
-            cost_statics & cast_static::COLORED_REDUCTION != 0 || {
+            cost_statics & cast_static::COLORED_REDUCTION != 0 || self_colored || {
                 let mut probe = cost.clone();
                 apply_colored_cost_statics(self, p, &card, &mut probe);
                 probe == cost
             },
             "cast_cost_scan missed a colored cost static",
         );
-        if cost_statics & cast_static::COLORED_REDUCTION != 0 {
+        if cost_statics & cast_static::COLORED_REDUCTION != 0 || self_colored {
             apply_colored_cost_statics(self, p, &card, &mut cost);
         }
         // Colored-aware target-conditional reduction (Brush Off's "{1}{U}
@@ -11892,6 +11910,40 @@ impl GameState {
             .collect();
         ranked.sort_by_key(|(_, key)| *key);
         ranked.into_iter().take(count).map(|(id, _)| id).collect()
+    }
+
+    /// The auto-line for a capped "Sacrifice up to `cap` permanents" cost
+    /// whose payoff wants card-type breadth (Baba Lysaga): cheapest first
+    /// (`auto_pick_lowest_power`'s order), each pick the one adding the most
+    /// card types not yet covered, at most `cap` picks. Returns nothing unless
+    /// the batch covers `cap` or more card types — a narrower batch buys no
+    /// payoff, so zero is the better (legal) payment.
+    pub(crate) fn distinct_type_sac_batch(&self, candidates: &[CardId], cap: usize) -> Vec<CardId> {
+        let ranked = self.auto_pick_lowest_power(candidates, candidates.len());
+        let types_of = |id: &CardId| -> Vec<crate::card::CardType> {
+            self.battlefield_find(*id).map(|c| c.definition.card_types.clone()).unwrap_or_default()
+        };
+        let mut covered: Vec<crate::card::CardType> = Vec::new();
+        let mut picks: Vec<CardId> = Vec::new();
+        while picks.len() < cap {
+            let best = ranked
+                .iter()
+                .filter(|id| !picks.contains(id))
+                .map(|id| (id, types_of(id).iter().filter(|t| !covered.contains(t)).count()))
+                .filter(|&(_, gain)| gain > 0)
+                .fold(None::<(&CardId, usize)>, |acc, (id, gain)| match acc {
+                    Some((_, g)) if g >= gain => acc,
+                    _ => Some((id, gain)),
+                });
+            let Some((id, _)) = best else { break };
+            for t in types_of(id) {
+                if !covered.contains(&t) {
+                    covered.push(t);
+                }
+            }
+            picks.push(*id);
+        }
+        if covered.len() >= cap { picks } else { Vec::new() }
     }
 
     /// Pick the `count` highest-power permanents from `candidates` (by id) —
@@ -12955,9 +13007,10 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value)
             || std::mem::take(&mut self.cast_paid_uncounterable);
         // Written only when set: `card` is a CoW handle and the write unshares.
-        if self.players[p].cast_paid_with_treasure {
-            self.players[p].cast_paid_with_treasure = false;
+        if self.players[p].cast_paid_with_treasure > 0 {
+            let spent = std::mem::take(&mut self.players[p].cast_paid_with_treasure);
             card.cast_with_treasure_mana = true;
+            card.cast_treasure_mana = spent.min(255) as u8;
         }
         if self.players[p].cast_paid_marked {
             self.players[p].cast_paid_marked = false;
@@ -21979,7 +22032,7 @@ impl GameState {
             return Err(GameError::InsufficientLife);
         }
         // "Pay half your life, rounded up" (CR 118.4 — Lurking Evil).
-        if ability.half_life_cost && self.players[p].life <= 0 {
+        if ability.half_life_cost && (self.players[p].life <= 0 || self.cost_payments_restricted()) {
             return Err(GameError::InsufficientLife);
         }
 
@@ -22459,7 +22512,8 @@ impl GameState {
                 .collect();
             match chosen_sac_any {
                 Some(chosen) => {
-                    sac_other_picks.extend(chosen.into_iter().filter(|id| candidates.contains(id)));
+                    let cap = ability.sac_any_number_max.map_or(usize::MAX, |m| m as usize);
+                    sac_other_picks.extend(chosen.into_iter().filter(|id| candidates.contains(id)).take(cap));
                 }
                 None if !candidates.is_empty() && self.players[p].manual_mana => {
                     let source_name = self
@@ -22473,7 +22527,7 @@ impl GameState {
                                 .map(|c| (*id, c.definition.name.to_string()))
                         })
                         .collect();
-                    let max = named.len() as u32;
+                    let max = ability.sac_any_number_max.map_or(named.len() as u32, |m| m.min(named.len() as u32));
                     self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                         decision: crate::decision::Decision::ChooseCards {
                             source: card_id,
@@ -22493,7 +22547,10 @@ impl GameState {
                     }));
                     return Ok(());
                 }
-                None => sac_other_picks.extend(candidates),
+                None => match ability.sac_any_number_max {
+                    Some(cap) => sac_other_picks.extend(self.distinct_type_sac_batch(&candidates, cap as usize)),
+                    None => sac_other_picks.extend(candidates),
+                },
             }
         }
 

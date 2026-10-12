@@ -1347,6 +1347,11 @@ pub enum DelayedKind {
     /// to a player, …" (CR 603.4). Fires per qualifying combat-damage event; the
     /// dealing creature is the trigger source. Expires at cleanup. Mistway Spy.
     CreatureYouControlDealsCombatDamageThisTurn,
+    /// "Until end of turn, whenever one or more [filter] creatures you control
+    /// deal combat damage to a player, …" — CR 603.2c: once per damaged player
+    /// per combat-damage step, the first matching dealer the trigger source,
+    /// the damaged seat the trigger player. Aphelia, Viper Whisperer.
+    MatchingCreaturesDealCombatDamageBatchThisTurn(crate::card::SelectionRequirement),
     /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.

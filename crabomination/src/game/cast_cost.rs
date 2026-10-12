@@ -72,14 +72,25 @@ impl GameState {
     /// sacrifices as costs of spells or activated abilities (CR 119.4b). The
     /// life lane gates the walk, so a board without one costs one bit test.
     pub(crate) fn cost_payments_restricted(&self) -> bool {
+        self.cost_restriction_present(false)
+    }
+
+    /// Yasharn, Implacable Earth on the battlefield: no life payments and no
+    /// *nonland* sacrifices as costs of spells or activated abilities.
+    pub(crate) fn nonland_sacrifice_costs_restricted(&self) -> bool {
+        self.cost_restriction_present(true)
+    }
+
+    /// The shared walk: either static bans paying life (`nonland_only` false
+    /// answers "any ban"); `nonland_only` asks for Yasharn's alone.
+    fn cost_restriction_present(&self, nonland_only: bool) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.has_life_static()
             && self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(StaticEffect::PlayersCantPayLifeOrSacrificeCreaturesForCosts)
-                    )
+                c.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, c) {
+                    Some(StaticEffect::PlayersCantPayLifeOrSacrificeNonlandForCosts) => true,
+                    Some(StaticEffect::PlayersCantPayLifeOrSacrificeCreaturesForCosts) => !nonland_only,
+                    _ => false,
                 })
             })
     }
@@ -97,7 +108,11 @@ impl GameState {
     /// Jubilation — judged by its current types, so an artifact creature can't
     /// pay "Sacrifice an artifact" either (ruling 2012-05-01).
     pub(crate) fn sacrificeable_for_cost(&self, c: &CardInstance) -> bool {
-        self.can_be_sacrificed(c.id) && !(self.cost_payments_restricted() && self.computed_is_creature(c))
+        self.can_be_sacrificed(c.id)
+            && !(self.cost_payments_restricted()
+                && (self.computed_is_creature(c)
+                    || (!self.computed_has_card_type(c, crate::card::CardType::Land)
+                        && self.nonland_sacrifice_costs_restricted())))
     }
 
     /// [`Self::sacrificeable_for_cost`] by id; false off the battlefield.

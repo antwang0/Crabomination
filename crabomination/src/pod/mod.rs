@@ -7039,9 +7039,16 @@ fn play_pod_game(
                 .find(|(c, z)| {
                     // CR 702.94 — a miracle reveal's permission IS a hand
                     // permission, live for the step it was drawn in.
+                    // A grant made to a card in hand for this turn (Zaffai and
+                    // the Tempests' free cast) is a hand permission too.
                     c.exiled_by.is_some()
                         || (matches!(z, Off::Hand | Off::Command)
-                            && c.may_play_until.as_ref().is_some_and(|m| !m.miracle))
+                            && c.may_play_until.as_ref().is_some_and(|m| {
+                                !m.miracle
+                                    && !(matches!(z, Off::Hand)
+                                        && m.duration == crate::card::MayPlayDuration::EndOfThisTurn
+                                        && m.granted_turn == g.turn_number)
+                            }))
                         || c.kicked
                 });
             if let Some((c, _)) = linked.filter(|_| g.pending_decision.is_none()) {

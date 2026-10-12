@@ -877,6 +877,7 @@ fn card_has_etb_counter_static(c: &CardInstance) -> bool {
                 | S::MatchingEntersWith { .. }
                 | S::OtherCreaturesEnterWithCountersEqualToSourceToughness { .. }
                 | S::OtherCreaturesEnterWithCountersEqualToSourceCounters { .. }
+                | S::OtherCreaturesEnterWithCountersPerTreasureMana { .. }
                 | S::ExtraEtbCountersForCreatureCasts { .. }
         )
     })
@@ -990,6 +991,7 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
         | S::PlayerCannotGainLife { .. }
         | S::PlayerCannotLoseLife { .. }
         | S::PlayersCantPayLifeOrSacrificeCreaturesForCosts
+        | S::PlayersCantPayLifeOrSacrificeNonlandForCosts
         // Painter's Servant shares the lane: `painted_colors` is gated on it
         // (one rare card; the lane word has no field to spare, see below).
         | S::ChosenColorEverywhere

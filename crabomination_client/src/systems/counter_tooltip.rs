@@ -1152,6 +1152,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             }
             crabomination::card::WardCost::DiscardHand => "Ward—Discard your hand".into(),
             crabomination::card::WardCost::Blight(n) => format!("Ward—Blight {n}"),
+            crabomination::card::WardCost::Poison(n) => format!("Ward—Get {n} poison counters"),
             crabomination::card::WardCost::RemoveCounterFromPermanent => {
                 "Ward—Remove a counter from a permanent you control".into()
             }
@@ -1636,6 +1637,8 @@ pub(crate) fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Discovery => "Discovery",
         CounterType::Prey => "Prey",
         CounterType::Incarnation => "Incarnation",
+        CounterType::Kick => "Kick",
+        CounterType::Rejection => "Rejection",
         CounterType::Slumber => "Slumber",
         CounterType::Story => "Story",
         CounterType::Winch => "Winch",

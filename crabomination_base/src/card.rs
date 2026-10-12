@@ -533,6 +533,8 @@ pub enum PlaneswalkerSubtype {
     Comet,
     // Serra the Benevolent (the one-card gaps of EDHREC's top 600).
     Serra,
+    // Mordenkainen (Minn, Wily Illusionist's EDHREC deck).
+    Mordenkainen,
     // Basri Ket (Lae'zel's EDHREC deck).
     Basri,
 }
@@ -1024,6 +1026,10 @@ pub enum CounterType {
     Incarnation,
     /// Peter Parker's Camera's film (each copies an ability).
     Film,
+    /// Zethi, Arcane Blademaster's kick counters on the instants it exiles.
+    Kick,
+    /// Tolarian Contempt's rejection counters.
+    Rejection,
 }
 
 /// Every zone a card can occupy.
@@ -1082,6 +1088,9 @@ pub enum WardCost {
     /// "Ward—Blight N." (CR 701.68 — Auntie Ool, Cursewretch.) The warding
     /// player must put N -1/-1 counters on a creature they control.
     Blight(u32),
+    /// "Ward—Get N poison counters." (The Serpent Society.) Always payable:
+    /// the warding player gets the counters (CR 122.1f).
+    Poison(u32),
     /// "Ward—Collect evidence N." (CR 701.59 — Axebane Ferox.) The warding
     /// player must exile cards with total mana value ≥ N from their graveyard.
     CollectEvidence(u32),
@@ -1164,6 +1173,7 @@ impl WardCost {
             W::RevealMatching(_) => "Reveal a matching card from your hand".to_string(),
             W::DiscardHand => "Ward—discard your hand".to_string(),
             W::Blight(n) => format!("Ward—Blight {n}"),
+            W::Poison(n) => format!("Ward—get {n} poison counters"),
             W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),
             W::ExileFromGraveyard(n) => format!("Ward—exile {n} card(s) from your graveyard"),
             W::BottomFromGraveyard(n) => {
@@ -2787,6 +2797,10 @@ pub enum CumulativeUpkeepCost {
     /// bottom of their owner's library" (Jötun Grunt): `n` cards from one
     /// graveyard per age counter.
     GraveyardCardsToBottom(u32),
+    /// "Cumulative upkeep—Put a +1/+1 counter on a creature an opponent
+    /// controls" (Sheltering Ancient): one `kind` counter per age counter,
+    /// each on a creature an opponent controls. Unpayable with none.
+    PutCounterOnOpponentCreature(CounterType),
 }
 
 impl CumulativeUpkeepCost {
@@ -2800,6 +2814,9 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::FlipCoin => "Flip a coin".into(),
             CumulativeUpkeepCost::PutCounterOnSelf(k) => format!("Put a {k:?} counter on this"),
             CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
+            CumulativeUpkeepCost::PutCounterOnOpponentCreature(k) => {
+                format!("Put a {k:?} counter on a creature an opponent controls")
+            }
             CumulativeUpkeepCost::GraveyardCardsToBottom(n) => {
                 format!("Put {n} cards from a single graveyard on the bottom of their owner's library")
             }
@@ -9961,6 +9978,10 @@ pub struct CardData {
     /// Treasure provenance fell during its payment). Read by
     /// `Predicate::CastWithTreasureMana`. Not serialized.
     pub cast_with_treasure_mana: bool,
+    /// How much Treasure mana was spent to cast this spell, capped at 255.
+    /// Read by `StaticEffect::OtherCreaturesEnterWithCountersPerTreasureMana`
+    /// (Kalain, Reclusive Painter). Not serialized.
+    pub cast_treasure_mana: u8,
     /// `SpendRestriction::MarksCast` mana funded this spell. Read by
     /// `Predicate::CastWithMarkedMana`. Not serialized.
     pub cast_with_marked_mana: bool,
@@ -11006,6 +11027,7 @@ impl CardInstance {
             bottom_on_leave_stack: false,
             exile_with_on_resolve: None,
             cast_with_treasure_mana: false,
+            cast_treasure_mana: 0,
             cast_with_marked_mana: false,
             cast_artifact_mana: 0,
             cast_desert_mana: 0,

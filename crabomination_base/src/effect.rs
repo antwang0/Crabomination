@@ -1200,6 +1200,10 @@ pub enum Value {
     /// resolution) sacrificed — "for each creature sacrificed this way"
     /// (Vicious Betrayal). Reads `GameState.sacrificed_count`.
     SacrificedCount,
+    /// Card types among the permanents this activation's cost sacrificed
+    /// (`scratch.cost_sacrificed_batch`, read off the last-known
+    /// snapshots) — Baba Lysaga, Night Witch.
+    CardTypesAmongCostSacrificed,
     /// Commanders (any player's, CR 903.3) sacrificed during this resolution
     /// (Tevesh Szat's "if the sacrificed permanent was a commander").
     CommandersSacrificedThisResolution,
@@ -2041,6 +2045,11 @@ pub enum Predicate {
     /// `who: Triggerer` + `once_per_turn` to model "whenever a player draws
     /// their Nth card each turn" (Faerie Mastermind's second-draw payoff).
     PlayerDrewAtLeastThisTurn { who: PlayerRef, n: u32 },
+    /// Suppressor Skyguard — "if that player has another opponent who isn't
+    /// being attacked": the active (attacking) player has a live opponent
+    /// other than you that no current attacker is aimed at (directly or
+    /// through a permanent it controls).
+    AttackingPlayerLeftAnotherOpponentUnattacked,
     /// True if any player matched by `who` has an effective life total at most
     /// `life`. Powers "unless an opponent has N or less life" gates (Vampire
     /// Lacerator).
@@ -7075,6 +7084,9 @@ pub enum Effect {
     /// enters/leaves-graveyard triggers don't fire — a faithful-enough
     /// approximation for the one card that does this.)
     ExchangeHandAndGraveyard { who: PlayerRef },
+    /// "Exchange your hand and library, then shuffle" (Mordenkainen's −10):
+    /// the hand becomes the library (shuffled) and the library the hand.
+    ExchangeHandAndLibrary { who: PlayerRef },
     /// Each player in `who` exiles all but the bottom `keep` cards of their
     /// library (face down — face-down exile isn't modeled, so the cards are
     /// exiled plainly). Doomsday Excruciator's "each player exiles all but the
@@ -11885,6 +11897,13 @@ pub enum Effect {
     /// exposed to `body` as `Selector::TriggerSource`. Expires at cleanup.
     /// Used by Mistway Spy's turn-face-up grant.
     CreaturesYouControlDealingCombatDamageThisTurn {
+        body: Box<Effect>,
+    },
+    /// "Until end of turn, whenever one or more [filter] creatures you control
+    /// deal combat damage to a player, [body]" — once a batch (CR 603.2c) per
+    /// damaged player; that seat is `PlayerRef::TriggerEventPlayer`.
+    MatchingCreaturesDealingCombatDamageBatchThisTurn {
+        filter: SelectionRequirement,
         body: Box<Effect>,
     },
 

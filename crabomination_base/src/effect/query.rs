@@ -488,6 +488,7 @@ impl Effect {
             | Effect::WheneverCreatureEntersThisTurn { body, .. }
             | Effect::WheneverCreatureEntersUntilYourNextTurn { body, .. }
             | Effect::CreaturesYouControlDealingCombatDamageThisTurn { body, .. }
+            | Effect::MatchingCreaturesDealingCombatDamageBatchThisTurn { body, .. }
             | Effect::WheneverYouGainLifeThisTurn { body, .. }
             | Effect::WheneverCombatDamageToYouPreventedThisTurn { body, .. }
             | Effect::WheneverOpponentMakesYouDiscardThisTurn { body, .. }
@@ -1842,7 +1843,9 @@ impl Effect {
             | Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, .. } => {
                 player_has_target(who)
             }
-            Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),
+            Effect::ExchangeHandAndGraveyard { who } | Effect::ExchangeHandAndLibrary { who } => {
+                player_has_target(who)
+            }
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
@@ -2297,6 +2300,7 @@ impl Effect {
             | Effect::EachPlayerChoosesWarOrPeace
             | Effect::EachOpponentSacrificesSharingTypeWith { .. } => false,
             Effect::CreaturesYouControlDealingCombatDamageThisTurn { .. } => false,
+            Effect::MatchingCreaturesDealingCombatDamageBatchThisTurn { .. } => false,
             Effect::WheneverYouGainLifeThisTurn { .. } => false,
             Effect::WheneverCombatDamageToYouPreventedThisTurn { .. } => false,
             Effect::WheneverCardEntersOpponentGraveyardThisTurn { .. } => false,

@@ -747,6 +747,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast spells with mana value 5 or greater or
     /// spells with {X} in their mana costs." (Troyan, Gutsy Explorer.)
     HighMvOrX,
+    /// "Spend this mana only to cast spells with mana value 4 or greater"
+    /// (Ashling, Rimebound). Reads `SpellKind::mana_value`.
+    SpellManaValueAtLeast4,
     /// "Spend this mana only on costs that contain {X}." (Elementalist's
     /// Palette.) Reads `SpellKind::has_x`.
     XCostsOnly,
@@ -942,6 +945,7 @@ impl SpendRestriction {
             SpendRestriction::TypeSpellOrItsAbility(_) => "only spells and abilities of the listed type",
             SpendRestriction::ColorlessSpellsOrAbilities => "only colorless spells or abilities",
             SpendRestriction::HighMvOrX => "only mana value 5+ or {X} spells",
+            SpendRestriction::SpellManaValueAtLeast4 => "only mana value 4+ spells",
             SpendRestriction::XCostsOnly => "only costs that contain {X}",
             SpendRestriction::DragonOrOmenSpell => "only Dragon or Omen spells",
             SpendRestriction::EnchantmentSpell => "only enchantment spells",
@@ -1092,6 +1096,7 @@ impl SpendRestriction {
                 kind.colorless || kind.activating_ability
             }
             SpendRestriction::HighMvOrX => kind.mana_value >= 5 || kind.has_x,
+            SpendRestriction::SpellManaValueAtLeast4 => !kind.activating_ability && kind.mana_value >= 4,
             SpendRestriction::XCostsOnly => kind.has_x,
             SpendRestriction::DragonOrOmenSpell => {
                 kind.omen

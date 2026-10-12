@@ -907,6 +907,16 @@ pub enum StaticEffect {
     /// had infect." (Phyrexian Unlife.) Gates the CR 704.5a loss SBA and
     /// flips both player-damage funnels to poison at ≤ 0 life.
     ControllerDoesntLoseFromLife,
+    /// "You don't lose the game for having 0 or less life" with no infect
+    /// rider — Pact Weapon, gated `WhileCondition(WhileSourceAttached)`.
+    /// Read by `GameState::player_zero_life_waived` at the CR 704.5a SBA.
+    ControllerDoesntLoseForZeroLife,
+    /// Yasharn, Implacable Earth — "Players can't pay life or sacrifice
+    /// nonland permanents to cast spells or activate abilities." Read by
+    /// `GameState::cost_life_payable` (every spell / ability life-cost gate,
+    /// Phyrexian mana included) and `can_be_sacrificed_for_cost` (activation
+    /// sacrifice costs).
+    PlayersCantPayLifeOrSacrificeNonlandForCosts,
     /// Card-intrinsic "This spell costs {amount} less to cast if a creature died
     /// this turn" (Bone Picker). Generic-only; clamped by `ManaCost::reduce_generic`.
     SelfCostReducedIfCreatureDiedThisTurn { amount: u32 },
@@ -975,6 +985,11 @@ pub enum StaticEffect {
     /// — your opponents control 3+ creatures). The predicate is evaluated at
     /// cost time with the caster as controller. Generic-only, clamped.
     SelfCostReducedIf { condition: Predicate, amount: u32 },
+    /// The COLORED sibling of `SelfCostReducedIf` — "This spell costs
+    /// {U}{U}{U} less to cast if an opponent has drawn four or more cards
+    /// this turn" (Even the Score). Folded into
+    /// `colored_cost_reduction_for_spell` with the caster as controller.
+    SelfColoredCostReducedIf { condition: Predicate, less: crate::mana::ManaCost },
     /// "This spell costs {1} less to cast for each [amount]" with the count
     /// read off a `Value` from the caster's side (Licia, Sanguine Tribune:
     /// life gained this turn).
@@ -2329,6 +2344,9 @@ pub enum StaticEffect {
     /// "You may look at an additional N cards each time you surveil"
     /// (Enhanced Surveillance), read by `Effect::Surveil`.
     SurveilLooksExtra { n: u32 },
+    /// "If you would scry a number of cards, scry that many cards plus `n`
+    /// instead" (Kenessos, Priest of Thassa), read by `Effect::Scry`.
+    ScryLooksExtra { n: u32 },
     /// "You may play lands and cast spells from among cards in your graveyard
     /// you've surveilled this turn … pay life equal to its mana value rather
     /// than its mana cost" (Eye of Duskmantle): stamped as a pay-life may-play
@@ -2872,6 +2890,19 @@ pub enum StaticEffect {
     /// counters on it, where X is the number of `kind` counters on this"
     /// (Bloodspore Thrinax). The counter-count sibling of the power one.
     OtherCreaturesEnterWithCountersEqualToSourceCounters { kind: CounterType },
+    /// Kalain, Reclusive Painter — "Other creatures you control enter with an
+    /// additional `kind` counter on them for each mana from a Treasure spent
+    /// to cast them" (the entrant's own `cast_treasure_mana`).
+    OtherCreaturesEnterWithCountersPerTreasureMana { kind: CounterType },
+    /// Frenzied Saddlebrute — "All creatures can attack your opponents and
+    /// planeswalkers your opponents control as though those creatures had
+    /// haste" (CR 302.6 waived per defender; read by
+    /// `GameState::attack_as_though_haste`).
+    CreaturesAttackYourOpponentsAsThoughHaste,
+    /// Averna, the Chaos Bloom — "As you cascade, you may put a land card from
+    /// among the exiled cards onto the battlefield tapped" (after the last
+    /// card is exiled, before the cast decision). Read by `Effect::Cascade`.
+    CascadeMayPutExiledLandTapped,
     /// "Each [filter] you control enters with a `keyword` counter on it"
     /// (Tayam's vigilance, Veiled Ascension's flying on face-down creatures):
     /// placed as it enters (CR 122.6), by `apply_etb_keyword_counters` at the
@@ -4455,6 +4486,12 @@ pub struct ActivatedAbility {
     /// same `Value::Sacrificed{Count,TotalPower}` batch as `sac_other_filter`.
     #[serde(default)]
     pub sac_any_number_filter: Option<SelectionRequirement>,
+    /// Caps `sac_any_number_filter` — "Sacrifice up to three permanents"
+    /// (Baba Lysaga, Night Witch). The auto-line then sacrifices a full batch
+    /// of distinct-card-type permanents or nothing (its payoff reads
+    /// `Value::CardTypesAmongCostSacrificed`).
+    #[serde(default)]
+    pub sac_any_number_max: Option<u32>,
     /// When true, `sac_other_filter`'s count is the activation's X value
     /// ("Sacrifice X [filter]:" costs — Lonis, Genetics Expert). The X is
     /// threaded to the effect as `Value::XFromCost`.

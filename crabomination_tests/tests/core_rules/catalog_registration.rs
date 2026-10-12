@@ -2012,11 +2012,13 @@ const BATCHED_DAMAGE_SIGNED_OFF: &[&str] =
 /// and wrong a second way in a pod — the batch keys on the damaged player, so
 /// each defending seat is its own fire.
 ///
-/// ⚠ **Three spellings satisfy it.** `once_per_batch` is the primitive;
+/// ⚠ **Four spellings satisfy it.** `once_per_batch` is the primitive;
 /// `once_per_turn` subsumes it (CR 603.3d is the stricter cap); and a
 /// `FromYourGraveyard` trigger is deduped by the graveyard walk in
 /// `fire_combat_damage_triggers` itself, which is how Killian's Confidence and
-/// Pyrewild Shaman are already right without carrying a flag.
+/// Pyrewild Shaman are already right without carrying a flag; and the
+/// turn-scoped `MatchingCreaturesDealingCombatDamageBatchThisTurn` watcher
+/// batches by construction.
 #[test]
 fn every_batched_damage_trigger_fires_once_a_batch() {
     clause_ratchet(
@@ -2041,6 +2043,9 @@ fn every_batched_damage_trigger_fires_once_a_batch() {
                 || body.contains("once_per_batch: true")
                 || body.contains("once_per_turn: true")
                 || body.contains("FromYourGraveyard")
+                // The turn-scoped watcher that batches by construction
+                // (Aphelia, Viper Whisperer's {4}{B}).
+                || body.contains("MatchingCreaturesDealingCombatDamageBatchThisTurn")
         },
     );
 }

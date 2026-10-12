@@ -12993,6 +12993,20 @@ impl GameState {
                         })
                         .sum::<usize>();
                 }
+                // CR 614.1a — Kenessos, Priest of Thassa: "If you would scry a
+                // number of cards, scry that many cards plus one instead."
+                if n > 0 && matches!(effect, Effect::Scry { .. }) {
+                    n += self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .flat_map(|c| c.definition.static_abilities.iter())
+                        .map(|sa| match sa.effect {
+                            crate::effect::StaticEffect::ScryLooksExtra { n } => n as usize,
+                            _ => 0,
+                        })
+                        .sum::<usize>();
+                }
                 // CR 701.22b: "If a player is instructed to scry 0, no
                 // scry event occurs. Abilities that trigger whenever a
                 // player scries won't trigger." (Same wording covers
@@ -30834,6 +30848,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeHandAndLibrary { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let pl = &mut *self.players[p];
+                    std::mem::swap(&mut pl.hand, &mut pl.library);
+                    self.shuffle_library(p, events);
+                }
+                Ok(())
+            }
+
             Effect::ShuffleLibrary { who } => {
                 
                 if let Some(p) = self.resolve_player(who, ctx) {
@@ -34814,6 +34837,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MatchingCreaturesDealingCombatDamageBatchThisTurn { filter, body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::MatchingCreaturesDealCombatDamageBatchThisTurn(
+                        filter.clone(),
+                    ),
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: false,
+                    expires_after_turn: None,
+                });
+                Ok(())
+            }
+
             Effect::WheneverOpponentMakesYouDiscardThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {
@@ -37968,7 +38009,22 @@ impl GameState {
                 // expressed as the engine-wide fog plus an "except" for
                 // everything that does NOT match.
                 self.prevent_combat_damage_this_turn = true;
-                self.prevent_combat_damage_except = Some(filter.clone().negate());
+                // The filter is read at damage time against the DEALER's
+                // controller, so "you" / "your opponents" are pinned to this
+                // effect's controller now (Winds of Qal Sisma's ferocious
+                // half: "by creatures your opponents control").
+                fn pin_you(f: &crate::card::SelectionRequirement, seat: u8) -> crate::card::SelectionRequirement {
+                    use crate::card::SelectionRequirement as R;
+                    match f {
+                        R::ControlledByYou => R::ControlledBySeat(seat),
+                        R::ControlledByOpponent => R::Not(Box::new(R::ControlledBySeat(seat))),
+                        R::And(a, b) => R::And(Box::new(pin_you(a, seat)), Box::new(pin_you(b, seat))),
+                        R::Or(a, b) => R::Or(Box::new(pin_you(a, seat)), Box::new(pin_you(b, seat))),
+                        R::Not(a) => R::Not(Box::new(pin_you(a, seat))),
+                        other => other.clone(),
+                    }
+                }
+                self.prevent_combat_damage_except = Some(pin_you(filter, ctx.controller as u8).negate());
                 Ok(())
             }
 
@@ -42055,6 +42111,28 @@ impl GameState {
                 // must land before it), then offer the hit.
                 if let Some(cid) = hit {
                     exiled.retain(|&x| x != cid);
+                }
+                // Averna — "as you cascade", one exiled land may enter tapped
+                // (taken: a land is never worse on the battlefield than on the
+                // bottom). The first land exiled.
+                if self.battlefield.iter().any(|src| {
+                    src.controller == p
+                        && src.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                self.active_static(&sa.effect, src),
+                                Some(crate::effect::StaticEffect::CascadeMayPutExiledLandTapped)
+                            )
+                        })
+                }) && let Some(land) = exiled.iter().copied().find(|id| {
+                    self.exile.iter().any(|c| c.id == *id && c.definition.card_types.contains(&CardType::Land))
+                }) {
+                    exiled.retain(|&x| x != land);
+                    self.move_card_to(
+                        land,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true },
+                        ctx,
+                        events,
+                    );
                 }
                 for cid in exiled {
                     if self.exile.iter().any(|c| c.id == cid) {
@@ -46610,6 +46688,10 @@ impl GameState {
                         for card_id in ids {
                             self.discard_card(payer, card_id, events);
                         }
+                        true
+                    }
+                    WardCost::Poison(n) => {
+                        self.add_poison(payer, *n, events);
                         true
                     }
                     WardCost::Blight(n) => {

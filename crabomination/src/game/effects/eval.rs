@@ -1427,6 +1427,25 @@ impl GameState {
                 .unwrap_or(0),
             Value::SacrificedTotalPower => self.sacrificed_total_power,
             Value::SacrificedCount => self.sacrificed_count as i32,
+            Value::CardTypesAmongCostSacrificed => {
+                let mut types: Vec<crate::card::CardType> = Vec::new();
+                for id in &self.scratch.cost_sacrificed_batch {
+                    let Some(c) = self
+                        .died_card_snapshots
+                        .get(id)
+                        .or_else(|| self.leaves_bf_lki.get(id))
+                        .or_else(|| self.find_card_anywhere(*id))
+                    else {
+                        continue;
+                    };
+                    for t in &c.definition.card_types {
+                        if !types.contains(t) {
+                            types.push(t.clone());
+                        }
+                    }
+                }
+                types.len() as i32
+            }
             Value::CommandersSacrificedThisResolution => self
                 .scratch
                 .cards_sacrificed_this_resolution
@@ -2239,10 +2258,13 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].creatures_died_this_turn as i32)
                 .unwrap_or(0),
+            // Summed over a many-player ref (The Balrog, Durin's Bane's "each
+            // permanent sacrificed this turn" reads `EachPlayer`).
             Value::PermanentsSacrificedThisTurn(p) => self
-                .resolve_player(p, ctx)
+                .resolve_players(p, ctx)
+                .into_iter()
                 .map(|p| self.players[p].permanents_sacrificed_this_turn as i32)
-                .unwrap_or(0),
+                .sum(),
             Value::ArtifactsOrCreaturesSacrificedThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].artifacts_or_creatures_sacrificed_this_turn as i32)
@@ -2770,6 +2792,16 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].life_gained_this_turn > 0),
+            Predicate::AttackingPlayerLeftAnotherOpponentUnattacked => {
+                let a = self.active_player_idx;
+                (0..self.players.len()).any(|d| {
+                    d != a
+                        && d != ctx.controller
+                        && self.players[d].is_alive()
+                        && !self.same_team(a, d)
+                        && !self.attacking.iter().any(|atk| self.defender_for(atk.target) == Some(d))
+                })
+            }
             Predicate::PlayerDrewAtLeastThisTurn { who, n } => self
                 .resolve_players(who, ctx)
                 .into_iter()
