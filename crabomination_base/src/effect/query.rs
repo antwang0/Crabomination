@@ -2173,6 +2173,7 @@ impl Effect {
             | Effect::BecomeCopyOfFor { what, source, .. } => {
                 sel_has_target(what) || sel_has_target(source)
             }
+            Effect::NextEntriesEnterAsCopy { of } => sel_has_target(of),
             Effect::AmendCopy { what, .. } => sel_has_target(what),
             Effect::Attach { what, to }
             | Effect::AttachAnyNumberTo { what, to }
@@ -3149,7 +3150,8 @@ impl Effect {
             Effect::BecomeCopyOf { source, .. }
             | Effect::BecomeCopyKeepingIdentity { source, .. }
             | Effect::BecomeCopyKeepingName { source, .. }
-            | Effect::BecomeCopyOfFor { source, .. } => sel_filter(source),
+            | Effect::BecomeCopyOfFor { source, .. }
+            | Effect::NextEntriesEnterAsCopy { of: source } => sel_filter(source),
             Effect::WhenTargetDiesThisTurn { filter, .. } => {
                 filter.as_ref().or(Some(&SelectionRequirement::Creature))
             }
@@ -5711,6 +5713,7 @@ impl Effect {
                 | Effect::BecomeCopyOfFor { what, source, .. } => {
                     sel_find(what, slot).or_else(|| sel_find(source, slot))
                 }
+                Effect::NextEntriesEnterAsCopy { of } => sel_find(of, slot),
                 // The token RECEIVER ("target player creates ...",
                 // Echocasting Symposium / Emeritus of Truce) is a player
                 // slot alongside the copied source's own slot.

@@ -1768,6 +1768,7 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 let has_match = state.battlefield.iter().any(|c| {
                     c.controller == caster
                         && state.requirement_on_permanent(filter, c, caster, None, &gates)
+                        && state.sacrificeable_for_cost(c)
                 });
                 if !has_match {
                     tax += pay;
@@ -6781,7 +6782,7 @@ impl GameState {
             })
             && let Some(life) = self.library_top_pay_life_cost(p, card_id)
         {
-            if !super::cast_cost::life_payable(self.players[p].life, life) {
+            if !self.cost_life_payable(p, self.players[p].life, life) {
                 return Err(GameError::InsufficientLife);
             }
             let card = self.players[p].library.remove(0);
@@ -10332,6 +10333,7 @@ impl GameState {
                                             p,
                                             None,
                                         )
+                                        && self.sacrificeable_for_cost(c)
                                 })
                                 .map(|c| Target::Permanent(c.id))
                                 .collect();
@@ -11496,7 +11498,7 @@ impl GameState {
         // Terror of the Peaks' targeting tax is paid with it.
         let pay_x_life: u32 = if card.definition.additional_cost_pay_x_life { x_value.unwrap_or(0) } else { 0 };
         let pay_x_life = pay_x_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
-        if !super::cast_cost::life_payable(self.effective_life(p), pay_x_life) {
+        if !self.cost_life_payable(p, self.effective_life(p), pay_x_life) {
             cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::InsufficientLife);
@@ -11854,7 +11856,7 @@ impl GameState {
         let Some(sac) = self.battlefield_find(sac_id) else {
             return false;
         };
-        if sac.controller != caster {
+        if sac.controller != caster || !self.sacrificeable_for_cost(sac) {
             return false;
         }
         card.definition
@@ -11955,6 +11957,7 @@ impl GameState {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
                         && self.evaluate_requirement_static_on(filter, c, p, None)
+                        && self.sacrificeable_for_cost(c)
                 }).count();
                 matching >= *count as usize
             }
@@ -12019,7 +12022,7 @@ impl GameState {
                 matching >= *count as usize
             }
             // CR 119.4 — life can be paid only if the total is at least N.
-            A::PayLife { amount } => self.players[p].life >= *amount as i32,
+            A::PayLife { amount } => self.cost_life_payable(p, self.players[p].life, *amount),
             A::ExilePermanent { filter, count } => {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
@@ -12079,6 +12082,7 @@ impl GameState {
     /// `PayLifeOrPay`'s choice: pay the life while it leaves `p` at 10 or more.
     pub(crate) fn pays_life_half(&self, p: usize, life: u32) -> bool {
         self.players.get(p).is_some_and(|pl| pl.life - life as i32 >= 10)
+            && self.cost_life_payable(p, self.players[p].life, life)
     }
 
     pub(crate) fn pick_one_of_cost(
@@ -12222,6 +12226,7 @@ impl GameState {
                                             p,
                                             None,
                                         )
+                                        && self.sacrificeable_for_cost(c)
                                 }) {
                                     picked.push(c);
                                 }
@@ -12242,6 +12247,7 @@ impl GameState {
                                             p,
                                             None,
                                         )
+                                        && self.sacrificeable_for_cost(c)
                                 })
                                 .collect();
                             cands.sort_by_key(|c| {
@@ -12784,6 +12790,9 @@ impl GameState {
         from_hand: bool,
     ) {
         let mut card = card;
+        if !self.grants_until_cast.is_empty() {
+            self.end_grants_until_cast(card.id);
+        }
         // CR 406.3 — a card cast out of face-down exile is a face-up spell; a
         // morph cast keeps its face (it carries `face_up_def`).
         if card.face_down && card.face_up_def.is_none() {
@@ -14783,7 +14792,7 @@ impl GameState {
             && alt_cast_cost.as_ref().is_some_and(|c| c.cmc() > 0)
             && self.exile.iter().find(|c| c.id == card_id).is_some_and(|c| self.free_exile_cast_waiver(p, c));
         if let Some(life) = valgavoth_toll {
-            if !super::cast_cost::life_payable(self.players[p].life, life) {
+            if !self.cost_life_payable(p, self.players[p].life, life) {
                 return Err(GameError::InsufficientLife);
             }
             self.pay_life_cost(p, life);
@@ -14937,7 +14946,7 @@ impl GameState {
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
         }
         // CR 119.4 — life is payable only up to the life total.
-        if !super::cast_cost::life_payable(self.players[p].life, tax_life) {
+        if !self.cost_life_payable(p, self.players[p].life, tax_life) {
             self.players[p].command.push(card);
             self.offboard_keyword_grants = true;
             return Err(GameError::InsufficientLife);
@@ -15107,7 +15116,7 @@ impl GameState {
         // life total is greater than or equal to the payment. Pre-flight
         // gate so we reject cleanly rather than driving life negative
         // mid-cast.
-        if !super::cast_cost::life_payable(self.players[p].life, alt.life_cost) {
+        if !self.cost_life_payable(p, self.players[p].life, alt.life_cost) {
             return Err(GameError::InsufficientLife);
         }
         if alt.energy_cost > 0 && self.players[p].energy < alt.energy_cost {
@@ -15181,6 +15190,7 @@ impl GameState {
                             p,
                             None,
                         )
+                        && self.sacrificeable_for_cost(c)
                 })
                 .map(|c| c.id)
                 .collect();
@@ -15435,7 +15445,7 @@ impl GameState {
         };
         let tax_life = tax_life + life_tax_for_spell(self, p, target.as_ref(), &additional_targets);
         // CR 119.4 — the alt cost's life and a life-paid tax come out of one total.
-        if !super::cast_cost::life_payable(self.players[p].life, tax_life + alt.life_cost) {
+        if !self.cost_life_payable(p, self.players[p].life, tax_life + alt.life_cost) {
             self.return_from_alt_cast(p, zone, card);
             return Err(GameError::InsufficientLife);
         }
@@ -17641,7 +17651,7 @@ impl GameState {
         let first = self.try_pay_after_snapshot_mode_any_life(
             payer, cost, snapshot, forced_only, kind, spend_float,
         )?;
-        if super::cast_cost::life_payable(self.effective_life(payer), first.side_effects.life_lost) {
+        if self.cost_life_payable(payer, self.effective_life(payer), first.side_effects.life_lost) {
             return Ok(first);
         }
         self.restore_payment_state(payer, pre.clone());
@@ -17668,7 +17678,7 @@ impl GameState {
             match self.try_pay_after_snapshot_mode_any_life(
                 payer, &attempt, pre.clone(), forced_only, kind, spend_float,
             ) {
-                Ok(r) if super::cast_cost::life_payable(self.effective_life(payer), r.side_effects.life_lost) => {
+                Ok(r) if self.cost_life_payable(payer, self.effective_life(payer), r.side_effects.life_lost) => {
                     return Ok(r);
                 }
                 Ok(_) => self.restore_payment_state(payer, pre.clone()),
@@ -19267,7 +19277,7 @@ impl GameState {
             self.battlefield
                 .iter()
                 .filter(|c| c.controller == p && (may_be_source || c.id != id) && !(untapped && c.tapped))
-                .filter(|c| untapped || self.can_be_sacrificed(c.id))
+                .filter(|c| untapped || self.sacrificeable_for_cost(c))
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .count() as u32
         };
@@ -21938,13 +21948,13 @@ impl GameState {
                 ability.life_cost.saturating_add(self.evaluate_value(v, &ctx).max(0) as u32)
             }
         };
-        if !super::cast_cost::life_payable(self.players[p].life, life_cost) {
+        if !self.cost_life_payable(p, self.players[p].life, life_cost) {
             return Err(GameError::InsufficientLife);
         }
         // Pre-flight variable life-cost gate ("Pay X life", CR 107.16): the
         // spend equals the activation's chosen `x_value`. Reject cleanly when
         // short so tap/mana aren't burned (Krumar Initiate).
-        if ability.x_life_cost && !super::cast_cost::life_payable(self.players[p].life, x_value.unwrap_or(0)) {
+        if ability.x_life_cost && !self.cost_life_payable(p, self.players[p].life, x_value.unwrap_or(0)) {
             return Err(GameError::InsufficientLife);
         }
         // "Pay half your life, rounded up" (CR 118.4 — Lurking Evil).
@@ -22269,7 +22279,7 @@ impl GameState {
         // lowest-power auto-pick (so the activator keeps better creatures).
         // CR 701.21 — a permanent that can't be sacrificed can't pay a
         // "Sacrifice this" cost (Assault Suit's equipped creature).
-        if ability.sac_cost && !self.can_be_sacrificed(card_id) {
+        if ability.sac_cost && !self.sacrificeable_for_cost_id(card_id) {
             return Err(GameError::SelectionRequirementViolated);
         }
         let sac_other_picks: Vec<CardId> = if let Some((filter, count)) =
@@ -22295,7 +22305,7 @@ impl GameState {
                 .iter()
                 .filter(|c| (c.id != card_id || ability.sac_other_may_be_source) && c.controller == p)
                 .filter(|c| !needs_attached_to_source || c.attached_to == Some(card_id))
-                .filter(|c| self.can_be_sacrificed(c.id))
+                .filter(|c| self.sacrificeable_for_cost(c))
                 .filter(|c| !needs_host_of_source || host == Some(c.id))
                 .map(|c| c.id)
                 .collect::<Vec<_>>()
@@ -22388,7 +22398,7 @@ impl GameState {
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| c.id != card_id && c.controller == p && self.sacrificeable_for_cost(c))
                 .map(|c| c.id)
                 .collect::<Vec<_>>()
                 .into_iter()
@@ -22418,7 +22428,7 @@ impl GameState {
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| c.id != card_id && c.controller == p && self.sacrificeable_for_cost(c))
                 .map(|c| c.id)
                 .collect::<Vec<_>>()
                 .into_iter()
@@ -24047,7 +24057,7 @@ impl GameState {
             let extra: Vec<CardId> = self
                 .battlefield
                 .iter()
-                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| c.id != card_id && c.controller == p && self.sacrificeable_for_cost(c))
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
                 .collect();

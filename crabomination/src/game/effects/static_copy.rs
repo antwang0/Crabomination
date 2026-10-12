@@ -83,6 +83,47 @@ impl GameState {
         true
     }
 
+    /// Mystic Reflection's armed copy (CR 707.2, 614.12): an entering creature
+    /// or planeswalker becomes a copy of the model this turn, in the first
+    /// batch only. A model card that left is copied from its new zone.
+    pub(crate) fn apply_next_entries_copy(
+        &mut self,
+        card_id: CardId,
+        controller: usize,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let Some(armed) = self.next_entries_copy.clone() else { return false };
+        if armed.turn != self.turn_number || armed.model == card_id {
+            return false;
+        }
+        let Some(c) = self.battlefield.find_by_id(card_id) else { return false };
+        if !(c.definition.is_creature() || c.definition.is_planeswalker()) {
+            return false;
+        }
+        // A card model reads from its new zone; a token that left is gone.
+        if self.find_card_anywhere(armed.model).is_none() {
+            return false;
+        }
+        let ctx = EffectContext::for_trigger(card_id, controller, Some(Target::Permanent(armed.model)), 0);
+        if let Ok(evs) = self.resolve_effect_driven(
+            &Effect::BecomeCopyOf {
+                what: Selector::This,
+                source: Selector::Target(0),
+                extra_creature_types: vec![],
+                keep_own_triggered: false,
+                keep_own_activated: false,
+                keep_name: false,
+            },
+            &ctx,
+        ) {
+            events.extend(evs);
+        }
+        if let Some(n) = self.next_entries_copy.as_mut() {
+            n.applied = true;
+        }
+        true
+    }
+
     /// CR 606.3 override — `seat` holds an emblem letting them activate
     /// loyalty abilities at instant speed (Teferi, Temporal Archmage).
     pub(crate) fn loyalty_at_instant_speed(&self, seat: usize) -> bool {

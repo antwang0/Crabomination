@@ -1651,6 +1651,10 @@ pub enum Value {
     /// resolution contexts (spells, activated abilities, delayed
     /// triggers that have moved past the original event).
     TriggerEventAmount,
+    /// CR 605.1a / 106.4 — the mana the `TappedForMana` event's permanent
+    /// produced in the trigger's batch, one per pip event (Tyvar the
+    /// Bellicose's "equal to the amount of mana this creature produced").
+    TriggerManaProduced,
     /// The number of Auras the trigger's controller controlled that were
     /// attached to the dying creature (the trigger subject) when it left the
     /// battlefield. Read from `GameState.auras_at_death`. Powers Hateful
@@ -3068,6 +3072,10 @@ pub enum Duration {
     UntilEndOfYourNextTurn,
     /// Indefinite (for effects like "gain control" without a clause).
     Permanent,
+    /// "until this card is cast from exile" (Emrakul, the Exigent Doom's land
+    /// grant): an activated-ability grant that `finalize_cast` strips when the
+    /// source card is next cast (CR 611.2b).
+    UntilSourceCast,
     /// CR 708.8 — "until this creature is turned face down" (Vesuvan
     /// Shapeshifter's copy): ends as `Effect::TurnFaceDown` turns it, so the
     /// card it stashes is its own.
@@ -9786,6 +9794,11 @@ pub enum Effect {
     /// Mockingbird (enter-as-a-copy). If `source` resolves to nothing the
     /// effect is a no-op (the copier stays itself — usually a 0/0 that
     /// dies to SBA, matching the printed "you may" decline).
+    /// "The next time one or more creatures or planeswalkers enter this turn,
+    /// they enter as copies of [of]" (Mystic Reflection, CR 707.2 / 614.12).
+    /// Arms `GameState::next_entries_copy`; `apply_enters_as_copy` applies it
+    /// to each entering creature or planeswalker until the next SBA check.
+    NextEntriesEnterAsCopy { of: Selector },
     BecomeCopyOf {
         what: Selector,
         source: Selector,

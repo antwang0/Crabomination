@@ -1128,6 +1128,15 @@ pub enum StaticEffect {
     /// ("your life total can't change") and by future "your opponent
     /// can't lose life" payoffs.
     PlayerCannotLoseLife { target: PlayerStaticTarget },
+    /// CR 119.4b / 701.21 — "Players can't pay life or sacrifice creatures to
+    /// cast spells or activate abilities" (Angel of Jubilation). Read by
+    /// `GameState::cost_life_payable` / `sacrificeable_for_cost`; no layer.
+    PlayersCantPayLifeOrSacrificeCreaturesForCosts,
+    /// CR 105.3 / 613.1e — "All cards that aren't on the battlefield, spells,
+    /// and permanents are the chosen color in addition to their other colors"
+    /// (Painter's Servant). Permanents through a layer-5 `AddColor`; cards in
+    /// every other zone (stack included) through `GameState::painted_colors`.
+    ChosenColorEverywhere,
     /// CR 614 — life-gain replacement: while active, when a targeted player
     /// *would* gain life, they lose that much life instead (Tainted Remedy:
     /// "If an opponent would gain life, that player loses that much life

@@ -1606,6 +1606,17 @@ pub struct TurnRegistries {
 }
 
 /// A queued CR 704.5j group: the controller, the name, the duplicates.
+/// "The next time one or more creatures or planeswalkers enter this turn,
+/// they enter as copies of the chosen creature" (Mystic Reflection).
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct NextEntriesCopy {
+    pub model: CardId,
+    pub turn: u32,
+    /// Set by the first entry it copies; the next SBA check ends it, so one
+    /// simultaneous batch is copied and no later one.
+    pub applied: bool,
+}
+
 pub(crate) type DeferredLegendChoice = (usize, String, Vec<(CardId, String)>);
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -1633,6 +1644,15 @@ pub struct ColdState {
     /// Fomori), as (creature, player). Cleared with `attacking`.
     #[serde(default)]
     pub(crate) attack_player_requirements: Vec<(CardId, usize)>,
+    /// `Duration::UntilSourceCast` grants as (permanent, source card, the
+    /// ability): `finalize_cast` strips each when its source is cast (Emrakul,
+    /// the Exigent Doom's land). Cold: only that grant writes it.
+    #[serde(default)]
+    pub(crate) grants_until_cast: Vec<(CardId, CardId, crate::effect::ActivatedAbility)>,
+    /// Mystic Reflection's pending copy (CR 707.2 / 614.12): the model, the
+    /// turn it was set, and once applied the SBA pass that closes the batch.
+    #[serde(default)]
+    pub(crate) next_entries_copy: Option<NextEntriesCopy>,
     /// Activated abilities countered this turn, as they last existed on the
     /// stack: a "copy that ability" trigger still copies one countered
     /// before it resolved (Unbound Flourishing's 2019-06-14 ruling). Cold:
@@ -21671,7 +21691,7 @@ impl GameState {
                     .or_else(|| self.granted_cycling_for(seat, c).map(|mc| (Some(mc), 0, None)))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
-        if !cast_cost::life_payable(self.players[seat].life, life_cost) {
+        if !self.cost_life_payable(seat, self.players[seat].life, life_cost) {
             return Err(GameError::InsufficientLife);
         }
         // "Cycling—Sacrifice a land" (Edge of Autumn): unpayable without one.
@@ -23441,7 +23461,7 @@ impl GameState {
         }
         // "Equip—Pay 3 life" (Nightmare Lash): same up-front gate as energy.
         let life_cost = self.battlefield[equip_pos].definition.equip_life_cost;
-        if !cast_cost::life_payable(self.players[p].life, life_cost) {
+        if !self.cost_life_payable(p, self.players[p].life, life_cost) {
             return Err(GameError::InsufficientLife);
         }
         // "Equip—Sacrifice an artifact" (Piston Sledge). Resolve the victim
@@ -31663,18 +31683,23 @@ impl GameState {
 
     /// [`Self::event_amount_for`] for a trigger dispatched from `events`: a
     /// `TappedForMana` event carries the colors that permanent's tap produced
-    /// in this batch, as a `ColorSet` mask (C.A.M.P., CR 106.8).
+    /// in this batch, as a `ColorSet` mask in the low byte (C.A.M.P., CR
+    /// 106.8), and the mana's amount above it (`Value::TriggerManaProduced`).
     pub(crate) fn event_amount_in(&self, ev: &GameEvent, events: &[GameEvent]) -> u32 {
         let GameEvent::TappedForMana { card_id, .. } = ev else { return self.event_amount_for(ev) };
         let mut set = crate::mana::ColorSet::empty();
+        let mut amount = 0u32;
         for e in events {
-            if let GameEvent::ManaAdded { color, source: Some(s), .. } = e
-                && s == card_id
-            {
-                set.insert(*color);
+            match e {
+                GameEvent::ManaAdded { color, source: Some(s), .. } if s == card_id => {
+                    set.insert(*color);
+                    amount += 1;
+                }
+                GameEvent::ColorlessManaAdded { source: Some(s), .. } if s == card_id => amount += 1,
+                _ => {}
             }
         }
-        u32::from(set.0)
+        u32::from(set.0) | (amount << 8)
     }
 
     pub(crate) fn event_amount_for(&self, ev: &GameEvent) -> u32 {
@@ -31875,7 +31900,9 @@ impl GameState {
         if let Some(cp) = self.computed_permanent(id) {
             return cp.colors.to_vec();
         }
-        self.find_card_anywhere(id).map(|c| c.definition.printed_colors()).unwrap_or_default()
+        self.find_card_anywhere(id)
+            .map(|c| self.off_battlefield_colors(c).iter().collect())
+            .unwrap_or_default()
     }
 
     /// The colour(s) tied for most common among all battlefield permanents —
@@ -32654,6 +32681,7 @@ fn card_can_change_colors(card: &CardInstance) -> bool {
         use crate::effect::StaticEffect as SE;
         match effect {
             SE::GrantColorless { .. }
+            | SE::ChosenColorEverywhere
             | SE::SetColorOfMatching { .. }
             | SE::SetColorOfMatchingToChosen { .. }
             | SE::GrantAllColors { .. } => true,
@@ -33598,6 +33626,20 @@ fn static_effect_to_effects(
                     out.push(mk(Layer::L5Color, None, Modification::SetColors(colors.clone())));
                 }
             }
+            StaticEffect::ChosenColorEverywhere => {
+                let every = crate::effect::Selector::EachPermanent(crate::card::SelectionRequirement::Permanent);
+                if let (Some(affected), Some(color)) = (selector_to_affected(&every, card), card.chosen_color) {
+                    out.push(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddColor(color),
+                    });
+                }
+            }
             StaticEffect::SetColorOfMatchingToChosen { applies_to } => {
                 if let (Some(affected), Some(color)) = (selector_to_affected(applies_to, card), card.chosen_color) {
                     out.push(ContinuousEffect {
@@ -34123,6 +34165,8 @@ fn static_effect_to_effects(
             // PlayerCannotLoseLife — consulted dynamically by adjust_life /
             // damage paths via player_cannot_lose_life_now; no layer effect.
             | StaticEffect::PlayerCannotLoseLife { .. }
+            // Angel of Jubilation — read by the cost gates in `cast_cost.rs`.
+            | StaticEffect::PlayersCantPayLifeOrSacrificeCreaturesForCosts
             // LifeGainBecomesLoss — consulted dynamically by adjust_life via
             // life_gain_becomes_loss_now (Tainted Remedy); no layer effect.
             | StaticEffect::LifeGainBecomesLoss { .. }

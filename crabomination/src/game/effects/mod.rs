@@ -330,7 +330,7 @@ pub(crate) fn map_effect_duration(
         crate::effect::Duration::WhileSourceOnBattlefield => {
             EffectDuration::WhileSourceOnBattlefield
         }
-        crate::effect::Duration::Permanent => EffectDuration::Indefinite,
+        crate::effect::Duration::Permanent | crate::effect::Duration::UntilSourceCast => EffectDuration::Indefinite,
         // Only a `BecomeCopyOfFor` copy uses it, and `TurnFaceDown` ends that
         // (`temporary_copies`); as a layer effect it would never end on time.
         crate::effect::Duration::UntilTurnedFaceDown => EffectDuration::Indefinite,
@@ -2576,6 +2576,9 @@ impl GameState {
         controller: usize,
         events: &mut Vec<GameEvent>,
     ) -> bool {
+        if self.next_entries_copy.is_some() && self.apply_next_entries_copy(card_id, controller, events) {
+            return true;
+        }
         let spec = self
             .battlefield
             .find_by_id(card_id)
@@ -41789,8 +41792,15 @@ impl GameState {
                     duration,
                     crate::effect::Duration::EndOfTurn | crate::effect::Duration::EndOfCombat
                 );
+                let until_cast = matches!(duration, crate::effect::Duration::UntilSourceCast);
                 for ent in self.resolve_selector(what, ctx) {
                     let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
+                    if until_cast
+                        && let Some(src) = ctx.source
+                        && self.battlefield_find(id).is_some()
+                    {
+                        self.grants_until_cast.push((id, src, (**ability).clone()));
+                    }
                     if let Some(c) = self.battlefield_find_mut(id) {
                         if eot {
                             c.granted_activated_eot.push((**ability).clone());
@@ -41798,6 +41808,14 @@ impl GameState {
                             c.granted_activated_abilities.push((**ability).clone());
                         }
                     }
+                }
+                Ok(())
+            }
+
+            Effect::NextEntriesEnterAsCopy { of } => {
+                if let Some(model) = self.resolve_selector(of, ctx).into_iter().find_map(|e| e.as_permanent_id()) {
+                    self.next_entries_copy =
+                        Some(crate::game::NextEntriesCopy { model, turn: self.turn_number, applied: false });
                 }
                 Ok(())
             }

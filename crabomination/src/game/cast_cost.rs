@@ -66,3 +66,89 @@ impl GameState {
 pub(crate) fn life_payable(life: i32, amount: u32) -> bool {
     amount == 0 || life >= amount as i32
 }
+
+impl GameState {
+    /// Angel of Jubilation on the battlefield: no life payments and no creature
+    /// sacrifices as costs of spells or activated abilities (CR 119.4b). The
+    /// life lane gates the walk, so a board without one costs one bit test.
+    pub(crate) fn cost_payments_restricted(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.has_life_static()
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(StaticEffect::PlayersCantPayLifeOrSacrificeCreaturesForCosts)
+                    )
+                })
+            })
+    }
+
+    /// [`life_payable`] for a cost of a spell or activated ability `p` casts or
+    /// activates: also barred by CR 119.4b (Angel of Jubilation) and CR 119.8
+    /// ("can't lose life" — Platinum Emperion). Paying 0 is always legal.
+    pub(crate) fn cost_life_payable(&self, p: usize, life: i32, amount: u32) -> bool {
+        amount == 0
+            || (life_payable(life, amount) && !self.cost_payments_restricted() && !self.player_cannot_lose_life_now(p))
+    }
+
+    /// May `c` be sacrificed to pay a cost (CR 701.21)? Not when it can't be
+    /// sacrificed at all (Assault Suit), nor a creature under Angel of
+    /// Jubilation — judged by its current types, so an artifact creature can't
+    /// pay "Sacrifice an artifact" either (ruling 2012-05-01).
+    pub(crate) fn sacrificeable_for_cost(&self, c: &CardInstance) -> bool {
+        self.can_be_sacrificed(c.id) && !(self.cost_payments_restricted() && self.computed_is_creature(c))
+    }
+
+    /// [`Self::sacrificeable_for_cost`] by id; false off the battlefield.
+    pub(crate) fn sacrificeable_for_cost_id(&self, id: crate::card::CardId) -> bool {
+        self.battlefield_find(id).is_some_and(|c| self.sacrificeable_for_cost(c))
+    }
+}
+
+impl GameState {
+    /// CR 611.2b — `source` was cast: each `Duration::UntilSourceCast` grant it
+    /// made ends (Emrakul, the Exigent Doom's "until this card is cast from
+    /// exile"; the card can only be cast from exile once it made one).
+    pub(crate) fn end_grants_until_cast(&mut self, source: crate::card::CardId) {
+        let (ended, kept): (Vec<_>, Vec<_>) =
+            std::mem::take(&mut self.grants_until_cast).into_iter().partition(|(_, s, _)| *s == source);
+        self.grants_until_cast = kept;
+        for (perm, _, ability) in ended {
+            if let Some(c) = self.battlefield_find_mut(perm)
+                && let Some(i) = c.granted_activated_abilities.iter().position(|a| *a == ability)
+            {
+                c.granted_activated_abilities.remove(i);
+            }
+        }
+    }
+}
+
+impl GameState {
+    /// The colors Painter's Servant adds to every card off the battlefield and
+    /// every spell (CR 105.3): each one's chosen color. Gated on the life lane
+    /// the static shares, so a board without one costs a bit test.
+    pub(crate) fn painted_colors(&self) -> crate::mana::ColorSet {
+        use crate::effect::StaticEffect;
+        let mut set = crate::mana::ColorSet::empty();
+        if !self.battlefield.has_life_static() {
+            return set;
+        }
+        for c in self.battlefield.iter() {
+            if let Some(color) = c.chosen_color
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(self.active_static(&sa.effect, c), Some(StaticEffect::ChosenColorEverywhere))
+                })
+            {
+                set.insert(color);
+            }
+        }
+        set
+    }
+
+    /// A card's colors off the battlefield (hand, graveyard, exile, library, the
+    /// stack): printed, plus [`Self::painted_colors`].
+    pub(crate) fn off_battlefield_colors(&self, card: &CardInstance) -> crate::mana::ColorSet {
+        card.definition.printed_color_set().union(self.painted_colors())
+    }
+}

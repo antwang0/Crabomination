@@ -1165,6 +1165,7 @@ impl GameState {
                     .unwrap_or(0) as i32
             }
             Value::TriggerEventAmount => ctx.event_amount as i32,
+            Value::TriggerManaProduced => (ctx.event_amount >> 8) as i32,
             Value::LastDieRoll => self.last_die_roll as i32,
             Value::NameStickerUniqueVowels => self.last_name_sticker_vowels as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
@@ -4978,7 +4979,11 @@ impl GameState {
                 if on_bf && gates.color(self) {
                     return None;
                 }
-                Some(card.definition.printed_color_set().contains(c))
+                Some(if on_bf {
+                    card.definition.printed_color_set().contains(c)
+                } else {
+                    self.off_battlefield_colors(card).contains(c)
+                })
             }
             R::IsToken => Some(card.is_token),
             R::RoomDoorUnlocked(bit) => Some(card.unlocked_doors & bit != 0),
@@ -5750,7 +5755,7 @@ impl GameState {
                     }
                     match computed() {
                         Some(cp) => cp.colors,
-                        None => printed,
+                        None => printed.union(self.painted_colors()),
                     }
                 };
                 use crate::card::CardType as CT;
@@ -7051,7 +7056,7 @@ impl GameState {
             // color indicator (tokens, DFC backs), and empty under Devoid.
             // `printed_colors` folds all three in — matching the battlefield
             // path (`colors_from_card`) for cards in hidden zones too.
-            R::HasColor(c) => card.definition.printed_color_set().contains(c),
+            R::HasColor(c) => self.off_battlefield_colors(card).contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::HasToxic => card.has_toxic(),
             R::HasModular => card.has_modular(),

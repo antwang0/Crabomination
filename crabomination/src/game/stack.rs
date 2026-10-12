@@ -7062,6 +7062,11 @@ impl GameState {
     /// pass a buffer that already holds this action's earlier events.
     pub fn check_state_based_actions_into(&mut self, events: &mut Vec<GameEvent>) {
         self.check_state_based_actions_inner(events, false);
+        // Mystic Reflection copies one simultaneous batch: the sweep after it
+        // closes it, and a turn's end drops an unused one.
+        if self.next_entries_copy.as_ref().is_some_and(|n| n.applied || n.turn != self.turn_number) {
+            self.next_entries_copy = None;
+        }
         // A card put into a covered graveyard since the grant resolved is
         // castable before anyone gets priority.
         if !self.turn.graveyard_cast_eot.is_empty() {
