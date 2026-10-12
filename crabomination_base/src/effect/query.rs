@@ -772,6 +772,7 @@ impl Effect {
             | Effect::GrantCastSpellRiders { .. }
             | Effect::GrantReboundToSpell { .. }
             | Effect::TriggersThisTurn { .. }
+            | Effect::CapSpellsThisTurn { .. }
             | Effect::CastExiledFreeOwnersLoseLife { .. }
             | Effect::CastExiledFree { .. }
             | Effect::DestroyOnePerOpponent { .. }

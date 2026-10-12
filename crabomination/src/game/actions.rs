@@ -12927,6 +12927,9 @@ impl GameState {
         if !cast_types.contains(&CardType::Artifact) {
             me.nonartifact_spells_cast_this_game_turn += 1;
         }
+        if !fdef.subtypes.creature_types.contains(&crate::card::CreatureType::Phyrexian) {
+            me.non_phyrexian_spells_cast_this_game_turn += 1;
+        }
         // Veil of Summer gate: note when a player casts a blue or black
         // spell (color read off the printed mana cost). The full profile
         // (colors + cast half's types) backs the Trap alternative costs.

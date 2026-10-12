@@ -1022,6 +1022,8 @@ pub enum CounterType {
     Prey,
     /// Nine Lives' tally of prevented damage events (nine exiles it).
     Incarnation,
+    /// Peter Parker's Camera's film (each copies an ability).
+    Film,
 }
 
 /// Every zone a card can occupy.

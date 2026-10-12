@@ -622,6 +622,15 @@ pub struct PlayerData {
     /// (Ethersworn Canonist). Reset for every player at Cleanup. `#[serde(default)]`.
     #[serde(default)]
     pub nonartifact_spells_cast_this_game_turn: u32,
+    /// Like `spells_cast_this_game_turn` but counting only non-Phyrexian
+    /// spells (Phyrexian Censor). Reset at Cleanup.
+    #[serde(default)]
+    pub non_phyrexian_spells_cast_this_game_turn: u32,
+    /// "You can cast only N more spells this turn" (Irencrag Feat): the
+    /// `spells_cast_this_game_turn` count at which casting stops. Reset at
+    /// Cleanup.
+    #[serde(default)]
+    pub spell_cap_this_turn: Option<u32>,
     /// Total life gained by this player this turn (sum of every
     /// `Effect::GainLife` and `Effect::Drain`-to-this-player resolution).
     /// Reset to 0 in `do_untap`. Powers Strixhaven's **Infusion** rider —
@@ -1724,6 +1733,8 @@ impl Player {
             spells_cast_this_game_turn: 0,
             noncreature_spells_cast_this_game_turn: 0,
             nonartifact_spells_cast_this_game_turn: 0,
+            non_phyrexian_spells_cast_this_game_turn: 0,
+            spell_cap_this_turn: None,
             life_gained_this_turn: 0,
             gained_life_earlier_this_turn: false,
             token_batches_this_turn: 0,

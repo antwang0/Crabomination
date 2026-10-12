@@ -999,6 +999,9 @@ pub enum StaticEffect {
     /// central `perform_action` cast gate against
     /// `Player.nonartifact_spells_cast_this_turn`.
     OneNonartifactSpellPerTurn,
+    /// "Each player can't cast more than one non-Phyrexian spell each turn"
+    /// (Phyrexian Censor), against `Player.non_phyrexian_spells_cast_this_game_turn`.
+    OneNonPhyrexianSpellPerTurn,
     /// "Each spell costs {N} more to cast except during its controller's turn"
     /// (Defense Grid). A generic-mana tax folded into `extra_cost_for_spell`,
     /// skipped when the caster is the active player.

@@ -5737,7 +5737,8 @@ impl GameState {
                     SE::OneSpellPerTurn
                     | SE::EnchantedPlayerOneSpellPerTurn
                     | SE::OneNoncreatureSpellPerTurn
-                    | SE::OneNonartifactSpellPerTurn => cast_lock::ONE_SPELL,
+                    | SE::OneNonartifactSpellPerTurn
+                    | SE::OneNonPhyrexianSpellPerTurn => cast_lock::ONE_SPELL,
                     SE::CantCastSharingColorWithLastCastSpell => cast_lock::MANA_MAZE,
                     SE::NoSpellOrNonbasicLandSharingAPermanentName => cast_lock::NAME,
                     SE::OpponentsCantCastChosenColor | SE::NoOneCastsChosenCardType => cast_lock::CHOSEN_COLOR,
@@ -5828,6 +5829,11 @@ impl GameState {
                         StaticEffect::OneNonartifactSpellPerTurn => {
                             !is_artifact && pl.nonartifact_spells_cast_this_game_turn >= 1
                         }
+                        StaticEffect::OneNonPhyrexianSpellPerTurn => {
+                            !cast_card.is_some_and(|c| {
+                                c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Phyrexian)
+                            }) && pl.non_phyrexian_spells_cast_this_game_turn >= 1
+                        }
                         _ => false,
                     })
                 });
@@ -5844,7 +5850,9 @@ impl GameState {
                                 })
                         })
                 });
-            if blocked || scheme_locked {
+            // "You can cast only one more spell this turn" (Irencrag Feat).
+            let capped = pl.spell_cap_this_turn.is_some_and(|cap| pl.spells_cast_this_game_turn >= cap);
+            if blocked || scheme_locked || capped {
                 return Some(GameError::SpellLimitReached);
             }
             // Mana Maze — no spell may share a colour with the turn's last
@@ -34811,6 +34819,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageBetweenYouAndChosenPlayer
             | StaticEffect::OneNoncreatureSpellPerTurn
             | StaticEffect::OneNonartifactSpellPerTurn
+            | StaticEffect::OneNonPhyrexianSpellPerTurn
             | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::PreventAllDamageToController

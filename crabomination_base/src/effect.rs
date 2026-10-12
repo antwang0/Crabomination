@@ -12700,6 +12700,10 @@ pub enum Effect {
     /// `triggered`, dropped at cleanup.
     TriggersThisTurn { triggered: Vec<TriggeredAbility> },
 
+    /// "You can cast only `more` more spells this turn" (Irencrag Feat): caps
+    /// the controller's spells this turn at the count so far plus `more`.
+    CapSpellsThisTurn { more: u32 },
+
     /// "[Player] wins the game." Used by Approach of the Second Sun's
     /// second-cast win condition, Coalition Victory, Test of Endurance,
     /// Felidar Sovereign, and similar alt-win effects. The engine

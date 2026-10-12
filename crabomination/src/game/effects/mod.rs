@@ -43146,6 +43146,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CapSpellsThisTurn { more } => {
+                let pl = &mut self.players[ctx.controller];
+                let cap = pl.spells_cast_this_game_turn + more;
+                pl.spell_cap_this_turn = Some(pl.spell_cap_this_turn.map_or(cap, |c| c.min(cap)));
+                Ok(())
+            }
+
             Effect::TriggersThisTurn { triggered } => {
                 let name = ctx
                     .source
