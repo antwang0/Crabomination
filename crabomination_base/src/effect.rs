@@ -9571,6 +9571,11 @@ pub enum Effect {
         max_count: Value,
         counters: u32,
     },
+    /// "Return any number of cards with total mana value `max_total` or less
+    /// from your graveyard to your hand" (Pair o' Dice Lost). The controller
+    /// picks at resolution; picks are accepted greedily until the next would
+    /// exceed the cap. Headless: the costliest cards first.
+    ReturnGraveyardCardsToHandUpToTotalManaValue { max_total: Value },
     /// Protean Hulk — search the controller's *library* for any number of
     /// creature cards with total mana value `max_total` or less, put them
     /// onto the battlefield, then shuffle. The controller picks the set at

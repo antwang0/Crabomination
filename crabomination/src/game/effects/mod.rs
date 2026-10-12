@@ -17219,6 +17219,59 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnGraveyardCardsToHandUpToTotalManaValue { max_total } => {
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let cap = self.evaluate_value(max_total, ctx).max(0);
+                let mut candidates: Vec<(CardId, String, i32)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc() as i32))
+                    .filter(|c| c.2 <= cap)
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                // Headless default: the costliest cards that fit, greedily.
+                candidates.sort_by_key(|c| std::cmp::Reverse(c.2));
+                let mut room = cap;
+                let auto_default: Vec<CardId> = candidates
+                    .iter()
+                    .filter(|c| {
+                        let fits = c.2 <= room;
+                        if fits {
+                            room -= c.2;
+                        }
+                        fits
+                    })
+                    .map(|c| c.0)
+                    .collect();
+                let count = candidates.len() as u32;
+                let Some(chosen) = self.choose_up_to_cards(
+                    p,
+                    format!("Return cards with total mana value {cap} or less"),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates.into_iter().map(|(id, name, _)| (id, name)).collect(),
+                    count,
+                    PickValue::Gain,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
+                let mut total = 0i32;
+                for cid in chosen {
+                    let Some(c) = self.players[p].graveyard.iter().find(|c| c.id == cid) else { continue };
+                    let mv = c.definition.cost.cmc() as i32;
+                    if total + mv > cap {
+                        continue;
+                    }
+                    total += mv;
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::CommandTheDreadhorde => {
                 
                 use crate::effect::ZoneDest;
