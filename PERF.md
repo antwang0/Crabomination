@@ -3136,6 +3136,36 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-12 (Commander run, `01WK58mx`) — guardrail; 164 EDHREC seats, nine card primitives
+
+Hot-path touch: `place_land_card` and the effect-move funnel bump
+`lands_entered_this_turn` (one more store beside the write each already
+makes); `equip` asks for a granted equip cost; the attack/block gates carry
+one more keyword arm. Release `bot_ladder` at `3e89f7b8f`, Xeon @ 2.10 GHz
+(4 cores), toolchain 1.99.0.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); peak_rss 29.9 MiB;
+                 games_per_s 272.01 (decisions_per_s 166,755 — another box)
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean (1m36s)
+release build    14m24s cold
+clippy           workspace incl. the client (after its four apt libs) — the
+                 client's two exhaustive WardCost matches were the only errors;
+                 cmdr_edhrec9.rs's two unused helpers are the other session's
+debug pods       seats 547-684 (numbered 540-677 then): 4-seat 720 games,
+                 6-seat 240 — 958 decided, one CR 104.4a draw, one board cap
+golden           core_rules golden_* 14/14 after the lands_entered fix
+debug pods 2     seats 706-731: 4-seat 140 games, 3-seat 100 — all decided
+suite            CRAB_ANSWER_LOG=strict nextest --workspace (no client):
+                 25,318 run, 25,314 passed, 5 skipped, 75m56s wall; the four
+                 failures were mid-batch registration/ratchet states, all
+                 fixed (core_rules 2747/2747 after); long pole
+                 cr_903_5a_the_official_precon_seats_play_pod_games 4093 s
+                 at 705 seats (was 3528 s at 684)
+```
+
 ### 2026-10-12 (Commander run, `01L4tuaB`) — guardrail; 110 EDHREC seats, emblem floors, graveyard discounts
 
 Hot-path touch: the graveyard ability discount walk folds one more static arm

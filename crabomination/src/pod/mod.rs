@@ -4800,6 +4800,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARES_COMMANDERS,
             main: decks::ARES_MAIN,
         },
+        // Seat 725: Gwenom, Remorseless's EDHREC average deck. `--pod-decks 725`.
+        PodDeck {
+            name: "Gwenom, Remorseless (B)",
+            commanders: decks::GWENOM_COMMANDERS,
+            main: decks::GWENOM_MAIN,
+        },
+        // Seat 726: Imskir Iron-Eater's EDHREC average deck. `--pod-decks 726`.
+        PodDeck {
+            name: "Imskir Iron-Eater (BR)",
+            commanders: decks::IMSKIR_IRON_EATER_COMMANDERS,
+            main: decks::IMSKIR_IRON_EATER_MAIN,
+        },
+        // Seat 727: Jolene, the Plunder Queen's EDHREC average deck. `--pod-decks 727`.
+        PodDeck {
+            name: "Jolene, the Plunder Queen (RG)",
+            commanders: decks::JOLENE_COMMANDERS,
+            main: decks::JOLENE_MAIN,
+        },
+        // Seat 728: Balan, Wandering Knight's EDHREC average deck. `--pod-decks 728`.
+        PodDeck {
+            name: "Balan, Wandering Knight (W)",
+            commanders: decks::BALAN_COMMANDERS,
+            main: decks::BALAN_MAIN,
+        },
+        // Seat 729: Red Death, Shipwrecker's EDHREC average deck. `--pod-decks 729`.
+        PodDeck {
+            name: "Red Death, Shipwrecker (UR)",
+            commanders: decks::RED_DEATH_COMMANDERS,
+            main: decks::RED_DEATH_MAIN,
+        },
+        // Seat 730: Delina, Wild Mage's EDHREC average deck. `--pod-decks 730`.
+        PodDeck {
+            name: "Delina, Wild Mage (R)",
+            commanders: decks::DELINA_COMMANDERS,
+            main: decks::DELINA_MAIN,
+        },
+        // Seat 731: Valduk, Keeper of the Flame's EDHREC average deck. `--pod-decks 731`.
+        PodDeck {
+            name: "Valduk, Keeper of the Flame (R)",
+            commanders: decks::VALDUK_COMMANDERS,
+            main: decks::VALDUK_MAIN,
+        },
     ]
 }
 
@@ -7288,6 +7330,13 @@ mod tests {
             ("Iroas, God of Victory", &[0x0BF8]),
             ("Kellan, the Fae-Blooded", &[0x0BF9]),
             ("Ares, God of War", &[0x0BFA]),
+            ("Gwenom, Remorseless", &[0x0BFB]),
+            ("Imskir Iron-Eater", &[0x0BFC]),
+            ("Jolene, the Plunder Queen", &[0x0BFD]),
+            ("Balan, Wandering Knight", &[0x0BFE]),
+            ("Red Death, Shipwrecker", &[0x0BFF]),
+            ("Delina, Wild Mage", &[0x0C00]),
+            ("Valduk, Keeper of the Flame", &[0x0C01]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
