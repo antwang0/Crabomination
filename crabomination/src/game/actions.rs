@@ -5391,6 +5391,15 @@ impl GameState {
         if self.players[self_seat].lands_enter_tapped_this_turn && self.battlefield[idx].definition.is_land() {
             should_tap = true;
         }
+        // Cone of Cold — "until your next turn, creatures your opponents
+        // control enter tapped".
+        if self.computed_is_creature(&self.battlefield[idx])
+            && self.players.iter().enumerate().any(|(q, pl)| {
+                pl.opponents_creatures_enter_tapped && pl.is_alive() && !self.same_team(q, self_seat)
+            })
+        {
+            should_tap = true;
+        }
         // "You may reveal a [card] from your hand" (the reveal lands, Primal
         // Beyond): untapped only if a reveal is the arm that held and the
         // controller chose to reveal.

@@ -369,6 +369,14 @@ pub struct PlayerCold {
     /// Read by `apply_enters_tapped_replacement`; cleared at the turn's end.
     #[serde(default)]
     pub lands_enter_tapped_this_turn: bool,
+    /// "Until your next turn, creatures your opponents control enter tapped"
+    /// (Cone of Cold's 20). Read by `apply_enters_tapped_replacement`;
+    /// cleared as this player's next turn begins.
+    #[serde(default)]
+    pub opponents_creatures_enter_tapped: bool,
+    /// Night Shift of the Living Dead's once-each-turn die shift is spent.
+    #[serde(default)]
+    pub die_shift_used_this_turn: bool,
     /// CR 702.131b — a permanent with ascend has entered under this player's
     /// control, so permanent entries check for the city's blessing.
     #[serde(default)]

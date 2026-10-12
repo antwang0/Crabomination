@@ -918,6 +918,7 @@ impl Effect {
             | Effect::SearchAuraAttachToSourceCappedBy { .. }
             | Effect::SetSourceChosenNumber(_)
             | Effect::YourLandsEnterTappedThisTurn
+            | Effect::OpponentsCreaturesEnterTappedUntilYourNextTurn
             | Effect::PutOntoBattlefieldAttached { .. }
             | Effect::RevealTopPutAttached { .. }
             | Effect::RevealUntilPutAttachedElseHand { .. }
@@ -2441,6 +2442,7 @@ impl Effect {
             }
             Effect::PreventAllDamageThisTurn { target, .. }
             | Effect::TurnFaceDown { what: target }
+            | Effect::TurnFaceDownAs { what: target, .. }
             | Effect::PreventAllDamageThisTurnWithCounters { target }
             | Effect::PreventOpposingDamageThisTurnReflecting { target }
             | Effect::PreventAllDamageFromChosenColorThisTurn { target }
@@ -2863,6 +2865,7 @@ impl Effect {
             // Player filter (Mistbind Clique); plain selectors keep theirs.
             Effect::PhaseOut { what, .. }
             | Effect::TurnFaceDown { what }
+            | Effect::TurnFaceDownAs { what, .. }
             | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
             | Effect::PutFaceDownOntoBattlefield { what }
             | Effect::TokenCopyTappedAttacking { source: what }
@@ -5198,6 +5201,7 @@ impl Effect {
                 },
                 Effect::LookAtFaceDown { what: target }
                 | Effect::TurnFaceDown { what: target }
+                | Effect::TurnFaceDownAs { what: target, .. }
                 | Effect::LookAtHand { who: target }
                 | Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageWithCounters { target, .. }

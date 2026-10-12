@@ -1248,6 +1248,7 @@ impl GameState {
             EventScope::FromYourGraveyard | EventScope::FromYourGraveyardAnyPlayer => false,
             EventScope::YourPermanentTargetedByOpponent
             | EventScope::YourCreatureTargeted
+            | EventScope::OpponentCreatureTargetedByYou
             | EventScope::EnchantedBySource
             | EventScope::YourSourceDamagedOpponent
             | EventScope::YourCreatureCombatDamagedOpponent
@@ -4721,9 +4722,7 @@ impl GameState {
                 // another player's step neither honours nor spends it.
                 if card.skip_next_untap && active {
                     card.skip_next_untap = false;
-                    if active {
-                        card.clear_summoning_sickness();
-                    }
+                    card.clear_summoning_sickness();
                     continue;
                 }
                 // Entrancing Lyre — a lock source keeps itself tapped while it
@@ -5081,6 +5080,10 @@ impl GameState {
                 pl.rad_per_cast = 0;
                 pl.rad_per_cast_their_turn = false;
             }
+        }
+        // Cone of Cold's "until your next turn" ends as its caster's turn begins.
+        if self.players[active].opponents_creatures_enter_tapped {
+            self.players[active].opponents_creatures_enter_tapped = false;
         }
         for pl in &mut self.players {
             // `Player` is a CoW handle over `PlayerData`, so each of the ~55

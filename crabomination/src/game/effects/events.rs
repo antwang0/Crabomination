@@ -890,6 +890,7 @@ fn event_matches_spec_rest(
         // any creature targeted, with the `with_filter` predicate refining.
         && spec.scope != EventScope::YourPermanentTargetedByOpponent
         && spec.scope != EventScope::YourCreatureTargeted
+        && spec.scope != EventScope::OpponentCreatureTargetedByYou
         && spec.scope != EventScope::AnyPlayer
         // "When enchanted creature becomes the target": the subject is the
         // Aura's host, matched by the scope arm below.
@@ -1208,6 +1209,17 @@ fn event_matches_spec_rest(
                     .battlefield_find(*target)
                     .is_some_and(|c| {
                         c.controller == source.controller && c.definition.is_creature()
+                    })
+            } else {
+                false
+            }
+        }
+        EventScope::OpponentCreatureTargetedByYou => {
+            // You chose the target; the creature is an opponent's (Willbreaker).
+            if let GameEvent::BecameTarget { target, caster, .. } = event {
+                *caster == source.controller
+                    && state.battlefield_find(*target).is_some_and(|c| {
+                        !state.same_team(c.controller, source.controller) && state.computed_is_creature(c)
                     })
             } else {
                 false
@@ -1725,6 +1737,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::YourPermanentTargetedByOpponent
         | EventScope::YourCreatureTargeted
+        | EventScope::OpponentCreatureTargetedByYou
         | EventScope::EnchantedBySource
         | EventScope::YourSourceDamagedOpponent
         | EventScope::YourSourceDamagedAnyPlayer

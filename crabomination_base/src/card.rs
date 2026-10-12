@@ -8277,6 +8277,15 @@ pub fn facedown_creature_definition() -> CardDefinition {
     }
 }
 
+/// CR 708.2 — a face-down 2/2 an effect lists one creature type for ("They're
+/// 2/2 Horror creatures" — Illithid Harvester).
+pub fn facedown_typed_definition(t: CreatureType) -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { creature_types: vec![t], ..Default::default() },
+        ..facedown_creature_definition()
+    }
+}
+
 /// The face-down Forest land Yedora, Grave Gardener returns a creature as:
 /// nameless, colorless, a Forest with no other types or abilities (its
 /// {T}: Add {G} is the basic land type's intrinsic ability, CR 305.6).
@@ -11373,6 +11382,24 @@ impl CardInstance {
             facedown_creature_definition()
         }));
         self.face_down = true;
+    }
+
+    /// CR 712.16 — a double-faced permanent (either face up, or melded) can't
+    /// be turned face down.
+    pub fn is_double_faced(&self) -> bool {
+        self.definition.back_face.is_some() || self.front_face.is_some() || !self.meld_parts.is_empty()
+    }
+
+    /// Turn this card face down as a 2/2 of creature type `t`
+    /// ([`facedown_typed_definition`]); no-op if already face down.
+    pub fn turn_face_down_as_type(&mut self, t: CreatureType) {
+        if self.face_up_def.is_some() {
+            return;
+        }
+        self.face_up_def = Some(self.definition.arc());
+        self.set_definition(Arc::new(facedown_typed_definition(t)));
+        self.face_down = true;
+        self.turn_up_by_morph_only = true;
     }
 
     /// Turn this card face down as a Forest land (Yedora, Grave Gardener).

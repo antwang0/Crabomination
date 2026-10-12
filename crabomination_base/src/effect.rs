@@ -4153,6 +4153,11 @@ pub enum EventScope {
     /// becomes the target of any spell or ability, friendly or hostile.
     /// Used with `EventKind::BecameTarget` — Nadu, Winged Wisdom.
     YourCreatureTargeted,
+    /// A creature an **opponent** controls becomes the target of a spell or
+    /// ability the source's controller controls. Used with
+    /// `EventKind::BecameTarget` — Willbreaker. The targeted creature is the
+    /// trigger source (`Selector::TriggerSource`).
+    OpponentCreatureTargetedByYou,
     /// A creature an **opponent** controls attacks the source's controller
     /// or a planeswalker they control — the "attacks you or a planeswalker
     /// you control" wording (a bare "attacks you" is
@@ -6553,6 +6558,9 @@ pub enum Effect {
     /// creature with no name, types, or abilities. A no-op on a permanent
     /// that is already face down (CR 708.2b). Ixidron.
     TurnFaceDown { what: Selector },
+    /// [`Effect::TurnFaceDown`] with one listed creature type: "turn them face
+    /// down. They're 2/2 Horror creatures" (Illithid Harvester, CR 708.2).
+    TurnFaceDownAs { what: Selector, creature_type: crate::card::CreatureType },
     /// CR 614 — "The next time you would draw a card this turn, [`body`]
     /// instead." Queues a one-shot replacement on the controller consumed by
     /// the next draw (the Onslaught Words cycle). Charges stack and are
@@ -11954,6 +11962,9 @@ pub enum Effect {
     /// "Lands you control enter tapped this turn" (Nahiri's Lithoforming) —
     /// the controller-scoped, land-only sibling.
     YourLandsEnterTappedThisTurn,
+    /// "Until your next turn, creatures your opponents control enter tapped"
+    /// (Cone of Cold) — a replacement (CR 614.1c) on the controller's seat.
+    OpponentsCreaturesEnterTappedUntilYourNextTurn,
     /// "Until end of turn, if one or more creatures would enter from exile
     /// or after being cast from exile, their owners shuffle them into their
     /// libraries instead" (Don't Blink).

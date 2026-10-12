@@ -11624,9 +11624,14 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::TurnFaceDown { what } => {
+            Effect::TurnFaceDown { what } | Effect::TurnFaceDownAs { what, .. } => {
                 // CR 708.2a/708.2b — `turn_face_down` stashes the real card and
-                // swaps in the vanilla 2/2 body; it no-ops if already face down.
+                // swaps in the vanilla 2/2 body; it no-ops if already face down,
+                // and on a double-faced permanent (CR 712.16).
+                let typed = match effect {
+                    Effect::TurnFaceDownAs { creature_type, .. } => Some(*creature_type),
+                    _ => None,
+                };
                 for ent in self.resolve_selector(what, ctx) {
                     // "Until this creature is turned face down" (Vesuvan
                     // Shapeshifter) — the copy ends first, so the card the
@@ -11639,8 +11644,12 @@ impl GameState {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid)
                         && !c.face_down
+                        && !c.is_double_faced()
                     {
-                        c.turn_face_down();
+                        match typed {
+                            Some(t) => c.turn_face_down_as_type(t),
+                            None => c.turn_face_down(),
+                        }
                         c.turn_up_by_morph_only = true;
                     }
                 }
@@ -35580,6 +35589,11 @@ impl GameState {
 
             Effect::YourLandsEnterTappedThisTurn => {
                 self.players[ctx.controller].lands_enter_tapped_this_turn = true;
+                Ok(())
+            }
+
+            Effect::OpponentsCreaturesEnterTappedUntilYourNextTurn => {
+                self.players[ctx.controller].opponents_creatures_enter_tapped = true;
                 Ok(())
             }
 
