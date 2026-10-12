@@ -3136,6 +3136,26 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-12 (Commander run, `01NRsiVW`) — guardrail; 183 EDHREC seats, eight card primitives
+
+Hot-path touch: `life_payable` became `cost_life_payable` (one life-lane bit
+test more per life payment), the cost-sacrifice pickers ask
+`sacrificeable_for_cost`, `event_amount_in` counts the batch's mana pips,
+`finalize_cast` tests one cold list for emptiness, the entry funnel one
+`Option`, the SBA sweep one more. Release `bot_ladder` at `c67e39c25`, Xeon @
+2.10 GHz (4 cores), toolchain 1.99.0.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs 1);
+                 peak_rss 30.7 MiB; games_per_s 267.88 (one run, not a reading)
+pools (300/arch) cube 2,398 + 2 CR 104.4 draws / sos 1,500 / sealed 3,600 — 0 stalls
+pod sweep        scripts/pod_sweep.py release 94 4,6 x4 seats 739-921: 308 games, bad 0
+                 scripts/pod_sweep.py release 95 4,8 x2 all 921 seats: 694 games, bad 0
+long pole        cr_903_5a_the_official_precon_seats_play_pod_games 3,280 s at 741
+                 seats / 1,207 games (debug, 4 cores) -> one seed a row (627 games)
+```
+
 ### 2026-10-12 (Commander run, `01WK58mx`) — guardrail; 164 EDHREC seats, nine card primitives
 
 Hot-path touch: `place_land_card` and the effect-move funnel bump
