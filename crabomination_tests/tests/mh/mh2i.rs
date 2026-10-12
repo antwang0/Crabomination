@@ -114,35 +114,39 @@ fn glimpse_of_tomorrow_reroll() {
     assert!(g.battlefield_find(theirs).is_some(), "opponent board untouched");
 }
 
-/// Garth One-Eye mints each classic once.
+/// Garth One-Eye mints each classic once. CR 707.12 — the copy is cast as
+/// the ability resolves, costs paid; a permanent copy resolves into a token,
+/// and a declined copy ceases to exist (no card joins anyone's hand — the pod
+/// invariant caught a Disenchant that did).
 #[test]
 fn garth_one_eye_classics() {
     let mut g = two_player_game();
     let garth = g.add_card_to_battlefield(0, catalog::garth_one_eye());
     g.clear_sickness(garth);
-    // First activation: pick Black Lotus (index 5).
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(5)]));
+    // First activation: pick Black Lotus (index 5), and cast it.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(5), DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: garth, ability_index: 0, target: None,
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("choose");
     drain_stack(&mut g);
-    assert!(
-        g.players[0].hand.iter().any(|c| c.definition.name == "Black Lotus"),
-        "copy of Black Lotus created"
-    );
+    let lotus = g.battlefield.iter().find(|c| c.definition.name == "Black Lotus").expect("the copy resolved");
+    assert!(lotus.is_token, "a resolving permanent copy is a token");
+    assert!(g.players[0].hand.is_empty() && g.exile.is_empty());
     assert_eq!(g.battlefield_find(garth).unwrap().name_choices_used, 1 << 5);
     // Second activation: Lotus is spent; Mode(5) now maps into the remaining
-    // five names, so Lotus can't be picked again.
+    // five names, so Lotus can't be picked again. Declined: nothing is left.
     g.battlefield_find_mut(garth).unwrap().tapped = false;
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(5)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(5), DecisionAnswer::Bool(false)]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: garth, ability_index: 0, target: None,
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("choose again");
     drain_stack(&mut g);
-    let lotuses = g.players[0].hand.iter().filter(|c| c.definition.name == "Black Lotus").count();
+    let lotuses = g.battlefield.iter().filter(|c| c.definition.name == "Black Lotus").count();
     assert_eq!(lotuses, 1, "each name only once");
+    assert!(g.players[0].hand.is_empty() && g.exile.is_empty(), "the declined copy ceased to exist");
+    assert_eq!(g.battlefield_find(garth).unwrap().name_choices_used.count_ones(), 2);
 }
 
 /// Dermotaxi imprints a corpse and impersonates it for a turn.

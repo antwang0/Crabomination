@@ -6492,13 +6492,32 @@ impl GameState {
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.name_choices_used |= 1 << idx;
                 }
-                // Approximation: the copy is created in the controller's hand
-                // as a real castable card (a true copy would cease to exist
-                // if not cast — CR 704.5e).
-                if let Some(def) = crate::catalog::lookup_arc_by_name(&name) {
-                    let id = self.next_id();
-                    let inst = crate::card::CardInstance::new(id, def, ctx.controller);
-                    self.players[ctx.controller].hand.push(inst);
+                // CR 707.12 — the copy is created and may be cast as this
+                // resolves, its costs paid (the 2021-06-18 rulings). It is no
+                // card a player owns: uncast, or once its spell leaves the
+                // stack, it ceases to exist (CR 704.5e); a permanent copy
+                // resolves into a token. Staged in exile as a token copy, as
+                // Mindleech Ghoul's is.
+                let Some(def) = crate::catalog::lookup_arc_by_name(&name) else { return Ok(()) };
+                let mut copy = crate::card::CardInstance::new(self.next_id(), def, ctx.controller);
+                copy.is_token = true;
+                copy.exiled_with = ctx.source;
+                let copy_id = copy.id;
+                self.exile.push(copy);
+                self.run_effect(
+                    &Effect::CastWithoutPayingImmediate {
+                        what: Selector::ExactObjects(vec![copy_id]),
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: true,
+                    },
+                    ctx,
+                    events,
+                )?;
+                if self.exile.iter().any(|c| c.id == copy_id) {
+                    self.exile.retain(|c| c.id != copy_id);
                 }
                 Ok(())
             }
