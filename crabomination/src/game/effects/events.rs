@@ -1534,6 +1534,9 @@ fn event_player(event: &GameEvent) -> Option<usize> {
 pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<EntityRef> {
     match event {
         GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        // The spell, or the ability's source, that chose targets (Loki, God
+        // of Mischief tells the two apart).
+        GameEvent::ChoseTargets { object, .. } => Some(EntityRef::Card(*object)),
         GameEvent::SpellsCopied { original, .. } => Some(EntityRef::Card(*original)),
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureFought { card_id, .. }
