@@ -295,6 +295,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::ManaAndLife(c, n) => c.cmc() == 0 && *n == 0,
         WardCost::Discard(n) | WardCost::DiscardRandom(n) => *n == 0,
         WardCost::DiscardMatching(_, n) => *n == 0,
+        WardCost::RevealMatching(_) => false,
         // Discarding your hand is never trivial as a Perplex-style counter cost,
         // but as a Ward tax it's free when the hand is already empty.
         WardCost::DiscardHand => false,

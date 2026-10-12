@@ -46412,6 +46412,11 @@ impl GameState {
                             ok
                         }
                     }
+                    // Ruthless Ripper's morph cost — a matching card in hand
+                    // is shown; nothing leaves it.
+                    WardCost::RevealMatching(filter) => self.players[payer].hand.iter().any(|c| {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(c.id), payer, ctx.source)
+                    }),
                     WardCost::DiscardMatching(filter, n) => {
                         // Body Snatcher — the discard must match `filter`, so
                         // the auto-pay takes the first N matching cards; a

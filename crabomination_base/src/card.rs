@@ -1066,6 +1066,10 @@ pub enum WardCost {
     /// `Discard` (Body Snatcher). Unpayable when the hand holds too few
     /// matching cards.
     DiscardMatching(Box<SelectionRequirement>, u32),
+    /// "Reveal a [filter] card in your hand" (Ruthless Ripper's morph cost,
+    /// CR 702.37 / 701.20): payable while the hand holds a match; the card
+    /// stays in hand.
+    RevealMatching(Box<SelectionRequirement>),
     /// "...unless its controller discards their hand." (Perplex.) Payable
     /// even from an empty hand — discarding zero cards is a legal payment.
     DiscardHand,
@@ -1151,6 +1155,7 @@ impl WardCost {
             W::Discard(n) => format!("Ward—discard {n}"),
             W::DiscardRandom(n) => format!("Ward—discard {n} at random"),
             W::DiscardMatching(_, n) => format!("Ward—discard {n} matching card(s)"),
+            W::RevealMatching(_) => "Reveal a matching card from your hand".to_string(),
             W::DiscardHand => "Ward—discard your hand".to_string(),
             W::Blight(n) => format!("Ward—Blight {n}"),
             W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),

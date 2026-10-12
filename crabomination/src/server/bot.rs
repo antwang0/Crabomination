@@ -18238,6 +18238,9 @@ fn ward_tax_payable(
             state.players[seat].hand.len() >= *n as usize
         }
         WardCost::DiscardHand => true,
+        WardCost::RevealMatching(f) => state.players[seat].hand.iter().any(|c| {
+            state.evaluate_requirement_static(f, &crate::game::types::Target::Permanent(c.id), seat, None)
+        }),
         WardCost::ExileFromGraveyard(n) | WardCost::BottomFromGraveyard(n) => {
             gy.len() >= *n as usize
         }
@@ -18271,6 +18274,7 @@ fn ward_tax_burden(tax: &crate::card::WardCost) -> i32 {
         WardCost::ManaAndLife(mc, n) => mc.cmc() as i32 + (*n as i32 + 1) / 2,
         WardCost::Discard(n) | WardCost::DiscardMatching(_, n) => 2 * *n as i32,
         WardCost::DiscardHand => 3,
+        WardCost::RevealMatching(_) => 0,
         _ => 2,
     }
 }
