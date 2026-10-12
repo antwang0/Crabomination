@@ -978,13 +978,12 @@ pub fn frenzied_gorespawn() -> CardDefinition {
                     effect: Box::new(Effect::Goad { what: Selector::Target(0) }),
                 }),
             }),
+            // Once per declaration, whoever declares it (Frontier Warmonger's
+            // shape): every creature attacking one of your opponents.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::IsAttackingAnOpponent,
-                }),
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayerAttacks),
                 effect: Effect::GrantKeyword {
-                    what: Selector::TriggerSource,
+                    what: Selector::EachPermanent(R::IsAttackingAnOpponent),
                     keyword: Keyword::Menace,
                     duration: Duration::EndOfTurn,
                 },
@@ -1350,5 +1349,188 @@ pub fn the_notary_hobbits() -> CardDefinition {
             ..Default::default()
         }],
         ..legend("The Notary Hobbits", cost(&[generic(3), g(), g()]), vec![CreatureType::Halfling, CreatureType::Advisor], 1, 1)
+    }
+}
+
+/// Rite of Harmony — {G}{W} instant, flashback {2}{G}{W}. Until end of turn,
+/// whenever a creature or enchantment you control enters, draw a card.
+pub fn rite_of_harmony() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), g(), w()]))],
+        ..spell(
+            "Rite of Harmony",
+            cost(&[g(), w()]),
+            CardType::Instant,
+            Effect::TriggersThisTurn {
+                triggered: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                        Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: R::Creature.or(R::Enchantment),
+                        },
+                    ),
+                    effect: draw(1),
+                }],
+            },
+        )
+    }
+}
+
+/// Bonus Round — {1}{R}{R} sorcery. Until end of turn, whenever a player casts
+/// an instant or sorcery spell, that player copies it.
+pub fn bonus_round() -> CardDefinition {
+    spell(
+        "Bonus Round",
+        cost(&[generic(1), r(), r()]),
+        CardType::Sorcery,
+        Effect::TriggersThisTurn {
+            triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                }),
+                effect: Effect::AsPlayer {
+                    who: PlayerRef::Triggerer,
+                    body: Box::new(Effect::CopySpell { what: Selector::TriggerSource, count: Value::ONE }),
+                },
+            }],
+        },
+    )
+}
+
+/// Uncover the Moon-Letters — {3}{U} enchantment. Whenever you cast a
+/// noncreature spell, you may draw X cards, X the mana spent on it; if you
+/// do, discard two cards.
+pub fn uncover_the_moon_letters() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(cast_is_noncreature()),
+            effect: may(
+                "draw X cards, then discard two",
+                Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::CastSpellManaSpent },
+                    Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+                ]),
+            ),
+        }],
+        ..permanent("Uncover the Moon-Letters", cost(&[generic(3), u()]), CardType::Enchantment)
+    }
+}
+
+/// Brazen Cannonade — {3}{R} enchantment. Whenever an attacking creature you
+/// control dies, 2 damage to each opponent. Raid — at the beginning of each of
+/// your postcombat main phases, if you attacked this turn, exile your top card;
+/// you may play it until end of combat on your next turn.
+pub fn brazen_cannonade() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsAttacking },
+                ),
+                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::PostCombatMain), EventScope::YourControl)
+                    .with_filter(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+            },
+        ],
+        ..permanent("Brazen Cannonade", cost(&[generic(3), r()]), CardType::Enchantment)
+    }
+}
+
+/// Offspring's Revenge — {2}{R}{W}{B} enchantment. At the beginning of combat
+/// on your turn, exile target red, white or black creature card from your
+/// graveyard; create a 1/1 token copy of it with haste.
+pub fn offsprings_revenge() -> CardDefinition {
+    let mut copy = crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, Selector::Target(0));
+    if let Effect::CreateTokenCopyOf { override_pt, extra_keywords, .. } = &mut copy {
+        *override_pt = Some((1, 1));
+        extra_keywords.push(Keyword::Haste);
+    }
+    CardDefinition {
+        triggered_abilities: vec![at_your(
+            TurnStep::BeginCombat,
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        R::Creature
+                            .and(R::HasColor(Color::Red).or(R::HasColor(Color::White)).or(R::HasColor(Color::Black)))
+                            .from_your_graveyard(),
+                    ),
+                    to: ZoneDest::Exile,
+                },
+                copy,
+            ]),
+        )],
+        ..permanent("Offspring's Revenge", cost(&[generic(2), r(), w(), b()]), CardType::Enchantment)
+    }
+}
+
+/// Hex Magic — {2}{R} sorcery — Arcane. Exile your hand, draw that many; you
+/// may play the exiled cards until the end of your next turn.
+pub fn hex_magic() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { spell_subtypes: vec![crate::card::SpellSubtype::Arcane], ..Default::default() },
+        ..spell(
+            "Hex Magic",
+            cost(&[generic(2), r()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Hand, filter: R::Any },
+                    to: ZoneDest::Exile,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::count(Selector::LastMoved) },
+            ]),
+        )
+    }
+}
+
+/// Key to the Side-Door — {1} artifact. {2}, {T}: target creature can't be
+/// blocked this turn. {1}, {T}, discard a legendary card sharing a name with a
+/// legendary permanent you control: draw two cards.
+pub fn key_to_the_side_door() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                discard_cost: Some((
+                    R::HasSupertype(Supertype::Legendary).and(R::Not(Box::new(R::NameNotSharedWithYourPermanents))),
+                    1,
+                )),
+                effect: draw(2),
+                ..Default::default()
+            },
+        ],
+        ..permanent("Key to the Side-Door", cost(&[generic(1)]), CardType::Artifact)
     }
 }

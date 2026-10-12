@@ -125,3 +125,76 @@ fn qala_counts_its_counters_into_the_other_attackers() {
     .expect("attack");
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+2/+0 from two counters");
 }
+
+/// CR 603.7c — Rite of Harmony's "this turn, whenever a creature or
+/// enchantment you control enters, draw a card": a creature entering this turn
+/// draws, and after cleanup one entering draws nothing.
+#[test]
+fn cr_603_7c_rite_of_harmony_draws_for_this_turns_entries_only() {
+    let mut g = pod(3);
+    library(&mut g, 0, 5);
+    let rite = g.add_card_to_hand(0, catalog::rite_of_harmony());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, rite, None).expect("rite");
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bear, None).expect("bear");
+    assert_eq!(g.players[0].hand.len(), hand, "cast the bear (-1), drew one (+1)");
+    let mut events = Vec::new();
+    let _ = g.do_cleanup(&mut events);
+    assert!(g.players[0].emblems.iter().all(|e| !e.this_turn), "cleanup ends the rite");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.stack.clear();
+    let bear2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bear2, None).expect("bear");
+    assert_eq!(g.players[0].hand.len(), hand - 1, "no draw after the turn");
+}
+
+/// Hex Magic: the hand is exiled, that many cards drawn, and the exiled cards
+/// stay playable through the caster's next turn.
+#[test]
+fn hex_magic_trades_the_hand_for_as_many_draws() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    let a = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let hex = g.add_card_to_hand(0, catalog::hex_magic());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, hex, None).expect("hex");
+    assert_eq!(g.players[0].hand.len(), 2, "two exiled, two drawn");
+    for id in [a, b] {
+        assert!(g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some()), "playable from exile");
+    }
+}
+
+/// Key to the Side-Door's draw: the discard must be a legendary card naming a
+/// legendary permanent you control — a copy of your commander in hand pays it,
+/// a lone legend doesn't.
+#[test]
+fn key_to_the_side_door_discards_a_duplicate_legend() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let key = ready(&mut g, 0, catalog::key_to_the_side_door());
+    g.add_card_to_hand(0, catalog::tyvar_the_bellicose());
+    let draw = |g: &mut GameState| {
+        g.players[0].mana_pool.add_colorless(1);
+        act(g, GameAction::ActivateAbility {
+            card_id: key,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(draw(&mut g).is_err(), "no Tyvar on the battlefield to match");
+    ready(&mut g, 0, catalog::tyvar_the_bellicose());
+    draw(&mut g).expect("the duplicate pays");
+    assert_eq!(g.players[0].hand.len(), 2);
+}
