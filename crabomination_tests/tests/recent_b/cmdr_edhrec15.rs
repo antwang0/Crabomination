@@ -704,3 +704,208 @@ fn rona_drains_on_spells() {
     cast(&mut g, opt, &[]).expect("opt");
     assert_eq!((g.players[1].life, g.players[2].life), (19, 19));
 }
+
+/// The Grey Havens: {T} adds a color of a legendary creature card in your
+/// graveyard — none, no mana.
+#[test]
+fn the_grey_havens_reads_legends_in_the_graveyard() {
+    let mut g = pod(2);
+    let gh = ready(&mut g, 0, catalog::the_grey_havens());
+    let tap = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: gh,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    let _ = tap(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no legend in the graveyard");
+    g.battlefield_find_mut(gh).unwrap().tapped = false;
+    g.add_card_to_graveyard(0, catalog::isamaru_hound_of_konda());
+    tap(&mut g).expect("tap for W");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+}
+
+/// Stigma Lasher (CR 119.7): a player it damages can't gain life for the rest
+/// of the game.
+#[test]
+fn stigma_lasher_locks_life_gain() {
+    let mut g = pod(2);
+    let sl = ready(&mut g, 0, catalog::stigma_lasher());
+    declare(&mut g, &[(sl, 1)]).expect("attack");
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 18);
+    let rev = g.add_card_to_hand(1, catalog::revitalize());
+    library(&mut g, 1, 1);
+    cast_as(&mut g, 1, rev, &[]).expect("revitalize");
+    assert_eq!(g.players[1].life, 18, "no life gained");
+}
+
+/// Phyrexian Purge: each target creature dies and costs its caster 3 life.
+#[test]
+fn phyrexian_purge_charges_three_life_a_target() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::gray_ogre());
+    let purge = g.add_card_to_hand(0, catalog::phyrexian_purge());
+    cast(&mut g, purge, &[perm(a), perm(b)]).expect("purge two");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert_eq!(g.players[0].life, 14);
+}
+
+/// Doors of Durin (CR 508.4): a creature on top enters tapped and attacking,
+/// with trample while you control a Dwarf.
+#[test]
+fn doors_of_durin_sends_the_top_creature_in() {
+    let mut g = pod(2);
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::serra_angel());
+    ready(&mut g, 0, catalog::doors_of_durin());
+    ready(&mut g, 0, catalog::dwarven_trader());
+    let att = ready(&mut g, 0, catalog::gray_ogre());
+    declare(&mut g, &[(att, 1)]).expect("attack");
+    let joined: Vec<_> = g.attacking.iter().map(|a| a.attacker).filter(|&id| id != att).collect();
+    assert_eq!(joined.len(), 1, "one creature joined");
+    let c = g.computed_permanent(joined[0]).unwrap();
+    assert!(c.keywords().contains(&Keyword::Trample), "a Dwarf grants trample");
+    let _ = top;
+}
+
+/// Mighty Servant of Leuk-o: crewed by exactly two creatures, it gains "combat
+/// damage to a player draws two" this turn.
+#[test]
+fn mighty_servant_draws_two_when_two_crew_it() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let ms = ready(&mut g, 0, catalog::mighty_servant_of_leuk_o());
+    let a = ready(&mut g, 0, catalog::gray_ogre());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: ms, crew_creatures: vec![a, b] }).expect("crew with two");
+    drain_stack(&mut g);
+    let hand = g.players[0].hand.len();
+    declare(&mut g, &[(ms, 1)]).expect("attack");
+    combat_damage(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+}
+
+/// Demonlord Belzenlok: digs to a nonland card and takes it, going again while
+/// the card costs 4 or more, 1 damage per card.
+#[test]
+fn belzenlok_digs_until_a_cheap_card() {
+    let mut g = pod(2);
+    // Top to bottom: Forest, Craterhoof (8), Island, Bears (2), Serra Angel.
+    for def in [
+        catalog::forest(),
+        catalog::craterhoof_behemoth(),
+        catalog::island(),
+        catalog::grizzly_bears(),
+        catalog::serra_angel(),
+    ] {
+        g.add_card_to_library(0, def);
+    }
+    let bz = g.add_card_to_hand(0, catalog::demonlord_belzenlok());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, bz, &[]).expect("belzenlok");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "Craterhoof, then the Bears");
+    assert_eq!(g.players[0].life, 18);
+    assert_eq!(g.players[0].library.len(), 1, "Serra Angel is left");
+}
+
+/// The Immortal Sun (CR 606.3): no loyalty abilities; spells cost {1} less;
+/// creatures you control get +1/+1.
+#[test]
+fn the_immortal_sun_locks_loyalty_and_discounts() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::the_immortal_sun());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, bear), (3, 3));
+    let lili = ready(&mut g, 0, catalog::liliana_of_the_veil());
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: lili, ability_index: 0, target: None, x_value: None })
+            .is_err(),
+        "loyalty is locked"
+    );
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Divination for {1}{U}");
+}
+
+/// Runadi, Behemoth Caller: an 8-drop enters with four more counters and,
+/// with three or more, haste.
+#[test]
+fn runadi_grows_big_creature_spells() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::runadi_behemoth_caller());
+    let hoof = g.add_card_to_hand(0, catalog::craterhoof_behemoth());
+    cast(&mut g, hoof, &[]).expect("craterhoof");
+    let c = g.battlefield_find(hoof).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 4);
+    assert!(g.computed_permanent(hoof).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// Vraska, the Cutting Glare: with six lands, ETB destroys an opponent's
+/// permanent and hands them a Treasure; with five, nothing.
+#[test]
+fn vraska_needs_six_lands() {
+    for (lands, kills) in [(5, false), (6, true)] {
+        let mut g = pod(2);
+        for _ in 0..lands {
+            ready(&mut g, 0, catalog::forest());
+        }
+        let ogre = ready(&mut g, 1, catalog::gray_ogre());
+        let v = g.add_card_to_hand(0, catalog::vraska_the_cutting_glare());
+        cast(&mut g, v, &[]).expect("vraska");
+        assert_eq!(g.battlefield_find(ogre).is_none(), kills, "{lands} lands");
+        let theirs = g.battlefield.iter().filter(|c| c.is_token && c.controller == 1 && c.definition.name == "Treasure").count();
+        assert_eq!(theirs, usize::from(kills));
+    }
+}
+
+/// Long Road Home: the creature comes back at the next end step with a
+/// +1/+1 counter.
+#[test]
+fn long_road_home_returns_with_a_counter() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let lrh = g.add_card_to_hand(0, catalog::long_road_home());
+    cast(&mut g, lrh, &[perm(bear)]).expect("long road home");
+    assert!(g.battlefield_find(bear).is_none());
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("back");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Brigid, Hero of Kinsbaile: 2 damage to each attacking or blocking creature
+/// the target player controls — only those in combat.
+#[test]
+fn brigid_hero_shoots_the_attackers() {
+    let mut g = pod(2);
+    let br = ready(&mut g, 1, catalog::brigid_hero_of_kinsbaile());
+    let att = ready(&mut g, 0, catalog::grizzly_bears());
+    let home = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, &[(att, 1)]).expect("attack");
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: br,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap brigid");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(att).is_none());
+    assert!(g.battlefield_find(home).is_some());
+}

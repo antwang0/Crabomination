@@ -2349,3 +2349,295 @@ pub fn brigid_clachans_heart() -> CardDefinition {
         ..legend("Brigid, Clachan's Heart", cost(&[generic(2), w()]), vec![CreatureType::Kithkin, CreatureType::Warrior], 3, 2)
     }
 }
+
+// ── Batch E: the last card of a nearly complete deck ─────────────────────────
+
+/// The Grey Havens — legendary land. ETB: scry 1. {T}: {C}. {T}: one mana of
+/// any color among legendary creature cards in your graveyard.
+pub fn the_grey_havens() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        ..land(
+            "The Grey Havens",
+            vec![
+                tap_add_colorless(),
+                ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard,
+                    },
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+}
+
+/// Mighty Servant of Leuk-o — {3} 6/6 artifact Vehicle, trample, ward—discard
+/// a card, crew 4. Crewed for the first time each turn by exactly two
+/// creatures: until end of turn it has "combat damage to a player draws two".
+pub fn mighty_servant_of_leuk_o() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::Discard(1)), Keyword::Crew(4)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    trigger_is(R::IsSource),
+                    Predicate::ValueAtLeast(Value::SourceCrewerCount, Value::Const(2)),
+                    Predicate::ValueAtMost(Value::SourceCrewerCount, Value::Const(2)),
+                ]))
+                .once_per_turn(),
+            effect: Effect::GrantTriggeredAbility {
+                what: Selector::This,
+                trigger: Box::new(on_combat_hit(draw(2))),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..permanent("Mighty Servant of Leuk-o", cost(&[generic(3)]), CardType::Artifact)
+    }
+}
+
+/// Stigma Lasher — {R}{R} 2/2 Elemental Shaman, wither. A player it damages
+/// can't gain life for the rest of the game.
+pub fn stigma_lasher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Wither],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::LifeGainLockGame { who: Selector::Player(PlayerRef::TriggerEventPlayer) },
+        }],
+        ..creature("Stigma Lasher", cost(&[r(), r()]), vec![CreatureType::Elemental, CreatureType::Shaman], 2, 2)
+    }
+}
+
+/// Phyrexian Purge — {2}{B}{R} sorcery: destroy any number of target
+/// creatures, 3 life for each target.
+pub fn phyrexian_purge() -> CardDefinition {
+    spell(
+        "Phyrexian Purge",
+        cost(&[generic(2), b(), r()]),
+        CardType::Sorcery,
+        Effect::ApplyToTargets {
+            max_targets: 20,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Destroy { what: Selector::Target(0) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+            ])),
+        },
+    )
+}
+
+/// Doors of Durin — {3}{R}{G} legendary artifact. Whenever you attack: scry 2,
+/// then reveal your top card; a creature card enters tapped and attacking,
+/// with trample if you control a Dwarf and hexproof if you control an Elf
+/// until your next turn.
+pub fn doors_of_durin() -> CardDefinition {
+    let rider = |kind: CreatureType, keyword: Keyword| Effect::If {
+        cond: Predicate::SelectorExists(Selector::EachPermanent(yours(R::HasCreatureType(kind)))),
+        then: Box::new(Effect::GrantKeyword { what: Selector::LastMoved, keyword, duration: Duration::UntilNextTurn }),
+        else_: Box::new(Effect::Noop),
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::If {
+                    cond: Predicate::EntityMatches { what: top_card(), filter: R::Creature },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: top_card(),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        },
+                        Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                        rider(CreatureType::Dwarf, Keyword::Trample),
+                        rider(CreatureType::Elf, Keyword::Hexproof),
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..permanent("Doors of Durin", cost(&[generic(3), r(), g()]), CardType::Artifact)
+    }
+}
+
+// ── Batch F: one-card gaps of ranks 1001-1500 the rescan surfaced ────────────
+
+/// Taunting Kobold — {R} 0/1 Kobold, haste. Attacking: goad target creature
+/// an opponent controls.
+pub fn taunting_kobold() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Goad { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+        }],
+        ..creature("Taunting Kobold", cost(&[r()]), vec![CreatureType::Kobold], 0, 1)
+    }
+}
+
+/// Battlefield Improvisation — {1}{W} instant. Target creature gets +2/+2;
+/// if it's attacking, attach any number of your Equipment to it.
+pub fn battlefield_improvisation() -> CardDefinition {
+    spell(
+        "Battlefield Improvisation",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            eot_pump(target_filtered(R::Creature), 2, 2),
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsAttacking },
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::EachPermanent(yours(R::HasArtifactSubtype(ArtifactSubtype::Equipment))),
+                    body: Box::new(Effect::Attach { what: Selector::TriggerSource, to: Selector::Target(0) }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Clever Conjurer — {2}{U} 2/3 Gnome Wizard. Mage Hand — {T}: untap target
+/// permanent not named Clever Conjurer (sorcery speed).
+pub fn clever_conjurer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Untap {
+                what: target_filtered(R::Permanent.and(R::Not(Box::new(R::HasName("Clever Conjurer".into()))))),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..creature("Clever Conjurer", cost(&[generic(2), u()]), vec![CreatureType::Gnome, CreatureType::Wizard], 2, 3)
+    }
+}
+
+/// Brigid, Hero of Kinsbaile — {2}{W}{W} 2/3 legendary Kithkin Archer, first
+/// strike. {T}: 2 damage to each attacking or blocking creature target player
+/// controls.
+pub fn brigid_hero_of_kinsbaile() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::ForEach {
+                selector: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: R::Creature.and(R::IsAttacking.or(R::IsBlocking)),
+                },
+                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(2) }),
+            },
+            ..Default::default()
+        }],
+        ..legend("Brigid, Hero of Kinsbaile", cost(&[generic(2), w(), w()]), vec![CreatureType::Kithkin, CreatureType::Archer], 2, 3)
+    }
+}
+
+/// Runadi, Behemoth Caller — {2}{G} 1/3 legendary Cat Shaman. Your creature
+/// spells of mana value 5+ enter with (mana value − 4) more +1/+1 counters;
+/// your creatures with three or more +1/+1 counters have haste. {T}: {G}.
+pub fn runadi_behemoth_caller() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            static_ab(
+                "Whenever you cast a creature spell with mana value 5 or greater, that creature enters with X additional +1/+1 counters on it, where X is its mana value minus 4.",
+                StaticEffect::ExtraEtbCountersForCreatureCasts {
+                    kind: CounterType::PlusOnePlusOne,
+                    value: Value::NonNeg(Box::new(Value::Diff(
+                        Box::new(Value::ManaValueOf(Box::new(Selector::This))),
+                        Box::new(Value::Const(4)),
+                    ))),
+                },
+            ),
+            static_ab(
+                "Creatures you control with three or more +1/+1 counters on them have haste.",
+                StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(yours(
+                        R::Creature.and(R::WithCounterAtLeast(CounterType::PlusOnePlusOne, 3)),
+                    )),
+                    keyword: Keyword::Haste,
+                },
+            ),
+        ],
+        activated_abilities: vec![tap_add(Color::Green)],
+        ..legend("Runadi, Behemoth Caller", cost(&[generic(2), g()]), vec![CreatureType::Cat, CreatureType::Shaman], 1, 3)
+    }
+}
+
+/// Demonlord Belzenlok — {4}{B}{B} 6/6 legendary Elder Demon, flying,
+/// trample. ETB: dig to a nonland card and take it, again while it costs 4
+/// or more; 1 damage to you per card taken.
+pub fn demonlord_belzenlok() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::ExileUntilNonlandToHandRepeat { again_at_least: 4, damage_each: 1 })],
+        ..legend("Demonlord Belzenlok", cost(&[generic(4), b(), b()]), vec![CreatureType::Elder, CreatureType::Demon], 6, 6)
+    }
+}
+
+/// The Immortal Sun — {6} legendary artifact. No loyalty abilities; you draw
+/// an additional card in your draw step; your spells cost {1} less; your
+/// creatures get +1/+1.
+pub fn the_immortal_sun() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![
+            static_ab("Players can't activate planeswalkers' loyalty abilities.", StaticEffect::NoLoyaltyAbilities),
+            static_ab("Spells you cast cost {1} less to cast.", StaticEffect::CostReduction { filter: R::Any, amount: 1 }),
+            static_ab(
+                "Creatures you control get +1/+1.",
+                StaticEffect::PumpPT { applies_to: Selector::EachPermanent(yours(R::Creature)), power: 1, toughness: 1 },
+            ),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::YourControl),
+            effect: draw(1),
+        }],
+        ..permanent("The Immortal Sun", cost(&[generic(6)]), CardType::Artifact)
+    }
+}
+
+/// Long Road Home — {1}{W} instant. Exile target creature; return it at the
+/// next end step under its owner's control with a +1/+1 counter.
+pub fn long_road_home() -> CardDefinition {
+    spell(
+        "Long Road Home",
+        cost(&[generic(1), w()]),
+        CardType::Instant,
+        Effect::ExileReturnNextEndStep { what: target_filtered(R::Creature) },
+    )
+}
+
+/// Vraska, the Cutting Glare — {B}{B}{G} 4/4 legendary Gorgon Assassin,
+/// deathtouch. ETB with six or more lands: destroy target permanent an
+/// opponent controls; its controller creates a Treasure.
+pub fn vraska_the_cutting_glare() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(
+                Predicate::ValueAtLeast(Value::count(Selector::EachPermanent(yours(R::Land))), Value::Const(6)),
+            ),
+            effect: Effect::Seq(vec![
+                // Their Treasure first, while the target still names its controller.
+                Effect::CreateToken {
+                    who: PlayerRef::ControllerOf(Box::new(target_filtered(R::Permanent.and(R::ControlledByOpponent)))),
+                    count: Value::ONE,
+                    definition: Arc::new(crabomination_base::tokens::treasure_token()),
+                },
+                Effect::Destroy { what: Selector::Target(0) },
+            ]),
+        }],
+        ..legend("Vraska, the Cutting Glare", cost(&[b(), b(), g()]), vec![CreatureType::Gorgon, CreatureType::Assassin], 4, 4)
+    }
+}
