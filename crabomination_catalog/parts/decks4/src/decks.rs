@@ -681,6 +681,9 @@ pub use cmdr_edhrec17::*;
 #[path = "../../../src/sets/decks/cmdr_edhrec19.rs"]
 mod cmdr_edhrec19;
 pub use cmdr_edhrec19::*;
+#[path = "../../../src/sets/decks/cmdr_edhrec20.rs"]
+mod cmdr_edhrec20;
+pub use cmdr_edhrec20::*;
 #[path = "../../../src/sets/decks/cmdr_most_built.rs"]
 mod cmdr_most_built;
 pub use cmdr_most_built::*;
