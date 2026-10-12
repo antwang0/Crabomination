@@ -594,10 +594,15 @@ fn known_library_top(
     viewer_seat: usize,
 ) -> Vec<crate::net::KnownCard> {
     use crate::effect::StaticEffect;
+    // A Class's level-gated static counts once the Class reaches that level
+    // (Ranger Class's level 3).
     let has_static = |pred: &dyn Fn(&StaticEffect) -> bool| {
         state.battlefield.iter().any(|c| {
             c.controller == player_seat
-                && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::WhileClassLevelAtLeast { n, inner } => c.class_level >= *n && pred(inner),
+                    e => pred(e),
+                })
         })
     };
     // Lantern of Insight — any permanent with the all-players static
