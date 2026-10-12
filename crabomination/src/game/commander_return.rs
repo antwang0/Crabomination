@@ -145,6 +145,24 @@ impl GameState {
     }
 
     /// Move commander `id` from `zone` to its owner's command zone.
+    /// CR 614.6 — "shuffle it into its owner's library instead" of a
+    /// graveyard (Darksteel Colossus, Progenitus). A commander so shuffled
+    /// still meets CR 903.9b's library replacement: its owner may put it into
+    /// the command zone instead (a prompting owner is asked once the action
+    /// settles).
+    pub(crate) fn shuffle_into_library_instead(&mut self, card: crate::card::CardInstance) {
+        use rand::seq::SliceRandom;
+        let (owner, id) = (card.owner, card.id);
+        self.players[owner].library.push(card);
+        let mut rng = self.rng.draw();
+        self.players[owner].library.shuffle(&mut rng);
+        if self.players[owner].commanders.contains(&id)
+            && self.resolve_zone_change(id, Zone::Graveyard, Zone::Library) == Zone::Command
+        {
+            self.return_commander(owner, id, Zone::Library);
+        }
+    }
+
     fn return_commander(&mut self, owner: usize, id: CardId, zone: Zone) {
         let card = match zone {
             Zone::Graveyard => Self::take_card(&mut self.players[owner].graveyard, id),

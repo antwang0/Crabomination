@@ -1600,3 +1600,20 @@ fn cr_502_3_skip_next_untap_ignores_a_seedborn_untap() {
     untap_step(&mut g, 1);
     assert!(tapped(&g, bear), "the skip still waits for seat 1's own step");
 }
+
+/// CR 903.9b with CR 614.6 — Progenitus "would be put into a graveyard …
+/// shuffle it into its owner's library instead": as a commander, the library
+/// replacement still lets its owner send it to the command zone. The shuffle
+/// bypassed the offer (pod seed 13064056694810588089, the Progenitus seat).
+#[test]
+fn cr_903_9b_a_commander_shuffled_in_instead_of_dying_goes_home() {
+    let mut g = main_phase();
+    let id = g.seat_commanders(0, vec![catalog::progenitus()])[0];
+    let pos = g.players[0].command.iter().position(|c| c.id == id).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    let mut events = Vec::new();
+    g.destroy_permanent(id, false, &mut events);
+    assert!(g.players[0].command.iter().any(|c| c.id == id), "home");
+    assert!(g.players[0].library.iter().all(|c| c.id != id));
+}
