@@ -4011,14 +4011,17 @@ impl crate::game::GameState {
         }
         self.battlefield
             .iter()
-            .filter(|c| c.controller == player)
             .map(|c| {
                 // Through `active_static`: Thranduil's Company grants the play
                 // only "as long as you control another Elf".
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| matches!(self.active_static(&sa.effect, c), Some(StaticEffect::ExtraLandPerTurn)))
+                    .filter(|sa| match self.active_static(&sa.effect, c) {
+                        Some(StaticEffect::ExtraLandPerTurn) => c.controller == player,
+                        Some(StaticEffect::ExtraLandPerTurnEachPlayer) => true,
+                        _ => false,
+                    })
                     .count() as u32
             })
             .sum()
@@ -4717,6 +4720,18 @@ impl crate::game::GameState {
                 ExtraManaKind::ChosenColor => self
                     .battlefield_find(src_id)
                     .and_then(|c| c.chosen_color),
+                ExtraManaKind::ChosenColorIfProduced => {
+                    let Some(chosen) = self.battlefield_find(src_id).and_then(|c| c.chosen_color) else {
+                        continue;
+                    };
+                    let produced = resolved.iter().any(|e| {
+                        matches!(e, GameEvent::ManaAdded { player, color, .. } if *player == p && *color == chosen)
+                    });
+                    if !produced {
+                        continue;
+                    }
+                    Some(chosen)
+                }
                 ExtraManaKind::Mirror => resolved.iter().find_map(|e| match e {
                     GameEvent::ManaAdded { player, color, .. } if *player == p => Some(*color),
                     _ => None,

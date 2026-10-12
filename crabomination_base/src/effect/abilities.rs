@@ -56,6 +56,10 @@ pub enum ExtraManaKind {
     /// more tide counters on Rikala, add an additional {U}"). Below the
     /// threshold the grant adds nothing.
     FixedWhileSourceCounters(crate::mana::Color, CounterType, u32),
+    /// One more of the source's ETB-chosen color, only when the tap produced
+    /// that color (Gauntlet of Power — "a basic land is tapped for mana of the
+    /// chosen color").
+    ChosenColorIfProduced,
 }
 
 /// serde default for `ReplaceDamageToSelfWithCounters.kind` — Phytohydra's
@@ -621,6 +625,10 @@ pub enum StaticEffect {
     LethalDamageByPower { applies_to: Selector },
     /// Controller may play one additional land per turn.
     ExtraLandPerTurn,
+    /// "Each player may play an additional land during each of their turns"
+    /// (Storm Cauldron): `ExtraLandPerTurn` for every player, whoever
+    /// controls the source.
+    ExtraLandPerTurnEachPlayer,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
     /// CR 601.2f — "Spells cost {N} less to cast" for EVERY player (Helm of

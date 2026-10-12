@@ -5563,6 +5563,12 @@ pub enum Effect {
     /// available energy. Aether Spike's "pay any amount of {E}; counter that
     /// spell unless its controller pays {1} for each {E} paid this way."
     PayAnyEnergy { then: Box<Effect> },
+    /// "Each player may exile their hand and draw `amount` cards. If
+    /// `amount` is `play_if_at_least` or more, you may play cards you own
+    /// exiled this way until the end of your next turn" (Wheel of Potential,
+    /// inside its `PayAnyEnergy`). A headless seat takes the wheel when its
+    /// hand is smaller than `amount`.
+    EachPlayerMayExileHandDraw { amount: Value, play_if_at_least: u32 },
     /// "Sacrifice/return this unless you pay {E}…" (CR 107.16). Pays `amount`
     /// energy if the controller can afford it; otherwise resolves `otherwise`
     /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when

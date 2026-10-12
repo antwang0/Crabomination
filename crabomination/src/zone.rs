@@ -815,6 +815,7 @@ fn card_has_land_play_static(c: &CardInstance) -> bool {
                 | S::ControllerCantPlayLands
                 | S::MostPermanentsCantPlay
                 | S::ExtraLandPerTurn
+                | S::ExtraLandPerTurnEachPlayer
         )
     })
 }

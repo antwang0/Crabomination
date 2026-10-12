@@ -33990,6 +33990,7 @@ fn static_effect_to_effects(
             | StaticEffect::GrantConspireToSpells { .. }
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
+            | StaticEffect::ExtraLandPerTurnEachPlayer
             | StaticEffect::CostReduction { .. }
             | StaticEffect::AllPlayersSpellsCostLess { .. }
             | StaticEffect::AllPlayersCostReduction { .. }

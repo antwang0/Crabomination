@@ -732,4 +732,75 @@ impl GameState {
             self.move_card_to(id, &ZoneDest::Graveyard, ctx, events);
         }
     }
+
+    /// `Effect::EachPlayerMayExileHandDraw` (Wheel of Potential). Each living
+    /// seat from the controller on (CR 101.4) chooses; then each one that
+    /// said yes exiles its hand and draws. Past the threshold the controller
+    /// may play their own exiled cards until the end of their next turn.
+    pub(crate) fn each_player_may_exile_hand_draw(
+        &mut self,
+        amount: &Value,
+        play_if_at_least: u32,
+        ctx: &crate::game::effects::EffectContext,
+        events: &mut Vec<crate::game::types::GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), crate::game::GameError> {
+        use crate::effect::{Selector, ZoneDest};
+        let n = self.evaluate_value(amount, ctx).max(0) as usize;
+        let seats = self.players.len();
+        let order: Vec<usize> = (0..seats)
+            .map(|i| (ctx.controller + i) % seats)
+            .filter(|&s| !self.players[s].eliminated)
+            .collect();
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut wheel = Vec::new();
+        for seat in order {
+            let yes = if self.seat_prompts(seat) {
+                let Some(b) = self.ask_seat_bool(
+                    &mut cursor,
+                    seat,
+                    format!("Exile your hand and draw {n}?"),
+                    source,
+                    effect,
+                    crate::decision::OptionalKind::MayBody,
+                ) else {
+                    return Ok(());
+                };
+                b
+            } else {
+                self.players[seat].hand.len() < n
+            };
+            if yes {
+                wheel.push(seat);
+            }
+        }
+        self.clear_answer_log();
+        for seat in wheel {
+            let hand = Selector::CardsInZone {
+                who: PlayerRef::Seat(seat),
+                zone: crate::card::Zone::Hand,
+                filter: crate::card::SelectionRequirement::Any,
+            };
+            let exile = Effect::Move { what: hand, to: ZoneDest::Exile };
+            let body = if seat == ctx.controller && n >= play_if_at_least as usize {
+                Effect::Seq(vec![
+                    exile,
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ])
+            } else {
+                exile
+            };
+            self.run_effect(&body, ctx, events)?;
+            self.draw_n(seat, n, events);
+        }
+        Ok(())
+    }
 }

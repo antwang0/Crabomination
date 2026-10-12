@@ -1028,6 +1028,7 @@ impl Effect {
             | Effect::PutAnyNumberFromGraveyardOnTop { .. }
             | Effect::ExileTopUntilNonland { .. }
             | Effect::ExileUntilNonlandToHandRepeat { .. }
+            | Effect::EachPlayerMayExileHandDraw { .. }
             | Effect::TapAnyNumberThenCounters { .. }
             | Effect::TapAnyNumberThenDraw { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
