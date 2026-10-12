@@ -6228,6 +6228,246 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AMARETH_COMMANDERS,
             main: decks::AMARETH_MAIN,
         },
+        // Seat 963: Cecil, Dark Knight's EDHREC average deck. `--pod-decks 963`.
+        PodDeck {
+            name: "Cecil, Dark Knight (WB)",
+            commanders: decks::CECIL_COMMANDERS,
+            main: decks::CECIL_MAIN,
+        },
+        // Seat 964: Muxus, Goblin Grandee's EDHREC average deck. `--pod-decks 964`.
+        PodDeck {
+            name: "Muxus, Goblin Grandee (R)",
+            commanders: decks::MUXUS_COMMANDERS,
+            main: decks::MUXUS_MAIN,
+        },
+        // Seat 965: Minwu, White Mage's EDHREC average deck. `--pod-decks 965`.
+        PodDeck {
+            name: "Minwu, White Mage (W)",
+            commanders: decks::MINWU_COMMANDERS,
+            main: decks::MINWU_MAIN,
+        },
+        // Seat 966: Gylwain, Casting Director's EDHREC average deck. `--pod-decks 966`.
+        PodDeck {
+            name: "Gylwain, Casting Director (WG)",
+            commanders: decks::GYLWAIN_COMMANDERS,
+            main: decks::GYLWAIN_MAIN,
+        },
+        // Seat 967: Ghalta and Mavren's EDHREC average deck. `--pod-decks 967`.
+        PodDeck {
+            name: "Ghalta and Mavren (WG)",
+            commanders: decks::GHALTA_AND_MAVREN_COMMANDERS,
+            main: decks::GHALTA_AND_MAVREN_MAIN,
+        },
+        // Seat 968: King T'Challa's EDHREC average deck. `--pod-decks 968`.
+        PodDeck {
+            name: "King T'Challa (WU)",
+            commanders: decks::KING_TCHALLA_COMMANDERS,
+            main: decks::KING_TCHALLA_MAIN,
+        },
+        // Seat 969: Mikaeus, the Unhallowed's EDHREC average deck. `--pod-decks 969`.
+        PodDeck {
+            name: "Mikaeus, the Unhallowed (B)",
+            commanders: decks::MIKAEUS_COMMANDERS,
+            main: decks::MIKAEUS_MAIN,
+        },
+        // Seat 970: Taborax, Hope's Demise's EDHREC average deck. `--pod-decks 970`.
+        PodDeck {
+            name: "Taborax, Hope's Demise (B)",
+            commanders: decks::TABORAX_COMMANDERS,
+            main: decks::TABORAX_MAIN,
+        },
+        // Seat 971: Satoru, the Infiltrator's EDHREC average deck. `--pod-decks 971`.
+        PodDeck {
+            name: "Satoru, the Infiltrator (UB)",
+            commanders: decks::SATORU_2_COMMANDERS,
+            main: decks::SATORU_2_MAIN,
+        },
+        // Seat 972: Arjun, the Shifting Flame's EDHREC average deck. `--pod-decks 972`.
+        PodDeck {
+            name: "Arjun, the Shifting Flame (UR)",
+            commanders: decks::ARJUN_COMMANDERS,
+            main: decks::ARJUN_MAIN,
+        },
+        // Seat 973: Oona, Queen of the Fae's EDHREC average deck. `--pod-decks 973`.
+        PodDeck {
+            name: "Oona, Queen of the Fae (UB)",
+            commanders: decks::OONA_COMMANDERS,
+            main: decks::OONA_MAIN,
+        },
+        // Seat 974: Gollum, Obsessed Stalker's EDHREC average deck. `--pod-decks 974`.
+        PodDeck {
+            name: "Gollum, Obsessed Stalker (B)",
+            commanders: decks::GOLLUM_COMMANDERS,
+            main: decks::GOLLUM_MAIN,
+        },
+        // Seat 975: Eruth, Tormented Prophet's EDHREC average deck. `--pod-decks 975`.
+        PodDeck {
+            name: "Eruth, Tormented Prophet (UR)",
+            commanders: decks::ERUTH_COMMANDERS,
+            main: decks::ERUTH_MAIN,
+        },
+        // Seat 976: Captain America, Living Legend's EDHREC average deck. `--pod-decks 976`.
+        PodDeck {
+            name: "Captain America, Living Legend (WU)",
+            commanders: decks::CAPTAIN_AMERICA_2_COMMANDERS,
+            main: decks::CAPTAIN_AMERICA_2_MAIN,
+        },
+        // Seat 977: Gretchen Titchwillow's EDHREC average deck. `--pod-decks 977`.
+        PodDeck {
+            name: "Gretchen Titchwillow (UG)",
+            commanders: decks::GRETCHEN_TITCHWILLOW_COMMANDERS,
+            main: decks::GRETCHEN_TITCHWILLOW_MAIN,
+        },
+        // Seat 978: Super-Skrull's EDHREC average deck. `--pod-decks 978`.
+        PodDeck {
+            name: "Super-Skrull (WUBRG)",
+            commanders: decks::SUPER_SKRULL_COMMANDERS,
+            main: decks::SUPER_SKRULL_MAIN,
+        },
+        // Seat 979: Godo, Bandit Warlord's EDHREC average deck. `--pod-decks 979`.
+        PodDeck {
+            name: "Godo, Bandit Warlord (R)",
+            commanders: decks::GODO_COMMANDERS,
+            main: decks::GODO_MAIN,
+        },
+        // Seat 980: Mortarion, Daemon Primarch's EDHREC average deck. `--pod-decks 980`.
+        PodDeck {
+            name: "Mortarion, Daemon Primarch (B)",
+            commanders: decks::MORTARION_COMMANDERS,
+            main: decks::MORTARION_MAIN,
+        },
+        // Seat 981: Sek'Kuar, Deathkeeper's EDHREC average deck. `--pod-decks 981`.
+        PodDeck {
+            name: "Sek'Kuar, Deathkeeper (BRG)",
+            commanders: decks::SEKKUAR_COMMANDERS,
+            main: decks::SEKKUAR_MAIN,
+        },
+        // Seat 982: Gallia of the Endless Dance's EDHREC average deck. `--pod-decks 982`.
+        PodDeck {
+            name: "Gallia of the Endless Dance (RG)",
+            commanders: decks::GALLIA_OF_THE_ENDLESS_DANCE_COMMANDERS,
+            main: decks::GALLIA_OF_THE_ENDLESS_DANCE_MAIN,
+        },
+        // Seat 983: Anje, Maid of Dishonor's EDHREC average deck. `--pod-decks 983`.
+        PodDeck {
+            name: "Anje, Maid of Dishonor (BR)",
+            commanders: decks::ANJE_2_COMMANDERS,
+            main: decks::ANJE_2_MAIN,
+        },
+        // Seat 984: Edgar, Charmed Groom's EDHREC average deck. `--pod-decks 984`.
+        PodDeck {
+            name: "Edgar, Charmed Groom (WB)",
+            commanders: decks::EDGAR_2_COMMANDERS,
+            main: decks::EDGAR_2_MAIN,
+        },
+        // Seat 985: Lazav, the Multifarious's EDHREC average deck. `--pod-decks 985`.
+        PodDeck {
+            name: "Lazav, the Multifarious (UB)",
+            commanders: decks::LAZAV_2_COMMANDERS,
+            main: decks::LAZAV_2_MAIN,
+        },
+        // Seat 986: Eight-and-a-Half-Tails's EDHREC average deck. `--pod-decks 986`.
+        PodDeck {
+            name: "Eight-and-a-Half-Tails (W)",
+            commanders: decks::EIGHT_AND_A_HALF_TAILS_COMMANDERS,
+            main: decks::EIGHT_AND_A_HALF_TAILS_MAIN,
+        },
+        // Seat 987: Quintorius, Loremaster's EDHREC average deck. `--pod-decks 987`.
+        PodDeck {
+            name: "Quintorius, Loremaster (WR)",
+            commanders: decks::QUINTORIUS_2_COMMANDERS,
+            main: decks::QUINTORIUS_2_MAIN,
+        },
+        // Seat 988: Tataru Taru's EDHREC average deck. `--pod-decks 988`.
+        PodDeck {
+            name: "Tataru Taru (W)",
+            commanders: decks::TATARU_TARU_COMMANDERS,
+            main: decks::TATARU_TARU_MAIN,
+        },
+        // Seat 989: Black Cat, Cunning Thief's EDHREC average deck. `--pod-decks 989`.
+        PodDeck {
+            name: "Black Cat, Cunning Thief (B)",
+            commanders: decks::BLACK_CAT_COMMANDERS,
+            main: decks::BLACK_CAT_MAIN,
+        },
+        // Seat 990: Dragonlord Ojutai's EDHREC average deck. `--pod-decks 990`.
+        PodDeck {
+            name: "Dragonlord Ojutai (WU)",
+            commanders: decks::DRAGONLORD_OJUTAI_COMMANDERS,
+            main: decks::DRAGONLORD_OJUTAI_MAIN,
+        },
+        // Seat 991: Grumgully, the Generous's EDHREC average deck. `--pod-decks 991`.
+        PodDeck {
+            name: "Grumgully, the Generous (RG)",
+            commanders: decks::GRUMGULLY_COMMANDERS,
+            main: decks::GRUMGULLY_MAIN,
+        },
+        // Seat 992: Wylie Duke, Atiin Hero's EDHREC average deck. `--pod-decks 992`.
+        PodDeck {
+            name: "Wylie Duke, Atiin Hero (WG)",
+            commanders: decks::WYLIE_DUKE_COMMANDERS,
+            main: decks::WYLIE_DUKE_MAIN,
+        },
+        // Seat 993: Yue, the Moon Spirit's EDHREC average deck. `--pod-decks 993`.
+        PodDeck {
+            name: "Yue, the Moon Spirit (U)",
+            commanders: decks::YUE_COMMANDERS,
+            main: decks::YUE_MAIN,
+        },
+        // Seat 994: Velomachus Lorehold's EDHREC average deck. `--pod-decks 994`.
+        PodDeck {
+            name: "Velomachus Lorehold (WR)",
+            commanders: decks::VELOMACHUS_LOREHOLD_COMMANDERS,
+            main: decks::VELOMACHUS_LOREHOLD_MAIN,
+        },
+        // Seat 995: Akiri, Fearless Voyager's EDHREC average deck. `--pod-decks 995`.
+        PodDeck {
+            name: "Akiri, Fearless Voyager (WR)",
+            commanders: decks::AKIRI_2_COMMANDERS,
+            main: decks::AKIRI_2_MAIN,
+        },
+        // Seat 996: Nicol Bolas's EDHREC average deck. `--pod-decks 996`.
+        PodDeck {
+            name: "Nicol Bolas (UBR)",
+            commanders: decks::NICOL_BOLAS_COMMANDERS,
+            main: decks::NICOL_BOLAS_MAIN,
+        },
+        // Seat 997: Thassa, Deep-Dwelling's EDHREC average deck. `--pod-decks 997`.
+        PodDeck {
+            name: "Thassa, Deep-Dwelling (U)",
+            commanders: decks::THASSA_COMMANDERS,
+            main: decks::THASSA_MAIN,
+        },
+        // Seat 998: Doctor Doom, Unrivaled's EDHREC average deck. `--pod-decks 998`.
+        PodDeck {
+            name: "Doctor Doom, Unrivaled (B)",
+            commanders: decks::DOCTOR_DOOM_COMMANDERS,
+            main: decks::DOCTOR_DOOM_MAIN,
+        },
+        // Seat 999: Toralf, God of Fury's EDHREC average deck. `--pod-decks 999`.
+        PodDeck {
+            name: "Toralf, God of Fury (R)",
+            commanders: decks::TORALF_COMMANDERS,
+            main: decks::TORALF_MAIN,
+        },
+        // Seat 1000: Magda, the Hoardmaster's EDHREC average deck. `--pod-decks 1000`.
+        PodDeck {
+            name: "Magda, the Hoardmaster (R)",
+            commanders: decks::MAGDA_2_COMMANDERS,
+            main: decks::MAGDA_2_MAIN,
+        },
+        // Seat 1001: Ghalta, Stampede Tyrant's EDHREC average deck. `--pod-decks 1001`.
+        PodDeck {
+            name: "Ghalta, Stampede Tyrant (G)",
+            commanders: decks::GHALTA_2_COMMANDERS,
+            main: decks::GHALTA_2_MAIN,
+        },
+        // Seat 1002: Kain, Traitorous Dragoon's EDHREC average deck. `--pod-decks 1002`.
+        PodDeck {
+            name: "Kain, Traitorous Dragoon (B)",
+            commanders: decks::KAIN_COMMANDERS,
+            main: decks::KAIN_MAIN,
+        },
     ]
 }
 
@@ -8962,6 +9202,46 @@ mod tests {
             ("Odric, Lunarch Marshal", &[0x0CE6]),
             ("Obosh, the Preypiercer", &[0x0CE7]),
             ("Amareth, the Lustrous", &[0x0CE8]),
+            ("Cecil, Dark Knight", &[0x0CE9]),
+            ("Muxus, Goblin Grandee", &[0x0CEA]),
+            ("Minwu, White Mage", &[0x0CEB]),
+            ("Gylwain, Casting Director", &[0x0CEC]),
+            ("Ghalta and Mavren", &[0x0CED]),
+            ("King T'Challa", &[0x0CEE]),
+            ("Mikaeus, the Unhallowed", &[0x0CEF]),
+            ("Taborax, Hope's Demise", &[0x0CF0]),
+            ("Satoru, the Infiltrator", &[0x0CF1]),
+            ("Arjun, the Shifting Flame", &[0x0CF2]),
+            ("Oona, Queen of the Fae", &[0x0CF3]),
+            ("Gollum, Obsessed Stalker", &[0x0CF4]),
+            ("Eruth, Tormented Prophet", &[0x0CF5]),
+            ("Captain America, Living Legend", &[0x0CF6]),
+            ("Gretchen Titchwillow", &[0x0CF7]),
+            ("Super-Skrull", &[0x0CF8]),
+            ("Godo, Bandit Warlord", &[0x0CF9]),
+            ("Mortarion, Daemon Primarch", &[0x0CFA]),
+            ("Sek'Kuar, Deathkeeper", &[0x0CFB]),
+            ("Gallia of the Endless Dance", &[0x0CFC]),
+            ("Anje, Maid of Dishonor", &[0x0CFD]),
+            ("Edgar, Charmed Groom", &[0x0CFE]),
+            ("Lazav, the Multifarious", &[0x0CFF]),
+            ("Eight-and-a-Half-Tails", &[0x0D00]),
+            ("Quintorius, Loremaster", &[0x0D01]),
+            ("Tataru Taru", &[0x0D02]),
+            ("Black Cat, Cunning Thief", &[0x0D03]),
+            ("Dragonlord Ojutai", &[0x0D04]),
+            ("Grumgully, the Generous", &[0x0D05]),
+            ("Wylie Duke, Atiin Hero", &[0x0D06]),
+            ("Yue, the Moon Spirit", &[0x0D07]),
+            ("Velomachus Lorehold", &[0x0D08]),
+            ("Akiri, Fearless Voyager", &[0x0D09]),
+            ("Nicol Bolas", &[0x0D0A]),
+            ("Thassa, Deep-Dwelling", &[0x0D0B]),
+            ("Doctor Doom, Unrivaled", &[0x0D0C]),
+            ("Toralf, God of Fury", &[0x0D0D]),
+            ("Magda, the Hoardmaster", &[0x0D0E]),
+            ("Ghalta, Stampede Tyrant", &[0x0D0F]),
+            ("Kain, Traitorous Dragoon", &[0x0D10]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
