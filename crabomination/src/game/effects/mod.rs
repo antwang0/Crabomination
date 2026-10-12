@@ -13473,6 +13473,9 @@ impl GameState {
             // CR 509.4 — mint a token already blocking the targeted attacker.
             Effect::CopyAttackersAsBlockers => self.copy_attackers_as_blockers(ctx, events),
             Effect::EachPlayerRecyclesArtifacts => self.each_player_recycles_artifacts(ctx, events),
+            Effect::YouAndPlayerChooseTheirPermanentsToSacrifice { who, filter } => {
+                self.you_and_player_choose_their_permanents_to_sacrifice(who, filter, effect, ctx, events)
+            }
             Effect::OpponentChoosesPermanentThen { filter, body, chooser, theirs } => {
                 self.opponent_chooses_permanent_then(filter, body, chooser.as_ref(), *theirs, effect, ctx, events)
             }

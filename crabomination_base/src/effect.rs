@@ -6298,6 +6298,12 @@ pub enum Effect {
     /// so the pick must be a legal target for you (CR 115.4). The spell's own
     /// targets follow the pick, from `Target(1)` on. Nothing happens without a
     /// match.
+    /// "You and `who` each secretly choose a [filter] that player controls.
+    /// Then those choices are revealed, and that player sacrifices those
+    /// permanents" (Malik, Grim Manipulator). Neither pick sees the other's;
+    /// the same permanent chosen twice is sacrificed once. Headless: you name
+    /// their priciest, they name their cheapest.
+    YouAndPlayerChooseTheirPermanentsToSacrifice { who: PlayerRef, filter: SelectionRequirement },
     OpponentChoosesPermanentThen {
         filter: SelectionRequirement,
         body: Box<Effect>,

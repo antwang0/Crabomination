@@ -101,6 +101,67 @@ impl GameState {
         self.run_effect(&Effect::BindTargetObjects { ids, body: Box::new(body.clone()) }, ctx, events)
     }
 
+    /// Malik, Grim Manipulator — you and `who` each pick one of `who`'s
+    /// permanents matching `filter` (read with you as the controller), each
+    /// blind to the other's pick; `who` sacrifices the picks (CR 701.21a), a
+    /// shared pick once.
+    pub(super) fn you_and_player_choose_their_permanents_to_sacrifice(
+        &mut self,
+        who: &crate::effect::PlayerRef,
+        filter: &SelectionRequirement,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let me = ctx.controller;
+        let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+        let source = ctx.source.unwrap_or(CardId(0));
+        let candidates: Vec<(CardId, String, u32)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && self.evaluate_requirement_on_card(filter, c, me))
+            .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+            .collect();
+        if candidates.is_empty() {
+            self.clear_answer_log();
+            return Ok(());
+        }
+        let priciest = candidates.iter().max_by_key(|c| (c.2, c.0.0)).map(|c| c.0);
+        let cheapest = candidates.iter().min_by_key(|c| (c.2, c.0.0)).map(|c| c.0);
+        let named: Vec<(CardId, String)> = candidates.iter().map(|c| (c.0, c.1.clone())).collect();
+        let mut cursor = 0;
+        let mut picks = Vec::new();
+        for (seat, value, auto, prompt) in [
+            (me, PickValue::Gain, priciest, "Secretly choose a creature that player will sacrifice"),
+            (p, PickValue::Cost, cheapest, "Secretly choose a creature of yours to sacrifice"),
+        ] {
+            let Some(ids) = self.ask_seat_cards_logged(
+                &mut cursor,
+                seat,
+                prompt.into(),
+                source,
+                named.clone(),
+                1,
+                1,
+                value,
+                effect,
+                auto.into_iter().collect(),
+            ) else {
+                return Ok(());
+            };
+            if let Some(pick) = ids.first().copied().or(auto)
+                && !picks.contains(&pick)
+            {
+                picks.push(pick);
+            }
+        }
+        self.clear_answer_log();
+        for id in picks {
+            self.sacrifice_one(id, p, events);
+        }
+        Ok(())
+    }
+
     /// Three passes over the table (CR 101.4, APNAP): exile each player's
     /// artifact cards, sacrifice each player's artifacts, return what each
     /// exiled. A sacrificed artifact that a replacement sends to exile is

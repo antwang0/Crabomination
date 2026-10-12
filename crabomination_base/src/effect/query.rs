@@ -2318,6 +2318,7 @@ impl Effect {
             Effect::ReturnTargetCardsAtRandom { .. } => false,
             Effect::EachPlayerRecyclesArtifacts => false,
             Effect::OpponentChoosesPermanentThen { .. } => false,
+            Effect::YouAndPlayerChooseTheirPermanentsToSacrifice { who, .. } => player_has_target(who),
             Effect::RevealUntilMatchingToBattlefield { count, .. } => value_has_target(count),
             Effect::ClashWithOpponent { on_win, on_lose, .. } => {
                 on_win.requires_target() || on_lose.as_ref().is_some_and(|e| e.requires_target())
@@ -5506,7 +5507,8 @@ impl Effect {
                 | Effect::LoseGame { who }
                 // "Target player searches their library" — the slot rides
                 // `who` (Scheming Symmetry's two target players).
-                | Effect::Search { who, .. } => pref_find(who, slot),
+                | Effect::Search { who, .. }
+                | Effect::YouAndPlayerChooseTheirPermanentsToSacrifice { who, .. } => pref_find(who, slot),
                 Effect::WaiveShroudForPlayerThisTurn { player } => {
                     pref_find(player, slot)
                 }
