@@ -5982,6 +5982,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INQUISITOR_EISENHORN_COMMANDERS,
             main: decks::INQUISITOR_EISENHORN_MAIN,
         },
+        // Seat 922: Oswald Fiddlebender's EDHREC average deck. `--pod-decks 922`.
+        PodDeck {
+            name: "Oswald Fiddlebender (W)",
+            commanders: decks::OSWALD_FIDDLEBENDER_COMMANDERS,
+            main: decks::OSWALD_FIDDLEBENDER_MAIN,
+        },
+        // Seat 923: Abomination of Llanowar's EDHREC average deck. `--pod-decks 923`.
+        PodDeck {
+            name: "Abomination of Llanowar (BG)",
+            commanders: decks::ABOMINATION_OF_LLANOWAR_COMMANDERS,
+            main: decks::ABOMINATION_OF_LLANOWAR_MAIN,
+        },
+        // Seat 924: Skrelv, Defector Mite's EDHREC average deck. `--pod-decks 924`.
+        PodDeck {
+            name: "Skrelv, Defector Mite (W)",
+            commanders: decks::SKRELV_COMMANDERS,
+            main: decks::SKRELV_MAIN,
+        },
+        // Seat 925: Orthion, Hero of Lavabrink's EDHREC average deck. `--pod-decks 925`.
+        PodDeck {
+            name: "Orthion, Hero of Lavabrink (R)",
+            commanders: decks::ORTHION_COMMANDERS,
+            main: decks::ORTHION_MAIN,
+        },
+        // Seat 926: Olag and Miau, New Friends's EDHREC average deck. `--pod-decks 926`.
+        PodDeck {
+            name: "Olag and Miau, New Friends (WBG)",
+            commanders: decks::OLAG_AND_MIAU_COMMANDERS,
+            main: decks::OLAG_AND_MIAU_MAIN,
+        },
     ]
 }
 
@@ -8668,6 +8698,11 @@ mod tests {
             ("Kokusho, the Evening Star", &[0x0CBD]),
             ("Lagomos, Hand of Hatred", &[0x0CBE]),
             ("Inquisitor Eisenhorn", &[0x0CBF]),
+            ("Oswald Fiddlebender", &[0x0CC0]),
+            ("Abomination of Llanowar", &[0x0CC1]),
+            ("Skrelv, Defector Mite", &[0x0CC2]),
+            ("Orthion, Hero of Lavabrink", &[0x0CC3]),
+            ("Olag and Miau, New Friends", &[0x0CC4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
