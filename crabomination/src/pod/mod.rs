@@ -5880,6 +5880,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JAXIS_COMMANDERS,
             main: decks::JAXIS_MAIN,
         },
+        // Seat 905: Tellah, Great Sage's EDHREC average deck. `--pod-decks 905`.
+        PodDeck {
+            name: "Tellah, Great Sage (UR)",
+            commanders: decks::TELLAH_COMMANDERS,
+            main: decks::TELLAH_MAIN,
+        },
+        // Seat 906: Garna, Bloodfist of Keld's EDHREC average deck. `--pod-decks 906`.
+        PodDeck {
+            name: "Garna, Bloodfist of Keld (BR)",
+            commanders: decks::GARNA_COMMANDERS,
+            main: decks::GARNA_MAIN,
+        },
+        // Seat 907: Torens, Fist of the Angels's EDHREC average deck. `--pod-decks 907`.
+        PodDeck {
+            name: "Torens, Fist of the Angels (WG)",
+            commanders: decks::TORENS_COMMANDERS,
+            main: decks::TORENS_MAIN,
+        },
+        // Seat 908: Rith, the Awakener's EDHREC average deck. `--pod-decks 908`.
+        PodDeck {
+            name: "Rith, the Awakener (WRG)",
+            commanders: decks::RITH_2_COMMANDERS,
+            main: decks::RITH_2_MAIN,
+        },
+        // Seat 909: Longshot, Rebel Bowman's EDHREC average deck. `--pod-decks 909`.
+        PodDeck {
+            name: "Longshot, Rebel Bowman (R)",
+            commanders: decks::LONGSHOT_COMMANDERS,
+            main: decks::LONGSHOT_MAIN,
+        },
+        // Seat 910: Cid, Timeless Artificer's EDHREC average deck. `--pod-decks 910`.
+        PodDeck {
+            name: "Cid, Timeless Artificer (WU)",
+            commanders: decks::CID_COMMANDERS,
+            main: decks::CID_MAIN,
+        },
+        // Seat 911: Birgi, God of Storytelling's EDHREC average deck. `--pod-decks 911`.
+        PodDeck {
+            name: "Birgi, God of Storytelling (R)",
+            commanders: decks::BIRGI_COMMANDERS,
+            main: decks::BIRGI_MAIN,
+        },
+        // Seat 912: Snapdax, Apex of the Hunt's EDHREC average deck. `--pod-decks 912`.
+        PodDeck {
+            name: "Snapdax, Apex of the Hunt (WBR)",
+            commanders: decks::SNAPDAX_COMMANDERS,
+            main: decks::SNAPDAX_MAIN,
+        },
     ]
 }
 
@@ -8549,6 +8597,14 @@ mod tests {
             ("Breeches, the Blastmaker", &[0x0CAC]),
             ("Seizan, Perverter of Truth", &[0x0CAD]),
             ("Jaxis, the Troublemaker", &[0x0CAE]),
+            ("Tellah, Great Sage", &[0x0CAF]),
+            ("Garna, Bloodfist of Keld", &[0x0CB0]),
+            ("Torens, Fist of the Angels", &[0x0CB1]),
+            ("Rith, the Awakener", &[0x0CB2]),
+            ("Longshot, Rebel Bowman", &[0x0CB3]),
+            ("Cid, Timeless Artificer", &[0x0CB4]),
+            ("Birgi, God of Storytelling", &[0x0CB5]),
+            ("Snapdax, Apex of the Hunt", &[0x0CB6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
