@@ -438,7 +438,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ..default()
             },
             BackgroundColor(theme::HUD_BG),
-            crate::systems::scroll::Scrollable::default(),
+            bevy::ui_widgets::ScrollArea,
             GameLogOuterPanel,
             InGameRoot,
         ))
@@ -640,7 +640,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 HintChip,
             ))
             .with_children(|chip| {
-                chip.spawn((Text::new(""), tf(13.0), TextColor(theme::ACCENT_GOLD), HintText));
+                chip.spawn((Node::default(), crate::mana_text::ManaText::new("", 13.0, theme::ACCENT_GOLD).wrapping(), HintText));
             });
         });
 

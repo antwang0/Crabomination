@@ -321,7 +321,7 @@ fn spawn_panel(commands: &mut Commands, tf: &impl Fn(f32) -> TextFont, panel: &S
                         overflow: Overflow::scroll_y(),
                         ..default()
                     },
-                    crate::systems::scroll::Scrollable::with_line_px(28.0),
+                    bevy::ui_widgets::ScrollArea,
                 ))
                 .with_children(|list| {
                     for (i, deck) in panel.decks.iter().enumerate() {

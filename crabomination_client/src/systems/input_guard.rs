@@ -126,13 +126,6 @@ mod tests {
         assert_access_is_legal(game_ui::handle_game_input);
     }
 
-    /// The shared wheel handler is registered unconditionally in every app
-    /// state, so its access set has to be legal too.
-    #[test]
-    fn the_shared_scroll_handler_has_a_legal_access_set() {
-        assert_access_is_legal(crate::systems::scroll::handle_scroll);
-    }
-
     /// The run condition is evaluated as part of the gated system's access
     /// set, so a condition/system clash is the same class of launch panic.
     #[test]

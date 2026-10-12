@@ -313,6 +313,7 @@ fn main() {
             MenuPlugin,
             theme::UiFontsPlugin,
             ui_button::UiButtonPlugin,
+            systems::scroll::ScrollPlugin,
             systems::draft::DraftPlugin,
             systems::lobby_ui::LobbyUiPlugin,
             systems::game_ui::TableAwarenessPlugin,
@@ -409,6 +410,7 @@ fn main() {
         // Mana symbols in UI text, in every state (the draft shows costs too).
         // After `Update`, whose systems despawn the nodes it rebuilds (a
         // tooltip closing), and before the UI lays the new rows out.
+        .init_resource::<mana_text::PipImages>()
         .add_systems(PostUpdate, mana_text::sync_mana_text.before(bevy::ui::UiSystems::Prepare))
         // A card focus dims fades its overlays with it, after their own
         // systems have painted them (`systems::focus`).
@@ -480,10 +482,6 @@ fn main() {
             Update,
             audit::handle_audit_picker.run_if(in_state(AppState::Audit)),
         )
-        // Mouse-wheel scrolling for every `Scrollable` panel, in every
-        // state — the menu/audit/draft pickers and the in-game log,
-        // browsers and decision grids all route through one handler.
-        .add_systems(Update, systems::scroll::handle_scroll)
         // Audit-mode HUD buttons: sync visibility every frame, handle
         // click → save + return to picker.
         .add_systems(

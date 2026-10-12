@@ -230,7 +230,7 @@ fn spawn_report(commands: &mut Commands, tf: &impl Fn(f32) -> TextFont, problems
                         overflow: Overflow::scroll_y(),
                         ..default()
                     },
-                    crate::systems::scroll::Scrollable::with_line_px(22.0),
+                    bevy::ui_widgets::ScrollArea,
                 ))
                 .with_children(|list| {
                     for line in &problems.lines {

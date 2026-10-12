@@ -286,7 +286,7 @@ fn spawn_grid(commands: &mut Commands, asset_server: &AssetServer, ui_fonts: &Ui
     commands.entity(panel).with_children(|panel| {
         panel.spawn((Text::new(pick.prompt.clone()), ui_fonts.tf(16.0), TextColor(theme::TEXT_PRIMARY)));
         // Scrollable: a bounded height, `Overflow::scroll_y` and the
-        // `Scrollable` marker that drives `ScrollPosition`. Without
+        // `ScrollArea` marker that drives `ScrollPosition`. Without
         // `min_height: 0` flexbox's default `min-height: auto` outranks
         // `max_height` and the grid grows to fit anyway.
         panel
@@ -304,7 +304,7 @@ fn spawn_grid(commands: &mut Commands, asset_server: &AssetServer, ui_fonts: &Ui
                     ..default()
                 },
                 Pickable::default(),
-                crate::systems::scroll::Scrollable::default(),
+                bevy::ui_widgets::ScrollArea,
             ))
             .with_children(|grid| {
                 for (card_id, name) in &pick.candidates {

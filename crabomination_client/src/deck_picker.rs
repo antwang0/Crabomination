@@ -278,7 +278,7 @@ fn spawn_overlay(commands: &mut Commands, tf: &impl Fn(f32) -> TextFont, pod_siz
                         overflow: Overflow::scroll_y(),
                         ..default()
                     },
-                    crate::systems::scroll::Scrollable::with_line_px(28.0),
+                    bevy::ui_widgets::ScrollArea,
                     DeckList,
                 ));
                 p.spawn(Node { flex_direction: FlexDirection::Row, justify_content: JustifyContent::SpaceBetween, align_items: AlignItems::Center, ..default() })

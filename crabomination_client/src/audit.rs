@@ -565,7 +565,7 @@ fn build_picker_ui(
                         ..default()
                     },
                     BackgroundColor(theme::PANEL_BG_SUNKEN),
-                    crate::systems::scroll::Scrollable::default(),
+                    bevy::ui_widgets::ScrollArea,
                 ))
                 .with_children(|list| {
                     for entry in &cards {

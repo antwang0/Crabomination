@@ -34,6 +34,43 @@ printed one. Needs an affordance list of hand cards whose
 `granted_alternative_cost_in` differs from the printed alt, and a two-entry
 menu. Engine and bot take both today.
 
+## Bevy 0.20: inline mana pips, `ScrollArea` (2026-10-12) — shipped
+
+Two 0.20 features the client had been working around. Read off
+`--mana-gallery` / `--alt` layout-harness screenshots before and after.
+
+- ✅ **Mana pips are images in the text** (`InlineImage`). `ManaText` was
+  a flex row of word nodes and pip nodes, so a cost could break only
+  between words and a pip was centred on the row rather than set in the
+  line. Now a `ManaText` is one `Text`: the words are spans, each pip an
+  inline image that wraps with them and sits on their baseline. A pip is
+  rasterised once per symbol and *physical* pixel size (`PipImages`) from
+  the UI fonts Bevy has already loaded — so it is crisp at any UI size and
+  works in the browser, with no font file read — and rebuilt when the UI
+  scale changes.
+  - ⚠ **`ab_glyph`'s `PxScale` is a font's line height, not its em.** Bevy
+    sizes text by the em, so a glyph scaled by `PxScale` alone came out
+    small in a face with tall line metrics: Noto Sans Math's Φ was a dot
+    at 13 px. `rasterize` converts with each face's
+    `height_unscaled / units_per_em`.
+  - ⚠ **An inline box's bottom edge sits on the baseline** (parley), and
+    `bevy_ui` positions only `InlineImage`s in one — a UI node with an
+    `InlineBox` is laid around but never moved — so a pip cannot be a node
+    any more, nor dip below the baseline. At 1.0 em it reads as a capital.
+  - ✅ The hint chip is mana text too, so a target prompt's cost draws as
+    pips (the Mana symbols residual below).
+- ✅ **`ScrollArea` replaces the client's wheel handler.** Bevy 0.20 ships
+  wheel scrolling (`ui_widgets::ScrollArea`, in `DefaultPlugins`), routed
+  through picking: a wheel tick over a row bubbles to the nearest
+  `ScrollArea`, which clamps to the content. The twelve `Scrollable`
+  panels are `ScrollArea`s and `systems::scroll::handle_scroll` is gone.
+  - Bevy's step is one global (`MouseScrollPixelsPerLine`, set to the old
+    60 px), so the deck picker, saved decks and deck import lists, which
+    stepped 22-28 px, now move two or three rows a detent.
+  - ⚠ A scroll panel must stay pickable (its rows may be
+    `Pickable::IGNORE`). And a test world that never registered `Window`
+    bubbles nothing: picking's traversal reads `Option<&Window>`.
+
 ## Take-backs against bots (2026-10-01) — shipped
 
 TODO "Engine — Rollback / Undo system", step 1. Read off layout-harness
@@ -844,7 +881,8 @@ Read off layout-harness screenshots of every combat and targeting state
     pips too (`ChooseOption` ballots — "Pay {2}" for ward —, the X
     picker's prompt, both mode pickers), through `mana_text::spawn_text`:
     plain text as before, wrapping mana text when there is a symbol.
-    ⏳ A target prompt's description reaches the hint chip as text.
+    ✅ A target prompt's description reaches the hint chip as pips too
+    (2026-10-12, Bevy 0.20's inline pips above).
 
 ## Paper-cut sweep (2026-09-12) — shipped, with residuals
 

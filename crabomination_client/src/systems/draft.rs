@@ -808,10 +808,10 @@ fn spawn_drafting_screen(
             spawn_draft_matters_bar(root, ui_fonts, session);
 
             // ── Body: scrollable, fills remaining vertical space ──
-            // No `Pickable::IGNORE` here — the scroll-wheel handler
-            // needs to find this node by cursor position. Children
-            // (cards, tab buttons) still receive clicks via Bevy's
-            // standard topmost-pick UI bubbling.
+            // No `Pickable::IGNORE` here — the wheel reaches its
+            // `ScrollArea` through picking, so this node has to be
+            // pickable. Children (cards, tab buttons) still receive
+            // clicks via Bevy's standard topmost-pick UI bubbling.
             root.spawn((
                 Node {
                     flex_grow: 1.0,
@@ -819,7 +819,7 @@ fn spawn_drafting_screen(
                     overflow: Overflow::scroll_y(),
                     ..default()
                 },
-                crate::systems::scroll::Scrollable::default(),
+                bevy::ui_widgets::ScrollArea,
             ))
             .with_children(|body| {
                 match session.current_tab {
@@ -1602,7 +1602,7 @@ fn spawn_deckbuilding_screen(
                         ..default()
                     },
                     BackgroundColor(theme::PANEL_BG_RAISED),
-                    crate::systems::scroll::Scrollable::default(),
+                    bevy::ui_widgets::ScrollArea,
                 ))
                 .with_children(|main| {
                     main.spawn((
@@ -1679,7 +1679,7 @@ fn spawn_deckbuilding_screen(
                             ..default()
                         },
                         BackgroundColor(theme::PANEL_BG_RAISED),
-                        crate::systems::scroll::Scrollable::default(),
+                        bevy::ui_widgets::ScrollArea,
                     ))
                     .with_children(|sb| {
                         sb.spawn((

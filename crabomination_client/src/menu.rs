@@ -1039,7 +1039,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ..default()
             },
             BackgroundColor(theme::OVERLAY_BG),
-            crate::systems::scroll::Scrollable::default(),
+            bevy::ui_widgets::ScrollArea,
             MenuRoot,
         ))
         .with_children(|root| {

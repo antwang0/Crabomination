@@ -8,12 +8,12 @@ pub fn update_hint(
     legal_targets: Res<crate::game::LegalTargets>,
     blocking: Res<BlockingState>,
     time: Res<Time>,
-    mut q: Query<(&mut Text, &mut TextColor, &mut TextFont), With<HintText>>,
+    mut q: Query<&mut crate::mana_text::ManaText, With<HintText>>,
 ) {
-    let Ok((mut t, mut color, mut font)) = q.single_mut() else { return };
+    let Ok(mut t) = q.single_mut() else { return };
     let Some(cv) = &view.0 else { return };
     if cv.game_over.is_some() {
-        apply_hint(&mut t, &mut color, &mut font, String::new(), theme::ACCENT_GOLD, 13.0);
+        apply_hint(&mut t, String::new(), theme::ACCENT_GOLD, 13.0);
         return;
     }
     if targeting.active {
@@ -52,7 +52,7 @@ pub fn update_hint(
                 13.0_f32,
             )
         };
-        apply_hint(&mut t, &mut color, &mut font, msg, hint_color, hint_size);
+        apply_hint(&mut t, msg, hint_color, hint_size);
         return;
     }
     if !cv.stack.is_empty() {
@@ -116,7 +116,7 @@ pub fn update_hint(
                 13.0_f32,
             )
         };
-        apply_hint(&mut t, &mut color, &mut font, style_text, style_color, style_size);
+        apply_hint(&mut t, style_text, style_color, style_size);
         return;
     }
     let your_seat = cv.your_seat;
@@ -130,7 +130,7 @@ pub fn update_hint(
         } else {
             "Click / Enter on a creature to block with it. Tab,← → select. P skip.".to_string()
         };
-        apply_hint(&mut t, &mut color, &mut font, msg, theme::ACCENT_GOLD, 13.0);
+        apply_hint(&mut t, msg, theme::ACCENT_GOLD, 13.0);
         return;
     }
     // Master Warcraft — someone took over this turn's declarations. Say who,
@@ -157,7 +157,7 @@ pub fn update_hint(
         } else {
             format!("{} chooses this turn's {what}.", player_name(cv, chooser))
         };
-        apply_hint(&mut t, &mut color, &mut font, msg, theme::ACCENT_GOLD, 13.0);
+        apply_hint(&mut t, msg, theme::ACCENT_GOLD, 13.0);
         return;
     }
     // Whose *move* it is is priority, not whose turn it is. Keying this on
@@ -196,38 +196,26 @@ pub fn update_hint(
             format!("{} is thinking{}", player_name(cv, cv.priority), dots)
         }
     };
-    apply_hint(&mut t, &mut color, &mut font, body, theme::ACCENT_GOLD, 13.0);
+    apply_hint(&mut t, body, theme::ACCENT_GOLD, 13.0);
 }
 
 /// Apply `(text, colour, size)` to the hint chip, skipping the write
 /// when the field already matches. Avoids spurious change-detection
 /// fanout from per-frame writes (this system runs every frame).
 ///
-/// Takes the `Mut`s themselves: coercing a `Mut<Text>` to `&mut Text` is
-/// a `DerefMut`, which marks the component changed before any comparison
-/// here could skip the write.
-fn apply_hint(
-    text: &mut Mut<Text>,
-    color: &mut Mut<TextColor>,
-    font: &mut Mut<TextFont>,
-    new_text: String,
-    new_color: Color,
-    new_size: f32,
-) {
-    if text.0 != new_text {
-        text.0 = new_text;
+/// Takes the `Mut` itself: coercing a `Mut<ManaText>` to `&mut ManaText`
+/// is a `DerefMut`, which marks the component changed before any
+/// comparison here could skip the write. The chip is mana text so a target
+/// prompt's cost ("Pay {2}") draws as pips.
+fn apply_hint(text: &mut Mut<crate::mana_text::ManaText>, new_text: String, new_color: Color, new_size: f32) {
+    if text.text() != new_text {
+        text.set(&new_text);
     }
-    if color.0 != new_color {
-        color.0 = new_color;
+    if text.color != new_color {
+        text.color = new_color;
     }
-    // `TextFont::font_size` is a `FontSize` enum in Bevy 0.19; the UI sets
-    // sizes in logical pixels, so compare/normalize on the `Px` value.
-    let cur_px = match font.font_size {
-        FontSize::Px(v) => v,
-        _ => f32::INFINITY,
-    };
-    if (cur_px - new_size).abs() > f32::EPSILON {
-        font.font_size = FontSize::Px(new_size);
+    if text.size != new_size {
+        text.size = new_size;
     }
 }
 
@@ -236,12 +224,12 @@ fn apply_hint(
 /// path in `update_hint` (game-over, targeting, stack, blocking, etc.)
 /// is covered without per-branch ceremony.
 pub fn sync_hint_chip_visibility(
-    text_q: Query<&Text, With<HintText>>,
+    text_q: Query<&crate::mana_text::ManaText, With<HintText>>,
     mut chip_q: Query<&mut Node, With<HintChip>>,
 ) {
     let Ok(text) = text_q.single() else { return };
     let Ok(mut chip) = chip_q.single_mut() else { return };
-    let target = if text.0.is_empty() { Display::None } else { Display::Flex };
+    let target = if text.text().is_empty() { Display::None } else { Display::Flex };
     if chip.display != target {
         chip.display = target;
     }

@@ -1565,7 +1565,7 @@ pub fn graveyard_browser(
                     ..default()
                 },
                 BackgroundColor(theme::PANEL_BG),
-                crate::systems::scroll::Scrollable::default(),
+                bevy::ui_widgets::ScrollArea,
                 crate::systems::ui_card_hover::PreviewAnchor,
             ))
             .id();
@@ -1875,7 +1875,7 @@ pub fn exile_browser(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
-            crate::systems::scroll::Scrollable::default(),
+            bevy::ui_widgets::ScrollArea,
             crate::systems::ui_card_hover::PreviewAnchor,
         ))
         .id();
