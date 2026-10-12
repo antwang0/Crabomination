@@ -2082,7 +2082,10 @@ fn every_graveyard_leave_trigger_fires_once_a_batch() {
 /// to exactly the printed amount, and batching it would need a count of
 /// the creatures attacking *you* — which at N > 2 is not the same as the
 /// creatures attacking, and no `SelectionRequirement` draws that line.
-const ATTACK_BATCH_SIGNED_OFF: &[&str] = &["Sabotage Strategist", "Orim's Prayer"];
+/// **Basri Ket**'s −2 ("create that many 1/1 Soldiers tapped and attacking")
+/// is the same arithmetic: one token per nontoken attacker is the printed
+/// count, and each token attacks what its attacker's player is defending.
+const ATTACK_BATCH_SIGNED_OFF: &[&str] = &["Sabotage Strategist", "Orim's Prayer", "Basri Ket"];
 
 /// **A card that prints "whenever one or more … attack" fires once per
 /// declaration, not once per attacker.**

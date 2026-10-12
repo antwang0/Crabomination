@@ -1816,14 +1816,17 @@ pub fn the_ghoul_gunslinger() -> CardDefinition {
                 what: Selector::TriggerSource,
                 filter: zombie_or_mutant.and(R::Not(Box::new(R::IsToken))),
             }),
-            effect: Effect::Seq(vec![
-                Effect::AddRadCounters { who: target_filtered(R::Player), amount: Value::Const(2) },
-                Effect::If {
-                    cond: Predicate::SamePlayer(PlayerRef::Target(0), PlayerRef::You),
-                    then: Box::new(make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token())),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
+            effect: Effect::TargetPlayerThen {
+                filter: R::Player,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddRadCounters { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+                    Effect::If {
+                        cond: Predicate::SamePlayer(PlayerRef::Target(0), PlayerRef::You),
+                        then: Box::new(make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token())),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
         }],
         ..legend(
             "The Ghoul, Gunslinger",
