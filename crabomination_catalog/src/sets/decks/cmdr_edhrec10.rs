@@ -2812,3 +2812,270 @@ pub fn ayara_widow_of_the_realm() -> CardDefinition {
         ..legend("Ayara, Widow of the Realm", cost(&[generic(1), b(), b()]), vec![CreatureType::Elf, CreatureType::Noble], 3, 3)
     }
 }
+
+// ── Two-card gaps in the 601-1000 claim ─────────────────────────────────────
+
+/// Pir, Imaginative Rascal — {2}{G} 1/1 legendary Human. Partner with Toothy,
+/// Imaginary Friend. If one or more counters would be put on a permanent your
+/// team controls, that many plus one are put on it instead (creatures and
+/// artifacts only — INCOMPLETE_CARDS).
+pub fn pir_imaginative_rascal() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::PartnerWith("Toothy, Imaginary Friend".into())],
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search("Toothy, Imaginary Friend")],
+        static_abilities: vec![static_ab(
+            "If one or more counters would be put on a permanent your team controls, that many plus one of each of \
+             those kinds of counters are put on that permanent instead.",
+            StaticEffect::ExtraCounterAllKinds,
+        )],
+        ..legend("Pir, Imaginative Rascal", cost(&[generic(2), g()]), vec![CreatureType::Human], 1, 1)
+    }
+}
+
+/// Toothy, Imaginary Friend — {3}{U} 1/1 legendary Illusion. Partner with
+/// Pir. Whenever you draw a card, put a +1/+1 counter on Toothy. When Toothy
+/// leaves the battlefield, draw a card for each +1/+1 counter on it.
+pub fn toothy_imaginary_friend() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::PartnerWith("Pir, Imaginative Rascal".into())],
+        triggered_abilities: vec![
+            crate::effect::shortcut::partner_with_search("Pir, Imaginative Rascal"),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+                },
+            },
+        ],
+        ..legend("Toothy, Imaginary Friend", cost(&[generic(3), u()]), vec![CreatureType::Illusion], 1, 1)
+    }
+}
+
+/// Twinflame Travelers — {2}{U}{R} 3/3 flying Elemental Sorcerer. Triggered
+/// abilities of your other Elementals trigger an additional time.
+pub fn twinflame_travelers() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![static_ab(
+            "If a triggered ability of another Elemental you control triggers, it triggers an additional time.",
+            StaticEffect::DoubleControllerTriggersOfType { types: vec![CreatureType::Elemental], exclude_source: true },
+        )],
+        ..creature(
+            "Twinflame Travelers",
+            cost(&[generic(2), u(), r()]),
+            vec![CreatureType::Elemental, CreatureType::Sorcerer],
+            3,
+            3,
+        )
+    }
+}
+
+/// Sunderflock — {7}{U}{U} 5/5 flying Elemental; costs {X} less, X the
+/// greatest mana value among your Elementals. When it enters, if you cast it,
+/// return all non-Elemental creatures to their owners' hands.
+pub fn sunderflock() -> CardDefinition {
+    let elemental = || R::HasCreatureType(CreatureType::Elemental);
+    CardDefinition {
+        self_cost_reduction_per: Some((
+            Value::ManaValueOf(Box::new(Selector::GreatestManaValueControlledMatching {
+                who: PlayerRef::You,
+                filter: elemental(),
+            })),
+            1,
+        )),
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SourceWasCast,
+            then: Box::new(Effect::Move {
+                what: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(elemental())))),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature("Sunderflock", cost(&[generic(7), u(), u()]), vec![CreatureType::Elemental], 5, 5)
+    }
+}
+
+/// Edge of the Divinity — {W/B} Aura. Enchanted creature gets +1/+2 while
+/// white and +2/+1 while black.
+pub fn edge_of_the_divinity() -> CardDefinition {
+    let tint = |c: Color, p: i32, t: i32| crate::card::ConditionalEquipBonus {
+        host_filter: R::HasColor(c),
+        power: p,
+        toughness: t,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Edge of the Divinity",
+        cost: cost(&[hybrid(Color::White, Color::Black)]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+        equipped_bonus: Some(EquipBonus {
+            conditional: vec![tint(Color::White, 1, 2), tint(Color::Black, 2, 1)],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Dark Dabbling — {2}{B} instant: regenerate target creature, draw a card.
+/// Spell mastery — also regenerate each other creature you control.
+pub fn dark_dabbling() -> CardDefinition {
+    spell(
+        "Dark Dabbling",
+        cost(&[generic(2), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Regenerate { what: target_filtered(R::Creature) },
+            draw(1),
+            Effect::If {
+                cond: crate::effect::shortcut::spell_mastery_gate(),
+                then: Box::new(Effect::Regenerate {
+                    what: Selector::EachPermanentExceptTargets(yours()),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Shay Cormac — {W}{B} 1/1 legendary Human Knight Rogue. {1}: permanents
+/// your opponents control lose hexproof, indestructible and shroud until end
+/// of turn (protection and ward stay — INCOMPLETE_CARDS). An opponent's
+/// creature you target gets a bounty counter; a creature with a bounty
+/// counter dying puts two +1/+1 counters on Shay.
+pub fn shay_cormac() -> CardDefinition {
+    let strip = |keyword: Keyword| Effect::LoseKeyword {
+        what: Selector::EachPermanent(R::ControlledByOpponent),
+        keyword,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                strip(Keyword::Hexproof),
+                strip(Keyword::Indestructible),
+                strip(Keyword::Shroud),
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::OpponentCreatureTargetedByYou),
+                effect: Effect::AddCounter { what: Selector::TriggerSource, kind: CounterType::Bounty, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::WithCounter(CounterType::Bounty),
+                }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        ..legend(
+            "Shay Cormac",
+            cost(&[w(), b()]),
+            vec![CreatureType::Human, CreatureType::Knight, CreatureType::Rogue],
+            1,
+            1,
+        )
+    }
+}
+
+/// Termination Facilitator — {1}{B} 1/3 Human Assassin. {T}: bounty counter
+/// on target creature or planeswalker (sorcery speed). Whenever an opponent's
+/// creature or planeswalker with a bounty counter is dealt damage, destroy it.
+pub fn termination_facilitator() -> CardDefinition {
+    let marked = R::WithCounter(CounterType::Bounty)
+        .and(R::ControlledByOpponent)
+        .and(R::Creature.or(R::Planeswalker));
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.or(R::Planeswalker)),
+                kind: CounterType::Bounty,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: marked }),
+            effect: Effect::Destroy { what: Selector::TriggerSource },
+        }],
+        ..creature(
+            "Termination Facilitator",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Human, CreatureType::Assassin],
+            1,
+            3,
+        )
+    }
+}
+
+/// Scrapyard Recombiner — {3} 0/0 Construct artifact creature, modular 2.
+/// {T}, sacrifice an artifact: search your library for a Construct card,
+/// reveal it, put it into your hand.
+pub fn scrapyard_recombiner() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Modular(2)],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Artifact, 1)),
+            sac_other_may_be_source: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Construct),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..creature("Scrapyard Recombiner", cost(&[generic(3)]), vec![CreatureType::Construct], 0, 0)
+    }
+}
+
+/// Pia's Revolution — {2}{R} enchantment. Whenever a nontoken artifact goes to
+/// your graveyard from the battlefield, return it to your hand unless target
+/// opponent has this enchantment deal 3 damage to them.
+pub fn pias_revolution() -> CardDefinition {
+    CardDefinition {
+        name: "Pia's Revolution",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Artifact.and(R::Not(Box::new(R::IsToken))),
+            }),
+            effect: Effect::AnyPlayerMayAccept {
+                who: PlayerRef::Target(0),
+                prompt: "Take 3 damage from Pia's Revolution to keep the artifact out of its owner's hand?".into(),
+                accepted: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::AcceptingPlayer),
+                    amount: Value::Const(3),
+                }),
+                otherwise: Box::new(Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}

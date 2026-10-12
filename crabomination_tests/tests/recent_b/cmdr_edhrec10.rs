@@ -1541,3 +1541,132 @@ fn ayara_drains_then_transforms() {
     assert!(g.battlefield_find(ayara).unwrap().transformed);
     assert_eq!(g.computed_permanent(ayara).unwrap().power, 4);
 }
+
+// ── Two-card gaps in the 601-1000 claim ─────────────────────────────────────
+
+/// Pir + Toothy: each draw puts 1 + 1 counters on Toothy (CR 614.16); Toothy
+/// leaving draws one per counter (last known information, CR 608.2h).
+#[test]
+fn pir_and_toothy_grow_and_cash_in() {
+    let mut g = pod(2);
+    library(&mut g, 0, 10);
+    ready(&mut g, 0, catalog::pir_imaginative_rascal());
+    let toothy = ready(&mut g, 0, catalog::toothy_imaginary_friend());
+    let d = g.add_card_to_hand(0, catalog::divination());
+    cast(&mut g, d, &[]).expect("draw two");
+    assert_eq!(g.battlefield_find(toothy).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+    let hand = g.players[0].hand.len();
+    let bounce = g.add_card_to_hand(0, catalog::unsummon());
+    cast(&mut g, bounce, &[perm(toothy)]).expect("unsummon");
+    assert_eq!(g.players[0].hand.len(), hand + 1 + 4, "Toothy back plus four draws");
+}
+
+/// Sunderflock costs {4} less beside Twinflame Travelers and bounces only
+/// non-Elementals; Twinflame doubles its enters trigger (CR 603.2d).
+#[test]
+fn sunderflock_with_twinflame_travelers() {
+    let mut g = pod(2);
+    let tt = ready(&mut g, 0, catalog::twinflame_travelers());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::sunderflock());
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{7}{U}{U} less 4");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+    assert!(g.battlefield_find(tt).is_some() && g.battlefield_find(s).is_some());
+}
+
+/// Edge of the Divinity pumps a white creature +1/+2 and leaves a green one.
+#[test]
+fn edge_of_the_divinity_reads_the_hosts_color() {
+    let mut g = pod(2);
+    let lions = ready(&mut g, 0, catalog::savannah_lions());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let e1 = g.add_card_to_hand(0, catalog::edge_of_the_divinity());
+    cast(&mut g, e1, &[perm(lions)]).expect("on the Lions");
+    let e2 = g.add_card_to_hand(0, catalog::edge_of_the_divinity());
+    cast(&mut g, e2, &[perm(bears)]).expect("on the Bears");
+    let l = g.computed_permanent(lions).unwrap();
+    assert_eq!((l.power, l.toughness), (3, 3));
+    let b = g.computed_permanent(bears).unwrap();
+    assert_eq!((b.power, b.toughness), (2, 2));
+}
+
+/// Dark Dabbling shields the target, draws, and with spell mastery shields
+/// the rest of your creatures (CR 701.19).
+#[test]
+fn dark_dabbling_regenerates_the_team_with_mastery() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    g.add_card_to_graveyard(0, catalog::divination());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::savannah_lions());
+    let foe = ready(&mut g, 1, catalog::hill_giant());
+    let d = g.add_card_to_hand(0, catalog::dark_dabbling());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, d, &[perm(a)]).expect("cast");
+    assert_eq!(g.players[0].hand.len(), hand);
+    for id in [a, b] {
+        assert_eq!(g.battlefield_find(id).unwrap().regeneration_shields, 1);
+    }
+    assert_eq!(g.battlefield_find(foe).unwrap().regeneration_shields, 0);
+}
+
+/// Shay Cormac: a targeted opposing creature gets a bounty counter, and its
+/// death grows Shay by two.
+#[test]
+fn shay_cormac_collects_bounties() {
+    let mut g = pod(2);
+    let shay = ready(&mut g, 0, catalog::shay_cormac());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[perm(foe)]).expect("bolt");
+    assert!(g.battlefield_find(foe).is_none());
+    assert_eq!(g.battlefield_find(shay).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Termination Facilitator: a bountied opposing creature dealt any damage is
+/// destroyed.
+#[test]
+fn termination_facilitator_finishes_marked_targets() {
+    let mut g = pod(2);
+    let tf = ready(&mut g, 0, catalog::termination_facilitator());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    activate(&mut g, tf, 0, Some(perm(wurm))).expect("mark");
+    assert_eq!(g.battlefield_find(wurm).unwrap().counter_count(CounterType::Bounty), 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[perm(wurm)]).expect("bolt");
+    assert!(g.battlefield_find(wurm).is_none(), "3 damage to a 6/4 still kills it");
+}
+
+/// Scrapyard Recombiner enters with two counters (CR 702.43a) and can feed
+/// itself to fetch a Construct.
+#[test]
+fn scrapyard_recombiner_fetches_a_construct() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::scrapyard_recombiner());
+    let s = g.add_card_to_hand(0, catalog::scrapyard_recombiner());
+    cast(&mut g, s, &[]).expect("cast");
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    g.clear_sickness(s);
+    activate(&mut g, s, 0, None).expect("sacrifice itself");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Scrapyard Recombiner"));
+}
+
+/// Pia's Revolution: a destroyed nontoken artifact comes back to hand unless
+/// the opponent takes 3.
+#[test]
+fn pias_revolution_punishes_artifact_removal() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::pias_revolution());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let life = g.players[1].life;
+    let sh = g.add_card_to_hand(0, catalog::shatter());
+    cast(&mut g, sh, &[perm(ring)]).expect("shatter");
+    let back = g.players[0].hand.iter().any(|c| c.id == ring);
+    assert!(back != (g.players[1].life == life - 3), "exactly one: hand or 3 damage");
+}

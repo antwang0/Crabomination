@@ -13669,6 +13669,16 @@ static DECKS: &[Factory] = &[
     super::decks::swashbuckler_extraordinaire,
     super::decks::toggo_goblin_weaponsmith,
     super::decks::ayara_widow_of_the_realm,
+    super::decks::pir_imaginative_rascal,
+    super::decks::toothy_imaginary_friend,
+    super::decks::twinflame_travelers,
+    super::decks::sunderflock,
+    super::decks::edge_of_the_divinity,
+    super::decks::dark_dabbling,
+    super::decks::shay_cormac,
+    super::decks::termination_facilitator,
+    super::decks::scrapyard_recombiner,
+    super::decks::pias_revolution,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
