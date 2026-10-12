@@ -88,13 +88,11 @@ fn net_for(slot: u8) -> Option<Arc<dyn NetEvaluator>> {
 }
 
 /// The slot's net for `state`, or `None` when the slot is empty *or* the
-/// state has other than two seats. The encoder is two-seat (it reads the
-/// opponent as `1 - seat`), so a Commander pod has no encoding: seat 2 would
-/// underflow, and seat 1 would see seat 0 as its only opponent. Every caller
+/// state is not [`super::encode::encodable`] (a Commander pod). Every caller
 /// already treats `None` as "use the heuristic", so a pod bot built on a net
 /// profile plays on the material leaf instead of crashing.
 fn net_for_state(state: &GameState, slot: u8) -> Option<Arc<dyn NetEvaluator>> {
-    if state.players.len() != 2 {
+    if !super::encode::encodable(state) {
         return None;
     }
     net_for(slot)

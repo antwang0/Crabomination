@@ -256,7 +256,7 @@ pub fn maybe_full(
     chosen: usize,
     prov: Provenance<'_>,
 ) {
-    if !enabled() || state.game_over.is_some() || candidates.len() < 2 {
+    if !recordable(state) || candidates.len() < 2 {
         return;
     }
     let successors: Vec<Option<GameState>> = candidates
@@ -285,10 +285,18 @@ pub fn maybe_states(
     chosen: usize,
     prov: Provenance<'_>,
 ) {
-    if !enabled() || state.game_over.is_some() || successors.len() < 2 {
+    if !recordable(state) || successors.len() < 2 {
         return;
     }
     record(state, seat, successors, chosen, prov, true);
+}
+
+/// Capture is on and `state` is a live two-seat game. A pod has no
+/// encoding (see [`super::encode::encodable`]); recording one underflowed
+/// on seat 2, and because the flag is process-global, every pod test that
+/// ran beside a capture test under `cargo test` died that way.
+fn recordable(state: &GameState) -> bool {
+    enabled() && state.game_over.is_none() && super::encode::encodable(state)
 }
 
 /// The shared tail: encode the surviving successors, remap `chosen` and

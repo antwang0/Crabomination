@@ -11,7 +11,6 @@ use crabomination::catalog;
 use crabomination::game::actions::{FORCE_GENERIC_ACTIVATION, PLAIN_LAND_TAPS};
 use crabomination::game::*;
 use crabomination::mana::Color;
-use std::sync::atomic::Ordering::Relaxed;
 
 /// Board builder: the state, the land to tap and the ability index.
 type Setup = fn() -> (GameState, CardId, usize);
@@ -34,13 +33,13 @@ fn both_ways(name: &str, accept: bool, setup: Setup) {
     let (mut fast, id, idx) = setup();
     let (mut slow, id2, idx2) = setup();
     assert_eq!((id, idx), (id2, idx2), "{name}: setup is not deterministic");
-    FORCE_GENERIC_ACTIVATION.store(false, Relaxed);
-    let before = PLAIN_LAND_TAPS.load(Relaxed);
+    FORCE_GENERIC_ACTIVATION.set(false);
+    let before = PLAIN_LAND_TAPS.get();
     let fast_events = tap(&mut fast, id, idx);
-    let taken = PLAIN_LAND_TAPS.load(Relaxed) - before;
-    FORCE_GENERIC_ACTIVATION.store(true, Relaxed);
+    let taken = PLAIN_LAND_TAPS.get() - before;
+    FORCE_GENERIC_ACTIVATION.set(true);
     let slow_events = tap(&mut slow, id, idx);
-    FORCE_GENERIC_ACTIVATION.store(false, Relaxed);
+    FORCE_GENERIC_ACTIVATION.set(false);
     assert_eq!(taken, u64::from(accept), "{name}: fast path taken {taken} times");
     assert_eq!(fast_events, slow_events, "{name}: events differ");
     // Neither path touches the CR 732.3 watch: a mana ability is part of
@@ -259,13 +258,13 @@ fn bot_game_identical_both_ways() {
     .iter()
     .flat_map(|&(f, n)| std::iter::repeat_n(f, n))
     .collect();
-    FORCE_GENERIC_ACTIVATION.store(false, Relaxed);
-    let before = PLAIN_LAND_TAPS.load(Relaxed);
+    FORCE_GENERIC_ACTIVATION.set(false);
+    let before = PLAIN_LAND_TAPS.get();
     let fast = trace_game(&red, &green, 0xA11CE, 4_000);
-    assert!(PLAIN_LAND_TAPS.load(Relaxed) > before, "no land tap took the fast path");
-    FORCE_GENERIC_ACTIVATION.store(true, Relaxed);
+    assert!(PLAIN_LAND_TAPS.get() > before, "no land tap took the fast path");
+    FORCE_GENERIC_ACTIVATION.set(true);
     let slow = trace_game(&red, &green, 0xA11CE, 4_000);
-    FORCE_GENERIC_ACTIVATION.store(false, Relaxed);
+    FORCE_GENERIC_ACTIVATION.set(false);
     let at = fast.lines.iter().zip(&slow.lines).position(|(x, y)| x != y);
     assert!(
         at.is_none() && fast.lines.len() == slow.lines.len(),

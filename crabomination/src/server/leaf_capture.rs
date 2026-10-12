@@ -53,9 +53,10 @@ pub fn set_enabled(on: bool) {
 /// Hook called at the search's leaf evaluations with the *simulated*
 /// state and the heuristic's score for it. Decided sims are skipped: the
 /// search ranks those by the ±100 000 result term, not by evaluation, so
-/// they are not part of the question.
+/// they are not part of the question. So are pods, which have no encoding
+/// (see [`super::encode::encodable`]).
 pub fn maybe(g: &GameState, seat: usize, heur: i32) {
-    if !ENABLED.load(Ordering::Relaxed) || g.game_over.is_some() {
+    if !ENABLED.load(Ordering::Relaxed) || g.game_over.is_some() || !super::encode::encodable(g) {
         return;
     }
     BUF.with(|b| {

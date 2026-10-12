@@ -1350,17 +1350,20 @@ fn available_mana_bits(def: &crate::card::CardDefinition) -> u64 {
         | if best == 1 { mana_summary::AM_BEST_ONE } else { 0 }
 }
 
-/// Test switch: `true` sends every activation down the generic path, so a
-/// test can play the same action both ways and compare the states. One
-/// relaxed load per activation; never set outside a test.
-pub static FORCE_GENERIC_ACTIVATION: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
-
-/// Debug-only tally of activations the land-tap fast path took, so the
-/// equivalence test can tell an accepted board from a declined one. Not
-/// compiled into an optimized build.
+// Per-thread, because the test harness runs tests concurrently on their own
+// threads: as process globals, a land tapped by any test in between moved
+// the tally, and the switch put every test running beside the equivalence
+// test on the generic path. Not compiled into an optimized build.
 #[cfg(debug_assertions)]
-pub static PLAIN_LAND_TAPS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+thread_local! {
+    /// Test switch: `true` sends this thread's activations down the generic
+    /// path, so a test can play the same action both ways and compare the
+    /// states. Never set outside a test.
+    pub static FORCE_GENERIC_ACTIVATION: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Tally of this thread's activations the land-tap fast path took, so
+    /// the equivalence test can tell an accepted board from a declined one.
+    pub static PLAIN_LAND_TAPS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
 
 /// A bare `{T}: Add …` — the tap is the whole cost line, the body is one
 /// `AddMana` for the activator, and every other field sits at its default,
@@ -20768,9 +20771,11 @@ impl GameState {
         x_value: Option<u32>,
         events: &mut Vec<GameEvent>,
     ) -> Option<Result<(), GameError>> {
-        if FORCE_GENERIC_ACTIVATION.load(std::sync::atomic::Ordering::Relaxed)
-            || self.limited_range()
-        {
+        #[cfg(debug_assertions)]
+        if FORCE_GENERIC_ACTIVATION.get() {
+            return None;
+        }
+        if self.limited_range() {
             return None;
         }
         let src = self.battlefield.find_by_id(card_id)?;
@@ -20797,7 +20802,7 @@ impl GameState {
         }
         let def = std::sync::Arc::clone(&src.definition);
         #[cfg(debug_assertions)]
-        PLAIN_LAND_TAPS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        PLAIN_LAND_TAPS.set(PLAIN_LAND_TAPS.get() + 1);
         // The generic path consumes any pending cost picks up front, so a
         // stale one cannot leak onto a later activation.
         let _ = self.pending_ability_sac_other.take();

@@ -221,8 +221,17 @@ fn ablated(bit: u16) -> bool {
     ABLATE.load(std::sync::atomic::Ordering::Relaxed) & bit != 0
 }
 
+/// Whether [`encode_state`] can encode `g` at all. The encoder is two-seat
+/// (it reads the opponent as `1 - seat`), so a Commander pod has no
+/// encoding: seat 2 underflows, and seat 1 would see seat 0 as its only
+/// opponent. Every caller outside the two-player bot stack checks this
+/// first — the net reads and both capture hooks.
+pub fn encodable(g: &GameState) -> bool {
+    g.players.len() == 2
+}
+
 /// Encode the position from `seat`'s perspective. Two-player only, like
-/// the rest of the bot stack.
+/// the rest of the bot stack — see [`encodable`].
 pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // One frozen-layer scope for the whole encode (modern precondition 2):
     // the battlefield reads below take layer-resolved truth per permanent
