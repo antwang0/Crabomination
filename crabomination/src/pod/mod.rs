@@ -2892,6 +2892,258 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TOVOLAR_COMMANDERS,
             main: decks::TOVOLAR_MAIN,
         },
+        // Seat 407: Xenagos, God of Revels's EDHREC average deck. `--pod-decks 407`.
+        PodDeck {
+            name: "Xenagos, God of Revels (RG)",
+            commanders: decks::XENAGOS_COMMANDERS,
+            main: decks::XENAGOS_MAIN,
+        },
+        // Seat 408: Kess, Dissident Mage's EDHREC average deck. `--pod-decks 408`.
+        PodDeck {
+            name: "Kess, Dissident Mage (UBR)",
+            commanders: decks::KESS_COMMANDERS,
+            main: decks::KESS_MAIN,
+        },
+        // Seat 409: Vnwxt, Verbose Host's EDHREC average deck. `--pod-decks 409`.
+        PodDeck {
+            name: "Vnwxt, Verbose Host (U)",
+            commanders: decks::VNWXT_COMMANDERS,
+            main: decks::VNWXT_MAIN,
+        },
+        // Seat 410: Szarel, Genesis Shepherd's EDHREC average deck. `--pod-decks 410`.
+        PodDeck {
+            name: "Szarel, Genesis Shepherd (BRG)",
+            commanders: decks::SZAREL_COMMANDERS,
+            main: decks::SZAREL_MAIN,
+        },
+        // Seat 411: Winter, Misanthropic Guide's EDHREC average deck. `--pod-decks 411`.
+        PodDeck {
+            name: "Winter, Misanthropic Guide (BRG)",
+            commanders: decks::WINTER_411_COMMANDERS,
+            main: decks::WINTER_411_MAIN,
+        },
+        // Seat 412: Niv-Mizzet, Visionary's EDHREC average deck. `--pod-decks 412`.
+        PodDeck {
+            name: "Niv-Mizzet, Visionary (UR)",
+            commanders: decks::NIV_MIZZET_COMMANDERS,
+            main: decks::NIV_MIZZET_MAIN,
+        },
+        // Seat 413: Bristly Bill, Spine Sower's EDHREC average deck. `--pod-decks 413`.
+        PodDeck {
+            name: "Bristly Bill, Spine Sower (G)",
+            commanders: decks::BRISTLY_BILL_COMMANDERS,
+            main: decks::BRISTLY_BILL_MAIN,
+        },
+        // Seat 414: Talion, the Kindly Lord's EDHREC average deck. `--pod-decks 414`.
+        PodDeck {
+            name: "Talion, the Kindly Lord (UB)",
+            commanders: decks::TALION_COMMANDERS,
+            main: decks::TALION_MAIN,
+        },
+        // Seat 415: Tifa, Martial Artist's EDHREC average deck. `--pod-decks 415`.
+        PodDeck {
+            name: "Tifa, Martial Artist (WRG)",
+            commanders: decks::TIFA_415_COMMANDERS,
+            main: decks::TIFA_415_MAIN,
+        },
+        // Seat 416: Lathiel, the Bounteous Dawn's EDHREC average deck. `--pod-decks 416`.
+        PodDeck {
+            name: "Lathiel, the Bounteous Dawn (WG)",
+            commanders: decks::LATHIEL_COMMANDERS,
+            main: decks::LATHIEL_MAIN,
+        },
+        // Seat 417: Koma, Cosmos Serpent's EDHREC average deck. `--pod-decks 417`.
+        PodDeck {
+            name: "Koma, Cosmos Serpent (UG)",
+            commanders: decks::KOMA_COMMANDERS,
+            main: decks::KOMA_MAIN,
+        },
+        // Seat 418: Bilbo, Birthday Celebrant's EDHREC average deck. `--pod-decks 418`.
+        PodDeck {
+            name: "Bilbo, Birthday Celebrant (WBG)",
+            commanders: decks::BILBO_COMMANDERS,
+            main: decks::BILBO_MAIN,
+        },
+        // Seat 419: Bruvac the Grandiloquent's EDHREC average deck. `--pod-decks 419`.
+        PodDeck {
+            name: "Bruvac the Grandiloquent (U)",
+            commanders: decks::BRUVAC_THE_GRANDILOQUENT_COMMANDERS,
+            main: decks::BRUVAC_THE_GRANDILOQUENT_MAIN,
+        },
+        // Seat 420: Ayara, First of Locthwain's EDHREC average deck. `--pod-decks 420`.
+        PodDeck {
+            name: "Ayara, First of Locthwain (B)",
+            commanders: decks::AYARA_COMMANDERS,
+            main: decks::AYARA_MAIN,
+        },
+        // Seat 421: Zurgo, Thunder's Decree's EDHREC average deck. `--pod-decks 421`.
+        PodDeck {
+            name: "Zurgo, Thunder's Decree (WBR)",
+            commanders: decks::ZURGO_421_COMMANDERS,
+            main: decks::ZURGO_421_MAIN,
+        },
+        // Seat 422: Laughing Jasper Flint's EDHREC average deck. `--pod-decks 422`.
+        PodDeck {
+            name: "Laughing Jasper Flint (BR)",
+            commanders: decks::LAUGHING_JASPER_FLINT_COMMANDERS,
+            main: decks::LAUGHING_JASPER_FLINT_MAIN,
+        },
+        // Seat 423: Jenova, Ancient Calamity's EDHREC average deck. `--pod-decks 423`.
+        PodDeck {
+            name: "Jenova, Ancient Calamity (BG)",
+            commanders: decks::JENOVA_COMMANDERS,
+            main: decks::JENOVA_MAIN,
+        },
+        // Seat 424: The Lord of Pain's EDHREC average deck. `--pod-decks 424`.
+        PodDeck {
+            name: "The Lord of Pain (BR)",
+            commanders: decks::THE_LORD_OF_PAIN_COMMANDERS,
+            main: decks::THE_LORD_OF_PAIN_MAIN,
+        },
+        // Seat 425: Marisi, Breaker of the Coil's EDHREC average deck. `--pod-decks 425`.
+        PodDeck {
+            name: "Marisi, Breaker of the Coil (WRG)",
+            commanders: decks::MARISI_COMMANDERS,
+            main: decks::MARISI_MAIN,
+        },
+        // Seat 426: Elenda, the Dusk Rose's EDHREC average deck. `--pod-decks 426`.
+        PodDeck {
+            name: "Elenda, the Dusk Rose (WB)",
+            commanders: decks::ELENDA_COMMANDERS,
+            main: decks::ELENDA_MAIN,
+        },
+        // Seat 427: Emry, Lurker of the Loch's EDHREC average deck. `--pod-decks 427`.
+        PodDeck {
+            name: "Emry, Lurker of the Loch (U)",
+            commanders: decks::EMRY_COMMANDERS,
+            main: decks::EMRY_MAIN,
+        },
+        // Seat 428: Felothar, Dawn of the Abzan's EDHREC average deck. `--pod-decks 428`.
+        PodDeck {
+            name: "Felothar, Dawn of the Abzan (WBG)",
+            commanders: decks::FELOTHAR_428_COMMANDERS,
+            main: decks::FELOTHAR_428_MAIN,
+        },
+        // Seat 429: Sin, Spira's Punishment's EDHREC average deck. `--pod-decks 429`.
+        PodDeck {
+            name: "Sin, Spira's Punishment (UBG)",
+            commanders: decks::SIN_COMMANDERS,
+            main: decks::SIN_MAIN,
+        },
+        // Seat 430: Mr. Foxglove's EDHREC average deck. `--pod-decks 430`.
+        PodDeck {
+            name: "Mr. Foxglove (WUG)",
+            commanders: decks::MR_FOXGLOVE_COMMANDERS,
+            main: decks::MR_FOXGLOVE_MAIN,
+        },
+        // Seat 431: Tasigur, the Golden Fang's EDHREC average deck. `--pod-decks 431`.
+        PodDeck {
+            name: "Tasigur, the Golden Fang (UBG)",
+            commanders: decks::TASIGUR_COMMANDERS,
+            main: decks::TASIGUR_MAIN,
+        },
+        // Seat 432: Loot, the Pathfinder's EDHREC average deck. `--pod-decks 432`.
+        PodDeck {
+            name: "Loot, the Pathfinder (URG)",
+            commanders: decks::LOOT_COMMANDERS,
+            main: decks::LOOT_MAIN,
+        },
+        // Seat 433: Jinnie Fay, Jetmir's Second's EDHREC average deck. `--pod-decks 433`.
+        PodDeck {
+            name: "Jinnie Fay, Jetmir's Second (WRG)",
+            commanders: decks::JINNIE_FAY_COMMANDERS,
+            main: decks::JINNIE_FAY_MAIN,
+        },
+        // Seat 434: Loot, Exuberant Explorer's EDHREC average deck. `--pod-decks 434`.
+        PodDeck {
+            name: "Loot, Exuberant Explorer (G)",
+            commanders: decks::LOOT_434_COMMANDERS,
+            main: decks::LOOT_434_MAIN,
+        },
+        // Seat 435: Scion of the Ur-Dragon's EDHREC average deck. `--pod-decks 435`.
+        PodDeck {
+            name: "Scion of the Ur-Dragon (WUBRG)",
+            commanders: decks::SCION_OF_THE_UR_DRAGON_COMMANDERS,
+            main: decks::SCION_OF_THE_UR_DRAGON_MAIN,
+        },
+        // Seat 436: Rhys the Redeemed's EDHREC average deck. `--pod-decks 436`.
+        PodDeck {
+            name: "Rhys the Redeemed (WG)",
+            commanders: decks::RHYS_THE_REDEEMED_COMMANDERS,
+            main: decks::RHYS_THE_REDEEMED_MAIN,
+        },
+        // Seat 437: Jarad, Golgari Lich Lord's EDHREC average deck. `--pod-decks 437`.
+        PodDeck {
+            name: "Jarad, Golgari Lich Lord (BG)",
+            commanders: decks::JARAD_COMMANDERS,
+            main: decks::JARAD_MAIN,
+        },
+        // Seat 438: Alesha, Who Smiles at Death's EDHREC average deck. `--pod-decks 438`.
+        PodDeck {
+            name: "Alesha, Who Smiles at Death (WBR)",
+            commanders: decks::ALESHA_COMMANDERS,
+            main: decks::ALESHA_MAIN,
+        },
+        // Seat 439: Quandrix, the Proof's EDHREC average deck. `--pod-decks 439`.
+        PodDeck {
+            name: "Quandrix, the Proof (UG)",
+            commanders: decks::QUANDRIX_COMMANDERS,
+            main: decks::QUANDRIX_MAIN,
+        },
+        // Seat 440: Yuna, Hope of Spira's EDHREC average deck. `--pod-decks 440`.
+        PodDeck {
+            name: "Yuna, Hope of Spira (WG)",
+            commanders: decks::YUNA_440_COMMANDERS,
+            main: decks::YUNA_440_MAIN,
+        },
+        // Seat 441: Goreclaw, Terror of Qal Sisma's EDHREC average deck. `--pod-decks 441`.
+        PodDeck {
+            name: "Goreclaw, Terror of Qal Sisma (G)",
+            commanders: decks::GORECLAW_COMMANDERS,
+            main: decks::GORECLAW_MAIN,
+        },
+        // Seat 442: Garth One-Eye's EDHREC average deck. `--pod-decks 442`.
+        PodDeck {
+            name: "Garth One-Eye (WUBRG)",
+            commanders: decks::GARTH_ONE_EYE_COMMANDERS,
+            main: decks::GARTH_ONE_EYE_MAIN,
+        },
+        // Seat 443: Rat King, Verminister's EDHREC average deck. `--pod-decks 443`.
+        PodDeck {
+            name: "Rat King, Verminister (B)",
+            commanders: decks::RAT_KING_COMMANDERS,
+            main: decks::RAT_KING_MAIN,
+        },
+        // Seat 444: Liberty Prime, Recharged's EDHREC average deck. `--pod-decks 444`.
+        PodDeck {
+            name: "Liberty Prime, Recharged (WUR)",
+            commanders: decks::LIBERTY_PRIME_COMMANDERS,
+            main: decks::LIBERTY_PRIME_MAIN,
+        },
+        // Seat 445: Samut, the Driving Force's EDHREC average deck. `--pod-decks 445`.
+        PodDeck {
+            name: "Samut, the Driving Force (WRG)",
+            commanders: decks::SAMUT_COMMANDERS,
+            main: decks::SAMUT_MAIN,
+        },
+        // Seat 446: Black Waltz No. 3's EDHREC average deck. `--pod-decks 446`.
+        PodDeck {
+            name: "Black Waltz No. 3 (BR)",
+            commanders: decks::BLACK_WALTZ_NO_3_COMMANDERS,
+            main: decks::BLACK_WALTZ_NO_3_MAIN,
+        },
+        // Seat 447: Otharri, Suns' Glory's EDHREC average deck. `--pod-decks 447`.
+        PodDeck {
+            name: "Otharri, Suns' Glory (WR)",
+            commanders: decks::OTHARRI_COMMANDERS,
+            main: decks::OTHARRI_MAIN,
+        },
+        // Seat 448: Vito, Thorn of the Dusk Rose's EDHREC average deck. `--pod-decks 448`.
+        PodDeck {
+            name: "Vito, Thorn of the Dusk Rose (B)",
+            commanders: decks::VITO_COMMANDERS,
+            main: decks::VITO_MAIN,
+        },
     ]
 }
 
@@ -4093,7 +4345,11 @@ fn play_pod_game(
                     .filter(|id| now[p].binary_search(id).is_err())
                     .map(|id| format!("{id:?} {:?}", g.find_card_anywhere(*id).map(|c| (c.definition.name, c.owner))))
                     .collect();
-                let new: Vec<_> = now[p].iter().filter(|id| owned_at_start[p].binary_search(id).is_err()).collect();
+                let new: Vec<String> = now[p]
+                    .iter()
+                    .filter(|id| owned_at_start[p].binary_search(id).is_err())
+                    .map(|id| format!("{id:?} {:?}", g.find_card_anywhere(*id).map(|c| (c.definition.name, c.owner))))
+                    .collect();
                 panic!(
                     "seed {seed}: p{p} owns {} nontoken cards, {} at the start (turn {}, {:?}, after {actions} actions): gone {gone:?}, new {new:?}",
                     now[p].len(), owned_at_start[p].len(), g.turn_number, g.step,
@@ -5056,6 +5312,48 @@ mod tests {
             ("Mr. House, President and CEO", [0x0ABA, 404, 9329]),
             ("Ezio Auditore da Firenze", [0x0ABB, 405, 9330]),
             ("Tovolar, Dire Overlord", [0x0ABC, 406, 9331]),
+            ("Xenagos, God of Revels", [0x0ABD, 407, 9332]),
+            ("Kess, Dissident Mage", [0x0ABE, 408, 9333]),
+            ("Vnwxt, Verbose Host", [0x0ABF, 409, 9334]),
+            ("Szarel, Genesis Shepherd", [0x0AC0, 410, 9335]),
+            ("Winter, Misanthropic Guide", [0x0AC1, 411, 9336]),
+            ("Niv-Mizzet, Visionary", [0x0AC2, 412, 9337]),
+            ("Bristly Bill, Spine Sower", [0x0AC3, 413, 9338]),
+            ("Talion, the Kindly Lord", [0x0AC4, 414, 9339]),
+            ("Tifa, Martial Artist", [0x0AC5, 415, 9340]),
+            ("Lathiel, the Bounteous Dawn", [0x0AC6, 416, 9341]),
+            ("Koma, Cosmos Serpent", [0x0AC7, 417, 9342]),
+            ("Bilbo, Birthday Celebrant", [0x0AC8, 418, 9343]),
+            ("Bruvac the Grandiloquent", [0x0AC9, 419, 9344]),
+            ("Ayara, First of Locthwain", [0x0ACA, 420, 9345]),
+            ("Zurgo, Thunder's Decree", [0x0ACB, 421, 9346]),
+            ("Laughing Jasper Flint", [0x0ACC, 422, 9347]),
+            ("Jenova, Ancient Calamity", [0x0ACD, 423, 9348]),
+            ("The Lord of Pain", [0x0ACE, 424, 9349]),
+            ("Marisi, Breaker of the Coil", [0x0ACF, 425, 9350]),
+            ("Elenda, the Dusk Rose", [0x0AD0, 426, 9351]),
+            ("Emry, Lurker of the Loch", [0x0AD1, 427, 9352]),
+            ("Felothar, Dawn of the Abzan", [0x0AD2, 428, 9353]),
+            ("Sin, Spira's Punishment", [0x0AD3, 429, 9354]),
+            ("Mr. Foxglove", [0x0AD4, 430, 9355]),
+            ("Tasigur, the Golden Fang", [0x0AD5, 431, 9356]),
+            ("Loot, the Pathfinder", [0x0AD6, 432, 9357]),
+            ("Jinnie Fay, Jetmir's Second", [0x0AD7, 433, 9358]),
+            ("Loot, Exuberant Explorer", [0x0AD8, 434, 9359]),
+            ("Scion of the Ur-Dragon", [0x0AD9, 435, 9360]),
+            ("Rhys the Redeemed", [0x0ADA, 436, 9361]),
+            ("Jarad, Golgari Lich Lord", [0x0ADB, 437, 9362]),
+            ("Alesha, Who Smiles at Death", [0x0ADC, 438, 9363]),
+            ("Quandrix, the Proof", [0x0ADD, 439, 9364]),
+            ("Yuna, Hope of Spira", [0x0ADE, 440, 9365]),
+            ("Goreclaw, Terror of Qal Sisma", [0x0ADF, 441, 9366]),
+            ("Garth One-Eye", [0x0AE0, 442, 9367]),
+            ("Rat King, Verminister", [0x0AE1, 443, 9368]),
+            ("Liberty Prime, Recharged", [0x0AE2, 444, 9369]),
+            ("Samut, the Driving Force", [0x0AE3, 445, 9370]),
+            ("Black Waltz No. 3", [0x0AE4, 446, 9371]),
+            ("Otharri, Suns' Glory", [0x0AE5, 447, 9372]),
+            ("Vito, Thorn of the Dusk Rose", [0x0AE6, 448, 9373]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
