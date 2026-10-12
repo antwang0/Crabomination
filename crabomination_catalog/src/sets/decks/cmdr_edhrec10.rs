@@ -3124,3 +3124,64 @@ pub fn nine_lives() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Bag of Holding — {1} artifact. Whenever you discard a card, exile it from
+/// your graveyard (with this). {2}, {T}: draw, then discard. {4}, {T},
+/// sacrifice: return every card exiled with it to its owner's hand.
+pub fn bag_of_holding() -> CardDefinition {
+    CardDefinition {
+        name: "Bag of Holding",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::ExileWithSource { what: Selector::TriggerSource },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    draw(1),
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Pair o' Dice Lost — {3}{G}{G} instant. Roll two six-sided dice; return any
+/// number of cards with total mana value at most their sum from your
+/// graveyard to your hand. Exile it.
+pub fn pair_o_dice_lost() -> CardDefinition {
+    let d6 = |results: Vec<(u8, u8, Effect)>| Effect::RollDie {
+        sides: 6,
+        count: Value::ONE,
+        modifier: Value::Const(0),
+        reroll_at_most: 0,
+        ignore_lowest: 0,
+        results,
+        on_doubles: None,
+    };
+    // The first die's face picks its arm; the second die's is `LastDieRoll`.
+    let first = (1..=6u8)
+        .map(|a| {
+            (a, a, d6(vec![(1, u8::MAX, Effect::ReturnGraveyardCardsToHandUpToTotalManaValue {
+                max_total: Value::Sum(vec![Value::Const(a as i32), Value::LastDieRoll]),
+            })]))
+        })
+        .collect();
+    CardDefinition {
+        exile_on_resolve: true,
+        ..spell("Pair o' Dice Lost", cost(&[generic(3), g(), g()]), CardType::Instant, d6(first))
+    }
+}

@@ -1708,3 +1708,39 @@ fn nine_lives_counts_down_to_a_loss() {
     assert!(g.battlefield_find(nl).is_none(), "nine counters exile it");
     assert!(!g.players[0].is_alive());
 }
+
+/// Bag of Holding: a discarded card is exiled with it, and sacrificing it
+/// returns that card to hand.
+#[test]
+fn bag_of_holding_keeps_discards() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let bag = ready(&mut g, 0, catalog::bag_of_holding());
+    activate(&mut g, bag, 0, None).expect("loot");
+    assert!(g.players[0].graveyard.is_empty(), "the discard is exiled");
+    assert_eq!(g.exile.len(), 1);
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(bag).unwrap().tapped = false;
+    activate(&mut g, bag, 1, None).expect("open the bag");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert!(g.exile.is_empty());
+}
+
+/// Pair o' Dice Lost: a 2 and a 3 (CR 706) return up to 5 total mana value —
+/// asking for the Giant (4) and the Wurm (6) gets only the Giant.
+#[test]
+fn pair_o_dice_lost_returns_by_total_mana_value() {
+    let mut g = pod(2);
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let p = g.add_card_to_hand(0, catalog::pair_o_dice_lost());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(2),
+        DecisionAnswer::DieRoll(3),
+        DecisionAnswer::Cards(vec![giant, wurm]),
+    ]));
+    cast(&mut g, p, &[]).expect("cast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm), "6 is over the 5 rolled");
+    assert!(g.exile.iter().any(|c| c.id == p));
+}
