@@ -2079,3 +2079,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Ian Malcolm, Chaotician | the permission is stamped per card for the active player at each upkeep and after each exile (a land among the exiles is playable; an exile mid-turn by a non-active player waits for that turn's next stamp) | `GrantMayPlay` per card, re-stamped |
 | 🟡 Press the Enemy | the spell / permanent choice is offered as two modes | one slot cannot hold either a spell or a permanent |
 | 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
+| 🟡 Altar of the Wretched // Wretched Bonemass | crafts with exactly one creature (not "one or more"); the Bonemass doesn't gain the exiled cards' flying/first strike/… keywords | the craft cost exiles a single card; no "has each keyword among exiled cards" static |
+| 🟡 Hand of Vecna | the pump goes only to the equipped creature; the "or a creature you control named Vecna" choice is missing | the trigger targets `AttachedTo` only |
+| 🟡 Game of Chaos | whoever wins a flip decides to flip again by the auto policy (`AnyPlayerMayAccept`); the stakes cap at 2^16 | `Effect::GameOfChaosRound` |
