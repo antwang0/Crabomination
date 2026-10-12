@@ -14873,3 +14873,59 @@ pub const AMALIA_BENAVIDES_AGUIRRE_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SEN_TRIPLETS_COMMANDERS: &[CardFactory] = &[sen_triplets];
+
+/// **Sen Triplets**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 84 nonbasic cards + 7 Islands + 4 Plains + 4 Swamps = 99.
+/// Sen Triplets
+pub const SEN_TRIPLETS_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, chromatic_lantern, dimir_signet, fellwar_stone,
+    lightning_greaves, orzhov_signet, sol_ring, swiftfoot_boots, talisman_of_dominance,
+    talisman_of_hierarchy, talisman_of_progress, thought_vessel, arcane_sanctum, city_of_brass,
+    command_tower, drowned_catacomb, exotic_orchard, flooded_strand, glacial_fortress,
+    godless_shrine, hallowed_fountain, isolated_chapel, marsh_flats, morphic_pool,
+    polluted_delta, prairie_stream, raffines_tower, reliquary_tower, sea_of_clouds,
+    sunken_hollow, vault_of_champions, watery_grave, agent_of_treachery, baleful_strix,
+    dauthi_voidwalker, drana_and_linvala, drannith_magistrate, elder_brain, esper_sentinel,
+    gonti_lord_of_luxury, grand_abolisher, grand_arbiter_augustin_iv, hostage_taker,
+    lavinia_azorius_renegade, nightveil_specter, notion_thief, opposition_agent,
+    thief_of_sanity, thieving_varmint, vega_the_watcher, xanathar_guild_kingpin,
+    blind_obedience, ghostly_prison, minds_dilation, mystic_remora, paradox_haze, propaganda,
+    rhystic_study, smothering_tithe, telepathy, an_offer_you_cant_refuse, arcane_denial,
+    counterspell, cyclonic_rift, dark_ritual, dovins_veto, fierce_guardianship, mana_drain,
+    negate, path_to_exile, render_silent, swan_song, swords_to_plowshares, void_rend,
+    tasha_the_witch_queen, bribery, damn, demonic_tutor, farewell, praetors_grasp,
+    supreme_verdict, toxic_deluge, windfall,
+    // Basics
+    island, island, island, island, island, island, island, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp,
+];
+
+pub const TASHA_COMMANDERS: &[CardFactory] = &[tasha_the_witch_queen];
+
+/// **Tasha, the Witch Queen**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Swamps = 99.
+/// Tasha, the Witch Queen
+pub const TASHA_MAIN: &[CardFactory] = &[
+    arcane_signet, chaos_wand, dimir_signet, fellwar_stone, mind_stone, mindcrank,
+    rod_of_absorption, sol_ring, talisman_of_dominance, the_water_crystal, thought_vessel,
+    choked_estuary, command_tower, darkwater_catacombs, dimir_aqueduct, drowned_catacomb,
+    exotic_orchard, morphic_pool, mystic_sanctuary, reliquary_tower, shipwreck_marsh,
+    sunken_hollow, tainted_isle, temple_of_deceit, underground_river, watery_grave,
+    arvinox_the_mind_flail, baleful_strix, brainstealer_dragon, consuming_aberration,
+    dauthi_voidwalker, dazzling_sphinx, diluvian_primordial, elder_brain, fallen_shinobi,
+    gonti_lord_of_luxury, gonti_night_minister, grima_sarumans_footman, hostage_taker,
+    intellect_devourer, nashi_moon_sages_scion, nightveil_specter, ruin_crab, thief_of_sanity,
+    tinybones_the_pickpocket, wrexial_the_risen_deep, xanathar_guild_kingpin,
+    court_of_locthwain, cunning_rhetoric, king_narfis_betrayal, lilianas_talent, minds_dilation,
+    propaganda, rogue_class, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    counterspell, dark_ritual, didnt_say_please, drown_in_the_loch, infernal_grasp,
+    memory_plunder, negate, outrageous_robbery, siphon_insight, ashiok_nightmare_muse,
+    dream_harvest, extract_brain, feed_the_swarm, fractured_sanity, maddening_cacophony,
+    mnemonic_betrayal, singularity_rupture, stolen_goods, talent_of_the_telepath, toxic_deluge,
+    windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

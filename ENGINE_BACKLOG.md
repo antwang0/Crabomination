@@ -132,9 +132,9 @@ the handoff.
   `Effect::NoteAmountOnSource`, `PlaneswalkerSubtype::Serra`. **Seats 494-512** waited on one or
   two of the 25 cards in `decks::cmdr_edhrec8` (tests `recent_b/cmdr_edhrec8.rs`); debug pods
   120 games, 119 decided, one CR 104.4a draw (Descent into Avernus killing the last two).
-- **Open:** Xanathar, Guild Kingpin (play the top of an opponent's library) and Sen Triplets (cast
-  from an opponent's hand) need a "play another player's card" permission; they hold the Sen
-  Triplets and Tasha, the Witch Queen seats back.
+- **Play another player's cards for a turn** (CR 108.3): `Effect::MayPlayLibraryTopOfThisTurn`
+  (Xanathar — any-color mana for those casts) and `Effect::MayPlayHandOfThisTurn` (Sen Triplets —
+  the hand is revealed); seats 513 Sen Triplets and 514 Tasha, the Witch Queen.
 - **Client:** `CounterType::Memory` broke two exhaustive client matches (fixed).
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and

@@ -3528,6 +3528,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AMALIA_BENAVIDES_AGUIRRE_COMMANDERS,
             main: decks::AMALIA_BENAVIDES_AGUIRRE_MAIN,
         },
+        // Seat 513: Sen Triplets's EDHREC average deck. `--pod-decks 513`.
+        PodDeck {
+            name: "Sen Triplets (WUB)",
+            commanders: decks::SEN_TRIPLETS_COMMANDERS,
+            main: decks::SEN_TRIPLETS_MAIN,
+        },
+        // Seat 514: Tasha, the Witch Queen's EDHREC average deck. `--pod-decks 514`.
+        PodDeck {
+            name: "Tasha, the Witch Queen (UB)",
+            commanders: decks::TASHA_COMMANDERS,
+            main: decks::TASHA_MAIN,
+        },
     ]
 }
 
@@ -5804,6 +5816,8 @@ mod tests {
             ("Plagon, Lord of the Beach", &[0x0B24]),
             ("Toph, Earthbending Master", &[0x0B25]),
             ("Amalia Benavides Aguirre", &[0x0B26]),
+            ("Sen Triplets", &[0x0B27]),
+            ("Tasha, the Witch Queen", &[0x0B28]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
