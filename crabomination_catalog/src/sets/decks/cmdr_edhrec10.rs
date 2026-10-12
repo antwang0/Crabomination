@@ -1646,3 +1646,60 @@ pub fn teferi_master_of_time() -> CardDefinition {
         )
     }
 }
+
+/// Lupine Prototype — {2} 5/5 artifact Wolf Construct; can't attack or block
+/// unless a player has no cards in hand.
+pub fn lupine_prototype() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::CantAttackOrBlockUnlessAHandIsEmpty],
+        ..creature("Lupine Prototype", cost(&[generic(2)]), vec![CreatureType::Wolf, CreatureType::Construct], 5, 5)
+    }
+}
+
+/// Majestic Genesis — {6}{G}{G} sorcery. Reveal the top X cards (X = the
+/// greatest mana value of a commander you own on the battlefield or in the
+/// command zone); put any number of permanent cards among them onto the
+/// battlefield, the rest on the bottom.
+pub fn majestic_genesis() -> CardDefinition {
+    spell(
+        "Majestic Genesis",
+        cost(&[generic(6), g(), g()]),
+        CardType::Sorcery,
+        Effect::RevealTopNPutMatchingToBattlefield {
+            who: PlayerRef::You,
+            count: Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You),
+            filter: R::PermanentCard,
+        },
+    )
+}
+
+/// Tetzimoc, Primal Death — {4}{B}{B} 6/6 legendary deathtouch Elder
+/// Dinosaur. {B}, reveal it from your hand (your turn only): a prey counter on
+/// target creature. When it enters, destroy each creature your opponents
+/// control with a prey counter on it.
+pub fn tetzimoc_primal_death() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            from_hand: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::Prey, amount: Value::ONE },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                R::Creature.and(R::ControlledByOpponent).and(R::WithCounter(CounterType::Prey)),
+            ),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        })],
+        ..legend(
+            "Tetzimoc, Primal Death",
+            cost(&[generic(4), b(), b()]),
+            vec![CreatureType::Elder, CreatureType::Dinosaur],
+            6,
+            6,
+        )
+    }
+}

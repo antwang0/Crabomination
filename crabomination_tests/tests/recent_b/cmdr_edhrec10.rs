@@ -1080,3 +1080,49 @@ fn teferi_master_of_time_works_on_their_turn() {
     walk(&mut g, t, 0, None).expect("+1 at instant speed");
     assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::Loyalty), 4);
 }
+
+/// Lupine Prototype attacks only while some player's hand is empty.
+#[test]
+fn lupine_prototype_needs_an_empty_hand() {
+    let mut g = pod(3);
+    let w = ready(&mut g, 0, catalog::lupine_prototype());
+    for s in 0..3 {
+        g.add_card_to_hand(s, catalog::island());
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: w, target: AttackTarget::Player(1) }])).is_err());
+    g.players[2].hand.clear();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: w, target: AttackTarget::Player(1) }]))
+        .expect("seat 2's hand is empty");
+}
+
+/// Majestic Genesis reveals as many cards as your commander's mana value and
+/// deploys the permanents among them (CR 903.3 — the commander designation).
+#[test]
+fn majestic_genesis_reads_the_commander() {
+    let mut g = pod(2);
+    let cmdr = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].commanders.push(cmdr);
+    let a = g.add_card_to_library(0, catalog::savannah_lions());
+    let b = g.add_card_to_library(0, catalog::union_of_the_third_path());
+    let c = g.add_card_to_library(0, catalog::forest());
+    let m = g.add_card_to_hand(0, catalog::majestic_genesis());
+    cast(&mut g, m, &[]).expect("cast");
+    assert!(g.battlefield_find(a).is_some(), "MV 2: the top two are revealed");
+    assert!(g.battlefield_find(b).is_none() && g.battlefield_find(c).is_none());
+}
+
+/// Tetzimoc marks from hand on your turn, then its entry destroys the marked.
+#[test]
+fn tetzimoc_hunts_its_prey() {
+    let mut g = pod(2);
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let t = g.add_card_to_hand(0, catalog::tetzimoc_primal_death());
+    activate(&mut g, t, 0, Some(perm(foe))).expect("mark from hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == t), "revealed, still in hand");
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::Prey), 1);
+    cast(&mut g, t, &[]).expect("cast");
+    assert!(g.battlefield_find(foe).is_none());
+}

@@ -13552,6 +13552,9 @@ static DECKS: &[Factory] = &[
     super::decks::mishras_self_replicator,
     super::decks::joraga_treespeaker,
     super::decks::teferi_master_of_time,
+    super::decks::lupine_prototype,
+    super::decks::majestic_genesis,
+    super::decks::tetzimoc_primal_death,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
