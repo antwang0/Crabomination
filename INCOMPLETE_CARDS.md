@@ -2008,3 +2008,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Sen Triplets | the chosen opponent can still activate mana abilities | `PlayerCantActivateNonManaAbilitiesThisTurn` (Abeyance's lock) is the nearest; there is no all-abilities lock |
 | 🟡 Liliana of the Dark Realms | the −3's "+X/+X or −X/−X" sign follows the target's controller (+X on yours, −X on another's), not a free choice | a loyalty activation carries no mode (`GameAction::ActivateLoyaltyAbility`); the collapse is the dominant line |
 | 🟡 Teferi, Temporal Pilgrim | the −12 skips "target opponent chooses a permanent they control and returns it to its owner's hand" before the shuffle | the shuffle half is `Move` of their nonland permanents; the chosen-then-bounced permanent needs an opponent's pick bound beside a player target |
+| 🟡 Smaug the Impenetrable | combat damage to it still puts its trigger on the stack (it resolves to nothing) | `EventKind` has no bit left for a noncombat kind; `Effect::IfTriggerDamageNoncombat` gates the body per event instead |
+| 🟡 Froghemoth | "their graveyard" accepts any opponent's graveyard | the target filter is `R::InOpponentGraveyard`; there is no "owned by the damaged player" atom |
+| 🟡 Briarbridge Patrol | "deals damage to one or more creatures" investigates once per creature damaged | `EventKind::DealsDamageToCreature` fires per damage event |
+| 🟡 Rhys, the Evermore | "remove any number of counters" removes all of them | `Effect::RemoveAllCounters`; there is no any-number counter choice |
+| 🟡 Nim Deathmantle | a nontoken creature you *control* dying triggers it, rather than one put into your graveyard (an owner's) | `CreatureDied` scoped `YourControl` |
