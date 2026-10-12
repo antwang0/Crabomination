@@ -403,3 +403,90 @@ impl GameState {
         }
     }
 }
+
+impl GameState {
+    /// `Effect::DealDamageToChosenCreatureOrPlayer` — not a target (Comet,
+    /// Stellar Pup). The ballot is every creature then every living player,
+    /// headless answer first: the greatest-power opposing creature the damage
+    /// kills, else the opponent with the least life.
+    pub(super) fn deal_damage_to_chosen_creature_or_player(
+        &mut self,
+        amount: &crate::effect::Value,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use crate::effect::{PlayerRef, Selector, Value};
+        let n = self.evaluate_value(amount, ctx).max(0);
+        let me = ctx.controller;
+        let mut creatures: Vec<(CardId, i32, bool, String)> = Vec::new();
+        for c in self.battlefield.iter() {
+            let Some(cp) = self.computed_permanent(c.id) else { continue };
+            if !cp.card_types().contains(&crate::card::CardType::Creature) {
+                continue;
+            }
+            let kills = cp.toughness - c.damage as i32 <= n;
+            let foe = !self.same_team(c.controller, me);
+            creatures.push((c.id, if foe && kills { cp.power } else { i32::MIN }, foe && kills, c.definition.name.to_string()));
+        }
+        let mut players: Vec<usize> = (0..self.players.len()).filter(|&q| self.players[q].is_alive()).collect();
+        // Opponents first, least life first; the seat order breaks ties.
+        players.sort_by_key(|&q| (self.same_team(q, me), self.players[q].life, q));
+        let kill = creatures.iter().filter(|c| c.2).max_by_key(|c| (c.1, std::cmp::Reverse(c.0))).map(|c| c.0);
+        let mut options: Vec<Result<CardId, usize>> = Vec::new();
+        match kill {
+            Some(id) => options.push(Ok(id)),
+            None => options.extend(players.first().map(|&q| Err(q))),
+        }
+        for c in &creatures {
+            if !options.contains(&Ok(c.0)) {
+                options.push(Ok(c.0));
+            }
+        }
+        for &q in &players {
+            if !options.contains(&Err(q)) {
+                options.push(Err(q));
+            }
+        }
+        if options.is_empty() {
+            return Ok(());
+        }
+        let labels: Vec<String> = options
+            .iter()
+            .map(|o| match o {
+                Ok(id) => creatures.iter().find(|c| c.0 == *id).map_or_else(String::new, |c| c.3.clone()),
+                Err(q) => format!("Player {}", q + 1),
+            })
+            .collect();
+        let i = match take_opt_scratch!(self.stashed_resolution_answer) {
+            Some(DecisionAnswer::Amount(k)) => k as usize,
+            _ if options.len() <= 1 => 0,
+            _ => {
+                let decision = Decision::ChooseOption {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Deal the damage to".to_string(),
+                    options: labels,
+                };
+                if self.seat_suspends(me) {
+                    let max = options.len() as u32 - 1;
+                    self.suspend_signal =
+                        Some(Box::new((decision, PendingEffectState::seated(me, PendingEffectState::AmountAnswerPending { max }), effect.clone())));
+                    return Ok(());
+                }
+                match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => 0,
+                    _ => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(k) => k as usize,
+                        _ => 0,
+                    },
+                }
+            }
+        };
+        let to = match options.get(i).or(options.first()).copied() {
+            Some(Ok(id)) => Selector::ExactObjects(vec![id]),
+            Some(Err(q)) => Selector::Player(PlayerRef::Seat(q)),
+            None => return Ok(()),
+        };
+        self.run_effect(&Effect::DealDamage { to, amount: Value::Const(n) }, ctx, events)
+    }
+}

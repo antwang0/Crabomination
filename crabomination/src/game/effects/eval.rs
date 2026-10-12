@@ -2136,6 +2136,12 @@ impl GameState {
             Value::LastRollFaceCount(face) => {
                 self.last_roll_naturals.iter().filter(|f| **f == *face).count() as i32
             }
+            Value::LastRollDistinctResults => {
+                let mut faces = self.last_roll_naturals.clone();
+                faces.sort_unstable();
+                faces.dedup();
+                faces.len() as i32
+            }
             Value::CreaturesEnteredThisTurn(p) => {
                 let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
                 self.players[seat].creatures_entered_this_turn.len() as i32
@@ -6239,6 +6245,13 @@ impl GameState {
                         }
                         _ => false,
                     }),
+                    // CR 115.1 — "with one or more targets" (Wyll's Reversal).
+                    R::SpellWithAnyTarget => self.stack.iter().any(|si| match si {
+                        StackItem::Spell { card: c, target, additional_targets, .. } if c.id == card.id => {
+                            target.is_some() || !additional_targets.is_empty()
+                        }
+                        _ => false,
+                    }),
                     // Wash Away's base mode: a stack spell cast from
                     // anywhere but its owner's hand (CR 702.148 bracket).
                     R::SaddledSourceThisTurn => source.is_some_and(|s| {
@@ -7616,6 +7629,7 @@ impl GameState {
             | R::ActivatedAbilityTargetsOnlySource
             | R::ActivatedAbilityTargetsMatching(_)
             | R::SpellWithSingleTarget
+            | R::SpellWithAnyTarget
             | R::DealtDamageToControllerThisTurn | R::CombatDamagedSourceControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn

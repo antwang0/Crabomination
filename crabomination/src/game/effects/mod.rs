@@ -7320,8 +7320,9 @@ impl GameState {
                 // CR 706.6 — Pixie Guide et al. roll extra dice and ignore
                 // that many lowest results. Ignored rolls never happened, so
                 // they're dropped before any arm, doubles check or trigger.
+                let extra = std::mem::take(&mut self.extra_ignored_dice) as u32;
                 let ignored =
-                    if n > 0 { self.extra_dice_for(ctx.controller) + *ignore_lowest as u32 } else { 0 };
+                    if n > 0 { self.extra_dice_for(ctx.controller) + *ignore_lowest as u32 + extra } else { 0 };
                 // CR 706.5 — track natural faces to detect "doubles".
                 let mut naturals: Vec<u8> = Vec::with_capacity(n as usize);
                 for _ in 0..n as u32 + ignored {
@@ -7339,13 +7340,16 @@ impl GameState {
                 if self.last_roll_naturals != naturals {
                     self.last_roll_naturals = naturals.clone();
                 }
-                // CR 706.2 — add the modifier, flooring the modified result at
-                // 1 (a die result is never reduced below 1). The result may
+                // CR 706.2 — add the modifier. A result can fall to 0 ("0 or
+                // less" — The Deck of Many Things; Scooch's 2022 ruling) or
                 // exceed `sides`, letting a top "N+" arm catch boosted rolls.
-                let rolls: Vec<u8> = naturals
+                let mut rolls: Vec<u8> = naturals
                     .iter()
-                    .map(|nat| (*nat as i32 + modifier).max(1).min(u8::MAX as i32) as u8)
+                    .map(|nat| (*nat as i32 + modifier).clamp(0, u8::MAX as i32) as u8)
                     .collect();
+                if n > 0 {
+                    self.offer_die_shift(ctx.controller, &mut rolls, results);
+                }
                 // CR 706.2 / 706.3a — the roll is over, and its result fixed,
                 // *before* the results table is consulted, so "whenever a
                 // player rolls one or more dice" has already triggered by the
@@ -34171,6 +34175,32 @@ impl GameState {
 
             Effect::DealDamageToPlayerOrPlaneswalker { who, amount } => {
                 self.deal_damage_to_player_or_planeswalker(who, amount, effect, ctx, events)
+            }
+
+            Effect::DealDamageToChosenCreatureOrPlayer { amount } => {
+                self.deal_damage_to_chosen_creature_or_player(amount, effect, ctx, events)
+            }
+
+            Effect::IgnoreAllButHighestRoll { dice, roll } => {
+                let extra = self.evaluate_value(dice, ctx).max(1) - 1;
+                self.extra_ignored_dice = u8::try_from(extra).unwrap_or(u8::MAX);
+                let out = self.run_effect(roll, ctx, events);
+                self.extra_ignored_dice = 0;
+                out
+            }
+
+            Effect::LoyaltyTwoMoreTimesThisTurn { what } => {
+                // CR 606.3 — two activations past the ones already spent: the
+                // cap becomes two and the count drops by two.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.loyalty_twice_this_turn = true;
+                        c.loyalty_uses_this_turn = c.loyalty_uses_this_turn.saturating_sub(2);
+                    }
+                }
+                Ok(())
             }
 
             Effect::CastExiledFreeAsking { card, player } => self.cast_exiled_free_asking(*card, *player, effect, events),

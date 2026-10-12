@@ -1674,6 +1674,9 @@ pub enum Value {
     /// that many Treasure tokens" — Ancient Copper Dragon). Returns 0 outside
     /// a die-roll context.
     LastDieRoll,
+    /// CR 706.4 — how many different results the most recent roll showed
+    /// ("for each different result" — Circuits Act).
+    LastRollDistinctResults,
     /// Number of creatures that died under `who`'s control so far this
     /// turn. Backed by `Player.creatures_died_this_turn` (bumped from the
     /// SBA death loop). Powers Witherbloom "harvest" payoffs that scale
@@ -10751,6 +10754,18 @@ pub enum Effect {
     /// body (Truth or Consequences: one opponent takes every consequences
     /// vote's damage), read back by `PlayerRef::ChosenPlayerOfSource`.
     WithRandomOpponent { body: Box<Effect> },
+    /// "Deals `amount` damage to a creature or player" chosen as it resolves —
+    /// not a target (Comet, Stellar Pup's 2022-10-07 ruling). The headless
+    /// pick is the greatest-power opposing creature the damage kills, else
+    /// the opponent with the least life.
+    DealDamageToChosenCreatureOrPlayer { amount: Value },
+    /// CR 706.6 — "roll a d20 for each [thing] and ignore all but the highest
+    /// roll" (Iron Mastiff): `roll` rolls `dice` dice (at least one) and
+    /// ignores every one but the highest.
+    IgnoreAllButHighestRoll { dice: Value, roll: Box<Effect> },
+    /// "You may activate [this]'s loyalty ability two more times this turn"
+    /// (Comet, Stellar Pup's 6), CR 606.3.
+    LoyaltyTwoMoreTimesThisTurn { what: Selector },
     /// "Deals `amount` damage to [that player] or a planeswalker that player
     /// controls" — not a target: the controller picks on resolution, from a
     /// ballot whose headless answer is a planeswalker the damage would kill,

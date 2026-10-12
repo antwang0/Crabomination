@@ -5107,6 +5107,9 @@ impl GameState {
                 pl.own_creature_ability_this_turn = false;
             }
             pl.cards_cycled_this_turn = 0;
+            if pl.die_shift_used_this_turn {
+                pl.die_shift_used_this_turn = false;
+            }
             pl.token_doublings_this_turn = 0;
             pl.steals_opponent_tokens_this_turn = false;
             pl.poison_capped_this_turn = false;

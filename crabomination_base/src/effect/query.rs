@@ -458,6 +458,7 @@ impl Effect {
             | Effect::BindScratch { body, .. }
             | Effect::WithRandomOpponent { body }
             | Effect::WithRandomPlayer { body }
+            | Effect::IgnoreAllButHighestRoll { roll: body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
             | Effect::OathCatchUp { body, .. }
@@ -879,6 +880,7 @@ impl Effect {
             | Effect::ChooseOpponentLedBy { then, .. } => then.requires_target(),
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
             Effect::DealDamageToPlayerOrPlaneswalker { who, .. } => player_has_target(who),
+            Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::ClearLastMoved
@@ -1576,7 +1578,8 @@ impl Effect {
             | Effect::BindTargetObjects { body, .. }
             | Effect::BindScratch { body, .. }
             | Effect::WithRandomOpponent { body }
-            | Effect::WithRandomPlayer { body } => body.requires_target(),
+            | Effect::WithRandomPlayer { body }
+            | Effect::IgnoreAllButHighestRoll { roll: body, .. } => body.requires_target(),
             Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithX { body, .. } => body.requires_target(),
@@ -2101,6 +2104,7 @@ impl Effect {
             Effect::RemoveCountersUpTo { what, amount } => sel_has_target(what) || value_has_target(amount),
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
             Effect::GrantLoyaltyTwiceThisTurn { what }
+            | Effect::LoyaltyTwoMoreTimesThisTurn { what }
             | Effect::BecomeTreasure { what }
             | Effect::AddCounterOfPresentKind { what } => sel_has_target(what),
             Effect::AddCounterOfEachKindAmong { onto: what, .. }
@@ -2894,6 +2898,7 @@ impl Effect {
             | Effect::RemoveCountersUpTo { what, .. }
             | Effect::SetLoyalty { what, .. }
             | Effect::GrantLoyaltyTwiceThisTurn { what }
+            | Effect::LoyaltyTwoMoreTimesThisTurn { what }
             | Effect::BecomeTreasure { what }
             | Effect::AddCounterOfPresentKind { what }
             | Effect::AddCounterOfEachKindAmong { onto: what, .. }
@@ -4721,6 +4726,7 @@ impl Effect {
             | Effect::BindScratch { body, .. }
             | Effect::WithRandomOpponent { body }
             | Effect::WithRandomPlayer { body }
+            | Effect::IgnoreAllButHighestRoll { roll: body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
             | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
@@ -5645,6 +5651,7 @@ impl Effect {
                 | Effect::LoseCardTypeUntilEot { what, .. }
                 | Effect::SetLoyalty { what, .. }
                 | Effect::GrantLoyaltyTwiceThisTurn { what }
+                | Effect::LoyaltyTwoMoreTimesThisTurn { what }
                 | Effect::BecomeTreasure { what }
                 | Effect::AddCounterOfPresentKind { what }
                 | Effect::AddCounterOfEachKindAmong { onto: what, .. }

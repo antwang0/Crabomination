@@ -3089,6 +3089,9 @@ pub struct GameState {
     /// `Value::LastDieRoll`. Set by the `Effect::RollDie` resolver.
     #[serde(skip)]
     pub(crate) last_die_roll: u8,
+    /// CR 706.6 — extra dice the next `RollDie` rolls and ignores, lowest
+    /// first ("ignore all but the highest" — `Effect::IgnoreAllButHighestRoll`).
+    pub(crate) extra_ignored_dice: u8,
     /// Transient generic cost-reduction folded into the next spell cast
     /// (CR 601.2f). Set by `cast_spell_sacrifice_reduce` to "{N} less per
     /// creature sacrificed" before delegating to the normal cast path, read
@@ -4482,6 +4485,7 @@ impl Clone for GameState {
             trigger_event_player_scratch: self.trigger_event_player_scratch,
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
+            extra_ignored_dice: self.extra_ignored_dice,
             extra_cast_reduction: self.extra_cast_reduction,
             cast_paid_uncounterable: self.cast_paid_uncounterable,
             cast_kick_count: self.cast_kick_count,
@@ -4697,6 +4701,7 @@ impl GameState {
             trigger_event_player_scratch: None,
             last_created_token: None,
             last_die_roll: 0,
+            extra_ignored_dice: 0,
             extra_cast_reduction: 0,
             cast_paid_uncounterable: false,
             cast_kick_count: 0,
@@ -33778,6 +33783,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
             | StaticEffect::RollExtraDiceIgnoreLowest(_)
+            | StaticEffect::PayLifeToShiftDieOnceEachTurn
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllCombatDamageToAndFromEnchanted

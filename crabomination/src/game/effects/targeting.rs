@@ -313,7 +313,8 @@ impl GameState {
                 // Radiant Performer's "target spell that targets only a
                 // single permanent or player" — its entry trigger found no
                 // target at all without the stack walk.
-                | R::SpellWithSingleTarget => true,
+                | R::SpellWithSingleTarget
+                | R::SpellWithAnyTarget => true,
                 R::And(a, b) | R::Or(a, b) => {
                     mentions_spell_on_stack(a) || mentions_spell_on_stack(b)
                 }

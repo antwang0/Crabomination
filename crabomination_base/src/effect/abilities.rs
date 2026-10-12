@@ -1612,6 +1612,10 @@ pub enum StaticEffect {
     /// Class). Ignored rolls never happened: no results-table arm, no doubles,
     /// no trigger. Read by `GameState::extra_dice_for`; instances stack.
     RollExtraDiceIgnoreLowest(u32),
+    /// CR 706.2 — "After you roll a die, you may pay 1 life. If you do,
+    /// increase or decrease the result by 1. Do this only once each turn"
+    /// (Night Shift of the Living Dead). Read by the `RollDie` resolver.
+    PayLifeToShiftDieOnceEachTurn,
     /// CR 615 — "Prevent all combat damage that would be dealt to this." A
     /// self-static the combat-damage resolver honors (zeroing damage marked on
     /// the permanent) unless combat damage can't be prevented this turn (615.12).

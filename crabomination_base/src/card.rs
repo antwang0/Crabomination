@@ -529,6 +529,8 @@ pub enum PlaneswalkerSubtype {
     Niko,
     // Lolth, Spider Queen (Shelob's EDHREC deck).
     Lolth,
+    // Comet, Stellar Pup (Mr. House's EDHREC deck).
+    Comet,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -3501,6 +3503,9 @@ pub enum SelectionRequirement {
     /// CR 115.7 — a stack spell with exactly one target ("target spell with a
     /// single target" — Ricochet Trap, Deflection).
     SpellWithSingleTarget,
+    /// CR 115.1 — a stack spell or ability with one or more targets ("target
+    /// spell or ability with one or more targets" — Wyll's Reversal).
+    SpellWithAnyTarget,
     /// A stack spell that was NOT cast from its owner's hand (Wash Away's
     /// bracketed base mode — flashback/graveyard/exile casts qualify).
     SpellNotCastFromHand,

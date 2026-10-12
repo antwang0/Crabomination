@@ -231,3 +231,83 @@ impl GameState {
         Ok(())
     }
 }
+
+impl GameState {
+    /// CR 706.2 — Night Shift of the Living Dead: once each turn, after `seat`
+    /// rolls, it may pay 1 life to move one die's result by one. The headless
+    /// pick takes +1 when that lands a die in a later results-table arm, or,
+    /// with no table, on a result threshold one of its die triggers names; it
+    /// never pays below 6 life. A deciding seat gets the ballot, headless
+    /// answer first; a UI seat takes the headless pick (the roll can't park
+    /// mid-resolution — INCOMPLETE_CARDS).
+    pub(super) fn offer_die_shift(&mut self, seat: usize, rolls: &mut [u8], results: &[(u8, u8, Effect)]) {
+        use crate::card::Predicate;
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::effect::{EventKind, KeywordAct, StaticEffect};
+        if self.players[seat].die_shift_used_this_turn || self.players[seat].life < 6 {
+            return;
+        }
+        let mine = || self.battlefield.iter().filter(|c| c.controller == seat);
+        if !mine().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| matches!(sa.effect, StaticEffect::PayLifeToShiftDieOnceEachTurn))
+        }) {
+            return;
+        }
+        fn thresholds(p: &Predicate, out: &mut Vec<u8>) {
+            match p {
+                Predicate::DieResultAtLeast(n) => out.push(*n),
+                Predicate::ValueAtLeast(Value::TriggerEventAmount, Value::Const(n)) => out.push(*n as u8),
+                Predicate::All(ps) | Predicate::Any(ps) => ps.iter().for_each(|q| thresholds(q, out)),
+                _ => {}
+            }
+        }
+        let mut wanted: Vec<u8> = Vec::new();
+        for c in mine() {
+            for t in &c.definition.triggered_abilities {
+                if matches!(t.event.kind, EventKind::RolledDice | EventKind::Performed(KeywordAct::DieResult))
+                    && let Some(f) = &t.event.filter
+                {
+                    thresholds(f, &mut wanted);
+                }
+            }
+        }
+        let arm = |r: u8| results.iter().position(|(lo, hi, _)| r >= *lo && r <= *hi);
+        let better = |r: u8| {
+            let up = r.saturating_add(1);
+            if results.is_empty() { wanted.contains(&up) } else { arm(up).is_some_and(|b| arm(r).is_none_or(|a| b > a)) }
+        };
+        // The ballot: the headless answer first, then keeping the results,
+        // then +1 / -1 on each die in order.
+        let mut choices: Vec<Option<(usize, bool)>> = vec![rolls.iter().position(|&r| better(r)).map(|k| (k, true))];
+        choices.push(None);
+        for k in 0..rolls.len() {
+            choices.extend([Some((k, true)), Some((k, false))]);
+        }
+        choices.dedup();
+        let label = |c: &Option<(usize, bool)>| match *c {
+            None => "Keep the results".to_string(),
+            Some((k, up)) => {
+                let to = if up { rolls[k].saturating_add(1) } else { rolls[k].saturating_sub(1) };
+                format!("Pay 1 life: die {} {} -> {}", k + 1, rolls[k], to)
+            }
+        };
+        let pick = match self.decider.kind() {
+            crate::decision::DeciderKind::Auto => choices[0],
+            _ => {
+                let decision = Decision::ChooseOption {
+                    source: CardId(0),
+                    prompt: "Night Shift of the Living Dead".to_string(),
+                    options: choices.iter().map(label).collect(),
+                };
+                match self.decider.decide(&decision) {
+                    DecisionAnswer::Amount(i) => choices.get(i as usize).copied().unwrap_or(choices[0]),
+                    _ => choices[0],
+                }
+            }
+        };
+        let Some((k, up)) = pick else { return };
+        rolls[k] = if up { rolls[k].saturating_add(1) } else { rolls[k].saturating_sub(1) };
+        self.players[seat].die_shift_used_this_turn = true;
+        self.pay_life_cost(seat, 1);
+    }
+}
