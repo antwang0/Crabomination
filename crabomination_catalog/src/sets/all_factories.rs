@@ -13459,6 +13459,13 @@ static DECKS: &[Factory] = &[
     super::decks::inferno_of_the_star_mounts,
     super::decks::guiding_hydra,
     super::decks::greasefang_okiba_boss,
+    super::decks::psemilla_meletian_poet,
+    super::decks::feast_of_the_victorious_dead,
+    super::decks::anje_maid_of_dishonor,
+    super::decks::archghoul_of_thraben,
+    super::decks::emissary_green,
+    super::decks::the_millennium_calendar,
+    super::decks::confounding_conundrum,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

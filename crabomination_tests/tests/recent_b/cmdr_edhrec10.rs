@@ -540,3 +540,132 @@ fn greasefang_borrows_a_vehicle_for_the_turn() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == v), "back to hand");
 }
+
+/// Psemilla: only the turn's first enchantment spell makes a Nymph; five
+/// enchantments pump her at a combat.
+#[test]
+fn psemilla_nymphs_and_grows() {
+    let mut g = pod(2);
+    let p = ready(&mut g, 0, catalog::psemilla_meletian_poet());
+    let a = g.add_card_to_hand(0, catalog::sultai_ascendancy());
+    let b = g.add_card_to_hand(0, catalog::polluted_bonds());
+    cast(&mut g, a, &[]).expect("first");
+    cast(&mut g, b, &[]).expect("second");
+    assert_eq!(tokens_of(&g, 0, "Nymph"), 1, "the first enchantment spell only");
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::sigardas_summons());
+    }
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(p).unwrap().power, 5);
+    assert!(has_kw(&g, p, Keyword::Lifelink));
+}
+
+/// Feast of the Victorious Dead: an end step after two deaths gains 2 and
+/// spreads two counters.
+#[test]
+fn feast_of_the_victorious_dead_counts_the_dead() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::feast_of_the_victorious_dead());
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    for s in [0, 1] {
+        let v = ready(&mut g, s, catalog::savannah_lions());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, bolt, &[perm(v)]).expect("bolt");
+    }
+    let life = g.players[0].life;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2);
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Anje: a Vampire entering makes one Blood a turn; sacrificing it drains
+/// each opponent for 2.
+#[test]
+fn anje_bleeds_the_table() {
+    let mut g = pod(3);
+    let anje = ready(&mut g, 0, catalog::anje_maid_of_dishonor());
+    let v = g.add_card_to_hand(0, catalog::vampire_nighthawk());
+    cast(&mut g, v, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Blood"), 1);
+    let (a, b, me) = (g.players[1].life, g.players[2].life, g.players[0].life);
+    activate(&mut g, anje, 0, None).expect("drain");
+    assert_eq!((g.players[1].life, g.players[2].life, g.players[0].life), (a - 2, b - 2, me + 2), "you gain 2, not 2 per opponent");
+}
+
+/// Archghoul of Thraben: a Zombie dying puts a Zombie card on top into hand.
+#[test]
+fn archghoul_digs_for_zombies() {
+    let mut g = pod(2);
+    let ghoul = ready(&mut g, 0, catalog::archghoul_of_thraben());
+    let top = g.add_card_to_library(0, catalog::archghoul_of_thraben());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[perm(ghoul)]).expect("bolt");
+    assert!(g.players[0].hand.iter().any(|c| c.id == top));
+}
+
+/// Emissary Green: in a two-seat pod both votes land somewhere — two
+/// Treasures per profit vote, a counter per security vote, four "units" in
+/// total.
+#[test]
+fn emissary_green_pays_out_each_vote() {
+    let mut g = pod(2);
+    let e = ready(&mut g, 0, catalog::emissary_green());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: e, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let treasures = tokens_of(&g, 0, "Treasure");
+    let counters = g.battlefield_find(e).unwrap().counter_count(CounterType::PlusOnePlusOne) as usize;
+    assert_eq!(treasures / 2 + counters, 2, "two votes");
+}
+
+/// The Millennium Calendar: a counter per permanent untapped in your untap
+/// step; doubling to 1,000 sacrifices it and each opponent loses 1,000.
+#[test]
+fn millennium_calendar_counts_to_a_thousand() {
+    let mut g = pod(3);
+    let cal = ready(&mut g, 0, catalog::the_millennium_calendar());
+    for _ in 0..2 {
+        let l = ready(&mut g, 0, catalog::forest());
+        g.battlefield_find_mut(l).unwrap().tapped = true;
+    }
+    g.step = TurnStep::Untap;
+    g.do_untap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cal).unwrap().counter_count(CounterType::Time), 2);
+    g.step = TurnStep::PreCombatMain;
+    g.battlefield_find_mut(cal).unwrap().counters.insert(CounterType::Time, 500);
+    activate(&mut g, cal, 0, None).expect("double");
+    assert!(g.battlefield_find(cal).is_none(), "sacrificed at 1,000");
+    assert!(g.players[1].life <= 0 && g.players[2].life <= 0);
+}
+
+/// Confounding Conundrum: an opponent's second land in a turn sends one home.
+/// Bug fix: `lands_entered_this_turn` counted only land TOKENS ("played or
+/// otherwise" per its doc), so a played land plus a fetched one read as zero
+/// and this — like Lavaball Trap and Nelly Borca's draw — never fired.
+#[test]
+fn confounding_conundrum_bounces_the_second_land() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::confounding_conundrum());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let a = g.add_card_to_hand(1, catalog::forest());
+    g.perform_action(GameAction::PlayLand(a)).expect("land 1");
+    drain_stack(&mut g);
+    let lands = |g: &GameState| g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_land()).count();
+    assert_eq!(lands(&g), 1);
+    g.priority.player_with_priority = 1;
+    let r = g.add_card_to_hand(1, catalog::rampant_growth());
+    g.add_card_to_library(1, catalog::forest());
+    flood(&mut g, 1);
+    g.perform_action(GameAction::CastSpell { card_id: r, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("ramp");
+    drain_stack(&mut g);
+    assert_eq!(lands(&g), 1, "the second land bounced one");
+}

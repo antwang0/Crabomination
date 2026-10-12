@@ -9,7 +9,9 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{colored_animation, etb, on_attack, target_any, target_filtered, tokens_gain_until_eot};
-use crate::effect::{ActivatedAbility, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{
+    ActivatedAbility, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, VoteOption, VoteTally, ZoneDest,
+};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
 use std::sync::Arc;
@@ -798,5 +800,205 @@ pub fn greasefang_okiba_boss() -> CardDefinition {
             Effect::ReturnToOwnersHandAtNextEndStep { what: Selector::LastMoved },
         ]))],
         ..legend("Greasefang, Okiba Boss", cost(&[generic(1), w(), b()]), vec![CreatureType::Rat, CreatureType::Pilot], 4, 3)
+    }
+}
+
+/// Psemilla, Meletian Poet — {2}{W} 1/1 legendary Human Bard. Your first
+/// enchantment spell each turn makes a 2/2 white Nymph enchantment creature;
+/// at the beginning of each combat, with five or more enchantments, she gets
+/// +4/+4 and lifelink until end of turn.
+pub fn psemilla_meletian_poet() -> CardDefinition {
+    let nymph = TokenDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        ..token("Nymph", 2, 2, vec![Color::White], vec![CreatureType::Nymph])
+    };
+    let enchantments = Value::PermanentCountControlledByMatching(PlayerRef::You, R::Enchantment);
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                    Predicate::CastSpellMatches(R::Enchantment),
+                    Predicate::SpellsOfTypeCastThisTurnAtMost {
+                        who: PlayerRef::You,
+                        card_type: CardType::Enchantment,
+                        n: 1,
+                    },
+                ])),
+                effect: make(PlayerRef::You, Value::ONE, nymph),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer)
+                    .with_filter(Predicate::ValueAtLeast(enchantments, Value::Const(5))),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(4),
+                        toughness: Value::Const(4),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+                ]),
+            },
+        ],
+        ..legend("Psemilla, Meletian Poet", cost(&[generic(2), w()]), vec![CreatureType::Human, CreatureType::Bard], 1, 1)
+    }
+}
+
+/// Feast of the Victorious Dead — {W}{B} enchantment. At your end step, if
+/// creatures died this turn, gain that much life and distribute that many
+/// +1/+1 counters among your creatures.
+pub fn feast_of_the_victorious_dead() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::CreaturesDiedThisTurnTotal },
+                Effect::DistributeCountersAmong {
+                    what: Selector::EachPermanent(yours()),
+                    total: Value::CreaturesDiedThisTurnTotal,
+                    counter: CounterType::PlusOnePlusOne,
+                },
+            ]),
+        }],
+        ..spell("Feast of the Victorious Dead", cost(&[w(), b()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Anje, Maid of Dishonor — {2}{B}{R} 4/5 legendary Vampire. Once each turn,
+/// Vampires of yours entering make a Blood token; {2}, sacrifice another
+/// creature or a Blood token: each opponent loses 2 life and you gain 2.
+pub fn anje_maid_of_dishonor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Vampire)),
+                })
+                .once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(crabomination_base::tokens::blood_token()),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((
+                R::ControlledByYou.and(R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Blood))),
+                1,
+            )),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..legend("Anje, Maid of Dishonor", cost(&[generic(2), b(), r()]), vec![CreatureType::Vampire], 4, 5)
+    }
+}
+
+/// Archghoul of Thraben — {2}{B} 3/2 Zombie Cleric. Whenever it or another
+/// Zombie you control dies, look at the top card: a Zombie card goes to your
+/// hand (the "may reveal" is always taken), anything else may be binned.
+pub fn archghoul_of_thraben() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCreatureType(CreatureType::Zombie),
+            }),
+            effect: Effect::RevealTopAndDrawIf {
+                who: PlayerRef::You,
+                reveal_filter: R::HasCreatureType(CreatureType::Zombie),
+                may_graveyard_miss: true,
+            },
+        }],
+        ..creature("Archghoul of Thraben", cost(&[generic(2), b()]), vec![CreatureType::Zombie, CreatureType::Cleric], 3, 2)
+    }
+}
+
+/// Emissary Green — {4}{G} 3/3 legendary Human Advisor. Attacking, each
+/// player votes profit or security: two Treasures per profit vote, a +1/+1
+/// counter on each of your creatures per security vote.
+pub fn emissary_green() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::Vote {
+            options: vec![
+                VoteOption::new(
+                    "profit",
+                    make(PlayerRef::You, Value::Const(2), crabomination_base::tokens::treasure_token()),
+                ),
+                VoteOption::new(
+                    "security",
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(yours()),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ),
+            ],
+            tally: VoteTally::PerVote,
+        })],
+        ..legend("Emissary Green", cost(&[generic(4), g()]), vec![CreatureType::Human, CreatureType::Advisor], 3, 3)
+    }
+}
+
+/// The Millennium Calendar — {1} legendary artifact. A time counter for each
+/// permanent you untap in your untap step; {2}, {T}: double them; at 1,000
+/// it is sacrificed and each opponent loses 1,000 life.
+pub fn the_millennium_calendar() -> CardDefinition {
+    let time = || Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Time };
+    CardDefinition {
+        name: "The Millennium Calendar",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesUntapped, EventScope::YourControl)
+                    .with_filter(Predicate::CurrentStepIs(TurnStep::Untap)),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Time, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CounterAdded(CounterType::Time), EventScope::SelfSource)
+                    .with_filter(Predicate::ValueAtLeast(time(), Value::Const(1000))),
+                effect: Effect::Seq(vec![
+                    Effect::SacrificePermanent { what: Selector::This },
+                    Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1000) },
+                ]),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Time, amount: time() },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Confounding Conundrum — {1}{U} enchantment. ETB: draw. Whenever a land an
+/// opponent controls enters, if they had another land enter this turn, they
+/// return a land they control to its owner's hand.
+pub fn confounding_conundrum() -> CardDefinition {
+    let them = || PlayerRef::ControllerOf(Box::new(Selector::TriggerSource));
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(draw(1)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::OpponentControl).with_filter(
+                    Predicate::All(vec![
+                        Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land },
+                        Predicate::LandsEnteredThisTurnAtLeast { who: them(), at_least: 2 },
+                    ]),
+                ),
+                effect: Effect::PlayerReturnsPermanentsToHand { who: them(), count: Value::ONE, filter: R::Land, up_to: false },
+            },
+        ],
+        ..spell("Confounding Conundrum", cost(&[generic(1), u()]), CardType::Enchantment, Effect::Noop)
     }
 }
