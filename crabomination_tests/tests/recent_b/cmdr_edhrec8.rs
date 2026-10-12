@@ -74,20 +74,6 @@ fn tokens_named(g: &GameState, name: &str) -> usize {
     g.battlefield.iter().filter(|c| c.is_token && c.definition.name == name).count()
 }
 
-fn activate_free(g: &mut GameState, id: CardId, index: usize) {
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id,
-        ability_index: index,
-        target: None,
-        additional_targets: vec![],
-        x_value: None,
-        mode: None,
-    })
-    .expect("activate");
-    drain_stack(g);
-}
-
 fn creature_def(name: &'static str, p: i32, t: i32, kind: crabomination::card::CreatureType) -> crabomination::card::CardDefinition {
     crabomination::card::CardDefinition {
         name,

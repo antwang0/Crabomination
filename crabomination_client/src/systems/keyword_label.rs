@@ -330,6 +330,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         Life(n) => format!("{n}♥"),
         ManaAndLife(c, n) => format!("{}+{n}♥", c.cmc()),
         Discard(n) | DiscardMatching(_, n) => format!("{n}↓"),
+        RevealMatching(_) => "reveal".to_string(),
         DiscardRandom(n) => format!("{n}↓?"),
         DiscardHand => "hand↓".into(),
         Blight(n) => format!("{n}☠"),
