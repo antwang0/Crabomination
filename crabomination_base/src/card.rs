@@ -1018,6 +1018,8 @@ pub enum CounterType {
     Ingenuity,
     /// Lara Croft, Tomb Raider's mark on the cards she exiles.
     Discovery,
+    /// Tetzimoc, Primal Death's mark (its entry destroys the marked).
+    Prey,
 }
 
 /// Every zone a card can occupy.
@@ -2319,6 +2321,9 @@ pub enum Keyword {
     /// exiled cards count.
     CantAttackOrBlockUnlessCardsInExile(u32),
     CantAttackOrBlockUnlessHandSizeAtMost(u32),
+    /// CR 508.1a / 509.1a — "can't attack or block unless a player has no
+    /// cards in hand" (Lupine Prototype): any seat still in the game.
+    CantAttackOrBlockUnlessAHandIsEmpty,
     /// CR 508.1a / 509.1a restriction with a cost — "This creature can't
     /// attack or block unless its controller pays {N}" (Oppressive Rays,
     /// Pacifism's taxing cousins). The controller is offered the payment as

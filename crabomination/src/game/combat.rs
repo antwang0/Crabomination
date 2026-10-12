@@ -727,6 +727,9 @@ impl GameState {
                 {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
+                Keyword::CantAttackOrBlockUnlessAHandIsEmpty if !self.some_hand_is_empty() => {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
                 // CR 508.1a — Patchwork Beastie's delirium gate.
                 Keyword::CantAttackOrBlockUnlessDelirium if !self.delirium_active(p) => {
                     return Some((line!(), GameError::CannotAttack(id)));
@@ -6447,6 +6450,7 @@ impl GameState {
                 Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
                     self.players[owner].hand.len() as u32 > *n
                 }
+                Keyword::CantAttackOrBlockUnlessAHandIsEmpty => !self.some_hand_is_empty(),
                 Keyword::CantAttackOrBlockUnlessDelirium => !self.delirium_active(owner),
                 Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
                     self.players[owner].creatures_died_this_turn == 0

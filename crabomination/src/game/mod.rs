@@ -17761,6 +17761,11 @@ impl GameState {
     /// CR 700.4-ish — Delirium: `seat`'s graveyard holds four or more card
     /// types. Shared by the Delirium predicate and the combat-restriction
     /// keyword (Patchwork Beastie).
+    /// Some player still in the game has no cards in hand (Lupine Prototype).
+    pub fn some_hand_is_empty(&self) -> bool {
+        self.players.iter().any(|p| p.is_alive() && p.hand.is_empty())
+    }
+
     pub fn delirium_active(&self, seat: usize) -> bool {
         self.distinct_card_types_in_graveyard(seat) >= 4
     }

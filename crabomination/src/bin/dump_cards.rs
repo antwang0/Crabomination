@@ -226,6 +226,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessYouControlCount { .. }
         | Keyword::CantAttackOrBlockUnlessEvenCounters
         | Keyword::CantAttackOrBlockUnlessHandSizeAtMost(_)
+        | Keyword::CantAttackOrBlockUnlessAHandIsEmpty
         | Keyword::CantAttackOrBlockUnlessCardsInExile(_)
         | Keyword::CantAttackOrBlockUnlessDelirium
         | Keyword::CantAttackOrBlockUnlessPay(_)

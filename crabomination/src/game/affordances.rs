@@ -692,6 +692,7 @@ impl GameState {
                     Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
                         self.players[seat].hand.len() as u32 <= *n
                     }
+                    Keyword::CantAttackOrBlockUnlessAHandIsEmpty => self.some_hand_is_empty(),
                     Keyword::CantAttackOrBlockUnlessDelirium => self.delirium_active(seat),
                     Keyword::CantAttackUnlessLandTypeOnBattlefield(lt) => self
                         .battlefield
