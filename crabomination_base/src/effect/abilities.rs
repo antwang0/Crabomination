@@ -2287,6 +2287,11 @@ pub enum StaticEffect {
     /// less to activate" (Embalmer's Tools) — generic only, no one-mana
     /// floor, and only for a creature card's abilities.
     GraveyardCreatureAbilitiesCostLess { amount: u32 },
+    /// "If a spell or ability you control would counter a spell, instead
+    /// exile that spell and you may play that card without paying its mana
+    /// cost" (Guile) — CR 614.1a, read in `countered_spell_off_stack`; the
+    /// permission is Spelljack's (`MayPlayDuration::WhileExiled`).
+    CounterBecomesExileFreePlay,
     /// "The first activated ability of an artifact you activate each turn
     /// costs {N} less to activate" (Tezzeret, Betrayer of Flesh). Generic
     /// only, no floor; mana abilities count as the first (2022-02-18 ruling).

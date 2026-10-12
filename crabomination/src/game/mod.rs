@@ -11296,6 +11296,39 @@ impl GameState {
         counterer: usize,
         events: &mut Vec<crate::game::GameEvent>,
     ) {
+        // Guile — CR 614.1a: the counter becomes "exile that spell, and its
+        // counterer may play it free while it stays exiled"; it is never
+        // countered (no `SpellCountered`).
+        if !card.is_token
+            && self.battlefield.iter().any(|c| {
+                c.controller == counterer
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(crate::effect::StaticEffect::CounterBecomesExileFreePlay)
+                        )
+                    })
+            })
+        {
+            let mut card = card;
+            let card_id = card.id;
+            card.may_play_until = Some(crate::card::MayPlayPermission {
+                cast_only: false,
+                locks_further_casts: false,
+                one_cast_group: None,
+                player: counterer,
+                granted_turn: self.turn_number,
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                exile_after: false,
+                miracle: false,
+                pay_life: false,
+                bottom_after: false,
+                undaunted: false,
+            });
+            self.exile.push(card);
+            events.push(crate::game::GameEvent::PermanentExiled { card_id });
+            return;
+        }
         // CR 701.6 — "a spell or ability you control counters a spell"
         // (Lullmage Mentor) plus the Summoning Trap per-turn tally, both keyed
         // on the counterer rather than the countered spell's caster.
@@ -34162,6 +34195,8 @@ fn static_effect_to_effects(
             | StaticEffect::MatchingActivatedAbilitiesCostLessFloored { .. }
             | StaticEffect::GraveyardActivatedAbilitiesCostLess { .. }
             | StaticEffect::GraveyardCreatureAbilitiesCostLess { .. }
+            // Read by `countered_spell_off_stack`.
+            | StaticEffect::CounterBecomesExileFreePlay
             | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
             | StaticEffect::FirstOwnCreatureTargetingAbilityCostsLess { .. }
             // Read on permanent entry (`apply_permanent_ascend`).
