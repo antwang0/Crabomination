@@ -48,7 +48,8 @@ fn default_starting_life() -> i32 {
 /// CR 114 — an emblem owned by a player. Has no characteristics other
 /// than the triggered abilities it grants its owner, and sits in the
 /// command zone for the rest of the game (emblems never leave). Created
-/// by planeswalker ultimates via `Effect::CreateEmblem`.
+/// by planeswalker ultimates via `Effect::CreateEmblem`; a `this_turn` one
+/// carries an effect's "until end of turn, whenever …" triggers instead.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Emblem {
     /// Source name, for display (e.g. "Professor Dellian Fel").
@@ -61,6 +62,10 @@ pub struct Emblem {
     /// snapshot back-compat.
     #[serde(default)]
     pub statics: Vec<crate::card::StaticAbility>,
+    /// CR 603.7c — "until end of turn, whenever …": the delayed triggered
+    /// abilities of `Effect::TriggersThisTurn`, dropped at cleanup.
+    #[serde(default)]
+    pub this_turn: bool,
 }
 
 /// CR 702.50 — a resolved Epic spell, snapshotted for the per-upkeep copy.

@@ -5248,6 +5248,7 @@ mod tests {
             name: "Professor Dellian Fel".into(),
             triggered: vec![],
             statics: vec![],
+            this_turn: false,
         });
         let view = project(&state, 0);
         assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);
@@ -5269,6 +5270,7 @@ mod tests {
                     toughness: 2,
                 },
             }],
+            this_turn: false,
         });
         let view = project(&state, 0);
         assert_eq!(

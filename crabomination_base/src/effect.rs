@@ -12695,6 +12695,11 @@ pub enum Effect {
         statics: Vec<crate::card::StaticAbility>,
     },
 
+    /// CR 603.7c — "until end of turn, whenever [event], [effect]" (Rite of
+    /// Harmony, Bonus Round): the controller gets a this-turn emblem with
+    /// `triggered`, dropped at cleanup.
+    TriggersThisTurn { triggered: Vec<TriggeredAbility> },
+
     /// "[Player] wins the game." Used by Approach of the Second Sun's
     /// second-cast win condition, Coalition Victory, Test of Endurance,
     /// Felidar Sovereign, and similar alt-win effects. The engine

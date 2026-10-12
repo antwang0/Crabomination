@@ -771,6 +771,7 @@ impl Effect {
             | Effect::EachOpponentReturnsFromYourGraveyard { .. }
             | Effect::GrantCastSpellRiders { .. }
             | Effect::GrantReboundToSpell { .. }
+            | Effect::TriggersThisTurn { .. }
             | Effect::CastExiledFreeOwnersLoseLife { .. }
             | Effect::CastExiledFree { .. }
             | Effect::DestroyOnePerOpponent { .. }

@@ -7816,6 +7816,7 @@ fn cr_800_4a_a_departed_players_emblems_leave_too() {
         name: "Test".into(),
         triggered: vec![],
         statics: vec![],
+        this_turn: false,
     });
     assert_eq!(g.players[2].emblems.len(), 1);
     g.concede(2);

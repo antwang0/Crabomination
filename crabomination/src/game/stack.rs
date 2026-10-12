@@ -5385,6 +5385,12 @@ impl GameState {
     /// wear-off, 514.3 priority check). See `CleanupOutcome` for how callers
     /// continue.
     pub fn do_cleanup(&mut self, events: &mut Vec<GameEvent>) -> CleanupOutcome {
+        // CR 603.7c — this turn's "until end of turn, whenever …" triggers end.
+        for p in 0..self.players.len() {
+            if self.players[p].emblems.iter().any(|e| e.this_turn) {
+                self.players[p].emblems.retain(|e| !e.this_turn);
+            }
+        }
         // CR 514.1 — First, if the active player's hand contains more cards
         // than their maximum hand size (normally seven), they discard
         // enough cards to reduce their hand size to that number. This

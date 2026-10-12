@@ -43138,10 +43138,25 @@ impl GameState {
                             name: name.clone(),
                             triggered: triggered.clone(),
                             statics: statics.clone(),
+                            this_turn: false,
                         });
                         self.offboard_keyword_grants = true;
                     }
                 }
+                Ok(())
+            }
+
+            Effect::TriggersThisTurn { triggered } => {
+                let name = ctx
+                    .source
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .map_or_else(String::new, |c| c.definition.name.to_string());
+                self.players[ctx.controller].emblems.push(crate::player::Emblem {
+                    name,
+                    triggered: triggered.clone(),
+                    statics: Vec::new(),
+                    this_turn: true,
+                });
                 Ok(())
             }
 
