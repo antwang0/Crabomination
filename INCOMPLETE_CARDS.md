@@ -2017,3 +2017,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Loki, God of Mischief | an ability of yours targeting only cards in graveyards or on the stack draws too | the trigger is `ChoseTargets` from a non-spell source; the targeted objects' kinds aren't read |
 | 🟡 Eradicator Valkyrie | "hexproof from planeswalkers" is not modelled | there is no hexproof-from-card-type keyword (`HexproofFromColor`/`…Monocolored`/`…Abilities` exist) |
 | 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
+| 🟡 Chiss-Goria, Forge Tyrant | the artifact spell cast from among the exiled cards doesn't gain affinity for artifacts | a may-play grant carries no cost-reduction rider (`MayPlayPermission` has `undaunted` only) |

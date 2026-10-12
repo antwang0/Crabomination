@@ -1172,3 +1172,30 @@ fn relentless_dead_keeps_coming_back() {
     assert!(g.players[0].hand.iter().any(|c| c.id == rd), "back to hand");
     assert!(g.battlefield_find(ghoul).is_some(), "the X=3 Zombie returned");
 }
+
+/// Chiss-Goria: affinity for artifacts; attacking exiles the top five and
+/// one artifact among them may be cast this turn.
+#[test]
+fn chiss_goria_forges_from_the_top() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::ornithopter());
+    }
+    let cg = g.add_card_to_hand(0, catalog::chiss_goria_forge_tyrant());
+    g.players[0].mana_pool.add(Color::Red, 6);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: cg, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{6}{R}{R}{R} less three");
+    drain_stack(&mut g);
+    let ring = g.add_card_to_library(0, catalog::sol_ring());
+    let ring2 = g.add_card_to_library(0, catalog::mind_stone());
+    library(&mut g, 0, 4);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: cg, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let granted = |id| g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some());
+    assert!(granted(ring) && granted(ring2));
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(cg)).count(), 5);
+}
