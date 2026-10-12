@@ -84,13 +84,6 @@ fn declare(g: &mut GameState, seat: usize, attacks: &[(CardId, usize)]) -> Resul
     Ok(())
 }
 
-fn combat_damage(g: &mut GameState) {
-    g.step = TurnStep::CombatDamage;
-    let ev = g.resolve_combat().expect("damage");
-    g.dispatch_triggers_for_events(&ev);
-    drain_stack(g);
-}
-
 fn on_bf(g: &GameState, id: CardId) -> bool {
     g.battlefield_find(id).is_some()
 }
