@@ -2283,6 +2283,10 @@ pub enum StaticEffect {
     /// activation cost to less than one mana" (Convergence of Dominion; its
     /// commander gate is a `WhileCondition`).
     GraveyardActivatedAbilitiesCostLess { amount: u32 },
+    /// "Activated abilities of creature cards in your graveyard cost {N}
+    /// less to activate" (Embalmer's Tools) — generic only, no one-mana
+    /// floor, and only for a creature card's abilities.
+    GraveyardCreatureAbilitiesCostLess { amount: u32 },
     /// "The first activated ability of an artifact you activate each turn
     /// costs {N} less to activate" (Tezzeret, Betrayer of Flesh). Generic
     /// only, no floor; mana abilities count as the first (2022-02-18 ruling).

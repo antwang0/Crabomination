@@ -11878,20 +11878,23 @@ impl GameState {
         if self.damage_causes_no_life_loss(seat) {
             return 0;
         }
+        let floors = |sa: &crate::card::StaticAbility| {
+            matches!(
+                sa.effect,
+                StaticEffect::DamageWontReduceControllerLifeBelowOne { requires_creature }
+                if !requires_creature
+                    || self.battlefield.iter().any(|c| {
+                        c.controller == seat && self.computed_is_creature(c)
+                    })
+            )
+        };
         let floored = self.players[seat].damage_floor_this_turn
             || self.battlefield.iter().any(|src| {
-                src.controller == seat
-                    && src.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            StaticEffect::DamageWontReduceControllerLifeBelowOne { requires_creature }
-                            if !requires_creature
-                                || self.battlefield.iter().any(|c| {
-                                    c.controller == seat && self.computed_is_creature(c)
-                                })
-                        )
-                    })
-            });
+                src.controller == seat && src.definition.static_abilities.iter().any(floors)
+            })
+            // CR 114.4 — an emblem's static works from the command zone
+            // (Serra the Benevolent's Worship emblem).
+            || self.players[seat].emblems.iter().any(|em| em.statics.iter().any(floors));
         if floored {
             amount.min(self.effective_life(seat).saturating_sub(1).max(0) as u32)
         } else {
@@ -34150,6 +34153,7 @@ fn static_effect_to_effects(
             | StaticEffect::MatchingActivatedAbilitiesCostLess { .. }
             | StaticEffect::MatchingActivatedAbilitiesCostLessFloored { .. }
             | StaticEffect::GraveyardActivatedAbilitiesCostLess { .. }
+            | StaticEffect::GraveyardCreatureAbilitiesCostLess { .. }
             | StaticEffect::FirstArtifactAbilityEachTurnCostsLess { .. }
             | StaticEffect::FirstOwnCreatureTargetingAbilityCostsLess { .. }
             // Read on permanent entry (`apply_permanent_ascend`).

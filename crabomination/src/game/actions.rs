@@ -23093,23 +23093,34 @@ impl GameState {
         // Convergence of Dominion — abilities that function from your
         // graveyard (unearth, scavenge, ...) cost {N} less, floored at one
         // mana of the cost.
+        // Embalmer's Tools — activated abilities of *creature* cards in
+        // your graveyard cost {N} less, with no floor.
         if ability.from_graveyard && !effective_mana_cost.symbols.is_empty() {
             let this = &*self;
-            let total: u32 = this
+            let creature_card = this.players[p]
+                .graveyard
+                .iter()
+                .any(|c| c.id == card_id && c.definition.card_types.contains(&crate::card::CardType::Creature));
+            let (total, creature_cut) = this
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
                 .flat_map(|c| {
                     c.definition.static_abilities.iter().filter_map(move |sa| this.active_static(&sa.effect, c))
                 })
-                .map(|e| match e {
-                    crate::effect::StaticEffect::GraveyardActivatedAbilitiesCostLess { amount } => *amount,
-                    _ => 0,
-                })
-                .sum();
+                .fold((0u32, 0u32), |(t, k), e| match e {
+                    crate::effect::StaticEffect::GraveyardActivatedAbilitiesCostLess { amount } => (t + *amount, k),
+                    crate::effect::StaticEffect::GraveyardCreatureAbilitiesCostLess { amount } if creature_card => {
+                        (t, k + *amount)
+                    }
+                    _ => (t, k),
+                });
             if total > 0 {
                 let max_cut = effective_mana_cost.cmc().saturating_sub(1);
                 effective_mana_cost.reduce_generic(total.min(max_cut));
+            }
+            if creature_cut > 0 {
+                effective_mana_cost.reduce_generic(creature_cut);
             }
         }
         // Professor Hojo — the first ability you activate during your turn

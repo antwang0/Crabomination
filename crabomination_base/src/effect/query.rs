@@ -1048,6 +1048,7 @@ impl Effect {
                 player_has_target(who) || otherwise.requires_target()
             }
             Effect::CounterSpellExileMayPlayFree { what } => sel_has_target(what),
+            Effect::NoteAmountOnSource { .. } => false,
             Effect::ExileTopRepeatOnDuplicateNames { who, .. }
             | Effect::LoseAllButLifeRemembered { who, .. }
             | Effect::UntapChosenPerCardInGraveyard { who } => player_has_target(who),

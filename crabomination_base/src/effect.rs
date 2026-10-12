@@ -13418,6 +13418,11 @@ pub enum Effect {
     /// back via [`Value::RememberedAmountOfSource`]. Soulgorger Orgg.
     LoseAllButLifeRemembered { who: PlayerRef, keep: Value },
 
+    /// "Note [amount]" (Sigarda's Splendor's life total): stamp the value on
+    /// the source permanent (`CardInstance.remembered_amount`), replacing any
+    /// earlier note; read back by [`Value::RememberedAmountOfSource`].
+    NoteAmountOnSource { amount: Value },
+
     /// "Counter target spell. If that spell is countered this way, exile it
     /// instead… You may play it without paying its mana cost for as long as it
     /// remains exiled" (Spelljack). The exiled card gets a may-play grant for

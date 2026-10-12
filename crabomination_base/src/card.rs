@@ -531,6 +531,8 @@ pub enum PlaneswalkerSubtype {
     Lolth,
     // Comet, Stellar Pup (Mr. House's EDHREC deck).
     Comet,
+    // Serra the Benevolent (the one-card gaps of EDHREC's top 600).
+    Serra,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

@@ -17580,12 +17580,15 @@ impl GameState {
             Effect::ReturnAllMatchingFromGraveyardToBattlefield { who, filter, sacrifice_eot } => {
                 use crate::effect::ZoneDest;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                // "with mana value X or less" (Ascend from Avernus) reads the
+                // spell's X; unresolved, the X atom matches nothing.
+                let filter = filter.resolve_x(ctx.x_value);
                 let ids: Vec<CardId> = self.players[p]
                     .graveyard
                     .iter()
                     .filter(|c| {
                         self.evaluate_requirement_static(
-                            filter,
+                            &filter,
                             &Target::Permanent(c.id),
                             ctx.controller,
                             ctx.source,
@@ -31782,6 +31785,16 @@ impl GameState {
                     if !repeat {
                         return Ok(());
                     }
+                }
+                Ok(())
+            }
+
+            Effect::NoteAmountOnSource { amount } => {
+                let n = self.evaluate_value(amount, ctx);
+                if let Some(src) = ctx.source
+                    && let Some(c) = self.battlefield_find_mut(src)
+                {
+                    c.remembered_amount = Some(n);
                 }
                 Ok(())
             }
