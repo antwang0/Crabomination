@@ -7677,8 +7677,16 @@ impl GameState {
 impl GameState {
     /// Do `types` share a card type with the first permanent sacrificed this
     /// resolution, as it last existed on the battlefield (CR 608.2h)?
+    /// With nothing sacrificed yet this resolution it reads the permanent a
+    /// spell's cost sacrificed (Fatal Grudge's "the sacrificed permanent").
     fn shares_card_type_with_first_sacrificed(&self, types: &[crate::card::CardType]) -> bool {
         let theirs = &self.scratch.first_sacrificed_types;
+        if theirs.is_empty() {
+            return self
+                .sacrificed_card
+                .and_then(|id| self.died_card_snapshots.get(&id).or_else(|| self.find_card_anywhere(id)))
+                .is_some_and(|c| types.iter().any(|t| c.definition.card_types.contains(t)));
+        }
         types.iter().any(|t| theirs.contains(t))
     }
 }
