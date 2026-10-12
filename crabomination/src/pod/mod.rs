@@ -4842,6 +4842,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VALDUK_COMMANDERS,
             main: decks::VALDUK_MAIN,
         },
+        // Seat 732: Eris, Roar of the Storm's EDHREC average deck. `--pod-decks 732`.
+        PodDeck {
+            name: "Eris, Roar of the Storm (UR)",
+            commanders: decks::ERIS_COMMANDERS,
+            main: decks::ERIS_MAIN,
+        },
+        // Seat 733: Zabaz, the Glimmerwasp's EDHREC average deck. `--pod-decks 733`.
+        PodDeck {
+            name: "Zabaz, the Glimmerwasp (WR)",
+            commanders: decks::ZABAZ_COMMANDERS,
+            main: decks::ZABAZ_MAIN,
+        },
+        // Seat 734: Killian, Ink Duelist's EDHREC average deck. `--pod-decks 734`.
+        PodDeck {
+            name: "Killian, Ink Duelist (WB)",
+            commanders: decks::KILLIAN_2_COMMANDERS,
+            main: decks::KILLIAN_2_MAIN,
+        },
+        // Seat 735: Mathas, Fiend Seeker's EDHREC average deck. `--pod-decks 735`.
+        PodDeck {
+            name: "Mathas, Fiend Seeker (WBR)",
+            commanders: decks::MATHAS_COMMANDERS,
+            main: decks::MATHAS_MAIN,
+        },
+        // Seat 736: Pir, Imaginative Rascal and Toothy, Imaginary Friend's EDHREC average deck. `--pod-decks 736`.
+        PodDeck {
+            name: "Pir, Imaginative Rascal and Toothy, Imaginary Friend (UG)",
+            commanders: decks::PIR_COMMANDERS,
+            main: decks::PIR_MAIN,
+        },
     ]
 }
 
@@ -7337,6 +7367,11 @@ mod tests {
             ("Red Death, Shipwrecker", &[0x0BFF]),
             ("Delina, Wild Mage", &[0x0C00]),
             ("Valduk, Keeper of the Flame", &[0x0C01]),
+            ("Eris, Roar of the Storm", &[0x0C02]),
+            ("Zabaz, the Glimmerwasp", &[0x0C03]),
+            ("Killian, Ink Duelist", &[0x0C04]),
+            ("Mathas, Fiend Seeker", &[0x0C05]),
+            ("Pir, Imaginative Rascal and Toothy, Imaginary Friend", &[0x0C06]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
