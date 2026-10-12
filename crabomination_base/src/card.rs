@@ -1013,6 +1013,11 @@ pub enum CounterType {
     /// Memory counter — The Animus and Altaïr Ibn-La'Ahad's mark on the
     /// legendary creature cards they exile.
     Memory,
+    /// Lady Octopus, Inspired Inventor's ingenuity counters (her free
+    /// artifact cast reads them).
+    Ingenuity,
+    /// Lara Croft, Tomb Raider's mark on the cards she exiles.
+    Discovery,
 }
 
 /// Every zone a card can occupy.
