@@ -1393,3 +1393,22 @@ pub fn ruthless_ripper() -> CardDefinition {
         ..creature("Ruthless Ripper", cost(&[b()]), vec![CreatureType::Human, CreatureType::Assassin], 1, 1)
     }
 }
+
+/// Edge of Autumn — {1}{G} sorcery: with four or fewer lands, a basic land
+/// onto the battlefield tapped. Cycling—Sacrifice a land.
+pub fn edge_of_autumn() -> CardDefinition {
+    let lands = Value::PermanentCountControlledByMatching(PlayerRef::You, R::Land);
+    CardDefinition {
+        keywords: vec![Keyword::CyclingSacrifice(Box::new(R::Land))],
+        ..spell(
+            "Edge of Autumn",
+            cost(&[generic(1), g()]),
+            CardType::Sorcery,
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::ValueAtLeast(lands, Value::Const(5)))),
+                then: Box::new(search_basic(ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true })),
+                else_: Box::new(Effect::Noop),
+            },
+        )
+    }
+}

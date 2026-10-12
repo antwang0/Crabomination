@@ -928,3 +928,24 @@ fn ruthless_ripper_reveals_to_flip() {
     assert!(g.players[0].hand.iter().any(|c| c.id == black), "revealed, not discarded");
     assert_eq!(g.players[1].life, life - 2);
 }
+
+/// Edge of Autumn ramps at four or fewer lands; its cycling sacrifices a land
+/// (CR 702.29) and can't be paid without one.
+#[test]
+fn edge_of_autumn_ramps_or_cycles() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let e = g.add_card_to_hand(0, catalog::edge_of_autumn());
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::Cycle { card_id: e, x_value: None }).is_err(), "no land to sacrifice");
+    cast(&mut g, e, &[]).expect("cast");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count(), 1);
+    let e2 = g.add_card_to_hand(0, catalog::edge_of_autumn());
+    let hand = g.players[0].hand.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Cycle { card_id: e2, x_value: None }).expect("cycle");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count(), 0, "the land paid");
+    assert_eq!(g.players[0].hand.len(), hand, "discarded one, drew one");
+}
