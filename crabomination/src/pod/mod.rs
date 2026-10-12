@@ -6468,6 +6468,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KAIN_COMMANDERS,
             main: decks::KAIN_MAIN,
         },
+        // Seat 1003: Anzrag, the Quake-Mole's EDHREC average deck. `--pod-decks 1003`.
+        PodDeck {
+            name: "Anzrag, the Quake-Mole (RG)",
+            commanders: decks::ANZRAG_COMMANDERS,
+            main: decks::ANZRAG_MAIN,
+        },
+        // Seat 1004: Ardbert, Warrior of Darkness's EDHREC average deck. `--pod-decks 1004`.
+        PodDeck {
+            name: "Ardbert, Warrior of Darkness (WB)",
+            commanders: decks::ARDBERT_COMMANDERS,
+            main: decks::ARDBERT_MAIN,
+        },
+        // Seat 1005: Fire Lord Ozai's EDHREC average deck. `--pod-decks 1005`.
+        PodDeck {
+            name: "Fire Lord Ozai (BR)",
+            commanders: decks::FIRE_LORD_OZAI_COMMANDERS,
+            main: decks::FIRE_LORD_OZAI_MAIN,
+        },
+        // Seat 1006: Hinata, Dawn-Crowned's EDHREC average deck. `--pod-decks 1006`.
+        PodDeck {
+            name: "Hinata, Dawn-Crowned (WUR)",
+            commanders: decks::HINATA_COMMANDERS,
+            main: decks::HINATA_MAIN,
+        },
+        // Seat 1007: Ian Malcolm, Chaotician's EDHREC average deck. `--pod-decks 1007`.
+        PodDeck {
+            name: "Ian Malcolm, Chaotician (UR)",
+            commanders: decks::IAN_MALCOLM_COMMANDERS,
+            main: decks::IAN_MALCOLM_MAIN,
+        },
+        // Seat 1008: Imodane, the Pyrohammer's EDHREC average deck. `--pod-decks 1008`.
+        PodDeck {
+            name: "Imodane, the Pyrohammer (R)",
+            commanders: decks::IMODANE_COMMANDERS,
+            main: decks::IMODANE_MAIN,
+        },
+        // Seat 1009: Ivy, Gleeful Spellthief's EDHREC average deck. `--pod-decks 1009`.
+        PodDeck {
+            name: "Ivy, Gleeful Spellthief (UG)",
+            commanders: decks::IVY_COMMANDERS,
+            main: decks::IVY_MAIN,
+        },
+        // Seat 1010: Maarika, Brutal Gladiator's EDHREC average deck. `--pod-decks 1010`.
+        PodDeck {
+            name: "Maarika, Brutal Gladiator (BRG)",
+            commanders: decks::MAARIKA_COMMANDERS,
+            main: decks::MAARIKA_MAIN,
+        },
+        // Seat 1011: Megatron, Tyrant's EDHREC average deck. `--pod-decks 1011`.
+        PodDeck {
+            name: "Megatron, Tyrant (WBR)",
+            commanders: decks::MEGATRON_COMMANDERS,
+            main: decks::MEGATRON_MAIN,
+        },
+        // Seat 1012: Saruman of Many Colors's EDHREC average deck. `--pod-decks 1012`.
+        PodDeck {
+            name: "Saruman of Many Colors (WUB)",
+            commanders: decks::SARUMAN_MANY_COLORS_COMMANDERS,
+            main: decks::SARUMAN_MANY_COLORS_MAIN,
+        },
     ]
 }
 
@@ -7055,12 +7115,30 @@ fn play_pod_game(
                                 )
                             })
                         });
+                        // Braid of Fire pays its cumulative upkeep with mana
+                        // in the new turn's upkeep (CR 702.24a).
+                        let upkeep_mana = |i: usize| {
+                            i == ap
+                                && g.step == crate::game::types::TurnStep::Upkeep
+                                && g.battlefield.iter().any(|c| {
+                                    c.controller == i
+                                        && c.definition.keywords.iter().any(|k| {
+                                            matches!(
+                                                k,
+                                                crate::card::Keyword::CumulativeUpkeep(
+                                                    crate::card::CumulativeUpkeepCost::AddMana(_)
+                                                )
+                                            )
+                                        })
+                                })
+                        };
                         if !keeps
-                            && let Some((i, p)) = g.players.iter().enumerate().find(|(_, p)| {
+                            && let Some((i, p)) = g.players.iter().enumerate().find(|(i, p)| {
                                 p.is_alive()
                                     && !p.mana_pool.is_empty()
                                     && p.kept_mana_this_turn.is_empty()
                                     && p.firebending_kept_red == 0
+                                    && !upkeep_mana(*i)
                             })
                         {
                             panic!(
@@ -9242,6 +9320,16 @@ mod tests {
             ("Magda, the Hoardmaster", &[0x0D0E]),
             ("Ghalta, Stampede Tyrant", &[0x0D0F]),
             ("Kain, Traitorous Dragoon", &[0x0D10]),
+            ("Anzrag, the Quake-Mole", &[0x0E00]),
+            ("Ardbert, Warrior of Darkness", &[0x0E01]),
+            ("Fire Lord Ozai", &[0x0E02]),
+            ("Hinata, Dawn-Crowned", &[0x0E03]),
+            ("Ian Malcolm, Chaotician", &[0x0E04]),
+            ("Imodane, the Pyrohammer", &[0x0E05]),
+            ("Ivy, Gleeful Spellthief", &[0x0E06]),
+            ("Maarika, Brutal Gladiator", &[0x0E07]),
+            ("Megatron, Tyrant", &[0x0E08]),
+            ("Saruman of Many Colors", &[0x0E09]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
