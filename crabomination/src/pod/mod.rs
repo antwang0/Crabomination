@@ -4560,6 +4560,132 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_GHOUL_COMMANDERS,
             main: decks::THE_GHOUL_MAIN,
         },
+        // Seat 685: Goro-Goro and Satoru's EDHREC average deck. `--pod-decks 685`.
+        PodDeck {
+            name: "Goro-Goro and Satoru (UBR)",
+            commanders: decks::GORO_GORO_AND_SATORU_COMMANDERS,
+            main: decks::GORO_GORO_AND_SATORU_MAIN,
+        },
+        // Seat 686: Neriv, Heart of the Storm's EDHREC average deck. `--pod-decks 686`.
+        PodDeck {
+            name: "Neriv, Heart of the Storm (WBR)",
+            commanders: decks::NERIV_686_COMMANDERS,
+            main: decks::NERIV_686_MAIN,
+        },
+        // Seat 687: Xavier Sal, Infested Captain's EDHREC average deck. `--pod-decks 687`.
+        PodDeck {
+            name: "Xavier Sal, Infested Captain (UBG)",
+            commanders: decks::XAVIER_SAL_COMMANDERS,
+            main: decks::XAVIER_SAL_MAIN,
+        },
+        // Seat 688: Myrkul, Lord of Bones's EDHREC average deck. `--pod-decks 688`.
+        PodDeck {
+            name: "Myrkul, Lord of Bones (WBG)",
+            commanders: decks::MYRKUL_COMMANDERS,
+            main: decks::MYRKUL_MAIN,
+        },
+        // Seat 689: The Beamtown Bullies's EDHREC average deck. `--pod-decks 689`.
+        PodDeck {
+            name: "The Beamtown Bullies (BRG)",
+            commanders: decks::THE_BEAMTOWN_BULLIES_COMMANDERS,
+            main: decks::THE_BEAMTOWN_BULLIES_MAIN,
+        },
+        // Seat 690: Kwain, Itinerant Meddler's EDHREC average deck. `--pod-decks 690`.
+        PodDeck {
+            name: "Kwain, Itinerant Meddler (WU)",
+            commanders: decks::KWAIN_COMMANDERS,
+            main: decks::KWAIN_MAIN,
+        },
+        // Seat 691: Zimone and Dina's EDHREC average deck. `--pod-decks 691`.
+        PodDeck {
+            name: "Zimone and Dina (UBG)",
+            commanders: decks::ZIMONE_AND_DINA_COMMANDERS,
+            main: decks::ZIMONE_AND_DINA_MAIN,
+        },
+        // Seat 692: Brudiclad, Telchor Engineer's EDHREC average deck. `--pod-decks 692`.
+        PodDeck {
+            name: "Brudiclad, Telchor Engineer (UR)",
+            commanders: decks::BRUDICLAD_COMMANDERS,
+            main: decks::BRUDICLAD_MAIN,
+        },
+        // Seat 693: Riku of Many Paths's EDHREC average deck. `--pod-decks 693`.
+        PodDeck {
+            name: "Riku of Many Paths (URG)",
+            commanders: decks::RIKU_OF_MANY_PATHS_COMMANDERS,
+            main: decks::RIKU_OF_MANY_PATHS_MAIN,
+        },
+        // Seat 694: Ratadrabik of Urborg's EDHREC average deck. `--pod-decks 694`.
+        PodDeck {
+            name: "Ratadrabik of Urborg (WB)",
+            commanders: decks::RATADRABIK_OF_URBORG_COMMANDERS,
+            main: decks::RATADRABIK_OF_URBORG_MAIN,
+        },
+        // Seat 695: Narset, Enlightened Master's EDHREC average deck. `--pod-decks 695`.
+        PodDeck {
+            name: "Narset, Enlightened Master (WUR)",
+            commanders: decks::NARSET_695_COMMANDERS,
+            main: decks::NARSET_695_MAIN,
+        },
+        // Seat 696: Syr Konrad, the Grim's EDHREC average deck. `--pod-decks 696`.
+        PodDeck {
+            name: "Syr Konrad, the Grim (B)",
+            commanders: decks::SYR_KONRAD_COMMANDERS,
+            main: decks::SYR_KONRAD_MAIN,
+        },
+        // Seat 697: Runo Stromkirk's EDHREC average deck. `--pod-decks 697`.
+        PodDeck {
+            name: "Runo Stromkirk (UB)",
+            commanders: decks::RUNO_STROMKIRK_COMMANDERS,
+            main: decks::RUNO_STROMKIRK_MAIN,
+        },
+        // Seat 698: Altaïr Ibn-La'Ahad's EDHREC average deck. `--pod-decks 698`.
+        PodDeck {
+            name: "Altaïr Ibn-La'Ahad (WBR)",
+            commanders: decks::ALTAIR_IBN_LA_AHAD_COMMANDERS,
+            main: decks::ALTAIR_IBN_LA_AHAD_MAIN,
+        },
+        // Seat 699: Kumena, Tyrant of Orazca's EDHREC average deck. `--pod-decks 699`.
+        PodDeck {
+            name: "Kumena, Tyrant of Orazca (UG)",
+            commanders: decks::KUMENA_COMMANDERS,
+            main: decks::KUMENA_MAIN,
+        },
+        // Seat 700: Kediss, Emberclaw Familiar // Malcolm, Keen-Eyed Navigator's EDHREC average deck. `--pod-decks 700`.
+        PodDeck {
+            name: "Kediss, Emberclaw Familiar // Malcolm, Keen-Eyed Navigator (UR)",
+            commanders: decks::KEDISS_COMMANDERS,
+            main: decks::KEDISS_MAIN,
+        },
+        // Seat 701: Nahiri, Forged in Fury's EDHREC average deck. `--pod-decks 701`.
+        PodDeck {
+            name: "Nahiri, Forged in Fury (WR)",
+            commanders: decks::NAHIRI_701_COMMANDERS,
+            main: decks::NAHIRI_701_MAIN,
+        },
+        // Seat 702: Selvala, Heart of the Wilds's EDHREC average deck. `--pod-decks 702`.
+        PodDeck {
+            name: "Selvala, Heart of the Wilds (G)",
+            commanders: decks::SELVALA_COMMANDERS,
+            main: decks::SELVALA_MAIN,
+        },
+        // Seat 703: Liliana, Heretical Healer's EDHREC average deck. `--pod-decks 703`.
+        PodDeck {
+            name: "Liliana, Heretical Healer (B)",
+            commanders: decks::LILIANA_COMMANDERS,
+            main: decks::LILIANA_MAIN,
+        },
+        // Seat 704: Vraska, Soul of Stone's EDHREC average deck. `--pod-decks 704`.
+        PodDeck {
+            name: "Vraska, Soul of Stone (WUR)",
+            commanders: decks::VRASKA_COMMANDERS,
+            main: decks::VRASKA_MAIN,
+        },
+        // Seat 705: Darien, King of Kjeldor's EDHREC average deck. `--pod-decks 705`.
+        PodDeck {
+            name: "Darien, King of Kjeldor (W)",
+            commanders: decks::DARIEN_COMMANDERS,
+            main: decks::DARIEN_MAIN,
+        },
     ]
 }
 
@@ -7008,6 +7134,27 @@ mod tests {
             ("Grismold, the Dreadsower", &[0x0BD0]),
             ("God-Eternal Oketra", &[0x0BD1]),
             ("The Ghoul, Gunslinger", &[0x0BD2]),
+            ("Goro-Goro and Satoru", &[0x0BD3]),
+            ("Neriv, Heart of the Storm", &[0x0BD4]),
+            ("Xavier Sal, Infested Captain", &[0x0BD5]),
+            ("Myrkul, Lord of Bones", &[0x0BD6]),
+            ("The Beamtown Bullies", &[0x0BD7]),
+            ("Kwain, Itinerant Meddler", &[0x0BD8]),
+            ("Zimone and Dina", &[0x0BD9]),
+            ("Brudiclad, Telchor Engineer", &[0x0BDA]),
+            ("Riku of Many Paths", &[0x0BDB]),
+            ("Ratadrabik of Urborg", &[0x0BDC]),
+            ("Narset, Enlightened Master", &[0x0BDD]),
+            ("Syr Konrad, the Grim", &[0x0BDE]),
+            ("Runo Stromkirk", &[0x0BDF]),
+            ("Altaïr Ibn-La'Ahad", &[0x0BE0]),
+            ("Kumena, Tyrant of Orazca", &[0x0BE1]),
+            ("Kediss, Emberclaw Familiar", &[0x0BE2]),
+            ("Nahiri, Forged in Fury", &[0x0BE3]),
+            ("Selvala, Heart of the Wilds", &[0x0BE4]),
+            ("Liliana, Heretical Healer", &[0x0BE5]),
+            ("Vraska, Soul of Stone", &[0x0BE6]),
+            ("Darien, King of Kjeldor", &[0x0BE7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

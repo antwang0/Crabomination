@@ -172,7 +172,9 @@ the handoff.
 - **Guile** (CR 614.1a): `StaticEffect::CounterBecomesExileFreePlay`, read in
   `countered_spell_off_stack`; seat 539 Baral. **Loki**: `ChoseTargets` now binds its chooser as
   the trigger subject; seat 540 Marchesa. Seats 541-546 the top 600's last two-card gaps
-  (`DeployCreatureFromHandAttacking` now resolves X — Arni Metalbrow).
+  (`DeployCreatureFromHandAttacking` now resolves X — Arni Metalbrow). **Seats 685-705**: the top
+  600's three-card gaps, 63 cards in `decks::cmdr_edhrec11`, no new primitive. Debug pods 150 games,
+  all decided. Eleven of those 32 decks wait on primitives (TODO's Commander NEXT item 6).
 - **Open from the rescan:** Pramikon (Suppressor Skyguard's "another opponent isn't attacked"),
   Karametra (Yasharn's
   no-life/no-sacrifice costs — no central gate: life and sacrifice payments are spread over the
