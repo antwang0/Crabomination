@@ -3,7 +3,6 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
-use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -373,3 +372,335 @@ fn vessel_of_volatility_makes_four_red() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 4);
 }
 
+
+/// Locket of Yesterdays (CR 601.2f): a spell costs {1} less per same-named
+/// card in your graveyard — a second Divination costs {1}{U}.
+#[test]
+fn locket_discounts_a_spell_by_its_namesakes() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    ready(&mut g, 0, catalog::locket_of_yesterdays());
+    g.add_card_to_graveyard(0, catalog::divination());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{1}{U} pays for it");
+}
+
+/// Hawkeye, Young Avenger (CR 614.1a): your noncombat damage to an opponent
+/// gets +X, X = Hawkeye's power; your own face takes no bonus.
+#[test]
+fn hawkeye_adds_its_power_to_noncombat_damage() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::hawkeye_young_avenger());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, &[Target::Player(1)]).expect("shock them");
+    assert_eq!(g.players[1].life, 16, "2 + Hawkeye's 2");
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, &[Target::Player(0)]).expect("shock yourself");
+    assert_eq!(g.players[0].life, 18);
+}
+
+/// Gelatinous Cube: Engulf exiles an opponent's non-Ooze creature; Dissolve
+/// for X = its mana value sends it to its owner's graveyard.
+#[test]
+fn gelatinous_cube_engulfs_then_dissolves() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let cube = g.add_card_to_hand(0, catalog::gelatinous_cube());
+    cast(&mut g, cube, &[]).expect("cube");
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    activate_x(&mut g, cube, 0, Some(perm(bear)), Some(2)).expect("dissolve x = 2");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+}
+
+/// Harbin, Vanguard Aviator: five attacking Soldiers pump the team and give
+/// it flying; four don't.
+#[test]
+fn harbin_needs_five_soldiers() {
+    for (soldiers, pumped) in [(3, false), (4, true)] {
+        let mut g = pod(2);
+        let harbin = ready(&mut g, 0, catalog::harbin_vanguard_aviator());
+        let mut attackers = vec![(harbin, 1)];
+        for _ in 0..soldiers {
+            attackers.push((ready(&mut g, 0, catalog::elite_vanguard()), 1));
+        }
+        let home = ready(&mut g, 0, catalog::grizzly_bears());
+        declare(&mut g, &attackers).expect("attack");
+        let (p, t) = pt(&g, home);
+        assert_eq!((p, t) == (3, 3), pumped, "{} Soldiers attacking", soldiers + 1);
+        let flies = g.computed_permanent(home).unwrap().keywords().contains(&Keyword::Flying);
+        assert_eq!(flies, pumped);
+    }
+}
+
+/// Lo and Li, Royal Advisors: an opponent milling grows every Advisor you
+/// control.
+#[test]
+fn lo_and_li_grow_advisors_when_an_opponent_mills() {
+    let mut g = pod(2);
+    library(&mut g, 1, 8);
+    let lo = ready(&mut g, 0, catalog::lo_and_li_royal_advisors());
+    let mc = ready(&mut g, 0, catalog::masters_councillors());
+    activate(&mut g, lo, 0, Some(Target::Player(1))).expect("mill four");
+    assert_eq!(g.players[1].graveyard.len(), 4);
+    for id in [lo, mc] {
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+}
+
+/// Master's Councillors: +2/+0 for each graveyard with seven or more cards.
+#[test]
+fn masters_councillors_counts_full_graveyards() {
+    let mut g = pod(3);
+    let mc = ready(&mut g, 0, catalog::masters_councillors());
+    for seat in [1, 2] {
+        for _ in 0..7 {
+            g.add_card_to_graveyard(seat, catalog::island());
+        }
+    }
+    assert_eq!(pt(&g, mc), (5, 3));
+}
+
+/// Krav, the Unredeemed: sacrifice X creatures — the target draws X and gains
+/// X, and Krav takes X counters.
+#[test]
+fn krav_sacrifices_x_for_cards_life_and_counters() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let krav = ready(&mut g, 0, catalog::krav_the_unredeemed());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    activate_x(&mut g, krav, 0, Some(Target::Player(0)), Some(2)).expect("x = 2");
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    assert_eq!(g.players[0].life, 22);
+    assert_eq!(g.battlefield_find(krav).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Protect the Negotiators: the tax is {1} per creature you control — two
+/// creatures, and an opponent with one spare mana is countered.
+#[test]
+fn protect_the_negotiators_taxes_per_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    let ptn = g.add_card_to_hand(0, catalog::protect_the_negotiators());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ptn,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "one spare mana can't pay {{2}}");
+}
+
+/// Last Light of Durin's Day: the sixth Mountain sacrifices it and puts a
+/// Dragon from hand onto the battlefield.
+#[test]
+fn last_light_fetches_a_dragon_at_six_quest_counters() {
+    let mut g = pod(2);
+    let ll = ready(&mut g, 0, catalog::last_light_of_durins_day());
+    let shivan = g.add_card_to_hand(0, catalog::shivan_dragon());
+    for _ in 0..6 {
+        let m = g.add_card_to_hand(0, catalog::mountain());
+        g.players[0].lands_played_this_turn = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::PlayLand(m)).expect("land drop");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(ll).is_none(), "sacrificed");
+    assert!(g.battlefield_find(shivan).is_some(), "the Dragon came from hand");
+}
+
+/// Themberchaud: ETB deals X — Mountains you control — to each other
+/// non-flier and each player.
+#[test]
+fn themberchaud_quakes_by_mountains() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::mountain());
+    }
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let serra = ready(&mut g, 1, catalog::serra_angel());
+    let th = g.add_card_to_hand(0, catalog::themberchaud());
+    cast(&mut g, th, &[]).expect("themberchaud");
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(serra).is_some(), "fliers are spared");
+    assert!(g.battlefield_find(th).is_some(), "not itself");
+    assert_eq!((g.players[0].life, g.players[1].life), (17, 17));
+}
+
+/// Rigo, Streetwise Mentor: enters with a shield counter; attacking with a
+/// power-1 creature draws a card.
+#[test]
+fn rigo_draws_when_a_small_creature_attacks() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let rigo = g.add_card_to_hand(0, catalog::rigo_streetwise_mentor());
+    cast(&mut g, rigo, &[]).expect("rigo");
+    assert_eq!(g.battlefield_find(rigo).unwrap().counter_count(CounterType::Shield), 1);
+    let lions = ready(&mut g, 0, catalog::savannah_lions());
+    let hand = g.players[0].hand.len();
+    declare(&mut g, &[(lions, 1)]).expect("attack with a 2/1");
+    assert_eq!(g.players[0].hand.len(), hand, "power 2 doesn't count");
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::rigo_streetwise_mentor());
+    let mite = ready(&mut g, 0, catalog::memnite());
+    let hand = g.players[0].hand.len();
+    declare(&mut g, &[(mite, 1)]).expect("attack with a 1/1");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Lapis Orb of Dragonkind: its {U} spent on a Dragon creature spell puts a
+/// scry 2 trigger above that spell.
+#[test]
+fn lapis_orb_scries_for_a_dragon() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let orb = ready(&mut g, 0, catalog::lapis_orb_of_dragonkind());
+    let iy = g.add_card_to_hand(0, catalog::iymrith_desert_doom());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: orb,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for U");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: iy, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast the Dragon");
+    assert_eq!(g.stack.len(), 2, "the scry trigger rides above the Dragon");
+}
+
+/// Isengard Unleashed (CR 614.1a): your sources deal triple damage to
+/// opponents this turn, not to you.
+#[test]
+fn isengard_unleashed_triples_damage_to_opponents() {
+    let mut g = pod(2);
+    let ise = g.add_card_to_hand(0, catalog::isengard_unleashed());
+    cast(&mut g, ise, &[]).expect("isengard");
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, &[Target::Player(1)]).expect("shock them");
+    assert_eq!(g.players[1].life, 14, "2 tripled");
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, &[Target::Player(0)]).expect("shock yourself");
+    assert_eq!(g.players[0].life, 18);
+}
+
+/// Chromium, the Mutable: discarding a card makes it a 1/1 Human with no
+/// abilities but hexproof, unblockable this turn.
+#[test]
+fn chromium_hides_as_a_hexproof_human() {
+    let mut g = pod(2);
+    let ch = ready(&mut g, 0, catalog::chromium_the_mutable());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, ch, 0, None).expect("discard");
+    let c = g.computed_permanent(ch).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 1));
+    assert!(c.keywords().contains(&Keyword::Hexproof));
+    assert!(!c.keywords().contains(&Keyword::Flying), "lost its abilities");
+}
+
+/// Owlbear Cub (CR 508.4): attacking a player with eight lands puts a creature
+/// from the top eight onto the battlefield tapped and attacking — no
+/// indestructible, no bounce.
+#[test]
+fn owlbear_cub_calls_mama_against_eight_lands() {
+    let mut g = pod(2);
+    for _ in 0..8 {
+        ready(&mut g, 1, catalog::forest());
+    }
+    g.add_card_to_library(0, catalog::island());
+    let mama = g.add_card_to_library(0, catalog::serra_angel());
+    let cub = ready(&mut g, 0, catalog::owlbear_cub());
+    declare(&mut g, &[(cub, 1)]).expect("attack");
+    assert!(g.attacking.iter().any(|a| a.attacker == mama), "joined the attack");
+    assert!(!g.computed_permanent(mama).unwrap().keywords().contains(&Keyword::Indestructible));
+}
+
+/// Ulvenwald Oddity transforms into the Behemoth, which pumps the team.
+#[test]
+fn ulvenwald_behemoth_pumps_the_team() {
+    let mut g = pod(2);
+    let odd = ready(&mut g, 0, catalog::ulvenwald_oddity());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, odd, 0, None).expect("transform");
+    assert_eq!(pt(&g, odd), (8, 8));
+    assert_eq!(pt(&g, bear), (3, 3));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// Shanna, Sisay's Legacy: +1/+1 per creature you control, herself included.
+#[test]
+fn shanna_counts_your_creatures() {
+    let mut g = pod(2);
+    let sh = ready(&mut g, 0, catalog::shanna_sisays_legacy());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, sh), (2, 2));
+}
+
+/// Brigid: entering makes a Kithkin; paying {G} at the first main phase
+/// transforms her, and the back taps for X mana, X = your other creatures.
+#[test]
+fn brigid_flips_for_mana() {
+    let mut g = pod(2);
+    let br = g.add_card_to_hand(0, catalog::brigid_clachans_heart());
+    cast(&mut g, br, &[]).expect("brigid");
+    assert_eq!(tokens_named(&g, "Kithkin"), 1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(br).unwrap().def.name, "Brigid, Doun's Mind");
+    assert_eq!(tokens_named(&g, "Kithkin"), 1, "flipping away makes no Kithkin");
+    g.clear_sickness(br);
+    g.players[0].mana_pool.empty();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: br,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for G");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "one other creature: the Kithkin");
+}
+
+/// Rona, Sheoldred's Faithful: each instant or sorcery drains every opponent.
+#[test]
+fn rona_drains_on_spells() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::rona_sheoldreds_faithful());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    library(&mut g, 0, 2);
+    cast(&mut g, opt, &[]).expect("opt");
+    assert_eq!((g.players[1].life, g.players[2].life), (19, 19));
+}

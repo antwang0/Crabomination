@@ -1678,3 +1678,674 @@ pub fn draconic_visitor() -> CardDefinition {
         ..creature("Draconic Visitor", cost(&[generic(3), r(), r()]), vec![CreatureType::Dragon], 5, 5)
     }
 }
+
+// ── Batch C ──────────────────────────────────────────────────────────────────
+
+/// Street Urchin — {1}{R} legendary enchantment Background. Commander
+/// creatures you own have "{1}, sacrifice another creature or an artifact: 1
+/// damage to any target."
+pub fn street_urchin() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Background], ..Default::default() },
+        static_abilities: vec![static_ab(
+            "Commander creatures you own have \"{1}, Sacrifice another creature or an artifact: This creature deals 1 damage to any target.\"",
+            StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::IsCommander).and(R::OwnedByYou)),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[generic(1)]),
+                    sac_other_filter: Some((R::Creature.and(R::OtherThanSource).or(R::Artifact), 1)),
+                    effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        )],
+        ..permanent("Street Urchin", cost(&[generic(1), r()]), CardType::Enchantment)
+    }
+}
+
+/// Sarinth Greatwurm — {4}{R}{G} 7/6 Wurm, trample. Whenever a land enters,
+/// create a tapped Powerstone token.
+pub fn sarinth_greatwurm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(trigger_is(R::Land)),
+            effect: Effect::Seq(vec![
+                make(Value::ONE, crabomination_base::tokens::powerstone_token()),
+                Effect::Tap { what: Selector::LastCreatedToken },
+            ]),
+        }],
+        ..creature("Sarinth Greatwurm", cost(&[generic(4), r(), g()]), vec![CreatureType::Wurm], 7, 6)
+    }
+}
+
+/// Atrocious Experiment — {2}{B} sorcery. Target player mills two, draws two,
+/// and loses 2 life.
+pub fn atrocious_experiment() -> CardDefinition {
+    spell(
+        "Atrocious Experiment",
+        cost(&[generic(2), b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(2) },
+            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+        ]),
+    )
+}
+
+/// Primal Amulet // Primal Wellspring — {4} artifact. Instants and sorceries
+/// you cast cost {1} less; each one adds a charge counter, and at four you may
+/// remove them and transform it. Back: land, {T}: any color; spent on an
+/// instant or sorcery, copy that spell.
+pub fn primal_amulet() -> CardDefinition {
+    let is = || R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    let wellspring = CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                    crate::mana::SpendRestriction::InstantSorceryCopy,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..land("Primal Wellspring", vec![])
+    };
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Instant and sorcery spells you cast cost {1} less to cast.",
+            StaticEffect::CostReduction { filter: is(), amount: 1 },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(is())),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                        Value::Const(4),
+                    ),
+                    then: Box::new(may(
+                        "Remove the charge counters and transform Primal Amulet?",
+                        Effect::Seq(vec![
+                            Effect::RemoveCounter {
+                                what: Selector::This,
+                                kind: CounterType::Charge,
+                                amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                            },
+                            Effect::Transform { what: Selector::This },
+                        ]),
+                    )),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(wellspring)),
+        ..permanent("Primal Amulet", cost(&[generic(4)]), CardType::Artifact)
+    }
+}
+
+/// Locket of Yesterdays — {1} artifact. Spells you cast cost {1} less for each
+/// card with the same name in your graveyard.
+pub fn locket_of_yesterdays() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Spells you cast cost {1} less to cast for each card with the same name as that spell in your graveyard.",
+            StaticEffect::SpellsCostLessPerSameNameInYourGraveyard,
+        )],
+        ..permanent("Locket of Yesterdays", cost(&[generic(1)]), CardType::Artifact)
+    }
+}
+
+/// Gelatinous Cube — {2}{B}{B} 4/3 Ooze. Engulf: ETB exiles target non-Ooze
+/// creature an opponent controls until it leaves. Dissolve — {X}{B}: put
+/// target creature card with mana value X exiled with it into its owner's
+/// graveyard.
+pub fn gelatinous_cube() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                R::Creature.and(R::ControlledByOpponent).and(R::Not(Box::new(R::HasCreatureType(CreatureType::Ooze)))),
+            ),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::x(), b()]),
+            effect: Effect::Move {
+                what: target_filtered(R::ExiledWithSource.and(R::Creature).and(R::ManaValueExactlyXFromCost)),
+                to: ZoneDest::Graveyard,
+            },
+            ..Default::default()
+        }],
+        ..creature("Gelatinous Cube", cost(&[generic(2), b(), b()]), vec![CreatureType::Ooze], 4, 3)
+    }
+}
+
+/// Harbin, Vanguard Aviator — {W}{U} 3/2 legendary Human Soldier flier.
+/// Attacking with five or more Soldiers gives your creatures +1/+1 and flying
+/// until end of turn.
+pub fn harbin_vanguard_aviator() -> CardDefinition {
+    let yours_all = || Selector::EachPermanent(yours(R::Creature));
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(Predicate::ValueAtLeast(
+                Value::count(Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Soldier).and(R::IsAttacking)))),
+                Value::Const(5),
+            )),
+            effect: Effect::Seq(vec![eot_pump(yours_all(), 1, 1), grant_eot(yours_all(), Keyword::Flying)]),
+        }],
+        ..legend("Harbin, Vanguard Aviator", cost(&[w(), u()]), vec![CreatureType::Human, CreatureType::Soldier], 3, 2)
+    }
+}
+
+/// Skystrike Officer — {2}{U} 2/3 Human Soldier flier. Attacking: a 1/1
+/// colorless Soldier artifact creature token. Tap three untapped Soldiers you
+/// control: draw a card.
+pub fn skystrike_officer() -> CardDefinition {
+    let soldier = TokenDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..token("Soldier", 1, 1, vec![], vec![CreatureType::Soldier])
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: make(Value::ONE, soldier),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((R::HasCreatureType(CreatureType::Soldier), 3)),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        ..creature("Skystrike Officer", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 3)
+    }
+}
+
+/// Lo and Li, Royal Advisors — {2}{B}{B} 3/3 legendary Human Advisor. An
+/// opponent discarding or milling puts a +1/+1 counter on each Advisor you
+/// control. {2}{U/B}: target player mills four.
+pub fn lo_and_li_royal_advisors() -> CardDefinition {
+    let grow = || Effect::AddCounter {
+        what: Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Advisor))),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::DiscardedOneOrMore, EventScope::OpponentControl), effect: grow() },
+            // "mills one or more cards" — once per mill, not per card.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Milled, EventScope::OpponentControl).once_per_batch(),
+                effect: grow(),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), hybrid(Color::Blue, Color::Black)]),
+            effect: Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..legend("Lo and Li, Royal Advisors", cost(&[generic(2), b(), b()]), vec![CreatureType::Human, CreatureType::Advisor], 3, 3)
+    }
+}
+
+/// Master's Councillors — {1}{U} 1/3 Human Advisor, vigilance; +2/+0 for each
+/// graveyard with seven or more cards. Your second draw each turn: target
+/// player mills three.
+pub fn masters_councillors() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![static_ab(
+            "This creature gets +2/+0 for each graveyard with seven or more cards in it.",
+            StaticEffect::PumpPTByValue {
+                applies_to: Selector::This,
+                power: Value::Times(Box::new(Value::Const(2)), Box::new(Value::GraveyardsWithAtLeast(7))),
+                toughness: Value::ZERO,
+            },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
+            effect: Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(3) },
+        }],
+        ..creature("Master's Councillors", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Advisor], 1, 3)
+    }
+}
+
+/// Krav, the Unredeemed — {4}{B} 3/3 legendary Demon, partner with Regna.
+/// {B}, sacrifice X creatures: target player draws X and gains X life; X
+/// +1/+1 counters on Krav.
+pub fn krav_the_unredeemed() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::PartnerWith("Regna, the Redeemer".into())],
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search("Regna, the Redeemer")],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_other_filter: Some((R::Creature, 1)),
+            sac_other_x: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: target_filtered(R::Player), amount: Value::XFromCost },
+                Effect::GainLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::XFromCost },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::XFromCost },
+            ]),
+            ..Default::default()
+        }],
+        ..legend("Krav, the Unredeemed", cost(&[generic(4), b()]), vec![CreatureType::Demon], 3, 3)
+    }
+}
+
+/// Regna, the Redeemer — {5}{W} 4/4 legendary Angel flier, partner with Krav.
+/// Each end step, if your team gained life this turn, two 1/1 white Warriors.
+pub fn regna_the_redeemer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::PartnerWith("Krav, the Unredeemed".into())],
+        triggered_abilities: vec![
+            crate::effect::shortcut::partner_with_search("Krav, the Unredeemed"),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                    .with_filter(Predicate::PlayerGainedLifeThisTurn { who: PlayerRef::You }),
+                effect: make(Value::Const(2), token("Warrior", 1, 1, vec![Color::White], vec![CreatureType::Warrior])),
+            },
+        ],
+        ..legend("Regna, the Redeemer", cost(&[generic(5), w()]), vec![CreatureType::Angel], 4, 4)
+    }
+}
+
+/// Rigo, Streetwise Mentor — {G/W}{W}{W/U} 2/2 legendary Cat Citizen, enters
+/// with a shield counter. Attacking with one or more creatures with power 1
+/// or less draws a card.
+pub fn rigo_streetwise_mentor() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Shield, Value::ONE)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(Predicate::SelectorExists(
+                Selector::EachPermanent(yours(R::IsAttacking.and(R::PowerAtMost(1)))),
+            )),
+            effect: draw(1),
+        }],
+        ..legend(
+            "Rigo, Streetwise Mentor",
+            cost(&[hybrid(Color::Green, Color::White), w(), hybrid(Color::White, Color::Blue)]),
+            vec![CreatureType::Cat, CreatureType::Citizen],
+            2,
+            2,
+        )
+    }
+}
+
+/// Protect the Negotiators — {1}{U} instant, kicker {W}. Kicked: a 1/1 white
+/// Soldier. Counter target spell unless its controller pays {1} for each
+/// creature you control.
+pub fn protect_the_negotiators() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[w()]))],
+        ..spell(
+            "Protect the Negotiators",
+            cost(&[generic(1), u()]),
+            CardType::Instant,
+            Effect::Seq(vec![
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(make(Value::ONE, token("Soldier", 1, 1, vec![Color::White], vec![CreatureType::Soldier]))),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::CounterUnlessPaid {
+                    what: target_filtered(R::IsSpellOnStack),
+                    mana_cost: ManaCost::default(),
+                    exile: false,
+                    extra_generic: Some(Value::count(Selector::EachPermanent(yours(R::Creature)))),
+                    if_paid: None,
+                },
+            ]),
+        )
+    }
+}
+
+/// Hawkeye, Young Avenger — {3}{R} 2/4 legendary Human Archer Hero, reach.
+/// Your sources' noncombat damage to opponents and their permanents gets +X,
+/// X = Hawkeye's power.
+pub fn hawkeye_young_avenger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![static_ab(
+            "If a source you control would deal noncombat damage to an opponent or a permanent an opponent controls, instead it deals that much damage plus X, where X is Hawkeye's power.",
+            StaticEffect::NoncombatDamageToOpponentsPlusOwnPower,
+        )],
+        ..legend(
+            "Hawkeye, Young Avenger",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Archer, CreatureType::Hero],
+            2,
+            4,
+        )
+    }
+}
+
+/// Lapis Orb of Dragonkind — {2}{U} artifact. {T}: {U}; spent on a Dragon
+/// creature spell, scry 2.
+pub fn lapis_orb_of_dragonkind() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::OfColor(Color::Blue, Value::ONE)),
+                    crate::mana::SpendRestriction::DragonCreatureScryTwo,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..permanent("Lapis Orb of Dragonkind", cost(&[generic(2), u()]), CardType::Artifact)
+    }
+}
+
+/// Themberchaud — {4}{R}{R}{R} 5/5 legendary Dragon, trample. ETB: X damage
+/// to each other creature without flying and each player, X = Mountains you
+/// control. You may exert it as it attacks; when you do, it gains flying.
+pub fn themberchaud() -> CardDefinition {
+    let x = || Value::count(Selector::EachPermanent(yours(R::HasLandType(LandType::Mountain))));
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Exert],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        R::Creature.and(R::OtherThanSource).and(R::HasKeyword(Keyword::Flying).negate()),
+                    ),
+                    body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: x() }),
+                },
+                Effect::ForEach {
+                    selector: Selector::Player(PlayerRef::EachPlayer),
+                    body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: x() }),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Exerted, EventScope::SelfSource),
+                effect: grant_eot(Selector::This, Keyword::Flying),
+            },
+        ],
+        ..legend("Themberchaud", cost(&[generic(4), r(), r(), r()]), vec![CreatureType::Dragon], 5, 5)
+    }
+}
+
+/// Last Light of Durin's Day — {1}{R} enchantment. A Mountain of yours
+/// entering adds a quest counter; at six or more, sacrifice it and put a
+/// Dragon card from your hand or library onto the battlefield.
+/// Mountaincycling {2}.
+pub fn last_light_of_durins_day() -> CardDefinition {
+    let to_bf = ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false };
+    let dragon = || R::HasCreatureType(CreatureType::Dragon);
+    CardDefinition {
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(trigger_is(R::HasLandType(LandType::Mountain))),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Quest, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                        Value::Const(6),
+                    ),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::SacrificeSelected { what: Selector::This },
+                        // A Dragon in hand comes first; otherwise the library.
+                        Effect::If {
+                            cond: Predicate::SelectorExists(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Hand,
+                                filter: dragon(),
+                            }),
+                            then: Box::new(Effect::Move {
+                                what: Selector::TakeGreatestManaValue {
+                                    inner: Box::new(Selector::CardsInZone {
+                                        who: PlayerRef::You,
+                                        zone: crate::card::Zone::Hand,
+                                        filter: dragon(),
+                                    }),
+                                    count: Box::new(Value::ONE),
+                                },
+                                to: to_bf.clone(),
+                            }),
+                            else_: Box::new(Effect::Search { who: PlayerRef::You, filter: dragon(), to: to_bf }),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..permanent("Last Light of Durin's Day", cost(&[generic(1), r()]), CardType::Enchantment)
+    }
+}
+
+// ── Batch D ──────────────────────────────────────────────────────────────────
+
+/// Isengard Unleashed — {2}{R}{R}{R} sorcery. Damage can't be prevented this
+/// turn; your sources deal triple damage to opponents and their permanents
+/// this turn. Flashback {4}{R}{R}{R}.
+pub fn isengard_unleashed() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), r(), r(), r()]))],
+        ..spell(
+            "Isengard Unleashed",
+            cost(&[generic(2), r(), r(), r()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![Effect::DamageCantBePreventedThisTurn, Effect::TripleYourSourcesDamageToOpponentsThisTurn]),
+        )
+    }
+}
+
+/// Chromium, the Mutable — {4}{W}{U}{B} 7/7 legendary Elder Dragon, flash,
+/// can't be countered, flying. Discard a card: until end of turn it becomes a
+/// 1/1 Human that loses all abilities and gains hexproof; it can't be blocked
+/// this turn.
+pub fn chromium_the_mutable() -> CardDefinition {
+    let eot = Duration::EndOfTurn;
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::CantBeCountered, Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Seq(vec![
+                Effect::BecomeCreatureType { what: Selector::This, creature_types: vec![CreatureType::Human], duration: eot },
+                Effect::SetBasePT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: eot },
+                Effect::LoseAllAbilities { what: Selector::This, duration: eot },
+                grant_eot(Selector::This, Keyword::Hexproof),
+                grant_eot(Selector::This, Keyword::Unblockable),
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Chromium, the Mutable",
+            cost(&[generic(4), w(), u(), b()]),
+            vec![CreatureType::Elder, CreatureType::Dragon],
+            7,
+            7,
+        )
+    }
+}
+
+/// Windshaper Planetar — {4}{W} 4/4 Angel, flash, flying. Entering during the
+/// declare attackers step, you may reselect what each attacking creature is
+/// attacking.
+pub fn windshaper_planetar() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::CurrentStepIs(TurnStep::DeclareAttackers)),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(R::IsAttacking),
+                body: Box::new(Effect::ReselectAttackTarget { what: Selector::TriggerSource, players_only: false }),
+            },
+        }],
+        ..creature("Windshaper Planetar", cost(&[generic(4), w()]), vec![CreatureType::Angel], 4, 4)
+    }
+}
+
+/// Neerdiv, Devious Diver — {2}{U} 2/2 legendary Merfolk Rogue. Becoming
+/// tapped: target player mills cards equal to its power. Casting a spell from
+/// your graveyard or activating an ability of a card there: draw a card and a
+/// +1/+1 counter on Neerdiv.
+pub fn neerdiv_devious_diver() -> CardDefinition {
+    let payoff = || Effect::Seq(vec![
+        draw(1),
+        Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+    ]);
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::Mill {
+                    who: target_filtered(R::Player),
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(trigger_is(R::WasCastFromGraveyard)),
+                effect: payoff(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
+                    .with_filter(trigger_is(R::InYourGraveyard)),
+                effect: payoff(),
+            },
+        ],
+        ..legend("Neerdiv, Devious Diver", cost(&[generic(2), u()]), vec![CreatureType::Merfolk, CreatureType::Rogue], 2, 2)
+    }
+}
+
+/// Rona, Sheoldred's Faithful — {1}{U}{B}{B} 3/4 legendary Human Wizard. Your
+/// instant and sorcery casts drain each opponent of 1 life. You may cast it
+/// from your graveyard by discarding two cards in addition to its other costs.
+pub fn rona_sheoldreds_faithful() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::GraveyardCast],
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::Discard { count: 2, filter: None }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            )),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        }],
+        ..legend(
+            "Rona, Sheoldred's Faithful",
+            cost(&[generic(1), u(), b(), b()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            4,
+        )
+    }
+}
+
+/// Owlbear Cub — {2}{G} 3/3 Bird Bear. Attacking a player who controls eight
+/// or more lands: look at your top eight; you may put a creature card from
+/// among them onto the battlefield tapped and attacking that player.
+pub fn owlbear_cub() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::ValueAtLeast(
+                Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByDefendingPlayer))),
+                Value::Const(8),
+            )),
+            effect: Effect::LookTopMayDeployAttacking {
+                count: Value::Const(8),
+                filter: R::Creature,
+                return_at_end_of_combat: false,
+                plain: true,
+            },
+        }],
+        ..creature("Owlbear Cub", cost(&[generic(2), g()]), vec![CreatureType::Bird, CreatureType::Bear], 3, 3)
+    }
+}
+
+/// Ulvenwald Oddity // Ulvenwald Behemoth — {2}{G}{G} 4/4 Beast, trample,
+/// haste; {5}{G}{G}: transform. Back: 8/8 trample, haste; other creatures you
+/// control get +1/+1 and have trample and haste.
+pub fn ulvenwald_oddity() -> CardDefinition {
+    let behemoth = CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        static_abilities: vec![static_ab(
+            "Other creatures you control get +1/+1 and have trample and haste.",
+            StaticEffect::AnthemForFilter {
+                filter: yours(R::Creature.and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Trample, Keyword::Haste],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        )],
+        ..creature("Ulvenwald Behemoth", ManaCost::default(), vec![CreatureType::Beast, CreatureType::Horror], 8, 8)
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), g(), g()]),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(behemoth)),
+        ..creature("Ulvenwald Oddity", cost(&[generic(2), g(), g()]), vec![CreatureType::Beast], 4, 4)
+    }
+}
+
+/// Shanna, Sisay's Legacy — {G}{W} 0/0 legendary Human Warrior. Can't be the
+/// target of abilities your opponents control; +1/+1 for each creature you
+/// control.
+pub fn shanna_sisays_legacy() -> CardDefinition {
+    let n = || Value::count(Selector::EachPermanent(yours(R::Creature)));
+    CardDefinition {
+        keywords: vec![Keyword::HexproofFromAbilities],
+        static_abilities: vec![static_ab(
+            "Shanna gets +1/+1 for each creature you control.",
+            StaticEffect::PumpPTByValue { applies_to: Selector::This, power: n(), toughness: n() },
+        )],
+        ..legend("Shanna, Sisay's Legacy", cost(&[g(), w()]), vec![CreatureType::Human, CreatureType::Warrior], 0, 0)
+    }
+}
+
+/// Brigid, Clachan's Heart // Brigid, Doun's Mind — {2}{W} 3/2 legendary
+/// Kithkin. Entering or transforming into this face: a 1/1 green and white
+/// Kithkin. First main phase: you may pay {G} to transform. Back: {T}: add X
+/// {G} or X {W}, X = your other creatures; first main phase: you may pay {W}
+/// to transform.
+pub fn brigid_clachans_heart() -> CardDefinition {
+    let main = |pay: ManaCost| TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+        effect: Effect::MayPay {
+            description: "Pay to transform Brigid?".into(),
+            mana_cost: pay,
+            body: Box::new(Effect::Transform { what: Selector::This }),
+            else_: None,
+        },
+    };
+    let others = || Value::count(Selector::EachPermanent(yours(R::Creature.and(R::OtherThanSource))));
+    let x_of = |c: Color| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(c, others()) },
+        ..Default::default()
+    };
+    let minds = CardDefinition {
+        activated_abilities: vec![x_of(Color::Green), x_of(Color::White)],
+        triggered_abilities: vec![main(cost(&[w()]))],
+        ..legend("Brigid, Doun's Mind", ManaCost::default(), vec![CreatureType::Kithkin, CreatureType::Soldier], 3, 2)
+    };
+    let kithkin = || make(Value::ONE, token("Kithkin", 1, 1, vec![Color::Green, Color::White], vec![CreatureType::Kithkin]));
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(kithkin()),
+            TriggeredAbility { event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource), effect: kithkin() },
+            main(cost(&[g()])),
+        ],
+        back_face: Some(Box::new(minds)),
+        ..legend("Brigid, Clachan's Heart", cost(&[generic(2), w()]), vec![CreatureType::Kithkin, CreatureType::Warrior], 3, 2)
+    }
+}
