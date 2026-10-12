@@ -21163,3 +21163,57 @@ pub const PIR_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, island,
     island, island, island, island, island, island, island, island, island,
 ];
+
+pub const IROH_COMMANDERS: &[CardFactory] = &[iroh_tea_master];
+
+/// **Iroh, Tea Master**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 10 Mountains + 12 Plains = 99.
+/// Iroh, Tea Master (EDHREC, fetched 2026-10-12).
+pub const IROH_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, bucknards_everfull_purse, coveted_jewel, crown_of_doom,
+    hithlain_rope, howling_mine, idol_of_oblivion, jinxed_idol, jinxed_ring,
+    pendant_of_prosperity, pumpkin_bombs, sol_ring, talisman_of_conviction, battlefield_forge,
+    boros_garrison, clifftop_retreat, command_tower, exotic_orchard, furycalm_snarl,
+    homeward_path, jasmine_dragon_tea_shop, rugged_prairie, sacred_foundry, spectator_seating,
+    sunbillow_verge, sundown_pass, abzan_falconer, akroan_horse, alexios_deimos_of_kosmos,
+    bazaar_trader, cinder_giant, discerning_financier, goldnight_castigator, grid_monitor,
+    humble_defector, kabira_evangel, kazuul_warlord, kharn_the_betrayer,
+    loran_of_the_third_path, neyali_suns_vanguard, ondu_cleric, rust_elemental, steel_golem,
+    stiltzkin_moogle_merchant, treasure_nabber, tuktuk_scrapper, wartime_protestors,
+    windborn_muse, yes_man_personal_securitron, zidane_tantalus_thief, aggressive_mining,
+    anointed_procession, curse_of_opulence, darksteel_mutation, ghostly_prison,
+    intangible_virtue, nine_lives, path_to_redemption, sokkas_charge, transcendence,
+    boros_charm, brand, chaos_warp, deflecting_palm, generous_gift, path_to_exile,
+    redirect_lightning, swords_to_plowshares, take_the_bait, blasphemous_act, cut_a_deal,
+    disrupt_decorum, harmless_offering, secret_rendezvous, taunt_from_the_rampart, united_front,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const BORBORYGMOS_ENRAGED_COMMANDERS: &[CardFactory] = &[borborygmos_enraged];
+
+/// **Borborygmos Enraged**'s EDHREC average deck, card for card:
+/// 64 nonbasic cards + 20 Forests + 15 Mountains = 99.
+/// Borborygmos Enraged (EDHREC, fetched 2026-10-12).
+pub const BORBORYGMOS_ENRAGED_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_of_holding, conduit_of_worlds, lightning_greaves, sol_ring,
+    swiftfoot_boots, boseiju_who_endures, cinder_glade, command_tower, commercial_district,
+    forgotten_cave, gruul_turf, kessig_wolf_run, myriad_landscape, reliquary_tower,
+    rockfall_vale, rootbound_crag, sheltered_thicket, spire_garden, stomping_ground,
+    temple_of_the_false_god, tranquil_thicket, wooded_foothills, azusa_lost_but_seeking,
+    dryad_of_the_ilysian_grove, eternal_witness, glint_horn_buccaneer, goblin_anarchomancer,
+    groundskeeper, icetill_explorer, lotus_cobra, mina_and_denn_wildborn, oracle_of_mul_daya,
+    orcish_lumberjack, ramunap_excavator, surly_badgersaur, sylvan_safekeeper,
+    tireless_provisioner, abundance, burgeoning, exploration, fiery_emancipation, keen_sense,
+    snake_umbra, beast_within, chaos_warp, harrow, pair_o_dice_lost, return_of_the_wildspeaker,
+    sprouting_vines, wrenn_and_seven, blasphemous_act, change_of_fortune, creeping_renaissance,
+    cultivate, farseek, kodamas_reach, life_from_the_loam, natures_lore, nyleas_intervention,
+    praetors_counsel, rampant_growth, rishkars_expertise, splendid_reclamation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];

@@ -4872,6 +4872,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PIR_COMMANDERS,
             main: decks::PIR_MAIN,
         },
+        // Seat 737: Iroh, Tea Master's EDHREC average deck. `--pod-decks 737`.
+        PodDeck {
+            name: "Iroh, Tea Master (WR)",
+            commanders: decks::IROH_COMMANDERS,
+            main: decks::IROH_MAIN,
+        },
+        // Seat 738: Borborygmos Enraged's EDHREC average deck. `--pod-decks 738`.
+        PodDeck {
+            name: "Borborygmos Enraged (RG)",
+            commanders: decks::BORBORYGMOS_ENRAGED_COMMANDERS,
+            main: decks::BORBORYGMOS_ENRAGED_MAIN,
+        },
     ]
 }
 
@@ -7372,6 +7384,8 @@ mod tests {
             ("Killian, Ink Duelist", &[0x0C04]),
             ("Mathas, Fiend Seeker", &[0x0C05]),
             ("Pir, Imaginative Rascal and Toothy, Imaginary Friend", &[0x0C06]),
+            ("Iroh, Tea Master", &[0x0C07]),
+            ("Borborygmos Enraged", &[0x0C08]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
