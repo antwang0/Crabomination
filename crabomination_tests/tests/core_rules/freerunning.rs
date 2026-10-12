@@ -177,8 +177,8 @@ fn merciless_harlequin_etb_draw_lose_life() {
     assert_eq!(g.players[0].life, 19, "lost 1 life on ETB");
 }
 
-/// Viewpoint Synchronization fetches up to three basics into hand (the
-/// controller picks each via `Decision::Search`).
+/// Viewpoint Synchronization fetches three basics: two onto the battlefield
+/// tapped, one into hand (the controller picks each via `Decision::Search`).
 #[test]
 fn viewpoint_synchronization_fetches_basics() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -197,9 +197,11 @@ fn viewpoint_synchronization_fetches_basics() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Viewpoint Synchronization");
     drain_stack(&mut g);
-    // Approximation routes all three fetched basics to hand: cast (-1) + 3 = +2
-    // beyond the spell card itself, i.e. hand_before + 3.
-    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    for &land in &f[..2] {
+        assert!(g.battlefield_find(land).is_some_and(|c| c.tapped), "two enter tapped");
+    }
+    assert!(g.players[0].hand.iter().any(|c| c.id == f[2]));
 }
 
 /// Escape Detection bounces a creature and cantrips.

@@ -14,7 +14,7 @@ use crate::effect::{
     ActivatedAbility, Duration, Effect, KeywordAct, ManaPayload, PlayerRef, RevealMissDest, ZoneDest, ZoneRef,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, r, u, w, x, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
 use crabomination_base::tokens::treasure_token;
 use std::sync::Arc;
 
@@ -1134,4 +1134,702 @@ pub fn thunderwave() -> CardDefinition {
             (20, u8::MAX, Effect::DealDamage { to: their_creatures(), amount: Value::Const(6) }),
         ]),
     )
+}
+
+// ── Ezio Auditore da Firenze (WUBRG) ─────────────────────────────────────────
+
+fn assassin() -> R {
+    R::HasCreatureType(CreatureType::Assassin)
+}
+
+fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition { supertypes: vec![Supertype::Legendary], ..creature(name, mana, types, p, t) }
+}
+
+fn human_assassin(name: &'static str, mana: ManaCost, p: i32, t: i32) -> CardDefinition {
+    legend(name, mana, vec![CreatureType::Human, CreatureType::Assassin], p, t)
+}
+
+fn static_ab(description: &'static str, effect: StaticEffect) -> StaticAbility {
+    StaticAbility { description, effect }
+}
+
+/// A 1/1 black Assassin creature token with menace.
+fn assassin_token() -> TokenDefinition {
+    TokenDefinition { keywords: vec![Keyword::Menace], ..token("Assassin", 1, 1, Color::Black, vec![CreatureType::Assassin]) }
+}
+
+/// "Whenever [this] deals combat damage to a player".
+fn on_hit(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource), effect }
+}
+
+/// "Whenever one or more [filter] you control deal combat damage to a player".
+fn yours_hit(filter: R, effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+            .once_per_batch()
+            .dealt_by(filter),
+        effect,
+    }
+}
+
+fn unblockable_this_turn(what: Selector) -> Effect {
+    until_eot(what, Keyword::Unblockable)
+}
+
+/// Ezio Auditore da Firenze — {1}{B} 3/2 legendary Human Assassin, menace.
+/// Assassin spells you cast have freerunning {B}{B} (CR 702.173); connecting
+/// with a player at 10 or less life, pay {W}{U}{B}{R}{G} and they lose.
+pub fn ezio_auditore_da_firenze() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![static_ab(
+            "Assassin spells you cast have freerunning {B}{B}.",
+            StaticEffect::GrantFreerunningToSpells { filter: assassin(), cost: cost(&[b(), b()]) },
+        )],
+        triggered_abilities: vec![on_hit(Effect::If {
+            cond: Predicate::PlayerLifeAtMost { who: PlayerRef::TriggerEventPlayer, life: 10 },
+            then: Box::new(Effect::MayPay {
+                description: "pay {W}{U}{B}{R}{G}: that player loses the game".into(),
+                mana_cost: cost(&[w(), u(), b(), r(), g()]),
+                body: Box::new(Effect::Reflexive {
+                    body: Box::new(Effect::LoseGame { who: PlayerRef::TriggerEventPlayer }),
+                }),
+                else_: None,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..human_assassin("Ezio Auditore da Firenze", cost(&[generic(1), b()]), 3, 2)
+    }
+}
+
+/// Haystack — {1}{W} Artifact. {2}, {T}: target creature you control phases out.
+pub fn haystack() -> CardDefinition {
+    CardDefinition {
+        name: "Haystack",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::PhaseOut {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                until_source_leaves: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hidden Blade — {2} Equipment with flash, equip {2}: +1/+0 and first strike;
+/// entering, it attaches to target creature you control, an Assassin of
+/// which gains deathtouch until end of turn.
+pub fn hidden_blade() -> CardDefinition {
+    let host = || target_filtered(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Hidden Blade",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, keywords: vec![Keyword::FirstStrike], ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AttachSourceTo { host: host() },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: assassin() },
+                then: Box::new(until_eot(Selector::Target(0), Keyword::Deathtouch)),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Smoke Bomb — {3} Artifact with flash. All creatures have shroud; at your
+/// upkeep you sacrifice it, and when you do a creature of yours can't be
+/// blocked this turn.
+pub fn smoke_bomb() -> CardDefinition {
+    CardDefinition {
+        name: "Smoke Bomb",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![static_ab(
+            "All creatures have shroud.",
+            StaticEffect::GrantKeyword { applies_to: Selector::EachPermanent(R::Creature), keyword: Keyword::Shroud },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::SacrificePermanent { what: Selector::This },
+                Effect::Reflexive {
+                    body: Box::new(unblockable_this_turn(target_filtered(R::Creature.and(R::ControlledByYou)))),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Animus — {2} legendary Artifact. Your end step exiles up to one
+/// legendary creature card from a graveyard with a memory counter; {T}: until
+/// your next turn, a legendary creature of yours becomes a copy of a creature
+/// card in exile with a memory counter. Sorcery speed.
+pub fn the_animus() -> CardDefinition {
+    let legendary = || R::Creature.and(R::HasSupertype(Supertype::Legendary));
+    CardDefinition {
+        name: "The Animus",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: legendary().and(R::InGraveyard),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Memory, amount: Value::ONE },
+                ])),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::BecomeCopyOfFor {
+                what: target_filtered(legendary().and(R::ControlledByYou)),
+                source: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::InExile).and(R::WithCounter(CounterType::Memory)),
+                },
+                duration: Duration::UntilNextTurn,
+                non_legendary: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abstergo Entertainment — legendary land. {T}: {C}; {1}, {T}: any color;
+/// {3}, {T}, exile it: return up to one historic card from your graveyard to
+/// your hand, then exile all graveyards.
+pub fn abstergo_entertainment() -> CardDefinition {
+    CardDefinition {
+        name: "Abstergo Entertainment",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                exile_self_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::Seq(vec![
+                    Effect::ApplyToTargets {
+                        max_targets: 1,
+                        min_targets: 0,
+                        filter: R::historic().from_your_graveyard(),
+                        effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }),
+                    },
+                    Effect::ExileAllGraveyards { filter: None, opponents_only: false },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Brotherhood Headquarters — Land. {T}: {C}; {T}: any color, spent only on
+/// Assassin spells, freerunning spells and Assassin sources' abilities.
+pub fn brotherhood_headquarters() -> CardDefinition {
+    CardDefinition {
+        name: "Brotherhood Headquarters",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::ONE)),
+                        crate::mana::SpendRestriction::AssassinOrFreerunning,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Altaïr Ibn-La'Ahad — {R}{W}{B} 3/3 first strike. Attacking, it exiles up
+/// to one Assassin creature card from your graveyard with a memory counter,
+/// then makes a tapped, attacking token copy of each memory creature card you
+/// own in exile, exiled at end of combat.
+pub fn altair_ibn_la_ahad() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature.and(assassin()).and(R::InYourGraveyard),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Memory, amount: Value::ONE },
+                ])),
+            },
+            Effect::ForEach {
+                selector: Selector::EachMatching {
+                    zone: ZoneRef::Exile,
+                    filter: R::Creature.and(R::OwnedByYou).and(R::WithCounter(CounterType::Memory)),
+                },
+                body: Box::new(Effect::TokenCopyAttackingUntilEndOfCombat { source: Selector::TriggerSource, sacrifice: false }),
+            },
+        ]))],
+        ..human_assassin("Altaïr Ibn-La'Ahad", cost(&[r(), w(), b()]), 3, 3)
+    }
+}
+
+/// Arno Dorian — {2}{B}{R} 3/3 deathtouch; other Assassins you control get
+/// +2/+0. Disguise {B}{R}.
+pub fn arno_dorian() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch, Keyword::Disguise(cost(&[b(), r()]))],
+        static_abilities: vec![static_ab(
+            "Other Assassins you control get +2/+0.",
+            StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(assassin()).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 2,
+                toughness: 0,
+            },
+        )],
+        ..human_assassin("Arno Dorian", cost(&[generic(2), b(), r()]), 3, 3)
+    }
+}
+
+/// Assassin Initiate — {B} 1/1 Human Assassin. {1}: flying, deathtouch or
+/// lifelink until end of turn.
+pub fn assassin_initiate() -> CardDefinition {
+    let me = || Selector::This;
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::ChooseMode(vec![
+                until_eot(me(), Keyword::Flying),
+                until_eot(me(), Keyword::Deathtouch),
+                until_eot(me(), Keyword::Lifelink),
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Assassin Initiate", cost(&[b()]), vec![CreatureType::Human, CreatureType::Assassin], 1, 1)
+    }
+}
+
+/// Aveline de Grandpré — {2}{G}{G} 3/3 deathtouch; a deathtouch creature of
+/// yours connecting gets that many +1/+1 counters. Disguise {B}{G}.
+pub fn aveline_de_grandpre() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch, Keyword::Disguise(cost(&[b(), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .dealt_by(R::Creature.and(R::HasKeyword(Keyword::Deathtouch))),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..human_assassin("Aveline de Grandpré", cost(&[generic(2), g(), g()]), 3, 3)
+    }
+}
+
+/// Aya of Alexandria — {2}{R}{W} 4/3 menace, lifelink; each historic creature
+/// of yours connecting makes a 1/1 Assassin with menace.
+pub fn aya_of_alexandria() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .dealt_by(R::Creature.and(R::historic())),
+            effect: make(1, assassin_token()),
+        }],
+        ..human_assassin("Aya of Alexandria", cost(&[generic(2), r(), w()]), 4, 3)
+    }
+}
+
+/// Bayek of Siwa — {3}{R}{W} 3/4 double strike; during your turn your other
+/// historic creatures have double strike. Disguise {1}{R}{W}.
+pub fn bayek_of_siwa() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::DoubleStrike, Keyword::Disguise(cost(&[generic(1), r(), w()]))],
+        static_abilities: vec![static_ab(
+            "During your turn, other historic creatures you control have double strike.",
+            StaticEffect::WhileYourTurn {
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::historic()).and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
+                    keyword: Keyword::DoubleStrike,
+                }),
+            },
+        )],
+        ..human_assassin("Bayek of Siwa", cost(&[generic(3), r(), w()]), 3, 4)
+    }
+}
+
+/// Desmond Miles — {1}{B} 1/3 menace; +1/+0 per other Assassin you control
+/// and Assassin card in your graveyard; connecting, surveil the damage dealt.
+pub fn desmond_miles() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![static_ab(
+            "Desmond Miles gets +1/+0 for each other Assassin you control and each Assassin card in your graveyard.",
+            StaticEffect::PumpPTByValue {
+                applies_to: Selector::This,
+                power: Value::Sum(vec![
+                    Value::count(Selector::EachPermanent(
+                        R::Creature.and(assassin()).and(R::ControlledByYou).and(R::OtherThanSource),
+                    )),
+                    Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: assassin() },
+                ]),
+                toughness: Value::ZERO,
+            },
+        )],
+        triggered_abilities: vec![on_hit(Effect::Surveil { who: PlayerRef::You, amount: Value::TriggerEventAmount })],
+        ..human_assassin("Desmond Miles", cost(&[generic(1), b()]), 1, 3)
+    }
+}
+
+/// Etrata, the Silencer — {2}{U}{B} 3/5 legendary Vampire Assassin, can't be
+/// blocked. Connecting, it exiles a creature that player controls with a hit
+/// counter (three of their cards so marked and they lose), then shuffles
+/// itself into its owner's library.
+pub fn etrata_the_silencer() -> CardDefinition {
+    let marked = Selector::CardsInZone {
+        who: PlayerRef::TriggerEventPlayer,
+        zone: Zone::Exile,
+        filter: R::WithCounter(CounterType::Hit),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Unblockable],
+        triggered_abilities: vec![on_hit(Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
+                to: ZoneDest::Exile,
+            },
+            Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Hit, amount: Value::ONE },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::count(marked), Value::Const(3)),
+                then: Box::new(Effect::LoseGame { who: PlayerRef::TriggerEventPlayer }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                    pos: crate::effect::LibraryPosition::Shuffled,
+                },
+            },
+        ]))],
+        ..legend(
+            "Etrata, the Silencer",
+            cost(&[generic(2), u(), b()]),
+            vec![CreatureType::Vampire, CreatureType::Assassin],
+            3,
+            5,
+        )
+    }
+}
+
+/// Evie Frye — {1}{U} 2/1, partner with Jacob Frye. {1}, {T}: loot; a creature
+/// card discarded this way makes a creature of yours unblockable this turn.
+pub fn evie_frye() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::PartnerWith("Jacob Frye".into())],
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search("Jacob Frye")],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::CreatureCardsDiscardedThisEffect, Value::ONE),
+                    then: Box::new(Effect::Reflexive {
+                        body: Box::new(unblockable_this_turn(target_filtered(R::Creature.and(R::ControlledByYou)))),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..human_assassin("Evie Frye", cost(&[generic(1), u()]), 2, 1)
+    }
+}
+
+/// Ezio, Blade of Vengeance — {3}{U}{B} 5/5 deathtouch; each Assassin of
+/// yours connecting draws a card.
+pub fn ezio_blade_of_vengeance() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .dealt_by(R::Creature.and(assassin())),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..human_assassin("Ezio, Blade of Vengeance", cost(&[generic(3), u(), b()]), 5, 5)
+    }
+}
+
+/// Jacob Frye — {2}{B} 3/2, partner with Evie Frye. Assassins of yours
+/// connecting exile up to one Assassin or freerunning card from your
+/// graveyard; you may cast a copy of it (paying its cost).
+pub fn jacob_frye() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::PartnerWith("Evie Frye".into())],
+        triggered_abilities: vec![
+            crate::effect::shortcut::partner_with_search("Evie Frye"),
+            yours_hit(
+                R::Creature.and(assassin()),
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: assassin().or(R::HasFreerunning).and(R::InYourGraveyard),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                        Effect::CastWithoutPayingImmediate {
+                            what: Selector::LastMoved,
+                            source_zone: Zone::Exile,
+                            exile_after: false,
+                            copy: true,
+                            reduce_generic: 0,
+                            pay_own_cost: true,
+                        },
+                    ])),
+                },
+            ),
+        ],
+        ..human_assassin("Jacob Frye", cost(&[generic(2), b()]), 3, 2)
+    }
+}
+
+/// Layla Hassan — {3}{W} 3/4 first strike. Entering, and whenever Assassins
+/// of yours connect, return target historic card from your graveyard to hand.
+pub fn layla_hassan() -> CardDefinition {
+    let regain = || Effect::Move {
+        what: target_filtered(R::historic().from_your_graveyard()),
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![etb(regain()), yours_hit(R::Creature.and(assassin()), regain())],
+        ..human_assassin("Layla Hassan", cost(&[generic(3), w()]), 3, 4)
+    }
+}
+
+/// Lydia Frye — {2}{U/B} 3/2, can't be blocked by power 3 or greater; your end
+/// step surveils one per tapped Assassin you control.
+pub fn lydia_frye() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedByPowerAtLeast(3)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::count(Selector::EachPermanent(
+                    R::Creature.and(assassin()).and(R::Tapped).and(R::ControlledByYou),
+                )),
+            },
+        }],
+        ..human_assassin("Lydia Frye", cost(&[generic(2), hybrid(Color::Blue, Color::Black)]), 3, 2)
+    }
+}
+
+/// Ramses, Assassin Lord — {2}{U}{B} 4/4 deathtouch; other Assassins you
+/// control get +1/+1; a player losing after an Assassin of yours attacked them
+/// this turn wins you the game.
+pub fn ramses_assassin_lord() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        static_abilities: vec![static_ab(
+            "Other Assassins you control get +1/+1.",
+            StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(assassin()).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerLeftGame, EventScope::AnyPlayer),
+            // CR 603.4 — the intervening "if" is read as the trigger resolves.
+            effect: Effect::If {
+                cond: Predicate::AttackedByYourAssassinThisTurn { who: PlayerRef::TriggerEventPlayer },
+                then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..human_assassin("Ramses, Assassin Lord", cost(&[generic(2), u(), b()]), 4, 4)
+    }
+}
+
+/// Ratonhnhaké꞉ton — {W}{U}{B} 3/3. Until it has dealt damage it has hexproof
+/// and can't be blocked; connecting makes a 1/1 Assassin with menace, and an
+/// Equipment card from your graveyard returns attached to it.
+pub fn ratonhnhake_ton() -> CardDefinition {
+    let fresh = || Predicate::Not(Box::new(Predicate::SourceHasDealtDamage));
+    let while_fresh = |keyword: Keyword| StaticEffect::WhileCondition {
+        condition: fresh(),
+        inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword }),
+    };
+    CardDefinition {
+        static_abilities: vec![
+            static_ab("As long as it hasn't dealt damage yet, it has hexproof.", while_fresh(Keyword::Hexproof)),
+            static_ab("As long as it hasn't dealt damage yet, it can't be blocked.", while_fresh(Keyword::Unblockable)),
+        ],
+        triggered_abilities: vec![on_hit(Effect::Seq(vec![
+            make(1, assassin_token()),
+            Effect::Reflexive {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(
+                            R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::Attach { what: Selector::LastMoved, to: Selector::LastCreatedToken },
+                ])),
+            },
+        ]))],
+        ..human_assassin("Ratonhnhaké꞉ton", cost(&[w(), u(), b()]), 3, 3)
+    }
+}
+
+/// Shao Jun — {1}{U}{R} 3/3; flying and first strike during your turn. Tap two
+/// untapped artifacts you control: 1 damage to each opponent.
+pub fn shao_jun() -> CardDefinition {
+    let yours_turn = |keyword: Keyword| StaticEffect::WhileYourTurn {
+        inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword }),
+    };
+    CardDefinition {
+        static_abilities: vec![
+            static_ab("During your turn, Shao Jun has flying.", yours_turn(Keyword::Flying)),
+            static_ab("During your turn, Shao Jun has first strike.", yours_turn(Keyword::FirstStrike)),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((R::Artifact.and(R::Untapped), 2)),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..human_assassin("Shao Jun", cost(&[generic(1), u(), r()]), 3, 3)
+    }
+}
+
+/// Bleeding Effect — {2}{W}{B} Enchantment. Beginning of combat on your turn,
+/// your creatures gain each listed keyword a creature card in your graveyard
+/// has, until end of turn.
+pub fn bleeding_effect() -> CardDefinition {
+    let kws = [
+        Keyword::Flying,
+        Keyword::FirstStrike,
+        Keyword::DoubleStrike,
+        Keyword::Deathtouch,
+        Keyword::Hexproof,
+        Keyword::Indestructible,
+        Keyword::Lifelink,
+        Keyword::Menace,
+        Keyword::Reach,
+        Keyword::Trample,
+        Keyword::Vigilance,
+    ];
+    let mine = || Selector::EachMatching { zone: ZoneRef::Battlefield, filter: R::Creature.and(R::ControlledByYou) };
+    CardDefinition {
+        name: "Bleeding Effect",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(
+                kws.into_iter()
+                    .map(|k| Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::CardsInGraveyardMatching {
+                                who: PlayerRef::You,
+                                filter: R::Creature.and(R::HasKeyword(k.clone())),
+                            },
+                            Value::ONE,
+                        ),
+                        then: Box::new(until_eot(mine(), k)),
+                        else_: Box::new(Effect::Noop),
+                    })
+                    .collect(),
+            ),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rooftop Bypass — {1}{U}{B} Enchantment. Nontoken creatures of yours
+/// connecting make a 1/1 Assassin with menace (once per batch).
+pub fn rooftop_bypass() -> CardDefinition {
+    CardDefinition {
+        name: "Rooftop Bypass",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![yours_hit(R::Creature.and(R::NotToken), make(1, assassin_token()))],
+        ..Default::default()
+    }
+}
+
+/// The Revelations of Ezio — {2}{B} Saga. I: destroy a tapped creature an
+/// opponent controls. II: your attacking Assassins get +1/+1 counters this
+/// turn. III: an Assassin creature card returns with an extra +1/+1 counter.
+pub fn the_revelations_of_ezio() -> CardDefinition {
+    CardDefinition {
+        name: "The Revelations of Ezio",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (1, Effect::Destroy { what: target_filtered(R::Creature.and(R::Tapped).and(R::ControlledByOpponent)) }),
+            (
+                2,
+                Effect::GrantTriggeredAbilityThisTurnToMatching {
+                    filter: R::Creature.and(assassin()).and(R::ControlledByYou),
+                    trigger: Box::new(on_attack(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    })),
+                },
+            ),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(R::Creature.and(assassin()).and(R::InYourGraveyard)),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
 }

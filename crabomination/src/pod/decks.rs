@@ -11819,3 +11819,32 @@ pub const MR_HOUSE_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
     plains, swamp, swamp, swamp, swamp,
 ];
+
+pub const EZIO_COMMANDERS: &[CardFactory] = &[ezio_auditore_da_firenze];
+
+/// **Ezio Auditore da Firenze**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 84 nonbasic cards + 2 Forests + 3 Islands + 2 Mountains + 2 Plains + 6 Swamps = 99.
+/// Ezio Auditore da Firenze (WUBRG) Assassins and freerunning
+pub const EZIO_MAIN: &[CardFactory] = &[
+    arcane_signet, assassin_gauntlet, brotherhood_regalia, chromatic_lantern, fellwar_stone,
+    haystack, hidden_blade, lightning_greaves, smoke_bomb, sol_ring, sword_of_feast_and_famine,
+    the_animus, whispersilk_cloak, abstergo_entertainment, blood_crypt, bloodstained_mire,
+    brotherhood_headquarters, cavern_of_souls, command_tower, evolving_wilds, exotic_orchard,
+    godless_shrine, marsh_flats, nomad_outpost, overgrown_tomb, path_of_ancestry,
+    polluted_delta, reliquary_tower, rogues_passage, secluded_courtyard, unclaimed_territory,
+    urborg_tomb_of_yawgmoth, verdant_catacombs, watery_grave, achilles_davenport,
+    altair_ibn_la_ahad, arbaaz_mir, arno_dorian, assassin_initiate, aveline_de_grandpre,
+    aya_of_alexandria, basim_ibn_ishaq, bayek_of_siwa, callidus_assassin, desmond_miles,
+    edward_kenway, etrata_the_silencer, evie_frye, ezio_blade_of_vengeance, jacob_frye,
+    layla_hassan, lydia_frye, mari_the_killing_quill, massacre_girl_known_killer,
+    olivia_opulent_outlaw, queen_marchesa, ramses_assassin_lord, ratonhnhake_ton,
+    royal_assassin, shao_jun, thraximundar, unstoppable_slasher, black_market_connections,
+    bleeding_effect, coastal_piracy, cover_of_darkness, propaganda, rooftop_bypass,
+    the_revelations_of_ezio, assassins_trophy, chain_assassination, desynchronization,
+    go_for_the_throat, mortify, path_to_exile, swords_to_plowshares, terminate, back_in_town,
+    cultivate, eagle_vision, farseek, overpowering_attack, restart_sequence,
+    viewpoint_synchronization,
+    // Basics
+    forest, forest, island, island, island, mountain, mountain, plains, plains, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];

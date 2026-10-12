@@ -247,19 +247,15 @@ pub fn overpowering_attack() -> CardDefinition {
 
 /// Viewpoint Synchronization — {4}{G} Sorcery. Freerunning {2}{G}. Search your
 /// library for up to three basic land cards; put two onto the battlefield
-/// tapped and one into your hand, then shuffle. (Approximated as a single
-/// `SearchUpToN` of three basics into your hand.)
+/// tapped and one into your hand, then shuffle (three searches, as Cultivate).
 pub fn viewpoint_synchronization() -> CardDefinition {
+    let basic = |to: ZoneDest| Effect::Search { who: PlayerRef::You, filter: SelectionRequirement::IsBasicLand, to };
+    let tapped = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true };
     CardDefinition {
         name: "Viewpoint Synchronization",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::SearchUpToN {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::IsBasicLand,
-            count: Value::Const(3),
-            to: ZoneDest::Hand(PlayerRef::You),
-        },
+        effect: Effect::Seq(vec![basic(tapped()), basic(tapped()), basic(ZoneDest::Hand(PlayerRef::You))]),
         alternative_cost: Some(freerunning(cost(&[generic(2), g()]))),
         ..Default::default()
     }

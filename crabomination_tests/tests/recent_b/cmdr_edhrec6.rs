@@ -521,3 +521,139 @@ fn wylls_reversal_copies_on_fifteen_or_more() {
     cast(&mut g, rev, &[Target::Permanent(bolt)]).expect("reverse");
     assert_eq!((g.players[0].life, g.players[1].life), (mine, theirs - 6), "the Bolt and its copy");
 }
+
+// ── Ezio Auditore da Firenze ────────────────────────────────────────────────
+
+/// Seat 0 swings `attackers` at seat 1 and runs combat damage.
+fn connect(g: &mut GameState, attackers: &[CardId]) {
+    attack_with(g, &attackers.iter().map(|&a| (a, 1)).collect::<Vec<_>>());
+    for _ in 0..200 {
+        if g.step == TurnStep::PostCombatMain || g.is_game_over() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+}
+
+/// CR 702.173 — Ezio grants freerunning {B}{B} to Assassin spells, opened by
+/// an Assassin's hit; connecting with a player at 10 life, {W}{U}{B}{R}{G}
+/// makes them lose.
+#[test]
+fn ezio_grants_freerunning_and_ends_a_low_player() {
+    let mut g = pod(3);
+    let ezio = ready(&mut g, 0, catalog::ezio_auditore_da_firenze());
+    for land in [catalog::plains(), catalog::island(), catalog::swamp(), catalog::mountain(), catalog::forest()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    g.players[1].life = 10;
+    script(&mut g, vec![DecisionAnswer::Bool(true)]);
+    connect(&mut g, &[ezio]);
+    assert!(!g.players[1].is_alive(), "paid WUBRG: that player loses");
+    assert!(g.players[0].freerunning_unlocked_this_turn);
+    g.step = TurnStep::PostCombatMain;
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let desmond = g.add_card_to_hand(0, catalog::ezio_blade_of_vengeance());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: desmond,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a five-drop Assassin for {B}{B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(desmond).is_some());
+}
+
+/// Ratonhnhaké꞉ton has hexproof and can't be blocked until it has dealt
+/// damage; its first hit ends both (and makes an Assassin).
+#[test]
+fn ratonhnhake_ton_is_hidden_until_it_strikes() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let r = ready(&mut g, 0, catalog::ratonhnhake_ton());
+    let kw = |g: &GameState| g.computed_permanent(r).unwrap().keywords().to_vec();
+    assert!(kw(&g).contains(&Keyword::Hexproof) && kw(&g).contains(&Keyword::Unblockable));
+    connect(&mut g, &[r]);
+    assert!(!kw(&g).contains(&Keyword::Hexproof) && !kw(&g).contains(&Keyword::Unblockable));
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Assassin"));
+}
+
+/// Ramses: a player an Assassin of yours attacked this turn losing wins you
+/// the game; one it didn't attack doesn't.
+#[test]
+fn ramses_wins_when_an_assassins_target_loses() {
+    let mut g = pod(4);
+    ready(&mut g, 0, catalog::ramses_assassin_lord());
+    let a = ready(&mut g, 0, catalog::assassin_initiate());
+    attack_with(&mut g, &[(a, 1)]);
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.game_over.is_none(), "seat 2 wasn't attacked by an Assassin");
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    for _ in 0..10 {
+        if g.is_game_over() || g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.game_over, Some(Some(0)), "seat 1 was");
+}
+
+/// Etrata marks what it exiles with hit counters; the third marked card a
+/// player owns loses them the game, and Etrata shuffles itself away.
+#[test]
+fn etrata_third_hit_counter_ends_the_player() {
+    let mut g = pod(3);
+    for _ in 0..2 {
+        let old = g.add_card_to_exile(1, catalog::grizzly_bears());
+        g.exile.iter_mut().find(|c| c.id == old).unwrap().add_counters(CounterType::Hit, 1);
+    }
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let e = ready(&mut g, 0, catalog::etrata_the_silencer());
+    connect(&mut g, &[e]);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(!g.players[1].is_alive(), "three hit-counter cards");
+    assert!(g.battlefield_find(e).is_none() && g.players[0].library.iter().any(|c| c.id == e));
+}
+
+/// Brotherhood Headquarters' coloured mana pays for an Assassin, not for a
+/// Dark Ritual.
+#[test]
+fn brotherhood_headquarters_mana_is_for_assassins() {
+    let mut g = pod(2);
+    let hq = ready(&mut g, 0, catalog::brotherhood_headquarters());
+    let tap_hq = |g: &mut GameState| {
+        g.battlefield_find_mut(hq).unwrap().tapped = false;
+        g.players[0].mana_pool.empty();
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Black)]));
+        activate(g, hq, 1, None).expect("tap for a colour");
+    };
+    tap_hq(&mut g);
+    let ritual = g.add_card_to_hand(0, catalog::dark_ritual());
+    let not = g.perform_action(GameAction::CastSpell { card_id: ritual, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(not.is_err(), "restricted mana can't fund a Dark Ritual");
+    tap_hq(&mut g);
+    let initiate = g.add_card_to_hand(0, catalog::assassin_initiate());
+    g.perform_action(GameAction::CastSpell { card_id: initiate, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("an Assassin");
+}
+
+/// Altaïr exiles an Assassin card with a memory counter and attacks with a
+/// token copy of each memory creature card you own in exile.
+#[test]
+fn altair_attacks_with_its_memories() {
+    let mut g = pod(2);
+    let alt = ready(&mut g, 0, catalog::altair_ibn_la_ahad());
+    let card = g.add_card_to_graveyard(0, catalog::assassin_initiate());
+    attack_with(&mut g, &[(alt, 1)]);
+    assert!(g.exile.iter().any(|c| c.id == card && c.counter_count(CounterType::Memory) == 1));
+    let copies: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Assassin Initiate").collect();
+    assert_eq!(copies.len(), 1);
+    assert!(copies[0].tapped && g.attacking.iter().any(|a| a.attacker == copies[0].id));
+}
