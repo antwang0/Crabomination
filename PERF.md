@@ -3157,7 +3157,9 @@ clippy           workspace incl. the client (after its four apt libs) — the
 debug pods       seats 547-684 (numbered 540-677 then): 4-seat 720 games,
                  6-seat 240 — 958 decided, one CR 104.4a draw, one board cap
 golden           core_rules golden_* 14/14 after the lands_entered fix
-debug pods 2     seats 706-731: 4-seat 140 games, 3-seat 100 — all decided
+debug pods 2     seats 706-736: 4-seat 180 games, 3-seat 140 — all decided
+clippy 2         workspace incl. client at `234cb6944`: 0 warnings (40m47s
+                 non-incremental); release-fast check clean again (1m36s)
 suite            CRAB_ANSWER_LOG=strict nextest --workspace (no client):
                  25,318 run, 25,314 passed, 5 skipped, 75m56s wall; the four
                  failures were mid-batch registration/ratchet states, all
