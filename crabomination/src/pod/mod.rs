@@ -5520,6 +5520,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ABUELO_COMMANDERS,
             main: decks::ABUELO_MAIN,
         },
+        // Seat 845: Malik, Grim Manipulator's EDHREC average deck. `--pod-decks 845`.
+        PodDeck {
+            name: "Malik, Grim Manipulator (WBR)",
+            commanders: decks::MALIK_COMMANDERS,
+            main: decks::MALIK_MAIN,
+        },
     ]
 }
 
@@ -8129,6 +8135,7 @@ mod tests {
             ("Exdeath, Void Warlock", &[0x0C70]),
             ("The Raven Man", &[0x0C71]),
             ("Abuelo, Ancestral Echo", &[0x0C72]),
+            ("Malik, Grim Manipulator", &[0x0C73]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

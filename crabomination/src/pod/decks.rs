@@ -24170,3 +24170,32 @@ pub const ABUELO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const MALIK_COMMANDERS: &[CardFactory] = &[malik_grim_manipulator];
+
+/// **Malik, Grim Manipulator**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 4 Mountains + 5 Plains + 7 Swamps = 99.
+/// Malik, Grim Manipulator (EDHREC, fetched 2026-10-12).
+pub const MALIK_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, gisas_favorite_shovel, orzhov_signet, panharmonicon,
+    sol_ring, talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, arid_mesa,
+    battlefield_forge, blood_crypt, bloodstained_mire, bojuka_bog, caves_of_koilos,
+    clifftop_retreat, command_tower, dragonskull_summit, exotic_orchard, godless_shrine,
+    isolated_chapel, luxury_suite, marsh_flats, nomad_outpost, sacred_foundry, savai_triome,
+    spectator_seating, vault_of_champions, academy_manufactor, accursed_marauder,
+    archfiend_of_depravity, blood_artist, braids_arisen_nightmare, carmen_cruel_skymarcher,
+    demons_disciple, fleshbag_marauder, gadrak_the_crown_scourge, goldspan_dragon,
+    kambal_profiteering_mayor, lotho_corrupt_shirriff, mahadi_emporium_master,
+    marionette_apprentice, marionette_master, mayhem_devil, merciless_executioner,
+    mirkwood_bats, morbid_opportunist, plaguecrafter, professional_face_breaker,
+    reckless_fireweaver, sheoldred_whispering_one, tergrid_god_of_fright, vihaan_goldwaker,
+    xorn, black_market_connections, dictate_of_erebos, grave_pact, phyrexian_arena,
+    revel_in_riches, smothering_tithe, teleportation_circle, anguished_unmaking, cloudshift,
+    crackling_doom, deadly_dispute, eerie_interlude, ephemerate, kayas_guile, path_to_exile,
+    sheoldreds_edict, soul_shatter, swords_to_plowshares, vonas_hunger, the_eternal_wanderer,
+    blasphemous_edict, demonic_tutor, make_an_example, mythos_of_snapdax, promise_of_loyalty,
+    reanimate, ruinous_ultimatum, torment_of_hailfire, tragic_arrogance,
+    // Basics
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
