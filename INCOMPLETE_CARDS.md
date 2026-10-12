@@ -2032,3 +2032,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Jade Monolith | redirects the next damage from any source, not one of your choice | `RedirectNextDamageTo` has no source filter |
 | 🟡 Shared Summons | the two creature cards needn't have different names | `SearchUpToN` has no distinct-name constraint |
 | 🟡 Lochmere Serpent | "exile five target cards" takes up to five | `ApplyToTargets { min_targets: 0 }` |
+| 🟡 Mystic Reflection | a token model that left the battlefield before the entries copies nothing (a card model copies from its new zone, which is its printed self) | `Effect::NextEntriesEnterAsCopy` stores the model's id, not its last-known copiable values |
+| 🟡 Emrakul, the Exigent Doom | the land loses the granted `{T}: Add {C}{C}` when the card is cast from any zone, not only exile (it can reach another zone only by leaving exile uncast) | `Duration::UntilSourceCast` ends on any cast of the source |
+| 🟡 Angel of Jubilation | also bars a Phyrexian pip's life in a non-cast payment (a ward "pay {U/P}"), which the printed "to cast spells or activate abilities" doesn't | `cost_life_payable` gates the shared Phyrexian payment ladder |
