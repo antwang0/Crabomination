@@ -427,6 +427,7 @@ impl Effect {
             | Effect::RepeatWhileMay { body, .. }
             | Effect::EachPlayerDoes { body, .. }
             | Effect::MayDo { body, .. }
+            | Effect::IfTriggerDamageNoncombat { body }
             | Effect::MayDoBy { body, .. }
             | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
             | Effect::MayPayGenericUpTo { body, .. }
