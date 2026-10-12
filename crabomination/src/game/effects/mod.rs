@@ -26011,7 +26011,9 @@ impl GameState {
             }
 
             Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot } => {
-                
+                // "with mana value less than that creature's" (Arni Metalbrow)
+                // rides an X bound by `WithX`.
+                let filter = &filter.resolve_x(ctx.x_value);
                 use crate::game::types::AttackTarget;
                 // Only meaningful mid-combat (the source is attacking).
                 if self.attacking.is_empty() {
