@@ -202,6 +202,11 @@ the handoff.
   itself — now `YourCreatureTargeted`. **Pod invariant:** Braid of Fire's upkeep mana tripped
   the CR 500.4 empty-pool check in a 963/967 pod (seed 23); the active player's upkeep pool is
   exempt while they control an "Add mana" cumulative upkeep.
+- **Seats 971-973** (Magar, Narci, Yennett; 12 cards, `decks::cmdr_edhrec19`). Primitive:
+  `Effect::PutFaceDownAsNotedSpell` — Magar's face-down 3/3 that recasts the card it hides on
+  combat damage and is exiled if it would leave; `CopyCardAndCastFree` now copies a face-down
+  permanent's face-up card. Brilliant Ultimatum is `SeparateIntoPiles` + Gix's
+  `PlayLandAmongNow` / `CastAnyOrderWithoutPaying`.
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.

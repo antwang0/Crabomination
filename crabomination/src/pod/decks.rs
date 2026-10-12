@@ -29830,3 +29830,89 @@ pub const VAAN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const MAGAR_OF_THE_MAGIC_STRINGS_COMMANDERS: &[CardFactory] = &[magar_of_the_magic_strings];
+
+/// **Magar of the Magic Strings**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Mountains + 9 Swamps = 99.
+/// Magar of the Magic Strings (EDHREC, fetched 2026-10-12).
+pub const MAGAR_OF_THE_MAGIC_STRINGS_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, key_to_the_city, lightning_greaves, mind_stone, rakdos_signet,
+    sol_ring, swiftfoot_boots, talisman_of_indulgence, thieves_tools, trailblazers_boots,
+    whispersilk_cloak, access_tunnel, blood_crypt, command_tower, dragonskull_summit,
+    foreboding_ruins, geier_reach_sanitarium, haunted_ridge, luxury_suite, rakdos_carnarium,
+    raucous_theater, rogues_passage, shadowblood_ridge, smoldering_marsh, sulfurous_springs,
+    tainted_peak, anger, azra_oddsmaker, chainer_nightmare_adept, dauthi_trapper,
+    dragons_rage_channeler, filth, guttersnipe, oriq_loremage, storm_kiln_artist,
+    the_infamous_cruelclaw, vile_entomber, bedlam, berserkers_onslaught, bitter_reunion,
+    goblin_war_drums, abrade, bedevil, big_score, blood_for_the_blood_god, cathartic_pyre,
+    chaos_warp, dark_ritual, demand_answers, entomb, rakdos_charm, savage_beating, terminate,
+    thrill_of_possibility, twinferno, unexpected_windfall, army_of_the_damned, brasss_bounty,
+    breach_the_multiverse, call_forth_the_tempest, cathartic_reunion, disrupt_decorum,
+    faithless_looting, feed_the_swarm, fevered_suspicion, final_parting, grab_the_prize,
+    hit_the_mother_lode, in_garruks_wake, pirates_pillage, plague_wind, rise_of_the_dark_realms,
+    rise_of_the_eldrazi, seize_the_spoils, sorins_vengeance, tormenting_voice, unmarked_grave,
+    wake_the_dragon, worst_fears,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const NARCI_COMMANDERS: &[CardFactory] = &[narci_fable_singer];
+
+/// **Narci, Fable Singer**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Forests + 6 Plains + 4 Swamps = 99.
+/// Narci, Fable Singer (EDHREC, fetched 2026-10-12).
+pub const NARCI_MAIN: &[CardFactory] = &[
+    arcane_signet, power_conduit, sol_ring, bountiful_promenade, canopy_vista, caves_of_koilos,
+    command_tower, exotic_orchard, godless_shrine, hall_of_heliods_generosity, indatha_triome,
+    isolated_chapel, karns_bastion, nesting_grounds, overgrown_tomb, reliquary_tower,
+    sandsteppe_citadel, sunpetal_grove, temple_garden, undergrowth_stadium, vault_of_champions,
+    woodland_cemetery, anikthea_hand_of_erebos, barbara_wright, demon_of_fates_design,
+    destiny_spinner, eidolon_of_blossoms, herald_of_the_pantheon, jukai_naturalist,
+    mesa_enchantress, ondu_spiritdancer, sanctum_weaver, satsuki_the_living_lore,
+    satyr_enchanter, setessan_champion, starfield_mystic, summon_bahamut, summon_fenrir,
+    summon_knights_of_round, summon_primal_odin, summon_titan, summon_yojimbo,
+    sythis_harvests_hand, verduran_enchantress, weaver_of_harmony, yenna_redtooth_regent,
+    battle_at_the_helvault, battle_for_bretagard, binding_the_old_gods, elspeth_conquers_death,
+    elspeths_nightmare, enchantresss_presence, firjas_retribution, font_of_fertility,
+    historians_boon, love_song_of_night_and_day, revival_of_the_ancestors, seal_of_cleansing,
+    seal_of_primordium, sigil_of_the_empty_throne, starfield_of_nyx, sterling_grove,
+    tale_of_tinuviel, the_aesir_escape_valhalla, the_birth_of_meletis, the_creation_of_avacyn,
+    the_cruelty_of_gix, the_eldest_reborn, the_first_iroan_games, the_mending_of_dominaria,
+    the_weatherseed_treaty, the_world_spell, atomize, heroic_intervention, path_to_exile,
+    swords_to_plowshares, cultivate, eerie_ultimatum, farseek, natures_lore, rampant_growth,
+    resurgent_belief,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, plains, plains, plains, plains,
+    plains, plains, swamp, swamp, swamp, swamp,
+];
+
+pub const YENNETT_COMMANDERS: &[CardFactory] = &[yennett_cryptic_sovereign];
+
+/// **Yennett, Cryptic Sovereign**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 7 Islands + 4 Plains + 4 Swamps = 99.
+/// Yennett, Cryptic Sovereign (EDHREC, fetched 2026-10-12).
+pub const YENNETT_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, chromatic_lantern, commanders_sphere, crystal_ball,
+    dimir_signet, gilded_lotus, lightning_greaves, senseis_divining_top, sol_ring,
+    swiftfoot_boots, talisman_of_progress, arcane_sanctum, caves_of_koilos, command_tower,
+    drowned_catacomb, exotic_orchard, flooded_strand, glacial_fortress, godless_shrine,
+    halimar_depths, hallowed_fountain, isolated_chapel, path_of_ancestry, prairie_stream,
+    raffines_tower, reliquary_tower, sea_of_clouds, sunken_hollow, temple_of_deceit,
+    temple_of_enlightenment, temple_of_silence, watery_grave, artisan_of_kozilek,
+    blazing_archon, cavalier_of_gales, dazzling_sphinx, doom_whisperer, enigma_sphinx,
+    esper_sentinel, ethersworn_sphinx, hidetsugu_and_kairi, magister_sphinx,
+    marvo_deep_operative, master_of_predicaments, prognostic_sphinx, scholar_of_the_lost_trove,
+    sphinx_of_the_final_word, the_ur_sphinx, thryx_the_sudden_storm, varragoth_bloodsky_sire,
+    vega_the_watcher, vesuvan_drifter, void_winnower, windreader_sphinx, aqueous_form,
+    ghostly_prison, minds_dilation, penance, propaganda, rhystic_study, soothsaying,
+    anguished_unmaking, brainstorm, brainsurge, counterspell, generous_gift, mortify,
+    mystical_tutor, nexus_of_fate, path_to_exile, swords_to_plowshares, void_rend,
+    aminatou_the_fateshifter, approach_of_the_second_sun, breach_the_multiverse,
+    brilliant_ultimatum, dream_cache, in_garruks_wake, plague_wind, ponder, portent, preordain,
+    rise_of_the_dark_realms,
+    // Basics
+    island, island, island, island, island, island, island, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp,
+];
