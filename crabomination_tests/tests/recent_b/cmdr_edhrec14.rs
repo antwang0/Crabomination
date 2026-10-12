@@ -91,8 +91,8 @@ fn heartwood_storyteller_draws_each_of_the_casters_opponents() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast(&mut g, bolt, Some(Target::Player(1))).expect("bolt");
     assert_eq!(g.players[0].hand.len(), hands[0]);
-    for s in 1..4 {
-        assert_eq!(g.players[s].hand.len(), hands[s] + 1, "seat {s} draws");
+    for (s, before) in hands.iter().enumerate().skip(1) {
+        assert_eq!(g.players[s].hand.len(), before + 1, "seat {s} draws");
     }
 }
 
@@ -331,4 +331,45 @@ fn toluz_banks_discards_and_returns_them_on_death() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast(&mut g, bolt, Some(Target::Permanent(toluz))).expect("bolt Toluz");
     assert!(g.players[0].hand.iter().any(|c| c.id == card), "back to hand when Toluz dies");
+}
+
+/// Amareth, the Lustrous: an entering creature takes a creature card off the
+/// top; a land on top stays.
+#[test]
+fn amareth_takes_a_top_card_sharing_a_type() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::amareth_the_lustrous());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bear, None).expect("bear");
+    assert_eq!(g.players[0].hand.len(), 1, "the top Grizzly Bears shares creature");
+    g.add_card_to_library(0, catalog::wastes());
+    let second = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, second, None).expect("bear");
+    assert_eq!(g.players[0].hand.len(), 1, "a land on top doesn't share a type with a creature");
+}
+
+/// Sin Prodder at three seats: when no opponent takes the damage, the
+/// revealed card goes to hand.
+#[test]
+fn sin_prodder_hands_over_a_declined_card() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::sin_prodder());
+    library(&mut g, 0, 2);
+    let hand = g.players[0].hand.len();
+    let lib = g.players[0].library.len();
+    let life: Vec<i32> = (0..3).map(|s| g.players[s].life).collect();
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "the top card left the library");
+    let damaged = (1..3).any(|s| g.players[s].life < life[s]);
+    let to_hand = g.players[0].hand.len() == hand + 1;
+    assert!(damaged ^ to_hand, "either an opponent took the damage or the card went to hand");
 }

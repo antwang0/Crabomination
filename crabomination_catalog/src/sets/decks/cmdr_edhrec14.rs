@@ -2076,3 +2076,68 @@ pub fn toluz_clever_conductor() -> CardDefinition {
         )
     }
 }
+
+/// Amareth, the Lustrous — {3}{G}{W}{U} 6/6 legendary flying Dragon. Whenever
+/// another permanent you control enters, look at the top card of your library;
+/// if it shares a card type with that permanent, you may put it into your hand.
+pub fn amareth_the_lustrous() -> CardDefinition {
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    let shares = Predicate::Any(
+        [CardType::Artifact, CardType::Creature, CardType::Enchantment, CardType::Land, CardType::Planeswalker, CardType::Battle]
+            .into_iter()
+            .map(|t| {
+                Predicate::All(vec![
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCardType(t.clone()) },
+                    Predicate::EntityMatches { what: top(), filter: R::HasCardType(t) },
+                ])
+            })
+            .collect(),
+    );
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours),
+            effect: Effect::If {
+                cond: shares,
+                then: Box::new(may(
+                    "reveal it and put it into your hand",
+                    Effect::Move { what: top(), to: ZoneDest::Hand(PlayerRef::You) },
+                )),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..legend(
+            "Amareth, the Lustrous",
+            cost(&[generic(3), g(), w(), u()]),
+            vec![CreatureType::Dragon],
+            6,
+            6,
+        )
+    }
+}
+
+/// Sin Prodder — {2}{R} 3/2 menace Devil. At the beginning of your upkeep,
+/// reveal the top card: any opponent may have it put into your graveyard and
+/// take damage equal to its mana value; otherwise it goes to your hand.
+pub fn sin_prodder() -> CardDefinition {
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE };
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![at_your(
+            TurnStep::Upkeep,
+            Effect::AnyPlayerMayAccept {
+                who: PlayerRef::EachOpponent,
+                prompt: "Put Sin Prodder's revealed card into its owner's graveyard and take damage equal to its mana value?".into(),
+                accepted: Box::new(Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::AcceptingPlayer),
+                        amount: Value::ManaValueOf(Box::new(top())),
+                    },
+                    Effect::Move { what: top(), to: ZoneDest::Graveyard },
+                ])),
+                otherwise: Box::new(Effect::Move { what: top(), to: ZoneDest::Hand(PlayerRef::You) }),
+            },
+        )],
+        ..creature("Sin Prodder", cost(&[generic(2), r()]), vec![CreatureType::Devil], 3, 2)
+    }
+}

@@ -2799,6 +2799,8 @@ static DECKS: &[Factory] = &[
     super::decks::teferi_who_slows_the_sunset,
     super::decks::lagrella_the_magpie,
     super::decks::toluz_clever_conductor,
+    super::decks::amareth_the_lustrous,
+    super::decks::sin_prodder,
     super::decks::ancient_brass_dragon,
     super::decks::ojer_kaslem_deepest_growth,
     super::decks::primeval_herald,
