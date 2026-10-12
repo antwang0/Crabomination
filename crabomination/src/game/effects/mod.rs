@@ -26700,6 +26700,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutFaceDownAsNotedSpell { what } => {
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).collect();
+                for cid in ids {
+                    if !self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == cid)) {
+                        continue;
+                    }
+                    let dest = ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                        tapped: false,
+                    };
+                    self.face_down_onto_battlefield(
+                        cid,
+                        crate::card::CardInstance::turn_face_down_as_noted_spell,
+                        &dest,
+                        ctx,
+                        events,
+                    );
+                    self.exile_if_leaves_battlefield(cid);
+                }
+                Ok(())
+            }
+
             Effect::Cloak { who, amount, from_hand } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
@@ -29126,10 +29149,16 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                let Some(def) = self.find_card_anywhere(id).map(|c| c.definition.arc()) else {
+                // A face-down permanent copies the card it hides (Magar's
+                // "the card with the noted name").
+                let Some(def) = self
+                    .find_card_anywhere(id)
+                    .map(|c| c.face_up_def.clone().unwrap_or_else(|| c.definition.arc()))
+                else {
                     return Ok(());
                 };
-                if def.is_land() {
+                // A copy of the face-down body notes no name (Magar's ruling).
+                if def.is_land() || def.name.is_empty() {
                     return Ok(());
                 }
                 let copy = self.next_id();

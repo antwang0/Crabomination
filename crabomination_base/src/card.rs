@@ -8432,6 +8432,22 @@ pub fn facedown_cyberman_definition() -> CardDefinition {
     }
 }
 
+/// Magar of the Magic Strings' face-down body: a nameless colorless 3/3 with
+/// "whenever this creature deals combat damage to a player, you may create a
+/// copy of the card with the noted name [and] cast the copy without paying
+/// its mana cost". The noted card is the face-down card itself.
+pub fn facedown_noted_spell_definition() -> CardDefinition {
+    CardDefinition {
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: crate::effect::Effect::CopyCardAndCastFree { what: crate::effect::Selector::This },
+        }],
+        ..facedown_creature_definition()
+    }
+}
+
 /// CR 702.166c — a face-down permanent cast/manifested via Disguise (or Cloak)
 /// is a 2/2 colorless creature with ward {2}.
 pub fn facedown_disguise_definition() -> CardDefinition {
@@ -11536,6 +11552,18 @@ impl CardInstance {
         }
         self.face_up_def = Some(self.definition.arc());
         self.set_definition(Arc::new(facedown_typed_definition(t)));
+        self.face_down = true;
+        self.turn_up_by_morph_only = true;
+    }
+
+    /// Turn this card face down as Magar's 3/3 ([`facedown_noted_spell_definition`]);
+    /// only a morph-family cost could turn it up, and it has none.
+    pub fn turn_face_down_as_noted_spell(&mut self) {
+        if self.face_up_def.is_some() {
+            return;
+        }
+        self.face_up_def = Some(self.definition.arc());
+        self.set_definition(Arc::new(facedown_noted_spell_definition()));
         self.face_down = true;
         self.turn_up_by_morph_only = true;
     }

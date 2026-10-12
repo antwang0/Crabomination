@@ -11315,6 +11315,13 @@ pub enum Effect {
     /// and enters as a 2/2 under the effect's controller, like a manifest —
     /// so a card with morph can be turned up for its morph cost.
     PutFaceDownOntoBattlefield { what: Selector },
+    /// Magar of the Magic Strings — each graveyard card `what` resolves to
+    /// enters face down under the effect's controller as a 3/3 that copies
+    /// the face-down card (cast free) when it deals combat damage to a
+    /// player, and is exiled if it would leave ([`facedown_noted_spell_definition`]).
+    ///
+    /// [`facedown_noted_spell_definition`]: crate::card::facedown_noted_spell_definition
+    PutFaceDownAsNotedSpell { what: Selector },
     /// CR 701.34 from the hand — the resolved player manifests `count`
     /// cards from their hand; if `controller_draws`, the effect's
     /// controller draws one card per card manifested (Kozilek, the Broken
