@@ -1900,10 +1900,12 @@ impl GameState {
         let Some(src) = ctx.source else { return };
         // A player subject is the seat "that player" names: the
         // `ControlledByTriggerPlayer` target filter reads it now and again at
-        // resolution (`trigger_player`).
+        // resolution (`trigger_player`). Otherwise the payoff inherits the
+        // enclosing trigger's player ("from that player's graveyard" — Fire
+        // Lord Sozin's combat-damage trigger).
         let seat = match subject {
             EntityRef::Player(p) => Some(p),
-            _ => None,
+            _ => self.trigger_event_player_scratch,
         };
         // CR 603.7 — the "when you do" payoff goes on the stack as
         // its own trigger; targets are picked now (603.7d).

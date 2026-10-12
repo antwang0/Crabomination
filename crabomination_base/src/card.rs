@@ -1034,6 +1034,9 @@ pub enum CounterType {
     Rejection,
     /// The Magic Mirror's knowledge counters.
     Knowledge,
+    /// Kaya the Inexorable's ghostform counter (a reminder; the granted
+    /// trigger works without it).
+    Ghostform,
 }
 
 /// Every zone a card can occupy.
