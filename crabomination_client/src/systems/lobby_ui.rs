@@ -11,6 +11,7 @@
 use std::sync::Mutex;
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 
 use crabomination::net::ClientMsg;
 #[cfg(not(target_arch = "wasm32"))]

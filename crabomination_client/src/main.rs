@@ -40,6 +40,7 @@ mod storage;
 mod ws_client;
 mod systems;
 mod theme;
+mod ui_button;
 
 use menu::{AppState, MenuPlugin, start_net_session_from_menu};
 use net_plugin::SinglePlayerPlugin;
@@ -311,6 +312,7 @@ fn main() {
             SinglePlayerPlugin,
             MenuPlugin,
             theme::UiFontsPlugin,
+            ui_button::UiButtonPlugin,
             systems::draft::DraftPlugin,
             systems::lobby_ui::LobbyUiPlugin,
             systems::game_ui::TableAwarenessPlugin,

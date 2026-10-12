@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use crate::ui_button::Interaction;
 use bevy::window::PrimaryWindow;
 use crabomination::card::CardId;
 use crabomination::game::{AttackTarget, Target, TurnStep};

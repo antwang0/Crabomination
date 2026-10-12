@@ -233,7 +233,7 @@ pub fn spawn_impact_effects(
                 }
             }
             GameEventWire::DamageDealt { to_card, to_player, amount } => {
-                let card_world = to_card.and_then(&pos_of);
+                let card_world = to_card.and_then(pos_of);
                 // Spark at the struck permanent, else at the damaged player's
                 // table anchor. (Unblocked combat damage and direct burn both
                 // surface as a player hit here.)

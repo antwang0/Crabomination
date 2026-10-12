@@ -100,12 +100,9 @@ impl GameState {
                 })
                 .collect()
         });
-        if let Some(lead) = lead {
-            legal.retain(|t| *t != lead);
-            legal.insert(0, lead);
-        } else {
-            return None;
-        }
+        let lead = lead?;
+        legal.retain(|t| *t != lead);
+        legal.insert(0, lead);
         let source_name = self.find_card_anywhere(pending.source).map(|c| c.definition.name.to_string()).unwrap_or_default();
         Some(Decision::ChooseTarget {
             source: pending.source,

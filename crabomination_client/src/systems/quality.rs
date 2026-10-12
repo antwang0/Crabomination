@@ -7,6 +7,7 @@
 //! keeps that column (in the table's near-left corner) short.
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 
 use crate::render_quality::{ChangeQuality, RenderQuality};
 use crate::systems::animate::{AnimationSpeed, ANIM_SPEED_MAX, ANIM_SPEED_MIN};

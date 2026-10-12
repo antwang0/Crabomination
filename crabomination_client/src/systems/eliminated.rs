@@ -5,6 +5,7 @@
 //! state onto the 3-D table.
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 
 use crate::net_plugin::CurrentView;
 

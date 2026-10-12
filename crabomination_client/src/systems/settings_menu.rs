@@ -7,6 +7,7 @@
 //! the persistence systems mirror those into `config.toml`).
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 use bevy::window::{MonitorSelection, PrimaryWindow, WindowMode};
 
 use crate::config::{ConfigStore, WindowModeCfg};

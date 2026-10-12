@@ -7,6 +7,7 @@
 //! and aren't part of the chrome.
 
 use bevy::prelude::*;
+use crate::ui_button::Interaction;
 use bevy::text::{FontFeatureTag, FontFeatures};
 
 // ── Fonts ────────────────────────────────────────────────────────────────────
@@ -120,7 +121,7 @@ pub fn register_symbol_fallbacks(
     }
     let mut changed = false;
     for script in FALLBACK_SCRIPTS {
-        let script = Script::from_str_unchecked(script);
+        let script = Script::from_bytes(script.as_bytes().try_into().expect("4-letter ISO 15924 code"));
         if !font_cx.collection.fallback_families(script).eq(families.iter().copied()) {
             font_cx.collection.set_fallbacks(script, families.iter().copied());
             changed = true;

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 # Bevy's `default` feature set, spelled out so `wayland` and `audio` can be
 # split off behind our own default-on features (see [features] below).
-bevy = { version = "0.19.0", default-features = false, features = [
+bevy = { version = "0.20.0", default-features = false, features = [
     # `2d` + `3d` + `ui`, minus the `default_platform` they pull in, and
     # minus glTF and scenes: the table is built from code, and nothing loads
     # a model (`3d_bevy_render` spelled out without `bevy_gltf` /
@@ -57,7 +57,7 @@ ab_glyph = "0.2.32"
 # registering the symbol fallback fonts (`theme::register_symbol_fallbacks`).
 # The same version and features `bevy_text` takes — `system` (OS font
 # discovery) stays off, as it is in Bevy.
-parley = { version = "0.9.0", default-features = false, features = ["std"] }
+parley = { version = "0.11.1", default-features = false, features = ["std"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # The client IS a simulator now: its bot seat is `MctsBot` at 256 iterations,
@@ -76,7 +76,7 @@ parley = { version = "0.9.0", default-features = false, features = ["std"] }
 mimalloc = { version = "0.1.52", default-features = false, optional = true }
 # OS config-dir discovery is native-only; the browser build stores config in
 # localStorage. (The card prefetch's HTTP client is `crabomination_art`'s.)
-dirs = "6"
+dirs = "7"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

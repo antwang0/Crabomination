@@ -60,7 +60,9 @@ fn parse(table: &'static str) -> HashMap<&'static str, Vec<OracleFace>> {
             let key = fields.next()?;
             let rest: Vec<&'static str> = fields.collect();
             let faces = rest
-                .chunks_exact(5)
+                .as_chunks::<5>()
+                .0
+                .iter()
                 .map(|f| OracleFace {
                     name: if f[0].is_empty() { key } else { f[0] },
                     cost: f[1],

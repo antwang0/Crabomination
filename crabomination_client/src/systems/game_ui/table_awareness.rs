@@ -18,6 +18,7 @@
 //! as [`TableAwarenessPlugin`].
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 use crabomination::card::CardId;
 use crabomination::game::{AttackTarget, TurnStep};
 use crabomination::net::{ClientView, PlayerView};

@@ -3130,9 +3130,11 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
-in this file is on that compiler unless its own block says otherwise; a pin
-bump invalidates the Ir columns and has to re-take the A/B base.
+The toolchain is pinned by `rust-toolchain.toml` (**1.99.0** since 2026-10-11,
+the Bevy 0.20 upgrade), so a pin bump invalidates the Ir columns and has to re-take
+the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
+1.99.0 baseline has been taken yet, so the first perf row on the new pin
+re-takes its own base rather than diffing against one of them.
 
 ### 2026-10-12 (Commander run, `01L4tuaB`) — guardrail; 110 EDHREC seats, emblem floors, graveyard discounts
 

@@ -15,6 +15,7 @@
 //! one, and opens the menu for exactly the cards that used to do nothing.
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 use crabomination::card::CardId;
 use crabomination::game::GameAction;
 use crabomination::net::{ClientView, KnownCard};

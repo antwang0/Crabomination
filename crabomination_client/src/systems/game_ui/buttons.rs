@@ -12,6 +12,7 @@
 //!   surface in one place.
 
 use bevy::prelude::*;
+use crate::ui_button::Interaction;
 use crabomination::game::{GameAction, TurnStep};
 
 use crate::net_plugin::{CurrentView, NetOutbox};

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::components::{BattlefieldCard, CardHoverLift, CardHovered, HandCard, BF_HOVER_LIFT, HOVER_LIFT_AMOUNT};
 
 pub fn on_card_over(
-    ev: On<Pointer<Over>>,
+    ev: On<PointerOver>,
     parents: Query<&ChildOf>,
     mut commands: Commands,
     mut lifts: Query<(&Transform, &mut CardHoverLift, Option<&HandCard>, Option<&BattlefieldCard>)>,
@@ -29,7 +29,7 @@ pub fn on_card_over(
 }
 
 pub fn on_card_out(
-    ev: On<Pointer<Out>>,
+    ev: On<PointerOut>,
     parents: Query<&ChildOf>,
     mut commands: Commands,
     mut lifts: Query<&mut CardHoverLift>,

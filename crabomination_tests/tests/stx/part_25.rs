@@ -1,6 +1,5 @@
 use crabomination::card::{CounterType, CreatureType, Keyword};
 use crabomination::catalog;
-use crabomination::game::*;
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
 use super::*;

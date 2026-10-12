@@ -29,7 +29,7 @@
 #
 # ⚠ THIS IS AN ITERATION TOOL, NOT AN INSTRUMENT.
 #
-# A nightly compiler generates different code from the pinned 1.95.0, so:
+# A nightly compiler generates different code from the pinned 1.99.0, so:
 #   * nothing built here goes anywhere near PERF.md — a `--bench` or callgrind
 #     number from a different compiler is not comparable to any row in it;
 #   * CLAUDE.md's pre-push gate
@@ -88,7 +88,7 @@ scripts/fast.sh: no nightly toolchain.
 
     rustup toolchain install nightly --profile minimal
 
-rust-toolchain.toml's 1.95.0 pin stays the default; `cargo +nightly` overrides
+rust-toolchain.toml's 1.99.0 pin stays the default; `cargo +nightly` overrides
 it per-invocation and nothing else in the tree changes.
 MSG
     exit 1

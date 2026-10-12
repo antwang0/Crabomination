@@ -1788,7 +1788,7 @@ mod tests {
             sum += g;
         }
         let mean = sum / n as f64;
-        assert!((mean - 0.5772).abs() < 0.05, "mean {mean}");
+        assert!((mean - std::f64::consts::EULER_GAMMA).abs() < 0.05, "mean {mean}");
     }
 
     /// The Gumbel arm returns a legal searched action from the same menus

@@ -5,6 +5,7 @@
 
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 
 use crabomination::mana::Color as ManaColor;
 use crabomination::net::DebugAction;

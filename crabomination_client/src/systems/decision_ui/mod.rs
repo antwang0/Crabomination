@@ -5,6 +5,7 @@
 //! is empty and no modal is shown.
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 
 use crabomination::{
     card::CardId,

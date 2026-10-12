@@ -346,7 +346,7 @@ pub(crate) fn distinct_categories(masks: &[u32], used: u32) -> bool {
     let Some((&first, rest)) = masks.split_first() else { return true };
     let mut free = first & !used;
     while free != 0 {
-        let bit = free & free.wrapping_neg();
+        let bit = free.isolate_lowest_one();
         if distinct_categories(rest, used | bit) {
             return true;
         }

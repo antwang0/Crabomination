@@ -770,14 +770,14 @@ fn exp_neg(x: f32) -> f32 {
 #[inline(always)]
 fn max_lanes(xs: &[f32]) -> f32 {
     let mut acc = [f32::NEG_INFINITY; 8];
-    let mut chunks = xs.chunks_exact(8);
-    for c in &mut chunks {
+    let (chunks, rest) = xs.as_chunks::<8>();
+    for c in chunks {
         for l in 0..8 {
             acc[l] = acc[l].max(c[l]);
         }
     }
     let mut m = f32::NEG_INFINITY;
-    for &v in chunks.remainder().iter().chain(&acc) {
+    for &v in rest.iter().chain(&acc) {
         m = m.max(v);
     }
     m
@@ -788,14 +788,14 @@ fn max_lanes(xs: &[f32]) -> f32 {
 #[inline(always)]
 fn sum_lanes(xs: &[f32]) -> f32 {
     let mut acc = [0.0f32; 8];
-    let mut chunks = xs.chunks_exact(8);
-    for c in &mut chunks {
+    let (chunks, rest) = xs.as_chunks::<8>();
+    for c in chunks {
         for l in 0..8 {
             acc[l] += c[l];
         }
     }
     let mut s = 0.0f32;
-    for &v in chunks.remainder() {
+    for &v in rest {
         s += v;
     }
     for v in acc {
@@ -1185,7 +1185,7 @@ fn get_tensor(st: &safetensors::SafeTensors<'_>, name: &'static str) -> Result<T
         return Err(NnError::BadTensor(name, "data length != shape".into()));
     }
     let data =
-        raw.chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().unwrap())).collect();
+        raw.as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes(*c)).collect();
     Ok(Tensor2::new(rows, cols, data))
 }
 
@@ -1317,7 +1317,7 @@ fn get_tensor_dyn(
             return Err(NnError::BadTensor(family, format!("{name}: rank {} shape", view.shape().len())));
         }
     };
-    let data = view.data().chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().unwrap())).collect();
+    let data = view.data().as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes(*c)).collect();
     Ok(Tensor2::new(rows, cols, data))
 }
 

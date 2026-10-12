@@ -35,7 +35,7 @@ socket2 = { version = "0.6.4", features = ["all"] }
 # one. The `#[global_allocator]` lives in the binaries: it is a whole-program
 # decision and belongs to whoever builds the program.
 mimalloc = { version = "0.1.52", optional = true, default-features = false }
-tungstenite = { version = "0.29.0", default-features = false, features = ["handshake"] }
+tungstenite = { version = "0.30.0", default-features = false, features = ["handshake"] }
 
 # rand's OS entropy source needs the JS backend on wasm32 (see
 # .cargo/config.toml for the matching getrandom_backend rustflag).

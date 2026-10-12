@@ -218,17 +218,17 @@ pub fn spawn_single_card(
         .id()
 }
 
-fn on_pile_over(ev: On<Pointer<Over>>, mut commands: Commands) {
+fn on_pile_over(ev: On<PointerOver>, mut commands: Commands) {
     commands.entity(ev.entity).insert(PileHovered);
 }
 
-fn on_pile_out(ev: On<Pointer<Out>>, mut commands: Commands) {
+fn on_pile_out(ev: On<PointerOut>, mut commands: Commands) {
     commands.entity(ev.entity).remove::<PileHovered>();
 }
 
 /// Click on the shared exile pile toggles the exile browser.
 fn on_exile_click(
-    _ev: On<Pointer<Click>>,
+    _ev: On<PointerClick>,
     mut browser: ResMut<crate::game::ExileBrowserState>,
 ) {
     browser.open = !browser.open;
@@ -237,7 +237,7 @@ fn on_exile_click(
 
 /// Click on any graveyard pile toggles the browser to that pile's owner.
 fn on_graveyard_click(
-    ev: On<Pointer<Click>>,
+    ev: On<PointerClick>,
     piles: Query<&GraveyardPile>,
     mut browser: ResMut<GraveyardBrowserState>,
 ) {

@@ -6504,8 +6504,8 @@ fn decide_choose_cards(
             .iter()
             .filter_map(|(id, _)| {
                 let c = in_a_library(*id)?;
-                Some((*id, c.definition.cost.cmc() as i32, c.definition.power))
-                    .filter(|_| !super::loop_hazard::entry_starts_loop(state, seat, &c.definition.arc(), w))
+                (!super::loop_hazard::entry_starts_loop(state, seat, &c.definition.arc(), w))
+                    .then_some((*id, c.definition.cost.cmc() as i32, c.definition.power))
             })
             .collect();
         ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));

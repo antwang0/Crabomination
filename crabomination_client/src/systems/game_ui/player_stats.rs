@@ -5,6 +5,7 @@
 //! when the table is busy.
 
 use bevy::prelude::*;
+use crate::ui_button::Button;
 use crabomination::game::TurnStep;
 
 use crate::game::TargetingState;

@@ -194,7 +194,7 @@ pub struct Projector {
 impl Projector {
     pub fn new(cam: &Transform, viewport: Vec2) -> Self {
         let view = cam.to_matrix().inverse();
-        let proj = Mat4::perspective_infinite_reverse_rh(FOV_Y, viewport.x / viewport.y, NEAR);
+        let proj = bevy::math::proj::perspective_infinite_reverse(FOV_Y, viewport.x / viewport.y, NEAR);
         Projector { clip_from_world: proj * view, viewport }
     }
 

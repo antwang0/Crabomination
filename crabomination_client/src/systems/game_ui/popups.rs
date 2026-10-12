@@ -3,6 +3,7 @@
 //! "open conditionally on a state resource, despawn when state clears."
 
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 use crabomination::card::CardId;
 use crabomination::game::{GameAction, Target};
 

@@ -20,6 +20,7 @@ use std::sync::{Arc, Mutex};
 
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
+use crate::ui_button::{Button, Interaction};
 
 use crabomination::cube::build_cube_state;
 use crabomination::sos_mode::build_sos_state;
