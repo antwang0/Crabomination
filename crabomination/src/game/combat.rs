@@ -2195,6 +2195,14 @@ impl GameState {
             if exerted_now && !self.exerted_this_turn.contains(&id) {
                 self.exerted_this_turn.push(id);
             }
+            // Ramses, Assassin Lord — "attacked this turn by an Assassin you
+            // controlled".
+            if let AttackTarget::Player(d) = atk.target
+                && d < self.players.len()
+                && self.permanent_has_creature_type(id, crate::card::CreatureType::Assassin)
+            {
+                self.players[d].attacked_by_assassins_of |= 1u64 << p;
+            }
             let card = self
                 .battlefield
                 .iter_mut()

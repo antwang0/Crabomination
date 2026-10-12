@@ -1006,6 +1006,9 @@ pub enum CounterType {
     Spore,
     /// Brass's Tunnel-Grinder's bore counters (three transform it).
     Bore,
+    /// Memory counter — The Animus and Altaïr Ibn-La'Ahad's mark on the
+    /// legendary creature cards they exile.
+    Memory,
 }
 
 /// Every zone a card can occupy.
@@ -7110,6 +7113,9 @@ pub(crate) mod debug_flag {
     /// combat damage this game (`Selector::OpponentsCombatDamagedByOwnName` —
     /// Gollum, Obsessed Stalker).
     pub const COMBAT_VICTIMS_BY_NAME: u8 = 1 << 5;
+    /// The card asks whether it has dealt damage yet
+    /// (`Predicate::SourceHasDealtDamage` — Ratonhnhaké꞉ton).
+    pub const OWN_DAMAGE: u8 = 1 << 6;
 }
 
 impl CardDefinition {
@@ -7725,6 +7731,13 @@ impl CardDefinition {
         self.debug_flags() & debug_flag::DAMAGE_VICTIMS != 0
     }
 
+    /// Whether this card asks if it has dealt damage yet
+    /// (`Predicate::SourceHasDealtDamage`). Gates the write of
+    /// `CardInstance::has_dealt_damage`.
+    pub fn tracks_own_damage(&self) -> bool {
+        self.debug_flags() & debug_flag::OWN_DAMAGE != 0
+    }
+
     /// Whether combat damage this card deals is remembered **by its name**
     /// (`Selector::OpponentsCombatDamagedByOwnName`, Gollum). Gates the combat
     /// path's write into `combat_victims_by_name`.
@@ -7805,6 +7818,9 @@ impl CardDefinition {
                 if dbg.contains("DamagedBySourceThisGame") {
                     v |= debug_flag::DAMAGE_VICTIMS;
                 }
+                if dbg.contains("SourceHasDealtDamage") {
+                    v |= debug_flag::OWN_DAMAGE;
+                }
                 if dbg.contains("DamageToSourceThisTurnFromOthersNamedSame") {
                     v |= debug_flag::DAMAGE_BY_NAME;
                 }
@@ -7849,6 +7865,7 @@ impl CardDefinition {
         let kindred = self.card_types.contains(&CardType::Kindred);
         crate::mana::SpellKind {
             not_owned: false,
+            freerunning: self.alternative_cost.as_ref().is_some_and(|a| a.freerunning),
             wants_converge: self.wants_converge(),
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),
             artifact,
@@ -10033,6 +10050,10 @@ pub struct CardData {
     /// cleanup. Powers "target creature that was dealt damage this turn"
     /// (Initiate of Blood // Goka). In-memory only.
     pub dealt_damage_this_turn: bool,
+    /// This permanent has dealt damage since it entered (Ratonhnhaké꞉ton's
+    /// "hasn't dealt damage yet"). Written only for a card that asks
+    /// (`CardDefinition::tracks_own_damage`). In-memory only.
+    pub has_dealt_damage: bool,
     /// CR 120.x — total damage dealt to this permanent this turn (any source,
     /// combat or not). Unlike `damage`, this survives regeneration and damage
     /// wipes, so "if 4 or more damage was dealt to it this turn" (Rushing-Tide
@@ -10975,6 +10996,7 @@ impl CardInstance {
             remembered_amount: None,
             dealt_deathtouch_damage: false,
             dealt_damage_this_turn: false,
+            has_dealt_damage: false,
             damage_dealt_to_this_turn: 0,
             excess_damage_this_turn: 0,
             combat_damager_controller: None,
@@ -12054,6 +12076,10 @@ impl CardInstance {
             self.renowned = false;
             self.suspected = false;
             self.harnessed = false;
+        }
+        // CR 400.7 — "hasn't dealt damage yet" asks of this object only.
+        if self.has_dealt_damage {
+            self.has_dealt_damage = false;
         }
     }
 

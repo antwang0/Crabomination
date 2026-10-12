@@ -844,6 +844,10 @@ pub struct PlayerData {
     /// costs are open. Reset at the turn boundary.
     #[serde(default)]
     pub freerunning_unlocked_this_turn: bool,
+    /// Seats (a bit each) whose Assassin attacked this player this turn
+    /// (Ramses, Assassin Lord). Cleared as each turn begins.
+    #[serde(default)]
+    pub attacked_by_assassins_of: u64,
     /// CR 614.5 — "sources you control deal double damage this turn" (Quest
     /// for Pure Flame). Read in `scale_damage_to`, reset at the turn boundary.
     #[serde(default)]
@@ -1756,6 +1760,7 @@ impl Player {
             creatures_attacked_this_turn: 0,
             dealt_combat_damage_to_player_this_turn: false,
             freerunning_unlocked_this_turn: false,
+            attacked_by_assassins_of: 0,
             double_your_source_damage_this_turn: false,
             committed_crime_this_turn: false,
             investigated_this_turn: false,

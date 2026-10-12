@@ -668,7 +668,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
                 | RedInstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
-                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | SpellsYouDontOwn | SpellOrAbilityCopy
+                | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | KnightOrEquipmentSpells | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
                 | SpellsOnly | TypeSpellOrItsAbility(_) => {}
@@ -684,6 +684,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureSpellOfType(CreatureType::Bear),
             SpellOrAbilityCopy,
             OutlawSpellsOrAbilities,
+            AssassinOrFreerunning,
             SpellsYouDontOwn,
             SpellsOnly,
             CreatureOfTypeOrItsAbility(CreatureType::Bear),

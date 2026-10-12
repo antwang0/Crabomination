@@ -3055,6 +3055,13 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].dealt_combat_damage_to_player_this_turn),
+            Predicate::SourceHasDealtDamage => {
+                ctx.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| c.has_dealt_damage)
+            }
+            Predicate::AttackedByYourAssassinThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].attacked_by_assassins_of & (1u64 << ctx.controller) != 0),
             Predicate::FreerunningUnlocked { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

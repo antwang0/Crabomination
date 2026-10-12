@@ -2235,6 +2235,13 @@ pub enum Predicate {
     /// creature or a commander `who` controlled (Freerunning's alt-cost gate).
     /// Backed by `Player.freerunning_unlocked_this_turn`.
     FreerunningUnlocked { who: PlayerRef },
+    /// The effect's source permanent has dealt damage since it entered —
+    /// negated, "as long as [this] hasn't dealt damage yet" (Ratonhnhaké꞉ton).
+    SourceHasDealtDamage,
+    /// `who` was attacked this turn by an Assassin the effect's controller
+    /// controlled (Ramses, Assassin Lord). Backed by
+    /// `Player::attacked_by_assassins_of`.
+    AttackedByYourAssassinThisTurn { who: PlayerRef },
     /// True if a creature other than the predicate's source entered the
     /// battlefield under `who`'s control last turn (Ephara, God of the
     /// Polis). Backed by `Player.creatures_entered_last_turn`.

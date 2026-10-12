@@ -131,6 +131,7 @@ mod attack_lure;
 mod attack_requirements;
 
 mod adventure_grant;
+mod damage_dealers;
 mod goad;
 mod ascend;
 mod storied;
@@ -24454,6 +24455,7 @@ impl GameState {
     /// having touched nothing. `cow::make_mut`'s shape (PERF `(-300)`).
     #[inline(always)]
     pub fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
+        self.note_damage_dealers(events);
         if events.is_empty()
             && self.scratch.pending_cost_events.is_empty()
             && self.scratch.pending_cost_triggers.is_empty()

@@ -857,6 +857,10 @@ pub enum SpendRestriction {
     /// types in any zone. `SpellKind::creature_types` is filled only for a
     /// creature or Kindred object, which is exactly what can carry one.
     OutlawSpellsOrAbilities,
+    /// "Spend this mana only to cast an Assassin spell or a spell that has
+    /// freerunning, or to activate an ability of an Assassin source"
+    /// (Brotherhood Headquarters).
+    AssassinOrFreerunning,
     /// "Spend this mana only to cast spells you don't own" (Thieving
     /// Varmint) — `SpellKind::not_owned`, filled by `spell_kind_for`.
     SpellsYouDontOwn,
@@ -909,6 +913,7 @@ impl SpendRestriction {
                 "only creatures of the chosen type or legendary creatures"
             }
             SpendRestriction::OutlawSpellsOrAbilities => "only outlaws and their abilities",
+            SpendRestriction::AssassinOrFreerunning => "only Assassins, freerunning spells and Assassin abilities",
             SpendRestriction::SpellsYouDontOwn => "only spells you don't own",
             SpendRestriction::CreatureOfType(_) => "only spells of the chosen type",
             SpendRestriction::CreatureOfAnyTypes(_) => "only spells of the listed creature types",
@@ -1017,6 +1022,11 @@ impl SpendRestriction {
                     && (kind.legendary || kind.changeling || kind.creature_types.contains(&t))
             }
             SpendRestriction::SpellsYouDontOwn => kind.not_owned && !kind.activating_ability,
+            SpendRestriction::AssassinOrFreerunning => {
+                kind.changeling
+                    || kind.creature_types.contains(&crate::card::CreatureType::Assassin)
+                    || (kind.freerunning && !kind.activating_ability)
+            }
             SpendRestriction::OutlawSpellsOrAbilities => {
                 use crate::card::CreatureType::*;
                 kind.changeling
@@ -1148,6 +1158,8 @@ pub struct SpellKind {
     /// The caster doesn't own the spell being cast (Thieving Varmint's mana;
     /// filled by `GameState::spell_kind_for`).
     pub not_owned: bool,
+    /// The spell has freerunning (CR 702.173) — Brotherhood Headquarters.
+    pub freerunning: bool,
     /// The spell's rules text computes `ConvergedValue` (converge): the
     /// payment path spends the generic portion across distinct colors
     /// instead of conserving them, and the auto-tapper prefers sources
