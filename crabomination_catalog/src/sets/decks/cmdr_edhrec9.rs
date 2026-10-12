@@ -1401,3 +1401,288 @@ pub fn glasses_of_urza() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Desecrated Tomb — {3} Artifact. Creature cards leaving your graveyard make
+/// a 1/1 flying Bat (once per batch).
+pub fn desecrated_tomb() -> CardDefinition {
+    let bat = TokenDefinition { keywords: vec![Keyword::Flying], ..token("Bat", 1, 1, Color::Black, vec![CreatureType::Bat]) };
+    CardDefinition {
+        name: "Desecrated Tomb",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature })
+                .once_per_batch(),
+            effect: make(1, bat),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Frog Butler — {1}{G} 1/1 deathtouch Frog Spirit. {T}: any color; {2}:
+/// reach until end of turn.
+pub fn frog_butler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Reach, duration: Duration::EndOfTurn },
+                ..Default::default()
+            },
+        ],
+        ..creature("Frog Butler", cost(&[generic(1), g()]), vec![CreatureType::Frog, CreatureType::Spirit], 1, 1)
+    }
+}
+
+/// Arni Metalbrow — {2}{R} 3/3 Human Berserker. A creature of yours
+/// attacking or entering attacking may pay {1}{R} to put a cheaper creature
+/// card from hand onto the battlefield tapped and attacking.
+pub fn arni_metalbrow() -> CardDefinition {
+    let deploy = || Effect::WithX {
+        x: Value::Diff(Box::new(Value::ManaValueOf(Box::new(Selector::TriggerSource))), Box::new(Value::ONE)),
+        body: Box::new(Effect::MayPay {
+            description: "Pay {1}{R} to put a cheaper creature card onto the battlefield attacking?".into(),
+            mana_cost: cost(&[generic(1), r()]),
+            body: Box::new(Effect::DeployCreatureFromHandAttacking {
+                filter: R::Creature.and(R::ManaValueAtMostXFromCost),
+                return_to_hand_eot: false,
+            }),
+            else_: None,
+        }),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::Attacks, EventScope::YourControl), effect: deploy() },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature.and(R::IsAttacking) },
+                ),
+                effect: deploy(),
+            },
+        ],
+        ..legend("Arni Metalbrow", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Berserker], 3, 3)
+    }
+}
+
+/// Cavalier of Gales — {2}{U}{U}{U} 5/5 flying Elemental Knight. ETB
+/// Brainstorm; dying shuffles it into its library, then scry 2.
+pub fn cavalier_of_gales() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                draw(3),
+                Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::Const(2) },
+            ])),
+            on_dies(Effect::Seq(vec![
+                Effect::ShuffleSelfIntoLibrary,
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ])),
+        ],
+        ..creature(
+            "Cavalier of Gales",
+            cost(&[generic(2), u(), u(), u()]),
+            vec![CreatureType::Elemental, CreatureType::Knight],
+            5,
+            5,
+        )
+    }
+}
+
+/// Uril, the Miststalker — {2}{R}{G}{W} 5/5 hexproof Beast, +2/+2 per Aura
+/// on it.
+pub fn uril_the_miststalker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Hexproof],
+        dynamic_pt: Some(crate::card::DynamicPt::BasePlusPerAttachedAura { base_p: 5, base_t: 5, per: 2 }),
+        ..legend("Uril, the Miststalker", cost(&[generic(2), r(), g(), w()]), vec![CreatureType::Beast], 5, 5)
+    }
+}
+
+/// Runes of the Deus — {4}{R/G} Aura. Red: +1/+1 and double strike; green:
+/// +1/+1 and trample.
+pub fn runes_of_the_deus() -> CardDefinition {
+    let when = |color, keyword| crate::card::ConditionalEquipBonus {
+        host_filter: R::HasColor(color),
+        power: 1,
+        toughness: 1,
+        keywords: vec![keyword],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Runes of the Deus",
+        cost: cost(&[generic(4), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            conditional: vec![when(Color::Red, Keyword::DoubleStrike), when(Color::Green, Keyword::Trample)],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Zurgo Helmsmasher — {2}{R}{W}{B} 7/2 haste Orc Warrior. Attacks each
+/// combat; indestructible on your turn; a creature it damaged this turn dying
+/// grows it.
+pub fn zurgo_helmsmasher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste, Keyword::MustAttack],
+        static_abilities: vec![static_ab(
+            "During your turn, Zurgo has indestructible.",
+            StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Indestructible,
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+            },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::DamagedBySourceThisTurn,
+            }),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..legend(
+            "Zurgo Helmsmasher",
+            cost(&[generic(2), r(), w(), b()]),
+            vec![CreatureType::Orc, CreatureType::Warrior],
+            7,
+            2,
+        )
+    }
+}
+
+/// Raiyuu, Storm's Edge — {2}{R}{W} 3/3 first strike Human Samurai. A lone
+/// Samurai or Warrior attacker of yours untaps, and in the first combat it
+/// adds another combat phase.
+pub fn raiyuu_storms_edge() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::AttackingAlone,
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Samurai).or(R::HasCreatureType(CreatureType::Warrior)),
+                },
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: Selector::TriggerSource, up_to: None },
+                Effect::If {
+                    cond: Predicate::IsFirstCombatPhaseThisTurn,
+                    then: Box::new(Effect::AdditionalCombatPhase { count: Value::ONE }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..legend("Raiyuu, Storm's Edge", cost(&[generic(2), r(), w()]), vec![CreatureType::Human, CreatureType::Samurai], 3, 3)
+    }
+}
+
+/// Heartflame Duelist // Heartflame Slash — {1}{W} 3/1 Human Knight; your
+/// instants and sorceries have lifelink. Adventure {2}{R}: 3 damage to any
+/// target.
+pub fn heartflame_duelist() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Instant and sorcery spells you control have lifelink.",
+            StaticEffect::YourInstantSorcerySpellsHaveLifelink,
+        )],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Heartflame Slash",
+            cost: cost(&[generic(2), r()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+        })),
+        ..creature("Heartflame Duelist", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Knight], 3, 1)
+    }
+}
+
+/// Dual Shot — {R} Instant. 1 damage to each of up to two creatures.
+pub fn dual_shot() -> CardDefinition {
+    spell(
+        "Dual Shot",
+        cost(&[r()]),
+        CardType::Instant,
+        Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE }),
+        },
+    )
+}
+
+/// Hanweir Militia Captain // Westvale Cult Leader — {1}{W} 2/2 Human
+/// Soldier; with four creatures at your upkeep it transforms into a */*
+/// (your creature count) Human Cleric that makes a 1/1 Human Cleric each end
+/// step.
+pub fn hanweir_militia_captain() -> CardDefinition {
+    let creatures = || Value::PermanentCountControlledByMatching(PlayerRef::You, R::Creature);
+    let leader = CardDefinition {
+        name: "Westvale Cult Leader",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Cleric], ..Default::default() },
+        color_indicator: vec![Color::White],
+        static_abilities: vec![static_ab(
+            "Westvale Cult Leader's power and toughness are each equal to the number of creatures you control.",
+            StaticEffect::SelfBasePtFromValue { power: creatures(), toughness: creatures() },
+        )],
+        triggered_abilities: vec![at_your(
+            TurnStep::End,
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition {
+                    colors: vec![Color::White, Color::Black],
+                    ..token("Human Cleric", 1, 1, Color::White, vec![CreatureType::Human, CreatureType::Cleric])
+                }),
+            },
+        )],
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+                .with_filter(Predicate::ValueAtLeast(creatures(), Value::Const(4))),
+            effect: Effect::Transform { what: Selector::This },
+        }],
+        back_face: Some(Box::new(leader)),
+        ..creature("Hanweir Militia Captain", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
+    }
+}
+
+/// Riders of the Mark — {6}{R} 7/4 trample, haste Human Knight, affinity for
+/// Humans. Your end step after it attacked returns it to hand for that many
+/// 1/1 Human Soldiers as its toughness.
+pub fn riders_of_the_mark() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        affinity_filter: Some(R::HasCreatureType(CreatureType::Human).and(R::ControlledByYou)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::SourceAttackedThisTurn),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::This, filter: R::Creature },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ToughnessOf(Box::new(Selector::This)),
+                        definition: Arc::new(token("Human Soldier", 1, 1, Color::White, vec![CreatureType::Human, CreatureType::Soldier])),
+                    },
+                    Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Riders of the Mark", cost(&[generic(6), r()]), vec![CreatureType::Human, CreatureType::Knight], 7, 4)
+    }
+}

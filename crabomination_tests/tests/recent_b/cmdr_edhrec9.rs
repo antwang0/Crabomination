@@ -418,3 +418,84 @@ fn glasses_of_urza_peeks() {
     activate(&mut g, gl, 0, Some(Target::Player(1))).expect("look");
     assert!(g.battlefield_find(gl).unwrap().tapped);
 }
+
+/// Uril grows +2/+2 per Aura on it.
+#[test]
+fn uril_grows_with_auras() {
+    let mut g = pod(2);
+    let u = ready(&mut g, 0, catalog::uril_the_miststalker());
+    let runes = g.add_card_to_hand(0, catalog::runes_of_the_deus());
+    cast(&mut g, runes, &[perm(u)]).expect("enchant Uril");
+    let cp = g.computed_permanent(u).unwrap();
+    assert_eq!((cp.power, cp.toughness), (9, 9), "5/5, +2/+2 for the Aura, Runes' +1/+1 for red and again for green");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample));
+}
+
+/// Zurgo is indestructible on your turn only.
+#[test]
+fn zurgo_is_indestructible_on_your_turn() {
+    let mut g = pod(2);
+    let z = ready(&mut g, 0, catalog::zurgo_helmsmasher());
+    assert!(g.computed_permanent(z).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(z).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
+}
+
+/// Dual Shot pings two creatures.
+#[test]
+fn dual_shot_pings_two() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 1, crabomination::card::CardDefinition { toughness: 1, ..catalog::grizzly_bears() });
+    let b = ready(&mut g, 1, crabomination::card::CardDefinition { toughness: 1, ..catalog::grizzly_bears() });
+    let d = g.add_card_to_hand(0, catalog::dual_shot());
+    cast(&mut g, d, &[perm(a), perm(b)]).expect("cast");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+}
+
+/// Hanweir Militia Captain transforms with four creatures and its back face
+/// counts them.
+#[test]
+fn hanweir_militia_captain_becomes_the_cult_leader() {
+    let mut g = pod(2);
+    let c = ready(&mut g, 0, catalog::hanweir_militia_captain());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::grizzly_bears());
+    }
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(c).unwrap().definition.name, "Westvale Cult Leader");
+    assert_eq!(g.computed_permanent(c).unwrap().power, 4);
+}
+
+/// Riders of the Mark: after attacking, your end step trades it for Soldiers.
+#[test]
+fn riders_of_the_mark_return_for_soldiers() {
+    let mut g = pod(2);
+    let r = ready(&mut g, 0, catalog::riders_of_the_mark());
+    g.battlefield_find_mut(r).unwrap().attacked_this_turn = true;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == r));
+    assert_eq!(tokens_named(&g, "Human Soldier"), 4);
+}
+
+/// Desecrated Tomb: a creature card leaving your graveyard makes a Bat.
+#[test]
+fn desecrated_tomb_makes_bats() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::desecrated_tomb());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ff = g.add_card_to_hand(0, catalog::flood_of_recollection());
+    let _ = ff;
+    let ascend = g.add_card_to_hand(0, catalog::ascend_from_avernus());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: ascend, target: None, additional_targets: vec![], mode: None, x_value: Some(2) })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(tokens_named(&g, "Bat"), 1);
+}
