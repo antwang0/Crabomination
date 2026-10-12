@@ -341,3 +341,55 @@ fn workshop_assistant_recovers_an_artifact() {
     bolt(&mut g, 1, perm(wa));
     assert!(g.players[0].hand.iter().any(|c| c.id == ring));
 }
+
+/// Guile: a counterspell of yours exiles the spell instead (CR 614.1a), and
+/// you may play it free while it stays exiled.
+#[test]
+fn guile_turns_counters_into_theft() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::guile());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("their Bears");
+    let retort = g.add_card_to_hand(0, catalog::wizards_retort());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: retort, target: Some(perm(bear)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("counter");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("exiled, not countered");
+    assert_eq!(exiled.may_play_until.map(|m| m.player), Some(0));
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear));
+}
+
+/// Ertai's Scorn costs {1}{U} once an opponent has cast two spells this turn.
+#[test]
+fn ertais_scorn_gets_cheaper_after_two_opposing_spells() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::ertais_scorn());
+    assert!(catalog::ertais_scorn().alternative_cost.is_some());
+    g.players[1].spells_cast_this_game_turn = 1;
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("their Bears");
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: s,
+        pitch_card: None,
+        target: Some(perm(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{U}{U} pays the {1}{U} alternative");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+}

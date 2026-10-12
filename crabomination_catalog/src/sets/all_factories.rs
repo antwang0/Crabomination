@@ -5378,6 +5378,8 @@ static DECKS: &[Factory] = &[
     super::decks::confront_the_unknown,
     super::decks::eirdu_carrier_of_dawn,
     super::decks::rhys_the_evermore,
+    super::decks::guile,
+    super::decks::ertais_scorn,
     super::decks::demonic_taskmaster,
     super::decks::lord_of_the_pit,
     super::decks::evil_eye_of_urborg,

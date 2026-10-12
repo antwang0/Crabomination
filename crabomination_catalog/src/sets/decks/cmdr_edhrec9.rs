@@ -1318,3 +1318,46 @@ pub fn rhys_the_evermore() -> CardDefinition {
         ..legend("Rhys, the Evermore", cost(&[generic(1), w()]), vec![CreatureType::Elf, CreatureType::Warrior], 2, 2)
     }
 }
+
+/// Guile — {3}{U}{U}{U} 6/6 Elemental Incarnation. Blocked only by three or
+/// more; your counterspells exile instead and let you play the card free;
+/// put into a graveyard from anywhere, it shuffles into its library.
+pub fn guile() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+        static_abilities: vec![static_ab(
+            "If a spell or ability you control would counter a spell, instead exile that spell and you may play that card without paying its mana cost.",
+            StaticEffect::CounterBecomesExileFreePlay,
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+            effect: Effect::ShuffleSelfIntoLibrary,
+        }],
+        ..creature(
+            "Guile",
+            cost(&[generic(3), u(), u(), u()]),
+            vec![CreatureType::Elemental, CreatureType::Incarnation],
+            6,
+            6,
+        )
+    }
+}
+
+/// Ertai's Scorn — {1}{U}{U} Instant, {U} less once an opponent has cast two
+/// spells this turn. Counter target spell.
+pub fn ertais_scorn() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(1), u()]),
+            // The most spells any one opponent has cast this turn.
+            condition: Some(Predicate::ValueAtLeast(Value::SpellsCastThisTurn(PlayerRef::EachOpponent), Value::Const(2))),
+            ..Default::default()
+        }),
+        ..spell(
+            "Ertai's Scorn",
+            cost(&[generic(1), u(), u()]),
+            CardType::Instant,
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+        )
+    }
+}
