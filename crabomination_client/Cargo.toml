@@ -44,6 +44,8 @@ toml = "1.1.2"
 # *program's* call and this program makes it below, in its own dependency
 # table, so the choice is visible in one place instead of two.
 crabomination = { path = "../crabomination", default-features = false }
+# Card art: the prefetch list, filenames, and (native) the Scryfall download.
+crabomination_art = { path = "../crabomination_art" }
 # Drawing the placeholder and proxy faces for cards with no Scryfall art
 # (`card::proxy`), and converting art cached before the JPEG switch. Only the
 # two codecs the client reads: `image`'s defaults compile every format it
@@ -72,10 +74,8 @@ parley = { version = "0.9.0", default-features = false, features = ["std"] }
 # instruction count dwarfs the allocator. It pays only on top of
 # `--profile play` / `--release`.
 mimalloc = { version = "0.1.52", default-features = false, optional = true }
-# Blocking HTTP (card prefetch) and OS config-dir discovery are native-only;
-# the browser build loads card art over HTTP via the AssetServer and stores
-# config in localStorage.
-ureq = "3.3"
+# OS config-dir discovery is native-only; the browser build stores config in
+# localStorage. (The card prefetch's HTTP client is `crabomination_art`'s.)
 dirs = "6"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

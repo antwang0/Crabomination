@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Regenerate crabomination_client/src/synthesized_cards.rs.
+  Regenerate crabomination_art/src/synthesized_cards.rs.
 
 .DESCRIPTION
   The STX catalog contains ~3700 "synthesised" cards -- college-flavoured
@@ -26,7 +26,7 @@
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $stxDir = Join-Path $repo 'crabomination_catalog\src\sets\stx'
-$out = Join-Path $repo 'crabomination_client\src\synthesized_cards.rs'
+$out = Join-Path $repo 'crabomination_art\src\synthesized_cards.rs'
 
 Write-Host 'Fetching Scryfall card-name catalog...'
 $headers = @{ 'User-Agent' = 'Crabomination-audit/1.0'; 'Accept' = 'application/json' }

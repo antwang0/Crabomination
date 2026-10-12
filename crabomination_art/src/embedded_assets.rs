@@ -7,33 +7,38 @@
 //! the UI font, the cardback and the symbol fonts have no download source
 //! — without them a custom asset dir meant a broken client. They are small
 //! (≈500 KB total), so embedding keeps any asset dir self-sufficient.
+//!
+//! They are also everything a browser bundle loads besides card art, so the
+//! server writes them into `CRAB_ASSETS_DIR` too. The files themselves stay
+//! in `crabomination_client/assets/`, which is where the native client reads
+//! them by default.
 
 use std::fs;
 use std::path::Path;
 
 /// (relative asset path, bytes) for every embedded core asset.
 const EMBEDDED: &[(&str, &[u8])] = &[
-    ("cardback.png", include_bytes!("../assets/cardback.png")),
+    ("cardback.png", include_bytes!("../../crabomination_client/assets/cardback.png")),
     (
         "fonts/MiranoExtendedFreebie-Light.ttf",
-        include_bytes!("../assets/fonts/MiranoExtendedFreebie-Light.ttf"),
+        include_bytes!("../../crabomination_client/assets/fonts/MiranoExtendedFreebie-Light.ttf"),
     ),
     // The symbol fallbacks (`theme::FALLBACK_FONT_PATHS`, ~36 KB together).
     (
         "fonts/fallback/NotoSansSymbols2.subset.ttf",
-        include_bytes!("../assets/fonts/fallback/NotoSansSymbols2.subset.ttf"),
+        include_bytes!("../../crabomination_client/assets/fonts/fallback/NotoSansSymbols2.subset.ttf"),
     ),
     (
         "fonts/fallback/NotoSansSymbols.subset.ttf",
-        include_bytes!("../assets/fonts/fallback/NotoSansSymbols.subset.ttf"),
+        include_bytes!("../../crabomination_client/assets/fonts/fallback/NotoSansSymbols.subset.ttf"),
     ),
     (
         "fonts/fallback/NotoSansMath.subset.ttf",
-        include_bytes!("../assets/fonts/fallback/NotoSansMath.subset.ttf"),
+        include_bytes!("../../crabomination_client/assets/fonts/fallback/NotoSansMath.subset.ttf"),
     ),
     (
         "fonts/fallback/NotoEmoji.subset.ttf",
-        include_bytes!("../assets/fonts/fallback/NotoEmoji.subset.ttf"),
+        include_bytes!("../../crabomination_client/assets/fonts/fallback/NotoEmoji.subset.ttf"),
     ),
 ];
 

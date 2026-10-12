@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crabomination_base", "crabomination_catalog", "crabomination_catalog/parts/core", "crabomination_catalog/parts/sets1", "crabomination_catalog/parts/sets2", "crabomination_catalog/parts/sets3", "crabomination_catalog/parts/decks1", "crabomination_catalog/parts/decks2", "crabomination_catalog/parts/decks3", "crabomination_catalog/parts/decks4", "crabomination_catalog/parts/stx", "crabomination", "crabomination_client", "crabomination_server", "crabomination_tests", "crabomination_nn", "crabomination_ml"]
+members = ["crabomination_base", "crabomination_art", "crabomination_catalog", "crabomination_catalog/parts/core", "crabomination_catalog/parts/sets1", "crabomination_catalog/parts/sets2", "crabomination_catalog/parts/sets3", "crabomination_catalog/parts/decks1", "crabomination_catalog/parts/decks2", "crabomination_catalog/parts/decks3", "crabomination_catalog/parts/decks4", "crabomination_catalog/parts/stx", "crabomination", "crabomination_client", "crabomination_server", "crabomination_tests", "crabomination_nn", "crabomination_ml"]
 
 [profile.dev]
 # opt-level = 0 (default) keeps clean compile times short. Dependencies

@@ -27,8 +27,6 @@ mod config;
 mod debug_export;
 mod deck_import;
 mod deck_picker;
-#[cfg(not(target_arch = "wasm32"))]
-mod embedded_assets;
 mod game;
 mod layout_harness;
 mod mana_text;
@@ -38,7 +36,6 @@ mod render_quality;
 mod saved_decks;
 mod scryfall;
 mod storage;
-mod synthesized_cards;
 #[cfg(target_arch = "wasm32")]
 mod ws_client;
 mod systems;
@@ -138,82 +135,23 @@ fn main() {
         .find_map(|w| (w[0] == "--play").then(|| menu::MatchFormat::from_cli(&w[1])))
         .flatten();
 
-    // Preload card images for every card the player could possibly see —
-    // the demo (Modern) decks and the full cube card universe. Cube
-    // matches roll a random deck per seat *after* startup, so we can't
-    // narrow the prefetch to "cards in this match"; the full union keeps
-    // Scryfall fetches off the critical path of gameplay.
-    //
-    // For each MDFC we record both faces _and the front→back link_ so
-    // the prefetcher can query Scryfall by the front name with
-    // `face=back`. Querying by back name alone 404s for most MDFCs.
-    use scryfall::CardImage;
-    use std::collections::HashSet;
-    let mut fronts: HashSet<&'static str> = HashSet::new();
-    let mut mdfc_pairs: HashSet<(&'static str, &'static str)> = HashSet::new();
-    let mut visit = |def: &crabomination::card::CardDefinition| {
-        fronts.insert(def.name);
-        if let Some(back) = def.back_face.as_ref() {
-            mdfc_pairs.insert((def.name, back.name));
+    // Preload card images for every card the player could possibly see
+    // (`crabomination_art::SpecSet` says which, and why all of them). Native
+    // only: the browser has no prefetch.
+    #[cfg(not(target_arch = "wasm32"))]
+    let specs = {
+        let mut spec_set = crabomination_art::SpecSet::default();
+        let demo = crabomination::demo::build_demo_state();
+        for player in &demo.players {
+            for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
+                spec_set.visit(&card.definition);
+            }
         }
-        // SOS preparation cards: the cast copy appears on the stack under
-        // the inset spell's own name, so prefetch it as a plain front —
-        // Scryfall's `cards/named` resolves face names (returning the
-        // full preparation card's art, which is the right image).
-        if let Some(prep) = def.prepare_spell.as_ref() {
-            fronts.insert(prep.name);
+        for factory in crabomination::catalog::all_known_factories() {
+            spec_set.visit(&factory());
         }
+        spec_set.into_specs()
     };
-    let demo = crabomination::demo::build_demo_state();
-    for player in &demo.players {
-        for card in player.library.iter().chain(&player.hand).chain(&player.graveyard) {
-            visit(&card.definition);
-        }
-    }
-    // Every card the registry knows about — cube, SoS, the *full* STX
-    // catalog, plus the xtra / Theros sets. This is a superset of every
-    // deck *and* the audit catalog (and the Lessons sideboard), so
-    // audit-mode cards and Learn-fetched Lessons (Academic Dispute, Anger,
-    // …) get their art prefetched instead of rendering with the
-    // missing-asset placeholder. Earlier this walked only cube + SoS, so
-    // the many STX cards outside those pools had no image.
-    for factory in crabomination::catalog::all_known_factories() {
-        visit(&factory());
-    }
-    // Token names: created mid-game by `Effect::CreateToken` factories,
-    // never present in deck definitions, so the catalog walk above
-    // doesn't see them. They use a separate Scryfall query path
-    // (`is:token+t:<name>`) since the bare type name doesn't resolve
-    // on `cards/named`.
-    let token_names: &[&'static str] = &[
-        // Cube / demo tokens.
-        "Bird", "Citizen", "Faerie", "Giant",
-        "Clue", "Treasure", "Food", "Blood",
-        // Cube-extras created by Soldier / Beast / Construct / Elephant /
-        // Cat token cards (Raise the Alarm, Beast Within, Karn Scion of
-        // Urza, Mascot Exhibition).
-        "Soldier", "Beast", "Construct", "Elephant", "Cat",
-        // Strixhaven / SoS-specific tokens. Without these the client
-        // prefetch never downloads art for Fractal Anomaly's payload, the
-        // Inkling tokens that Eager Glyphmage and friends produce, the
-        // Pest tokens (Pest Mascot, Pest Summoning), or the R/W Spirit
-        // tokens (Antiquities on the Loose, Group Project), so they
-        // render with a missing-asset placeholder in the 3-D view.
-        "Fractal", "Inkling", "Pest", "Spirit",
-        // Prismari Elemental (Artistic Process mode 2, Visionary's Dance,
-        // Muse's Encouragement, the rest of the elemental_token() callers).
-        // Was missing from the prefetch list, so the freshly-minted token
-        // entered with a placeholder front face on the battlefield.
-        "Elemental",
-    ];
-
-    let mut specs: Vec<CardImage> = fronts.into_iter().map(CardImage::Front).collect();
-    specs.extend(
-        mdfc_pairs
-            .into_iter()
-            .map(|(front, back)| CardImage::MdfcBack { front, back }),
-    );
-    specs.extend(token_names.iter().map(|name| CardImage::Token { name }));
     // Resolve once: a relative `asset_dir` is anchored to a fixed location
     // (crate source dir in debug, exe dir in release) so the prefetch cache
     // and Bevy's asset root agree regardless of the working directory.
@@ -227,11 +165,11 @@ fn main() {
     // A custom/fresh asset dir starts empty — materialize the embedded
     // core assets (fonts, cardback) before anything reads them.
     #[cfg(not(target_arch = "wasm32"))]
-    embedded_assets::materialize_core_assets(&asset_dir);
+    crabomination_art::materialize_core_assets(&asset_dir);
     // Token art fetched by type rather than name is often the wrong token
     // entirely; clear it once so the prefetch below fetches it by name.
     #[cfg(not(target_arch = "wasm32"))]
-    scryfall::purge_type_matched_token_art(&asset_dir, token_names);
+    crabomination_art::purge_type_matched_token_art(&asset_dir, crabomination_art::TOKEN_NAMES);
     // Card-art prefetch runs on a background thread — launch never blocks
     // on the network. Missing images render as name placeholders (see
     // `CardPlaceholderReader`) and hot-swap to real art as downloads land
@@ -244,7 +182,7 @@ fn main() {
         // Cards the app renders jump this queue as they are asked for
         // (`scryfall::card_asset_path`), so a match never waits on unrelated art.
         std::thread::spawn(move || {
-            scryfall::ensure_card_images_with_progress(&specs, &dir, &progress);
+            crabomination_art::ensure_card_images_with_progress(&specs, &dir, &progress);
         });
     }
     // Browser: no prefetch — card art loads over HTTP through the asset
@@ -252,7 +190,6 @@ fn main() {
     // done so the menu doesn't show a stuck download bar.
     #[cfg(target_arch = "wasm32")]
     {
-        let _ = &specs;
         image_prefetch.finished.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 

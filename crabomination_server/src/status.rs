@@ -1,4 +1,5 @@
-//! Optional HTTP status endpoint: set `CRAB_STATUS_BIND` (e.g. `0.0.0.0:7778`)
+//! Optional HTTP status endpoint: set `CRAB_STATUS_BIND` (e.g. `0.0.0.0:7779`;
+//! 7778 is the WebSocket listener's default)
 //! to serve `GET /healthz` → `ok` (liveness probe), `/readyz` → `ready`/503
 //! saturated (readiness probe), `/status.json` → a
 //! machine-readable metric object (for scrapers), `/metrics` → Prometheus text,

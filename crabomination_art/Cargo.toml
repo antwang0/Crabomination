@@ -1,0 +1,40 @@
+[package]
+name = "crabomination_art"
+version = "0.1.0"
+edition = "2024"
+
+# Card art: which images the catalog needs, what they are called on disk,
+# and (native only) fetching them from Scryfall into an asset dir. The
+# client's launch prefetch, and `fill_art`, which fills the asset dir a
+# browser bundle is served from — the browser cannot fetch or cache art
+# itself. Bevy-free, so `fill_art` builds without the client.
+
+[lib]
+# No doctests: each is its own binary to build and link, and the generated
+# `synthesized_cards.rs` header carries an indented shell command rustdoc
+# would compile as Rust. The unit tests are in `lib.rs`.
+doctest = false
+
+[dependencies]
+crabomination_base = { path = "../crabomination_base" }
+
+# `fill_art <assets dir>`: the prefetch, run to completion. Not a server
+# feature on purpose — art is the web host's, and a multi-hour fill has no
+# business in the process holding live matches.
+[[bin]]
+name = "fill_art"
+test = false
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# `fill_art`'s catalog walk. The library must not name it: that would link the
+# whole catalog into the library's test binary (253 MB against 22 MB).
+crabomination = { path = "../crabomination", default-features = false }
+# Blocking HTTP to Scryfall, re-encoding non-JPEG art, and the token search's
+# JSON — the download half, which the browser build does not have.
+ureq = "3.3"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
+serde_json = "1.0.150"
+# Scryfall's bulk card file (`BulkIndex`): gzipped JSONL, read as it streams.
+# Both already in the tree (flate2 through ureq's gzip support).
+serde = { version = "1.0.228", features = ["derive"] }
+flate2 = "1.1"

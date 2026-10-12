@@ -2266,6 +2266,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "crabomination_art"
+version = "0.1.0"
+dependencies = [
+ "crabomination",
+ "crabomination_base",
+ "flate2",
+ "image",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "crabomination_base"
 version = "0.1.0"
 dependencies = [
@@ -2368,6 +2381,7 @@ dependencies = [
  "ab_glyph",
  "bevy",
  "crabomination",
+ "crabomination_art",
  "dirs",
  "getrandom 0.4.2",
  "icu_properties",
@@ -2380,7 +2394,6 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
- "ureq",
  "wasm-bindgen",
  "web-sys",
 ]
