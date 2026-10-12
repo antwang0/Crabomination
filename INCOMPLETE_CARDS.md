@@ -2018,6 +2018,9 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Eradicator Valkyrie | "hexproof from planeswalkers" is not modelled | there is no hexproof-from-card-type keyword (`HexproofFromColor`/`…Monocolored`/`…Abilities` exist) |
 | 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
 | 🟡 Chiss-Goria, Forge Tyrant | the artifact spell cast from among the exiled cards doesn't gain affinity for artifacts | a may-play grant carries no cost-reduction rider (`MayPlayPermission` has `undaunted` only) |
+| 🟡 Wernog, Rider's Chaplain | an opponent who declines to investigate doesn't lose 1 life | modelled as a tempting offer (`Effect::TemptingOffer`), which has no "each who doesn't" arm |
+| 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
+| 🟡 Shredder's Technique | an indestructible enchantment that survives still costs you 2 life | the life loss reads the target's type before the destroy; there is no "destroyed this way" predicate |
 | 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
 | 🟡 Nahiri, Forged in Fury | an exiled Equipment card still costs its mana | `ExileTopAndGrantMayPlay` grants one paid permission for every card it exiles |
 | 🟡 Gandalf the White | only an *entering* legendary permanent or artifact doubles triggers; a leaving one doesn't | `DoubleControllerEtbTriggers` has no leave-the-battlefield half |

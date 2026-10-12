@@ -1215,3 +1215,207 @@ fn the_ghoul_irradiates() {
         assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
     }
 }
+
+// ── The two-card gaps (ranks 601-1000) ──────────────────────────────────────
+
+/// Ghoulcaller's Bell mills every player one.
+#[test]
+fn ghoulcallers_bell_mills_the_table() {
+    let mut g = pod(3);
+    for s in 0..3 {
+        library(&mut g, s, 2);
+    }
+    let bell = ready(&mut g, 0, catalog::ghoulcallers_bell());
+    activate(&mut g, bell, 0, None).expect("tap");
+    assert!((0..3).all(|s| g.players[s].graveyard.len() == 1));
+}
+
+/// Hand of the Praetors pumps other infect creatures and poisons on an
+/// infect creature spell.
+#[test]
+fn hand_of_the_praetors_spreads_poison() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    ready(&mut g, 0, catalog::hand_of_the_praetors());
+    let cur = g.add_card_to_hand(0, catalog::corpse_cur());
+    cast(&mut g, cur, &[]).expect("cast");
+    assert_eq!(g.computed_permanent(cur).unwrap().power, 3, "a lord for infect");
+    assert_eq!(g.players[1].poison_counters, 1);
+}
+
+/// Deathbloom Ritualist counts creature cards in your graveyard.
+#[test]
+fn graveyard_mana_counts_creature_cards() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_graveyard(0, catalog::island());
+    let dr = ready(&mut g, 0, catalog::deathbloom_ritualist());
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: dr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("tap");
+    assert_eq!(g.players[0].mana_pool.total(), 3);
+}
+
+/// Electrostatic Infantry grows per instant or sorcery.
+#[test]
+fn electrostatic_infantry_grows() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let ei = ready(&mut g, 0, catalog::electrostatic_infantry());
+    let u = g.add_card_to_hand(0, catalog::union_of_the_third_path());
+    cast(&mut g, u, &[]).expect("cast");
+    assert_eq!(g.battlefield_find(ei).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Super Shredder grows when another permanent leaves the battlefield.
+#[test]
+fn super_shredder_feeds_on_departures() {
+    let mut g = pod(2);
+    let ss = ready(&mut g, 0, catalog::super_shredder());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[perm(foe)]).expect("bolt");
+    assert_eq!(g.battlefield_find(ss).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Shredder's Technique: an enchantment destroyed costs 2 life, a creature
+/// doesn't.
+#[test]
+fn shredders_technique_taxes_enchantments() {
+    let mut g = pod(2);
+    let ench = ready(&mut g, 1, catalog::polluted_bonds());
+    let st = g.add_card_to_hand(0, catalog::shredders_technique());
+    let life = g.players[0].life;
+    cast(&mut g, st, &[perm(ench)]).expect("cast");
+    assert!(g.battlefield_find(ench).is_none());
+    assert_eq!(g.players[0].life, life - 2);
+}
+
+/// Snapback can be cast by exiling a blue card.
+#[test]
+fn snapback_pitches_a_blue_card() {
+    let mut g = pod(2);
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let blue = g.add_card_to_hand(0, catalog::dragon_turtle());
+    let sb = g.add_card_to_hand(0, catalog::snapback());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative { card_id: sb, pitch_card: Some(blue), target: Some(perm(foe)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("pitch");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == foe));
+    assert!(g.exile.iter().any(|c| c.id == blue));
+}
+
+/// Wargate fetches a permanent with mana value X or less onto the
+/// battlefield.
+#[test]
+fn wargate_deploys_x_or_less() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let w = g.add_card_to_hand(0, catalog::wargate());
+    cast_x(&mut g, w, &[], Some(2)).expect("cast");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"));
+}
+
+/// Liliana the Faultless gains a life per other creature entering.
+#[test]
+fn liliana_the_faultless_gains_on_entries() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::liliana_the_faultless());
+    let life = g.players[0].life;
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bears, &[]).expect("cast");
+    assert_eq!(g.players[0].life, life + 1);
+}
+
+/// Ajani Resolute: gaining life adds loyalty; −4 makes Ajani's Pridemate.
+#[test]
+fn ajani_resolute_grows_with_life() {
+    let mut g = pod(2);
+    let a = walker(&mut g, catalog::ajani_resolute(), 2);
+    walk(&mut g, a, 0, None).expect("0: gain 1");
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::Loyalty), 3, "the life gain added one");
+    g.battlefield_find_mut(a).unwrap().counters.insert(CounterType::Loyalty, 6);
+    g.battlefield_find_mut(a).unwrap().loyalty_uses_this_turn = 0;
+    walk(&mut g, a, 1, None).expect("-4");
+    assert_eq!(tokens_of(&g, 0, "Ajani's Pridemate"), 1);
+}
+
+/// Feasting Troll King cast from hand brings three Foods, and three Foods
+/// bring it back from the graveyard on your turn.
+#[test]
+fn feasting_troll_king_eats_its_way_back() {
+    let mut g = pod(2);
+    let k = g.add_card_to_hand(0, catalog::feasting_troll_king());
+    cast(&mut g, k, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Food"), 3);
+    let bolt = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, bolt, &[perm(k)]).expect("kill");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == k));
+    activate(&mut g, k, 0, None).expect("three Foods");
+    assert!(g.battlefield_find(k).is_some());
+    assert_eq!(tokens_of(&g, 0, "Food"), 0);
+}
+
+/// Giant Opportunity: three Foods without two to spare.
+#[test]
+fn giant_opportunity_makes_food_or_a_giant() {
+    let mut g = pod(2);
+    let go = g.add_card_to_hand(0, catalog::giant_opportunity());
+    cast(&mut g, go, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Food"), 3);
+}
+
+/// Slash the Ranks spares commanders (CR 903.3).
+#[test]
+fn slash_the_ranks_spares_commanders() {
+    let mut g = pod(2);
+    let cmdr = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].commanders.push(cmdr);
+    let other = ready(&mut g, 1, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::slash_the_ranks());
+    cast(&mut g, s, &[]).expect("cast");
+    assert!(g.battlefield_find(cmdr).is_some());
+    assert!(g.battlefield_find(other).is_none());
+}
+
+/// Stimulus Package turns a Treasure into a Citizen.
+#[test]
+fn stimulus_package_spends_treasure() {
+    let mut g = pod(2);
+    let sp = g.add_card_to_hand(0, catalog::stimulus_package());
+    cast(&mut g, sp, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 2);
+    activate(&mut g, sp, 0, None).expect("sac a Treasure");
+    assert_eq!((tokens_of(&g, 0, "Treasure"), tokens_of(&g, 0, "Citizen")), (1, 1));
+}
+
+/// Morbid Curiosity draws the sacrificed permanent's mana value.
+#[test]
+fn morbid_curiosity_draws_by_mana_value() {
+    let mut g = pod(2);
+    library(&mut g, 0, 8);
+    ready(&mut g, 0, catalog::craw_wurm());
+    let mc = g.add_card_to_hand(0, catalog::morbid_curiosity());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, mc, &[]).expect("cast");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 6);
+}
+
+/// Ares, God of War returns your attacking creatures that die to hand.
+#[test]
+fn ares_returns_fallen_attackers() {
+    let mut g = pod(2);
+    let ares = ready(&mut g, 0, catalog::ares_god_of_war());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ares, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, bolt, &[perm(ares)]).expect("kill the attacker");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ares));
+}
