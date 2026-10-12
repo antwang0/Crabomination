@@ -356,6 +356,8 @@ pub(crate) struct CommanderManaScry {
     palace_copies: (u32, Option<CardId>),
     /// Scaled Nurturer — rider pips that funded a Dragon creature spell.
     dragon_life: u32,
+    /// Lapis Orb of Dragonkind — rider pips that funded a Dragon creature spell.
+    dragon_scry: u32,
     /// Tecutlan — rider pips that funded a permanent spell, and its mana value.
     discover: (u32, u32),
 }
@@ -444,6 +446,9 @@ impl GameState {
         } else {
             0
         };
+        // Primal Wellspring — the same copy for any instant or sorcery.
+        let goggles = goggles
+            + if kind.instant_or_sorcery { spent.spent_count(SpendRestriction::InstantSorceryCopy) } else { 0 };
         // Sunken Palace — its rider copies whatever spell it funded.
         let palace = spent.spent_count(SpendRestriction::SpellOrAbilityCopy);
         let copies = if goggles > 0 { (goggles, Some(card.id)) } else { (0, None) };
@@ -466,6 +471,7 @@ impl GameState {
             copies,
             palace_copies,
             dragon_life: if dragon { spent.spent_count(SpendRestriction::DragonCreatureGainTwo) } else { 0 },
+            dragon_scry: if dragon { spent.spent_count(SpendRestriction::DragonCreatureScryTwo) } else { 0 },
             discover: if card.definition.is_permanent() {
                 (spent.spent_count(SpendRestriction::PermanentSpellDiscover), card.definition.cost.cmc())
             } else {
@@ -492,6 +498,7 @@ impl GameState {
         if let (copy_pips @ 1.., Some(spell)) = riders.copies {
             let source = self
                 .restricted_mana_source(seat, SpendRestriction::RedInstantSorceryCopy)
+                .or_else(|| self.restricted_mana_source(seat, SpendRestriction::InstantSorceryCopy))
                 .unwrap_or(CardId(0));
             for _ in 0..copy_pips {
                 self.push_stack(
@@ -540,6 +547,18 @@ impl GameState {
                         Effect::GainLife { who: crate::effect::Selector::You, amount: Value::Const(2) },
                     )
                     .build(),
+                );
+            }
+        }
+        // Lapis Orb of Dragonkind — "scry 2", one trigger per pip.
+        if riders.dragon_scry > 0 {
+            let source = self
+                .restricted_mana_source(seat, SpendRestriction::DragonCreatureScryTwo)
+                .unwrap_or(CardId(0));
+            for _ in 0..riders.dragon_scry {
+                self.push_stack(
+                    TriggerPush::new(source, seat, Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })
+                        .build(),
                 );
             }
         }

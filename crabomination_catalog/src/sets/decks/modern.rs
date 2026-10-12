@@ -66033,6 +66033,7 @@ pub fn winota_joiner_of_forces() -> CardDefinition {
                 filter: SelectionRequirement::Creature
                     .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
                 return_at_end_of_combat: false,
+                plain: false,
             },
         }],
         ..Default::default()

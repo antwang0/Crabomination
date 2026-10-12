@@ -664,9 +664,9 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | PlaneswalkerSpellsOnly
                 | LegendarySpell | LegendarySpellUncounterable | NoncreatureSpellsOnly
                 | RoomSpellsOrDoors
-                | FaceDownSpellsOrTurnFaceUp | TurnFaceUpOnly | CreatureHaste | DragonCreatureHaste | DragonCreatureCounterHexproof | DragonCreatureGainTwo | PermanentSpellDiscover | CommanderTypeScry
+                | FaceDownSpellsOrTurnFaceUp | TurnFaceUpOnly | CreatureHaste | DragonCreatureHaste | DragonCreatureCounterHexproof | DragonCreatureGainTwo | DragonCreatureScryTwo | PermanentSpellDiscover | CommanderTypeScry
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
-                | RedInstantSorceryCopy | XCostsOnly
+                | RedInstantSorceryCopy | InstantSorceryCopy | XCostsOnly
                 | SpellFromGraveyard
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | KnightOrEquipmentSpells | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
@@ -683,6 +683,8 @@ fn cr_106_6_every_rider_allows_every_payment() {
             CreatureOfType(CreatureType::Bear),
             CreatureSpellOfType(CreatureType::Bear),
             SpellOrAbilityCopy,
+            InstantSorceryCopy,
+            DragonCreatureScryTwo,
             OutlawSpellsOrAbilities,
             AssassinOrFreerunning,
             SpellsYouDontOwn,

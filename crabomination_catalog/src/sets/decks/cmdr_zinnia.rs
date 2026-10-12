@@ -92,6 +92,7 @@ pub fn arthur_marigold_knight() -> CardDefinition {
                 count: Value::Const(6),
                 filter: R::Creature,
                 return_at_end_of_combat: true,
+                plain: false,
             },
         }],
         ..creature(

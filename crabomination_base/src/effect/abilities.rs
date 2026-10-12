@@ -1843,6 +1843,12 @@ pub enum StaticEffect {
     /// static's own permanent is excluded. Applied in the same
     /// `deal_damage_to_from` funnel as `NoncombatDamageToOpponentsBonus`.
     NoncombatDamageFromOtherSourcesBonus { amount: u32 },
+    /// "If a source you control would deal noncombat damage to an opponent or
+    /// a permanent an opponent controls, it deals that much damage plus X
+    /// instead, where X is [this creature]'s power" (Hawkeye, Young Avenger).
+    /// The power-scaled sibling of `NoncombatDamageToOpponentsBonus`, read in
+    /// the same `noncombat_damage_bonus_for` walk.
+    NoncombatDamageToOpponentsPlusOwnPower,
     /// CR 614.5/615 — "If a source would deal damage to you or a permanent
     /// you control, prevent half that damage, rounded up." (Gisela.) The
     /// remainder is floor(amount/2) — same arithmetic as a halver, scoped
@@ -2304,6 +2310,9 @@ pub enum StaticEffect {
     /// each creature it targets" (Battlefield Thaumaturge). Generic-only,
     /// applied in `cost_reduction_for_spell`.
     YourISSpellsCostLessPerTargetCreature { amount: u32 },
+    /// CR 601.2f — "Spells you cast cost {1} less to cast for each card with
+    /// the same name as that spell in your graveyard" (Locket of Yesterdays).
+    SpellsCostLessPerSameNameInYourGraveyard,
     /// "Abilities you activate that aren't mana abilities cost {N} less to
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).

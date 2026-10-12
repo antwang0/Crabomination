@@ -6857,6 +6857,10 @@ pub enum Effect {
         filter: SelectionRequirement,
         #[serde(default)]
         return_at_end_of_combat: bool,
+        /// Neither rider: the creature just stays (Owlbear Cub's "Mama's
+        /// Coming").
+        #[serde(default)]
+        plain: bool,
     },
     /// Unattach each resolved Equipment/Aura-like permanent from its host
     /// (Stolen Uniform's end-of-theft cleanup). Auras die to SBA afterward;
@@ -9224,6 +9228,11 @@ pub enum Effect {
     /// it deals double that damage instead." Sets the controller's
     /// turn-scoped flag read by `scale_damage_to` (Quest for Pure Flame).
     DoubleYourSourcesDamageThisTurn,
+    /// CR 614.1a — "If a source you control would deal damage this turn to an
+    /// opponent or a permanent an opponent controls, it deals triple that
+    /// damage instead" (Isengard Unleashed). Sets
+    /// `Player.triple_your_source_damage_to_opponents_this_turn`.
+    TripleYourSourcesDamageToOpponentsThisTurn,
     /// Goblin Welder: target artifact's controller simultaneously sacrifices
     /// it and returns an artifact card from their graveyard to the
     /// battlefield. The graveyard half is auto-picked (highest mana value).
@@ -14169,7 +14178,8 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::GraveyardCastCostReduction { .. }
         | SE::NamedSpellCostReduction { .. }
         | SE::SharedCreatureTypeSpellCostReduction { .. }
-        | SE::YourISSpellsCostLessPerTargetCreature { .. } => true,
+        | SE::YourISSpellsCostLessPerTargetCreature { .. }
+        | SE::SpellsCostLessPerSameNameInYourGraveyard => true,
         // Gate wrappers: the reduction loop peels every one through
         // `active_static` (a Class level, CR 716.2; Momo's "during your
         // turn"). The two tax walks peel none — over-approximating is free (a

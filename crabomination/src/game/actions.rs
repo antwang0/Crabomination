@@ -2237,6 +2237,15 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                         reduction += amount;
                     }
                 }
+                // Locket of Yesterdays — {1} less per same-named card in the
+                // caster's graveyard.
+                StaticEffect::SpellsCostLessPerSameNameInYourGraveyard if src.controller == caster => {
+                    reduction += state.players[caster]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.name == card.definition.name)
+                        .count() as u32;
+                }
                 StaticEffect::NamedSpellCostReduction { amount }
                     if src.controller == caster
                         && src.named_card.as_deref().is_some_and(|n| card.definition.has_name(n)) =>

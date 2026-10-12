@@ -813,6 +813,10 @@ pub enum SpendRestriction {
     /// life." (Scaled Nurturer.) Unrestricted spend; the trigger goes on the
     /// stack above the spell it funded.
     DragonCreatureGainTwo,
+    /// "When you spend this mana to cast a Dragon creature spell, scry 2."
+    /// (Lapis Orb of Dragonkind.) Unrestricted spend; the scry trigger goes
+    /// on the stack above the spell it funded.
+    DragonCreatureScryTwo,
     /// "Whenever you cast a permanent spell using mana produced by [this],
     /// discover X, where X is that spell's mana value." (Tecutlan, the Searing
     /// Rift.) Unrestricted spend; one discover trigger per funding pip.
@@ -843,6 +847,10 @@ pub enum SpendRestriction {
     /// Goggles.) Unrestricted spend; the copy trigger goes on the stack above
     /// the spell it funded, one per rider pip.
     RedInstantSorceryCopy,
+    /// "When that mana is spent to cast an instant or sorcery spell, copy that
+    /// spell and you may choose new targets for the copy." (Primal
+    /// Wellspring.) The any-color sibling of `RedInstantSorceryCopy`.
+    InstantSorceryCopy,
     /// Sunken Palace's rider: "When you spend this mana to cast a spell or
     /// activate an ability, copy that spell or ability. You may choose new
     /// targets for the copy." Permits every payment.
@@ -971,6 +979,7 @@ impl SpendRestriction {
             | SpendRestriction::DragonCreatureHaste
             | SpendRestriction::DragonCreatureCounterHexproof
             | SpendRestriction::DragonCreatureGainTwo
+            | SpendRestriction::DragonCreatureScryTwo
             | SpendRestriction::PermanentSpellDiscover
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
@@ -978,6 +987,7 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
+            | SpendRestriction::InstantSorceryCopy
             | SpendRestriction::SpellOrAbilityCopy
             | SpendRestriction::MarksCast => {
                 return None;
@@ -1136,6 +1146,7 @@ impl SpendRestriction {
             | SpendRestriction::DragonCreatureHaste
             | SpendRestriction::DragonCreatureCounterHexproof
             | SpendRestriction::DragonCreatureGainTwo
+            | SpendRestriction::DragonCreatureScryTwo
             | SpendRestriction::PermanentSpellDiscover
             | SpendRestriction::CommanderTypeScry
             | SpendRestriction::CommanderCastCounters
@@ -1143,6 +1154,7 @@ impl SpendRestriction {
             | SpendRestriction::CommanderCastScry
             | SpendRestriction::SmallInstantSorceryExileInstead
             | SpendRestriction::RedInstantSorceryCopy
+            | SpendRestriction::InstantSorceryCopy
             | SpendRestriction::SpellOrAbilityCopy
             | SpendRestriction::MarksCast => {
                 debug_assert!(self.is_rider(), "rider arm reached through the match");

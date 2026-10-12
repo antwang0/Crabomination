@@ -22787,6 +22787,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TripleYourSourcesDamageToOpponentsThisTurn => {
+                self.players[ctx.controller].triple_your_source_damage_to_opponents_this_turn = true;
+                Ok(())
+            }
+
             Effect::WeldArtifacts { what } => {
                 // Goblin Welder: the target artifact's controller sacrifices
                 // it and returns an artifact card from their graveyard
@@ -29870,7 +29875,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopMayDeployAttacking { count, filter, return_at_end_of_combat } => {
+            Effect::LookTopMayDeployAttacking { count, filter, return_at_end_of_combat, plain } => {
                 use crate::game::types::AttackTarget;
                 // Only meaningful mid-combat.
                 if self.attacking.is_empty() {
@@ -29923,7 +29928,8 @@ impl GameState {
                     if let Some(target) = target
                         && self.put_into_combat_attacking(id, target)
                     {
-                        if *return_at_end_of_combat {
+                        if *plain {
+                        } else if *return_at_end_of_combat {
                             self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                                 controller: p,
                                 source: ctx.source.unwrap_or(CardId(0)),

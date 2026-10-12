@@ -9652,7 +9652,15 @@ impl GameState {
                         StaticEffect::NoncombatDamageFromOtherSourcesBonus { amount } => {
                             (source != Some(c.id)).then_some(amount)
                         }
-                        StaticEffect::NoncombatDamageToOpponentsBonus { .. } if !hits_opponent => None,
+                        StaticEffect::NoncombatDamageToOpponentsBonus { .. }
+                        | StaticEffect::NoncombatDamageToOpponentsPlusOwnPower
+                            if !hits_opponent =>
+                        {
+                            None
+                        }
+                        StaticEffect::NoncombatDamageToOpponentsPlusOwnPower => {
+                            Some(self.computed_permanent(c.id).map_or(0, |cp| cp.power.max(0) as u32))
+                        }
                         StaticEffect::NoncombatDamageToOpponentsBonus { amount, while_revolt, players_only } => {
                             if (players_only && !matches!(ent, EntityRef::Player(_)))
                                 || while_revolt
@@ -10075,6 +10083,7 @@ impl GameState {
             || !self.staggered_damage_players.is_empty()
             || self.damage_becomes_this_turn.is_some()
             || self.players.iter().any(|p| p.double_your_source_damage_this_turn)
+            || self.players.iter().any(|p| p.triple_your_source_damage_to_opponents_this_turn)
             // The board half is a whole-battlefield walk over a
             // definition-only predicate, asked once per damage event
             // (21,154 a `cube` run at ~360 Ir); the zone memoizes it.
@@ -10358,6 +10367,14 @@ impl GameState {
             && self.players[*src_ctrl].double_your_source_damage_this_turn
         {
             d += 1;
+        }
+        // Isengard Unleashed — ×3 to the source controller's opponents and
+        // their permanents.
+        if let Some((src_ctrl, _)) = &source_info
+            && self.players[*src_ctrl].triple_your_source_damage_to_opponents_this_turn
+            && affected.is_some_and(|p| !self.same_team(*src_ctrl, p))
+        {
+            mul = mul.saturating_mul(3);
         }
         // Neriv, Heart of the Storm — a creature you control that entered this
         // turn deals double damage (combat and noncombat alike).
@@ -34104,6 +34121,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::DoubleYourNoncombatDamageWhile { .. }
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
+            | StaticEffect::NoncombatDamageToOpponentsPlusOwnPower
             | StaticEffect::NoncombatDamageFromOtherSourcesBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::ReduceDamageToYouBy(_)
@@ -34661,6 +34679,7 @@ fn static_effect_to_effects(
             // `activate_ability`; no layer effect.
             // Cost reductions read in `cost_reduction_for_spell`; no layer.
             | StaticEffect::YourISSpellsCostLessPerTargetCreature { .. }
+            | StaticEffect::SpellsCostLessPerSameNameInYourGraveyard
             | StaticEffect::ActivationTax { .. }
             | StaticEffect::NamedSourcesActivationTax { .. }
             // Pithing Needle's lock — consulted in `activate_ability`

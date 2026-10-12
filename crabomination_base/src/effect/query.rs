@@ -989,6 +989,7 @@ impl Effect {
             | Effect::CantLoseThisTurn { .. }
             | Effect::Venture
             | Effect::DoubleYourSourcesDamageThisTurn
+            | Effect::TripleYourSourcesDamageToOpponentsThisTurn
             | Effect::ReturnSelfTransformedAttached
             | Effect::ReturnSelfAttachedToTarget
             | Effect::ReturnSelfAttachedToTrigger
