@@ -13684,6 +13684,8 @@ static DECKS: &[Factory] = &[
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,
     super::decks::spider_man_india,
+    super::decks::malik_grim_manipulator,
+    super::decks::gisas_favorite_shovel,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

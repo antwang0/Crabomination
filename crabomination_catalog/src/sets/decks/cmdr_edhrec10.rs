@@ -3185,3 +3185,66 @@ pub fn pair_o_dice_lost() -> CardDefinition {
         ..spell("Pair o' Dice Lost", cost(&[generic(3), g(), g()]), CardType::Instant, d6(first))
     }
 }
+
+/// Malik, Grim Manipulator — {2}{R}{W}{B} 4/3 legendary Human Rogue. When it
+/// enters, you and target opponent each secretly choose a creature that
+/// player controls; they sacrifice those. Whenever an opponent sacrifices a
+/// creature, create a Treasure.
+pub fn malik_grim_manipulator() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::YouAndPlayerChooseTheirPermanentsToSacrifice {
+                who: PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer })),
+                filter: R::Creature,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::OpponentControl),
+                effect: make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token()),
+            },
+        ],
+        ..legend(
+            "Malik, Grim Manipulator",
+            cost(&[generic(2), r(), w(), b()]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            4,
+            3,
+        )
+    }
+}
+
+/// Gisa's Favorite Shovel — {1}{B} legendary Equipment. Equipped creature
+/// gets +2/+0 and has menace; whenever it attacks, defending player
+/// sacrifices a creature of their choice, and if they do you create a
+/// Walker (a 2/2 black Zombie). Equip {4}.
+pub fn gisas_favorite_shovel() -> CardDefinition {
+    let walker = token("Walker", 2, 2, vec![Color::Black], vec![CreatureType::Zombie]);
+    CardDefinition {
+        name: "Gisa's Favorite Shovel",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            keywords: vec![Keyword::Menace],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::DefendingPlayer),
+                        count: Value::ONE,
+                        filter: R::Creature,
+                    },
+                    Effect::If {
+                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::DefendingPlayer),
+                        then: Box::new(make(PlayerRef::You, Value::ONE, walker)),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

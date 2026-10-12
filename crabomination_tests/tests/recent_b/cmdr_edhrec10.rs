@@ -1744,3 +1744,38 @@ fn pair_o_dice_lost_returns_by_total_mana_value() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == wurm), "6 is over the 5 rolled");
     assert!(g.exile.iter().any(|c| c.id == p));
 }
+
+/// Malik, Grim Manipulator: you name their best creature, they name their
+/// worst, and both are sacrificed (CR 701.21a); each sacrifice by an opponent
+/// makes a Treasure.
+#[test]
+fn malik_takes_two_and_profits() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let m = g.add_card_to_hand(0, catalog::malik_grim_manipulator());
+    cast(&mut g, m, &[]).expect("cast");
+    assert!(g.battlefield_find(bears).is_none() && g.battlefield_find(wurm).is_none());
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 2);
+}
+
+/// Gisa's Favorite Shovel: the equipped attacker makes the defender sacrifice
+/// a creature, and that sacrifice digs up a Walker.
+#[test]
+fn gisas_favorite_shovel_digs_a_walker() {
+    let mut g = pod(2);
+    let shovel = ready(&mut g, 0, catalog::gisas_favorite_shovel());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let foe = ready(&mut g, 1, catalog::savannah_lions());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: shovel, target: bears }).expect("equip {4}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none());
+    assert_eq!(tokens_of(&g, 0, "Walker"), 1);
+}
