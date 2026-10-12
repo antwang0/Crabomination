@@ -205,10 +205,14 @@ pub fn goblin_gaveleer() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Trample],
-        dynamic_pt: Some(DynamicPt::BasePlusPerAttachedEquipment {
+        // +2/+0 only: `BasePlusPerAttachedEquipment` adds `per` to toughness too.
+        dynamic_pt: Some(DynamicPt::BasePlusPerAttached {
             base_p: 1,
             base_t: 1,
-            per: 2,
+            per_p: 2,
+            per_t: 0,
+            auras: false,
+            equipment: true,
         }),
         ..Default::default()
     }

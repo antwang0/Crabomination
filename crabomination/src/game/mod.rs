@@ -17051,6 +17051,17 @@ impl GameState {
                     let n = self.attached_equipment_count(card.id) as i32;
                     (base_p + n * per, base_t + n * per)
                 }
+                crate::card::DynamicPt::BasePlusPerAttached { base_p, base_t, per_p, per_t, auras, equipment } => {
+                    let mut n = 0i32;
+                    if equipment {
+                        n += self.attached_equipment_count(card.id) as i32;
+                    }
+                    if auras {
+                        n += self.battlefield.iter().filter(|c| c.attached_to == Some(card.id) && c.definition.is_aura()).count()
+                            as i32;
+                    }
+                    (base_p + n * per_p, base_t + n * per_t)
+                }
                 crate::card::DynamicPt::BaseMinusHighestLife { base_p, base_t } => {
                     let hi = self.players.iter()
                         .filter(|p| !p.eliminated)

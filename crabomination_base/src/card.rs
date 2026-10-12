@@ -6897,6 +6897,10 @@ pub enum DynamicPt {
     /// P/T = base + `per` for each Equipment attached to this permanent.
     /// Goblin Gaveleer (1/1, +2/+0 per Equipment).
     BasePlusPerAttachedEquipment { base_p: i32, base_t: i32, per: i32 },
+    /// P/T = base + (`per_p`, `per_t`) for each Aura and/or Equipment attached
+    /// (as `auras` / `equipment` say): Goblin Gaveleer's +2/+0 per Equipment,
+    /// Champion of the Flame's +2/+2 per Aura and Equipment.
+    BasePlusPerAttached { base_p: i32, base_t: i32, per_p: i32, per_t: i32, auras: bool, equipment: bool },
     /// P/T = base − the highest life total among players (Scourge of the
     /// Skyclaves: 20 − highest life).
     BaseMinusHighestLife { base_p: i32, base_t: i32 },

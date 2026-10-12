@@ -113,6 +113,8 @@ mod recent12 {
         let eq = g.add_card_to_battlefield(0, catalog::cathars_shield());
         attach(&mut g, eq, gav);
         assert_eq!(g.computed_permanent(gav).unwrap().power, 3, "+2/+0 from one Equipment");
+        // Bug fix: the per-Equipment bonus added +2 toughness too (1 + 3 + 2).
+        assert_eq!(g.computed_permanent(gav).unwrap().toughness, 4, "+0 toughness: only the Shield's +3");
     }
 
     /// Danitha makes Equipment spells cost {1} less — Leonin Scimitar ({1}) becomes
