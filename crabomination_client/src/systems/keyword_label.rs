@@ -334,7 +334,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         DiscardRandom(n) => format!("{n}↓?"),
         DiscardHand => "hand↓".into(),
         Blight(n) => format!("{n}☠"),
-        Poison(n) => format!("{n}☣"),
+        Poison(n) => format!("{n}psn"),
         GenericCountersOnSource(_) => "◆".into(),
         GenericControllerExperience => "X".into(),
         CollectEvidence(n) => format!("ev{n}"),
