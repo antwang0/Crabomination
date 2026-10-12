@@ -2069,3 +2069,12 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 In Search of Greatness | the free cast takes mana value up to 1 + the greatest (not exactly), and the enchantment counts itself | `MayCastFromHandFreeMatching { max_mv }` over `GreatestManaValueAmongPermanents(You)` |
 | 🟡 Hooded Blightfang | only combat damage to a planeswalker destroys it | `EventKind::DealsCombatDamageToPlaneswalker`; `EventKind` has no bit for the noncombat kind |
 | 🟡 Akroma, Vision of Ixidor | protection is not counted | there is no "has any protection" requirement atom |
+| 🟡 Rune of Might | on an Equipment it grants nothing ("equipped creature gets +1/+1 and has trample") | `EquipBonus` applies to the attached permanent only, as Rune of Mortality |
+| 🟡 You Look Upon the Tarrasque | "able to block that creature do so" binds the creatures on the battlefield as it resolves; one entering later isn't forced | `Effect::MustBlockTarget` stamps `must_block` per creature |
+| 🟡 Kaya the Inexorable | the +1 places no ghostform counter (a reminder only, 2021-02-05 ruling; proliferate and counter-count readers miss it) | no `CounterType::Ghostform` |
+| 🟡 Fire Lord Sozin | "from that player's graveyard" reads any opponent's graveyard | the reflexive's targets have no binding to the damaged player |
+| 🟡 The Rise of Sozin | chapter II exiles every card with the name rather than up to four, and from an opponent the engine picks rather than a target | `Effect::NameCardExileMatchingAllZones` |
+| 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |
+| 🟡 Ian Malcolm, Chaotician | the permission is stamped per card for the active player at each upkeep and after each exile (a land among the exiles is playable; an exile mid-turn by a non-active player waits for that turn's next stamp) | `GrantMayPlay` per card, re-stamped |
+| 🟡 Press the Enemy | the spell / permanent choice is offered as two modes | one slot cannot hold either a spell or a permanent |
+| 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
