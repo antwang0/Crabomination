@@ -409,3 +409,12 @@ fn loki_draws_when_an_ability_targets() {
     activate(&mut g, plagon, 0, Some(perm(bear))).expect("Plagon's ability targets");
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// Glasses of Urza: {T}: look at a player's hand (an ability that targets).
+#[test]
+fn glasses_of_urza_peeks() {
+    let mut g = pod(2);
+    let gl = ready(&mut g, 0, catalog::glasses_of_urza());
+    activate(&mut g, gl, 0, Some(Target::Player(1))).expect("look");
+    assert!(g.battlefield_find(gl).unwrap().tapped);
+}

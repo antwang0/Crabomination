@@ -1386,3 +1386,18 @@ pub fn loki_god_of_mischief() -> CardDefinition {
         )
     }
 }
+
+/// Glasses of Urza — {1} Artifact. {T}: look at a target player's hand.
+pub fn glasses_of_urza() -> CardDefinition {
+    CardDefinition {
+        name: "Glasses of Urza",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::LookAtHand { who: target_filtered(R::Player) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
