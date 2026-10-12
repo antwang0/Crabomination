@@ -6955,6 +6955,11 @@ pub struct AlternativeCost {
     /// If `Some`, the player must exile a card from their hand matching this
     /// filter as part of casting via the alternative.
     pub exile_filter: Option<SelectionRequirement>,
+    /// More hand cards matching `exile_filter` exiled beside the pitch card,
+    /// lowest mana value first — "exile two blue cards from your hand"
+    /// (Commandeer, Fury of the Horde) is 1.
+    #[serde(default)]
+    pub exile_filter_extra: u32,
     /// True for evoke costs — the resulting permanent is sacrificed on ETB
     /// (after its ETB triggers fire).
     pub evoke_sacrifice: bool,

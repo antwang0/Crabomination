@@ -2375,6 +2375,10 @@ pub enum StaticEffect {
     /// color of the creature it targets", on the Equipment's own equip. Read
     /// by `GameState::equip`.
     EquipCostReducedPerTargetColor,
+    /// "This ability costs {1} less to activate for each [filter] you
+    /// control" on its own equip (Plate Armor: each other Equipment). The
+    /// filter is read with the Equipment as source. Read by `GameState::equip`.
+    EquipCostReducedPerControlled { filter: SelectionRequirement },
     /// "This ability costs {N} less to activate if [condition]" on its own
     /// equip (Crown of Gondor: {3} less while you're the monarch).
     EquipCostReducedWhile { condition: crate::effect::Predicate, amount: u32 },

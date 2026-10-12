@@ -15289,6 +15289,7 @@ impl GameState {
             };
 
         // Validate that the pitch card matches the filter (if any).
+        let mut pitch_extra: Vec<CardId> = Vec::new();
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
             // The pitch card must be in hand AND match the filter. The filter
@@ -15310,6 +15311,16 @@ impl GameState {
             if !self.evaluate_requirement_on_card(&filter, pitch_card_inst, p) {
                 return Err(GameError::InvalidPitchCard(pitch_id));
             }
+            let mut extra: Vec<&crate::card::CardInstance> = self.players[p]
+                .hand
+                .iter()
+                .filter(|c| c.id != card_id && c.id != pitch_id && self.evaluate_requirement_on_card(&filter, c, p))
+                .collect();
+            if extra.len() < alt.exile_filter_extra as usize {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            extra.sort_by_key(|c| c.definition.cost.cmc());
+            pitch_extra = extra.iter().take(alt.exile_filter_extra as usize).map(|c| c.id).collect();
         }
 
         // CR 601.2b — "discard a [filter] card rather than pay this spell's
@@ -15593,6 +15604,13 @@ impl GameState {
             self.exile.push(pitch);
             self.note_exiled_from_hand_or_by(p);
             auto_events.push(GameEvent::PermanentExiled { card_id: cid });
+        }
+        for id in pitch_extra {
+            if let Some(c) = self.players[p].remove_from_hand(id) {
+                self.exile.push(c);
+                self.note_exiled_from_hand_or_by(p);
+                auto_events.push(GameEvent::PermanentExiled { card_id: id });
+            }
         }
 
         // Exile-N-from-graveyard additional cost. Validated up front;

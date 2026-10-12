@@ -23369,6 +23369,25 @@ impl GameState {
         }) {
             reduction += self.computed_permanent(target).map_or(0, |c| c.colors.len());
         }
+        let per_controlled: Vec<crate::card::SelectionRequirement> = self.battlefield[equip_pos]
+            .definition
+            .static_abilities
+            .iter()
+            .filter_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::EquipCostReducedPerControlled { filter } => Some(filter.clone()),
+                _ => None,
+            })
+            .collect();
+        for filter in per_controlled {
+            reduction += self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(equipment))
+                })
+                .count() as u32;
+        }
         let conditional: Vec<(crate::effect::Predicate, u32)> = self.battlefield[equip_pos]
             .definition
             .static_abilities
@@ -34324,6 +34343,7 @@ fn static_effect_to_effects(
             // Read by `draw_one`, not a layer effect.
             | StaticEffect::ControllerDrawsFromBottom
             | StaticEffect::EquipCostReducedByTargetPower
+            | StaticEffect::EquipCostReducedPerControlled { .. }
             | StaticEffect::EquipCostReducedPerTargetColor
             | StaticEffect::EquipCostReducedWhile { .. }
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
