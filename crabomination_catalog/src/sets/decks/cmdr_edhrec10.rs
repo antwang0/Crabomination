@@ -7,7 +7,7 @@ use crate::card::{
     AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, EnchantmentSubtype, EntersAsCopy, EquipBonus, SplitCard,
     SplitHalf, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
     LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, Zone, MayPlayDuration,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone, MayPlayDuration,
 };
 use crate::effect::shortcut::{colored_animation, etb, on_attack, target_any, target_filtered, tokens_gain_until_eot};
 use crate::effect::{
@@ -1375,5 +1375,21 @@ pub fn corporeal_projection() -> CardDefinition {
             ..Default::default()
         }),
         ..spell("Corporeal Projection", cost(&[u(), r()]), CardType::Sorcery, grant(target_filtered(yours())))
+    }
+}
+
+/// Ruthless Ripper — {B} 1/1 deathtouch Human Assassin. Morph—reveal a black
+/// card in your hand. When it's turned face up, target player loses 2 life.
+pub fn ruthless_ripper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Deathtouch,
+            Keyword::MorphCost(Box::new(WardCost::RevealMatching(Box::new(R::HasColor(Color::Black))))),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::LoseLife { who: target_filtered(R::Player), amount: Value::Const(2) },
+        }],
+        ..creature("Ruthless Ripper", cost(&[b()]), vec![CreatureType::Human, CreatureType::Assassin], 1, 1)
     }
 }

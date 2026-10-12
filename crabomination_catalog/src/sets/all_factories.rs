@@ -13526,6 +13526,7 @@ static DECKS: &[Factory] = &[
     super::decks::widespread_thieving,
     super::decks::the_watcher_in_the_water,
     super::decks::corporeal_projection,
+    super::decks::ruthless_ripper,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

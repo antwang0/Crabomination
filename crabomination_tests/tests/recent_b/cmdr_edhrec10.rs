@@ -904,3 +904,27 @@ fn corporeal_projection_grants_myriad() {
     let copies = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Grizzly Bears").count();
     assert_eq!(copies, 1);
 }
+
+/// Ruthless Ripper: the morph cost is revealing a black card (none in hand,
+/// no turn-up); turned up, it drains a target player for 2.
+#[test]
+fn ruthless_ripper_reveals_to_flip() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    let r = g.add_card_to_hand(0, catalog::ruthless_ripper());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFaceDown { card_id: r }).expect("face down for {3}");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::TurnFaceUp { card_id: r }).is_err(), "no black card to reveal");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(g.perform_action(GameAction::TurnFaceUp { card_id: r }).is_err(), "a red card doesn't do");
+    let _ = bolt;
+    let black = g.add_card_to_hand(0, catalog::archghoul_of_thraben());
+    let life = g.players[1].life;
+    g.perform_action(GameAction::TurnFaceUp { card_id: r }).expect("reveal Archghoul");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == black), "revealed, not discarded");
+    assert_eq!(g.players[1].life, life - 2);
+}
