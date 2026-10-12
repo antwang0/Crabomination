@@ -1740,3 +1740,37 @@ pub fn sword_of_wealth_and_power() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Relentless Dead — {B}{B} 2/2 menace Zombie. Dying, you may pay {B} to
+/// return it to its owner's hand, and you may pay {X} to return another
+/// Zombie creature card with mana value X from your graveyard to the
+/// battlefield.
+pub fn relentless_dead() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            crate::effect::shortcut::on_dies(Effect::MayPay {
+                description: "Pay {B} to return Relentless Dead to its owner's hand?".into(),
+                mana_cost: cost(&[b()]),
+                body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
+                else_: None,
+            }),
+            crate::effect::shortcut::on_dies(Effect::MayPayX {
+                description: "Pay {X} to return a Zombie with mana value X?".into(),
+                body: Box::new(Effect::Reflexive {
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            R::Creature
+                                .and(R::HasCreatureType(CreatureType::Zombie))
+                                .and(R::InYourGraveyard)
+                                .and(R::ManaValueExactlyXFromCost)
+                                .and(R::OtherThanSource),
+                        ),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                }),
+            }),
+        ],
+        ..creature("Relentless Dead", cost(&[b(), b()]), vec![CreatureType::Zombie], 2, 2)
+    }
+}

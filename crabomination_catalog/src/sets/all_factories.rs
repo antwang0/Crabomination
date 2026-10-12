@@ -13556,6 +13556,7 @@ static DECKS: &[Factory] = &[
     super::decks::majestic_genesis,
     super::decks::tetzimoc_primal_death,
     super::decks::sword_of_wealth_and_power,
+    super::decks::relentless_dead,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

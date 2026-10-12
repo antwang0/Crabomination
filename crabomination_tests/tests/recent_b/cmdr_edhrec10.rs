@@ -1156,3 +1156,19 @@ fn sword_of_wealth_and_power_copies_the_next_instant() {
     cast(&mut g, u, &[]).expect("cast");
     assert_eq!(g.players[0].hand.len(), hand + 2, "the copy drew too");
 }
+
+/// Relentless Dead: dying, {B} returns it to hand and {X} returns another
+/// Zombie with mana value X.
+#[test]
+fn relentless_dead_keeps_coming_back() {
+    let mut g = pod(2);
+    let rd = ready(&mut g, 0, catalog::relentless_dead());
+    let ghoul = g.add_card_to_graveyard(0, catalog::archghoul_of_thraben());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(3), DecisionAnswer::Bool(true)]));
+    // The {X} trigger was put on the stack last, so it resolves (and asks)
+    // first.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[perm(rd)]).expect("bolt");
+    assert!(g.players[0].hand.iter().any(|c| c.id == rd), "back to hand");
+    assert!(g.battlefield_find(ghoul).is_some(), "the X=3 Zombie returned");
+}
