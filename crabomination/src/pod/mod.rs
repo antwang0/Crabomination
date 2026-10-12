@@ -4686,6 +4686,120 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DARIEN_COMMANDERS,
             main: decks::DARIEN_MAIN,
         },
+        // Seat 706: Zacama, Primal Calamity's EDHREC average deck. `--pod-decks 706`.
+        PodDeck {
+            name: "Zacama, Primal Calamity (WRG)",
+            commanders: decks::ZACAMA_COMMANDERS,
+            main: decks::ZACAMA_MAIN,
+        },
+        // Seat 707: Selvala, Explorer Returned's EDHREC average deck. `--pod-decks 707`.
+        PodDeck {
+            name: "Selvala, Explorer Returned (WG)",
+            commanders: decks::SELVALA_2_COMMANDERS,
+            main: decks::SELVALA_2_MAIN,
+        },
+        // Seat 708: Abdel Adrian, Gorion's Ward and Candlekeep Sage's EDHREC average deck. `--pod-decks 708`.
+        PodDeck {
+            name: "Abdel Adrian, Gorion's Ward and Candlekeep Sage (WU)",
+            commanders: decks::ABDEL_ADRIAN_COMMANDERS,
+            main: decks::ABDEL_ADRIAN_MAIN,
+        },
+        // Seat 709: Crystal, Inhuman Princess's EDHREC average deck. `--pod-decks 709`.
+        PodDeck {
+            name: "Crystal, Inhuman Princess (WURG)",
+            commanders: decks::CRYSTAL_COMMANDERS,
+            main: decks::CRYSTAL_MAIN,
+        },
+        // Seat 710: Zilortha, Strength Incarnate's EDHREC average deck. `--pod-decks 710`.
+        PodDeck {
+            name: "Zilortha, Strength Incarnate (RG)",
+            commanders: decks::ZILORTHA_COMMANDERS,
+            main: decks::ZILORTHA_MAIN,
+        },
+        // Seat 711: Illuna, Apex of Wishes's EDHREC average deck. `--pod-decks 711`.
+        PodDeck {
+            name: "Illuna, Apex of Wishes (URG)",
+            commanders: decks::ILLUNA_COMMANDERS,
+            main: decks::ILLUNA_MAIN,
+        },
+        // Seat 712: Mm'menon, the Right Hand's EDHREC average deck. `--pod-decks 712`.
+        PodDeck {
+            name: "Mm'menon, the Right Hand (U)",
+            commanders: decks::MMMENON_COMMANDERS,
+            main: decks::MMMENON_MAIN,
+        },
+        // Seat 713: Niv-Mizzet, Ghost Counsel's EDHREC average deck. `--pod-decks 713`.
+        PodDeck {
+            name: "Niv-Mizzet, Ghost Counsel (WB)",
+            commanders: decks::NIV_MIZZET_3_COMMANDERS,
+            main: decks::NIV_MIZZET_3_MAIN,
+        },
+        // Seat 714: Bjorna, Nightfall Alchemist and Wernog, Rider's Chaplain's EDHREC average deck. `--pod-decks 714`.
+        PodDeck {
+            name: "Bjorna, Nightfall Alchemist and Wernog, Rider's Chaplain (WUBR)",
+            commanders: decks::BJORNA_COMMANDERS,
+            main: decks::BJORNA_MAIN,
+        },
+        // Seat 715: Yarus, Roar of the Old Gods's EDHREC average deck. `--pod-decks 715`.
+        PodDeck {
+            name: "Yarus, Roar of the Old Gods (RG)",
+            commanders: decks::YARUS_COMMANDERS,
+            main: decks::YARUS_MAIN,
+        },
+        // Seat 716: Burakos, Party Leader and Folk Hero's EDHREC average deck. `--pod-decks 716`.
+        PodDeck {
+            name: "Burakos, Party Leader and Folk Hero (WB)",
+            commanders: decks::BURAKOS_COMMANDERS,
+            main: decks::BURAKOS_MAIN,
+        },
+        // Seat 717: Super Shredder's EDHREC average deck. `--pod-decks 717`.
+        PodDeck {
+            name: "Super Shredder (B)",
+            commanders: decks::SUPER_SHREDDER_COMMANDERS,
+            main: decks::SUPER_SHREDDER_MAIN,
+        },
+        // Seat 718: Gyome, Master Chef's EDHREC average deck. `--pod-decks 718`.
+        PodDeck {
+            name: "Gyome, Master Chef (BG)",
+            commanders: decks::GYOME_COMMANDERS,
+            main: decks::GYOME_MAIN,
+        },
+        // Seat 719: Skithiryx, the Blight Dragon's EDHREC average deck. `--pod-decks 719`.
+        PodDeck {
+            name: "Skithiryx, the Blight Dragon (B)",
+            commanders: decks::SKITHIRYX_COMMANDERS,
+            main: decks::SKITHIRYX_MAIN,
+        },
+        // Seat 720: Old Stickfingers's EDHREC average deck. `--pod-decks 720`.
+        PodDeck {
+            name: "Old Stickfingers (BG)",
+            commanders: decks::OLD_STICKFINGERS_COMMANDERS,
+            main: decks::OLD_STICKFINGERS_MAIN,
+        },
+        // Seat 721: Balmor, Battlemage Captain's EDHREC average deck. `--pod-decks 721`.
+        PodDeck {
+            name: "Balmor, Battlemage Captain (UR)",
+            commanders: decks::BALMOR_COMMANDERS,
+            main: decks::BALMOR_MAIN,
+        },
+        // Seat 722: Iroas, God of Victory's EDHREC average deck. `--pod-decks 722`.
+        PodDeck {
+            name: "Iroas, God of Victory (WR)",
+            commanders: decks::IROAS_COMMANDERS,
+            main: decks::IROAS_MAIN,
+        },
+        // Seat 723: Kellan, the Fae-Blooded's EDHREC average deck. `--pod-decks 723`.
+        PodDeck {
+            name: "Kellan, the Fae-Blooded (WR)",
+            commanders: decks::KELLAN_2_COMMANDERS,
+            main: decks::KELLAN_2_MAIN,
+        },
+        // Seat 724: Ares, God of War's EDHREC average deck. `--pod-decks 724`.
+        PodDeck {
+            name: "Ares, God of War (BR)",
+            commanders: decks::ARES_COMMANDERS,
+            main: decks::ARES_MAIN,
+        },
     ]
 }
 
@@ -7155,6 +7269,25 @@ mod tests {
             ("Liliana, Heretical Healer", &[0x0BE5]),
             ("Vraska, Soul of Stone", &[0x0BE6]),
             ("Darien, King of Kjeldor", &[0x0BE7]),
+            ("Zacama, Primal Calamity", &[0x0BE8]),
+            ("Selvala, Explorer Returned", &[0x0BE9]),
+            ("Abdel Adrian, Gorion's Ward and Candlekeep Sage", &[0x0BEA]),
+            ("Crystal, Inhuman Princess", &[0x0BEB]),
+            ("Zilortha, Strength Incarnate", &[0x0BEC]),
+            ("Illuna, Apex of Wishes", &[0x0BED]),
+            ("Mm'menon, the Right Hand", &[0x0BEE]),
+            ("Niv-Mizzet, Ghost Counsel", &[0x0BEF]),
+            ("Bjorna, Nightfall Alchemist and Wernog, Rider's Chaplain", &[0x0BF0]),
+            ("Yarus, Roar of the Old Gods", &[0x0BF1]),
+            ("Burakos, Party Leader and Folk Hero", &[0x0BF2]),
+            ("Super Shredder", &[0x0BF3]),
+            ("Gyome, Master Chef", &[0x0BF4]),
+            ("Skithiryx, the Blight Dragon", &[0x0BF5]),
+            ("Old Stickfingers", &[0x0BF6]),
+            ("Balmor, Battlemage Captain", &[0x0BF7]),
+            ("Iroas, God of Victory", &[0x0BF8]),
+            ("Kellan, the Fae-Blooded", &[0x0BF9]),
+            ("Ares, God of War", &[0x0BFA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
