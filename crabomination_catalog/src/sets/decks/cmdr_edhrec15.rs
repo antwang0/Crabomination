@@ -2896,3 +2896,313 @@ pub fn consuming_tide() -> CardDefinition {
         ]),
     )
 }
+
+// ── Batch H ──────────────────────────────────────────────────────────────────
+
+/// Wheel of Potential — {2}{R} sorcery. You get {E}{E}{E}, then may pay any
+/// amount of {E}; each player may exile their hand and draw that many. At
+/// seven or more, you may play your exiled cards until the end of your next
+/// turn.
+pub fn wheel_of_potential() -> CardDefinition {
+    spell(
+        "Wheel of Potential",
+        cost(&[generic(2), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(3)),
+            Effect::PayAnyEnergy {
+                then: Box::new(Effect::EachPlayerMayExileHandDraw {
+                    amount: Value::EnergyPaidThisEffect,
+                    play_if_at_least: 7,
+                }),
+            },
+        ]),
+    )
+}
+
+/// Gauntlet of Power — {5} artifact. As it enters, choose a color. Creatures
+/// of that color get +1/+1; a basic land tapped for that color adds one more.
+pub fn gauntlet_of_power() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        static_abilities: vec![
+            static_ab(
+                "Creatures of the chosen color get +1/+1.",
+                StaticEffect::AnthemForFilter {
+                    filter: R::Creature.and(R::HasChosenColorOfSource),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    opponents: false,
+                    all_players: true,
+                    only_your_turn: false,
+                    scale_by_counters_on_self: None,
+                },
+            ),
+            static_ab(
+                "Whenever a basic land is tapped for mana of the chosen color, its controller adds an additional one mana of that color.",
+                StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: false,
+                    filter: R::IsBasicLand,
+                    extra: crate::effect::ExtraManaKind::ChosenColorIfProduced,
+                    while_monarch: false,
+                },
+            ),
+        ],
+        ..permanent("Gauntlet of Power", cost(&[generic(5)]), CardType::Artifact)
+    }
+}
+
+/// Storm Cauldron — {5} artifact. Each player may play an additional land
+/// each turn. Whenever a land is tapped for mana, return it to its owner's
+/// hand.
+pub fn storm_cauldron() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Each player may play an additional land during each of their turns.",
+            StaticEffect::ExtraLandPerTurnEachPlayer,
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TappedForMana, EventScope::AnyPlayer).with_filter(trigger_is(R::Land)),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+            },
+        }],
+        ..permanent("Storm Cauldron", cost(&[generic(5)]), CardType::Artifact)
+    }
+}
+
+/// Sheoldred // The True Scriptures — {3}{B}{B} 4/5 legendary Phyrexian
+/// Praetor, menace. ETB: each opponent sacrifices a nontoken creature or
+/// planeswalker. {4}{B}, sorcery speed, if an opponent has eight or more cards
+/// in their graveyard: return it transformed. Saga: I — for each opponent,
+/// destroy up to one of their creatures or planeswalkers; II — each opponent
+/// discards three, then mills three; III — every creature card in every
+/// graveyard onto the battlefield under your control, then flip back.
+pub fn sheoldred() -> CardDefinition {
+    let threat = || R::Creature.or(R::Planeswalker);
+    let opps = || Selector::Player(PlayerRef::EachOpponent);
+    let scriptures = CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::ForEachOpponentTarget {
+                    body: Box::new(Effect::ApplyToTargets {
+                        max_targets: 8,
+                        min_targets: 0,
+                        filter: threat().and(R::ControlledByOpponent),
+                        effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                    }),
+                },
+            ),
+            (
+                2,
+                Effect::Seq(vec![
+                    Effect::Discard { who: opps(), amount: Value::Const(3), random: false },
+                    Effect::Mill { who: opps(), amount: Value::Const(3) },
+                ]),
+            ),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::EachMatching {
+                            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::EachPlayer),
+                            filter: R::Creature,
+                        },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::ExileSelfReturnFrontFace,
+                ]),
+            ),
+        ],
+        ..permanent("The True Scriptures", ManaCost::default(), CardType::Enchantment)
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::Sacrifice {
+            who: opps(),
+            count: Value::ONE,
+            filter: threat().and(R::Not(Box::new(R::IsToken))),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b()]),
+            sorcery_speed: true,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::GreatestGraveyardSizeAmong(PlayerRef::EachOpponent),
+                Value::Const(8),
+            )),
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(scriptures)),
+        ..legend("Sheoldred", cost(&[generic(3), b(), b()]), vec![CreatureType::Phyrexian, CreatureType::Praetor], 4, 5)
+    }
+}
+
+/// Unseal the Necropolis — {2}{B} instant. Each player mills three; you return
+/// up to two creature cards from your graveyard to your hand.
+pub fn unseal_the_necropolis() -> CardDefinition {
+    spell(
+        "Unseal the Necropolis",
+        cost(&[generic(2), b()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) },
+            Effect::Move {
+                what: Selector::TakeGreatestManaValue {
+                    inner: Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: R::Creature,
+                    }),
+                    count: Box::new(Value::Const(2)),
+                },
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+    )
+}
+
+/// Boseiju Reaches Skyward // Branch of Boseiju — {3}{G} Saga. I: up to two
+/// basic Forests to hand. II: up to one land card from your graveyard on top
+/// of your library. III: return transformed — a 0/0 reach Plant with +1/+1
+/// per land you control.
+pub fn boseiju_reaches_skyward() -> CardDefinition {
+    let lands = || Value::count(Selector::EachPermanent(yours(R::Land)));
+    let branch = CardDefinition {
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![static_ab(
+            "This creature gets +1/+1 for each land you control.",
+            StaticEffect::PumpPTByValue { applies_to: Selector::This, power: lands(), toughness: lands() },
+        )],
+        ..creature("Branch of Boseiju", ManaCost::default(), vec![CreatureType::Plant], 0, 0)
+    };
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::SearchUpToN {
+                    who: PlayerRef::You,
+                    filter: R::IsBasicLand.and(R::HasLandType(LandType::Forest)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                    count: Value::Const(2),
+                },
+            ),
+            (
+                2,
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(R::Land.and(R::InYourGraveyard)),
+                        to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+                    }),
+                },
+            ),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(branch)),
+        ..permanent("Boseiju Reaches Skyward", cost(&[generic(3), g()]), CardType::Enchantment)
+    }
+}
+
+/// Waking the Trolls — {4}{R}{G} Saga. I: destroy target land. II: put target
+/// land card from a graveyard onto the battlefield under your control. III:
+/// for target opponent with fewer lands than you, 4/4 green Troll Warriors
+/// with trample equal to the difference.
+pub fn waking_the_trolls() -> CardDefinition {
+    let troll = TokenDefinition {
+        keywords: vec![Keyword::Trample],
+        ..token("Troll Warrior", 4, 4, vec![Color::Green], vec![CreatureType::Troll, CreatureType::Warrior])
+    };
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (1, Effect::Destroy { what: target_filtered(R::Land) }),
+            (
+                2,
+                Effect::Move {
+                    what: target_filtered(R::Land.and(R::InGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ),
+            (
+                3,
+                make(
+                    Value::NonNeg(Box::new(Value::Diff(
+                        Box::new(Value::count(Selector::EachPermanent(yours(R::Land)))),
+                        Box::new(Value::count(Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Land })),
+                    ))),
+                    troll,
+                ),
+            ),
+        ],
+        ..permanent("Waking the Trolls", cost(&[generic(4), r(), g()]), CardType::Enchantment)
+    }
+}
+
+/// Crovax, Ascendant Hero — {4}{W}{W} 4/4 legendary Human Noble. Other white
+/// creatures get +1/+1; nonwhite creatures get -1/-1. Pay 2 life: return it
+/// to its owner's hand.
+pub fn crovax_ascendant_hero() -> CardDefinition {
+    let anthem = |filter: R, d: i32| StaticEffect::AnthemForFilter {
+        filter,
+        power: d,
+        toughness: d,
+        keywords: vec![],
+        opponents: false,
+        all_players: true,
+        only_your_turn: false,
+        scale_by_counters_on_self: None,
+    };
+    CardDefinition {
+        static_abilities: vec![
+            static_ab(
+                "Other white creatures get +1/+1.",
+                anthem(R::Creature.and(R::HasColor(Color::White)).and(R::OtherThanSource), 1),
+            ),
+            static_ab("Nonwhite creatures get -1/-1.", anthem(R::Creature.and(R::HasColor(Color::White).negate()), -1)),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 2,
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))) },
+            ..Default::default()
+        }],
+        ..legend("Crovax, Ascendant Hero", cost(&[generic(4), w(), w()]), vec![CreatureType::Human, CreatureType::Noble], 4, 4)
+    }
+}
+
+/// Grafted Butcher — {1}{B} 2/2 Phyrexian Samurai. ETB: your Phyrexians gain
+/// menace until end of turn. Other Phyrexians you control get +1/+1. {3}{B},
+/// sacrifice an artifact or creature: return it from your graveyard to the
+/// battlefield (sorcery speed).
+pub fn grafted_butcher() -> CardDefinition {
+    let phyrexians = || yours(R::HasCreatureType(CreatureType::Phyrexian));
+    CardDefinition {
+        triggered_abilities: vec![etb(grant_eot(Selector::EachPermanent(phyrexians()), Keyword::Menace))],
+        static_abilities: vec![static_ab(
+            "Other Phyrexians you control get +1/+1.",
+            StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(phyrexians().and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            from_graveyard: true,
+            sorcery_speed: true,
+            sac_other_filter: Some((R::Artifact.or(R::Creature), 1)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature("Grafted Butcher", cost(&[generic(1), b()]), vec![CreatureType::Phyrexian, CreatureType::Samurai], 2, 2)
+    }
+}

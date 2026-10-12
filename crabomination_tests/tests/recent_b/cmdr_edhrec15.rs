@@ -1054,3 +1054,175 @@ fn consuming_tide_keeps_one_each() {
     assert_eq!((nonland(0), nonland(1)), (1, 1));
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest"), "lands stay");
 }
+
+/// Wheel of Potential: seven {E} paid wheels every hand for seven, and you
+/// may play your own exiled cards until the end of your next turn.
+#[test]
+fn wheel_of_potential_wheels_for_the_energy_paid() {
+    let mut g = pod(2);
+    library(&mut g, 0, 10);
+    library(&mut g, 1, 10);
+    g.players[0].energy = 4;
+    let keep = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::island());
+    let wheel = g.add_card_to_hand(0, catalog::wheel_of_potential());
+    cast(&mut g, wheel, &[]).expect("wheel");
+    assert_eq!(g.players[0].energy, 0, "the bot pays all seven");
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.players[1].hand.len(), 7, "a one-card hand takes seven");
+    let bolt = g.exile.iter().find(|c| c.id == keep).expect("exiled");
+    assert!(bolt.may_play_until.is_some(), "playable from exile");
+}
+
+/// Gauntlet of Power: the chosen color's creatures get +1/+1 and its basics
+/// make one more of that color.
+#[test]
+fn gauntlet_of_power_doubles_the_chosen_basics() {
+    let mut g = pod(2);
+    let mtn = ready(&mut g, 0, catalog::mountain());
+    let isl = ready(&mut g, 0, catalog::island());
+    let gp = ready(&mut g, 0, catalog::gauntlet_of_power());
+    g.battlefield_find_mut(gp).unwrap().chosen_color = Some(Color::Red);
+    let gob = ready(&mut g, 1, catalog::goblin_guide());
+    assert_eq!(pt(&g, gob), (3, 3), "every player's red creature");
+    let tap = |g: &mut GameState, id: CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap");
+    };
+    tap(&mut g, mtn);
+    tap(&mut g, isl);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
+}
+
+/// Storm Cauldron (CR 305.2): every player gets an extra land drop; a land
+/// tapped for mana returns to its owner's hand.
+#[test]
+fn storm_cauldron_bounces_tapped_lands() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::storm_cauldron());
+    let mtn = ready(&mut g, 0, catalog::mountain());
+    assert!(g.can_player_play_land(0) && g.extra_land_plays_per_turn(0) == 1, "the other player's Cauldron counts");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mtn,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mtn));
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "the mana stays");
+}
+
+/// Sheoldred (MOM): ETB edicts each opponent; it transforms only once an
+/// opponent's graveyard holds eight cards; The True Scriptures III returns
+/// every creature card in every graveyard to you.
+#[test]
+fn sheoldred_edicts_then_reads_the_scriptures() {
+    let mut g = pod(2);
+    let ogre = ready(&mut g, 1, catalog::gray_ogre());
+    let sh = g.add_card_to_hand(0, catalog::sheoldred());
+    cast(&mut g, sh, &[]).expect("sheoldred");
+    assert!(g.battlefield_find(ogre).is_none(), "edicted");
+    assert!(activate(&mut g, sh, 0, None).is_err(), "seven cards isn't enough");
+    for _ in 0..7 {
+        g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    }
+    activate(&mut g, sh, 0, None).expect("eight cards");
+    let saga = g.battlefield.iter().find(|c| c.definition.name == "The True Scriptures").map(|c| c.id).expect("flipped");
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    let mine = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(mine, 7, "every Bears came back under your control");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Sheoldred"), "front face up again");
+}
+
+/// Unseal the Necropolis: each player mills three; you take back two creature
+/// cards.
+#[test]
+fn unseal_the_necropolis_returns_two() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let us = g.add_card_to_hand(0, catalog::unseal_the_necropolis());
+    cast(&mut g, us, &[]).expect("unseal");
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 2);
+    assert_eq!(g.players[1].graveyard.len(), 3);
+}
+
+/// Boseiju Reaches Skyward: I fetches two basic Forests; III flips it into a
+/// Plant that counts your lands.
+#[test]
+fn boseiju_reaches_skyward_grows_a_branch() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    ready(&mut g, 0, catalog::forest());
+    let bs = g.add_card_to_hand(0, catalog::boseiju_reaches_skyward());
+    cast(&mut g, bs, &[]).expect("saga");
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Forest").count(), 2);
+    g.saga_advance(bs);
+    drain_stack(&mut g);
+    g.saga_advance(bs);
+    drain_stack(&mut g);
+    let branch = g.battlefield.iter().find(|c| c.definition.name == "Branch of Boseiju").map(|c| c.id).expect("flipped");
+    assert_eq!(pt(&g, branch), (1, 1), "one land");
+}
+
+/// Waking the Trolls III: a Troll per land you have over the target opponent.
+#[test]
+fn waking_the_trolls_makes_the_difference() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    ready(&mut g, 1, catalog::forest());
+    let wt = g.add_card_to_battlefield(0, catalog::waking_the_trolls());
+    g.battlefield.iter_mut().filter(|c| c.id == wt).for_each(|c| c.add_counters(CounterType::Lore, 2));
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    g.saga_advance(wt);
+    drain_stack(&mut g);
+    assert_eq!(tokens_named(&g, "Troll Warrior"), 3);
+}
+
+/// Crovax, Ascendant Hero: other white creatures +1/+1, nonwhite -1/-1.
+#[test]
+fn crovax_splits_the_board_by_white() {
+    let mut g = pod(2);
+    let cx = ready(&mut g, 0, catalog::crovax_ascendant_hero());
+    let lions = ready(&mut g, 1, catalog::savannah_lions());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, cx), (4, 4));
+    assert_eq!(pt(&g, lions), (3, 2));
+    assert_eq!(pt(&g, bear), (1, 1));
+}
+
+/// Grafted Butcher: returns from the graveyard for {3}{B} and a sacrifice.
+#[test]
+fn grafted_butcher_returns_for_a_sacrifice() {
+    let mut g = pod(2);
+    let fodder = ready(&mut g, 0, catalog::grizzly_bears());
+    let gb = g.add_card_to_graveyard(0, catalog::grafted_butcher());
+    activate(&mut g, gb, 0, None).expect("return");
+    assert!(g.battlefield_find(gb).is_some());
+    assert!(g.battlefield_find(fodder).is_none());
+}
