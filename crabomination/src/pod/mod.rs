@@ -3414,6 +3414,120 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::G_RAHA_TIA_COMMANDERS,
             main: decks::G_RAHA_TIA_MAIN,
         },
+        // Seat 494: Slimefoot and Squee's EDHREC average deck. `--pod-decks 494`.
+        PodDeck {
+            name: "Slimefoot and Squee (BRG)",
+            commanders: decks::SLIMEFOOT_AND_SQUEE_COMMANDERS,
+            main: decks::SLIMEFOOT_AND_SQUEE_MAIN,
+        },
+        // Seat 495: Elesh Norn, Mother of Machines's EDHREC average deck. `--pod-decks 495`.
+        PodDeck {
+            name: "Elesh Norn, Mother of Machines (W)",
+            commanders: decks::ELESH_NORN_COMMANDERS,
+            main: decks::ELESH_NORN_MAIN,
+        },
+        // Seat 496: Evereth, Viceroy of Plunder's EDHREC average deck. `--pod-decks 496`.
+        PodDeck {
+            name: "Evereth, Viceroy of Plunder (BR)",
+            commanders: decks::EVERETH_COMMANDERS,
+            main: decks::EVERETH_MAIN,
+        },
+        // Seat 497: Kiora, Sovereign of the Deep's EDHREC average deck. `--pod-decks 497`.
+        PodDeck {
+            name: "Kiora, Sovereign of the Deep (UG)",
+            commanders: decks::KIORA_COMMANDERS,
+            main: decks::KIORA_MAIN,
+        },
+        // Seat 498: Juri, Master of the Revue's EDHREC average deck. `--pod-decks 498`.
+        PodDeck {
+            name: "Juri, Master of the Revue (BR)",
+            commanders: decks::JURI_COMMANDERS,
+            main: decks::JURI_MAIN,
+        },
+        // Seat 499: Eshki Dragonclaw's EDHREC average deck. `--pod-decks 499`.
+        PodDeck {
+            name: "Eshki Dragonclaw (URG)",
+            commanders: decks::ESHKI_DRAGONCLAW_COMMANDERS,
+            main: decks::ESHKI_DRAGONCLAW_MAIN,
+        },
+        // Seat 500: Aang, at the Crossroads's EDHREC average deck. `--pod-decks 500`.
+        PodDeck {
+            name: "Aang, at the Crossroads (WUG)",
+            commanders: decks::AANG_COMMANDERS,
+            main: decks::AANG_MAIN,
+        },
+        // Seat 501: Aragorn, King of Gondor's EDHREC average deck. `--pod-decks 501`.
+        PodDeck {
+            name: "Aragorn, King of Gondor (WUR)",
+            commanders: decks::ARAGORN_COMMANDERS,
+            main: decks::ARAGORN_MAIN,
+        },
+        // Seat 502: Arixmethes, Slumbering Isle's EDHREC average deck. `--pod-decks 502`.
+        PodDeck {
+            name: "Arixmethes, Slumbering Isle (UG)",
+            commanders: decks::ARIXMETHES_COMMANDERS,
+            main: decks::ARIXMETHES_MAIN,
+        },
+        // Seat 503: Rivaz of the Claw's EDHREC average deck. `--pod-decks 503`.
+        PodDeck {
+            name: "Rivaz of the Claw (BR)",
+            commanders: decks::RIVAZ_OF_THE_CLAW_COMMANDERS,
+            main: decks::RIVAZ_OF_THE_CLAW_MAIN,
+        },
+        // Seat 504: Aurelia, the Warleader's EDHREC average deck. `--pod-decks 504`.
+        PodDeck {
+            name: "Aurelia, the Warleader (WR)",
+            commanders: decks::AURELIA_COMMANDERS,
+            main: decks::AURELIA_MAIN,
+        },
+        // Seat 505: Toph, Hardheaded Teacher's EDHREC average deck. `--pod-decks 505`.
+        PodDeck {
+            name: "Toph, Hardheaded Teacher (RG)",
+            commanders: decks::TOPH_COMMANDERS,
+            main: decks::TOPH_MAIN,
+        },
+        // Seat 506: Xantcha, Sleeper Agent's EDHREC average deck. `--pod-decks 506`.
+        PodDeck {
+            name: "Xantcha, Sleeper Agent (BR)",
+            commanders: decks::XANTCHA_COMMANDERS,
+            main: decks::XANTCHA_MAIN,
+        },
+        // Seat 507: Kyler, Sigardian Emissary's EDHREC average deck. `--pod-decks 507`.
+        PodDeck {
+            name: "Kyler, Sigardian Emissary (WG)",
+            commanders: decks::KYLER_COMMANDERS,
+            main: decks::KYLER_MAIN,
+        },
+        // Seat 508: Muerra, Trash Tactician's EDHREC average deck. `--pod-decks 508`.
+        PodDeck {
+            name: "Muerra, Trash Tactician (RG)",
+            commanders: decks::MUERRA_COMMANDERS,
+            main: decks::MUERRA_MAIN,
+        },
+        // Seat 509: Alesha, Who Laughs at Fate's EDHREC average deck. `--pod-decks 509`.
+        PodDeck {
+            name: "Alesha, Who Laughs at Fate (BR)",
+            commanders: decks::ALESHA_509_COMMANDERS,
+            main: decks::ALESHA_509_MAIN,
+        },
+        // Seat 510: Plagon, Lord of the Beach's EDHREC average deck. `--pod-decks 510`.
+        PodDeck {
+            name: "Plagon, Lord of the Beach (WU)",
+            commanders: decks::PLAGON_COMMANDERS,
+            main: decks::PLAGON_MAIN,
+        },
+        // Seat 511: Toph, Earthbending Master's EDHREC average deck. `--pod-decks 511`.
+        PodDeck {
+            name: "Toph, Earthbending Master (G)",
+            commanders: decks::TOPH_511_COMMANDERS,
+            main: decks::TOPH_511_MAIN,
+        },
+        // Seat 512: Amalia Benavides Aguirre's EDHREC average deck. `--pod-decks 512`.
+        PodDeck {
+            name: "Amalia Benavides Aguirre (WB)",
+            commanders: decks::AMALIA_BENAVIDES_AGUIRRE_COMMANDERS,
+            main: decks::AMALIA_BENAVIDES_AGUIRRE_MAIN,
+        },
     ]
 }
 
@@ -5671,6 +5785,25 @@ mod tests {
             ("Tinybones, Trinket Thief", &[0x0B11]),
             ("Cayth, Famed Mechanist", &[0x0B12]),
             ("G'raha Tia, Scion Reborn", &[0x0B13]),
+            ("Slimefoot and Squee", &[0x0B14]),
+            ("Elesh Norn, Mother of Machines", &[0x0B15]),
+            ("Evereth, Viceroy of Plunder", &[0x0B16]),
+            ("Kiora, Sovereign of the Deep", &[0x0B17]),
+            ("Juri, Master of the Revue", &[0x0B18]),
+            ("Eshki Dragonclaw", &[0x0B19]),
+            ("Aang, at the Crossroads", &[0x0B1A]),
+            ("Aragorn, King of Gondor", &[0x0B1B]),
+            ("Arixmethes, Slumbering Isle", &[0x0B1C]),
+            ("Rivaz of the Claw", &[0x0B1D]),
+            ("Aurelia, the Warleader", &[0x0B1E]),
+            ("Toph, Hardheaded Teacher", &[0x0B1F]),
+            ("Xantcha, Sleeper Agent", &[0x0B20]),
+            ("Kyler, Sigardian Emissary", &[0x0B21]),
+            ("Muerra, Trash Tactician", &[0x0B22]),
+            ("Alesha, Who Laughs at Fate", &[0x0B23]),
+            ("Plagon, Lord of the Beach", &[0x0B24]),
+            ("Toph, Earthbending Master", &[0x0B25]),
+            ("Amalia Benavides Aguirre", &[0x0B26]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
