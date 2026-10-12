@@ -2018,3 +2018,9 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Eradicator Valkyrie | "hexproof from planeswalkers" is not modelled | there is no hexproof-from-card-type keyword (`HexproofFromColor`/`…Monocolored`/`…Abilities` exist) |
 | 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
 | 🟡 Chiss-Goria, Forge Tyrant | the artifact spell cast from among the exiled cards doesn't gain affinity for artifacts | a may-play grant carries no cost-reduction rider (`MayPlayPermission` has `undaunted` only) |
+| 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
+| 🟡 Nahiri, Forged in Fury | an exiled Equipment card still costs its mana | `ExileTopAndGrantMayPlay` grants one paid permission for every card it exiles |
+| 🟡 Gandalf the White | only an *entering* legendary permanent or artifact doubles triggers; a leaving one doesn't | `DoubleControllerEtbTriggers` has no leave-the-battlefield half |
+| 🟡 Jade Monolith | redirects the next damage from any source, not one of your choice | `RedirectNextDamageTo` has no source filter |
+| 🟡 Shared Summons | the two creature cards needn't have different names | `SearchUpToN` has no distinct-name constraint |
+| 🟡 Lochmere Serpent | "exile five target cards" takes up to five | `ApplyToTargets { min_targets: 0 }` |
