@@ -6696,6 +6696,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YES_MAN_COMMANDERS,
             main: decks::YES_MAN_MAIN,
         },
+        // Seat 1041: Nissa, Worldsoul Speaker's EDHREC average deck. `--pod-decks 1041`.
+        PodDeck {
+            name: "Nissa, Worldsoul Speaker (G)",
+            commanders: decks::NISSA_3_COMMANDERS,
+            main: decks::NISSA_3_MAIN,
+        },
+        // Seat 1042: Mazzy, Truesword Paladin's EDHREC average deck. `--pod-decks 1042`.
+        PodDeck {
+            name: "Mazzy, Truesword Paladin (WRG)",
+            commanders: decks::MAZZY_COMMANDERS,
+            main: decks::MAZZY_MAIN,
+        },
+        // Seat 1043: Sedris, the Traitor King's EDHREC average deck. `--pod-decks 1043`.
+        PodDeck {
+            name: "Sedris, the Traitor King (UBR)",
+            commanders: decks::SEDRIS_COMMANDERS,
+            main: decks::SEDRIS_MAIN,
+        },
+        // Seat 1044: Starscream, Power Hungry's EDHREC average deck. `--pod-decks 1044`.
+        PodDeck {
+            name: "Starscream, Power Hungry (B)",
+            commanders: decks::STARSCREAM_COMMANDERS,
+            main: decks::STARSCREAM_MAIN,
+        },
+        // Seat 1045: Noyan Dar, Roil Shaper's EDHREC average deck. `--pod-decks 1045`.
+        PodDeck {
+            name: "Noyan Dar, Roil Shaper (WU)",
+            commanders: decks::NOYAN_DAR_COMMANDERS,
+            main: decks::NOYAN_DAR_MAIN,
+        },
+        // Seat 1046: Vaan, Street Thief's EDHREC average deck. `--pod-decks 1046`.
+        PodDeck {
+            name: "Vaan, Street Thief (R)",
+            commanders: decks::VAAN_COMMANDERS,
+            main: decks::VAAN_MAIN,
+        },
     ]
 }
 
@@ -9526,6 +9562,12 @@ mod tests {
             ("Rakdos, the Showstopper", &[0x0E23]),
             ("Krang, Utrom Warlord", &[0x0E24]),
             ("Yes Man, Personal Securitron", &[0x0E25]),
+            ("Nissa, Worldsoul Speaker", &[0x0E26]),
+            ("Mazzy, Truesword Paladin", &[0x0E27]),
+            ("Sedris, the Traitor King", &[0x0E28]),
+            ("Starscream, Power Hungry", &[0x0E29]),
+            ("Noyan Dar, Roil Shaper", &[0x0E2A]),
+            ("Vaan, Street Thief", &[0x0E2B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
