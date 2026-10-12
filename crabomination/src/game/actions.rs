@@ -4989,6 +4989,15 @@ impl GameState {
         // Oracle of Mul Daya) lets the land be played off the library top.
         let from_top = !self.players[p].has_in_hand(card_id)
             && self.library_top_playable(p, card_id);
+        // Xanathar — the top of an opponent's library this turn.
+        let foreign_top =
+            if from_top || self.players[p].has_in_hand(card_id) { None } else { self.foreign_library_top_seat(p, card_id) };
+        // Sen Triplets — a land from an opponent's hand.
+        let foreign_hand = if from_top || foreign_top.is_some() || self.players[p].has_in_hand(card_id) {
+            None
+        } else {
+            self.foreign_hand_seat(p, card_id)
+        };
         let from_top_capped = if from_top { self.library_top_capped_source(p, card_id) } else { None };
         // CR 118.x — "you may play that card" grants cover lands too. An
         // impulse-exiled land (Light Up the Stage, Gonti Night Minister,
@@ -4996,6 +5005,8 @@ impl GameState {
         // CR 715.3d — a card whose permanent half is a land is *played* out of
         // adventure exile, not cast (the FIN Town // Adventure cycle).
         let from_adventure = !from_top
+            && foreign_top.is_none()
+            && foreign_hand.is_none()
             && !self.players[p].has_in_hand(card_id)
             && self.exile.iter().any(|c| {
                 c.id == card_id && c.on_adventure && c.owner == p && c.definition.is_land()
@@ -5006,6 +5017,10 @@ impl GameState {
         let from_hand = !from_top && self.players[p].has_in_hand(card_id);
         let mut card = if from_top {
             self.players[p].library.remove(0)
+        } else if let Some(q) = foreign_top {
+            self.players[q].library.remove(0)
+        } else if let Some(q) = foreign_hand {
+            self.players[q].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?
         } else if self.players[p].has_in_hand(card_id) {
             self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?
         } else if from_exile {
@@ -5017,6 +5032,10 @@ impl GameState {
         let restore = |state: &mut Self, card: crate::card::CardInstance| {
             if from_top {
                 state.players[p].library.insert(0, card);
+            } else if let Some(q) = foreign_top {
+                state.players[q].library.insert(0, card);
+            } else if let Some(q) = foreign_hand {
+                state.players[q].hand.push(card);
             } else if from_exile {
                 state.exile.push(card);
             } else {
@@ -6781,6 +6800,48 @@ impl GameState {
                 }
             }
         }
+        // Sen Triplets — cast a spell from an opponent's hand this turn. The
+        // card moves into the caster's hand for the cast pipeline and back
+        // to its owner's hand on failure.
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && let Some(q) = self.foreign_hand_seat(p, card_id)
+        {
+            let Some(card) = self.players[q].remove_from_hand(card_id) else { return Err(GameError::CardNotInHand(card_id)) };
+            self.players[p].hand.push(card);
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
+            );
+            if r.is_err()
+                && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
+            {
+                self.players[q].hand.push(card);
+            }
+            return r;
+        }
+        // Xanathar — cast the top of an opponent's library this turn, mana
+        // spendable as any color (CR 609.4b). The card hops into the
+        // caster's hand for the cast pipeline and goes back on top of its
+        // owner's library on failure; its owner stays its owner (CR 108.3).
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && let Some(q) = self.foreign_library_top_seat(p, card_id)
+        {
+            let card = self.players[q].library.remove(0);
+            self.players[p].hand.push(card);
+            self.casting_hop = Some((card_id, crate::game::HopFrom::LibraryTop));
+            let any_color = self.players[p].may_spend_any_color_this_turn;
+            self.players[p].may_spend_any_color_this_turn = true;
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
+            );
+            self.players[p].may_spend_any_color_this_turn = any_color;
+            self.casting_hop = None;
+            if r.is_err()
+                && let Some(card) = Self::take_card(&mut self.players[p].hand, card_id)
+            {
+                self.players[q].library.insert(0, card);
+            }
+            return r;
+        }
         // CR 401.6 — cast off the library top when a PlayFromLibraryTop
         // static covers the card (Mystic Forge). Hop the card into hand for
         // the normal cast pipeline; restore it to the top on failure.
@@ -7266,6 +7327,24 @@ impl GameState {
     pub fn is_library_top(&self, card_id: CardId) -> bool {
         self.casting_hop == Some((card_id, crate::game::HopFrom::LibraryTop))
             || self.players.iter().any(|p| p.library.first().is_some_and(|c| c.id == card_id))
+    }
+
+    /// Sen Triplets — the seat whose hand holds `card_id`, when `p` may play
+    /// from that hand this turn.
+    pub fn foreign_hand_seat(&self, p: usize, card_id: CardId) -> Option<usize> {
+        self.players[p]
+            .may_play_hand_of
+            .iter()
+            .copied()
+            .find(|&q| q != p && self.players.get(q).is_some_and(|pl| pl.has_in_hand(card_id)))
+    }
+
+    /// Xanathar, Guild Kingpin — the seat whose library top `card_id` is,
+    /// when `p` holds this turn's permission to play that seat's top card.
+    pub fn foreign_library_top_seat(&self, p: usize, card_id: CardId) -> Option<usize> {
+        self.players[p].may_play_library_top_of.iter().copied().find(|&q| {
+            q != p && self.players.get(q).is_some_and(|pl| pl.library.first().is_some_and(|c| c.id == card_id))
+        })
     }
 
     /// CR 401.6 — true when `card_id` is the top card of `p`'s library and a

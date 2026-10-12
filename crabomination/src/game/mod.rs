@@ -10611,6 +10611,10 @@ impl GameState {
         if viewer == owner || self.hands_revealed_to.contains(&(viewer, owner)) {
             return true;
         }
+        // Sen Triplets — "plays with their hand revealed" this turn.
+        if self.players.iter().any(|p| p.may_play_hand_of.contains(&owner)) {
+            return true;
+        }
         !self.same_team(viewer, owner)
             && self.battlefield.iter().any(|c| {
                 c.controller == viewer

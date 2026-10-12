@@ -1001,6 +1001,15 @@ pub struct PlayerData {
     /// `play_from_top_this_turn`'s spells cost life, not mana (Gwenom).
     #[serde(default)]
     pub play_from_top_pay_life_this_turn: bool,
+    /// Xanathar, Guild Kingpin — seats whose library top this player may
+    /// look at and play this turn, spending mana as though it were mana of
+    /// any color for those spells. Cleared at cleanup.
+    #[serde(default)]
+    pub may_play_library_top_of: Vec<usize>,
+    /// Sen Triplets — seats from whose hand this player may play lands and
+    /// cast spells this turn; those hands are revealed. Cleared at cleanup.
+    #[serde(default)]
+    pub may_play_hand_of: Vec<usize>,
     /// CR 603.3d-adjacent — set once this player casts/plays a card from the
     /// top of their library under a `PlayFromLibraryTopOncePerTurn` grant
     /// (Johann, Apprentice Sorcerer). Cleared at end of turn. Read by
@@ -1746,6 +1755,8 @@ impl Player {
             steals_opponent_tokens_this_turn: false,
             lost_life_this_turn: false,
             play_from_top_this_turn: false,
+            may_play_library_top_of: Vec::new(),
+            may_play_hand_of: Vec::new(),
             play_from_top_pay_life_this_turn: false,
             cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,

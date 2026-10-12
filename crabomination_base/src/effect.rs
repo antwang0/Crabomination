@@ -11439,6 +11439,17 @@ pub enum Effect {
     /// value rather than their mana cost — Bolas's Citadel for a turn
     /// (Gwenom, Remorseless).
     GrantPlayFromTopPayLifeThisTurn,
+    /// "Until end of turn, you may look at the top card of [who]'s library
+    /// any time, you may play the top card of their library, and you may
+    /// spend mana as though it were mana of any color to cast spells this
+    /// way" (Xanathar, Guild Kingpin). Adds the seat to the controller's
+    /// `Player.may_play_library_top_of`.
+    MayPlayLibraryTopOfThisTurn { who: PlayerRef },
+    /// "[who] plays with their hand revealed. You may play lands and cast
+    /// spells from that player's hand this turn" (Sen Triplets). Adds the
+    /// seat to the controller's `Player.may_play_hand_of`, which also reveals
+    /// that hand (`GameState::hand_visible_to`).
+    MayPlayHandOfThisTurn { who: PlayerRef },
 
     /// "You may cast up to `count` spells from among face-up cards your
     /// opponents own from exile this turn without paying their mana costs."

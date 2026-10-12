@@ -5224,6 +5224,12 @@ impl GameState {
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;
             pl.play_from_top_pay_life_this_turn = false;
+            if !pl.may_play_library_top_of.is_empty() {
+                pl.may_play_library_top_of.clear();
+            }
+            if !pl.may_play_hand_of.is_empty() {
+                pl.may_play_hand_of.clear();
+            }
             // Johann's once-per-turn top-of-library cast resets each turn.
             pl.cast_from_library_top_this_turn = false;
         }

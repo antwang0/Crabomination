@@ -14,10 +14,41 @@ pub(super) fn pick_library_top(state: &GameState, seat: usize) -> Option<GameAct
     if state.players[seat].commanders.is_empty() || !state.stack.is_empty() {
         return None;
     }
-    let top = state.players[seat].library.first()?;
-    if !state.library_top_playable(seat, top.id) {
-        return None;
+    // Sen Triplets — a land, then a spell, out of an opponent's hand.
+    for &q in &state.players[seat].may_play_hand_of {
+        let Some(owner) = state.players.get(q) else { continue };
+        let mut cards: Vec<_> = owner.hand.iter().collect();
+        cards.sort_by_key(|c| !c.definition.is_land());
+        for c in cards {
+            let action = if c.definition.is_land() {
+                GameAction::PlayLand(c.id)
+            } else {
+                let (target, additional_targets) =
+                    state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+                GameAction::CastSpell { card_id: c.id, target, additional_targets, mode: None, x_value: None }
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
     }
+    // Xanathar — an opponent's top card this turn comes first; the seat's
+    // own permission is checked after.
+    let foreign = state.players[seat]
+        .may_play_library_top_of
+        .iter()
+        .filter_map(|&q| state.players.get(q)?.library.first())
+        .find(|c| state.foreign_library_top_seat(seat, c.id).is_some());
+    let top = match foreign {
+        Some(c) => c,
+        None => {
+            let top = state.players[seat].library.first()?;
+            if !state.library_top_playable(seat, top.id) {
+                return None;
+            }
+            top
+        }
+    };
     let action = if top.definition.is_land() {
         GameAction::PlayLand(top.id)
     } else {
@@ -52,5 +83,25 @@ mod tests {
         assert!(matches!(pick_library_top(&g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == wurm));
         g.players[0].commanders.clear();
         assert_eq!(pick_library_top(&g, 0), None, "no commander: not a pod");
+    }
+
+    /// Sen Triplets: a pod bot plays the opponent's land, then casts from
+    /// that hand, while the permission lasts.
+    #[test]
+    fn sen_triplets_bot_plays_from_the_opponents_hand() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let cmd = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.players[0].commanders.push(cmd);
+        let bear = g.add_card_to_hand(1, crate::catalog::grizzly_bears());
+        let land = g.add_card_to_hand(1, crate::catalog::forest());
+        g.players[0].mana_pool.add(Color::Green, 2);
+        assert!(!matches!(pick_library_top(&g, 0), Some(GameAction::PlayLand(_))), "no permission yet");
+        g.players[0].may_play_hand_of.push(1);
+        assert_eq!(pick_library_top(&g, 0), Some(GameAction::PlayLand(land)));
+        g.players[0].lands_played_this_turn = 1;
+        assert!(matches!(pick_library_top(&g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == bear));
     }
 }

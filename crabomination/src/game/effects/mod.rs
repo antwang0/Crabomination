@@ -31429,6 +31429,24 @@ impl GameState {
                 self.players[ctx.controller].play_from_top_this_turn = true;
                 Ok(())
             }
+            Effect::MayPlayHandOfThisTurn { who } => {
+                if let Some(q) = self.resolve_player(who, ctx)
+                    && q != ctx.controller
+                    && !self.players[ctx.controller].may_play_hand_of.contains(&q)
+                {
+                    self.players[ctx.controller].may_play_hand_of.push(q);
+                }
+                Ok(())
+            }
+            Effect::MayPlayLibraryTopOfThisTurn { who } => {
+                if let Some(q) = self.resolve_player(who, ctx)
+                    && q != ctx.controller
+                    && !self.players[ctx.controller].may_play_library_top_of.contains(&q)
+                {
+                    self.players[ctx.controller].may_play_library_top_of.push(q);
+                }
+                Ok(())
+            }
 
             Effect::CastUpToNFromOpponentsExile { count } => {
                 // Grant the controller a free end-of-turn cast permission on

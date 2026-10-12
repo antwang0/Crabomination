@@ -624,7 +624,9 @@ fn known_library_top(
                 | StaticEffect::PlayFromLibraryTopBySacrificing { .. }
                 | StaticEffect::MayLookAtOwnLibraryTop))
             || state.players[player_seat].play_from_top_this_turn);
-    if revealed_to_all || owner_may_look {
+    // Xanathar — "you may look at the top card of their library any time".
+    let granted_look = state.players.get(viewer_seat).is_some_and(|v| v.may_play_library_top_of.contains(&player_seat));
+    if revealed_to_all || owner_may_look || granted_look {
         state.players[player_seat].library.first().map(known_card).into_iter().collect()
     } else {
         Vec::new()
