@@ -6528,6 +6528,174 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SARUMAN_MANY_COLORS_COMMANDERS,
             main: decks::SARUMAN_MANY_COLORS_MAIN,
         },
+        // Seat 1013: Heartless Hidetsugu's EDHREC average deck. `--pod-decks 1013`.
+        PodDeck {
+            name: "Heartless Hidetsugu (R)",
+            commanders: decks::HEARTLESS_HIDETSUGU_COMMANDERS,
+            main: decks::HEARTLESS_HIDETSUGU_MAIN,
+        },
+        // Seat 1014: Chromium, the Mutable's EDHREC average deck. `--pod-decks 1014`.
+        PodDeck {
+            name: "Chromium, the Mutable (WUB)",
+            commanders: decks::CHROMIUM_COMMANDERS,
+            main: decks::CHROMIUM_MAIN,
+        },
+        // Seat 1015: Themberchaud's EDHREC average deck. `--pod-decks 1015`.
+        PodDeck {
+            name: "Themberchaud (R)",
+            commanders: decks::THEMBERCHAUD_COMMANDERS,
+            main: decks::THEMBERCHAUD_MAIN,
+        },
+        // Seat 1016: Emet-Selch of the Third Seat's EDHREC average deck. `--pod-decks 1016`.
+        PodDeck {
+            name: "Emet-Selch of the Third Seat (UB)",
+            commanders: decks::EMET_SELCH_OF_THE_THIRD_SEAT_COMMANDERS,
+            main: decks::EMET_SELCH_OF_THE_THIRD_SEAT_MAIN,
+        },
+        // Seat 1017: Erinis, Gloom Stalker and Street Urchin's EDHREC average deck. `--pod-decks 1017`.
+        PodDeck {
+            name: "Erinis, Gloom Stalker and Street Urchin (RG)",
+            commanders: decks::ERINIS_COMMANDERS,
+            main: decks::ERINIS_MAIN,
+        },
+        // Seat 1018: Sarkhan, Soul Aflame's EDHREC average deck. `--pod-decks 1018`.
+        PodDeck {
+            name: "Sarkhan, Soul Aflame (UR)",
+            commanders: decks::SARKHAN_2_COMMANDERS,
+            main: decks::SARKHAN_2_MAIN,
+        },
+        // Seat 1019: Fandaniel, Telophoroi Ascian's EDHREC average deck. `--pod-decks 1019`.
+        PodDeck {
+            name: "Fandaniel, Telophoroi Ascian (B)",
+            commanders: decks::FANDANIEL_COMMANDERS,
+            main: decks::FANDANIEL_MAIN,
+        },
+        // Seat 1020: Tawnos, the Toymaker's EDHREC average deck. `--pod-decks 1020`.
+        PodDeck {
+            name: "Tawnos, the Toymaker (UG)",
+            commanders: decks::TAWNOS_COMMANDERS,
+            main: decks::TAWNOS_MAIN,
+        },
+        // Seat 1021: Alistair, the Brigadier's EDHREC average deck. `--pod-decks 1021`.
+        PodDeck {
+            name: "Alistair, the Brigadier (WUG)",
+            commanders: decks::ALISTAIR_COMMANDERS,
+            main: decks::ALISTAIR_MAIN,
+        },
+        // Seat 1022: Rigo, Streetwise Mentor's EDHREC average deck. `--pod-decks 1022`.
+        PodDeck {
+            name: "Rigo, Streetwise Mentor (WUG)",
+            commanders: decks::RIGO_COMMANDERS,
+            main: decks::RIGO_MAIN,
+        },
+        // Seat 1023: Krav, the Unredeemed and Regna, the Redeemer's EDHREC average deck. `--pod-decks 1023`.
+        PodDeck {
+            name: "Krav, the Unredeemed and Regna, the Redeemer (WB)",
+            commanders: decks::KRAV_COMMANDERS,
+            main: decks::KRAV_MAIN,
+        },
+        // Seat 1024: Queen Allenal of Ruadach's EDHREC average deck. `--pod-decks 1024`.
+        PodDeck {
+            name: "Queen Allenal of Ruadach (WG)",
+            commanders: decks::QUEEN_ALLENAL_OF_RUADACH_COMMANDERS,
+            main: decks::QUEEN_ALLENAL_OF_RUADACH_MAIN,
+        },
+        // Seat 1025: Lo and Li, Royal Advisors's EDHREC average deck. `--pod-decks 1025`.
+        PodDeck {
+            name: "Lo and Li, Royal Advisors (UB)",
+            commanders: decks::LO_AND_LI_COMMANDERS,
+            main: decks::LO_AND_LI_MAIN,
+        },
+        // Seat 1026: Umori, the Collector's EDHREC average deck. `--pod-decks 1026`.
+        PodDeck {
+            name: "Umori, the Collector (BG)",
+            commanders: decks::UMORI_COMMANDERS,
+            main: decks::UMORI_MAIN,
+        },
+        // Seat 1027: Ingris Stingerquill's EDHREC average deck. `--pod-decks 1027`.
+        PodDeck {
+            name: "Ingris Stingerquill (BR)",
+            commanders: decks::INGRIS_STINGERQUILL_COMMANDERS,
+            main: decks::INGRIS_STINGERQUILL_MAIN,
+        },
+        // Seat 1028: Wulfgar of Icewind Dale's EDHREC average deck. `--pod-decks 1028`.
+        PodDeck {
+            name: "Wulfgar of Icewind Dale (RG)",
+            commanders: decks::WULFGAR_OF_ICEWIND_DALE_COMMANDERS,
+            main: decks::WULFGAR_OF_ICEWIND_DALE_MAIN,
+        },
+        // Seat 1029: Arbaaz Mir's EDHREC average deck. `--pod-decks 1029`.
+        PodDeck {
+            name: "Arbaaz Mir (WR)",
+            commanders: decks::ARBAAZ_MIR_COMMANDERS,
+            main: decks::ARBAAZ_MIR_MAIN,
+        },
+        // Seat 1030: Rip, Spawn Hunter's EDHREC average deck. `--pod-decks 1030`.
+        PodDeck {
+            name: "Rip, Spawn Hunter (WG)",
+            commanders: decks::RIP_COMMANDERS,
+            main: decks::RIP_MAIN,
+        },
+        // Seat 1031: Greven, Predator Captain's EDHREC average deck. `--pod-decks 1031`.
+        PodDeck {
+            name: "Greven, Predator Captain (BR)",
+            commanders: decks::GREVEN_COMMANDERS,
+            main: decks::GREVEN_MAIN,
+        },
+        // Seat 1032: Vraska, the Silencer's EDHREC average deck. `--pod-decks 1032`.
+        PodDeck {
+            name: "Vraska, the Silencer (BG)",
+            commanders: decks::VRASKA_2_COMMANDERS,
+            main: decks::VRASKA_2_MAIN,
+        },
+        // Seat 1033: Karazikar, the Eye Tyrant's EDHREC average deck. `--pod-decks 1033`.
+        PodDeck {
+            name: "Karazikar, the Eye Tyrant (BR)",
+            commanders: decks::KARAZIKAR_COMMANDERS,
+            main: decks::KARAZIKAR_MAIN,
+        },
+        // Seat 1034: Ratonhnhaké꞉ton's EDHREC average deck. `--pod-decks 1034`.
+        PodDeck {
+            name: "Ratonhnhaké꞉ton (WUB)",
+            commanders: decks::RATONHNHAKE_TON_COMMANDERS,
+            main: decks::RATONHNHAKE_TON_MAIN,
+        },
+        // Seat 1035: Arcanis the Omnipotent's EDHREC average deck. `--pod-decks 1035`.
+        PodDeck {
+            name: "Arcanis the Omnipotent (U)",
+            commanders: decks::ARCANIS_THE_OMNIPOTENT_COMMANDERS,
+            main: decks::ARCANIS_THE_OMNIPOTENT_MAIN,
+        },
+        // Seat 1036: Trostani, Three Whispers's EDHREC average deck. `--pod-decks 1036`.
+        PodDeck {
+            name: "Trostani, Three Whispers (WG)",
+            commanders: decks::TROSTANI_2_COMMANDERS,
+            main: decks::TROSTANI_2_MAIN,
+        },
+        // Seat 1037: Runadi, Behemoth Caller's EDHREC average deck. `--pod-decks 1037`.
+        PodDeck {
+            name: "Runadi, Behemoth Caller (G)",
+            commanders: decks::RUNADI_COMMANDERS,
+            main: decks::RUNADI_MAIN,
+        },
+        // Seat 1038: Rakdos, the Showstopper's EDHREC average deck. `--pod-decks 1038`.
+        PodDeck {
+            name: "Rakdos, the Showstopper (BR)",
+            commanders: decks::RAKDOS_COMMANDERS,
+            main: decks::RAKDOS_MAIN,
+        },
+        // Seat 1039: Krang, Utrom Warlord's EDHREC average deck. `--pod-decks 1039`.
+        PodDeck {
+            name: "Krang, Utrom Warlord (C)",
+            commanders: decks::KRANG_COMMANDERS,
+            main: decks::KRANG_MAIN,
+        },
+        // Seat 1040: Yes Man, Personal Securitron's EDHREC average deck. `--pod-decks 1040`.
+        PodDeck {
+            name: "Yes Man, Personal Securitron (W)",
+            commanders: decks::YES_MAN_COMMANDERS,
+            main: decks::YES_MAN_MAIN,
+        },
     ]
 }
 
@@ -9330,6 +9498,34 @@ mod tests {
             ("Maarika, Brutal Gladiator", &[0x0E07]),
             ("Megatron, Tyrant", &[0x0E08]),
             ("Saruman of Many Colors", &[0x0E09]),
+            ("Heartless Hidetsugu", &[0x0E0A]),
+            ("Chromium, the Mutable", &[0x0E0B]),
+            ("Themberchaud", &[0x0E0C]),
+            ("Emet-Selch of the Third Seat", &[0x0E0D]),
+            ("Erinis, Gloom Stalker and Street Urchin", &[0x0E0E]),
+            ("Sarkhan, Soul Aflame", &[0x0E0F]),
+            ("Fandaniel, Telophoroi Ascian", &[0x0E10]),
+            ("Tawnos, the Toymaker", &[0x0E11]),
+            ("Alistair, the Brigadier", &[0x0E12]),
+            ("Rigo, Streetwise Mentor", &[0x0E13]),
+            ("Krav, the Unredeemed and Regna, the Redeemer", &[0x0E14]),
+            ("Queen Allenal of Ruadach", &[0x0E15]),
+            ("Lo and Li, Royal Advisors", &[0x0E16]),
+            ("Umori, the Collector", &[0x0E17]),
+            ("Ingris Stingerquill", &[0x0E18]),
+            ("Wulfgar of Icewind Dale", &[0x0E19]),
+            ("Arbaaz Mir", &[0x0E1A]),
+            ("Rip, Spawn Hunter", &[0x0E1B]),
+            ("Greven, Predator Captain", &[0x0E1C]),
+            ("Vraska, the Silencer", &[0x0E1D]),
+            ("Karazikar, the Eye Tyrant", &[0x0E1E]),
+            ("Ratonhnhaké꞉ton", &[0x0E1F]),
+            ("Arcanis the Omnipotent", &[0x0E20]),
+            ("Trostani, Three Whispers", &[0x0E21]),
+            ("Runadi, Behemoth Caller", &[0x0E22]),
+            ("Rakdos, the Showstopper", &[0x0E23]),
+            ("Krang, Utrom Warlord", &[0x0E24]),
+            ("Yes Man, Personal Securitron", &[0x0E25]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
