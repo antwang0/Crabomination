@@ -990,6 +990,7 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
     ("Mist Dragon", "printed `{0}: gains flying` / `{0}: loses flying`"),
     ("Nomads en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
     ("Opal Acrolith", "printed `{0}: This permanent becomes an enchantment.`"),
+    ("Outrider en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
     ("Reconnaissance", "printed `{0}: Remove target attacking creature … from combat`"),
     ("Sentinel", "printed `{0}: Change this creature's base toughness …`"),
     ("Shaman en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
