@@ -1,7 +1,7 @@
 //! Commander: one-card EDHREC gaps of EDHREC's top-600 commanders
 //! (`decks::cmdr_edhrec9`).
 
-use crabomination::card::{CardId, CardType, CounterType};
+use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
@@ -72,31 +72,6 @@ fn library(g: &mut GameState, seat: usize, n: usize) {
 
 fn tokens_named(g: &GameState, name: &str) -> usize {
     g.battlefield.iter().filter(|c| c.is_token && c.definition.name == name).count()
-}
-
-fn activate_free(g: &mut GameState, id: CardId, index: usize) {
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id,
-        ability_index: index,
-        target: None,
-        additional_targets: vec![],
-        x_value: None,
-        mode: None,
-    })
-    .expect("activate");
-    drain_stack(g);
-}
-
-fn creature_def(name: &'static str, p: i32, t: i32, kind: crabomination::card::CreatureType) -> crabomination::card::CardDefinition {
-    crabomination::card::CardDefinition {
-        name,
-        card_types: vec![CardType::Creature],
-        subtypes: crabomination::card::Subtypes { creature_types: vec![kind], ..Default::default() },
-        power: p,
-        toughness: t,
-        ..Default::default()
-    }
 }
 
 fn bolt(g: &mut GameState, caster: usize, target: Target) {
