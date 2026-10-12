@@ -2040,3 +2040,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Offspring's Revenge | the token keeps haste past "until your next turn" | `CreateTokenCopyOf.extra_keywords` is permanent |
 | 🟡 Brazen Cannonade | the raid card stays playable through your next turn, not only until end of its combat | `MayPlayDuration::EndOfControllersNextTurn` |
 | 🟡 Teferi, Who Slows the Sunset | +1 takes up to three artifacts/creatures/lands in any mix, not one of each; the −7 emblem untaps your permanents at each opponent's upkeep rather than in their untap step | one `ApplyToTargets` slot set; emblem triggers fire at `StepBegins`, and no trigger fires in an untap step |
+| 🟡 Lagrella, the Magpie | exiles only opponents' creatures, and a returning card gets no +1/+1 counters | the "enters under your control" rider has no engine hook; your own creatures would come back without it |

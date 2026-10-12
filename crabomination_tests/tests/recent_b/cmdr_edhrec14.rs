@@ -313,3 +313,22 @@ fn teferi_who_slows_the_sunset_untaps_yours_and_taps_theirs() {
     assert!(g.battlefield_find(their_bear).unwrap().tapped, "their creature taps");
     assert_eq!(g.players[0].life, life + 2);
 }
+
+/// Toluz, Clever Conductor: cards you discard are exiled with it, and come
+/// back to hand when it dies.
+#[test]
+fn toluz_banks_discards_and_returns_them_on_death() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let toluz = ready(&mut g, 0, catalog::toluz_clever_conductor());
+    let card = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let mut events = Vec::new();
+    g.discard_card(0, card, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == card), "the discard is exiled");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(toluz))).expect("bolt Toluz");
+    assert!(g.players[0].hand.iter().any(|c| c.id == card), "back to hand when Toluz dies");
+}

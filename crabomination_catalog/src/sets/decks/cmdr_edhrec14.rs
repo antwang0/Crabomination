@@ -2020,3 +2020,59 @@ pub fn teferi_who_slows_the_sunset() -> CardDefinition {
         ..permanent("Teferi, Who Slows the Sunset", cost(&[generic(2), w(), u()]), CardType::Planeswalker)
     }
 }
+
+/// Lagrella, the Magpie — {G}{W}{U} 2/3 legendary Human Soldier. When it
+/// enters, exile any number of other target creatures controlled by different
+/// players until Lagrella leaves the battlefield.
+pub fn lagrella_the_magpie() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ForEachPlayerTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Creature.and(R::OtherThanSource).and(R::Not(Box::new(R::ControlledByYou))),
+                effect: Box::new(Effect::ExileUntilSourceLeaves {
+                    what: Selector::Target(0),
+                    return_to: crate::card::ExileReturnZone::Battlefield,
+                }),
+            }),
+        })],
+        ..legend(
+            "Lagrella, the Magpie",
+            cost(&[g(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            2,
+            3,
+        )
+    }
+}
+
+/// Toluz, Clever Conductor — {W/U}{U}{U/B} 3/1 legendary Human Rogue. When it
+/// enters, it connives. Whenever you discard cards, exile them from your
+/// graveyard. When it dies, the cards exiled with it go to their owners' hands.
+pub fn toluz_clever_conductor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(crate::effect::shortcut::connive(1)),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+                effect: Effect::Move { what: Selector::TriggerSource, to: ZoneDest::ExileWithSourceStamp },
+            },
+            crate::effect::shortcut::on_dies(Effect::Move {
+                what: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Exile,
+                    filter: R::ExiledWithSource,
+                },
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        ],
+        ..legend(
+            "Toluz, Clever Conductor",
+            cost(&[hybrid(Color::White, Color::Blue), u(), hybrid(Color::Blue, Color::Black)]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            3,
+            1,
+        )
+    }
+}
