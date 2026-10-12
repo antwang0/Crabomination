@@ -649,8 +649,8 @@ pub fn the_kenriths_royal_funeral() -> CardDefinition {
 
 /// Kaya the Inexorable — {3}{W}{B} planeswalker, loyalty 5. +1: up to one
 /// target nontoken creature gains "when this dies or is put into exile, return
-/// it to its owner's hand and create a 1/1 white flying Spirit" (the ghostform
-/// counter is a reminder only, 2021-02-05 ruling, and isn't placed). −3: exile
+/// it to its owner's hand and create a 1/1 white flying Spirit", marked by a
+/// ghostform counter (a reminder only, 2021-02-05 ruling). −3: exile
 /// target nonland permanent. −7: an emblem — at the beginning of your upkeep,
 /// you may cast a legendary spell from your hand, graveyard or exile free.
 pub fn kaya_the_inexorable() -> CardDefinition {
@@ -689,7 +689,12 @@ pub fn kaya_the_inexorable() -> CardDefinition {
                 effect: Effect::OptionalTargets {
                     min: 0,
                     body: Box::new(Effect::Seq(vec![
-                        grant(EventKind::CreatureDied, target_filtered(R::Creature.and(R::NotToken))),
+                        Effect::AddCounter {
+                            what: target_filtered(R::Creature.and(R::NotToken)),
+                            kind: CounterType::Ghostform,
+                            amount: Value::ONE,
+                        },
+                        grant(EventKind::CreatureDied, Selector::Target(0)),
                         grant(EventKind::CardExiled, Selector::Target(0)),
                     ])),
                 },
@@ -959,8 +964,7 @@ pub fn braid_of_fire() -> CardDefinition {
 /// Fire Lord Sozin — the back: 5/5 legendary Human Noble, menace, firebending
 /// 3. Whenever it deals combat damage to a player, you may pay {X}; when you
 /// do, put any number of target creature cards with total mana value X or
-/// less from an opponent's graveyard onto the battlefield under your control
-/// ("that player's" graveyard is read as any opponent's — INCOMPLETE_CARDS).
+/// less from that player's graveyard onto the battlefield under your control.
 pub fn fire_lord_sozin() -> CardDefinition {
     let reanimate = Effect::WithX {
         x: Value::XFromCost,
@@ -968,7 +972,10 @@ pub fn fire_lord_sozin() -> CardDefinition {
             body: Box::new(Effect::ApplyToTargets {
                 max_targets: 8,
                 min_targets: 0,
-                filter: R::Creature.and(R::InOpponentGraveyard).and(R::SlotsTotalManaValueAtMostX),
+                filter: R::Creature
+                    .and(R::InOpponentGraveyard)
+                    .and(R::ControlledByTriggerPlayer)
+                    .and(R::SlotsTotalManaValueAtMostX),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },

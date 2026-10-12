@@ -698,3 +698,18 @@ fn press_the_enemy_bounces_and_casts() {
     assert!(g.players[0].hand.iter().all(|c| c.id != s), "the strike was cast");
     assert!(g.players[1].life < life);
 }
+
+/// Fire Lord Sozin steals only from the graveyard of the player it hit.
+#[test]
+fn fire_lord_sozin_reanimates_from_the_damaged_player() {
+    let mut g = pod(3);
+    let other = g.add_card_to_graveyard(2, catalog::hill_giant());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let sozin = ready(&mut g, 0, catalog::fire_lord_sozin());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(5)]));
+    flood(&mut g, 0);
+    declare(&mut g, 0, &[(sozin, 1)]).expect("attack");
+    combat_damage(&mut g);
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0), "seat 1's bear is ours");
+    assert!(g.battlefield_find(other).is_none(), "seat 2's graveyard is off limits");
+}
