@@ -713,3 +713,38 @@ fn fire_lord_sozin_reanimates_from_the_damaged_player() {
     assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(0), "seat 1's bear is ours");
     assert!(g.battlefield_find(other).is_none(), "seat 2's graveyard is off limits");
 }
+
+/// Seated decks' residuals closed: Steel Seraph's keyword is a mode; Lightning
+/// Axe pays {5} with no card to discard; Frantic Firebolt counts Adventures.
+#[test]
+fn seat_residuals_steel_seraph_axe_firebolt() {
+    let mut g = pod(2);
+    let seraph = ready(&mut g, 0, catalog::steel_seraph());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let _ = seraph;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2)]));
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let kw = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().to_vec();
+    assert!(kw(&g, bear).contains(&Keyword::Lifelink) || kw(&g, seraph).contains(&Keyword::Lifelink));
+
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let axe = g.add_card_to_hand(0, catalog::lightning_axe());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let axe_cast = GameAction::CastSpell { card_id: axe, target: Some(perm(giant)), additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(axe_cast.clone()).is_err(), "no card to discard: {{5}} more");
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(axe_cast).expect("{R} + {5}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none());
+
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    g.add_card_to_graveyard(0, catalog::bonecrusher_giant());
+    let ff = g.add_card_to_hand(0, catalog::frantic_firebolt());
+    cast(&mut g, ff, &[perm(giant)]).expect("firebolt");
+    assert!(g.battlefield_find(giant).is_none(), "2 + the Adventure card = 3");
+}

@@ -4628,17 +4628,14 @@ pub fn tail_swipe() -> CardDefinition {
 }
 
 /// Lightning Axe — {R} Instant. As an additional cost, discard a card or pay
-/// {5}. Deals 5 damage to target creature. (The "or pay {5}" alternative is
-/// omitted.)
+/// {5}. Deals 5 damage to target creature. (With another card in hand the
+/// discard is taken; with none, the {5}.)
 pub fn lightning_axe() -> CardDefinition {
     CardDefinition {
         name: "Lightning Axe",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
-            count: 1,
-            filter: None,
-        }],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardOrPay { pay: 5 }],
         effect: Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(5),

@@ -293,8 +293,8 @@ pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
 
 /// Phoenix Fleet Airship — {2}{B}{B} Artifact — Vehicle 4/4. Flying, Crew 1. At
 /// the beginning of your end step, if you sacrificed a permanent this turn,
-/// create a token that's a copy of this Vehicle. (The "8+ copies → creature"
-/// clause is dropped.)
+/// create a token that's a copy of this Vehicle. As long as you control eight
+/// or more permanents named Phoenix Fleet Airship, it's an artifact creature.
 pub fn phoenix_fleet_airship() -> CardDefinition {
     CardDefinition {
         name: "Phoenix Fleet Airship",
@@ -331,6 +331,19 @@ pub fn phoenix_fleet_airship() -> CardDefinition {
                 no_mana_cost: false,
                 enters_with_counters: None,
                 remove_keywords: vec![],
+            },
+        }],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "As long as you control eight or more permanents named Phoenix Fleet Airship, it's an artifact creature.",
+            effect: crate::effect::StaticEffect::SelfIsCreatureIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::PermanentCountControlledByMatching(
+                        PlayerRef::You,
+                        crate::card::SelectionRequirement::HasName("Phoenix Fleet Airship".into()),
+                    ),
+                    Value::Const(8),
+                ),
+                creature_types: vec![],
             },
         }],
         ..Default::default()

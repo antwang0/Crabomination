@@ -215,8 +215,8 @@ pub fn flick_a_coin() -> CardDefinition {
 }
 
 /// Frantic Firebolt — {2}{R} Instant. Deals X damage to target creature, where
-/// X is 2 plus the number of instant and sorcery cards in your graveyard.
-/// (The "…and/or have an Adventure" graveyard clause is approximated away.)
+/// X is 2 plus the number of cards in your graveyard that are instant cards,
+/// sorcery cards, and/or have an Adventure.
 pub fn frantic_firebolt() -> CardDefinition {
     CardDefinition {
         name: "Frantic Firebolt",
@@ -228,7 +228,9 @@ pub fn frantic_firebolt() -> CardDefinition {
                 Value::Const(2),
                 Value::CardsInGraveyardMatching {
                     who: PlayerRef::You,
-                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    filter: R::HasCardType(CardType::Instant)
+                        .or(R::HasCardType(CardType::Sorcery))
+                        .or(R::HasAdventure),
                 },
             ]),
         },

@@ -292,7 +292,6 @@ pub fn phyrexian_fleshgorger() -> CardDefinition {
 /// Steel Seraph — {6} 5/4 Angel. Prototype {1}{W}{W} — 3/3. Flying.
 /// "At the beginning of combat on your turn, target creature you control
 /// gains your choice of flying, vigilance, or lifelink until end of turn."
-/// (The modal keyword choice is approximated as granting flying.)
 pub fn steel_seraph() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::game::types::TurnStep;
@@ -309,13 +308,18 @@ pub fn steel_seraph() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::BeginCombat),
                 EventScope::YourControl,
             ),
-            effect: Effect::GrantKeyword {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                keyword: Keyword::Flying,
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::ChooseMode(
+                [Keyword::Flying, Keyword::Vigilance, Keyword::Lifelink]
+                    .into_iter()
+                    .map(|keyword| Effect::GrantKeyword {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        ),
+                        keyword,
+                        duration: Duration::EndOfTurn,
+                    })
+                    .collect(),
+            ),
         }],
         prototype: proto(cost(&[generic(1), w(), w()]), 3, 3),
         ..Default::default()
