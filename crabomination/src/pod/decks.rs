@@ -11760,3 +11760,33 @@ pub const EDWARD_KENWAY_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, mountain, mountain, mountain,
     mountain, mountain, swamp, swamp, swamp, swamp, swamp,
 ];
+
+
+pub const HYLDA_OF_THE_ICY_CROWN_COMMANDERS: &[CardFactory] = &[hylda_of_the_icy_crown];
+
+/// **Hylda of the Icy Crown**'s EDHREC average deck (fetched 2026-10-12), card for card:
+/// 87 nonbasic cards + 6 Islands + 6 Plains = 99.
+/// Hylda of the Icy Crown (WU) tappers
+pub const HYLDA_OF_THE_ICY_CROWN_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, fellwar_stone, hyldas_crown_of_winter, icy_manipulator,
+    mind_stone, mjolnir_storm_hammer, sol_ring, swiftfoot_boots, talisman_of_progress,
+    thought_vessel, adarkar_wastes, azorius_chancery, command_tower, deserted_beach,
+    glacial_floodplain, glacial_fortress, hallowed_fountain, port_town, prairie_stream,
+    reliquary_tower, sea_of_clouds, skycloud_expanse, snow_covered_island, snow_covered_island,
+    snow_covered_island, snow_covered_island, snow_covered_island, snow_covered_island,
+    snow_covered_plains, snow_covered_plains, snow_covered_plains, snow_covered_plains,
+    temple_of_enlightenment, court_street_denizen, dreamshackle_geist, elvish_mariner,
+    frost_titan, gadwick_the_wizened, giant_killer, gideons_lawkeeper, githzerai_monk,
+    goldmeadow_harrier, hammers_of_moradin, icewrought_sentry, illithid_harvester, junk_winder,
+    minister_of_impediments, niblis_of_frost, rhoda_geist_avenger, sharae_of_numbing_depths,
+    sunblast_angel, timin_youthful_geist, topplegeist, willbreaker, bitter_chill, citadel_siege,
+    lost_in_the_maze, opposition, retreat_to_coralhelm, scroll_of_isildur, solitary_sanctuary,
+    time_of_ice, verity_circle, blustersquall, counterspell, cryptic_command, dovins_veto,
+    downpour, feeling_of_dread, generous_gift, icy_blast, path_to_exile, plunge_into_winter,
+    stroke_of_midnight, succumb_to_the_cold, swords_to_plowshares, urzas_rebuff,
+    you_see_a_guard_approach, tamiyo_the_moon_sage, bond_of_discipline,
+    borrowing_100_000_arrows, cone_of_cold, freeze_in_place, sleep, split_up, theft_of_dreams,
+    // Basics
+    island, island, island, island, island, island, plains, plains, plains, plains, plains,
+    plains,
+];

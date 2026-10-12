@@ -2868,6 +2868,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EDWARD_KENWAY_COMMANDERS,
             main: decks::EDWARD_KENWAY_MAIN,
         },
+        // Seat 403: Hylda of the Icy Crown's EDHREC average deck. `--pod-decks 403`.
+        PodDeck {
+            name: "Hylda of the Icy Crown (WU)",
+            commanders: decks::HYLDA_OF_THE_ICY_CROWN_COMMANDERS,
+            main: decks::HYLDA_OF_THE_ICY_CROWN_MAIN,
+        },
     ]
 }
 
@@ -5028,6 +5034,7 @@ mod tests {
             ("Marvo, Deep Operative", [0x0AB6, 400, 9325]),
             ("Tom Bombadil", [0x0AB7, 401, 9326]),
             ("Edward Kenway", [0x0AB8, 402, 9327]),
+            ("Hylda of the Icy Crown", [0x0AB9, 403, 9328]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
