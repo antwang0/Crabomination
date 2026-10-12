@@ -1734,3 +1734,155 @@ pub fn zurgo_and_ojutai() -> CardDefinition {
         )
     }
 }
+
+/// Irencrag Feat — {1}{R}{R}{R} sorcery. Add seven {R}. You can cast only one
+/// more spell this turn.
+pub fn irencrag_feat() -> CardDefinition {
+    spell(
+        "Irencrag Feat",
+        cost(&[generic(1), r(), r(), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Red, Value::Const(7)) },
+            Effect::CapSpellsThisTurn { more: 1 },
+        ]),
+    )
+}
+
+/// Phyrexian Censor — {2}{W} 3/3 Phyrexian Wizard. Each player can't cast more
+/// than one non-Phyrexian spell each turn. Non-Phyrexian creatures enter
+/// tapped.
+pub fn phyrexian_censor() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            static_ab(
+                "Each player can't cast more than one non-Phyrexian spell each turn.",
+                StaticEffect::OneNonPhyrexianSpellPerTurn,
+            ),
+            static_ab(
+                "Non-Phyrexian creatures enter tapped.",
+                StaticEffect::EntersTapped {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::Not(Box::new(R::HasCreatureType(CreatureType::Phyrexian)))),
+                    ),
+                },
+            ),
+        ],
+        ..creature("Phyrexian Censor", cost(&[generic(2), w()]), vec![CreatureType::Phyrexian, CreatureType::Wizard], 3, 3)
+    }
+}
+
+/// Peter Parker's Camera — {1} artifact; enters with three film counters. {2},
+/// {T}, remove a film counter: copy target activated or triggered ability you
+/// control.
+pub fn peter_parkers_camera() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Film, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Film, 1)),
+            effect: Effect::CopyAbility {
+                what: target_filtered(R::HasAbilityOnStack.and(R::ControlledByYou)),
+                times: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..permanent("Peter Parker's Camera", cost(&[generic(1)]), CardType::Artifact)
+    }
+}
+
+/// Olag and Miau, New Friends — {W}{B}{G} 3/3 legendary Zombie Cat. Another
+/// Zombie entering grows a Cat of yours; another Cat entering grows a Zombie.
+/// At your end step, each opponent loses life equal to your tapped Cats and/or
+/// Zombies.
+pub fn olag_and_miau_new_friends() -> CardDefinition {
+    let other_enters = |kind: CreatureType, grow: CreatureType| TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
+            Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCreatureType(kind) },
+        ),
+        effect: Effect::AddCounter {
+            what: target_filtered(yours(R::HasCreatureType(grow))),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+    };
+    let tapped_kin = R::Tapped.and(R::HasCreatureType(CreatureType::Cat).or(R::HasCreatureType(CreatureType::Zombie)));
+    CardDefinition {
+        triggered_abilities: vec![
+            other_enters(CreatureType::Zombie, CreatureType::Cat),
+            other_enters(CreatureType::Cat, CreatureType::Zombie),
+            at_your(
+                TurnStep::End,
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::count(Selector::EachPermanent(yours(tapped_kin))),
+                },
+            ),
+        ],
+        ..legend(
+            "Olag and Miau, New Friends",
+            cost(&[w(), b(), g()]),
+            vec![CreatureType::Zombie, CreatureType::Cat],
+            3,
+            3,
+        )
+    }
+}
+
+/// Harald Unites the Elves — {2}{B}{G} Saga. I: mill three; you may put an Elf
+/// or Tyvar card from your graveyard onto the battlefield. II: a +1/+1 counter
+/// on each Elf you control. III: this turn, whenever an Elf you control
+/// attacks, target creature an opponent controls gets -1/-1.
+pub fn harald_unites_the_elves() -> CardDefinition {
+    let elf_or_tyvar = R::HasCreatureType(CreatureType::Elf)
+        .or(R::HasPlaneswalkerType(crate::card::PlaneswalkerSubtype::Tyvar));
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                    Effect::ApplyToTargets {
+                        max_targets: 1,
+                        min_targets: 0,
+                        filter: elf_or_tyvar.from_your_graveyard(),
+                        effect: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    },
+                ]),
+            ),
+            (
+                2,
+                Effect::AddCounter {
+                    what: Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Elf))),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ),
+            (
+                3,
+                Effect::TriggersThisTurn {
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                            Predicate::EntityMatches {
+                                what: Selector::TriggerSource,
+                                filter: R::HasCreatureType(CreatureType::Elf),
+                            },
+                        ),
+                        effect: Effect::PumpPT {
+                            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                            power: Value::Const(-1),
+                            toughness: Value::Const(-1),
+                            duration: Duration::EndOfTurn,
+                        },
+                    }],
+                },
+            ),
+        ],
+        ..permanent("Harald Unites the Elves", cost(&[generic(2), b(), g()]), CardType::Enchantment)
+    }
+}

@@ -237,3 +237,39 @@ fn demonic_gifts_returns_the_creature_that_dies() {
         "the bear came back"
     );
 }
+
+/// Irencrag Feat: seven red, then "you can cast only one more spell this
+/// turn" — the first cast after it goes through, the second is refused.
+#[test]
+fn irencrag_feat_allows_one_more_spell() {
+    let mut g = pod(2);
+    let feat = g.add_card_to_hand(0, catalog::irencrag_feat());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, feat, None).expect("feat");
+    let one = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, one, Some(Target::Player(1))).expect("the one more spell");
+    let two = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(cast(&mut g, two, Some(Target::Player(1))).is_err(), "no third spell");
+}
+
+/// Phyrexian Censor: one non-Phyrexian spell a turn per player (Phyrexian
+/// spells don't count or get locked), and non-Phyrexian creatures enter
+/// tapped.
+#[test]
+fn phyrexian_censor_locks_non_phyrexian_spells_and_taps_entrants() {
+    let mut g = pod(3);
+    ready(&mut g, 1, catalog::phyrexian_censor());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bear, None).expect("first non-Phyrexian spell");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "entered tapped");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g, bolt, Some(Target::Player(1))).is_err(), "a second non-Phyrexian spell");
+    let censor = g.add_card_to_hand(0, catalog::phyrexian_censor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, censor, None).expect("a Phyrexian spell isn't limited");
+    assert!(!g.battlefield_find(censor).unwrap().tapped, "a Phyrexian creature enters untapped");
+}
