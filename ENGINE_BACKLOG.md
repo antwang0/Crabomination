@@ -124,7 +124,7 @@ the handoff.
 8. **The concurrent eighteenth run (`01Xu59CH`, ENGINE_BACKLOG "eighteenth Commander run"):** CR 601.2c (every required slot at cast; ratchet `spells_requiring_two_targets_print_no_optional_target`), CR 701.21a (only a controller sacrifices), CR 115.3 (an "up to N" instance under an `If`), `LastMoved` never names a commander gone home (Tinybones), Gishath's "any number" pick + the bot declining a loop-starting entry (Polyraptor), loop watch sees face-down faces, Soul Cauldron sink gate, Subtlety, seat 356 Anti-Venom; `audit_cr_citations.py` catches a real-but-wrong keyword number (report 0; absent numbers 61 → 48). **Sweeps: plain 181001/182001/187001, `--a dflt` 183001, fuzzed strict 184001/185001/186001 — ~48,000 pod games, 6 aborts, all fixed.** Fuzz (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`) found 4 of the 6: run it every session. **Gates at `80eea8640`:** strict suite 24,889 / 2 / 5 (both the reveal answer-log leak, fixed concurrently); workspace clippy 0; `--bench` 196,176 / 27.64 / 613.0 byte-identical, both determinism checks ok; paired A/B vs the run's base +3.3 % (PERF). (Both of its open rows are closed: a `TriggerSource` that left its graveyard before resolution is a new object (CR 400.7), and a counter is now growth to the loop watch.)
 9. **The concurrent nineteenth run (`01Vk2K6g`, ENGINE_BACKLOG "nineteenth Commander run"):** seats 357-368, 372-375 and 379 (Avatar Aang: bending events, `KeywordAct::Bent`) (Fire Lord Zuko … Toph, the First Metalbender; ~140 cards in `decks::cmdr_edhrec3`, 20 primitives), each 40 debug pod games decided. ⚠ It built Miirym + Tiamat in parallel with the other session; its copies were dropped at the rebase — fetch before *starting* a deck. Gates at `f2d66e817`: suite 25,282 / 0 / 6 (after registering Avatar Kyoshi) + the long-pole `cr_903_5a_the_official_precon_seats_play_pod_games` (2,011 s), clippy 0, `--bench` byte-identical + both determinism checks, release pod smoke 970 games (4/6/19 seats + the new seats) 0 panics, 1 undecided (a Miirym / Astral Dragon / Ureni token board cap). Final tip `5ccaee51b`: suite 25,316 / 0 / 6, clippy 0, `--bench` byte-identical. Then audit sweeps 197001 + fuzzed 198001 over seats 335-378 only (`pod_sweep.py --decks 335-378`, 2,220 games): 0 aborts; an Anti-Venom / All Will Be One loop fixed (CR 109.5: a damage-to-counters replacement's controller puts the counters). Scan after seat 379: Iroh 4, Lorehold 4, High Perfect Morcant 6, Obeka 7, Galadriel 7 (scry triggers, the Ring).
 
-## FIXED/OPEN 2026-10-12 (Commander run, `01L4tuaB`) — a hundred and ten EDHREC seats and a bug class
+## FIXED/OPEN 2026-10-12 (Commander run, `01L4tuaB`) — a hundred and thirty-four EDHREC seats and a bug class
 
 - **Seats 407-493** (EDHREC top-600 average decks): 407-448 the catalog already covered;
   449-493 each waited on one card — 43 cards in `decks::cmdr_edhrec7` (tests
@@ -136,6 +136,14 @@ the handoff.
   (Xanathar — any-color mana for those casts) and `Effect::MayPlayHandOfThisTurn` (Sen Triplets —
   the hand is revealed); seats 513 Sen Triplets and 514 Tasha, the Witch Queen.
 - **Client:** `CounterType::Memory` broke two exhaustive client matches (fixed).
+- **Seats 515-538** — the rescan's 24 two-card-gap decks (`decks::cmdr_edhrec9`, 47 cards):
+  `Value::CardsDrawnThisTurnByOpponents`, `Player::clues_sacrificed_this_turn`,
+  `Effect::IfTriggerDamageNoncombat` (⚠ `EventKind` is out of bits — the u128 kind mask is full,
+  so a new event kind needs the mask widened first). **CR 903.9b**: Progenitus's "shuffle into its
+  library instead" skipped the commander's command-zone offer (pod invariant, fixed).
+- **Open from the rescan:** Pramikon (Suppressor Skyguard's "another opponent isn't attacked"),
+  Marchesa (Loki's "becomes the target of an ability you control"), Karametra (Yasharn's
+  no-life/no-sacrifice costs), Baral (Guile's counter-to-exile replacement; Ertai's Scorn).
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.

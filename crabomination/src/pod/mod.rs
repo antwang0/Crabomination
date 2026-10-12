@@ -3540,6 +3540,150 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TASHA_COMMANDERS,
             main: decks::TASHA_MAIN,
         },
+        // Seat 515: Clement, the Worrywort's EDHREC average deck. `--pod-decks 515`.
+        PodDeck {
+            name: "Clement, the Worrywort (UG)",
+            commanders: decks::CLEMENT_COMMANDERS,
+            main: decks::CLEMENT_MAIN,
+        },
+        // Seat 516: Marwyn, the Nurturer's EDHREC average deck. `--pod-decks 516`.
+        PodDeck {
+            name: "Marwyn, the Nurturer (G)",
+            commanders: decks::MARWYN_COMMANDERS,
+            main: decks::MARWYN_MAIN,
+        },
+        // Seat 517: Imotekh the Stormlord's EDHREC average deck. `--pod-decks 517`.
+        PodDeck {
+            name: "Imotekh the Stormlord (B)",
+            commanders: decks::IMOTEKH_THE_STORMLORD_COMMANDERS,
+            main: decks::IMOTEKH_THE_STORMLORD_MAIN,
+        },
+        // Seat 518: Clive, Ifrit's Dominant's EDHREC average deck. `--pod-decks 518`.
+        PodDeck {
+            name: "Clive, Ifrit's Dominant (R)",
+            commanders: decks::CLIVE_COMMANDERS,
+            main: decks::CLIVE_MAIN,
+        },
+        // Seat 519: Mabel, Heir to Cragflame's EDHREC average deck. `--pod-decks 519`.
+        PodDeck {
+            name: "Mabel, Heir to Cragflame (WR)",
+            commanders: decks::MABEL_COMMANDERS,
+            main: decks::MABEL_MAIN,
+        },
+        // Seat 520: Jhoira, Weatherlight Captain's EDHREC average deck. `--pod-decks 520`.
+        PodDeck {
+            name: "Jhoira, Weatherlight Captain (UR)",
+            commanders: decks::JHOIRA_COMMANDERS,
+            main: decks::JHOIRA_MAIN,
+        },
+        // Seat 521: Talrand, Sky Summoner's EDHREC average deck. `--pod-decks 521`.
+        PodDeck {
+            name: "Talrand, Sky Summoner (U)",
+            commanders: decks::TALRAND_COMMANDERS,
+            main: decks::TALRAND_MAIN,
+        },
+        // Seat 522: Karumonix, the Rat King's EDHREC average deck. `--pod-decks 522`.
+        PodDeck {
+            name: "Karumonix, the Rat King (B)",
+            commanders: decks::KARUMONIX_COMMANDERS,
+            main: decks::KARUMONIX_MAIN,
+        },
+        // Seat 523: Kambal, Profiteering Mayor's EDHREC average deck. `--pod-decks 523`.
+        PodDeck {
+            name: "Kambal, Profiteering Mayor (WB)",
+            commanders: decks::KAMBAL_COMMANDERS,
+            main: decks::KAMBAL_MAIN,
+        },
+        // Seat 524: Smaug the Impenetrable's EDHREC average deck. `--pod-decks 524`.
+        PodDeck {
+            name: "Smaug the Impenetrable (C)",
+            commanders: decks::SMAUG_THE_IMPENETRABLE_COMMANDERS,
+            main: decks::SMAUG_THE_IMPENETRABLE_MAIN,
+        },
+        // Seat 525: Zur, Eternal Schemer's EDHREC average deck. `--pod-decks 525`.
+        PodDeck {
+            name: "Zur, Eternal Schemer (WUB)",
+            commanders: decks::ZUR_525_COMMANDERS,
+            main: decks::ZUR_525_MAIN,
+        },
+        // Seat 526: The Reaper, King No More's EDHREC average deck. `--pod-decks 526`.
+        PodDeck {
+            name: "The Reaper, King No More (BRG)",
+            commanders: decks::THE_REAPER_COMMANDERS,
+            main: decks::THE_REAPER_MAIN,
+        },
+        // Seat 527: Progenitus's EDHREC average deck. `--pod-decks 527`.
+        PodDeck {
+            name: "Progenitus (WUBRG)",
+            commanders: decks::PROGENITUS_COMMANDERS,
+            main: decks::PROGENITUS_MAIN,
+        },
+        // Seat 528: Massacre Girl, Known Killer's EDHREC average deck. `--pod-decks 528`.
+        PodDeck {
+            name: "Massacre Girl, Known Killer (B)",
+            commanders: decks::MASSACRE_GIRL_COMMANDERS,
+            main: decks::MASSACRE_GIRL_MAIN,
+        },
+        // Seat 529: Bre of Clan Stoutarm's EDHREC average deck. `--pod-decks 529`.
+        PodDeck {
+            name: "Bre of Clan Stoutarm (WR)",
+            commanders: decks::BRE_OF_CLAN_STOUTARM_COMMANDERS,
+            main: decks::BRE_OF_CLAN_STOUTARM_MAIN,
+        },
+        // Seat 530: Eirdu, Carrier of Dawn's EDHREC average deck. `--pod-decks 530`.
+        PodDeck {
+            name: "Eirdu, Carrier of Dawn (WB)",
+            commanders: decks::EIRDU_COMMANDERS,
+            main: decks::EIRDU_MAIN,
+        },
+        // Seat 531: Tatsunari, Toad Rider's EDHREC average deck. `--pod-decks 531`.
+        PodDeck {
+            name: "Tatsunari, Toad Rider (UBG)",
+            commanders: decks::TATSUNARI_COMMANDERS,
+            main: decks::TATSUNARI_MAIN,
+        },
+        // Seat 532: Gonti, Night Minister's EDHREC average deck. `--pod-decks 532`.
+        PodDeck {
+            name: "Gonti, Night Minister (B)",
+            commanders: decks::GONTI_532_COMMANDERS,
+            main: decks::GONTI_532_MAIN,
+        },
+        // Seat 533: Minthara, Merciless Soul's EDHREC average deck. `--pod-decks 533`.
+        PodDeck {
+            name: "Minthara, Merciless Soul (WB)",
+            commanders: decks::MINTHARA_COMMANDERS,
+            main: decks::MINTHARA_MAIN,
+        },
+        // Seat 534: Asmoranomardicadaistinaculdacar's EDHREC average deck. `--pod-decks 534`.
+        PodDeck {
+            name: "Asmoranomardicadaistinaculdacar (BR)",
+            commanders: decks::ASMORANOMARDICADAISTINACULDACAR_COMMANDERS,
+            main: decks::ASMORANOMARDICADAISTINACULDACAR_MAIN,
+        },
+        // Seat 535: Slicer, Hired Muscle's EDHREC average deck. `--pod-decks 535`.
+        PodDeck {
+            name: "Slicer, Hired Muscle (R)",
+            commanders: decks::SLICER_COMMANDERS,
+            main: decks::SLICER_MAIN,
+        },
+        // Seat 536: Kozilek, the Great Distortion's EDHREC average deck. `--pod-decks 536`.
+        PodDeck {
+            name: "Kozilek, the Great Distortion (C)",
+            commanders: decks::KOZILEK_COMMANDERS,
+            main: decks::KOZILEK_MAIN,
+        },
+        // Seat 537: Savra, Queen of the Golgari's EDHREC average deck. `--pod-decks 537`.
+        PodDeck {
+            name: "Savra, Queen of the Golgari (BG)",
+            commanders: decks::SAVRA_COMMANDERS,
+            main: decks::SAVRA_MAIN,
+        },
+        // Seat 538: Lonis, Cryptozoologist's EDHREC average deck. `--pod-decks 538`.
+        PodDeck {
+            name: "Lonis, Cryptozoologist (UG)",
+            commanders: decks::LONIS_COMMANDERS,
+            main: decks::LONIS_MAIN,
+        },
     ]
 }
 
@@ -5818,6 +5962,30 @@ mod tests {
             ("Amalia Benavides Aguirre", &[0x0B26]),
             ("Sen Triplets", &[0x0B27]),
             ("Tasha, the Witch Queen", &[0x0B28]),
+            ("Clement, the Worrywort", &[0x0B29]),
+            ("Marwyn, the Nurturer", &[0x0B2A]),
+            ("Imotekh the Stormlord", &[0x0B2B]),
+            ("Clive, Ifrit's Dominant", &[0x0B2C]),
+            ("Mabel, Heir to Cragflame", &[0x0B2D]),
+            ("Jhoira, Weatherlight Captain", &[0x0B2E]),
+            ("Talrand, Sky Summoner", &[0x0B2F]),
+            ("Karumonix, the Rat King", &[0x0B30]),
+            ("Kambal, Profiteering Mayor", &[0x0B31]),
+            ("Smaug the Impenetrable", &[0x0B32]),
+            ("Zur, Eternal Schemer", &[0x0B33]),
+            ("The Reaper, King No More", &[0x0B34]),
+            ("Progenitus", &[0x0B35]),
+            ("Massacre Girl, Known Killer", &[0x0B36]),
+            ("Bre of Clan Stoutarm", &[0x0B37]),
+            ("Eirdu, Carrier of Dawn", &[0x0B38]),
+            ("Tatsunari, Toad Rider", &[0x0B39]),
+            ("Gonti, Night Minister", &[0x0B3A]),
+            ("Minthara, Merciless Soul", &[0x0B3B]),
+            ("Asmoranomardicadaistinaculdacar", &[0x0B3C]),
+            ("Slicer, Hired Muscle", &[0x0B3D]),
+            ("Kozilek, the Great Distortion", &[0x0B3E]),
+            ("Savra, Queen of the Golgari", &[0x0B3F]),
+            ("Lonis, Cryptozoologist", &[0x0B40]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
