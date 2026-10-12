@@ -190,27 +190,27 @@ the handoff.
   controller (it read them against the damage dealer). **Pod invariant:** a this-turn may-play
   granted to a card already in hand (Zaffai and the Tempests) panicked the CR 400.7 link check
   in an Ashling pod; exempted.
-- **Seats 963-970** (Magnus, Yusri, Nine-Fingers Keene, Xu-Ifit, Duskana, Hapatra, Grenzo,
-  Sergeant John Benton; 31 cards, `decks::cmdr_edhrec17`). Primitives: copy your next instant or
+- **Seats 1047-1054** (Magnus, Yusri, Nine-Fingers Keene, Xu-Ifit, Duskana, Hapatra, Grenzo,
+  Sergeant John Benton; 29 cards, `decks::cmdr_edhrec17`; Tuya Bearclaw and Braid of Fire were built
+  twice — `cmdr_edhrec15`/`18`'s stay). Primitives: copy your next instant or
   sorcery X times, X fixed at resolution (Storm King's Thunder — the delayed body's own
   `XFromCost` read the storm count); Game of Chaos's doubling coin-flip rounds; a type-line
   word count (Embiggen); a self-only chosen basic land type (layer 4) and a life cost on its
   intrinsic mana abilities (Thran Portal); a search for power + toughness exactly X; cumulative
-  upkeep "Add {R}" (Braid of Fire); craft now links the exiled cards to the crafted face, so
+  upkeep "Add {R}" (`011PQ8Uk` built it too; one survives); craft now links the exiled cards to the crafted face, so
   Wretched Bonemass reads their total power. **Bug:** Daru Spiritualist's "a Cleric you
   control becomes the target" used `EventScope::YourControl`, which matches only the source
   itself — now `YourCreatureTargeted`. **Pod invariant:** Braid of Fire's upkeep mana tripped
-  the CR 500.4 empty-pool check in a 963/967 pod (seed 23); the active player's upkeep pool is
-  exempt while they control an "Add mana" cumulative upkeep.
-- **Seats 971-973** (Magar, Narci, Yennett; 12 cards, `decks::cmdr_edhrec19`). Primitive:
+  the CR 500.4 empty-pool check (both sessions found it; `011PQ8Uk`'s exemption stays).
+- **Seats 1055-1057** (Magar, Narci, Yennett; 12 cards, `decks::cmdr_edhrec19`). Primitive:
   `Effect::PutFaceDownAsNotedSpell` — Magar's face-down 3/3 that recasts the card it hides on
-  combat damage and is exiled if it would leave; `CopyCardAndCastFree` now copies a face-down
+  combat damage (its `on_hit` body, a `MayDo`) and is exiled if it would leave; `CopyCardAndCastFree` now copies a face-down
   permanent's face-up card. Brilliant Ultimatum is `SeparateIntoPiles` + Gix's
   `PlayLandAmongNow` / `CastAnyOrderWithoutPaying`.
-- **Seats 974-976** (Maha, General Ferrous Rokiric, Greasefang; 18 cards, `decks::cmdr_edhrec20`).
-  Primitives: Rem Karolus's spell-damage statics (`PreventSpellDamageToYouAndYourOtherPermanents`
-  — a new `prevent_static` lane bit — and `SpellDamageToOpponentsBonus`, any spell's); a crew
-  event's trigger amount is its crew size (Mighty Servant of Leuk-o's "exactly two").
+- **Seats 1058-1060** (Maha, General Ferrous Rokiric, Greasefang; 17 cards, `decks::cmdr_edhrec20`;
+  Mighty Servant of Leuk-o is `cmdr_edhrec15`'s). Primitives: Rem Karolus's spell-damage statics
+  (`PreventSpellDamageToYouAndYourOtherPermanents` — a new `prevent_static` lane bit — and
+  `SpellDamageToOpponentsBonus`, any spell's).
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.

@@ -6732,6 +6732,90 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VAAN_COMMANDERS,
             main: decks::VAAN_MAIN,
         },
+        // Seat 1047: Magnus the Red's EDHREC average deck. `--pod-decks 1047`.
+        PodDeck {
+            name: "Magnus the Red (UR)",
+            commanders: decks::MAGNUS_THE_RED_COMMANDERS,
+            main: decks::MAGNUS_THE_RED_MAIN,
+        },
+        // Seat 1048: Yusri, Fortune's Flame's EDHREC average deck. `--pod-decks 1048`.
+        PodDeck {
+            name: "Yusri, Fortune's Flame (UR)",
+            commanders: decks::YUSRI_COMMANDERS,
+            main: decks::YUSRI_MAIN,
+        },
+        // Seat 1049: Nine-Fingers Keene's EDHREC average deck. `--pod-decks 1049`.
+        PodDeck {
+            name: "Nine-Fingers Keene (UBG)",
+            commanders: decks::NINE_FINGERS_KEENE_COMMANDERS,
+            main: decks::NINE_FINGERS_KEENE_MAIN,
+        },
+        // Seat 1050: Xu-Ifit, Osteoharmonist's EDHREC average deck. `--pod-decks 1050`.
+        PodDeck {
+            name: "Xu-Ifit, Osteoharmonist (B)",
+            commanders: decks::XU_IFIT_COMMANDERS,
+            main: decks::XU_IFIT_MAIN,
+        },
+        // Seat 1051: Duskana, the Rage Mother's EDHREC average deck. `--pod-decks 1051`.
+        PodDeck {
+            name: "Duskana, the Rage Mother (WRG)",
+            commanders: decks::DUSKANA_COMMANDERS,
+            main: decks::DUSKANA_MAIN,
+        },
+        // Seat 1052: Hapatra, Vizier of Poisons's EDHREC average deck. `--pod-decks 1052`.
+        PodDeck {
+            name: "Hapatra, Vizier of Poisons (BG)",
+            commanders: decks::HAPATRA_COMMANDERS,
+            main: decks::HAPATRA_MAIN,
+        },
+        // Seat 1053: Grenzo, Dungeon Warden's EDHREC average deck. `--pod-decks 1053`.
+        PodDeck {
+            name: "Grenzo, Dungeon Warden (BR)",
+            commanders: decks::GRENZO_COMMANDERS,
+            main: decks::GRENZO_MAIN,
+        },
+        // Seat 1054: Sergeant John Benton's EDHREC average deck. `--pod-decks 1054`.
+        PodDeck {
+            name: "Sergeant John Benton (WG)",
+            commanders: decks::SERGEANT_JOHN_BENTON_COMMANDERS,
+            main: decks::SERGEANT_JOHN_BENTON_MAIN,
+        },
+        // Seat 1055: Magar of the Magic Strings's EDHREC average deck. `--pod-decks 1055`.
+        PodDeck {
+            name: "Magar of the Magic Strings (BR)",
+            commanders: decks::MAGAR_OF_THE_MAGIC_STRINGS_COMMANDERS,
+            main: decks::MAGAR_OF_THE_MAGIC_STRINGS_MAIN,
+        },
+        // Seat 1056: Narci, Fable Singer's EDHREC average deck. `--pod-decks 1056`.
+        PodDeck {
+            name: "Narci, Fable Singer (WBG)",
+            commanders: decks::NARCI_COMMANDERS,
+            main: decks::NARCI_MAIN,
+        },
+        // Seat 1057: Yennett, Cryptic Sovereign's EDHREC average deck. `--pod-decks 1057`.
+        PodDeck {
+            name: "Yennett, Cryptic Sovereign (WUB)",
+            commanders: decks::YENNETT_COMMANDERS,
+            main: decks::YENNETT_MAIN,
+        },
+        // Seat 1058: Maha, Its Feathers Night's EDHREC average deck. `--pod-decks 1058`.
+        PodDeck {
+            name: "Maha, Its Feathers Night (B)",
+            commanders: decks::MAHA_COMMANDERS,
+            main: decks::MAHA_MAIN,
+        },
+        // Seat 1059: General Ferrous Rokiric's EDHREC average deck. `--pod-decks 1059`.
+        PodDeck {
+            name: "General Ferrous Rokiric (WR)",
+            commanders: decks::GENERAL_FERROUS_ROKIRIC_COMMANDERS,
+            main: decks::GENERAL_FERROUS_ROKIRIC_MAIN,
+        },
+        // Seat 1060: Greasefang, Okiba Boss's EDHREC average deck. `--pod-decks 1060`.
+        PodDeck {
+            name: "Greasefang, Okiba Boss (WB)",
+            commanders: decks::GREASEFANG_COMMANDERS,
+            main: decks::GREASEFANG_MAIN,
+        },
     ]
 }
 
@@ -9568,6 +9652,20 @@ mod tests {
             ("Starscream, Power Hungry", &[0x0E29]),
             ("Noyan Dar, Roil Shaper", &[0x0E2A]),
             ("Vaan, Street Thief", &[0x0E2B]),
+            ("Magnus the Red", &[0x0E2C]),
+            ("Yusri, Fortune's Flame", &[0x0E2D]),
+            ("Nine-Fingers Keene", &[0x0E2E]),
+            ("Xu-Ifit, Osteoharmonist", &[0x0E2F]),
+            ("Duskana, the Rage Mother", &[0x0E30]),
+            ("Hapatra, Vizier of Poisons", &[0x0E31]),
+            ("Grenzo, Dungeon Warden", &[0x0E32]),
+            ("Sergeant John Benton", &[0x0E33]),
+            ("Magar of the Magic Strings", &[0x0E34]),
+            ("Narci, Fable Singer", &[0x0E35]),
+            ("Yennett, Cryptic Sovereign", &[0x0E36]),
+            ("Maha, Its Feathers Night", &[0x0E37]),
+            ("General Ferrous Rokiric", &[0x0E38]),
+            ("Greasefang, Okiba Boss", &[0x0E39]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
