@@ -949,3 +949,134 @@ fn edge_of_autumn_ramps_or_cycles() {
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count(), 0, "the land paid");
     assert_eq!(g.players[0].hand.len(), hand, "discarded one, drew one");
 }
+
+/// Trail of Evidence: an instant or sorcery investigates.
+#[test]
+fn trail_of_evidence_investigates() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::trail_of_evidence());
+    library(&mut g, 0, 3);
+    let u = g.add_card_to_hand(0, catalog::union_of_the_third_path());
+    cast(&mut g, u, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Clue"), 1);
+}
+
+/// Virulent Plague shrinks every creature token, not cards.
+#[test]
+fn virulent_plague_kills_small_tokens() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let e = g.add_card_to_hand(1, catalog::eiganjo_uprising());
+    let _ = e;
+    let vp = g.add_card_to_hand(0, catalog::virulent_plague());
+    let up = g.add_card_to_hand(0, catalog::eiganjo_uprising());
+    cast_x(&mut g, up, &[], Some(2)).expect("tokens");
+    cast(&mut g, vp, &[]).expect("plague");
+    assert_eq!(tokens_of(&g, 0, "Samurai") + tokens_of(&g, 1, "Samurai"), 0, "2/2 tokens die");
+    assert!(g.battlefield_find(bears).is_some());
+}
+
+/// Rescuer Chwinga returns another permanent you control.
+#[test]
+fn rescuer_chwinga_rescues() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let c = g.add_card_to_hand(0, catalog::rescuer_chwinga());
+    cast(&mut g, c, &[]).expect("cast");
+    assert!(g.battlefield_find(c).is_some(), "not itself");
+    let _ = bears;
+}
+
+/// Thieves' Tools: a Treasure, and the equipped 2/2 can't be blocked; a
+/// pump past 3 power makes it blockable again.
+#[test]
+fn thieves_tools_sneaks_small_creatures() {
+    let mut g = pod(2);
+    let t = g.add_card_to_hand(0, catalog::thieves_tools());
+    cast(&mut g, t, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: t, target: bears }).expect("equip");
+    assert!(has_kw(&g, bears, Keyword::UnblockableWhilePowerAtMost(3)));
+}
+
+/// Eradicator Valkyrie's boast (after attacking): each opponent sacrifices.
+#[test]
+fn eradicator_valkyrie_boasts() {
+    let mut g = pod(3);
+    let v = ready(&mut g, 0, catalog::eradicator_valkyrie());
+    let fodder = ready(&mut g, 0, catalog::grizzly_bears());
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 2, catalog::grizzly_bears());
+    assert!(activate(&mut g, v, 0, None).is_err(), "it hasn't attacked");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: v, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    activate(&mut g, v, 0, None).expect("boast");
+    assert!(g.battlefield_find(fodder).is_none());
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+}
+
+/// Sentinel Tower: the second instant of your turn deals 2.
+#[test]
+fn sentinel_tower_escalates() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    ready(&mut g, 0, catalog::sentinel_tower());
+    library(&mut g, 0, 4);
+    let life = g.players[1].life;
+    for _ in 0..2 {
+        let u = g.add_card_to_hand(0, catalog::union_of_the_third_path());
+        cast(&mut g, u, &[]).expect("cast");
+    }
+    assert_eq!(g.players[1].life, life - 3, "1 then 2");
+}
+
+/// Mishra's Self-Replicator copies itself off a historic spell for {1}.
+#[test]
+fn mishras_self_replicator_copies() {
+    let mut g = pod(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    ready(&mut g, 0, catalog::mishras_self_replicator());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    cast(&mut g, ring, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Mishra's Self-Replicator"), 1);
+}
+
+/// Joraga Treespeaker: level 1 taps for {G}{G}; at level 5 its Elves do.
+#[test]
+fn joraga_treespeaker_levels_into_a_mana_engine() {
+    let mut g = pod(2);
+    let j = ready(&mut g, 0, catalog::joraga_treespeaker());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    assert!(activate(&mut g, j, 1, None).is_err(), "level 0");
+    activate(&mut g, j, 0, None).expect("level up");
+    assert_eq!(g.computed_permanent(j).unwrap().toughness, 2);
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, j, 1, None).expect("tap for GG");
+    g.battlefield_find_mut(j).unwrap().counters.insert(CounterType::Level, 5);
+    assert_eq!(g.computed_permanent(j).unwrap().toughness, 4);
+    let n = g.battlefield_find(elf).unwrap().definition.activated_abilities.len();
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: elf, ability_index: n, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("the granted {T}: Add {G}{G}");
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+}
+
+/// Teferi, Master of Time activates on an opponent's turn.
+#[test]
+fn teferi_master_of_time_works_on_their_turn() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let t = walker(&mut g, catalog::teferi_master_of_time(), 3);
+    g.add_card_to_hand(0, catalog::island());
+    g.active_player_idx = 1;
+    g.step = TurnStep::End;
+    walk(&mut g, t, 0, None).expect("+1 at instant speed");
+    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::Loyalty), 4);
+}

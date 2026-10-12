@@ -13542,6 +13542,16 @@ static DECKS: &[Factory] = &[
     super::decks::corporeal_projection,
     super::decks::ruthless_ripper,
     super::decks::edge_of_autumn,
+    super::decks::trail_of_evidence,
+    super::decks::sylvok_replica,
+    super::decks::virulent_plague,
+    super::decks::rescuer_chwinga,
+    super::decks::thieves_tools,
+    super::decks::eradicator_valkyrie,
+    super::decks::sentinel_tower,
+    super::decks::mishras_self_replicator,
+    super::decks::joraga_treespeaker,
+    super::decks::teferi_master_of_time,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -7,7 +7,7 @@ use crate::card::{
     AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType, EnchantmentSubtype, EntersAsCopy, EquipBonus, SplitCard,
     SplitHalf, CreatureType, EventKind, EventScope, EventSpec, Keyword, LandType,
     LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone, MayPlayDuration,
+    LevelBand, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone, MayPlayDuration,
 };
 use crate::effect::shortcut::{colored_animation, etb, on_attack, target_any, target_filtered, tokens_gain_until_eot};
 use crate::effect::{
@@ -1409,6 +1409,240 @@ pub fn edge_of_autumn() -> CardDefinition {
                 then: Box::new(search_basic(ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true })),
                 else_: Box::new(Effect::Noop),
             },
+        )
+    }
+}
+
+// ── The second rescan's one-card gaps ───────────────────────────────────────
+
+fn instant_or_sorcery() -> R {
+    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))
+}
+
+/// Trail of Evidence — {2}{U} enchantment: investigate whenever you cast an
+/// instant or sorcery spell.
+pub fn trail_of_evidence() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(instant_or_sorcery())),
+            effect: crate::effect::shortcut::investigate(1),
+        }],
+        ..spell("Trail of Evidence", cost(&[generic(2), u()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Sylvok Replica — {3} 1/3 artifact Shaman. {G}, sacrifice it: destroy
+/// target artifact or enchantment.
+pub fn sylvok_replica() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_cost: true,
+            effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            ..Default::default()
+        }],
+        ..creature("Sylvok Replica", cost(&[generic(3)]), vec![CreatureType::Shaman], 1, 3)
+    }
+}
+
+/// Virulent Plague — {2}{B} enchantment: creature tokens get -2/-2.
+pub fn virulent_plague() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Creature tokens get -2/-2.",
+            StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::IsToken)),
+                power: -2,
+                toughness: -2,
+            },
+        )],
+        ..spell("Virulent Plague", cost(&[generic(2), b()]), CardType::Enchantment, Effect::Noop)
+    }
+}
+
+/// Rescuer Chwinga — {1}{W} 2/2 flash Elemental Spirit. Natural Shelter: when
+/// it enters, you may return another permanent you control to its owner's
+/// hand.
+pub fn rescuer_chwinga() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::PlayerReturnsPermanentsToHand {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            filter: R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource),
+            up_to: true,
+        })],
+        ..creature("Rescuer Chwinga", cost(&[generic(1), w()]), vec![CreatureType::Elemental, CreatureType::Spirit], 2, 2)
+    }
+}
+
+/// Thieves' Tools — {1}{B} Equipment. ETB: a Treasure. The equipped creature
+/// can't be blocked while its power is 3 or less. Equip {2}.
+pub fn thieves_tools() -> CardDefinition {
+    CardDefinition {
+        name: "Thieves' Tools",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![etb(make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token()))],
+        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::UnblockableWhilePowerAtMost(3)], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Eradicator Valkyrie — {2}{B}{B} 4/3 flying, lifelink Angel Berserker.
+/// Boast — {1}{B}, sacrifice a creature: each opponent sacrifices a creature
+/// or planeswalker. Residual: "hexproof from planeswalkers" is not modelled.
+pub fn eradicator_valkyrie() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((yours(), 1)),
+            sac_other_may_be_source: true,
+            ..crate::effect::shortcut::boast(
+                cost(&[generic(1), b()]),
+                Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: R::Creature.or(R::Planeswalker),
+                },
+            )
+        }],
+        ..creature(
+            "Eradicator Valkyrie",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Angel, CreatureType::Berserker],
+            4,
+            3,
+        )
+    }
+}
+
+/// Sentinel Tower — {4} artifact. An instant or sorcery spell cast during
+/// your turn makes it deal 1 plus the instants and sorceries cast before it
+/// this turn to any target. Residual: only your own earlier casts count.
+pub fn sentinel_tower() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
+                Predicate::CastSpellMatches(instant_or_sorcery()),
+                Predicate::IsTurnOf(PlayerRef::You),
+            ])),
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Sum(vec![
+                    Value::ONE,
+                    Value::Diff(
+                        Box::new(Value::InstantsOrSorceriesCastThisTurn(PlayerRef::You)),
+                        Box::new(Value::ONE),
+                    ),
+                ]),
+            },
+        }],
+        ..spell("Sentinel Tower", cost(&[generic(4)]), CardType::Artifact, Effect::Noop)
+    }
+}
+
+/// Mishra's Self-Replicator — {5} 2/2 artifact Assembly-Worker. Casting a
+/// historic spell, you may pay {1} for a token copy of it.
+pub fn mishras_self_replicator() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::historic())),
+            effect: Effect::MayPay {
+                description: "Pay {1} to copy Mishra's Self-Replicator?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                }),
+                else_: None,
+            },
+        }],
+        ..creature("Mishra's Self-Replicator", cost(&[generic(5)]), vec![CreatureType::AssemblyWorker], 2, 2)
+    }
+}
+
+/// Joraga Treespeaker — {G} 1/1 Elf Druid, level up {1}{G}. LEVEL 1-4: 1/2,
+/// {T}: Add {G}{G}. LEVEL 5+: 1/4, Elves you control have "{T}: Add {G}{G}."
+pub fn joraga_treespeaker() -> CardDefinition {
+    let gg = || ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Green, Color::Green]) },
+        ..Default::default()
+    };
+    let level = |n: u32| Predicate::SourceHasCountersAtLeast { counter: CounterType::Level, n };
+    CardDefinition {
+        level_bands: vec![
+            LevelBand { min: 1, max: Some(4), power: 1, toughness: 2, keywords: vec![] },
+            LevelBand { min: 5, max: None, power: 1, toughness: 4, keywords: vec![] },
+        ],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), g()]),
+                sorcery_speed: true,
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Level, amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                condition: Some(Predicate::All(vec![level(1), Predicate::Not(Box::new(level(5)))])),
+                ..gg()
+            },
+        ],
+        static_abilities: vec![static_ab(
+            "LEVEL 5+ — Elves you control have \"{T}: Add {G}{G}.\"",
+            StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou)),
+                ability: gg(),
+                condition: Some(level(5)),
+            },
+        )],
+        ..creature("Joraga Treespeaker", cost(&[g()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 1)
+    }
+}
+
+/// Teferi, Master of Time — {2}{U}{U}, loyalty 3; its loyalty abilities work
+/// at instant speed on any turn. +1: loot. −3: target creature you don't
+/// control phases out. −10: two extra turns.
+pub fn teferi_master_of_time() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "You may activate loyalty abilities of Teferi on any player's turn any time you could cast an instant.",
+            StaticEffect::LoyaltyAbilitiesAtInstantSpeed,
+        )],
+        ..walker(
+            "Teferi, Master of Time",
+            cost(&[generic(2), u(), u()]),
+            PlaneswalkerSubtype::Teferi,
+            3,
+            vec![
+                loyalty(1, Effect::Seq(vec![
+                    draw(1),
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ])),
+                loyalty(-3, Effect::PhaseOut {
+                    what: target_filtered(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))),
+                    until_source_leaves: false,
+                }),
+                loyalty(-10, Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::Const(2) }),
+            ],
         )
     }
 }
