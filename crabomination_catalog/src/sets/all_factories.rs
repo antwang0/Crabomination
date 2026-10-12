@@ -13662,6 +13662,13 @@ static DECKS: &[Factory] = &[
     super::decks::barrow_blade,
     super::decks::bjorna_nightfall_alchemist,
     super::decks::wernog_riders_chaplain,
+    super::decks::cloudsteel_kirin,
+    super::decks::fell_beasts_shriek,
+    super::decks::scheming_symmetry,
+    super::decks::mindclaw_shaman,
+    super::decks::swashbuckler_extraordinaire,
+    super::decks::toggo_goblin_weaponsmith,
+    super::decks::ayara_widow_of_the_realm,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

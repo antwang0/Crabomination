@@ -1419,3 +1419,125 @@ fn ares_returns_fallen_attackers() {
     cast(&mut g, bolt, &[perm(ares)]).expect("kill the attacker");
     assert!(g.players[0].hand.iter().any(|c| c.id == ares));
 }
+
+// ── The one-card gaps left in the 601-1000 claim ────────────────────────────
+
+/// Cloudsteel Kirin reconfigured onto a creature: CR 104.3d — its controller
+/// can't lose at 0 life.
+#[test]
+fn cloudsteel_kirin_keeps_its_bearer_alive() {
+    let mut g = pod(2);
+    let kirin = ready(&mut g, 0, catalog::cloudsteel_kirin());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Reconfigure { equipment: kirin, target: Some(bears) }).expect("reconfigure");
+    assert!(has_kw(&g, bears, Keyword::Flying));
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    assert!(g.players[0].is_alive());
+}
+
+/// Fell Beast's Shriek: each opponent's chosen creature is tapped and goaded
+/// (CR 701.15).
+#[test]
+fn fell_beasts_shriek_taps_and_goads_one_each() {
+    let mut g = pod(3);
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let lions = ready(&mut g, 2, catalog::savannah_lions());
+    let s = g.add_card_to_hand(0, catalog::fell_beasts_shriek());
+    cast(&mut g, s, &[]).expect("cast");
+    for id in [bears, lions] {
+        let c = g.battlefield_find(id).unwrap();
+        assert!(c.tapped);
+        assert!(g.goaded_by_player(c, 0));
+    }
+}
+
+/// Scheming Symmetry: both target players search (CR 701.23).
+#[test]
+fn scheming_symmetry_tutors_two_players() {
+    let mut g = pod(3);
+    library(&mut g, 0, 3);
+    library(&mut g, 2, 3);
+    let s = g.add_card_to_hand(0, catalog::scheming_symmetry());
+    cast(&mut g, s, &[Target::Player(0), Target::Player(2)]).expect("cast");
+    assert!(g.players[0].searched_library_this_turn);
+    assert!(g.players[2].searched_library_this_turn);
+    assert!(!g.players[1].searched_library_this_turn, "not targeted");
+    assert_eq!(g.players[2].library.len(), 3);
+}
+
+/// Mindclaw Shaman casts a sorcery from the opponent's hand for free, never a
+/// creature card.
+#[test]
+fn mindclaw_shaman_steals_a_sorcery() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    g.add_card_to_hand(1, catalog::divination());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let m = g.add_card_to_hand(0, catalog::mindclaw_shaman());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, m, &[]).expect("cast");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Shaman left, two drawn");
+    assert_eq!(g.players[1].hand.len(), 1);
+    assert_eq!(g.players[1].hand[0].definition.name, "Grizzly Bears");
+}
+
+/// Swashbuckler Extraordinaire: a Treasure from its ETB buys one attacker
+/// double strike.
+#[test]
+fn swashbuckler_trades_treasure_for_double_strike() {
+    let mut g = pod(2);
+    let s = g.add_card_to_hand(0, catalog::swashbuckler_extraordinaire());
+    cast(&mut g, s, &[]).expect("cast");
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
+    g.clear_sickness(s);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: s, target: AttackTarget::Player(1) },
+        Attack { attacker: bears, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(tokens_of(&g, 0, "Treasure"), 0);
+    let ds = [s, bears].iter().filter(|&&id| has_kw(&g, id, Keyword::DoubleStrike)).count();
+    assert_eq!(ds, 1, "one Treasure, one attacker");
+}
+
+/// Toggo: landfall makes a Rock; the equipped creature flings it for 2.
+#[test]
+fn toggo_throws_rocks() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::toggo_goblin_weaponsmith());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(land)).expect("play");
+    drain_stack(&mut g);
+    let rock = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Rock").map(|c| c.id).expect("a Rock");
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: rock, target: bears }).expect("equip {1}");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    activate(&mut g, bears, 0, Some(Target::Player(1))).expect("throw");
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.battlefield_find(rock).is_none(), "the Rock is sacrificed");
+}
+
+/// Ayara, Widow of the Realm drains by the sacrificed permanent's mana value,
+/// and transforms at sorcery speed (CR 701.28).
+#[test]
+fn ayara_drains_then_transforms() {
+    let mut g = pod(2);
+    let ayara = ready(&mut g, 0, catalog::ayara_widow_of_the_realm());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    activate(&mut g, ayara, 0, Some(Target::Player(1))).expect("sacrifice the Bears");
+    assert!(g.battlefield_find(bears).is_none());
+    assert_eq!((g.players[0].life, g.players[1].life), (mine + 2, theirs - 2));
+    activate(&mut g, ayara, 1, None).expect("transform");
+    assert!(g.battlefield_find(ayara).unwrap().transformed);
+    assert_eq!(g.computed_permanent(ayara).unwrap().power, 4);
+}

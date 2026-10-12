@@ -9,12 +9,14 @@ use crate::card::{
     LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
     LevelBand, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone, MayPlayDuration,
 };
-use crate::effect::shortcut::{colored_animation, etb, on_attack, target_any, target_filtered, tokens_gain_until_eot};
+use crate::effect::shortcut::{
+    colored_animation, etb, landfall, on_attack, on_you_attack, target_any, target_filtered, tokens_gain_until_eot,
+};
 use crate::effect::{
     ActivatedAbility, Duration, Effect, LibraryPosition, LookPick, ManaPayload, PlayerRef, VoteOption, VoteTally, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, hybrid, phyrexian, r, u, w, x, Color, ManaCost};
 use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -2608,5 +2610,205 @@ pub fn wernog_riders_chaplain() -> CardDefinition {
             TriggeredAbility { event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource), effect: offer() },
         ],
         ..legend("Wernog, Rider's Chaplain", cost(&[w(), b()]), vec![CreatureType::Human], 1, 2)
+    }
+}
+
+// ── The one-card gaps left in the 601-1000 claim ────────────────────────────
+
+/// Cloudsteel Kirin — {2}{W} 3/2 flying Equipment Kirin artifact creature.
+/// Equipped creature has flying and "You can't lose the game and your
+/// opponents can't win the game." Reconfigure {5}.
+pub fn cloudsteel_kirin() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kirin],
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flying, Keyword::Reconfigure(cost(&[generic(5)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying, Keyword::ControllerCantLoseGame],
+            ..Default::default()
+        }),
+        ..creature("Cloudsteel Kirin", cost(&[generic(2), w()]), vec![CreatureType::Kirin], 3, 2)
+    }
+}
+
+/// Fell Beast's Shriek — {U}{R} sorcery: each opponent chooses a creature they
+/// control; tap and goad the chosen creatures. Splice onto instant or sorcery
+/// {2}{U}{R} (not modelled — INCOMPLETE_CARDS).
+pub fn fell_beasts_shriek() -> CardDefinition {
+    spell(
+        "Fell Beast's Shriek",
+        cost(&[u(), r()]),
+        CardType::Sorcery,
+        Effect::ForEachOpponent {
+            body: Box::new(Effect::OpponentChoosesPermanentThen {
+                filter: R::Creature,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Tap { what: Selector::Target(0) },
+                    Effect::Goad { what: Selector::Target(0) },
+                ])),
+                chooser: Some(PlayerRef::Triggerer),
+                theirs: true,
+            }),
+        },
+    )
+}
+
+/// Scheming Symmetry — {B} sorcery: two target players each search their
+/// library for a card, then shuffle and put that card on top.
+pub fn scheming_symmetry() -> CardDefinition {
+    let tutor = |slot: u8, filter: R| {
+        let who = PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered { slot, filter }));
+        Effect::Search { who: who.clone(), filter: R::Any, to: ZoneDest::Library { who, pos: LibraryPosition::Top } }
+    };
+    spell(
+        "Scheming Symmetry",
+        cost(&[b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![tutor(0, R::Player), tutor(1, R::Player.and(R::OtherThanTargetSlot(0)))]),
+    )
+}
+
+/// Mindclaw Shaman — {4}{R} 2/2 Lizard Shaman. When it enters, target
+/// opponent reveals their hand; you may cast an instant or sorcery spell from
+/// among those cards without paying its mana cost.
+pub fn mindclaw_shaman() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::LookAtHandCastFree {
+            who: target_filtered(R::OpponentPlayer),
+            filter: Some(instant_or_sorcery()),
+        })],
+        ..creature("Mindclaw Shaman", cost(&[generic(4), r()]), vec![CreatureType::Lizard, CreatureType::Shaman], 2, 2)
+    }
+}
+
+/// Swashbuckler Extraordinaire — {2}{R} 2/2 Dragon Rogue Warrior. When it
+/// enters, create a Treasure. Whenever you attack, you may sacrifice one or
+/// more Treasures; up to that many target creatures gain double strike until
+/// end of turn. Each attacker of yours is offered a Treasure in turn
+/// (INCOMPLETE_CARDS).
+pub fn swashbuckler_extraordinaire() -> CardDefinition {
+    let treasure = || R::HasArtifactSubtype(ArtifactSubtype::Treasure).and(R::ControlledByYou);
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(make(PlayerRef::You, Value::ONE, crabomination_base::tokens::treasure_token())),
+            on_you_attack(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    yours().and(R::IsAttacking).and(R::Not(Box::new(R::HasKeyword(Keyword::DoubleStrike)))),
+                ),
+                body: Box::new(Effect::MaySacrifice {
+                    description: "Sacrifice a Treasure to give this attacker double strike?".into(),
+                    filter: treasure(),
+                    count: Value::ONE,
+                    then: Box::new(Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::DoubleStrike,
+                        duration: Duration::EndOfTurn,
+                    }),
+                    else_: None,
+                }),
+            }),
+        ],
+        ..creature(
+            "Swashbuckler Extraordinaire",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Dragon, CreatureType::Rogue, CreatureType::Warrior],
+            2,
+            2,
+        )
+    }
+}
+
+/// Toggo, Goblin Weaponsmith — {2}{R} 2/2 legendary Goblin Artificer with
+/// partner. Landfall: create a Rock — a colorless Equipment artifact token
+/// with "Equipped creature has '{1}, {T}, Sacrifice Rock: This creature deals
+/// 2 damage to any target'" and equip {1}.
+pub fn toggo_goblin_weaponsmith() -> CardDefinition {
+    let rock = TokenDefinition {
+        name: "Rock".into(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                sac_other_filter: Some((R::HasName("Rock".into()).and(R::AttachedToSource), 1)),
+                effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Partner],
+        triggered_abilities: vec![landfall(make(PlayerRef::You, Value::ONE, rock))],
+        ..legend("Toggo, Goblin Weaponsmith", cost(&[generic(2), r()]), vec![CreatureType::Goblin, CreatureType::Artificer], 2, 2)
+    }
+}
+
+/// Ayara, Furnace Queen — Ayara, Widow of the Realm's back face: 4/4
+/// Phyrexian Elf Noble. At the beginning of combat on your turn, return up to
+/// one target artifact or creature card from your graveyard to the
+/// battlefield; it gains haste; exile it at the beginning of the next end step.
+fn ayara_furnace_queen() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![at_your(
+            TurnStep::BeginCombat,
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        R::InGraveyard.and(R::OwnedByYou).and(R::Artifact.or(R::Creature)),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                Effect::ExileAtNextEndStep { what: Selector::LastMoved },
+            ]),
+        )],
+        // CR 712.8 — a transforming back face has no mana cost.
+        color_indicator: vec![Color::Black, Color::Red],
+        ..legend(
+            "Ayara, Furnace Queen",
+            ManaCost::default(),
+            vec![CreatureType::Phyrexian, CreatureType::Elf, CreatureType::Noble],
+            4,
+            4,
+        )
+    }
+}
+
+/// Ayara, Widow of the Realm — {1}{B}{B} 3/3 legendary Elf Noble. {T},
+/// sacrifice another creature or artifact: deal X damage to target opponent
+/// or battle and gain X life, X the sacrificed permanent's mana value.
+/// {5}{R/P}: transform, sorcery speed.
+pub fn ayara_widow_of_the_realm() -> CardDefinition {
+    CardDefinition {
+        back_face: Some(Box::new(ayara_furnace_queen())),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_other_filter: Some((R::Creature.or(R::Artifact), 1)),
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: target_filtered(R::OpponentPlayer.or(R::HasCardType(CardType::Battle))),
+                        amount: Value::SacrificedManaValue,
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::SacrificedManaValue },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5), phyrexian(Color::Red)]),
+                sorcery_speed: true,
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        ..legend("Ayara, Widow of the Realm", cost(&[generic(1), b(), b()]), vec![CreatureType::Elf, CreatureType::Noble], 3, 3)
     }
 }
