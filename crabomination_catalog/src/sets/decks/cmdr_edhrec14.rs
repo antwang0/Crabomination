@@ -1,0 +1,1354 @@
+//! Commander: the one-card EDHREC gaps of commanders ranked 1001-1500 (the
+//! 2026-10-12 top-1500 rescan) — each card completes at least one average
+//! deck. Tests in `tests/recent_b/cmdr_edhrec14.rs`.
+
+use crate::card::{
+    ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Selector,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
+};
+use crate::effect::shortcut::{
+    battalion, blocks, cast_is_noncreature, enrage, etb, on_attack, target_any, target_filtered,
+};
+use crate::effect::{ActivatedAbility, Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
+use crate::game::types::TurnStep;
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color, ManaCost};
+use std::sync::Arc;
+
+fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition { supertypes: vec![Supertype::Legendary], ..creature(name, mana, types, p, t) }
+}
+
+fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
+    CardDefinition { name, cost: mana, card_types: vec![kind], effect, ..Default::default() }
+}
+
+fn permanent(name: &'static str, mana: ManaCost, kind: CardType) -> CardDefinition {
+    CardDefinition { name, cost: mana, card_types: vec![kind], ..Default::default() }
+}
+
+fn static_ab(description: &'static str, effect: StaticEffect) -> StaticAbility {
+    StaticAbility { description, effect }
+}
+
+fn token(name: &str, p: i32, t: i32, colors: Vec<Color>, types: Vec<CreatureType>) -> TokenDefinition {
+    TokenDefinition {
+        name: name.into(),
+        power: p,
+        toughness: t,
+        colors,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        ..Default::default()
+    }
+}
+
+fn make(n: i32, def: TokenDefinition) -> Effect {
+    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(n), definition: Arc::new(def) }
+}
+
+fn draw(n: i32) -> Effect {
+    Effect::Draw { who: Selector::You, amount: Value::Const(n) }
+}
+
+fn gain(n: i32) -> Effect {
+    Effect::GainLife { who: Selector::You, amount: Value::Const(n) }
+}
+
+fn yours(filter: R) -> R {
+    filter.and(R::ControlledByYou)
+}
+
+fn at_your(step: TurnStep, effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::StepBegins(step), EventScope::YourControl), effect }
+}
+
+fn may(description: &str, body: Effect) -> Effect {
+    Effect::MayDo { description: description.into(), body: Box::new(body) }
+}
+
+/// Kindly Customer — {1}{W} 1/1 Human Citizen. When it enters, draw a card.
+pub fn kindly_customer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(draw(1))],
+        ..creature("Kindly Customer", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Citizen], 1, 1)
+    }
+}
+
+/// Corridor Monitor — {1}{U} 1/4 artifact creature Construct. When it enters,
+/// untap target artifact or creature you control.
+pub fn corridor_monitor() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::Untap {
+            what: target_filtered(yours(R::Artifact.or(R::Creature))),
+            up_to: None,
+        })],
+        ..creature("Corridor Monitor", cost(&[generic(1), u()]), vec![CreatureType::Construct], 1, 4)
+    }
+}
+
+/// See Beyond — {1}{U} sorcery. Draw two, then shuffle a card from your hand
+/// into your library.
+pub fn see_beyond() -> CardDefinition {
+    spell(
+        "See Beyond",
+        cost(&[generic(1), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            draw(2),
+            Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::ONE },
+            Effect::ShuffleLibrary { who: PlayerRef::You },
+        ]),
+    )
+}
+
+/// Goldenglow Moth — {W} 0/1 flying Insect. Whenever it blocks, you may gain 4
+/// life.
+pub fn goldenglow_moth() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![blocks(may("gain 4 life", gain(4)))],
+        ..creature("Goldenglow Moth", cost(&[w()]), vec![CreatureType::Insect], 0, 1)
+    }
+}
+
+/// Howling Golem — {3} 2/3 artifact creature Golem. Whenever it attacks or
+/// blocks, each player draws a card.
+pub fn howling_golem() -> CardDefinition {
+    let each_draws = || Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![on_attack(each_draws()), blocks(each_draws())],
+        ..creature("Howling Golem", cost(&[generic(3)]), vec![CreatureType::Golem], 2, 3)
+    }
+}
+
+/// Rendclaw Trow — {2}{B/G} 2/2 Troll with wither and persist.
+pub fn rendclaw_trow() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Wither, Keyword::Persist],
+        ..creature(
+            "Rendclaw Trow",
+            cost(&[generic(2), hybrid(Color::Black, Color::Green)]),
+            vec![CreatureType::Troll],
+            2,
+            2,
+        )
+    }
+}
+
+/// Spitemare — {2}{R/W}{R/W} 3/3 Elemental. Whenever it's dealt damage, it
+/// deals that much damage to any target.
+pub fn spitemare() -> CardDefinition {
+    let rw = || hybrid(Color::Red, Color::White);
+    CardDefinition {
+        triggered_abilities: vec![enrage(Effect::DealDamage { to: target_any(), amount: Value::TriggerEventAmount })],
+        ..creature("Spitemare", cost(&[generic(2), rw(), rw()]), vec![CreatureType::Elemental], 3, 3)
+    }
+}
+
+/// Golden Egg — {2} artifact Food. When it enters, draw a card. {1}, {T},
+/// sacrifice it: one mana of any color. {2}, {T}, sacrifice it: gain 3 life.
+pub fn golden_egg() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        triggered_abilities: vec![etb(draw(1))],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: gain(3),
+                ..Default::default()
+            },
+        ],
+        ..permanent("Golden Egg", cost(&[generic(2)]), CardType::Artifact)
+    }
+}
+
+/// Staff of the Death Magus — {3} artifact. Whenever you cast a black spell or
+/// a Swamp you control enters, you gain 1 life.
+pub fn staff_of_the_death_magus() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasColor(Color::Black) },
+                ),
+                effect: gain(1),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasLandType(LandType::Swamp),
+                    },
+                ),
+                effect: gain(1),
+            },
+        ],
+        ..permanent("Staff of the Death Magus", cost(&[generic(3)]), CardType::Artifact)
+    }
+}
+
+/// Lyla, Holographic Assistant — {3}{U} 2/2 legendary artifact creature
+/// Illusion Advisor. Whenever you draw a card, put a +1/+1 counter on target
+/// creature.
+pub fn lyla_holographic_assistant() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..legend(
+            "Lyla, Holographic Assistant",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Illusion, CreatureType::Advisor],
+            2,
+            2,
+        )
+    }
+}
+
+/// Tainted Treats — {1}{B}{G} instant. Destroy target artifact or creature; if
+/// its mana value was 4 or less, create a Food token.
+pub fn tainted_treats() -> CardDefinition {
+    spell(
+        "Tainted Treats",
+        cost(&[generic(1), b(), g()]),
+        CardType::Instant,
+        Effect::If {
+            cond: Predicate::ValueAtMost(Value::ManaValueOf(Box::new(Selector::Target(0))), Value::Const(4)),
+            then: Box::new(Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Artifact.or(R::Creature)) },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(crabomination_base::tokens::food_token()),
+                },
+            ])),
+            else_: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+        },
+    )
+}
+
+/// Haazda Marshal — {W} 1/1 Human Soldier. Whenever it and at least two other
+/// creatures attack, create a 1/1 white Soldier token with lifelink.
+pub fn haazda_marshal() -> CardDefinition {
+    let soldier = TokenDefinition {
+        keywords: vec![Keyword::Lifelink],
+        ..token("Soldier", 1, 1, vec![Color::White], vec![CreatureType::Soldier])
+    };
+    CardDefinition {
+        triggered_abilities: vec![battalion(make(1, soldier))],
+        ..creature("Haazda Marshal", cost(&[w()]), vec![CreatureType::Human, CreatureType::Soldier], 1, 1)
+    }
+}
+
+/// Magus of the Moat — {2}{W}{W} 0/3 Human Wizard. Creatures without flying
+/// can't attack.
+pub fn magus_of_the_moat() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Creatures without flying can't attack.",
+            StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying))))),
+                keyword: Keyword::CantAttack,
+            },
+        )],
+        ..creature(
+            "Magus of the Moat",
+            cost(&[generic(2), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            0,
+            3,
+        )
+    }
+}
+
+/// Voltaic Servant — {2} 1/3 artifact creature Construct. At the beginning of
+/// your end step, untap target artifact.
+pub fn voltaic_servant() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![at_your(
+            TurnStep::End,
+            Effect::Untap { what: target_filtered(R::Artifact), up_to: None },
+        )],
+        ..creature("Voltaic Servant", cost(&[generic(2)]), vec![CreatureType::Construct], 1, 3)
+    }
+}
+
+/// Samut, Voice of Dissent — {3}{R}{G} 3/4 legendary Human Warrior with flash,
+/// double strike, vigilance, haste. Other creatures you control have haste.
+/// {W}, {T}: untap another target creature.
+pub fn samut_voice_of_dissent() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::DoubleStrike, Keyword::Vigilance, Keyword::Haste],
+        static_abilities: vec![static_ab(
+            "Other creatures you control have haste.",
+            StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(yours(R::Creature).and(R::OtherThanSource)),
+                keyword: Keyword::Haste,
+            },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            tap_cost: true,
+            effect: Effect::Untap { what: target_filtered(R::Creature.and(R::OtherThanSource)), up_to: None },
+            ..Default::default()
+        }],
+        ..legend(
+            "Samut, Voice of Dissent",
+            cost(&[generic(3), r(), g()]),
+            vec![CreatureType::Human, CreatureType::Warrior],
+            3,
+            4,
+        )
+    }
+}
+
+/// Aegis Angel — {4}{W}{W} 5/5 flying Angel. When it enters, another target
+/// permanent gains indestructible for as long as you control this creature.
+pub fn aegis_angel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(R::Permanent.and(R::OtherThanSource)),
+            keyword: Keyword::Indestructible,
+            duration: Duration::WhileSourceOnBattlefield,
+        })],
+        ..creature("Aegis Angel", cost(&[generic(4), w(), w()]), vec![CreatureType::Angel], 5, 5)
+    }
+}
+
+/// Ayula's Influence — {G}{G}{G} enchantment. Discard a land card: create a
+/// 2/2 green Bear token.
+pub fn ayulas_influence() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Land, 1)),
+            effect: make(1, token("Bear", 2, 2, vec![Color::Green], vec![CreatureType::Bear])),
+            ..Default::default()
+        }],
+        ..permanent("Ayula's Influence", cost(&[g(), g(), g()]), CardType::Enchantment)
+    }
+}
+
+/// Plate Armor — {2}{W} Equipment. +3/+3 and ward {1}. Equip {3}, {1} less for
+/// each other Equipment you control.
+pub fn plate_armor() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        static_abilities: vec![static_ab(
+            "This ability costs {1} less to activate for each other Equipment you control.",
+            StaticEffect::EquipCostReducedPerControlled {
+                filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::OtherThanSource),
+            },
+        )],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+            ..Default::default()
+        }),
+        ..permanent("Plate Armor", cost(&[generic(2), w()]), CardType::Artifact)
+    }
+}
+
+/// Mouser Foundry — {1}{R} artifact. When it enters or leaves the
+/// battlefield, create a 1/1 colorless Robot artifact creature token. {4}{R},
+/// sacrifice it: 3 damage to target creature.
+pub fn mouser_foundry() -> CardDefinition {
+    let robot = || {
+        make(
+            1,
+            TokenDefinition {
+                card_types: vec![CardType::Artifact, CardType::Creature],
+                ..token("Robot", 1, 1, vec![], vec![CreatureType::Robot])
+            },
+        )
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(robot()),
+            TriggeredAbility { event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource), effect: robot() },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), r()]),
+            sac_cost: true,
+            effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..permanent("Mouser Foundry", cost(&[generic(1), r()]), CardType::Artifact)
+    }
+}
+
+/// Brightmare — {2}{W} 2/3 Unicorn. When it enters, tap up to one target
+/// creature; gain life equal to its power.
+pub fn brightmare() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::GainLife { who: Selector::You, amount: Value::PowerOf(Box::new(Selector::Target(0))) },
+            ])),
+        })],
+        ..creature("Brightmare", cost(&[generic(2), w()]), vec![CreatureType::Unicorn], 2, 3)
+    }
+}
+
+/// Heartwood Storyteller — {1}{G}{G} 2/3 Treefolk. Whenever a player casts a
+/// noncreature spell, each of that player's opponents may draw a card.
+pub fn heartwood_storyteller() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(cast_is_noncreature()),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::OpponentOf(Box::new(PlayerRef::Triggerer))),
+                amount: Value::ONE,
+            },
+        }],
+        ..creature("Heartwood Storyteller", cost(&[generic(1), g(), g()]), vec![CreatureType::Treefolk], 2, 3)
+    }
+}
+
+/// Soldevi Adnate — {1}{B} 1/2 Human Cleric. {T}, sacrifice a black or
+/// artifact creature: add {B} equal to its mana value.
+pub fn soldevi_adnate() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature.and(R::HasColor(Color::Black).or(R::Artifact)), 1)),
+            sac_other_may_be_source: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Black, Value::SacrificedManaValue),
+            },
+            ..Default::default()
+        }],
+        ..creature("Soldevi Adnate", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Cleric], 1, 2)
+    }
+}
+
+/// Lyra, Archangel of Dawn — {2}{W} 3/3 legendary flying Angel Knight.
+/// Whenever you gain life, put a +1/+1 counter on each Angel you control.
+pub fn lyra_archangel_of_dawn() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Angel))),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..legend(
+            "Lyra, Archangel of Dawn",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Angel, CreatureType::Knight],
+            3,
+            3,
+        )
+    }
+}
+
+/// Marwyn, the Preserver — {1}{G} 3/2 legendary Elf Druid. Lands you control
+/// have hexproof. {2}: return target land card from your graveyard to hand.
+pub fn marwyn_the_preserver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Lands you control have hexproof.",
+            StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(yours(R::Land)),
+                keyword: Keyword::Hexproof,
+            },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Move {
+                what: target_filtered(R::Land.from_your_graveyard()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..legend("Marwyn, the Preserver", cost(&[generic(1), g()]), vec![CreatureType::Elf, CreatureType::Druid], 3, 2)
+    }
+}
+
+/// Wizards of Thay — {3}{U} 3/3 Human Wizard with myriad. Instant and sorcery
+/// spells you cast cost {1} less; you may cast sorceries as though they had
+/// flash.
+pub fn wizards_of_thay() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::myriad()],
+        static_abilities: vec![
+            static_ab(
+                "Instant and sorcery spells you cast cost {1} less to cast.",
+                StaticEffect::CostReduction {
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    amount: 1,
+                },
+            ),
+            static_ab(
+                "You may cast sorcery spells as though they had flash.",
+                StaticEffect::ControllerSpellsHaveFlash { filter: R::HasCardType(CardType::Sorcery) },
+            ),
+        ],
+        ..creature("Wizards of Thay", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 3)
+    }
+}
+
+/// Faerie Tauntings — {2}{B} Kindred Enchantment — Faerie. Whenever you cast
+/// a spell during an opponent's turn, you may have each opponent lose 1 life.
+pub fn faerie_tauntings() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Kindred, CardType::Enchantment],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+            effect: may(
+                "each opponent loses 1 life",
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            ),
+        }],
+        ..permanent("Faerie Tauntings", cost(&[generic(2), b()]), CardType::Enchantment)
+    }
+}
+
+/// Ingris Stingerquill — {B}{R}{R} 1/4 legendary flying Elder Sphinx. Whenever
+/// a creature you control attacks, it deals 1 damage to each opponent. {4}:
+/// create a 2/2 colorless Wizard Soldier named Cadet; creatures you control
+/// gain haste until end of turn.
+pub fn ingris_stingerquill() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::DealDamageFrom {
+                source: Selector::TriggerSource,
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::Seq(vec![
+                make(1, token("Cadet", 2, 2, vec![], vec![CreatureType::Wizard, CreatureType::Soldier])),
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(yours(R::Creature)),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Ingris Stingerquill",
+            cost(&[b(), r(), r()]),
+            vec![CreatureType::Elder, CreatureType::Sphinx],
+            1,
+            4,
+        )
+    }
+}
+
+/// Desolation of Smaug — {2}{R}{R} sorcery. 3 damage to each non-Dragon
+/// creature; add four mana in any combination of colors, spent only on Dragon
+/// spells.
+pub fn desolation_of_smaug() -> CardDefinition {
+    spell(
+        "Desolation of Smaug",
+        cost(&[generic(2), r(), r()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::HasCreatureType(CreatureType::Dragon))))),
+                amount: Value::Const(3),
+            },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyColors(Value::Const(4))),
+                    crate::mana::SpendRestriction::CreatureSpellOfType(CreatureType::Dragon),
+                ),
+            },
+        ]),
+    )
+}
+
+/// Teferi, Mage of Zhalfir — {2}{U}{U}{U} 3/4 legendary Human Wizard with
+/// flash. Your creature cards have flash; opponents cast spells only at
+/// sorcery speed.
+pub fn teferi_mage_of_zhalfir() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![
+            static_ab(
+                "Creature cards you own that aren't on the battlefield have flash.",
+                StaticEffect::ControllerSpellsHaveFlash { filter: R::HasCardType(CardType::Creature) },
+            ),
+            static_ab(
+                "Each opponent can cast spells only any time they could cast a sorcery.",
+                StaticEffect::OpponentsSorceryTimingOnly,
+            ),
+        ],
+        ..legend(
+            "Teferi, Mage of Zhalfir",
+            cost(&[generic(2), u(), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            4,
+        )
+    }
+}
+
+/// "Exile two [color] cards from your hand rather than pay this spell's mana
+/// cost" (Fury of the Horde, Commandeer).
+fn exile_two(color: Color) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        exile_filter: Some(R::HasColor(color)),
+        exile_filter_extra: 1,
+        ..Default::default()
+    }
+}
+
+/// Fury of the Horde — {5}{R}{R} sorcery; exile two red cards instead. Untap
+/// every creature that attacked this turn; an additional combat and main
+/// phase follow this one.
+pub fn fury_of_the_horde() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(exile_two(Color::Red)),
+        ..spell(
+            "Fury of the Horde",
+            cost(&[generic(5), r(), r()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::Untap { what: Selector::EachPermanent(R::Creature.and(R::AttackedThisTurn)), up_to: None },
+                Effect::AdditionalCombatPhaseAfterMain { count: Value::ONE },
+            ]),
+        )
+    }
+}
+
+/// Commandeer — {5}{U}{U} instant; exile two blue cards instead. Gain control
+/// of target noncreature spell.
+pub fn commandeer() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(exile_two(Color::Blue)),
+        ..spell(
+            "Commandeer",
+            cost(&[generic(5), u(), u()]),
+            CardType::Instant,
+            Effect::GainControlOfSpell {
+                what: target_filtered(R::IsSpellOnStack.and(R::Not(Box::new(R::HasCardType(CardType::Creature))))),
+            },
+        )
+    }
+}
+
+/// Invert Polarity — {U}{U}{R} instant. Choose target spell, flip a coin: win,
+/// gain control of it; lose, counter it.
+pub fn invert_polarity() -> CardDefinition {
+    spell(
+        "Invert Polarity",
+        cost(&[u(), u(), r()]),
+        CardType::Instant,
+        Effect::FlipCoin {
+            count: Value::ONE,
+            on_heads: Box::new(Effect::GainControlOfSpell { what: target_filtered(R::IsSpellOnStack) }),
+            on_tails: Box::new(Effect::CounterSpell { what: Selector::Target(0) }),
+        },
+    )
+}
+
+/// "Gain control of [target] until end of turn. Untap it. It gains haste
+/// until end of turn," then `rider`.
+fn threaten(filter: R, rider: Vec<Effect>) -> Effect {
+    let mut steps = vec![
+        Effect::GainControl { what: target_filtered(filter), to: None, duration: Duration::EndOfTurn },
+        Effect::Untap { what: Selector::Target(0), up_to: None },
+        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+    ];
+    steps.extend(rider);
+    Effect::Seq(steps)
+}
+
+/// Kari Zev's Expertise — {1}{R}{R} sorcery. Threaten target creature or
+/// Vehicle; you may cast a spell with mana value 2 or less from your hand free.
+pub fn kari_zevs_expertise() -> CardDefinition {
+    spell(
+        "Kari Zev's Expertise",
+        cost(&[generic(1), r(), r()]),
+        CardType::Sorcery,
+        threaten(
+            R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+            vec![Effect::CastFromHandWithoutPaying { filter: Some(R::ManaValueAtMost(2)) }],
+        ),
+    )
+}
+
+/// Furnace Reins — {2}{R} sorcery. Threaten target creature; until end of turn
+/// it has "whenever this deals combat damage to a player, create a Treasure".
+pub fn furnace_reins() -> CardDefinition {
+    spell(
+        "Furnace Reins",
+        cost(&[generic(2), r()]),
+        CardType::Sorcery,
+        threaten(
+            R::Creature,
+            vec![Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                    effect: Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: Arc::new(crabomination_base::tokens::treasure_token()),
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            }],
+        ),
+    )
+}
+
+/// Qala, Ajani's Pridemate — {3}{W} 3/3 legendary Cat Warrior. Attacking:
+/// other attackers get +X/+0, X its counters. Life gain grows it. {3}{W}: gain
+/// 1 life.
+pub fn qala_ajanis_pridemate() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            on_attack(Effect::PumpPT {
+                what: Selector::EachPermanent(yours(R::IsAttacking).and(R::OtherThanSource)),
+                power: Value::TotalCountersOn { what: Box::new(Selector::This) },
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility { mana_cost: cost(&[generic(3), w()]), effect: gain(1), ..Default::default() }],
+        ..legend("Qala, Ajani's Pridemate", cost(&[generic(3), w()]), vec![CreatureType::Cat, CreatureType::Warrior], 3, 3)
+    }
+}
+
+/// Tui and La, Moon and Ocean — {3}{U} 3/3 legendary Fish Spirit. Becoming
+/// tapped draws a card; becoming untapped puts a +1/+1 counter on it.
+pub fn tui_and_la_moon_and_ocean() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource), effect: draw(1) },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+        ],
+        ..legend("Tui and La, Moon and Ocean", cost(&[generic(3), u()]), vec![CreatureType::Fish, CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Shaman of the Great Hunt — {3}{R} 4/2 Orc Shaman with haste. Your creatures
+/// that deal combat damage to a player get a +1/+1 counter. Ferocious —
+/// {2}{G/U}{G/U}: draw a card per creature you control with power 4 or more.
+pub fn shaman_of_the_great_hunt() -> CardDefinition {
+    let gu = || hybrid(Color::Green, Color::Blue);
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), gu(), gu()]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(yours(R::Creature).and(R::PowerAtLeast(4)))),
+            },
+            ..Default::default()
+        }],
+        ..creature("Shaman of the Great Hunt", cost(&[generic(3), r()]), vec![CreatureType::Orc, CreatureType::Shaman], 4, 2)
+    }
+}
+
+/// Pride Sovereign — {2}{G} 2/2 Cat; +1/+1 for each other Cat you control.
+/// {W}, {T}, exert it: create two 1/1 white Cat tokens with lifelink.
+pub fn pride_sovereign() -> CardDefinition {
+    let cat = TokenDefinition {
+        keywords: vec![Keyword::Lifelink],
+        ..token("Cat", 1, 1, vec![Color::White], vec![CreatureType::Cat])
+    };
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "This creature gets +1/+1 for each other Cat you control.",
+            StaticEffect::PumpPTPerOtherOfType { creature_type: CreatureType::Cat, power: 1, toughness: 1 },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![Effect::SkipNextUntap { what: Selector::This }, make(2, cat)]),
+            ..Default::default()
+        }],
+        ..creature("Pride Sovereign", cost(&[generic(2), g()]), vec![CreatureType::Cat], 2, 2)
+    }
+}
+
+fn background(name: &'static str, mana: ManaCost) -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Background],
+            ..Default::default()
+        },
+        ..permanent(name, mana, CardType::Enchantment)
+    }
+}
+
+/// "Commander creatures you own have [ability]."
+fn grant_to_your_commanders(description: &'static str, ability: TriggeredAbility) -> StaticAbility {
+    static_ab(
+        description,
+        StaticEffect::GrantTriggeredAbility {
+            filter: R::Creature.and(R::IsCommander).and(R::OwnedByYou),
+            ability: Box::new(ability),
+        },
+    )
+}
+
+/// Sword Coast Sailor — {1}{U} Background. Commander creatures you own have
+/// "whenever this attacks a player, if no opponent has more life than that
+/// player, it can't be blocked this turn."
+pub fn sword_coast_sailor() -> CardDefinition {
+    let richest = Predicate::Not(Box::new(Predicate::ForAnyPlayer {
+        who: PlayerRef::EachOpponent,
+        pred: Box::new(Predicate::Not(Box::new(Predicate::ValueAtLeast(
+            Value::LifeOf(PlayerRef::DefendingPlayer),
+            Value::LifeOf(PlayerRef::Triggerer),
+        )))),
+    }));
+    let trigger = TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::All(vec![
+            Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingOpponentPlayer },
+            richest,
+        ])),
+        effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+    };
+    CardDefinition {
+        static_abilities: vec![grant_to_your_commanders(
+            "Commander creatures you own have \"Whenever this creature attacks a player, if no opponent has more \
+             life than that player, this creature can't be blocked this turn.\"",
+            trigger,
+        )],
+        ..background("Sword Coast Sailor", cost(&[generic(1), u()]))
+    }
+}
+
+/// Cloakwood Hermit — {2}{G} Background. Commander creatures you own have "at
+/// the beginning of your end step, if a creature card was put into your
+/// graveyard from anywhere this turn, create two tapped 1/1 green Squirrels."
+pub fn cloakwood_hermit() -> CardDefinition {
+    let squirrel = TokenDefinition {
+        tapped: true,
+        ..token("Squirrel", 1, 1, vec![Color::Green], vec![CreatureType::Squirrel])
+    };
+    let trigger = TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+            .with_filter(Predicate::CreatureCardsToGraveyardThisTurnAtLeast(1)),
+        effect: make(2, squirrel),
+    };
+    CardDefinition {
+        static_abilities: vec![grant_to_your_commanders(
+            "Commander creatures you own have \"At the beginning of your end step, if a creature card was put \
+             into your graveyard from anywhere this turn, create two tapped 1/1 green Squirrel creature tokens.\"",
+            trigger,
+        )],
+        ..background("Cloakwood Hermit", cost(&[generic(2), g()]))
+    }
+}
+
+/// Phantom Blade — {4}{B} Equipment. When it enters, attach it to up to one
+/// target creature you control; destroy up to one other target creature.
+/// Equipped creature gets +1/+1 and has menace. Equip {2}.
+pub fn phantom_blade() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: yours(R::Creature),
+                effect: Box::new(Effect::Attach { what: Selector::This, to: Selector::Target(0) }),
+            },
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature.and(R::Not(Box::new(R::ControlledByYou))),
+                effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            },
+        ]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Menace], ..Default::default() }),
+        ..permanent("Phantom Blade", cost(&[generic(4), b()]), CardType::Artifact)
+    }
+}
+
+/// Sigil of Valor — {2} Equipment. Whenever equipped creature attacks alone,
+/// it gets +1/+1 for each other creature you control. Equip {1}.
+pub fn sigil_of_valor() -> CardDefinition {
+    let others = || Value::count(Selector::EachPermanent(yours(R::Creature).and(R::Not(Box::new(R::IsAttacking)))));
+    CardDefinition {
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::AttackingAlone),
+                effect: Effect::PumpPT { what: Selector::This, power: others(), toughness: others(), duration: Duration::EndOfTurn },
+            }],
+            ..Default::default()
+        }),
+        ..permanent("Sigil of Valor", cost(&[generic(2)]), CardType::Artifact)
+    }
+}
+
+/// Firbolg Flutist — {4}{R}{R} 4/4 Giant Bard. When it enters, gain control of
+/// target creature you don't control until end of turn, untap it; it gains
+/// haste and myriad until end of turn.
+pub fn firbolg_flutist() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(threaten(
+            R::Creature.and(R::Not(Box::new(R::ControlledByYou))),
+            vec![Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(crate::effect::shortcut::myriad()),
+                duration: Duration::EndOfTurn,
+            }],
+        ))],
+        ..creature("Firbolg Flutist", cost(&[generic(4), r(), r()]), vec![CreatureType::Giant, CreatureType::Bard], 4, 4)
+    }
+}
+
+/// Frenzied Gorespawn — {3}{B}{R} 4/4 Horror. When it enters, for each
+/// opponent, goad target creature that player controls. Whenever creatures
+/// attack one of your opponents, they gain menace until end of turn.
+pub fn frenzied_gorespawn() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::ForEachOpponentTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 5,
+                    min_targets: 0,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                    effect: Box::new(Effect::Goad { what: Selector::Target(0) }),
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::IsAttackingAnOpponent,
+                }),
+                effect: Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..creature("Frenzied Gorespawn", cost(&[generic(3), b(), r()]), vec![CreatureType::Horror], 4, 4)
+    }
+}
+
+/// Bhaal, Lord of Murder — {2}{B}{R}{G} 4/4 legendary God. Indestructible
+/// while your life is at most half your starting life. Whenever another
+/// nontoken creature you control dies, put a +1/+1 counter on target creature
+/// and goad it.
+pub fn bhaal_lord_of_murder() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "As long as your life total is less than or equal to half your starting life total, Bhaal has indestructible.",
+            StaticEffect::WhileCondition {
+                condition: Predicate::PlayerLifeAtMostHalfStarting { who: PlayerRef::You },
+                inner: Box::new(StaticEffect::GrantKeyword { applies_to: Selector::This, keyword: Keyword::Indestructible }),
+            },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: target_filtered(R::Creature), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::Goad { what: Selector::Target(0) },
+            ]),
+        }],
+        ..legend("Bhaal, Lord of Murder", cost(&[generic(2), b(), r(), g()]), vec![CreatureType::God], 4, 4)
+    }
+}
+
+/// Kroxa and Kunoros — {3}{R}{W}{B} 6/6 legendary Elder Giant Dog with
+/// vigilance, menace, lifelink. Entering or attacking: you may exile five cards
+/// from your graveyard; when you do, return target creature card from your
+/// graveyard to the battlefield.
+pub fn kroxa_and_kunoros() -> CardDefinition {
+    let reanimate = || {
+        Effect::If {
+            cond: Predicate::ValueAtLeast(Value::GraveyardSizeOf(PlayerRef::You), Value::Const(5)),
+            then: Box::new(may(
+                "exile five cards from your graveyard to return a creature card",
+                Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::Take {
+                            inner: Box::new(Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Graveyard,
+                                filter: R::Any,
+                            }),
+                            count: Box::new(Value::Const(5)),
+                        },
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::Reflexive {
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(R::Creature.from_your_graveyard()),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    },
+                ]),
+            )),
+            else_: Box::new(Effect::Noop),
+        }
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Menace, Keyword::Lifelink],
+        triggered_abilities: vec![etb(reanimate()), on_attack(reanimate())],
+        ..legend(
+            "Kroxa and Kunoros",
+            cost(&[generic(3), r(), w(), b()]),
+            vec![CreatureType::Elder, CreatureType::Giant, CreatureType::Dog],
+            6,
+            6,
+        )
+    }
+}
+
+/// Search for Dagger — {1}{W} enchantment. Whenever your commander enters or
+/// attacks, look at the top six cards; you may reveal a legendary creature
+/// card and put it into your hand; the rest go to the bottom at random.
+pub fn search_for_dagger() -> CardDefinition {
+    let commander = || Predicate::EntityMatches {
+        what: Selector::TriggerSource,
+        filter: R::IsCommander.and(R::OwnedByYou),
+    };
+    let dig = || {
+        Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+            count: Value::Const(6),
+            pick_filter: Some(R::Creature.and(R::HasSupertype(Supertype::Legendary))),
+            rest_bottom_random: true,
+            optional: true,
+            ..Default::default()
+        }))
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(commander()),
+                effect: dig(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(commander()),
+                effect: dig(),
+            },
+        ],
+        ..permanent("Search for Dagger", cost(&[generic(1), w()]), CardType::Enchantment)
+    }
+}
+
+/// Flagstones of Trokair — legendary land. {T}: add {W}. When it's put into a
+/// graveyard from the battlefield, you may search for a Plains card and put it
+/// onto the battlefield tapped.
+pub fn flagstones_of_trokair() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![crate::sets::tap_add(Color::White)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            effect: may(
+                "search for a Plains card",
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasLandType(LandType::Plains),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            ),
+        }],
+        ..permanent("Flagstones of Trokair", ManaCost::default(), CardType::Land)
+    }
+}
+
+/// Loyal Inventor — {2}{U} 2/3 Human Artificer with vigilance. When it enters,
+/// you may search for an artifact card: to your hand if you control an
+/// Assassin, otherwise on top of your library.
+pub fn loyal_inventor() -> CardDefinition {
+    let search = |to: ZoneDest| Effect::Search { who: PlayerRef::You, filter: R::Artifact, to };
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(may(
+            "search for an artifact card",
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Assassin)))),
+                then: Box::new(search(ZoneDest::Hand(PlayerRef::You))),
+                else_: Box::new(search(ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top })),
+            },
+        ))],
+        ..creature("Loyal Inventor", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 3)
+    }
+}
+
+/// Angrath, the Flame-Chained — {3}{B}{R} planeswalker, loyalty 4. +1: each
+/// opponent discards a card and loses 2 life. −3: threaten target creature;
+/// sacrifice it at the next end step if its mana value is 3 or less. −8: each
+/// opponent loses life equal to the cards in their graveyard.
+pub fn angrath_the_flame_chained() -> CardDefinition {
+    let loyalty = |cost: i32, effect: Effect| crate::card::LoyaltyAbility { loyalty_cost: cost, effect, ..Default::default() };
+    let each_opp = || Selector::Player(PlayerRef::EachOpponent);
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Angrath],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            loyalty(
+                1,
+                Effect::Seq(vec![
+                    Effect::Discard { who: each_opp(), amount: Value::ONE, random: false },
+                    Effect::LoseLife { who: each_opp(), amount: Value::Const(2) },
+                ]),
+            ),
+            loyalty(
+                -3,
+                threaten(
+                    R::Creature,
+                    vec![Effect::If {
+                        cond: Predicate::ValueAtMost(Value::ManaValueOf(Box::new(Selector::Target(0))), Value::Const(3)),
+                        then: Box::new(Effect::SacrificeAtNextEndStep { what: Selector::Target(0) }),
+                        else_: Box::new(Effect::Noop),
+                    }],
+                ),
+            ),
+            loyalty(
+                -8,
+                Effect::ForEachOpponent {
+                    body: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::GraveyardSizeOf(PlayerRef::Triggerer),
+                    }),
+                },
+            ),
+        ],
+        ..permanent("Angrath, the Flame-Chained", cost(&[generic(3), b(), r()]), CardType::Planeswalker)
+    }
+}
+
+/// Fumulus, the Infestation — {3}{B} 2/2 legendary flying, deathtouch Vampire
+/// Insect. Whenever a player sacrifices a nontoken creature, create a 1/1 black
+/// flying Insect. Whenever an Insect, Leech, Slug or Worm you control attacks,
+/// defending player loses 1 life and you gain 1 life.
+pub fn fumulus_the_infestation() -> CardDefinition {
+    let insect = TokenDefinition {
+        keywords: vec![Keyword::Flying],
+        ..token("Insect", 1, 1, vec![Color::Black], vec![CreatureType::Insect])
+    };
+    let crawlers = [CreatureType::Insect, CreatureType::Leech, CreatureType::Slug, CreatureType::Worm]
+        .into_iter()
+        .map(R::HasCreatureType)
+        .reduce(|a, b| a.or(b))
+        .expect("four types");
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken },
+                ),
+                effect: make(1, insect),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: crawlers }),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE },
+                    gain(1),
+                ]),
+            },
+        ],
+        ..legend(
+            "Fumulus, the Infestation",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Vampire, CreatureType::Insect],
+            2,
+            2,
+        )
+    }
+}
+
+/// Drafna, Founder of Lat-Nam — {1}{U} 2/1 legendary Human Artificer Advisor.
+/// {1}{U}: return target artifact you control to its owner's hand. {3}, {T}:
+/// copy target artifact spell you control.
+pub fn drafna_founder_of_lat_nam() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                effect: Effect::Move {
+                    what: target_filtered(yours(R::Artifact)),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                effect: Effect::CopySpell {
+                    what: target_filtered(R::IsSpellOnStack.and(R::Artifact).and(R::ControlledByYou)),
+                    count: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..legend(
+            "Drafna, Founder of Lat-Nam",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Advisor],
+            2,
+            1,
+        )
+    }
+}
+
+/// Saradoc, Master of Buckland — {3}{W} 2/4 legendary Halfling Citizen.
+/// Whenever it or another nontoken creature you control with power 2 or less
+/// enters, create a 1/1 white Halfling. Tap two other untapped Halflings you
+/// control: +2/+0 and lifelink until end of turn.
+pub fn saradoc_master_of_buckland() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::NotToken).and(R::PowerAtMost(2)),
+                },
+            ),
+            effect: make(1, token("Halfling", 1, 1, vec![Color::White], vec![CreatureType::Halfling])),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((R::HasCreatureType(CreatureType::Halfling).and(R::OtherThanSource), 2)),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Saradoc, Master of Buckland",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Halfling, CreatureType::Citizen],
+            2,
+            4,
+        )
+    }
+}
+
+/// Zoyowa's Justice — {1}{R} instant. The owner of target artifact or creature
+/// with mana value 1 or greater shuffles it into their library, then discovers
+/// X, X its mana value.
+pub fn zoyowas_justice() -> CardDefinition {
+    spell(
+        "Zoyowa's Justice",
+        cost(&[generic(1), r()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            Effect::AsPlayer {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(R::Artifact.or(R::Creature).and(R::ManaValueAtLeast(1))),
+                        to: ZoneDest::Library {
+                            who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            pos: crate::effect::LibraryPosition::Shuffled,
+                        },
+                    },
+                    // The card's mana value read from the library it was
+                    // shuffled into.
+                    Effect::Discover { n: Value::ManaValueOf(Box::new(Selector::Target(0))), filter: None },
+                ])),
+            },
+        ]),
+    )
+}
+
+fn non_legendary_copies() -> Effect {
+    let mut copies = crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::Const(2), Selector::This);
+    if let Effect::CreateTokenCopyOf { non_legendary, .. } = &mut copies {
+        *non_legendary = true;
+    }
+    copies
+}
+
+/// The Notary Hobbits — {3}{G}{G} 1/1 legendary Halfling Advisor. When they
+/// enter, if they're not a token, create two non-legendary token copies. {T}:
+/// add {C} for each Halfling you control.
+pub fn the_notary_hobbits() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::NotToken }),
+            effect: non_legendary_copies(),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::count(Selector::EachPermanent(yours(R::HasCreatureType(CreatureType::Halfling))))),
+            },
+            ..Default::default()
+        }],
+        ..legend("The Notary Hobbits", cost(&[generic(3), g(), g()]), vec![CreatureType::Halfling, CreatureType::Advisor], 1, 1)
+    }
+}
