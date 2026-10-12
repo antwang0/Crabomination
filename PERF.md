@@ -3188,6 +3188,31 @@ suite            CRAB_ANSWER_LOG=strict nextest --workspace (no client):
                  at 705 seats (was 3528 s at 684)
 ```
 
+### 2026-10-12 (Commander run, `01L4tuaB`, second leg) — guardrail; 79 cards, seats 932-960
+
+Hot-path touches: the cast path asks the casting card for a self colored
+discount (one hand lookup a cast); each `Effect::Scry` walks the controller's
+statics for `ScryLooksExtra` (as `Surveil` already did); a summoning-sick
+attacker under no haste source reads the board once for a Saddlebrute
+waiver; the CR 704.5a life check reads gated zero-life waivers. Release
+`bot_ladder` at `d768e5c18`, toolchain 1.99, Xeon @ 2.80 GHz (4 cores).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); peak_rss 31.8 MiB; games_per_s 244.90 (wall 1.31 s,
+                 host_calib_ms 55 vs 45 last leg — a slower box reading, not
+                 a regression claim)
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean
+clippy           workspace --all-targets clean
+strict suite     25,437 / 1 / 5 before the last rebase: the one failure was
+                 the batched-damage ratchet on Aphelia, fixed in-tree
+                 (`MatchingCreaturesDealingCombatDamageBatchThisTurn`)
+pods             debug, 4-seat 8 × 20 + 6-seat 12 games over seats 932-960,
+                 all decided (seeds 93201/93202)
+```
+
 ### 2026-10-12 (Commander run, `01L4tuaB`) — guardrail; 110 EDHREC seats, emblem floors, graveyard discounts
 
 Hot-path touch: the graveyard ability discount walk folds one more static arm
