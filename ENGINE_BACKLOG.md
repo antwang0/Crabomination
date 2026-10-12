@@ -189,9 +189,19 @@ the handoff.
   `PreventAllCombatDamageByMatchingThisTurn` now pins "you" / "opponent" filters to its
   controller (it read them against the damage dealer). **Pod invariant:** a this-turn may-play
   granted to a card already in hand (Zaffai and the Tempests) panicked the CR 400.7 link check
-  in an Ashling pod; exempted. **Open:** Xu-Ifit (Altar of the Wretched's crafted Bonemass);
-  Storm King's Thunder (a delayed body's `XFromCost` reads the storm count, not its own X);
-  Thran Portal (self-only chosen basic type, a life cost on intrinsic mana abilities).
+  in an Ashling pod; exempted.
+- **Seats 963-970** (Magnus, Yusri, Nine-Fingers Keene, Xu-Ifit, Duskana, Hapatra, Grenzo,
+  Sergeant John Benton; 31 cards, `decks::cmdr_edhrec17`). Primitives: copy your next instant or
+  sorcery X times, X fixed at resolution (Storm King's Thunder — the delayed body's own
+  `XFromCost` read the storm count); Game of Chaos's doubling coin-flip rounds; a type-line
+  word count (Embiggen); a self-only chosen basic land type (layer 4) and a life cost on its
+  intrinsic mana abilities (Thran Portal); a search for power + toughness exactly X; cumulative
+  upkeep "Add {R}" (Braid of Fire); craft now links the exiled cards to the crafted face, so
+  Wretched Bonemass reads their total power. **Bug:** Daru Spiritualist's "a Cleric you
+  control becomes the target" used `EventScope::YourControl`, which matches only the source
+  itself — now `YourCreatureTargeted`. **Pod invariant:** Braid of Fire's upkeep mana tripped
+  the CR 500.4 empty-pool check in a 963/967 pod (seed 23); the active player's upkeep pool is
+  exempt while they control an "Add mana" cumulative upkeep.
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.
