@@ -2050,6 +2050,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Invoke Justice | the counters go among your own creatures and Vehicles ("target player" is always you) | no permanent filter keyed to a player target |
 | 🟡 Phyrexian Purge | the 3 life per target is lost as the spell resolves, not paid as a cast cost | no per-target life surcharge in the cast pipeline |
 | 🟡 Doors of Durin | the top card is always revealed (the "you may" isn't asked) | a creature on top always joins the attack |
+| 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
 | 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
 | 🟡 Suppressor Skyguard | the shield lasts the turn, not just that combat | `PreventAllCombatDamageToPlayerThisTurn` has no per-combat duration |
 | 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |

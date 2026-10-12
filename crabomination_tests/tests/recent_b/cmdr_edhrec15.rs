@@ -909,3 +909,148 @@ fn brigid_hero_shoots_the_attackers() {
     assert!(g.battlefield_find(att).is_none());
     assert!(g.battlefield_find(home).is_some());
 }
+
+/// Fabrication Module: getting energy puts a +1/+1 counter on a creature you
+/// control; {4}, {T} is the energy.
+#[test]
+fn fabrication_module_counts_energy() {
+    let mut g = pod(2);
+    let fm = ready(&mut g, 0, catalog::fabrication_module());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, fm, 0, None).expect("energy");
+    assert_eq!(g.players[0].energy, 1);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Primal Prayers (CR 118.9): {E} casts a creature spell of mana value 3 or
+/// less in place of its mana cost.
+#[test]
+fn primal_prayers_casts_small_creatures_for_energy() {
+    let mut g = pod(2);
+    let pp = g.add_card_to_hand(0, catalog::primal_prayers());
+    cast(&mut g, pp, &[]).expect("prayers");
+    assert_eq!(g.players[0].energy, 2);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.empty();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: bear,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("pay {E}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.players[0].energy, 1);
+}
+
+/// Sedris, the Traitor King: creature cards in your graveyard have unearth
+/// {2}{B}.
+#[test]
+fn sedris_grants_unearth() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::sedris_the_traitor_king());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    activate(&mut g, bear, 0, None).expect("unearth");
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Obeka, Brute Chronologist (CR 724): its tap lets the active player end the
+/// turn — the stack is exiled and the turn skips to cleanup.
+#[test]
+fn obeka_ends_the_turn() {
+    let mut g = pod(2);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let ob = ready(&mut g, 0, catalog::obeka_brute_chronologist());
+    activate(&mut g, ob, 0, None).expect("tap");
+    assert!(matches!(g.step, TurnStep::Cleanup | TurnStep::Untap | TurnStep::Upkeep) || g.active_player_idx != 0, "turn ended at {:?}", g.step);
+}
+
+/// Mazzy, Truesword Paladin: an Aura of yours dying is exiled and castable;
+/// an enchanted attacker gets +2/+0.
+#[test]
+fn mazzy_recasts_dead_auras() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::mazzy_truesword_paladin());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let str_ = g.add_card_to_hand(0, catalog::holy_strength());
+    cast(&mut g, str_, &[perm(bear)]).expect("holy strength");
+    declare(&mut g, &[(bear, 1)]).expect("attack");
+    assert_eq!(pt(&g, bear), (5, 4), "+1/+2 aura and +2/+0");
+    let dis = g.add_card_to_hand(1, catalog::disenchant());
+    cast_as(&mut g, 1, dis, &[perm(str_)]).expect("disenchant the Aura");
+    let aura = g.exile.iter().find(|c| c.id == str_).expect("the Aura went to exile");
+    assert!(aura.may_play_until.is_some(), "castable from exile");
+}
+
+/// Unbridled Growth: the enchanted land taps for any color.
+#[test]
+fn unbridled_growth_fixes_a_land() {
+    let mut g = pod(2);
+    let land = ready(&mut g, 0, catalog::mountain());
+    let ug = g.add_card_to_hand(0, catalog::unbridled_growth());
+    cast(&mut g, ug, &[perm(land)]).expect("aura");
+    g.players[0].mana_pool.empty();
+    let idx = catalog::mountain().activated_abilities.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: idx,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("granted any-color tap");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+/// Kellan, Planar Trailblazer: Scout → Detective (impulse on hit) → 3/2
+/// double-striking Rogue; the second upgrade needs the first.
+#[test]
+fn kellan_levels_up_in_order() {
+    let mut g = pod(2);
+    let k = ready(&mut g, 0, catalog::kellan_planar_trailblazer());
+    activate(&mut g, k, 1, None).expect("rogue step does nothing yet");
+    assert_eq!(pt(&g, k), (2, 1));
+    activate(&mut g, k, 0, None).expect("detective");
+    activate(&mut g, k, 1, None).expect("rogue");
+    assert_eq!(pt(&g, k), (3, 2));
+    assert!(g.computed_permanent(k).unwrap().keywords().contains(&Keyword::DoubleStrike));
+}
+
+/// View from Above: with a white permanent it returns to your hand.
+#[test]
+fn view_from_above_comes_back_with_white() {
+    for (white, back) in [(false, false), (true, true)] {
+        let mut g = pod(2);
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        if white {
+            ready(&mut g, 0, catalog::savannah_lions());
+        }
+        let v = g.add_card_to_hand(0, catalog::view_from_above());
+        cast(&mut g, v, &[perm(bear)]).expect("view");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == v), back);
+    }
+}
+
+/// Consuming Tide: each player keeps one nonland permanent; the rest bounce.
+#[test]
+fn consuming_tide_keeps_one_each() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::serra_angel());
+    ready(&mut g, 1, catalog::gray_ogre());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::forest());
+    library(&mut g, 0, 2);
+    let ct = g.add_card_to_hand(0, catalog::consuming_tide());
+    cast(&mut g, ct, &[]).expect("tide");
+    let nonland = |s: usize| g.battlefield.iter().filter(|c| c.controller == s && !c.definition.is_land()).count();
+    assert_eq!((nonland(0), nonland(1)), (1, 1));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest"), "lands stay");
+}

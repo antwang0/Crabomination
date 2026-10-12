@@ -2641,3 +2641,258 @@ pub fn vraska_the_cutting_glare() -> CardDefinition {
         ..legend("Vraska, the Cutting Glare", cost(&[b(), b(), g()]), vec![CreatureType::Gorgon, CreatureType::Assassin], 4, 4)
     }
 }
+
+// ── Batch G ──────────────────────────────────────────────────────────────────
+
+/// Fabrication Module — {3} artifact. Whenever you get one or more {E}, a
+/// +1/+1 counter on target creature you control. {4}, {T}: you get {E}.
+pub fn fabrication_module() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EnergyGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: target_filtered(yours(R::Creature)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::AddEnergy(Value::ONE),
+            ..Default::default()
+        }],
+        ..permanent("Fabrication Module", cost(&[generic(3)]), CardType::Artifact)
+    }
+}
+
+/// Primal Prayers — {2}{G}{G} enchantment. ETB: {E}{E}. You may cast creature
+/// spells with mana value 3 or less by paying {E} rather than their mana
+/// costs (the "as though it had flash" rider isn't modeled).
+pub fn primal_prayers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
+        static_abilities: vec![static_ab(
+            "You may cast creature spells with mana value 3 or less by paying {E} rather than paying their mana costs.",
+            StaticEffect::EnergyAlternativeCostForFilter { filter: R::Creature.and(R::ManaValueAtMost(3)), energy: 1 },
+        )],
+        ..permanent("Primal Prayers", cost(&[generic(2), g(), g()]), CardType::Enchantment)
+    }
+}
+
+/// Sedris, the Traitor King — {3}{U}{B}{R} 5/5 legendary Zombie Warrior. Each
+/// creature card in your graveyard has unearth {2}{B}.
+pub fn sedris_the_traitor_king() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Each creature card in your graveyard has unearth {2}{B}.",
+            StaticEffect::GraveyardCardsHaveUnearth { filter: R::Creature, cost: cost(&[generic(2), b()]) },
+        )],
+        ..legend(
+            "Sedris, the Traitor King",
+            cost(&[generic(3), u(), b(), r()]),
+            vec![CreatureType::Zombie, CreatureType::Warrior],
+            5,
+            5,
+        )
+    }
+}
+
+/// Obeka, Brute Chronologist — {1}{U}{B}{R} 3/4 legendary Ogre Wizard. {T}:
+/// the player whose turn it is may end the turn.
+pub fn obeka_brute_chronologist() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::MayDoBy {
+                who: PlayerRef::ActivePlayer,
+                description: "End the turn?".into(),
+                body: Box::new(Effect::EndTheTurn),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Obeka, Brute Chronologist",
+            cost(&[generic(1), u(), b(), r()]),
+            vec![CreatureType::Ogre, CreatureType::Wizard],
+            3,
+            4,
+        )
+    }
+}
+
+/// Mazzy, Truesword Paladin — {1}{R}{G}{W} 3/4 legendary Halfling Knight. An
+/// enchanted creature of yours attacking gets +2/+0 and trample. An Aura of
+/// yours put into your graveyard from the battlefield is exiled; you may cast
+/// it until the end of your next turn.
+pub fn mazzy_truesword_paladin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(trigger_is(R::IsEnchanted)),
+                effect: Effect::Seq(vec![
+                    eot_pump(Selector::TriggerSource, 2, 0),
+                    grant_eot(Selector::TriggerSource, Keyword::Trample),
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl)
+                    .with_filter(trigger_is(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))),
+                effect: Effect::Seq(vec![
+                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ]),
+            },
+        ],
+        ..legend(
+            "Mazzy, Truesword Paladin",
+            cost(&[generic(1), r(), g(), w()]),
+            vec![CreatureType::Halfling, CreatureType::Knight],
+            3,
+            4,
+        )
+    }
+}
+
+/// Unbridled Growth — {G} Aura, enchant land. Enchanted land has "{T}: add one
+/// mana of any color." Sacrifice it: draw a card.
+pub fn unbridled_growth() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(yours(R::Land)) },
+        equipped_bonus: Some(EquipBonus { activated_abilities: vec![crate::sets::tap_add_any_color()], ..Default::default() }),
+        activated_abilities: vec![ActivatedAbility { sac_cost: true, effect: draw(1), ..Default::default() }],
+        ..permanent("Unbridled Growth", cost(&[g()]), CardType::Enchantment)
+    }
+}
+
+/// Coastline Marauders — {2}{R} 0/3 Human Pirate, trample. Attacking: +1/+0
+/// for each land defending player controls. Encore {4}{R}{R}.
+pub fn coastline_marauders() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByDefendingPlayer))),
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        })],
+        activated_abilities: vec![crate::effect::shortcut::encore(cost(&[generic(4), r(), r()]))],
+        ..creature("Coastline Marauders", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Pirate], 0, 3)
+    }
+}
+
+/// Kellan, Planar Trailblazer — {R} 2/1 legendary Human Faerie Scout. {1}{R}:
+/// a Scout becomes a Detective with "combat damage to a player exiles your
+/// top card; you may play it this turn". {2}{R}: a Detective becomes a 3/2
+/// Rogue with double strike.
+pub fn kellan_planar_trailblazer() -> CardDefinition {
+    let forever = Duration::Permanent;
+    let is = |t: CreatureType| Predicate::EntityMatches { what: Selector::This, filter: R::HasCreatureType(t) };
+    let types = |last: CreatureType| vec![CreatureType::Human, CreatureType::Faerie, last];
+    let impulse = Effect::ExileTopAndGrantMayPlay {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+        pay_any_color: false,
+        max_mana_value: None,
+        pay_own_cost: true,
+        uncast_penalty: None,
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Scout),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::BecomeCreatureType {
+                            what: Selector::This,
+                            creature_types: types(CreatureType::Detective),
+                            duration: forever,
+                        },
+                        Effect::GrantTriggeredAbility {
+                            what: Selector::This,
+                            trigger: Box::new(on_combat_hit(impulse)),
+                            duration: forever,
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), r()]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Detective),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::BecomeCreatureType {
+                            what: Selector::This,
+                            creature_types: types(CreatureType::Rogue),
+                            duration: forever,
+                        },
+                        Effect::SetBasePT { what: Selector::This, power: Value::Const(3), toughness: Value::Const(2), duration: forever },
+                        Effect::GrantKeyword { what: Selector::This, keyword: Keyword::DoubleStrike, duration: forever },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..legend(
+            "Kellan, Planar Trailblazer",
+            cost(&[r()]),
+            vec![CreatureType::Human, CreatureType::Faerie, CreatureType::Scout],
+            2,
+            1,
+        )
+    }
+}
+
+/// View from Above — {1}{U} instant. Target creature gains flying until end
+/// of turn; if you control a white permanent, return this to its owner's hand.
+pub fn view_from_above() -> CardDefinition {
+    spell(
+        "View from Above",
+        cost(&[generic(1), u()]),
+        CardType::Instant,
+        Effect::Seq(vec![
+            grant_eot(target_filtered(R::Creature), Keyword::Flying),
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(yours(R::Permanent.and(R::HasColor(Color::White))))),
+                then: Box::new(Effect::ReturnResolvingSpellToHand),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Consuming Tide — {2}{U}{U} sorcery. Each player keeps one nonland
+/// permanent; the rest return to their owners' hands. Then you draw a card
+/// for each opponent with more cards in hand than you.
+pub fn consuming_tide() -> CardDefinition {
+    spell(
+        "Consuming Tide",
+        cost(&[generic(2), u(), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::EachPlayerKeepsOneSacrificeRest {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                filter: R::Permanent.and(R::Nonland),
+                destroy: false,
+                bounce: true,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::PlayersWithGreaterTally(crate::card::PlayerTally::CardsInHand),
+            },
+        ]),
+    )
+}
