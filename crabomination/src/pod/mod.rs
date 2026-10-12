@@ -5928,6 +5928,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SNAPDAX_COMMANDERS,
             main: decks::SNAPDAX_MAIN,
         },
+        // Seat 913: Monk Gyatso's EDHREC average deck. `--pod-decks 913`.
+        PodDeck {
+            name: "Monk Gyatso (W)",
+            commanders: decks::MONK_GYATSO_COMMANDERS,
+            main: decks::MONK_GYATSO_MAIN,
+        },
+        // Seat 914: Basim Ibn Ishaq's EDHREC average deck. `--pod-decks 914`.
+        PodDeck {
+            name: "Basim Ibn Ishaq (UB)",
+            commanders: decks::BASIM_IBN_ISHAQ_COMMANDERS,
+            main: decks::BASIM_IBN_ISHAQ_MAIN,
+        },
+        // Seat 915: Iron Spider, Stark Upgrade's EDHREC average deck. `--pod-decks 915`.
+        PodDeck {
+            name: "Iron Spider, Stark Upgrade (C)",
+            commanders: decks::IRON_SPIDER_COMMANDERS,
+            main: decks::IRON_SPIDER_MAIN,
+        },
+        // Seat 916: Piru, the Volatile's EDHREC average deck. `--pod-decks 916`.
+        PodDeck {
+            name: "Piru, the Volatile (WBR)",
+            commanders: decks::PIRU_COMMANDERS,
+            main: decks::PIRU_MAIN,
+        },
+        // Seat 917: Mahadi, Emporium Master's EDHREC average deck. `--pod-decks 917`.
+        PodDeck {
+            name: "Mahadi, Emporium Master (BR)",
+            commanders: decks::MAHADI_COMMANDERS,
+            main: decks::MAHADI_MAIN,
+        },
+        // Seat 918: Zurgo and Ojutai's EDHREC average deck. `--pod-decks 918`.
+        PodDeck {
+            name: "Zurgo and Ojutai (WUR)",
+            commanders: decks::ZURGO_AND_OJUTAI_COMMANDERS,
+            main: decks::ZURGO_AND_OJUTAI_MAIN,
+        },
+        // Seat 919: Kokusho, the Evening Star's EDHREC average deck. `--pod-decks 919`.
+        PodDeck {
+            name: "Kokusho, the Evening Star (B)",
+            commanders: decks::KOKUSHO_COMMANDERS,
+            main: decks::KOKUSHO_MAIN,
+        },
+        // Seat 920: Lagomos, Hand of Hatred's EDHREC average deck. `--pod-decks 920`.
+        PodDeck {
+            name: "Lagomos, Hand of Hatred (BR)",
+            commanders: decks::LAGOMOS_COMMANDERS,
+            main: decks::LAGOMOS_MAIN,
+        },
+        // Seat 921: Inquisitor Eisenhorn's EDHREC average deck. `--pod-decks 921`.
+        PodDeck {
+            name: "Inquisitor Eisenhorn (UB)",
+            commanders: decks::INQUISITOR_EISENHORN_COMMANDERS,
+            main: decks::INQUISITOR_EISENHORN_MAIN,
+        },
     ]
 }
 
@@ -8605,6 +8659,15 @@ mod tests {
             ("Cid, Timeless Artificer", &[0x0CB4]),
             ("Birgi, God of Storytelling", &[0x0CB5]),
             ("Snapdax, Apex of the Hunt", &[0x0CB6]),
+            ("Monk Gyatso", &[0x0CB7]),
+            ("Basim Ibn Ishaq", &[0x0CB8]),
+            ("Iron Spider, Stark Upgrade", &[0x0CB9]),
+            ("Piru, the Volatile", &[0x0CBA]),
+            ("Mahadi, Emporium Master", &[0x0CBB]),
+            ("Zurgo and Ojutai", &[0x0CBC]),
+            ("Kokusho, the Evening Star", &[0x0CBD]),
+            ("Lagomos, Hand of Hatred", &[0x0CBE]),
+            ("Inquisitor Eisenhorn", &[0x0CBF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
