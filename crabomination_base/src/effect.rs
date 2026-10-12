@@ -3364,6 +3364,10 @@ pub enum ManaPayload {
     /// you control (Mox Amber). The legal-color set is the union of those
     /// permanents' colors; produces nothing when empty.
     AnyColorAmongLegendaries,
+    /// Add one mana of any color among legendary creature cards in your
+    /// graveyard (The Grey Havens) — their printed colors; nothing when there
+    /// are none.
+    AnyColorAmongLegendaryCreatureCardsInYourGraveyard,
     /// "Add one mana of any of this creature's colors" — the source
     /// permanent's own computed colors (Katilda's granted Human ability);
     /// nothing off a colorless source.
@@ -6406,6 +6410,12 @@ pub enum Effect {
     /// card." The exiled cards stay in exile; the stopping card's mana value
     /// is published as `Value::LastExiledManaValue` (Undying Flames).
     ExileTopUntilNonland { who: PlayerRef },
+    /// "Exile cards from the top of your library until you exile a nonland
+    /// card, then put that card into your hand. If the card's mana value is
+    /// `again_at_least` or greater, repeat this process. [This] deals
+    /// `damage_each` damage to you for each card put into your hand this way"
+    /// (Demonlord Belzenlok). An empty library ends the process.
+    ExileUntilNonlandToHandRepeat { again_at_least: u32, damage_each: u32 },
     /// "Exile the top `batch` cards. If the last card exiled isn't a land
     /// card, repeat this process." `then` runs afterwards and reads the
     /// nonland tally through [`Value::NonlandCardsExiledThisEffect`].

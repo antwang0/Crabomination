@@ -2477,6 +2477,9 @@ pub enum StaticEffect {
     /// covers that planeswalker only (Teferi, Master of Time). Read by
     /// `activate_loyalty_ability`.
     LoyaltyAbilitiesAtInstantSpeed,
+    /// CR 606.3 — "Players can't activate planeswalkers' loyalty abilities"
+    /// (The Immortal Sun). Read in `activate_loyalty_ability`.
+    NoLoyaltyAbilities,
     /// CR 615 — "If a spell you control would deal damage to an opponent,
     /// prevent that damage. Create a `token` for each 1 damage prevented this
     /// way." (Hostility.) Applied in the noncombat damage funnel.

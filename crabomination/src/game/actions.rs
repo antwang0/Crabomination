@@ -3213,6 +3213,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyTypeSacrificedLandProduces
         | ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard
         | ManaPayload::AnyColorOfSource
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents
@@ -4900,6 +4901,7 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         // Color set depends on live board state — not auto-tapped. (The
         // source table reads `AnyColorOfSource` off its source instead.)
         ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard
         | ManaPayload::AnyColorOfSource
         | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents

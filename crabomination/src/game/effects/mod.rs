@@ -14617,6 +14617,30 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard => {
+                        // The Grey Havens — printed colors of the legendary
+                        // creature cards in the controller's graveyard.
+                        let mut legal: Vec<Color> = Vec::new();
+                        for c in self.players[p].graveyard.iter().filter(|c| {
+                            c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
+                                && self.computed_is_creature(c)
+                        }) {
+                            for col in c.definition.cost.colors() {
+                                if !legal.contains(&col) {
+                                    legal.push(col);
+                                }
+                            }
+                        }
+                        if !legal.is_empty() {
+                            let color = if legal.len() == 1 {
+                                legal[0]
+                            } else {
+                                self.chosen_mana_color(p, &legal, ctx.source)
+                            };
+                            add_one(self, p, color);
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                        }
+                    }
                     ManaPayload::AnyColorAmongExiledWithSource => {
                         // Pit of Offerings — the union of printed colours
                         // among the cards its ETB exiled. Nothing exiled (or
@@ -16628,6 +16652,41 @@ impl GameState {
                     if !is_land {
                         break;
                     }
+                }
+                Ok(())
+            }
+
+            Effect::ExileUntilNonlandToHandRepeat { again_at_least, damage_each } => {
+                // Demonlord Belzenlok — dig to a nonland, take it, and go
+                // again while the take costs `again_at_least` or more.
+                let seat = ctx.controller;
+                let mut taken = 0u32;
+                loop {
+                    let mut hit = None;
+                    while let Some(top) = self.players[seat].library.first() {
+                        let (id, is_land, mv) = (top.id, top.definition.is_land(), top.definition.cost.cmc());
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                        if !is_land {
+                            hit = Some((id, mv));
+                            break;
+                        }
+                    }
+                    let Some((id, mv)) = hit else { break };
+                    self.move_card_to(id, &ZoneDest::Hand(PlayerRef::Seat(seat)), ctx, events);
+                    taken += 1;
+                    if mv < *again_at_least {
+                        break;
+                    }
+                }
+                if taken > 0 && *damage_each > 0 {
+                    self.run_effect(
+                        &Effect::DealDamage {
+                            to: Selector::You,
+                            amount: crate::effect::Value::Const((taken * damage_each) as i32),
+                        },
+                        ctx,
+                        events,
+                    )?;
                 }
                 Ok(())
             }

@@ -28047,6 +28047,15 @@ impl GameState {
         if !self.battlefield[pos].definition.is_planeswalker() {
             return Err(GameError::InvalidTarget);
         }
+        // The Immortal Sun — no player may activate loyalty abilities.
+        if self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::NoLoyaltyAbilities))
+        }) {
+            return Err(GameError::AbilityConditionNotMet);
+        }
         // CR 701.35 — a detained planeswalker's loyalty abilities can't be
         // activated (same gate as the regular activation path).
         if self.battlefield[pos].detained_by.is_some() {
@@ -34469,6 +34478,7 @@ fn static_effect_to_effects(
             // Consulted at ETB placement / by `activate_loyalty_ability`.
             | StaticEffect::CreaturesEnterAsCopyOf { .. }
             | StaticEffect::LoyaltyAbilitiesAtInstantSpeed
+            | StaticEffect::NoLoyaltyAbilities
             // Consulted in the noncombat damage funnel.
             | StaticEffect::SpellDamageToOpponentsBecomesTokens { .. }
             // A cast-time lock; and a per-creature pump gathered state-aware.

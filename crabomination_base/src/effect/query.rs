@@ -1025,6 +1025,7 @@ impl Effect {
             | Effect::ReturnAnyNumberToHand { .. }
             | Effect::PutAnyNumberFromGraveyardOnTop { .. }
             | Effect::ExileTopUntilNonland { .. }
+            | Effect::ExileUntilNonlandToHandRepeat { .. }
             | Effect::TapAnyNumberThenCounters { .. }
             | Effect::TapAnyNumberThenDraw { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
@@ -1930,6 +1931,7 @@ impl Effect {
                     | ManaPayload::AnyColorABasicLandYouControlCouldProduce
                     | ManaPayload::AnyColorAGateYouControlCouldProduce
                     | ManaPayload::AnyColorAmongLegendaries
+                    | ManaPayload::AnyColorAmongLegendaryCreatureCardsInYourGraveyard
                     | ManaPayload::AnyColorOfSource
                     | ManaPayload::AnyColorInCommanderIdentity
                     | ManaPayload::DraftNotedColorOfSource => false,
