@@ -20129,6 +20129,9 @@ impl GameState {
                         .unwrap_or_else(|| (attacker.power(), attacker.toughness()));
                     p <= *n as i32 || t <= *n as i32
                 }
+                Keyword::UnblockableWhilePowerAtMost(n) => {
+                    atk_cp.map_or_else(|| attacker.power(), |c| c.power) <= *n as i32
+                }
                 // CR 509.1b — Kraken of the Straits.
                 Keyword::CantBeBlockedByPowerLessThanCount(f) => {
                     let n = self
@@ -27872,7 +27875,11 @@ impl GameState {
         // entered. Having priority is implied by reaching this action.
         let flash_loyalty_window = (self.battlefield[pos].definition.flash_loyalty
             && self.battlefield[pos].entered_turn == Some(self.turn_number))
-            || self.loyalty_at_instant_speed(p);
+            || self.loyalty_at_instant_speed(p)
+            // Teferi, Master of Time — the same permission on its own card.
+            || self.battlefield[pos].definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::LoyaltyAbilitiesAtInstantSpeed)
+            });
         if !flash_loyalty_window && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -35315,6 +35322,7 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
             | Keyword::CantBeBlockedByPowerLessThanCount(_)
             | Keyword::CantBeBlockedByPowerLessThanGreatestAmong(_)
             | Keyword::UnblockableWhilePowerOrToughnessAtMost(_)
+            | Keyword::UnblockableWhilePowerAtMost(_)
             // `can_block_attacker_computed`'s attacker pass.
             | Keyword::Unblockable
             | Keyword::ProtectionFromCreatures

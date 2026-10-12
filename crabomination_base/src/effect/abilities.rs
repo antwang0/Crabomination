@@ -2403,7 +2403,9 @@ pub enum StaticEffect {
     CreaturesEnterAsCopyOf { filter: SelectionRequirement, of: crate::effect::Selector },
     /// CR 606.3 override — "You may activate loyalty abilities of planeswalkers
     /// you control on any player's turn any time you could cast an instant."
-    /// (Teferi, Temporal Archmage's emblem.) Read by `activate_loyalty_ability`.
+    /// (Teferi, Temporal Archmage's emblem.) Printed on a planeswalker it
+    /// covers that planeswalker only (Teferi, Master of Time). Read by
+    /// `activate_loyalty_ability`.
     LoyaltyAbilitiesAtInstantSpeed,
     /// CR 615 — "If a spell you control would deal damage to an opponent,
     /// prevent that damage. Create a `token` for each 1 damage prevented this

@@ -2633,6 +2633,9 @@ pub enum Keyword {
     /// block declaration, so the grant needs no P/T filter the layers can't
     /// route.
     UnblockableWhilePowerOrToughnessAtMost(u32),
+    /// CR 509.1b — "can't be blocked as long as its power is `max` or less"
+    /// (Thieves' Tools on its equipped creature). The power-only sibling.
+    UnblockableWhilePowerAtMost(u32),
     /// CR 509.1b — "This creature can't be blocked unless all creatures
     /// defending player controls block it" (Tromokratis). Enforced against
     /// the finished block assignment in `declare_blockers`.
