@@ -5260,6 +5260,7 @@ impl GameState {
             card.definition_make_mut().activated_abilities = kept;
         }
         self.players[p].lands_played_this_turn += 1;
+        self.players[p].lands_entered_this_turn += 1;
         // CR 400.7 — a land that was an animated, pumped or damaged creature
         // when it last left the battlefield is a new object now (guarded by
         // the read-only probe: the reset unshares the card's data, and a

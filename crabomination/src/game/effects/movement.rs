@@ -3129,7 +3129,9 @@ impl GameState {
                 if card.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Food) {
                     self.players[p].foods_entered_this_turn += 1;
                 }
-                if !card.definition.is_land() {
+                if card.definition.is_land() {
+                    self.players[p].lands_entered_this_turn += 1;
+                } else {
                     self.players[p].nonland_permanents_entered_this_turn += 1;
                 }
                 if card.definition.has_creature_type(crate::card::CreatureType::Mount)
