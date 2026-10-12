@@ -6750,6 +6750,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YENNETT_COMMANDERS,
             main: decks::YENNETT_MAIN,
         },
+        // Seat 974: Maha, Its Feathers Night's EDHREC average deck. `--pod-decks 974`.
+        PodDeck {
+            name: "Maha, Its Feathers Night (B)",
+            commanders: decks::MAHA_COMMANDERS,
+            main: decks::MAHA_MAIN,
+        },
+        // Seat 975: General Ferrous Rokiric's EDHREC average deck. `--pod-decks 975`.
+        PodDeck {
+            name: "General Ferrous Rokiric (WR)",
+            commanders: decks::GENERAL_FERROUS_ROKIRIC_COMMANDERS,
+            main: decks::GENERAL_FERROUS_ROKIRIC_MAIN,
+        },
+        // Seat 976: Greasefang, Okiba Boss's EDHREC average deck. `--pod-decks 976`.
+        PodDeck {
+            name: "Greasefang, Okiba Boss (WB)",
+            commanders: decks::GREASEFANG_COMMANDERS,
+            main: decks::GREASEFANG_MAIN,
+        },
     ]
 }
 

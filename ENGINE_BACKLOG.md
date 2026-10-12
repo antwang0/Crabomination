@@ -207,6 +207,10 @@ the handoff.
   combat damage and is exiled if it would leave; `CopyCardAndCastFree` now copies a face-down
   permanent's face-up card. Brilliant Ultimatum is `SeparateIntoPiles` + Gix's
   `PlayLandAmongNow` / `CastAnyOrderWithoutPaying`.
+- **Seats 974-976** (Maha, General Ferrous Rokiric, Greasefang; 18 cards, `decks::cmdr_edhrec20`).
+  Primitives: Rem Karolus's spell-damage statics (`PreventSpellDamageToYouAndYourOtherPermanents`
+  — a new `prevent_static` lane bit — and `SpellDamageToOpponentsBonus`, any spell's); a crew
+  event's trigger amount is its crew size (Mighty Servant of Leuk-o's "exactly two").
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.

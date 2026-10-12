@@ -29916,3 +29916,88 @@ pub const YENNETT_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const MAHA_COMMANDERS: &[CardFactory] = &[maha_its_feathers_night];
+
+/// **Maha, Its Feathers Night**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Maha, Its Feathers Night (EDHREC, fetched 2026-10-12).
+pub const MAHA_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, caltrops, charcoal_diamond, jet_medallion,
+    lightning_greaves, mind_stone, sol_ring, swiftfoot_boots, the_darkness_crystal,
+    thought_vessel, bojuka_bog, cabal_coffers, cabal_stronghold, nykthos_shrine_to_nyx,
+    reliquary_tower, spymasters_vault, urborg_tomb_of_yawgmoth, ascendant_evincar, blood_artist,
+    crypt_ghast, deathgreeter, dread_presence, gisa_glorious_resurrector,
+    gray_merchant_of_asphodel, harvester_of_souls, krrik_son_of_yawgmoth, kaervek_the_spiteful,
+    m_o_d_o_k, massacre_girl, massacre_girl_known_killer, massacre_wurm, midnight_banshee,
+    morbid_opportunist, necroskitter, night_clubber, persistent_constrictor, plague_mare,
+    plague_spitter, syr_konrad_the_grim, vein_ripper, black_market, black_market_connections,
+    curse_of_deaths_hold, night_of_souls_betrayal, noxious_field, pestilence, phyrexian_arena,
+    the_meathook_massacre, cower_in_fear, dark_ritual, defile, imps_mischief, make_obsolete,
+    neutralize_the_guards, suffocating_fumes, tragic_slip, v_a_t_s, withering_torment,
+    liliana_of_the_dark_realms, black_suns_zenith, exsanguinate, feed_the_swarm,
+    gruesome_realization, nausea, nights_whisper, reanimate, rise_of_the_dark_realms, shrivel,
+    sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const GENERAL_FERROUS_ROKIRIC_COMMANDERS: &[CardFactory] = &[general_ferrous_rokiric];
+
+/// **General Ferrous Rokiric**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Mountains + 11 Plains = 99.
+/// General Ferrous Rokiric (EDHREC, fetched 2026-10-12).
+pub const GENERAL_FERROUS_ROKIRIC_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, glass_of_the_guildpact, idol_of_oblivion,
+    seal_of_the_guildpact, sol_ring, sunforger, talisman_of_conviction, tome_of_the_guildpact,
+    battlefield_forge, boros_garrison, clifftop_retreat, command_tower, furycalm_snarl,
+    needleverge_pathway, pillar_of_the_paruns, radiant_summit, rugged_prairie, sacred_foundry,
+    spectator_seating, sundown_pass, sunscorched_divide, temple_of_triumph,
+    adriana_captain_of_the_guard, alibou_ancient_witness, anim_pakal_thousandth_moon,
+    arcbound_shikari, aurelia_the_law_above, aurelia_the_warleader, balefire_liege,
+    bayek_of_siwa, blade_historian, boros_reckoner, duergar_hedge_mage, figure_of_destiny,
+    firemane_avenger, gisela_blade_of_goldnight, hero_of_precinct_one, iroas_god_of_victory,
+    jor_kadeen_the_prevailer, losheel_clockwork_scholar, neyali_suns_vanguard,
+    rem_karolus_stalwart_slayer, sentinel_sarah_lyons, skyknight_vanguard,
+    swiftblade_vindicator, tajic_legions_edge, tori_davenant_fury_rider, venerable_warsinger,
+    eowyn_fearless_knight, assemble_the_legion, intangible_virtue, legions_initiative,
+    showdown_of_the_skalds, tocasias_welcome, warleaders_call, boros_charm, deflecting_palm,
+    intimidation_bolt, justice_strike, legion_leadership, lightning_helix, lorehold_charm,
+    lorehold_command, master_warcraft, response_resurgence, ride_down, shattering_blow,
+    swords_to_plowshares, wear_tear, angelfire_ignition, deafening_clarion, pursue_the_past,
+    reconstruct_history, rip_apart, taunt_from_the_rampart, thrilling_discovery,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const GREASEFANG_COMMANDERS: &[CardFactory] = &[greasefang_okiba_boss];
+
+/// **Greasefang, Okiba Boss**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 9 Plains + 9 Swamps = 99.
+/// Greasefang, Okiba Boss (EDHREC, fetched 2026-10-12).
+pub const GREASEFANG_MAIN: &[CardFactory] = &[
+    aerial_surveyor, arcane_signet, cultivators_caravan, cybership, demonic_junker,
+    key_to_the_city, knight_paladin, mighty_servant_of_leuk_o, mole_module, nautiloid_ship,
+    orzhov_signet, parhelion_ii, peacewalker_colossus, reaver_titan, reckoner_bankbuster,
+    rolling_hamsphere, salvation_engine, skysovereign_consul_flagship, smugglers_copter,
+    sol_ring, surgehacker_mech, talisman_of_hierarchy, the_prydwen_steel_flagship, the_regalia,
+    thunderhawk_gunship, valors_flagship, weatherlight, bojuka_bog, brightclimb_pathway,
+    buried_ruin, caves_of_koilos, command_tower, fetid_heath, geier_reach_sanitarium,
+    godless_shrine, isolated_chapel, mech_hangar, orzhov_basilica, shadowy_backstreet,
+    shattered_sanctum, shineshadow_snarl, tainted_field, temple_of_silence, vault_of_champions,
+    aeronaut_admiral, armix_filigree_thrasher, braids_arisen_nightmare, cynical_loner,
+    dockside_chef, foundry_inspector, giant_ox, hotshot_mechanic, imotekh_the_stormlord,
+    interface_ace, king_macar_the_gold_cursed, kitsune_ace, losheel_clockwork_scholar,
+    oriq_loremage, oswald_fiddlebender, putrid_imp, sram_senior_edificer, vile_entomber,
+    born_to_drive, okiba_reckoner_raid, ripples_of_undeath, teleportation_circle,
+    bitter_triumph, deadly_dispute, dispatch, entomb, path_to_exile, reckoners_bargain,
+    swords_to_plowshares, village_rites, bone_shards, damn, from_father_to_son, lively_dirge,
+    morbid_curiosity, rite_of_oblivion, unmarked_grave,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
