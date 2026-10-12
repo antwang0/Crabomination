@@ -1926,6 +1926,9 @@ pub enum Keyword {
     /// CR 702.29 — Cycling whose cost is a life payment instead of mana
     /// ("Cycling—Pay 2 life", Street Wraith).
     CyclingLife(u32),
+    /// CR 702.29 — Cycling whose cost is sacrificing a permanent matching the
+    /// filter ("Cycling—Sacrifice a land", Edge of Autumn).
+    CyclingSacrifice(Box<SelectionRequirement>),
     /// CR 702.29e — Typecycling (landcycling). A variant of Cycling: pay the
     /// cost + discard this card, then search your library for a land card with
     /// the given land type, reveal it, and put it into your hand (then
@@ -8078,6 +8081,7 @@ impl CardDefinition {
                 k,
                 Keyword::Cycling(_)
                     | Keyword::CyclingLife(_)
+                    | Keyword::CyclingSacrifice(_)
                     | Keyword::Landcycling(_, _)
                     | Keyword::Typecycling(_)
             )

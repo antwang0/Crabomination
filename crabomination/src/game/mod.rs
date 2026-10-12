@@ -21638,7 +21638,7 @@ impl GameState {
         }
         // Locate the card in `seat`'s hand and clone the cycling cost —
         // mana (`Cycling`) or life ("Cycling—Pay 2 life", `CyclingLife`).
-        let (cycling_cost, life_cost) = self.players[seat]
+        let (cycling_cost, life_cost, sac) = self.players[seat]
             .hand
             .iter()
             .find(|c| c.id == card_id)
@@ -21647,15 +21647,24 @@ impl GameState {
                     .keywords
                     .iter()
                     .find_map(|kw| match kw {
-                        Keyword::Cycling(mc) => Some((Some(mc.clone()), 0)),
-                        Keyword::CyclingLife(n) => Some((None, *n)),
+                        Keyword::Cycling(mc) => Some((Some(mc.clone()), 0, None)),
+                        Keyword::CyclingLife(n) => Some((None, *n, None)),
+                        Keyword::CyclingSacrifice(f) => Some((None, 0, Some((**f).clone()))),
                         _ => None,
                     })
-                    .or_else(|| self.granted_cycling_for(seat, c).map(|mc| (Some(mc), 0)))
+                    .or_else(|| self.granted_cycling_for(seat, c).map(|mc| (Some(mc), 0, None)))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
         if !cast_cost::life_payable(self.players[seat].life, life_cost) {
             return Err(GameError::InsufficientLife);
+        }
+        // "Cycling—Sacrifice a land" (Edge of Autumn): unpayable without one.
+        if let Some(f) = &sac
+            && !self.battlefield.iter().any(|c| {
+                c.controller == seat && self.evaluate_requirement_static(f, &Target::Permanent(c.id), seat, None)
+            })
+        {
+            return Err(GameError::CardNotInHand(card_id));
         }
         // Pay the cycling cost from the floated mana pool; an {X} in the
         // cost (Shark Typhoon's {X}{1}{U}) is paid as `x_value` generic.
@@ -21676,6 +21685,11 @@ impl GameState {
         }
         if life_cost > 0 {
             self.adjust_life_emit(seat, -crate::game::life_amount(life_cost), &mut paid);
+        }
+        if let Some(f) = &sac
+            && !free
+        {
+            paid.extend(self.sacrifice_for_graveyard_cast(seat, card_id, f));
         }
         // Discard the card from hand via the centralized path (handles the
         // graveyard move, CardDiscarded, discard-matters counters, and the

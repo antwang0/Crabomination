@@ -7197,7 +7197,7 @@ impl GameState {
     /// matching `filter`. With a choice the decider picks (`ChooseCards`,
     /// `min == 1`); the candidates are ordered tapped first, then basics, so
     /// a headless seat gives up the land it has already used.
-    fn sacrifice_for_graveyard_cast(
+    pub(crate) fn sacrifice_for_graveyard_cast(
         &mut self,
         p: usize,
         source: CardId,

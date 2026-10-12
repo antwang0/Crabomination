@@ -154,7 +154,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Impending(_) => "Impending",
         Keyword::Cycling(_) => "Cycling",
         Keyword::Splice(_, _) => "Splice",
-        Keyword::CyclingLife(_) => "Cycling",
+        Keyword::CyclingLife(_) | Keyword::CyclingSacrifice(_) => "Cycling",
         Keyword::Entwine(_) => "Entwine",
         Keyword::Landcycling(_, _) => "Landcycling",
         Keyword::Typecycling(_) => "Typecycling",
