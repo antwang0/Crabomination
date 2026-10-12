@@ -309,6 +309,7 @@ pub fn siphon_insight() -> CardDefinition {
                 count: Value::Const(2),
                 rest_to_graveyard: false,
                 any_color: true,
+                take: 1,
             },
         ]),
         ..Default::default()
@@ -358,6 +359,7 @@ pub fn thief_of_sanity() -> CardDefinition {
             count: Value::Const(3),
             rest_to_graveyard: true,
             any_color: false,
+            take: 1,
         })],
         ..creature("Thief of Sanity", cost(&[generic(1), u(), b()]), vec![CreatureType::Specter], 2, 2)
     }

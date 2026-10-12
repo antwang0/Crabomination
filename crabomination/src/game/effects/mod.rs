@@ -30865,6 +30865,10 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ShuffleSelfRevealUntilSameNameToBattlefield => {
+                self.shuffle_self_reveal_until_same_name(ctx, events);
+                Ok(())
+            }
             Effect::ShuffleSelfIntoLibrary => {
                 // A triggered ability's source is a card on the battlefield
                 // (Fblthp, the Lost) or in a graveyard (Serra Avatar, Vigor):
@@ -40546,9 +40550,17 @@ impl GameState {
             }
             Effect::TakeContestedLand => self.take_contested_land(effect, ctx, events),
             Effect::ExileSpellLinked { what } => self.exile_spell_linked(what, ctx, events),
-            Effect::LookTopExileOneFaceDownMayPlay { who, count, rest_to_graveyard, any_color } => {
-                self.look_top_exile_one_face_down_may_play(who, count, *rest_to_graveyard, *any_color, ctx, events, effect)
-            }
+            Effect::LookTopExileOneFaceDownMayPlay { who, count, rest_to_graveyard, any_color, take } => self
+                .look_top_exile_one_face_down_may_play(
+                    who,
+                    count,
+                    *rest_to_graveyard,
+                    *any_color,
+                    *take,
+                    ctx,
+                    events,
+                    effect,
+                ),
             Effect::OpponentChoosesXFromHandCastOneFree { who } => {
                 self.opponent_chooses_x_from_hand_cast_one_free(who, ctx, events, effect)
             }

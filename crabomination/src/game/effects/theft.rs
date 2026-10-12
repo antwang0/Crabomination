@@ -85,50 +85,62 @@ impl GameState {
         count: &crate::effect::Value,
         rest_to_graveyard: bool,
         any_color: bool,
+        take: u32,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
         effect: &Effect,
     ) -> Result<(), GameError> {
         let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
         let n = self.evaluate_value(count, ctx).max(0) as usize;
+        let take = (take.max(1) as usize).min(n);
         let looked: Vec<CardId> = self.players[seat].library.iter().take(n).map(|c| c.id).collect();
-        let Some(best) = Self::best_card_to_take(self.players[seat].library.iter().take(n)) else {
+        if looked.is_empty() {
             return Ok(());
-        };
+        }
         // CR 608.2d — "exile one of them" is the controller's pick; a bot
-        // takes the highest mana value nonland.
-        let pick = if looked.len() > 1 {
+        // takes the highest mana value nonlands.
+        let mut ranked: Vec<&crate::card::CardInstance> = self.players[seat].library.iter().take(n).collect();
+        ranked.sort_by_key(|c| std::cmp::Reverse((!c.definition.is_land(), c.definition.cost.cmc())));
+        let defaults: Vec<CardId> = ranked.iter().take(take).map(|c| c.id).collect();
+        let picks: Vec<CardId> = if looked.len() > take {
             let candidates: Vec<(CardId, String)> = self.players[seat]
                 .library
                 .iter()
                 .take(n)
                 .map(|c| (c.id, c.definition.name.to_string()))
                 .collect();
+            let prompt = if take == 1 {
+                "Exile one face down (you may play it)".to_string()
+            } else {
+                format!("Exile {take} face down (you may play them)")
+            };
             let Some(picked) = self.choose_up_to_cards(
                 ctx.controller,
-                "Exile one face down (you may play it)".into(),
+                prompt,
                 ctx.source.unwrap_or(CardId(0)),
                 candidates,
-                1,
+                take as u32,
                 crate::decision::PickValue::Gain,
                 effect,
-                vec![best],
+                defaults.clone(),
             ) else {
                 return Ok(());
             };
-            picked.first().copied().unwrap_or(best)
+            if picked.is_empty() { defaults } else { picked.into_iter().take(take).collect() }
         } else {
-            best
+            looked.clone()
         };
-        if let Some(mut card) = Self::take_card(&mut self.players[seat].library, pick) {
-            card.exiled_with = ctx.source;
-            card.face_down = true;
-            self.exile.push(card);
-            events.push(GameEvent::PermanentExiled { card_id: pick });
-            self.note_exiled_from_library(seat, pick, events);
-            self.grant_any_type_play(pick, ctx.controller);
-            if any_color && let Some(c) = self.exile.iter_mut().find(|c| c.id == pick) {
-                c.granted_alt_cast_cost_eot = Some(c.definition.cost.colored_as_generic());
+        for &pick in &picks {
+            if let Some(mut card) = Self::take_card(&mut self.players[seat].library, pick) {
+                card.exiled_with = ctx.source;
+                card.face_down = true;
+                self.exile.push(card);
+                events.push(GameEvent::PermanentExiled { card_id: pick });
+                self.note_exiled_from_library(seat, pick, events);
+                self.grant_any_type_play(pick, ctx.controller);
+                if any_color && let Some(c) = self.exile.iter_mut().find(|c| c.id == pick) {
+                    c.granted_alt_cast_cost_eot = Some(c.definition.cost.colored_as_generic());
+                }
             }
         }
         let dest = if rest_to_graveyard {
@@ -139,7 +151,7 @@ impl GameState {
                 pos: crate::effect::LibraryPosition::Bottom,
             }
         };
-        for id in looked.into_iter().filter(|id| *id != pick) {
+        for id in looked.into_iter().filter(|id| !picks.contains(id)) {
             self.move_card_to(id, &dest, ctx, events);
         }
         Ok(())

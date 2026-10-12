@@ -2036,6 +2036,10 @@ pub enum Predicate {
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
     /// Spectacle (CR 702.137) — pair with `who: EachOpponent`.
     PlayerLostLifeThisTurn { who: PlayerRef },
+    /// True if a permanent was put into the hand of any player matched by
+    /// `who` from the battlefield this turn. Backed by
+    /// `Player.permanent_to_hand_this_turn` (Barrin, Tolarian Archmage).
+    PermanentPutIntoHandThisTurn { who: PlayerRef },
     /// True if any player matched by `who` has gained life this turn. Backed by
     /// `Player.life_gained_this_turn`. Powers "if you gained or lost life this
     /// turn" end-step payoffs (Starlit Soothsayer, Star Charter).
@@ -7338,6 +7342,13 @@ pub enum Effect {
     /// Beacon of Destruction). Runs at resolution before the spell would go
     /// to the graveyard, so the card never lands in the graveyard.
     ShuffleSelfIntoLibrary,
+    /// "This creature's owner shuffles it into their library. If that player
+    /// does, they reveal cards from the top of that library until a card
+    /// named [this] is revealed. The player puts that card onto the
+    /// battlefield and all other cards revealed this way into their
+    /// graveyard" (Mirror-Mad Phantasm). Does nothing unless the source is
+    /// still on the battlefield.
+    ShuffleSelfRevealUntilSameNameToBattlefield,
     /// "Return [this spell] to its owner's hand" as part of its own
     /// resolution (Journey to the Oracle's discard rider). Flags the
     /// post-resolution routing the same way `ShuffleSelfIntoLibrary` does.
@@ -13194,7 +13205,7 @@ pub enum Effect {
     /// Exile each resolved spell from the stack (not a counter), linked to
     /// the source (Smirking Spelljacker).
     ExileSpellLinked { what: Selector },
-    /// Look at the top `count` of `who`'s library, exile one face down that
+    /// Look at the top `count` of `who`'s library, exile `take` (usually one) face down that
     /// you may play with mana of any type while it stays exiled, the rest to
     /// that player's graveyard (`rest_to_graveyard`, Thief of Sanity) or the
     /// bottom (Siphon Insight). The engine picks the card. `any_color`: mana
@@ -13206,6 +13217,9 @@ pub enum Effect {
         rest_to_graveyard: bool,
         #[serde(default)]
         any_color: bool,
+        /// How many of them are exiled (Black Cat's "exile two of them").
+        #[serde(default = "one_u32")]
+        take: u32,
     },
     /// `who` chooses X cards from their hand; you may cast one of them free
     /// (Extract Brain). Both picks are the engine's.

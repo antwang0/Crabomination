@@ -384,6 +384,8 @@ pub enum CreatureType {
     // Sonic the Hedgehog (COMMANDER_BACKLOG §1).
     Hedgehog,
     Echidna,
+    // Marvel (Super-Skrull).
+    Skrull,
 }
 
 /// Land subtypes (basic land types + others).
@@ -1030,6 +1032,8 @@ pub enum CounterType {
     Kick,
     /// Tolarian Contempt's rejection counters.
     Rejection,
+    /// The Magic Mirror's knowledge counters.
+    Knowledge,
 }
 
 /// Every zone a card can occupy.

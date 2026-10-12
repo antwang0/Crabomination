@@ -2607,6 +2607,7 @@ impl GameState {
             if matches!(resolved_dest, ZoneDest::Hand(_))
                 && let Some(p) = self.players.iter().position(|pl| pl.hand.iter().any(|c| c.id == cid))
             {
+                self.players[p].permanent_to_hand_this_turn = true;
                 events.push(GameEvent::PermanentReturnedToHand { card_id: cid, player: p });
             }
             if let Some((card_id, controller)) = leaver {

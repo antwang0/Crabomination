@@ -6812,6 +6812,7 @@ impl GameState {
                                     | crate::effect::StaticEffect::LifeGainBecomesDraw
                                     | crate::effect::StaticEffect::LifeGainBonus { .. }
                                     | crate::effect::StaticEffect::LifeGainMultiplier { .. }
+                                    | crate::effect::StaticEffect::ControllerLifeGainDoubledAtOrBelow { .. }
                                     | crate::effect::StaticEffect::PlayerCannotGainLife { .. }
                                     | crate::effect::StaticEffect::PlayerCannotLoseLife { .. }
                                     | crate::effect::StaticEffect::OpponentLifeLossDoubledDuringYourTurn
@@ -10223,6 +10224,18 @@ impl GameState {
                         {
                             amount = amount.saturating_sub(*n);
                         }
+                        // Battletide Alchemist — X = the controller's matching permanents.
+                        StaticEffect::ReduceDamageToYourTeamByCount { filter }
+                            if self.same_team(c.controller, p)
+                                && matches!(ent, EntityRef::Player(_)) =>
+                        {
+                            let x = self
+                                .battlefield
+                                .iter()
+                                .filter(|t| t.controller == c.controller && self.evaluate_requirement_on_card(filter, t, c.controller))
+                                .count() as u32;
+                            amount = amount.saturating_sub(x);
+                        }
                         // The Odyssey Sphere cycle — a colour-scoped shave.
                         StaticEffect::ReduceColorDamageToYouBy { color, amount: n }
                             if c.controller == p
@@ -12144,6 +12157,9 @@ impl GameState {
             .iter()
             .flat_map(|src| {
                 src.definition.static_abilities.iter().filter_map(move |sa| {
+                    if let StaticEffect::ControllerLifeGainDoubledAtOrBelow { life } = &sa.effect {
+                        return (src.controller == seat && self.players[seat].life <= *life).then_some(2);
+                    }
                     if let StaticEffect::LifeGainMultiplier { target, factor } = &sa.effect {
                         let hits = match target {
                             PlayerStaticTarget::Controller => src.controller == seat,
@@ -33084,6 +33100,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::DoubleDamageBetweenYouAndChosenPlayer
         | SE::HalveDamageToYou
         | SE::ReduceDamageToYouBy(_)
+        | SE::ReduceDamageToYourTeamByCount { .. }
         | SE::ReduceColorDamageToYouBy { .. }
         | SE::ReduceDamageToYourCreaturesBy(_)
         | SE::ReduceOpponentDamageToYouAndYoursBy(_)
@@ -34090,6 +34107,7 @@ fn static_effect_to_effects(
             | StaticEffect::NoncombatDamageFromOtherSourcesBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::ReduceDamageToYouBy(_)
+            | StaticEffect::ReduceDamageToYourTeamByCount { .. }
             | StaticEffect::ReduceSpellDamageBy { .. }
             | StaticEffect::ReduceColorDamageToYouBy { .. }
             | StaticEffect::ControllerMaxHandSizeReduced(_)
@@ -34336,6 +34354,7 @@ fn static_effect_to_effects(
             | StaticEffect::EnergyAlternativeCostForFilter { .. }
             | StaticEffect::TokensMayBecome { .. }
             | StaticEffect::CreatureTokensBecome { .. }
+            | StaticEffect::ArtifactTokensBecome { .. }
             // Read at the untap step's stun replacement.
             | StaticEffect::OpponentsStunCountersStay
             | StaticEffect::TokenNamedBecomes { .. }
@@ -34584,6 +34603,7 @@ fn static_effect_to_effects(
             // LifeGainMultiplier — consulted in `adjust_life` via
             // `life_gain_multiplier_now` (Rhox Faithmender); no layer effect.
             | StaticEffect::LifeGainMultiplier { .. }
+            | StaticEffect::ControllerLifeGainDoubledAtOrBelow { .. }
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
             | StaticEffect::DamageCantBePrevented

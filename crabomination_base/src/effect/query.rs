@@ -947,7 +947,6 @@ impl Effect {
             | Effect::CounterAllAbilitiesOf { .. }
             | Effect::CounterOpponentsSpellsAndAbilities { .. }
             | Effect::EachPlayerChoosesOpponentPermanentExile { .. }
-            | Effect::LookTopExileOneFaceDownMayPlay { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::NextSpellOfChosenTypeHasFlashThisTurn
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
@@ -1725,6 +1724,7 @@ impl Effect {
             | Effect::SacrificeHalf { who, .. }
             | Effect::SacrificeAllButN { who, .. } => sel_has_target(who),
             Effect::ShuffleSelfIntoLibrary => false,
+            Effect::ShuffleSelfRevealUntilSameNameToBattlefield => false,
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
@@ -1764,6 +1764,7 @@ impl Effect {
                 sel_has_target(who) || value_has_target(count)
             }
             Effect::LookTopExileOneOfN { who, .. }
+            | Effect::LookTopExileOneFaceDownMayPlay { who, .. }
             | Effect::NameCardRevealUntilThenBin { who }
             | Effect::NameCardThenRevealTopBin { who }
             | Effect::BottomHandThenDrawThatMany { who } => {
@@ -3033,7 +3034,7 @@ impl Effect {
             | Effect::RearrangeTop { who, .. }
             | Effect::OrderLibraryBottom { who, .. }
             | Effect::LookTopExileOneOfN { who, .. }
-
+            | Effect::LookTopExileOneFaceDownMayPlay { who, .. }
             | Effect::TakeExtraTurn { who, .. }
             | Effect::RevealUntilCreatureBecomeCopy { who }
             | Effect::LoseGame { who }
@@ -4236,6 +4237,9 @@ impl Effect {
             },
             Effect::DoubleLife { .. } => "double target player's life total".into(),
             Effect::ShuffleSelfIntoLibrary => "shuffle this card into its owner's library".into(),
+            Effect::ShuffleSelfRevealUntilSameNameToBattlefield => {
+                "shuffle this into its owner's library, then reveal until a card with its name and put it onto the battlefield".into()
+            }
             Effect::Scry { amount, .. } => match amount {
                 Value::Const(n) => format!("scry {n}"),
                 _ => "scry".into(),

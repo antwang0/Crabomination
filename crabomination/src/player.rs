@@ -892,6 +892,10 @@ pub struct PlayerData {
     /// `GameEvent::Investigated` is their first when it is false.
     #[serde(default)]
     pub investigated_this_turn: bool,
+    /// A permanent was put into this player's hand from the battlefield this
+    /// turn (Barrin, Tolarian Archmage's end-step draw).
+    #[serde(default)]
+    pub permanent_to_hand_this_turn: bool,
     /// CR 708 — a permanent entered the battlefield face down under this
     /// player's control, or they turned a permanent face up, this turn. Powers
     /// Oblivious Bookworm's "unless … entered face down / you turned a permanent
@@ -1795,6 +1799,7 @@ impl Player {
             double_your_source_damage_this_turn: false,
             committed_crime_this_turn: false,
             investigated_this_turn: false,
+            permanent_to_hand_this_turn: false,
             face_down_activity_this_turn: false,
             free_exile_cast_used_this_turn: false,
             life_alt_cast_used_this_turn: false,

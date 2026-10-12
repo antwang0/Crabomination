@@ -1174,6 +1174,11 @@ pub enum StaticEffect {
     /// instead"). Consulted in `adjust_life` for positive deltas, applied
     /// before any additive `LifeGainBonus`. Multiple multipliers compound.
     LifeGainMultiplier { target: PlayerStaticTarget, factor: i32 },
+    /// CR 614 — "If you would gain life while you have `life` or less life,
+    /// you gain twice that much life instead" (Phial of Galadriel). Read with
+    /// `LifeGainMultiplier` in `life_gain_multiplier_now`, against the
+    /// controller's life before the gain.
+    ControllerLifeGainDoubledAtOrBelow { life: i32 },
     /// CR 121.2a / 614 — draw replacement: while active, when the source's
     /// controller would draw a card, they draw two instead (Thought
     /// Reflection). Consulted per draw event in `draw_one`; the extra draw is
@@ -1847,6 +1852,11 @@ pub enum StaticEffect {
     /// (Urza's Armor). Applied per damage event to the static controller's own
     /// life total, after the additive bonuses and before the doublers.
     ReduceDamageToYouBy(u32),
+    /// "If a source would deal damage to a player, you may prevent X of that
+    /// damage, where X is the number of [filter] you control" (Battletide
+    /// Alchemist). The "may" is taken for players on the controller's team
+    /// and declined for opponents; X is read per damage event.
+    ReduceDamageToYourTeamByCount { filter: SelectionRequirement },
     /// "If a spell would deal damage to a permanent or player, it deals that
     /// much damage minus `amount` instead" (Benevolent Unicorn). A global
     /// shave on *spell* damage only, applied to every recipient.
@@ -3203,6 +3213,11 @@ pub enum StaticEffect {
     /// Visitation). Mandatory, applied per creature token at mint time by
     /// `GameState::token_replacement_for`, ahead of any `TokensMayBecome`.
     CreatureTokensBecome { into: crate::card::TokenDefinition },
+    /// CR 614.1a — "If one or more artifact tokens would be created under
+    /// your control, that many [into] tokens are created instead" (Draconic
+    /// Visitor's 5/5 Dragons). The artifact sibling of `CreatureTokensBecome`,
+    /// read after it in `token_replacement_for`.
+    ArtifactTokensBecome { into: crate::card::TokenDefinition },
     /// "Stun counters can't be removed from permanents your opponents
     /// control" (Fear of Sleep Paralysis): at the untap step (CR 122.1d) such
     /// a permanent keeps its stun counter and stays tapped.

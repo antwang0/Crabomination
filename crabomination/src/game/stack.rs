@@ -5206,6 +5206,7 @@ impl GameState {
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
             pl.investigated_this_turn = false;
+            pl.permanent_to_hand_this_turn = false;
             // CR 708 — "entered face down / turned face up this turn" resets.
             pl.face_down_activity_this_turn = false;
             // Warped Space's once-per-turn free cast from exile.
@@ -9256,6 +9257,7 @@ impl GameState {
             events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
         }
         if resolved == crate::card::Zone::Hand {
+            self.players[owner].permanent_to_hand_this_turn = true;
             events.push(GameEvent::PermanentReturnedToHand { card_id: id, player: owner });
         }
         events

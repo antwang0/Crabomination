@@ -2964,6 +2964,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::GainLife { .. } => "Gain life",
         Effect::DoubleLife { .. } => "Double life total",
         Effect::ShuffleSelfIntoLibrary => "Shuffle into library",
+        Effect::ShuffleSelfRevealUntilSameNameToBattlefield => "Shuffle in, dig for its namesake",
         Effect::Mill { .. } => "Mill",
         Effect::Scry { .. } => "Scry",
         Effect::Surveil { .. } => "Surveil",

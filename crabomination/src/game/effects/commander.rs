@@ -685,3 +685,32 @@ fn notes_exiled_mana_values(def: &crate::card::CardDefinition) -> bool {
         )
     })
 }
+
+impl GameState {
+    /// `Effect::ShuffleSelfRevealUntilSameNameToBattlefield` (Mirror-Mad
+    /// Phantasm). CR 701.20 — the revealed misses go to the graveyard; the
+    /// first card with the source's name enters under its owner's control.
+    pub(crate) fn shuffle_self_reveal_until_same_name(
+        &mut self,
+        ctx: &crate::game::effects::EffectContext,
+        events: &mut Vec<crate::game::types::GameEvent>,
+    ) {
+        use crate::effect::{LibraryPosition, ZoneDest};
+        let Some(src) = ctx.source else { return };
+        let Some((owner, name)) = self.battlefield_find(src).map(|c| (c.owner, c.definition.name)) else { return };
+        self.move_card_to(src, &ZoneDest::Library { who: PlayerRef::Seat(owner), pos: LibraryPosition::Shuffled }, ctx, events);
+        if !self.players[owner].library.iter().any(|c| c.id == src) {
+            return;
+        }
+        while let Some(top) = self.players[owner].library.first() {
+            let (id, hit, card_name, is_land) =
+                (top.id, top.definition.name == name, top.definition.name, top.definition.is_land());
+            events.push(crate::game::types::GameEvent::TopCardRevealed { player: owner, card_name, is_land });
+            if hit {
+                self.move_card_to(id, &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false }, ctx, events);
+                return;
+            }
+            self.move_card_to(id, &ZoneDest::Graveyard, ctx, events);
+        }
+    }
+}

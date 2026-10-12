@@ -2788,6 +2788,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].lost_life_this_turn),
+            Predicate::PermanentPutIntoHandThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].permanent_to_hand_this_turn),
             Predicate::PlayerGainedLifeThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

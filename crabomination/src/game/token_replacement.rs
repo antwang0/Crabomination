@@ -32,6 +32,20 @@ impl GameState {
                 return Some(crabomination_base::tokens::token_card_arc(into));
             }
         }
+        if def.is_artifact() {
+            let mandatory = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == ctrl)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .find_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::ArtifactTokensBecome { into } => Some(into),
+                    _ => None,
+                });
+            if let Some(into) = mandatory {
+                return Some(crabomination_base::tokens::token_card_arc(into));
+            }
+        }
         let offers = |c: &crate::card::CardInstance| {
             c.controller == ctrl
                 && c.definition
