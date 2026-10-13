@@ -3581,7 +3581,8 @@ fn every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket() {
         // `fire_combat_damage_triggers` phase 1 (`SelfSource`): printed +
         // `static_granted_triggers_of(source)` + instance, and phase 1b the
         // attached Equipment / Aura grants; the `YourControl` / `AnyPlayer`
-        // listener walk (phases 1.5 / 1.6) reads printed only.
+        // listener walk (phases 1.5 / 1.6) reads printed + statics (the
+        // statics leg since Feywild Visitor's commander grant, 2026-10-13).
         ("DealsCombatDamage", "SelfSource", "pise"),
         ("DealsCombatDamageToPlayer", "SelfSource", "pise"),
         ("DealsCombatDamageToCreature", "SelfSource", "pise"),
@@ -3589,6 +3590,14 @@ fn every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket() {
         ("DealsDamage", "SelfSource", "pise"),
         ("DealsDamageToPlayer", "SelfSource", "pise"),
         ("DealsDamageToCreature", "SelfSource", "pise"),
+        ("DealsCombatDamage", "YourControl", "ps"),
+        ("DealsCombatDamage", "AnyPlayer", "ps"),
+        ("DealsCombatDamageToPlayer", "YourControl", "ps"),
+        ("DealsCombatDamageToPlayer", "AnyPlayer", "ps"),
+        ("DealsDamage", "YourControl", "ps"),
+        ("DealsDamage", "AnyPlayer", "ps"),
+        ("DealsDamageToPlayer", "YourControl", "ps"),
+        ("DealsDamageToPlayer", "AnyPlayer", "ps"),
         // The three combat listener walks: printed + instance since (-277).
         ("ControllerDealtCombatDamage", "SelfSource", "pi"),
         ("YouAttack", "*", "pi"),

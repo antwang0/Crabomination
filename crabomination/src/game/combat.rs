@@ -7703,6 +7703,54 @@ impl GameState {
                 self.battlefield.store_listener(epoch, any_listener);
             }
         }
+        // The same two scopes granted by a static ("Commander creatures you
+        // own have 'Whenever one or more nontoken creatures you control deal
+        // combat damage to a player, …'" — Feywild Visitor): the walk above
+        // reads printed triggers only. A board without such a grant pays the
+        // grant lane's one check.
+        let grants: Vec<_> = self
+            .trigger_grant_sources()
+            .into_iter()
+            .filter(|g| {
+                matches!(
+                    g.ability.event.scope,
+                    crate::effect::EventScope::YourControl | crate::effect::EventScope::AnyPlayer
+                ) && slot(&g.ability.event.kind).is_some()
+            })
+            .collect();
+        if !grants.is_empty() {
+            let strip_set = self.stripped_permanents();
+            for c in &self.battlefield {
+                if strip_set.contains(&c.id) {
+                    continue;
+                }
+                let mine = attacker_controller == Some(c.controller);
+                // A granted ability has no printed index; its position in this
+                // permanent's (stable) grant list keys the once-per-batch dedupe.
+                for (j, t) in self.statics_granted_triggers_with(c, &grants).into_iter().enumerate() {
+                    let listens = match t.event.scope {
+                        crate::effect::EventScope::YourControl => mine,
+                        crate::effect::EventScope::AnyPlayer => c.id != source,
+                        _ => false,
+                    };
+                    let Some(i) = slot(&t.event.kind) else { continue };
+                    if !listens
+                        || !t.event.dealer_filter.as_ref().is_none_or(|f| {
+                            self.evaluate_requirement_static(f, &Target::Permanent(source), c.controller, Some(c.id))
+                        })
+                    {
+                        continue;
+                    }
+                    let key = once_key(Some(usize::MAX / 2 + j), &t);
+                    let trig = (c.id, t.effect.clone(), c.controller, t.event.filter.clone(), true, key);
+                    if t.event.scope == crate::effect::EventScope::AnyPlayer {
+                        any_player.push((i, trig));
+                    } else {
+                        by_kind[i].push(trig);
+                    }
+                }
+            }
+        }
         for (i, trig) in any_player {
             by_kind[i].push(trig);
         }
