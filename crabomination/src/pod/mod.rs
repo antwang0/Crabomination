@@ -7614,6 +7614,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALISAIE_LEVEILLEUR_2_COMMANDERS,
             main: decks::ALISAIE_LEVEILLEUR_2_MAIN,
         },
+        // Seat 1194: Belbe, Corrupted Observer's EDHREC average deck. `--pod-decks 1194`.
+        PodDeck {
+            name: "Belbe, Corrupted Observer (BG)",
+            commanders: decks::BELBE_COMMANDERS,
+            main: decks::BELBE_MAIN,
+        },
+        // Seat 1195: River Song's EDHREC average deck. `--pod-decks 1195`.
+        PodDeck {
+            name: "River Song (UR)",
+            commanders: decks::RIVER_SONG_COMMANDERS,
+            main: decks::RIVER_SONG_MAIN,
+        },
+        // Seat 1196: Zurzoth, Chaos Rider's EDHREC average deck. `--pod-decks 1196`.
+        PodDeck {
+            name: "Zurzoth, Chaos Rider (R)",
+            commanders: decks::ZURZOTH_COMMANDERS,
+            main: decks::ZURZOTH_MAIN,
+        },
+        // Seat 1197: Vannifar, Evolved Enigma's EDHREC average deck. `--pod-decks 1197`.
+        PodDeck {
+            name: "Vannifar, Evolved Enigma (UG)",
+            commanders: decks::VANNIFAR_COMMANDERS,
+            main: decks::VANNIFAR_MAIN,
+        },
     ]
 }
 
@@ -10632,6 +10656,10 @@ mod tests {
             ("Gor Muldrak, Amphinologist", &[0x0EBC]),
             ("The Capitoline Triad", &[0x0EBD]),
             ("Alisaie Leveilleur and Alphinaud Leveilleur", &[0x0EBE]),
+            ("Belbe, Corrupted Observer", &[0x0EBF]),
+            ("River Song", &[0x0EC0]),
+            ("Zurzoth, Chaos Rider", &[0x0EC1]),
+            ("Vannifar, Evolved Enigma", &[0x0EC2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

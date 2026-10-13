@@ -151,7 +151,23 @@ the handoff.
 - **OPEN (bot):** Gor Muldrak's deck never activates its creature-type changers (Imagecrafter,
   Mistform Mutant, Unnatural Selection) — the bot has no "make it a Salamander" plan.
 
-## FIXED/OPEN 2026-10-13 (Commander run, `01BJKf54`) — 89 EDHREC seats from the 1500 rescan's one- and two-card gaps
+## FIXED/OPEN 2026-10-13 (Commander run, `01BJKf54`) — 106 EDHREC seats from the 1500 rescan's one- to three-card gaps
+
+- **Seats 1157-1169 and 1194-1197** — `decks::cmdr_edhrec28`..`cmdr_edhrec31` (59 cards). `scripts/seat_decks.py`
+  now escapes quotes in seat names (Miles "Tails" Prower broke the generated literal).
+- **FIXED (pod panic, seed 31401):** Hired Giant's "each other player may search" was a bare
+  `Search { who: EachOpponent }` — one library searched, the fan-out guard panicked at 4 seats.
+  `EachPlayerDoes` now; `no_library_search_names_a_set_of_searchers` kills the class.
+- **New primitives:** `EntersAsCopy::copied_counters` (Undercover Operative),
+  `Keyword::CantBeTargetedByOpponentSpellsMatching` (Fiendslayer Paladin).
+- **OPEN (bot, action cap):** The Cabbage Merchant's EDHREC deck assembles a real infinite
+  (Academy Manufactor + Peregrin Took + Nuka-Cola Vending Machine + Krark-Clan Ironworks + Trail of
+  Crumbs) and the bot loops Food/Treasure for 3,000+ plays in one main phase at 155 life while the
+  last opponent sits at 1 (a 4-seat pod with Belbe/River Song/Zurzoth, seed 31402 game 13; 1,324 s
+  debug to the 4,000-play cap). Not seated — the debug long-pole test gives each row 50,000
+  actions. Same lever as Preston/Elesh Norn and Cathars' Crusade.
+- **OPEN:** Hidetsugu and Kairi's Mirage Mockery — entwine over two targeted modes needs distinct
+  target slots per mode (unverified); unclaimed.
 
 - **Seats 1061-1062, 1069-1093, 1102-1108, 1115-1154** — `decks::cmdr_edhrec21`..`cmdr_edhrec27`
   (136 cards, tests `recent_b/cmdr_edhrec21.rs`..`27.rs`). Seat numbers moved twice on rebases
