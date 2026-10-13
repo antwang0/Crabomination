@@ -3281,6 +3281,35 @@ audit build      overflow + debug-assertions at 1f1447f38+2: pod_sweep 9905 × 4
                  / Chatterfang token engine at 1,024 permanents, seed 990772)
 ```
 
+### 2026-10-13 (Commander run, `011PQ8Uk`, second leg) — guardrail; residual riders, one OOM fix
+
+Hot-path touches: `MillUntilLands` counts a budget per revealed card;
+`activate_ability`'s exhaust gate reads a turn registry and one static only
+for an already-spent exhaust ability; `ExileTopAndGrantMayPlay` binds one
+more duration. Release `bot_ladder` at `bacf8d212`, toolchain 1.99, Xeon @
+2.80 GHz (4 cores).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (also at 52857b32c mid-run); determinism ok; games_per_s
+                 203.13
+golden traces    unchanged (core_rules::golden_trace, pod digests)
+suite            nextest --workspace (no client): 25,718 run, 25,717 passed,
+                 5 skipped; the one failure was a new test's own assertion
+                 (restricted mana is outside `total()`), fixed and re-run;
+                 long pole cr_903_5a_* ~2,900 s at 1,156 seats
+clippy           workspace --all-targets: one collapsible_if (fixed; crate
+                 re-check clean)
+pods (release)   pod_sweep 9907 seats 1040-1108 × 4,6 × 4 = 120 games, 0 bad;
+                 9908 seats 1003-1108 × 4,6,8 × 12 = 708 games: 2 CR 104.4a
+                 draws, 2 board caps (a Mondrak, Glory Dominus token-copy
+                 doubling at 901 copies, seed 990872; Hapatra + Blowfly
+                 Infestation, seed 990880) and one OOM kill at 12 GB —
+                 MillUntilLands looping on a landless shuffle-back library
+                 (seed 990884), fixed (52eaea9f3); 9909 every deck × 4,6 ×
+                 2 = 970 games at the tip, 0 undecided
+```
+
 ### 2026-10-13 (Commander run, `01L4tuaB`, third leg) — guardrail; 58 cards, seats 1047-1060
 
 Hot-path touches: `draw_one` reads the drawer's statics once a turn per
