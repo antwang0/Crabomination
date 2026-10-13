@@ -7088,6 +7088,24 @@ impl GameState {
             }
         };
         self.battlefield.for_each_triggerer_or_all(own_grant, visit);
+        // "Whenever combat damage is dealt to you …, if this card is in your
+        // graveyard" (Vengeful Pharaoh): the damaged player's graveyard
+        // listens too, behind its own trigger lane (PERF `(-210)`'s word).
+        if self.players[damaged_player].graveyard.has_graveyard_trigger() {
+            for c in &self.players[damaged_player].graveyard {
+                for (i, ta) in c.definition.triggered_abilities.iter().enumerate() {
+                    if ta.event.kind == EventKind::ControllerDealtCombatDamage && ta.event.scope.from_graveyard() {
+                        listeners.push((
+                            c.id,
+                            ta.effect.clone(),
+                            damaged_player,
+                            ta.event.filter.clone(),
+                            ta.event.once_per_batch.then_some(i),
+                        ));
+                    }
+                }
+            }
+        }
         for (listener, effect, controller, filter, batch) in listeners {
             let dealer = Some(crate::game::effects::EntityRef::Permanent(source));
             if let Some(f) = &filter {
