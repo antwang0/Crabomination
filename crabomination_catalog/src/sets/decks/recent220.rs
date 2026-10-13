@@ -128,8 +128,8 @@ pub fn tangle_tumbler() -> CardDefinition {
 }
 
 /// Bonecache Overseer — {B} 1/1 Squirrel Warlock. {T}, Pay 1 life: Draw a card.
-/// Activate only if three or more cards left your graveyard this turn. (The
-/// printed "or sacrificed a Food" alternative is not modeled.)
+/// Activate only if three or more cards left your graveyard this turn or if
+/// you've sacrificed a Food this turn.
 pub fn bonecache_overseer() -> CardDefinition {
     CardDefinition {
         name: "Bonecache Overseer",
@@ -144,10 +144,13 @@ pub fn bonecache_overseer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             life_cost: 1,
-            condition: Some(Predicate::CardsLeftGraveyardThisTurnAtLeast {
-                who: PlayerRef::You,
-                at_least: Value::Const(3),
-            }),
+            condition: Some(Predicate::Any(vec![
+                Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(3),
+                },
+                Predicate::SacrificedFoodThisTurn { who: PlayerRef::You },
+            ])),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,

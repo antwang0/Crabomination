@@ -939,3 +939,33 @@ fn elvish_refueler_reopens_one_exhaust_per_turn() {
     g.active_player_idx = 1;
     assert!(pump(&mut g).is_err(), "only during your turn");
 }
+
+/// Bonecache Overseer — "Activate only if three or more cards left your
+/// graveyard this turn or if you've sacrificed a Food this turn." (CR
+/// 602.5b activation restriction.) Sacrificing a Food opens the draw.
+#[test]
+fn bonecache_overseer_opens_after_a_food_sacrifice() {
+    let mut g = pod(2);
+    let squirrel = ready(&mut g, 0, catalog::bonecache_overseer());
+    g.add_card_to_library(0, catalog::island());
+    let food = g.add_token_to_battlefield(0, &crabomination::game::effects::food_token());
+    let activate = |g: &mut GameState, id: CardId| {
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        let r = g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        });
+        drain_stack(g);
+        r
+    };
+    assert!(activate(&mut g, squirrel).is_err(), "no Food sacrificed yet");
+    activate(&mut g, food).expect("eat the Food");
+    let hand = g.players[0].hand.len();
+    activate(&mut g, squirrel).expect("a Food was sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
