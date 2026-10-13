@@ -3065,6 +3065,11 @@ pub enum SelectionRequirement {
     /// candidate's.
     PowerAtMostSourceCounters(CounterType),
     WithCounter(CounterType),
+    /// The permanent gained one or more counters this turn
+    /// (`TurnRegistries::permanents_gained_counter_this_turn`) — Kid Loki's
+    /// "creatures you've put +1/+1 counters on this turn", paired with
+    /// `WithCounter`. Live state, so a layer leaf (`requirement_live_leaves`).
+    GainedCounterThisTurn,
     /// "…with N or more [kind] counters on it" (Bomb Squad's fuse check).
     WithCounterAtLeast(CounterType, u32),
     /// True when the candidate has at least one counter of any kind on it —
