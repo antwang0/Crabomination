@@ -390,6 +390,11 @@ the handoff.
   Mighty Servant of Leuk-o is `cmdr_edhrec15`'s). Primitives: Rem Karolus's spell-damage statics
   (`PreventSpellDamageToYouAndYourOtherPermanents` — a new `prevent_static` lane bit — and
   `SpellDamageToOpponentsBonus`, any spell's).
+- **Whtz's legal deck cards** (Lost Auramancers, Reed Richards, Personal Tutor;
+  `decks::cmdr_edhrec35`, unseated — Whtz is a Rulebreaker). Primitive: Reed Richards'
+  first-extra-draw replacement (`FirstExtraDrawEachTurnBecomes`, read in `draw_one`).
+  **Bug (CR 303.4f):** a searched Aura put onto the battlefield entered unattached and the SBA
+  binned it; the search placement now attaches it as `Move` does.
 - **Garth One-Eye handed you the copy** instead of casting it as the ability resolved (CR 707.12):
   a pod invariant ("a player gained a Disenchant") caught it; the copy is now staged in exile and
   cast free. The invariant message names the gained card.

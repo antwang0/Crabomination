@@ -2110,3 +2110,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Ravenloft Adventurer | the die-to-exile-with-a-hit-counter replacement is a dies trigger (the creature still "dies"), as Mari, the Killing Quill's | `CreatureDied` → `Move` + `AddCounter` |
 | 🟡 Ziatora's Envoy | the top card can't be played as a land, and a miss is drawn rather than put into hand | `CastTopFreeIfElseDraw` |
 | 🟡 Acererak the Archlich | "if you haven't completed Tomb of Annihilation" reads any completed dungeon | `Value::DungeonsCompleted` |
+| 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |
