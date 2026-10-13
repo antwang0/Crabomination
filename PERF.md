@@ -3212,6 +3212,28 @@ pods (release)   pod_sweep 9901 every deck × 4,6 × 3 = 1,266 games, 1 draw
                  Champion of Lambholt, the known token-combat class)
 ```
 
+### 2026-10-13 (Commander run, `01L4tuaB`, third leg) — guardrail; 58 cards, seats 1047-1060
+
+Hot-path touches: `draw_one` reads the drawer's statics once a turn per
+player for Reed Richards' first-extra-draw replacement (only on the draw that
+makes the qualifying count one); the spell-damage scale block matches one
+more arm (`SpellDamageToOpponentsBonus`); `prevent_static_scan` gains a lane
+bit; `CopyCardAndCastFree` reads a face-down card's face-up definition.
+Release `bot_ladder` at `d8367688b`, toolchain 1.99, Xeon @ 2.80 GHz (4 cores).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); peak_rss 32.4 MiB; games_per_s 253.79 (wall 1.26 s,
+                 host_calib_ms 60)
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean
+clippy           workspace --all-targets clean
+strict suite     25,584 / 25,584 at d8367688b (5 skipped)
+pods             debug, 4-seat blocks over seats 1047-1060: 80/80 decided;
+                 earlier legs' blocks 120 + 64 + 64, one action-cap game
+```
+
 ### 2026-10-12 (Commander run, `01L4tuaB`, second leg) — guardrail; 79 cards, seats 932-960
 
 Hot-path touches: the cast path asks the casting card for a self colored
