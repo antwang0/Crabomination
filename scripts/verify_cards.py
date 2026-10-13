@@ -53,10 +53,14 @@ class ScryfallCache:
         self._path = path
         self._data: dict = {}
         if path.exists():
+            # A cache that will not parse is refused, never replaced: starting
+            # fresh made the next `set` overwrite the committed 40,000-card
+            # cache with the handful just fetched (2026-10-13, twice).
             try:
                 self._data = json.loads(path.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
-                pass  # corrupt cache → start fresh
+            except (json.JSONDecodeError, OSError) as exc:
+                sys.exit(f"{path}: unreadable cache ({exc}); restore it with "
+                         f"`git checkout -- {path.name}` rather than rebuild it")
 
     def get(self, name: str):
         """Return cached value, or raise KeyError if not cached."""
@@ -65,11 +69,15 @@ class ScryfallCache:
 
     def set(self, name: str, value: Optional[dict]) -> None:
         self._data[name] = _NOT_FOUND if value is None else value
+        # Write beside, then rename: a full disk or an interrupt mid-write
+        # leaves the old cache whole instead of a truncated one.
+        tmp = self._path.with_suffix(".json.tmp")
         try:
-            self._path.write_text(
+            tmp.write_text(
                 json.dumps(self._data, indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
+            tmp.replace(self._path)
         except OSError as exc:
             print(f"  [warning: could not write cache: {exc}]", file=sys.stderr)
 
