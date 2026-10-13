@@ -16294,6 +16294,17 @@ impl GameState {
                         crate::effect::StaticEffect::MatchingLoseAllCreatureTypes { applies_to } => {
                             (applies_to, Modification::SetCreatureTypes(Vec::new()), Layer::L4Type, None)
                         }
+                        // "Commander creatures you own are Giants" (Raised by
+                        // Giants): `IsCommander` is live, so the static path drops it.
+                        crate::effect::StaticEffect::AddCreatureTypeToMatching {
+                            applies_to: applies_to @ Sel::EachPermanent(req),
+                            creature_type,
+                        } if !crate::game::layers::requirement_is_card_only(req) => (
+                            applies_to,
+                            Modification::AddCreatureType(*creature_type),
+                            Layer::L4Type,
+                            None,
+                        ),
                         crate::effect::StaticEffect::GrantKeyword {
                             applies_to: applies_to @ Sel::EachPermanent(req),
                             keyword,
