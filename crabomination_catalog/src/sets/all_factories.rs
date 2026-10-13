@@ -14406,7 +14406,7 @@ static DECKS: &[Factory] = &[
     super::decks::hanweir_the_writhing_township,
     super::decks::tilonallis_summoner,
     super::decks::tom_bert_and_william,
-    super::decks::bebop_and_rocksteady,
+    super::decks::bebop_rocksteady,
     super::decks::part_in_friendship,
 ];
 static DGM: &[Factory] = &[

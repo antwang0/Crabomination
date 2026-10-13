@@ -157,9 +157,9 @@ fn tom_bert_and_william_turn_to_stone() {
 /// Bebop & Rocksteady attacking: discard a card, or (empty-handed) sacrifice
 /// a permanent.
 #[test]
-fn bebop_and_rocksteady_tax_every_swing() {
+fn bebop_rocksteady_tax_every_swing() {
     let mut g = pod(2);
-    let duo = g.add_card_to_battlefield(0, catalog::bebop_and_rocksteady());
+    let duo = g.add_card_to_battlefield(0, catalog::bebop_rocksteady());
     g.clear_sickness(duo);
     g.players[0].hand.clear();
     let land = g.add_card_to_battlefield(0, catalog::forest());

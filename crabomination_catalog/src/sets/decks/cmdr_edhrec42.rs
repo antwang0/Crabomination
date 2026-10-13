@@ -286,7 +286,7 @@ pub fn tom_bert_and_william() -> CardDefinition {
 
 /// Bebop & Rocksteady — {1}{B/G}{B/G} legendary 7/5 Boar Rhino Mutant.
 /// Attacking or blocking: sacrifice a permanent unless you discard a card.
-pub fn bebop_and_rocksteady() -> CardDefinition {
+pub fn bebop_rocksteady() -> CardDefinition {
     let toll = || Effect::MayDiscard {
         description: "Discard a card rather than sacrifice a permanent?".into(),
         count: Value::ONE,
