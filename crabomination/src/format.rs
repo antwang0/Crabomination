@@ -769,7 +769,8 @@ fn is_background(def: &CardDefinition) -> bool {
 }
 
 /// CR 903.3 — may `def` be designated a deck's commander on its own? The card
-/// must be legendary and either **(a)** a creature card, **(b)** a Vehicle
+/// must be legendary and either **(a)** a creature card (counting one that is
+/// a creature only off the battlefield, CR 604.3), **(b)** a Vehicle
 /// card, or **(c)** a Spacecraft card with one or more power/toughness boxes;
 /// CR 903.3a's printed "[this] can be your commander" (CR 113.6n) is the other
 /// way in. The Background half of a CR 702.124k pair is not covered here — it
@@ -782,6 +783,10 @@ fn is_background(def: &CardDefinition) -> bool {
 pub fn is_legal_commander(def: &CardDefinition) -> bool {
     def.is_legendary()
         && (def.is_creature()
+            // CR 604.3 — a card that is a creature while it isn't on the
+            // battlefield (Grist, the Hunger Tide) is a creature card in the
+            // command zone, where CR 903.3 judges it.
+            || def.creature_off_battlefield
             || def.can_be_commander
             || def.is_vehicle()
             || is_spacecraft_with_pt(def))

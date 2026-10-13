@@ -4738,6 +4738,7 @@ fn cr_903_3_a_vehicle_or_a_spacecraft_with_a_pt_box_can_be_a_commander() {
         (catalog::the_eternity_elevator(), false, "legendary Spacecraft, no P/T box"),
         (catalog::sol_ring(), false, "not even legendary"),
         (catalog::sigarda_host_of_herons(), true, "the ordinary case"),
+        (catalog::grist_the_hunger_tide(), true, "a creature off the battlefield (CR 604.3)"),
     ] {
         assert_eq!(is_legal_commander(&def), want, "{} — {why}", def.name);
     }
