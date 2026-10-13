@@ -4993,7 +4993,12 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| c.may_play_until)
-            .is_some_and(|perm| perm.player == p && !perm.cast_only && self.may_play_usable(&perm))
+            .is_some_and(|perm| {
+                perm.player == p
+                    && !perm.cast_only
+                    && perm.duration != crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell
+                    && self.may_play_usable(&perm)
+            })
     }
 
     /// Whether a may-play permission's own condition holds right now:
@@ -5026,6 +5031,10 @@ impl GameState {
                             perm.player,
                         )
                 })
+            }
+            // A land is never cast, so it is never played this way.
+            crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell => {
+                self.players.get(perm.player).is_some_and(|p| p.spells_cast_this_game_turn > 0)
             }
             _ => true,
         }

@@ -1301,6 +1301,11 @@ pub enum MayPlayDuration {
     /// only while the holder controls a creature of `creature_type` —
     /// checked as the card is played (`GameState::may_play_usable`).
     WhileExiledIfHolderControls { creature_type: CreatureType },
+    /// "For as long as it remains exiled, it has 'You may cast this card from
+    /// exile as long as you've cast another spell this turn'" (Monk Class):
+    /// `WhileExiled`, castable (never played as a land) only once the holder
+    /// has cast a spell this turn — checked as it is cast.
+    WhileExiledAfterAnotherSpell,
     /// "During any turn you put a lore counter on this Saga, you may play that
     /// card" (Summon: Brynhildr): live on the granting turn, parked at
     /// [`MAY_PLAY_DORMANT`] by the turn sweep, woken for `holder` whenever a
