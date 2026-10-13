@@ -236,6 +236,12 @@ the handoff.
   `EntersAsCopy::keep_own_pt` (Hulking Metamorph — the copy keeps its own, possibly prototyped,
   size) and `Effect::CloakPileWithTop` (Become Anonymous); Princess Yue's Moon rides a back face
   through the Ojer gods' `ReturnSelfTransformedTappedToOwner`.
+- **Seats 1516-1661** (EDHREC ranks 2001-2500: 125 zero-gap decks plus 21 one-card-gap cards in
+  `decks::cmdr_edhrec55`/`56`): new `Predicate::PlayedCardFromExileThisTurn` (Visions of Phyrexia;
+  `Player.played_land_from_exile_this_turn`) and `Predicate::NoPermanentLeftBattlefieldThisTurn`
+  (Sarevok). **OPEN:** Maraxus of Keld the creature shares its name with the Vanguard avatar the
+  catalog carries, so its deck resolves to the avatar and fails CR 903.3; Kamahl's Will's land mode
+  is untargeted (twenty optional slots would precede the other mode's target).
 - **New primitives:** `Effect::GainControlWhileMonarch` (`TempControl.while_monarch`, Garland),
   `R::HasActivatedAbility`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn`
   (Locus of Enlightenment), `StaticEffect::FirstDrawEachTurnMillsOneOfTwo` (a `DrawDig`, Scion of
