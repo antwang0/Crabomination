@@ -9390,6 +9390,78 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NEYAM_SHAI_MURAD_COMMANDERS,
             main: decks::NEYAM_SHAI_MURAD_MAIN,
         },
+        // Seat 1490: Vrestin, Menoptra Leader's EDHREC average deck. `--pod-decks 1490`.
+        PodDeck {
+            name: "Vrestin, Menoptra Leader (WG)",
+            commanders: decks::VRESTIN_COMMANDERS,
+            main: decks::VRESTIN_MAIN,
+        },
+        // Seat 1491: Anafenza, the Foremost's EDHREC average deck. `--pod-decks 1491`.
+        PodDeck {
+            name: "Anafenza, the Foremost (WBG)",
+            commanders: decks::ANAFENZA_COMMANDERS,
+            main: decks::ANAFENZA_MAIN,
+        },
+        // Seat 1492: Lulu, Stern Guardian's EDHREC average deck. `--pod-decks 1492`.
+        PodDeck {
+            name: "Lulu, Stern Guardian (U)",
+            commanders: decks::LULU_COMMANDERS,
+            main: decks::LULU_MAIN,
+        },
+        // Seat 1493: The Peregrine Dynamo's EDHREC average deck. `--pod-decks 1493`.
+        PodDeck {
+            name: "The Peregrine Dynamo (C)",
+            commanders: decks::THE_PEREGRINE_DYNAMO_COMMANDERS,
+            main: decks::THE_PEREGRINE_DYNAMO_MAIN,
+        },
+        // Seat 1494: Adeliz, the Cinder Wind's EDHREC average deck. `--pod-decks 1494`.
+        PodDeck {
+            name: "Adeliz, the Cinder Wind (UR)",
+            commanders: decks::ADELIZ_COMMANDERS,
+            main: decks::ADELIZ_MAIN,
+        },
+        // Seat 1495: Grenzo, Havoc Raiser's EDHREC average deck. `--pod-decks 1495`.
+        PodDeck {
+            name: "Grenzo, Havoc Raiser (R)",
+            commanders: decks::GRENZO_2_COMMANDERS,
+            main: decks::GRENZO_2_MAIN,
+        },
+        // Seat 1496: Rienne, Angel of Rebirth's EDHREC average deck. `--pod-decks 1496`.
+        PodDeck {
+            name: "Rienne, Angel of Rebirth (WRG)",
+            commanders: decks::RIENNE_COMMANDERS,
+            main: decks::RIENNE_MAIN,
+        },
+        // Seat 1497: Ratchet, Field Medic's EDHREC average deck. `--pod-decks 1497`.
+        PodDeck {
+            name: "Ratchet, Field Medic (W)",
+            commanders: decks::RATCHET_COMMANDERS,
+            main: decks::RATCHET_MAIN,
+        },
+        // Seat 1498: Rulik Mons, Warren Chief's EDHREC average deck. `--pod-decks 1498`.
+        PodDeck {
+            name: "Rulik Mons, Warren Chief (RG)",
+            commanders: decks::RULIK_MONS_COMMANDERS,
+            main: decks::RULIK_MONS_MAIN,
+        },
+        // Seat 1499: Radagast, Wizard of Wilds's EDHREC average deck. `--pod-decks 1499`.
+        PodDeck {
+            name: "Radagast, Wizard of Wilds (UG)",
+            commanders: decks::RADAGAST_COMMANDERS,
+            main: decks::RADAGAST_MAIN,
+        },
+        // Seat 1500: Liliana the Faultless's EDHREC average deck. `--pod-decks 1500`.
+        PodDeck {
+            name: "Liliana the Faultless (W)",
+            commanders: decks::LILIANA_THE_FAULTLESS_COMMANDERS,
+            main: decks::LILIANA_THE_FAULTLESS_MAIN,
+        },
+        // Seat 1501: The Beast, Deathless Prince's EDHREC average deck. `--pod-decks 1501`.
+        PodDeck {
+            name: "The Beast, Deathless Prince (BR)",
+            commanders: decks::THE_BEAST_COMMANDERS,
+            main: decks::THE_BEAST_MAIN,
+        },
     ]
 }
 
@@ -12710,6 +12782,18 @@ mod tests {
             ("Sidisi, Undead Vizier", &[0x0FE4]),
             ("Syr Elenora, the Discerning", &[0x0FE5]),
             ("Neyam Shai Murad", &[0x0FE6]),
+            ("Vrestin, Menoptra Leader", &[0x0FE7]),
+            ("Anafenza, the Foremost", &[0x0FE8]),
+            ("Lulu, Stern Guardian", &[0x0FE9]),
+            ("The Peregrine Dynamo", &[0x0FEA]),
+            ("Adeliz, the Cinder Wind", &[0x0FEB]),
+            ("Grenzo, Havoc Raiser", &[0x0FEC]),
+            ("Rienne, Angel of Rebirth", &[0x0FED]),
+            ("Ratchet, Field Medic", &[0x0FEE]),
+            ("Rulik Mons, Warren Chief", &[0x0FEF]),
+            ("Radagast, Wizard of Wilds", &[0x0FF0]),
+            ("Liliana the Faultless", &[0x0FF1]),
+            ("The Beast, Deathless Prince", &[0x0FF2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
