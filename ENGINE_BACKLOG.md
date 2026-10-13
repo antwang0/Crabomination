@@ -209,8 +209,9 @@ the handoff.
 - **OPEN (sweep seed 112, 440 games over 1170-1186, 3 undecided):** Eloise + March of the
   Machines with no drain on board is a true mandatory loop (seed 11232 g24 ends as the CR 104.4b
   draw, correctly); with Lucy MacLean's once-a-turn copies varying the state the loop detector
-  misses it and the game reaches the action cap (11232 g28). `loop_hazard`'s cast probe could
-  refuse the half (March with Eloise out, or Eloise with March out) that starts it. Syr Konrad
+  misses it and the game reaches the action cap (11232 g28) — FIXED: `loop_hazard`'s probe now
+  also reads a never-draining stack that minted 24 tokens as a loop, so the bot declines the
+  half that starts it. Syr Konrad
   + Kozilek, Butcher of Truth reached the action cap at stack 421 (11254 g4) — not yet traced.
 - **FIXED — Elesh Norn (MOM):** "whenever a source an opponent controls deals damage to you **or a
   permanent you control**, that source's controller loses 2 life unless they pay {1}". The
