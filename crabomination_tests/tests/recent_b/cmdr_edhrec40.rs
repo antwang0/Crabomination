@@ -118,3 +118,139 @@ fn cr_119_5_vraska_ultimate_sets_life_to_one() {
     assert_eq!(g.players[2].life, 1);
     assert!(g.battlefield_find(vraska).is_none(), "zero loyalty: to the graveyard");
 }
+
+/// A bot casts Shadow of the Second Sun on itself — the extra untap, upkeep
+/// and draw are its own.
+#[test]
+fn bot_enchants_itself_with_shadow_of_the_second_sun() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(3);
+    let shadow = g.add_card_to_hand(0, catalog::shadow_of_the_second_sun());
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let action = HeuristicBot::new().next_action(&g, 0).expect("an action");
+    match action {
+        GameAction::CastSpell { card_id, target, .. } => {
+            assert_eq!(card_id, shadow);
+            assert_eq!(target, Some(Target::Player(0)));
+        }
+        other => panic!("expected the Shadow cast, got {other:?}"),
+    }
+}
+
+fn named(g: &GameState, seat: usize, name: &str) -> Vec<CardId> {
+    g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == name).map(|c| c.id).collect()
+}
+
+/// Loot's upkeep exiles one card per card type among its controller's other
+/// nonland permanents — an artifact creature counts twice — playable this turn.
+#[test]
+fn loot_exiles_by_card_types() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    g.add_card_to_battlefield(0, catalog::loot_the_key_to_everything());
+    g.add_card_to_battlefield(0, catalog::jhoiras_timebug());
+    g.add_card_to_battlefield(0, catalog::gutter_grime());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let exiled = g.exile.len();
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len(), exiled + 3, "artifact, creature, enchantment");
+}
+
+/// Invasion of Kaldheim swaps the hand for as many fresh cards; its back face
+/// burns for a discarded land and impulse-draws off it.
+#[test]
+fn invasion_of_kaldheim_wheels_the_hand_into_exile() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_kaldheim());
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    let exiled = g.exile.len();
+    cast(&mut g, inv, None).expect("invasion");
+    assert_eq!(g.players[0].hand.len(), 3, "three exiled, three drawn");
+    assert_eq!(g.exile.len(), exiled + 3);
+
+    let pyre = *catalog::invasion_of_kaldheim().back_face.unwrap();
+    let pyre = g.add_card_to_battlefield(0, pyre);
+    g.add_card_to_hand(0, catalog::forest());
+    let graveyard = g.players[0].graveyard.len();
+    let life = g.players[1].life;
+    let exiled = g.exile.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pyre,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("pyre");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), graveyard + 1);
+    assert!(g.players[0].graveyard.last().unwrap().definition.is_land(), "a land was discarded");
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(g.exile.len(), exiled + 1, "the discard trigger exiled the top card");
+}
+
+/// Omenpath Journey exiles lands with different names, then drops one at
+/// random onto the battlefield tapped at its controller's end step.
+#[test]
+fn omenpath_journey_banks_differently_named_lands() {
+    let mut g = pod(2);
+    for land in [catalog::forest(), catalog::forest(), catalog::island(), catalog::swamp()] {
+        g.add_card_to_library(0, land);
+    }
+    let journey = g.add_card_to_hand(0, catalog::omenpath_journey());
+    cast(&mut g, journey, None).expect("journey");
+    let banked: Vec<_> = g.exile.iter().filter(|c| c.exiled_with == Some(journey)).map(|c| c.definition.name).collect();
+    assert_eq!(banked.len(), 3, "Forest, Island, Swamp — not the second Forest: {banked:?}");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let landed: Vec<_> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).collect();
+    assert_eq!(landed.len(), 1);
+    assert!(landed[0].tapped);
+}
+
+/// Uugguu: a nontoken Ooze of yours dying leaves two 2/2 nonlegendary token
+/// copies; Gutter Grime adds a slime counter and an Ooze as big as its count.
+#[test]
+fn uugguu_and_gutter_grime_replace_dead_oozes() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::uugguu_the_omniplasm());
+    let grime = g.add_card_to_battlefield(0, catalog::gutter_grime());
+    let slime = g.add_card_to_battlefield(0, catalog::consumptive_goo());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, Some(Target::Permanent(slime))).expect("shock");
+    let copies = named(&g, 0, "Consumptive Goo");
+    assert_eq!(copies.len(), 2);
+    for c in &copies {
+        let cp = g.computed_permanent(*c).unwrap();
+        assert_eq!((cp.power, cp.toughness), (2, 2));
+    }
+    assert_eq!(g.battlefield_find(grime).unwrap().counter_count(CounterType::Slime), 1);
+    let oozes = named(&g, 0, "Ooze");
+    assert_eq!(oozes.len(), 1);
+    assert_eq!(g.computed_permanent(oozes[0]).unwrap().power, 1);
+    let bolt = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, bolt, Some(Target::Permanent(copies[0]))).expect("shock a token");
+    assert_eq!(g.battlefield_find(grime).unwrap().counter_count(CounterType::Slime), 1, "a token isn't nontoken");
+}
+
+/// Omni-Changeling enters as a copy that keeps changeling (CR 702.73a).
+#[test]
+fn cr_702_73a_omni_changeling_copies_with_changeling() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let omni = g.add_card_to_hand(0, catalog::omni_changeling());
+    cast(&mut g, omni, None).expect("omni");
+    let cp = g.computed_permanent(omni).expect("on the battlefield");
+    assert_eq!(cp.def.name, "Grizzly Bears");
+    assert!(cp.keywords().contains(&Keyword::Changeling), "changeling: every creature type");
+}

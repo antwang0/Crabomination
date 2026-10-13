@@ -3,13 +3,14 @@
 //! Loot). Tests in `tests/recent_b/cmdr_edhrec40.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EventKind, EventScope, EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Predicate,
-    SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, BattleSubtype, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EntersAsCopy, EventKind, EventScope, EventSpec, Keyword, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype,
+    Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{ActivationTrait, Effect, PlayerRef, VoteOption};
-use crate::mana::{b, cost, g, generic, u, Color};
+use crate::effect::shortcut::{etb, target_any, target_filtered};
+use crate::effect::{ActivationTrait, Effect, PlayerRef, VoteOption, ZoneDest};
+use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
 use crabomination_base::tokens::treasure_token;
 use crabomination_base::turn_step::TurnStep;
 use std::sync::Arc;
@@ -177,6 +178,224 @@ pub fn vraska_relic_seeker() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition { supertypes: vec![Supertype::Legendary], ..creature(name, mana, types, p, t) }
+}
+
+fn your_step(step: TurnStep, effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::StepBegins(step), EventScope::YourControl), effect }
+}
+
+// ── Loot, the Key to Everything ──────────────────────────────────────────────
+
+/// Loot, the Key to Everything — {G}{U}{R} legendary 1/2 Beast Noble. Ward
+/// {1}. Upkeep: exile the top X (card types among your other nonland
+/// permanents); you may play them this turn.
+pub fn loot_the_key_to_everything() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+        triggered_abilities: vec![your_step(
+            TurnStep::Upkeep,
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::CardTypesAmong(Box::new(Selector::EachPermanent(
+                    R::Nonland.and(R::ControlledByYou).and(R::OtherThanSource),
+                ))),
+                duration: MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+        )],
+        ..legend(
+            "Loot, the Key to Everything",
+            cost(&[g(), u(), r()]),
+            vec![CreatureType::Beast, CreatureType::Noble],
+            1,
+            2,
+        )
+    }
+}
+
+/// Invasion of Kaldheim // Pyre of the World Tree — {3}{R} Siege, defense 4.
+/// Enters: exile your hand, draw that many; play the exiled cards until the
+/// end of your next turn. Pyre: discard a land card: 2 damage to any target;
+/// whenever you discard a land card, exile your top card, playable this turn.
+pub fn invasion_of_kaldheim() -> CardDefinition {
+    let exiled = || Selector::ExiledThisResolution { filter: R::Any };
+    let pyre = CardDefinition {
+        name: "Pyre of the World Tree",
+        card_types: vec![CardType::Enchantment],
+        color_indicator: vec![Color::Red],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Land, 1)),
+            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land }),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Invasion of Kaldheim",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![BattleSubtype::Siege], ..Default::default() },
+        defense: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ExileHand { who: PlayerRef::You },
+            Effect::Draw { who: Selector::You, amount: Value::count(exiled()) },
+            Effect::GrantMayPlay {
+                what: exiled(),
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            },
+        ]))],
+        back_face: Some(Box::new(pyre)),
+        ..Default::default()
+    }
+}
+
+/// Omenpath Journey — {3}{G} enchantment. Enters: exile up to five land cards
+/// with different names from your library. Your end step: one of them at
+/// random onto the battlefield tapped.
+pub fn omenpath_journey() -> CardDefinition {
+    let fetch = || Effect::Search {
+        who: PlayerRef::You,
+        filter: R::Land.and(R::Not(Box::new(R::SameNameAsExiledWithSource))),
+        to: ZoneDest::ExileWithSourceStamp,
+    };
+    CardDefinition {
+        name: "Omenpath Journey",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Seq((0..5).map(|_| fetch()).collect())),
+            your_step(
+                TurnStep::End,
+                Effect::ChooseOneAtRandomAmong {
+                    what: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Exile, filter: R::ExiledWithSource },
+                    chosen: Box::new(Effect::Move {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    }),
+                    other: Box::new(Effect::Noop),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Uugguu, the Omniplasm ────────────────────────────────────────────────────
+
+/// Uugguu, the Omniplasm — {B}{G}{U} legendary 2/2 Ooze. Whenever another
+/// nontoken Ooze creature you control dies, two token copies of it, 2/2 and
+/// not legendary.
+pub fn uugguu_the_omniplasm() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::NotToken.and(R::HasCreatureType(CreatureType::Ooze)),
+                },
+            ),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                source: Selector::TriggerSource,
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: Some((2, 2)),
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: true,
+                legendary: false,
+                extra_keywords: vec![],
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: vec![],
+            },
+        }],
+        ..legend("Uugguu, the Omniplasm", cost(&[b(), g(), u()]), vec![CreatureType::Ooze], 2, 2)
+    }
+}
+
+/// Omni-Changeling — {3}{U}{U} 0/0 Shapeshifter. Changeling, convoke. It may
+/// enter as a copy of any creature, except it has changeling.
+pub fn omni_changeling() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Changeling, Keyword::Convoke],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Creature,
+            extra_keywords: vec![Keyword::Changeling],
+            ..Default::default()
+        }),
+        ..creature("Omni-Changeling", cost(&[generic(3), u(), u()]), vec![CreatureType::Shapeshifter], 0, 0)
+    }
+}
+
+/// Gutter Grime — {4}{G} enchantment. Whenever a nontoken creature you
+/// control dies, a slime counter here, then a green Ooze token whose P/T are
+/// the slime counters on Gutter Grime.
+pub fn gutter_grime() -> CardDefinition {
+    let slime = || Value::CountersOn { what: Box::new(Selector::CreatorOfSource), kind: CounterType::Slime };
+    let ooze = TokenDefinition {
+        name: "Ooze".into(),
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "This token's power and toughness are each equal to the number of slime counters on Gutter Grime.",
+            effect: StaticEffect::SelfBasePtFromValue { power: slime(), toughness: slime() },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Gutter Grime",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Slime, amount: Value::ONE },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(ooze) },
+            ]),
+        }],
         ..Default::default()
     }
 }

@@ -14388,6 +14388,12 @@ static DECKS: &[Factory] = &[
     super::decks::way_of_the_necromancer,
     super::decks::way_of_the_paradox,
     super::decks::vraska_relic_seeker,
+    super::decks::loot_the_key_to_everything,
+    super::decks::invasion_of_kaldheim,
+    super::decks::omenpath_journey,
+    super::decks::uugguu_the_omniplasm,
+    super::decks::omni_changeling,
+    super::decks::gutter_grime,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
