@@ -35744,3 +35744,87 @@ pub const SOKKA_AND_SUKI_MAIN: &[CardFactory] = &[
     island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const SAMUT_3_COMMANDERS: &[CardFactory] = &[samut_vizier_of_naktamun];
+
+/// **Samut, Vizier of Naktamun**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 10 Forests + 10 Mountains = 99.
+/// Samut, Vizier of Naktamun (EDHREC, fetched 2026-10-13).
+pub const SAMUT_3_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_selves, dolmen_gate, doors_of_durin, lightning_greaves, sol_ring,
+    urabrasks_forge, cinder_glade, command_tower, cragcrown_pathway, game_trail,
+    karplusan_forest, kessig_wolf_run, mossfire_valley, reliquary_tower, rockfall_vale,
+    rootbound_crag, sokenzan_crucible_of_defiance, spire_garden, stomping_ground,
+    wooded_foothills, ardoz_cobbler_of_war, atalan_jackal, birds_of_paradise,
+    bloodbraid_challenger, bloodbraid_elf, champion_of_lambholt, deathleaper_terror_weapon,
+    elturel_survivors, elvish_mystic, enduring_courage, flamerush_rider, frenzied_baloth,
+    fyndhorn_elves, goblin_anarchomancer, grand_warlord_radha, hanweir_garrison,
+    kari_zev_skyship_raider, legion_warboss, llanowar_elves, loyal_apprentice,
+    ogre_battledriver, ohran_frostfang, phoenix_chick, primal_forcemage,
+    professional_face_breaker, questing_beast, reinforced_ronin, ruby_daring_tracker,
+    samut_hazorets_champion, scion_of_calamity, scurry_of_squirrels, squee_dubious_monarch,
+    stampede_surfer, toski_bearer_of_secrets, urabrask_the_hidden, beastmaster_ascension,
+    garruks_uprising, rhythm_of_the_wild, rising_of_the_day, tribute_to_the_world_tree,
+    utopia_sprawl, wild_growth, abrade, beast_within, chaos_warp, great_train_heist,
+    heroic_intervention, natures_claim, untimely_malfunction, minsc_boo_timeless_heroes,
+    blasphemous_act, cultivate, farseek, natures_lore, rampant_growth, song_of_totentanz,
+    stump_stomp, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const THE_WALLS_OF_BA_SING_SE_COMMANDERS: &[CardFactory] = &[walls_of_ba_sing_se];
+
+/// **The Walls of Ba Sing Se**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 15 Wastes = 99.
+/// The Walls of Ba Sing Se (EDHREC, fetched 2026-10-13).
+pub const THE_WALLS_OF_BA_SING_SE_MAIN: &[CardFactory] = &[
+    basalt_monolith, chimil_the_inner_sun, cloud_key, commanders_plate, darksteel_forge,
+    darksteel_monolith, dreamstone_hedron, everflowing_chalice, expedition_map,
+    forsaken_monument, hedron_archive, helm_of_the_host, lightning_greaves, mind_stone,
+    minds_eye, mithril_coat, mystic_forge, nevinyrrals_disk, pariahs_shield, sculpting_steel,
+    sol_ring, swiftfoot_boots, the_eternity_elevator, thought_vessel, thran_dynamo,
+    unwinding_clock, warmongers_chariot, worn_powerstone, buried_ruin, command_beacon,
+    darksteel_citadel, inventors_fair, reliquary_tower, rogues_passage, sanctum_of_ugin,
+    shrine_of_the_forsaken_gods, temple_of_the_false_god, the_mycosynth_gardens,
+    thespians_stage, tomb_of_the_spirit_dragon, urzas_cave, urzas_factory, urzas_mine,
+    urzas_power_plant, urzas_saga, urzas_tower, urzas_workshop, vesuva, war_room,
+    zhalfirin_void, blightsteel_colossus, colossus_of_akros, consulate_skygate,
+    crashing_drawbridge, cryptothrall, foundry_inspector, geode_golem, glaring_fleshraker,
+    it_that_heralds_the_end, jhoiras_familiar, karn_legacy_reforged,
+    liberator_urzas_battlethopter, palladium_myr, platinum_angel, shield_wall_sentinel,
+    silent_arbiter, solemn_simulacrum, steel_overseer, steel_wall, summon_bahamut,
+    suspicious_bookcase, towering_viewpoint, ultima_origin_of_oblivion, walking_bulwark,
+    weathered_sentinels, echoes_of_eternity, eldritch_immunity, kozileks_command,
+    null_elemental_blast, warping_wail, ugin_eye_of_the_storms, ugin_the_ineffable, all_is_dust,
+    selective_obliteration,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes, wastes, wastes, wastes,
+];
+
+pub const SASAYA_COMMANDERS: &[CardFactory] = &[sasaya_orochi_ascendant];
+
+/// **Sasaya, Orochi Ascendant**'s EDHREC average deck, card for card:
+/// 56 nonbasic cards + 43 Forests = 99.
+/// Sasaya, Orochi Ascendant (EDHREC, fetched 2026-10-13).
+pub const SASAYA_MAIN: &[CardFactory] = &[
+    armillary_sphere, endless_atlas, khalni_gem, orochi_hatchery, sol_ring, thought_vessel,
+    desert_of_the_indomitable, reliquary_tower, slippery_karst, tranquil_thicket,
+    azusa_lost_but_seeking, cultivator_colossus, dryad_greenseeker, eternal_witness,
+    hydra_broodmaster, jadelight_spelunker, kamahl_fist_of_krosa, krosan_tusker,
+    magus_of_the_candelabra, magus_of_the_library, nantuko_cultivator, omnath_locus_of_mana,
+    polukranos_world_eater, shigeki_jukai_visionary, silvanuss_invoker, sylvan_ranger,
+    wakeroot_elemental, wolfbriar_elemental, yavimaya_elder, abundance, boseiju_reaches_skyward,
+    helix_pinnacle, rowen, sylvan_library, beast_within, evolution_charm, heroic_intervention,
+    sprouting_vines, squall_line, you_happen_on_a_glade, wrenn_and_seven, cultivate,
+    gaeas_bounty, gelatinous_genesis, genesis_wave, harmonize, hurricane, journey_of_discovery,
+    kodamas_reach, mulch, nissas_pilgrimage, nissas_triumph, nyleas_intervention,
+    rites_of_spring, seek_the_horizon, winding_way,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];

@@ -7992,6 +7992,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SOKKA_AND_SUKI_COMMANDERS,
             main: decks::SOKKA_AND_SUKI_MAIN,
         },
+        // Seat 1257: Samut, Vizier of Naktamun's EDHREC average deck. `--pod-decks 1257`.
+        PodDeck {
+            name: "Samut, Vizier of Naktamun (RG)",
+            commanders: decks::SAMUT_3_COMMANDERS,
+            main: decks::SAMUT_3_MAIN,
+        },
+        // Seat 1258: The Walls of Ba Sing Se's EDHREC average deck. `--pod-decks 1258`.
+        PodDeck {
+            name: "The Walls of Ba Sing Se (C)",
+            commanders: decks::THE_WALLS_OF_BA_SING_SE_COMMANDERS,
+            main: decks::THE_WALLS_OF_BA_SING_SE_MAIN,
+        },
+        // Seat 1259: Sasaya, Orochi Ascendant's EDHREC average deck. `--pod-decks 1259`.
+        PodDeck {
+            name: "Sasaya, Orochi Ascendant (G)",
+            commanders: decks::SASAYA_COMMANDERS,
+            main: decks::SASAYA_MAIN,
+        },
     ]
 }
 
@@ -11080,6 +11098,9 @@ mod tests {
             ("Azami, Lady of Scrolls", &[0x0EFB]),
             ("Kolodin, Triumph Caster", &[0x0EFC]),
             ("Sokka and Suki", &[0x0EFD]),
+            ("Samut, Vizier of Naktamun", &[0x0EFE]),
+            ("The Walls of Ba Sing Se", &[0x0EFF]),
+            ("Sasaya, Orochi Ascendant", &[0x0F00]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
