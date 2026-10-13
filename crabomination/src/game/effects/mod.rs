@@ -45944,12 +45944,18 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
                 // Reveal from the top until `lands` land cards, then put all
-                // revealed cards into the graveyard (Mind Grind).
+                // revealed cards into the graveyard (Mind Grind). Capped at the
+                // library size the reveal started with: a card that shuffles
+                // back instead (Nexus of Fate, CR 614.6) kept a landless
+                // library from ever emptying, and a bot's look-ahead grew the
+                // event list until it was OOM-killed (6-seat pod, seed 990884).
                 let want = self.evaluate_value(lands, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
                         let mut found = 0usize;
-                        while found < want && !self.players[p].library.is_empty() {
+                        let mut budget = self.players[p].library.len();
+                        while found < want && budget > 0 && !self.players[p].library.is_empty() {
+                            budget -= 1;
                             let card = self.players[p].library.remove(0);
                             if card.definition.is_land() {
                                 found += 1;

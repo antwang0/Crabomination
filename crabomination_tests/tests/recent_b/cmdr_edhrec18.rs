@@ -1183,3 +1183,20 @@ fn asinine_antics_flashes_for_two_more() {
     })
     .expect("six mana flashes it in");
 }
+
+/// CR 104.4b / CR 614.6 — "reveal until a land" over a landless library
+/// whose cards shuffle back instead of reaching the graveyard (Nexus of
+/// Fate) must end. Consuming Aberration's cast trigger used to loop until a
+/// bot look-ahead was OOM-killed (6-seat pod, seed 990884); the reveal is
+/// capped at the library's starting size.
+#[test]
+fn mill_until_land_ends_on_a_shuffle_back_library() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::consuming_aberration());
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::nexus_of_fate());
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(1)]).unwrap();
+    assert_eq!(g.players[1].library.len(), 3, "each Nexus shuffled back; the reveal stopped");
+}
