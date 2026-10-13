@@ -1825,3 +1825,29 @@ fn spells_requiring_two_targets_print_no_optional_target() {
     assert!(strict >= 100, "only {strict} spells require two slots — the walk has gone vacuous");
     assert!(bad.is_empty(), "{} spell(s) require every slot but print an optional target:\n  {}", bad.len(), bad.join("\n  "));
 }
+
+/// Bug fix (seed 22104, a 4-seat pod): `GainControl`'s `to` is ONE new
+/// controller, resolved by the singular `resolve_player`, so a fan-out ref
+/// there ("an opponent gains control" written as `EachOpponent`) panics at
+/// 3+ seats. Five cards had it; no card may.
+#[test]
+fn no_gain_control_hands_a_permanent_to_a_set_of_players() {
+    use crabomination::effect::Effect;
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut hits: Vec<&'static str> = Vec::new();
+    let bad = |e: &Effect| matches!(e, Effect::GainControl { to: Some(p), .. } if p.is_fan_out());
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        let mut effects: Vec<&Effect> = vec![&def.effect];
+        effects.extend(def.triggered_abilities.iter().map(|t| &t.effect));
+        effects.extend(def.activated_abilities.iter().map(|a| &a.effect));
+        effects.extend(def.loyalty_abilities.iter().map(|a| &a.effect));
+        if effects.iter().any(|e| e.any_nested(&bad)) {
+            hits.push(def.name);
+        }
+    }
+    assert!(hits.is_empty(), "GainControl to a fan-out PlayerRef: {hits:?}");
+}
