@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-13 (Commander run, `01BJKf54`) — guardrail; 89 EDHREC seats, 136 cards
+
+Hot-path touch: `fire_combat_damage_triggers` phase 1.5 asks `trigger_grant_sources`
+once per combat-damage event (the grant lane; empty on a grant-free board);
+`spell_kind_for` scans exile for the card (`from_exile`); a may-play cast from
+exile pays with its spell kind. Release `bot_ladder` at `86a7e43cd`, Xeon @ 2.10 GHz
+(4 cores), toolchain 1.99.0, cold release build 13m19s.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs 1);
+                 peak_rss 31.7 MiB; games_per_s 344.34 (one run, not a reading)
+pools (1200/arch) seed 9301: cube 9,590 + 10 CR 104.4 draws / sos 6,000 / sealed 14,400 — 0 stalls
+pods (debug)     22 blocks, 4/6 seats, ~550 games: one panic (fixed, 3ce9a8490), one CR 104.4a draw
+```
+
 ### 2026-10-12 (Commander run, `01NRsiVW`, second firing) — guardrail; 80 EDHREC seats, twenty card primitives
 
 Hot-path touch: `damage_scaling_in_scope` reads one more per-player flag
