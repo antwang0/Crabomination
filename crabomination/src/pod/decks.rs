@@ -35966,3 +35966,63 @@ pub const VERRAK_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ZUKO_COMMANDERS: &[CardFactory] = &[zuko_firebending_master];
+
+/// **Zuko, Firebending Master**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Zuko, Firebending Master (EDHREC, fetched 2026-10-13).
+pub const ZUKO_MAIN: &[CardFactory] = &[
+    arcane_signet, fire_nation_turret, mithril_coat, ruby_medallion, sol_ring, swiftfoot_boots,
+    tablet_of_discovery, the_fire_crystal, vedalken_orrery, arena_of_glory, emergence_zone,
+    fire_nation_palace, rogues_passage, valakut_the_molten_pinnacle, war_room,
+    ashling_flame_dancer, avatar_roku_firebender, birgi_god_of_storytelling,
+    electro_assaulting_battery, firebending_student, guttersnipe, hellkite_charger,
+    iroh_dragon_of_the_west, leyline_tyrant, longshot_rebel_bowman, pinnacle_monk,
+    runaway_steam_kin, storm_kiln_artist, young_pyromancer, zuko_avatar_hunter,
+    zuko_exiled_prince, fated_firepower, fiery_inscription, firebender_ascension,
+    ghitu_firebreathing, lost_in_memories, the_legend_of_roku, abrade, balduvian_rage,
+    big_score, blazing_crescendo, chaos_warp, comet_storm, commune_with_lava, crimson_wisps,
+    deflecting_swat, demand_answers, electrodominance, expedite, fire_nation_attacks,
+    firebending_lesson, fists_of_flame, sos_flashback_instant, great_train_heist, haste_magic,
+    lightning_bolt, monstrous_rage, redirect_lightning, return_the_favor, seething_song,
+    solstice_revelations, the_last_agni_kai, thrill_of_possibility, unexpected_windfall,
+    untimely_malfunction, blasphemous_act, jeskas_will, past_in_flames, sozins_comet,
+    vandalblast, will_of_the_jeskai,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const KELETH_COMMANDERS: &[CardFactory] = &[keleth_sunmane_familiar, yoshimaru_ever_faithful];
+
+/// **Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 24 Plains = 98.
+/// Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful (EDHREC, fetched 2026-10-13).
+pub const KELETH_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, caduceus_staff_of_hermes, heroes_podium,
+    mirror_of_galadriel, mithril_coat, mox_amber, oketras_monument, pearl_medallion,
+    relic_of_legends, shadowspear, sol_ring, swiftfoot_boots, sword_of_the_animist, the_ozolith,
+    the_seriema, eiganjo_castle, eiganjo_seat_of_the_empire, flagstones_of_trokair,
+    geier_reach_sanitarium, mikokoro_center_of_the_sea, minas_tirith, nykthos_shrine_to_nyx,
+    rogues_passage, the_grey_havens, war_room, adeline_resplendent_cathar,
+    anafenza_kin_tree_spirit, baird_steward_of_argive, bastion_protector,
+    boromir_warden_of_the_tower, daxos_blessed_by_the_sun, eight_and_a_half_tails,
+    esper_sentinel, gandalf_the_white, heliod_sun_crowned, isamaru_hound_of_konda,
+    laezel_vlaakiths_champion, linden_the_steadfast_queen, loran_of_the_third_path,
+    mangara_the_diplomat, mikaeus_the_lunarch, odric_lunarch_marshal, phelia_exuberant_shepherd,
+    rune_tail_kitsune_ascendant, senu_keen_eyed_protector, skrelv_defector_mite,
+    teshar_ancestors_apostle, thalia_guardian_of_thraben, thalia_heretic_cathar,
+    urdnan_dromoka_warrior, venat_heart_of_hydaelyn, yoshimaru_beloved_companion,
+    commanders_insignia, day_of_destiny, flaming_fist, flowering_of_the_white_tree,
+    legions_landing, noble_heritage, on_serras_wings, akromas_will, brave_the_elements,
+    flawless_maneuver, generous_gift, path_to_exile, stroke_of_midnight, swords_to_plowshares,
+    teferis_protection, ajani_caller_of_the_pride, elspeth_resplendent, austere_command,
+    cut_a_deal, search_for_glory, urzas_ruinous_blast,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];

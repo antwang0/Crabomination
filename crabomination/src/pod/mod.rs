@@ -8040,6 +8040,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VERRAK_COMMANDERS,
             main: decks::VERRAK_MAIN,
         },
+        // Seat 1265: Zuko, Firebending Master's EDHREC average deck. `--pod-decks 1265`.
+        PodDeck {
+            name: "Zuko, Firebending Master (R)",
+            commanders: decks::ZUKO_COMMANDERS,
+            main: decks::ZUKO_MAIN,
+        },
+        // Seat 1266: Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful's EDHREC average deck. `--pod-decks 1266`.
+        PodDeck {
+            name: "Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful (W)",
+            commanders: decks::KELETH_COMMANDERS,
+            main: decks::KELETH_MAIN,
+        },
     ]
 }
 
@@ -11135,6 +11147,8 @@ mod tests {
             ("Abigale, Eloquent First-Year", &[0x0F03]),
             ("Kaima, the Fractured Calm", &[0x0F04]),
             ("Verrak, Warped Sengir", &[0x0F05]),
+            ("Zuko, Firebending Master", &[0x0F06]),
+            ("Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful", &[0x0F07]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
