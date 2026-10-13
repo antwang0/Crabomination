@@ -3382,7 +3382,9 @@ impl GameState {
             self.permanents_returned_this_resolution = 0;
             self.permanents_tapped_this_resolution = 0;
             self.cards_revealed_this_resolution = 0;
-            self.surveil_kept_top_this_resolution = 0;
+            if self.scratch.surveil_kept_top_this_resolution != 0 {
+                self.scratch.surveil_kept_top_this_resolution = 0;
+            }
             self.creature_cards_discarded_this_resolution = 0;
             self.greatest_discarded_mv_this_resolution = 0;
             // Dropped, not cleared: a cleared map keeps its buffer, and

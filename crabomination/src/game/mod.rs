@@ -2353,6 +2353,12 @@ fn serde_true() -> bool {
 /// `(-143)` measured what happens when you do not: +2.15 % on `fixed`.
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ResolutionScratch {
+    /// Cards surveils left on top within the current resolution
+    /// (`Value::SurveilKeptOnTopThisEffect`). Here rather than on
+    /// `GameState`, whose size is capped (`cow::tests::game_state_stays_small`);
+    /// written only by a surveil that keeps a card, reset only when non-zero.
+    #[serde(skip)]
+    pub(crate) surveil_kept_top_this_resolution: u32,
     /// CR 603.3d — a prompting seat's targeted self-death trigger that fired
     /// mid-resolution, held until the resolution ends so its controller names
     /// the targets (`resolve_top_of_stack` drains it). Empty in bot play.
@@ -3191,10 +3197,6 @@ pub struct GameState {
     /// within the current resolution (`Value::CardsRevealedThisEffect`).
     #[serde(skip)]
     pub(crate) cards_revealed_this_resolution: u32,
-    /// Transient: cards surveils left on top within the current resolution
-    /// (`Value::SurveilKeptOnTopThisEffect`).
-    #[serde(skip)]
-    pub(crate) surveil_kept_top_this_resolution: u32,
     /// Transient: count of *creature* cards discarded within the current
     /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
     /// when the discarded card carries `CardType::Creature`. Read by
@@ -4544,7 +4546,6 @@ impl Clone for GameState {
             permanents_returned_this_resolution: self.permanents_returned_this_resolution,
             permanents_tapped_this_resolution: self.permanents_tapped_this_resolution,
             cards_revealed_this_resolution: self.cards_revealed_this_resolution,
-            surveil_kept_top_this_resolution: self.surveil_kept_top_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             greatest_discarded_mv_this_resolution: self.greatest_discarded_mv_this_resolution,
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
@@ -4761,7 +4762,6 @@ impl GameState {
             permanents_returned_this_resolution: 0,
             permanents_tapped_this_resolution: 0,
             cards_revealed_this_resolution: 0,
-            surveil_kept_top_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
             shuffle_resolving_spell_into_library: false,
@@ -29651,7 +29651,10 @@ impl GameState {
                 for c in top_cards.into_iter().rev() {
                     lib.insert(0, c);
                 }
-                self.surveil_kept_top_this_resolution += count.saturating_sub(graveyarded) as u32;
+                let kept = count.saturating_sub(graveyarded) as u32;
+                if kept > 0 {
+                    self.scratch.surveil_kept_top_this_resolution += kept;
+                }
                 out.push(GameEvent::SurveilPerformed { player, looked_at: count, graveyarded });
                 out.push(GameEvent::ScriedOrSurveiled { player, surveil: true, looked_at: count as u32 });
                 Ok(out)
