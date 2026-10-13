@@ -997,8 +997,9 @@ pub fn hulldrifter() -> CardDefinition {
     }
 }
 
-/// Tidal Terror — {4}{U}{U} Creature — Octopus 5/6. Islandcycling {2}. (The
-/// tap-two-to-be-unblockable attack rider is omitted.)
+/// Tidal Terror — {4}{U}{U} Creature — Octopus 5/6. Whenever it attacks, you
+/// may tap two other untapped creatures you control; if you do, it can't be
+/// blocked this turn. Islandcycling {2}.
 pub fn tidal_terror() -> CardDefinition {
     CardDefinition {
         name: "Tidal Terror",

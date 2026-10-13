@@ -650,7 +650,9 @@ pub fn aether_syphon() -> CardDefinition {
 }
 
 /// Alacrian Armory — {3}{W} Artifact. Creatures you control get +0/+1 and have
-/// vigilance. (The begin-combat saddle/crew rider is dropped.)
+/// vigilance. At the beginning of combat on your turn, up to one target Mount
+/// or Vehicle you control becomes saddled / an artifact creature until end of
+/// turn.
 pub fn alacrian_armory() -> CardDefinition {
     CardDefinition {
         name: "Alacrian Armory",

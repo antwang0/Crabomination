@@ -210,8 +210,8 @@ pub fn high_society_hunter() -> CardDefinition {
 }
 
 /// Dropkick Bomber — {2}{R} 2/3 Goblin Warrior. Other Goblins you control get
-/// +1/+1. {R}: Another target Goblin you control gains flying until end of turn.
-/// (The granted "sacrifice on combat damage" rider is dropped.)
+/// +1/+1. {R}: Until end of turn, another target Goblin you control gains
+/// flying and "When this creature deals combat damage, sacrifice it."
 pub fn dropkick_bomber() -> CardDefinition {
     CardDefinition {
         name: "Dropkick Bomber",
@@ -237,15 +237,25 @@ pub fn dropkick_bomber() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
-            effect: Effect::GrantKeyword {
-                what: target_filtered(
-                    R::HasCreatureType(CreatureType::Goblin)
-                        .and(R::ControlledByYou)
-                        .and(R::OtherThanSource),
-                ),
-                keyword: Keyword::Flying,
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        R::HasCreatureType(CreatureType::Goblin)
+                            .and(R::ControlledByYou)
+                            .and(R::OtherThanSource),
+                    ),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantTriggeredAbility {
+                    what: Selector::Target(0),
+                    trigger: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::DealsCombatDamage, EventScope::SelfSource),
+                        effect: Effect::SacrificeSource,
+                    }),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

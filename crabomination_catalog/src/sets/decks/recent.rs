@@ -3160,8 +3160,8 @@ pub fn three_tree_scribe() -> CardDefinition {
 
 /// Krydle of Baldur's Gate — {U}{B} 1/3 Legendary Human Elf Rogue. Whenever it
 /// deals combat damage to a player, that player loses 1 life and mills a card,
-/// then you gain 1 life and scry 1. (The attack pay-{2} unblockable rider is
-/// omitted.)
+/// then you gain 1 life and scry 1. Whenever you attack, you may pay {2}; if
+/// you do, target creature can't be blocked this turn.
 pub fn krydle_of_baldurs_gate() -> CardDefinition {
     CardDefinition {
         name: "Krydle of Baldur's Gate",
@@ -3175,8 +3175,6 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![
-            // "Whenever you attack, you may pay {2}. If you do, target creature
-            // can't be blocked this turn" — shipped missing (the `cnt` audit column, 2026-09-10).
             TriggeredAbility {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
                 effect: Effect::MayPay {

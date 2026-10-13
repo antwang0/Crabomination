@@ -1052,3 +1052,30 @@ fn perigee_beckoner_returns_the_target_tapped() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear && c.tapped), "back, tapped");
 }
+
+/// Dropkick Bomber — "{R}: Until end of turn, another target Goblin you
+/// control gains flying and 'When this creature deals combat damage,
+/// sacrifice it.'" (CR 510.3a: the trigger fires off the combat damage.)
+#[test]
+fn dropkick_bomber_goblin_flies_and_is_sacrificed() {
+    let mut g = pod(2);
+    let bomber = ready(&mut g, 0, catalog::dropkick_bomber());
+    let gob = ready(&mut g, 0, catalog::raging_goblin());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomber,
+        ability_index: 0,
+        target: Some(perm(gob)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activates");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(gob).unwrap().keywords().contains(&Keyword::Flying));
+    declare(&mut g, 0, &[(gob, 1)]).unwrap();
+    block(&mut g, 1, vec![]).unwrap();
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 18, "2/2 with the Bomber's lord bonus");
+    assert!(g.battlefield.iter().all(|c| c.id != gob), "sacrificed after dealing damage");
+}
