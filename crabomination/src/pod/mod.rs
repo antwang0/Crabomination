@@ -10512,6 +10512,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FRODO_2_COMMANDERS,
             main: decks::FRODO_2_MAIN,
         },
+        // Seat 1677: Council of Reeds's EDHREC average deck. `--pod-decks 1677`.
+        PodDeck {
+            name: "Council of Reeds (U)",
+            commanders: decks::COUNCIL_OF_REEDS_COMMANDERS,
+            main: decks::COUNCIL_OF_REEDS_MAIN,
+        },
+        // Seat 1678: Emperor Mihail II's EDHREC average deck. `--pod-decks 1678`.
+        PodDeck {
+            name: "Emperor Mihail II (U)",
+            commanders: decks::EMPEROR_MIHAIL_II_COMMANDERS,
+            main: decks::EMPEROR_MIHAIL_II_MAIN,
+        },
+        // Seat 1679: Apothecary White's EDHREC average deck. `--pod-decks 1679`.
+        PodDeck {
+            name: "Apothecary White (W)",
+            commanders: decks::APOTHECARY_WHITE_COMMANDERS,
+            main: decks::APOTHECARY_WHITE_MAIN,
+        },
+        // Seat 1680: Gorm the Great and Virtus the Veiled's EDHREC average deck. `--pod-decks 1680`.
+        PodDeck {
+            name: "Gorm the Great and Virtus the Veiled (BG)",
+            commanders: decks::GORM_THE_GREAT_COMMANDERS,
+            main: decks::GORM_THE_GREAT_MAIN,
+        },
+        // Seat 1681: Loki, Lord of Misrule's EDHREC average deck. `--pod-decks 1681`.
+        PodDeck {
+            name: "Loki, Lord of Misrule (U)",
+            commanders: decks::LOKI_COMMANDERS,
+            main: decks::LOKI_MAIN,
+        },
+        // Seat 1682: Kairi, the Swirling Sky's EDHREC average deck. `--pod-decks 1682`.
+        PodDeck {
+            name: "Kairi, the Swirling Sky (U)",
+            commanders: decks::KAIRI_COMMANDERS,
+            main: decks::KAIRI_MAIN,
+        },
     ]
 }
 
@@ -14019,6 +14055,12 @@ mod tests {
             ("Braulios of Pheres Band", &[0x109F]),
             ("Jolrael, Empress of Beasts", &[0x10A0]),
             ("Frodo, Determined Hero", &[0x10A1]),
+            ("Council of Reeds", &[0x10A2]),
+            ("Emperor Mihail II", &[0x10A3]),
+            ("Apothecary White", &[0x10A4]),
+            ("Gorm the Great and Virtus the Veiled", &[0x10A5]),
+            ("Loki, Lord of Misrule", &[0x10A6]),
+            ("Kairi, the Swirling Sky", &[0x10A7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

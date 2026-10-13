@@ -47458,3 +47458,163 @@ pub const FRODO_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const COUNCIL_OF_REEDS_COMMANDERS: &[CardFactory] = &[council_of_reeds];
+
+/// **Council of Reeds**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Council of Reeds (EDHREC, fetched 2026-10-13).
+pub const COUNCIL_OF_REEDS_MAIN: &[CardFactory] = &[
+    arcane_signet, banner_of_kinship, coat_of_arms, eldrazi_monument, fellwar_stone,
+    heroes_podium, honor_worn_shaku, idol_of_oblivion, machine_gods_effigy, mind_stone,
+    mirror_box, patchwork_banner, relic_of_legends, sapphire_medallion, sol_ring,
+    team_transmitter, thought_vessel, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, three_tree_city, war_room, archetype_of_imagination,
+    glasspool_mimic, harmonized_trio, junk_winder, mirror_image, mister_fantastic_reed_richards,
+    phantasmal_image, phyrexian_metamorph, roaming_throne, spark_double,
+    valeria_richards_precocious, extravagant_replication, kindred_discovery,
+    mirror_room_fractured_realm, propaganda, rhystic_study, an_offer_you_cant_refuse,
+    arcane_denial, brainstorm, cackling_counterpart, consider, counterspell, fated_infatuation,
+    frantic_search, harmonized_crescendo, high_tide, louisoixs_sacrifice, opt, pongify,
+    rapid_hybridization, see_double, snap, swan_song, three_steps_ahead, distant_melody,
+    echocasting_symposium, gitaxian_probe, mass_appeal, mirage_mockery, ponder, preordain,
+    quantum_misalignment, quasiduplicate, raise_the_palisade, relms_sketching,
+    rite_of_replication, season_of_weaving,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const EMPEROR_MIHAIL_II_COMMANDERS: &[CardFactory] = &[emperor_mihail_ii];
+
+/// **Emperor Mihail II**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Emperor Mihail II (EDHREC, fetched 2026-10-13).
+pub const EMPEROR_MIHAIL_II_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, heralds_horn, kefnets_monument, patchwork_banner,
+    sapphire_medallion, sol_ring, thought_vessel, vanquishers_banner, castle_vantress,
+    mystic_sanctuary, nykthos_shrine_to_nyx, path_of_ancestry, reliquary_tower, three_tree_city,
+    coralhelm_commander, cosis_trickster, cursecatcher, deepchannel_mentor,
+    harbinger_of_the_seas, harbinger_of_the_tides, kopala_warden_of_waves, lord_of_atlantis,
+    lullmage_mentor, master_of_the_pearl_trident, merfolk_looter, merfolk_sovereign,
+    merfolk_trickster, merrow_harbinger, merrow_reejerey, mindspring_merfolk, mist_dancer,
+    mist_cloaked_herald, river_sneak, seafloor_oracle, seahunter, silvergill_adept,
+    stonybrook_banneret, svyelun_of_sea_and_sky, tempest_caller, thada_adel_acquisitor,
+    thieving_skydiver, tide_shaper, tishanas_tidebinder, triton_shorestalker,
+    vodalian_hexcatcher, wanderwine_prophets, deeproot_pilgrimage, deeproot_waters,
+    kindred_discovery, merrow_commerce, reconnaissance_mission, reflections_of_littjara,
+    spreading_seas, aetherize, arcane_denial, brainstorm, counterspell, harmonized_crescendo,
+    high_tide, negate, pongify, rapid_hybridization, reality_shift, thassas_rebuff,
+    aquitects_will, distant_melody, ponder, raise_the_palisade, spectral_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const APOTHECARY_WHITE_COMMANDERS: &[CardFactory] = &[apothecary_white];
+
+/// **Apothecary White**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Apothecary White (EDHREC, fetched 2026-10-13).
+pub const APOTHECARY_WHITE_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_end_banquet, halo_fountain, horn_of_gondor, idol_of_oblivion, lembas,
+    lightning_greaves, mind_stone, nuka_cola_vending_machine, oketras_monument, pearl_medallion,
+    skullclamp, sol_ring, swiftfoot_boots, witchs_oven, castle_ardenvale, emeria_the_sky_ruin,
+    minas_tirith, myriad_landscape, three_tree_city, war_room, windbrisk_heights,
+    academy_manufactor, adeline_resplendent_cathar, astrid_peth, belladonna_took,
+    bennie_bracks_zoologist, beregond_of_the_guard, bill_the_pony, coppercoat_vanguard,
+    devout_chaplain, eastfarthing_farmer, ellyn_harbreeze_busybody, enduring_innocence,
+    goldnight_commander, haliya_guided_by_light, knight_of_the_white_orchid,
+    lita_little_orphan_amphibian, lossarnach_captain, mentor_of_the_meek, mondrak_glory_dominus,
+    rosie_cotton_of_south_lane, rumor_gatherer, sierra_nukas_biggest_fan, soul_warden,
+    souls_attendant, thalias_lieutenant, welcoming_vampire, anointed_procession,
+    caretakers_talent, cathars_crusade, divine_visitation, inspiring_leader, intangible_virtue,
+    of_herbs_and_stewed_rabbit, smothering_tithe, tocasias_welcome, akromas_will,
+    flawless_maneuver, generous_gift, hobbits_sting, path_to_exile, reprieve,
+    stroke_of_midnight, swords_to_plowshares, elspeth_storm_slayer, austere_command,
+    hour_of_reckoning, late_to_dinner, requisition_raid, the_battle_of_bywater,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const GORM_THE_GREAT_COMMANDERS: &[CardFactory] = &[gorm_the_great, virtus_the_veiled];
+
+/// **Gorm the Great and Virtus the Veiled**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Forests + 10 Swamps = 98.
+/// Gorm the Great and Virtus the Veiled (EDHREC, fetched 2026-10-13).
+pub const GORM_THE_GREAT_MAIN: &[CardFactory] = &[
+    arcane_signet, fireshrieker, golgari_signet, infiltration_lens, lightning_greaves,
+    prowlers_helm, quietus_spike, scytheclaw, sol_ring, swiftfoot_boots, thieves_tools,
+    trailblazers_boots, vorpal_sword, whispersilk_cloak, access_tunnel, bojuka_bog,
+    command_tower, deathcap_glade, golgari_rot_farm, llanowar_wastes, necroblossom_snarl,
+    overgrown_tomb, rogues_passage, tainted_wood, temple_of_malady, twilight_mire,
+    undergrowth_stadium, woodland_cemetery, anara_wolvid_familiar, archfiend_of_despair,
+    birds_of_paradise, bloodletter_of_aclazotz, deathcap_cultivator, dire_fleet_ravager,
+    elvish_mystic, fynn_the_fangbearer, glissa_sunslayer, guardian_augmenter, hooded_blightfang,
+    leyline_prowler, llanowar_elves, noble_quarry, ochran_assassin, ohran_frostfang,
+    poison_tip_archer, raving_dead, saryth_the_vipers_fang, shinen_of_lifes_roar, taunting_elf,
+    toski_bearer_of_secrets, unstoppable_slasher, agent_of_the_shadow_thieves, grievous_wound,
+    lure, phyrexian_arena, raised_by_giants, warlock_class, wound_reflection, assassins_trophy,
+    beast_within, dark_ritual, destined_lead, golgari_charm, heroic_intervention, putrefy,
+    revitalizing_repast, tamiyos_safekeeping, vraska_the_unseen, cultivate, farseek, harmonize,
+    kodamas_reach, natures_lore, nights_whisper, rampant_growth, skull_storm, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const LOKI_COMMANDERS: &[CardFactory] = &[loki_lord_of_misrule];
+
+/// **Loki, Lord of Misrule**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Loki, Lord of Misrule (EDHREC, fetched 2026-10-13).
+pub const LOKI_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, bident_of_thassa, fellwar_stone, lightning_greaves,
+    mind_stone, sapphire_medallion, sol_ring, swiftfoot_boots, thought_vessel,
+    minamo_school_at_waters_edge, myriad_landscape, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, war_room, alandra_sky_dreamer, archmage_emeritus,
+    chasm_skulker, council_of_reeds, curiosity_crafter, daughter_of_the_deep,
+    detective_of_the_month, emrakuls_messenger, enduring_curiosity, faerie_mastermind,
+    geralf_the_fleshwright, hermes_overseer_of_elpis, homunculus_horde, hullbreaker_horror,
+    loki_god_of_mischief, master_of_waves, minn_wily_illusionist, mischievous_mystic,
+    mister_fantastic_reed_richards, murmuring_mystic, namor_the_sub_mariner,
+    ornithopter_of_paradise, phyrexian_metamorph, silent_hallcreeper, silver_myr,
+    skystrike_officer, talrand_sky_summoner, the_mindskinner, impostor_syndrome, mystic_remora,
+    propaganda, rhystic_study, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    consider, counterspell, cyclonic_rift, frantic_search, high_tide, mana_drain, opt, pongify,
+    rapid_hybridization, sink_into_stupor, swan_song, echocasting_symposium, ponder, preordain,
+    raise_the_palisade, sea_gate_restoration, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const KAIRI_COMMANDERS: &[CardFactory] = &[kairi_the_swirling_sky];
+
+/// **Kairi, the Swirling Sky**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Kairi, the Swirling Sky (EDHREC, fetched 2026-10-13).
+pub const KAIRI_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, gilded_lotus, hedron_archive, mind_stone, sapphire_medallion,
+    sol_ring, thought_vessel, thran_dynamo, wayfarers_bauble, worn_powerstone, high_market,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, terrain_generator, war_room,
+    archmage_emeritus, baral_chief_of_compliance, fog_bank, glasspool_mimic, haughty_djinn,
+    keiga_the_tide_star, mirrorhall_mimic, phantasmal_image, phyrexian_metamorph, pupu_ufo,
+    solemn_simulacrum, dissipation_field, mirror_mockery, propaganda, shark_typhoon, aetherize,
+    aetherspouts, an_offer_you_cant_refuse, archmages_charm, cackling_counterpart, counterspell,
+    dig_through_time, evacuation, fact_or_fiction, fated_infatuation, frantic_search, high_tide,
+    pongify, rapid_hybridization, reality_shift, resculpt, rewind, see_double, silundi_vision,
+    sink_into_stupor, snap, sublime_epiphany, three_steps_ahead, turnabout, unwind,
+    clear_the_mind, curse_of_the_swine, echocasting_symposium, mirage_mockery, quasiduplicate,
+    ravenform, relms_sketching, replication_technique, rise_from_the_tides, rite_of_replication,
+    season_of_weaving, solve_the_equation,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
