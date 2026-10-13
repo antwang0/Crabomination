@@ -7284,6 +7284,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INFERNO_OF_THE_STAR_MOUNTS_COMMANDERS,
             main: decks::INFERNO_OF_THE_STAR_MOUNTS_MAIN,
         },
+        // Seat 1139: Commander Mustard's EDHREC average deck. `--pod-decks 1139`.
+        PodDeck {
+            name: "Commander Mustard (WR)",
+            commanders: decks::COMMANDER_MUSTARD_COMMANDERS,
+            main: decks::COMMANDER_MUSTARD_MAIN,
+        },
+        // Seat 1140: Ashling the Pilgrim's EDHREC average deck. `--pod-decks 1140`.
+        PodDeck {
+            name: "Ashling the Pilgrim (R)",
+            commanders: decks::ASHLING_THE_PILGRIM_COMMANDERS,
+            main: decks::ASHLING_THE_PILGRIM_MAIN,
+        },
+        // Seat 1141: Tetsuko Umezawa, Fugitive's EDHREC average deck. `--pod-decks 1141`.
+        PodDeck {
+            name: "Tetsuko Umezawa, Fugitive (U)",
+            commanders: decks::TETSUKO_UMEZAWA_COMMANDERS,
+            main: decks::TETSUKO_UMEZAWA_MAIN,
+        },
+        // Seat 1142: Blor the Impervious's EDHREC average deck. `--pod-decks 1142`.
+        PodDeck {
+            name: "Blor the Impervious (G)",
+            commanders: decks::BLOR_THE_IMPERVIOUS_COMMANDERS,
+            main: decks::BLOR_THE_IMPERVIOUS_MAIN,
+        },
+        // Seat 1143: Phlage, Titan of Fire's Fury's EDHREC average deck. `--pod-decks 1143`.
+        PodDeck {
+            name: "Phlage, Titan of Fire's Fury (WR)",
+            commanders: decks::PHLAGE_COMMANDERS,
+            main: decks::PHLAGE_MAIN,
+        },
+        // Seat 1144: Parnesse, the Subtle Brush's EDHREC average deck. `--pod-decks 1144`.
+        PodDeck {
+            name: "Parnesse, the Subtle Brush (UBR)",
+            commanders: decks::PARNESSE_COMMANDERS,
+            main: decks::PARNESSE_MAIN,
+        },
+        // Seat 1145: Kassandra, Eagle Bearer's EDHREC average deck. `--pod-decks 1145`.
+        PodDeck {
+            name: "Kassandra, Eagle Bearer (WR)",
+            commanders: decks::KASSANDRA_COMMANDERS,
+            main: decks::KASSANDRA_MAIN,
+        },
+        // Seat 1146: Minsc, Beloved Ranger's EDHREC average deck. `--pod-decks 1146`.
+        PodDeck {
+            name: "Minsc, Beloved Ranger (WRG)",
+            commanders: decks::MINSC_COMMANDERS,
+            main: decks::MINSC_MAIN,
+        },
     ]
 }
 
@@ -10212,6 +10260,14 @@ mod tests {
             ("Kraven the Hunter", &[0x0E85]),
             ("Amarant Coral", &[0x0E86]),
             ("Inferno of the Star Mounts", &[0x0E87]),
+            ("Commander Mustard", &[0x0E88]),
+            ("Ashling the Pilgrim", &[0x0E89]),
+            ("Tetsuko Umezawa, Fugitive", &[0x0E8A]),
+            ("Blor the Impervious", &[0x0E8B]),
+            ("Phlage, Titan of Fire's Fury", &[0x0E8C]),
+            ("Parnesse, the Subtle Brush", &[0x0E8D]),
+            ("Kassandra, Eagle Bearer", &[0x0E8E]),
+            ("Minsc, Beloved Ranger", &[0x0E8F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
