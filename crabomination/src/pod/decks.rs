@@ -49892,3 +49892,116 @@ pub const DRIZZT_DOURDEN_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const ANAX_AND_CYMEDE_COMMANDERS: &[CardFactory] = &[anax_and_cymede];
+
+/// **Anax and Cymede**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Mountains + 12 Plains = 99.
+/// Anax and Cymede (EDHREC, fetched 2026-10-13).
+pub const ANAX_AND_CYMEDE_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, mind_stone, sol_ring, swiftfoot_boots, talisman_of_conviction,
+    battlefield_forge, boros_garrison, clifftop_retreat, command_tower, evolving_wilds,
+    furycalm_snarl, rugged_prairie, sacred_foundry, slayers_stronghold, spectator_seating,
+    sundown_pass, temple_of_triumph, akroan_crusader, akroan_hoplite, baird_argivian_recruiter,
+    brigone_soldier_of_meletis, cleon_merry_champion, danitha_sword_of_hope, fabled_hero,
+    favored_hoplite, feather_the_redeemed, hero_of_iroas, hero_of_the_nyxborn,
+    informed_inkwright, iroas_god_of_victory, leonin_lightscribe, mavinda_students_advocate,
+    mentor_of_the_meek, monastery_mentor, phalanx_leader, stirring_hopesinger,
+    storm_kiln_artist, sun_titan, vanguard_of_brimaz, young_pyromancer, zada_hedron_grinder,
+    angelic_gift, assemble_the_legion, crown_of_flames, dragon_mantle, ethereal_armor,
+    flickering_ward, frontline_heroism, leyline_of_resonance, mark_of_fury, sticky_fingers,
+    unquestioned_authority, ajanis_presence, boros_charm, coordinated_assault, crimson_wisps,
+    defiant_strike, emerge_unscathed, expedite, fists_of_flame, gods_willing, legion_leadership,
+    path_to_exile, phalanx_tactics, psychotic_fury, shelter, swords_to_plowshares,
+    titans_strength, wear_tear, angelfire_ignition, honor, impolite_entrance, launch_the_fleet,
+    martial_coup, winds_of_rath,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const FUMIKO_THE_LOWBLOOD_COMMANDERS: &[CardFactory] = &[fumiko_the_lowblood];
+
+/// **Fumiko the Lowblood**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Fumiko the Lowblood (EDHREC, fetched 2026-10-13).
+pub const FUMIKO_THE_LOWBLOOD_MAIN: &[CardFactory] = &[
+    arcane_signet, bloodthirsty_blade, crawlspace, embercleave, fiendlash, fire_diamond,
+    hazorets_monument, lightning_greaves, mind_stone, ruby_medallion, sol_ring, swiftfoot_boots,
+    tenza_godos_maul, wayfarers_bauble, myriad_landscape, rogues_passage,
+    shinka_the_bloodsoaked_keep, spinerock_knoll, valakut_the_molten_pinnacle, war_room,
+    aether_membrane, agitator_ant, alexios_deimos_of_kosmos, archetype_of_aggression,
+    bloodmark_mentor, bothersome_quasit, brash_taunter, death_kiss, emberwilde_captain,
+    etali_primal_storm, frenzied_saddlebrute, frontier_warmonger, geode_rager, goblin_spymaster,
+    grenzo_havoc_raiser, humble_defector, kazuul_tyrant_of_the_cliffs, kharn_the_betrayer,
+    life_of_the_party, professional_face_breaker, slumbering_dragon, solemn_simulacrum,
+    stuffy_doll, varchild_betrayer_of_kjeldor, vengeful_ancestor, weathered_sentinels,
+    circle_of_flame, curse_of_opulence, dictate_of_the_twin_gods, mass_hysteria, pain_for_all,
+    rite_of_the_raging_storm, shiny_impetus, the_akroan_war, abrade, big_score, chaos_warp,
+    demand_answers, lightning_bolt, thrill_of_possibility, untimely_malfunction,
+    koth_fire_of_resistance, blasphemous_act, disrupt_decorum, faithless_looting, insurrection,
+    mana_geyser, spectacular_showdown, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const KATAKI_COMMANDERS: &[CardFactory] = &[kataki_wars_wage];
+
+/// **Kataki, War's Wage**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Kataki, War's Wage (EDHREC, fetched 2026-10-13).
+pub const KATAKI_MAIN: &[CardFactory] = &[
+    chromatic_star, ichor_wellspring, implement_of_improvement, mycosynth_lattice,
+    mycosynth_wellspring, nutrient_block, prized_statue, sol_ring, spine_of_ish_sah, terrarion,
+    thran_turbine, ugins_nexus, buried_ruin, eiganjo_seat_of_the_empire, emeria_the_sky_ruin,
+    monumental_henge, myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, war_room,
+    archivist_of_oghma, aven_mindcensor, circuit_mender, deep_gnome_terramancer,
+    filigree_familiar, gandalf_the_white, grand_abolisher, junk_diver, keeper_of_the_accord,
+    knight_of_the_white_orchid, loyal_warhound, luminous_broodmoth, mangara_the_diplomat,
+    market_gnome, myr_retriever, oswald_fiddlebender, scrap_trawler, solemn_simulacrum,
+    spelltithe_enforcer, starnheim_courser, sun_titan, teshar_ancestors_apostle,
+    thalia_guardian_of_thraben, thalia_heretic_cathar, treasure_keeper, windborn_muse,
+    workshop_assistant, aura_of_silence, authority_of_the_consuls, blind_obedience,
+    darksteel_mutation, deafening_silence, ghostly_prison, land_tax, martyrs_bond,
+    faiths_reward, generous_gift, mana_tithe, path_to_exile, rebuff_the_wicked, reprieve,
+    second_sunrise, stroke_of_midnight, swords_to_plowshares, elspeth_suns_champion,
+    approach_of_the_second_sun, austere_command, brilliant_restoration, farewell,
+    ravnica_at_war, sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const CELESTIAL_KIRIN_COMMANDERS: &[CardFactory] = &[celestial_kirin];
+
+/// **Celestial Kirin**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Celestial Kirin (EDHREC, fetched 2026-10-13).
+pub const CELESTIAL_KIRIN_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, darksteel_ingot, long_forgotten_gohei, mithril_coat,
+    pearl_medallion, skyclave_relic, sol_ring, wayfarers_bauble, darksteel_citadel,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, flagstones_of_trokair, myriad_landscape,
+    nykthos_shrine_to_nyx, path_of_ancestry, war_room, anafenza_unyielding_lineage,
+    angel_of_flight_alabaster, ao_the_dawn_sky, bygone_bishop, celestial_crusader,
+    drogskol_reinforcements, eidolon_of_rhetoric, guardian_of_faith, horizon_seed,
+    kami_of_ancient_law, kami_of_false_hope, karmic_guide, kataki_wars_wage,
+    katilda_dawnhart_martyr, mirror_entity, myojin_of_blooming_dawn, nikko_onna,
+    omarthis_ghostfire_initiate, oyobi_who_split_the_heavens, pilgrim_of_the_ages,
+    remorseful_cleric, rescuer_chwinga, selfless_spirit, skyclave_apparition,
+    spirit_of_the_labyrinth, strict_proctor, ugins_conjurant, vanguard_of_the_restless,
+    white_orchid_phantom, windborn_muse, yosei_the_morning_star, court_of_ardenvale,
+    field_of_souls, kindred_boon, land_tax, smothering_tithe, blessed_breath, brought_back,
+    crib_swap, ethereal_haze, faiths_reward, flare_of_fortitude, flawless_maneuver,
+    otherworldly_journey, path_to_exile, quiet_purity, shining_shoal, spiritual_visit,
+    swords_to_plowshares, cleanfall, cut_a_deal, gift_of_estates, secret_rendezvous,
+    terashis_grasp,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];

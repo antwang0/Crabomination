@@ -11040,6 +11040,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DRIZZT_DOURDEN_COMMANDERS,
             main: decks::DRIZZT_DOURDEN_MAIN,
         },
+        // Seat 1765: Anax and Cymede's EDHREC average deck. `--pod-decks 1765`.
+        PodDeck {
+            name: "Anax and Cymede (WR)",
+            commanders: decks::ANAX_AND_CYMEDE_COMMANDERS,
+            main: decks::ANAX_AND_CYMEDE_MAIN,
+        },
+        // Seat 1766: Fumiko the Lowblood's EDHREC average deck. `--pod-decks 1766`.
+        PodDeck {
+            name: "Fumiko the Lowblood (R)",
+            commanders: decks::FUMIKO_THE_LOWBLOOD_COMMANDERS,
+            main: decks::FUMIKO_THE_LOWBLOOD_MAIN,
+        },
+        // Seat 1767: Kataki, War's Wage's EDHREC average deck. `--pod-decks 1767`.
+        PodDeck {
+            name: "Kataki, War's Wage (W)",
+            commanders: decks::KATAKI_COMMANDERS,
+            main: decks::KATAKI_MAIN,
+        },
+        // Seat 1768: Celestial Kirin's EDHREC average deck. `--pod-decks 1768`.
+        PodDeck {
+            name: "Celestial Kirin (W)",
+            commanders: decks::CELESTIAL_KIRIN_COMMANDERS,
+            main: decks::CELESTIAL_KIRIN_MAIN,
+        },
     ]
 }
 
@@ -14635,6 +14659,10 @@ mod tests {
             ("Thranduil the Strategist", &[0x10F7]),
             ("Karrthus, Tyrant of Jund", &[0x10F8]),
             ("Drizzt Do'Urden", &[0x10F9]),
+            ("Anax and Cymede", &[0x10FA]),
+            ("Fumiko the Lowblood", &[0x10FB]),
+            ("Kataki, War's Wage", &[0x10FC]),
+            ("Celestial Kirin", &[0x10FD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
