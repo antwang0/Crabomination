@@ -44750,6 +44750,17 @@ impl GameState {
                     .collect()
             }
 
+            // CR 800.4a / 101.4 — "permanents your opponents control" is every
+            // opponent's: a fan-out ref names all its seats, not the first.
+            Selector::ControlledBy { who, filter } if who.is_fan_out() => {
+                let seats = self.resolve_players(who, ctx);
+                self.battlefield
+                    .iter()
+                    .filter(|c| seats.contains(&c.controller))
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, ctx.controller, ctx.source))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
             Selector::ControlledBy { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
                 self.battlefield
@@ -44760,6 +44771,15 @@ impl GameState {
                     .collect()
             }
 
+            Selector::OwnedBy { who, filter } if who.is_fan_out() => {
+                let seats = self.resolve_players(who, ctx);
+                self.battlefield
+                    .iter()
+                    .filter(|c| seats.contains(&c.owner))
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, ctx.controller, ctx.source))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
             Selector::OwnedBy { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
                 self.battlefield

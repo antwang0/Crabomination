@@ -9658,3 +9658,24 @@ fn cr_115_1_a_creature_card_in_exile_is_not_a_target_creature() {
     assert!(r.is_err(), "an exiled card is no target creature");
     assert!(g.exile.iter().any(|c| c.id == exiled));
 }
+
+/// CR 101.4 / 800.4a — "permanents your opponents control" names every
+/// opponent's board: a `ControlledBy` / `OwnedBy` selector over a fan-out
+/// player ref resolved only the first opponent (a 6-seat pod's
+/// `LoseKeyword` over `ControlledBy { EachOpponent }` tripped the fan-out
+/// assert, seed 33001).
+#[test]
+fn cr_101_4_controlled_by_each_opponent_reaches_every_opponent() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(4);
+    let bears: Vec<_> = (0..4).map(|s| g.add_card_to_battlefield(s, catalog::grizzly_bears())).collect();
+    let destroy = Effect::Destroy {
+        what: Selector::ControlledBy {
+            who: PlayerRef::EachOpponent,
+            filter: SelectionRequirement::Creature,
+        },
+    };
+    g.resolve_effect(&destroy, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    assert!(g.battlefield_find(bears[0]).is_some(), "yours stays");
+    assert!(bears[1..].iter().all(|b| g.battlefield_find(*b).is_none()), "every opponent's dies");
+}
