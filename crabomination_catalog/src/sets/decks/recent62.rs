@@ -184,7 +184,7 @@ pub fn gearshift_ace() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: false }, EventScope::SelfSource),
             effect: Effect::GrantKeyword {
                 what: Selector::TriggerSource,
                 keyword: Keyword::FirstStrike,
@@ -214,7 +214,7 @@ pub fn veteran_motorist() -> CardDefinition {
                 amount: Value::Const(2),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: false }, EventScope::SelfSource),
                 effect: Effect::PumpPT {
                     what: Selector::TriggerSource,
                     power: Value::Const(1),

@@ -361,7 +361,7 @@ pub fn ghost_ark() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Crew(2)],
         triggered_abilities: vec![TriggeredAbility {
             // The crew event's subject is the Vehicle: "this Vehicle becomes crewed".
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::YourControl)
+            event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: false }, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsSource }),
             effect: Effect::GraveyardCardsGainUnearthThisTurn {
                 filter: artifact_creature_req(),

@@ -242,7 +242,7 @@ mod recent239 {
         g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2 creatures → X=2
         for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); } // mill lands, X unchanged
         let def = catalog::stubborn_burrowfiend();
-        assert_eq!(def.triggered_abilities[0].event.kind, EventKind::CrewsOrSaddles);
+        assert_eq!(def.triggered_abilities[0].event.kind, EventKind::CrewsOrSaddles { main_phase_only: false });
         assert!(def.triggered_abilities[0].event.once_per_turn, "first-time-each-turn gate");
         g.resolve_effect(&def.triggered_abilities[0].effect, &EffectContext::for_trigger(fiend, 0, None, 0)).unwrap();
         let c = g.computed_permanent(fiend).unwrap();

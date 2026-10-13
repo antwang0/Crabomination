@@ -2385,7 +2385,7 @@ pub fn mighty_servant_of_leuk_o() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::Discard(1)), Keyword::Crew(4)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::YourControl)
+            event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: false }, EventScope::YourControl)
                 .with_filter(Predicate::All(vec![
                     trigger_is(R::IsSource),
                     Predicate::ValueAtLeast(Value::SourceCrewerCount, Value::Const(2)),

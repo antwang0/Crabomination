@@ -349,7 +349,7 @@ pub fn mobilizer_mech() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Crew(3)],
         triggered_abilities: vec![TriggeredAbility {
             // The crew event's subject is the Vehicle: "this Vehicle becomes crewed".
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::YourControl)
+            event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: false }, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsSource }),
             effect: animate_until_eot(target_filtered(vehicle().and(R::ControlledByYou).and(R::OtherThanSource))),
         }],

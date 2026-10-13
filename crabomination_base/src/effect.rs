@@ -3832,9 +3832,10 @@ pub enum EventKind {
     /// creature's side (`SelfSource` matches when the source is among the
     /// crew/riders); the crewed Vehicle / saddled Mount is the event subject,
     /// so `Selector::TriggerSource` binds to it. Matched to
-    /// `GameEvent::VehicleCrewed` / `GameEvent::MountSaddled`. The "during your
-    /// main phase" rider is baked into the match (both printed cards carry it).
-    CrewsOrSaddles,
+    /// `GameEvent::VehicleCrewed` / `GameEvent::MountSaddled`. `main_phase_only`
+    /// is the printed "during your main phase" rider (Canyon Vaulter, Reckless
+    /// Velocitaur); Gearshift Ace's and a Vehicle's "becomes crewed" carry none.
+    CrewsOrSaddles { main_phase_only: bool },
     /// CR 702.26 — a permanent phased in. The phasing-in permanent is the
     /// event subject; matched to `GameEvent::PermanentPhasedIn`.
     PhasesIn,

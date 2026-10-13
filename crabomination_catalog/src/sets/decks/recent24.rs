@@ -1135,7 +1135,7 @@ pub fn canyon_vaulter() -> CardDefinition {
         power: 3,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: true }, EventScope::SelfSource),
             effect: Effect::GrantKeyword {
                 what: Selector::TriggerSource,
                 keyword: Keyword::Flying,
@@ -1161,7 +1161,7 @@ pub fn reckless_velocitaur() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: true }, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::TriggerSource,

@@ -146,7 +146,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::PermanentUntapped { .. } => bits!(K::BecomesUntapped),
         E::PermanentTapped { .. } => bits!(K::Tapped),
         E::PaidLife { .. } => bits!(K::PaidLife),
-        E::VehicleCrewed { .. } | E::MountSaddled { .. } => bits!(K::CrewsOrSaddles),
+        E::VehicleCrewed { .. } | E::MountSaddled { .. } => bits!(K::CrewsOrSaddles { main_phase_only: false }),
         E::RoomFullyUnlocked { .. } => bits!(K::RoomFullyUnlocked),
         E::CommanderPutIntoCommandZone { .. } => bits!(K::CommanderPutIntoCommandZone),
         E::CaseSolved { .. } => bits!(K::CaseSolved),
@@ -446,7 +446,7 @@ fn reference_event_kind_matches(
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
         (EventKind::PaidLife, GameEvent::PaidLife { .. }) => true,
         (
-            EventKind::CrewsOrSaddles,
+            EventKind::CrewsOrSaddles { .. },
             GameEvent::VehicleCrewed { .. } | GameEvent::MountSaddled { .. },
         ) => true,
         (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
@@ -857,10 +857,9 @@ fn event_matches_spec_rest(
         return false;
     }
 
-    // CR 702.122/702.171 — the printed crew/saddle triggers fire only "during
-    // your main phase." Bake that rider into the match (both DFT cards carry
-    // it): the controller must be the active player in a main phase.
-    if matches!(spec.kind, EventKind::CrewsOrSaddles)
+    // CR 702.122/702.171 — a "during your main phase" crew/saddle trigger:
+    // the controller must be the active player in a main phase.
+    if matches!(spec.kind, EventKind::CrewsOrSaddles { main_phase_only: true })
         && !(source.controller == state.active_player_idx && state.step.is_main_phase())
     {
         return false;
@@ -2223,7 +2222,8 @@ mod tests {
             K::ManifestedDread,
             K::BecomesUntapped,
             K::Tapped,
-            K::CrewsOrSaddles,
+            K::CrewsOrSaddles { main_phase_only: false },
+            K::CrewsOrSaddles { main_phase_only: true },
             K::PhasesIn,
             K::PhasesOut,
             K::CumulativeUpkeepUnpaid,

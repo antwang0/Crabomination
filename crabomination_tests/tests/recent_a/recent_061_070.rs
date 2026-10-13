@@ -294,6 +294,27 @@ mod recent62 {
         );
     }
 
+    /// CR 702.122 — Gearshift Ace's crew trigger has no "during your main
+    /// phase" rider (Canyon Vaulter's does): crewing in the beginning of combat
+    /// still grants first strike, and Vaulter's flying waits for a main phase.
+    #[test]
+    fn cr_702_122_only_a_printed_main_phase_rider_gates_a_crew_trigger() {
+        let mut g = two_player_game();
+        g.step = TurnStep::BeginCombat;
+        let veh = g.add_card_to_battlefield(0, catalog::renegade_freighter());
+        let ace = g.add_card_to_battlefield(0, catalog::gearshift_ace());
+        g.clear_sickness(ace);
+        g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![ace] }).expect("crew");
+        drain_stack(&mut g);
+        assert!(g.computed_permanent(veh).unwrap().keywords().contains(&Keyword::FirstStrike));
+        let veh2 = g.add_card_to_battlefield(0, catalog::renegade_freighter());
+        let vaulter = g.add_card_to_battlefield(0, catalog::canyon_vaulter());
+        g.clear_sickness(vaulter);
+        g.perform_action(GameAction::Crew { vehicle: veh2, crew_creatures: vec![vaulter] }).expect("crew");
+        drain_stack(&mut g);
+        assert!(!g.computed_permanent(veh2).unwrap().keywords().contains(&Keyword::Flying));
+    }
+
     #[test]
     fn veteran_motorist_scries_and_pumps_crewed_vehicle() {
         let mut g = two_player_game();

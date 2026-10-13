@@ -294,7 +294,7 @@ pub fn stubborn_burrowfiend() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Saddle(2)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource)
+            event: EventSpec::new(EventKind::CrewsOrSaddles { main_phase_only: false }, EventScope::SelfSource)
                 .once_per_turn(),
             effect: Effect::Seq(vec![
                 Effect::Mill {
