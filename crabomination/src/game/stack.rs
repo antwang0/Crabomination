@@ -6526,14 +6526,12 @@ impl GameState {
         // there is no active player), the next player in turn order who can
         // still become the monarch does.
         if self.monarch == Some(p) {
-            let heir = if self.active_player_idx != p && !self.players[self.active_player_idx].eliminated {
-                Some(self.active_player_idx)
-            } else {
-                let n = self.players.len();
-                (1..n)
-                    .map(|off| (self.active_player_idx + off) % n)
-                    .find(|&q| q != p && !self.players[q].eliminated)
-            };
+            // A seat Jared Carthalion barred this turn can't inherit; the
+            // crown passes over it rather than staying with the departed.
+            let n = self.players.len();
+            let heir = (0..n).map(|off| (self.active_player_idx + off) % n).find(|&q| {
+                q != p && !self.players[q].eliminated && !self.turn.cant_become_monarch_this_turn.contains(&q)
+            });
             // The heir BECOMES the monarch: `MonarchChanged` (its "becomes
             // the monarch" triggers) and Palace Jailer's returns go out with
             // the leave's own events, not into a dropped buffer.

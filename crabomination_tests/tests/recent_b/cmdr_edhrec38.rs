@@ -88,3 +88,18 @@ fn cleopatra_draws_off_grakmaws_counters() {
     let cp = g.computed_permanent(hydra).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
+
+/// CR 725.4 — the monarch Jared crowned concedes the same turn: Jared's
+/// controller is the active player but can't become the monarch, so the
+/// crown passes to the next player in turn order instead of staying with
+/// the departed seat.
+#[test]
+fn cr_725_4_a_barred_active_player_is_passed_over_on_succession() {
+    let mut g = pod(3);
+    let jared = g.add_card_to_hand(0, catalog::jared_carthalion_true_heir());
+    cast(&mut g, jared, None).expect("jared");
+    let monarch = g.monarch.expect("an opponent is the monarch");
+    g.concede(monarch);
+    let heir = if monarch == 1 { 2 } else { 1 };
+    assert_eq!(g.monarch, Some(heir));
+}
