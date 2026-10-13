@@ -7668,6 +7668,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KORVOLD_2_COMMANDERS,
             main: decks::KORVOLD_2_MAIN,
         },
+        // Seat 1203: Omarthis, Ghostfire Initiate's EDHREC average deck. `--pod-decks 1203`.
+        PodDeck {
+            name: "Omarthis, Ghostfire Initiate (C)",
+            commanders: decks::OMARTHIS_COMMANDERS,
+            main: decks::OMARTHIS_MAIN,
+        },
+        // Seat 1204: Setzer, Wandering Gambler's EDHREC average deck. `--pod-decks 1204`.
+        PodDeck {
+            name: "Setzer, Wandering Gambler (BR)",
+            commanders: decks::SETZER_COMMANDERS,
+            main: decks::SETZER_MAIN,
+        },
+        // Seat 1205: Kaza, Roil Chaser's EDHREC average deck. `--pod-decks 1205`.
+        PodDeck {
+            name: "Kaza, Roil Chaser (UR)",
+            commanders: decks::KAZA_COMMANDERS,
+            main: decks::KAZA_MAIN,
+        },
+        // Seat 1206: Atemsis, All-Seeing's EDHREC average deck. `--pod-decks 1206`.
+        PodDeck {
+            name: "Atemsis, All-Seeing (U)",
+            commanders: decks::ATEMSIS_COMMANDERS,
+            main: decks::ATEMSIS_MAIN,
+        },
+        // Seat 1207: Serah Farron's EDHREC average deck. `--pod-decks 1207`.
+        PodDeck {
+            name: "Serah Farron (WG)",
+            commanders: decks::SERAH_FARRON_COMMANDERS,
+            main: decks::SERAH_FARRON_MAIN,
+        },
+        // Seat 1208: Lazav, Wearer of Faces's EDHREC average deck. `--pod-decks 1208`.
+        PodDeck {
+            name: "Lazav, Wearer of Faces (UB)",
+            commanders: decks::LAZAV_3_COMMANDERS,
+            main: decks::LAZAV_3_MAIN,
+        },
     ]
 }
 
@@ -10695,6 +10731,12 @@ mod tests {
             ("Grothama, All-Devouring", &[0x0EC5]),
             ("Havi, the All-Father", &[0x0EC6]),
             ("Korvold, Gleeful Glutton", &[0x0EC7]),
+            ("Omarthis, Ghostfire Initiate", &[0x0EC8]),
+            ("Setzer, Wandering Gambler", &[0x0EC9]),
+            ("Kaza, Roil Chaser", &[0x0ECA]),
+            ("Atemsis, All-Seeing", &[0x0ECB]),
+            ("Serah Farron", &[0x0ECC]),
+            ("Lazav, Wearer of Faces", &[0x0ECD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
