@@ -2516,7 +2516,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     // your graveyard" as an additional cost (count 1). Grim Lavamancer —
     // "Exile two cards from your graveyard" (count 2). The bare label
     // pluralises off the exile count.
-    if let Some((_, n)) = ability.exile_other_filter.as_ref() {
+    if let Some(total) = ability.exile_other_total_mv {
+        parts.push(format!("Exile cards with total mana value {total}+ from gy"));
+    } else if let Some((_, n)) = ability.exile_other_filter.as_ref() {
         if *n == 1 {
             parts.push("Exile a card from gy".into());
         } else {

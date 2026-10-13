@@ -1059,6 +1059,10 @@ pub enum StaticEffect {
     /// `amount` of that damage" (Sphere of Purity). Applies separately to each
     /// damage event, combat or not, and only to damage aimed at the controller.
     ReduceDamageToControllerFromSource { filter: SelectionRequirement, amount: u32 },
+    /// CR 702.16 — "you have protection from [filter]" (Gor Muldrak's
+    /// Salamanders): damage from a matching source to the controller is
+    /// prevented (702.16e) and a matching source can't target them (702.16b).
+    ControllerProtectionFromMatching { filter: SelectionRequirement },
     /// CR 104.3d flip side — "You can't win the game and your opponents
     /// can't lose the game" (Abyssal Persecutor).
     ControllerCantWinGame,
@@ -4443,6 +4447,12 @@ pub struct ActivatedAbility {
     /// `exiled_with` so its effects can read them back (CR 607.2a — Ludevic).
     #[serde(default)]
     pub exile_other_linked: bool,
+    /// "Exile any number of [filter] cards from your graveyard with total mana
+    /// value N or greater" (The Capitoline Triad): `exile_other_filter`'s
+    /// count is ignored and the pick is the fewest matching cards, highest
+    /// mana value first, whose mana values sum to at least N.
+    #[serde(default)]
+    pub exile_other_total_mv: Option<u32>,
     /// "X can't be 0" (Ludevic, Necrogenius): an activation at X = 0 is
     /// rejected.
     #[serde(default)]

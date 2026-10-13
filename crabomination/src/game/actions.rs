@@ -16130,6 +16130,14 @@ impl GameState {
                 {
                     return Err(GameError::InvalidTarget);
                 }
+                // CR 702.16b — "you have protection from [quality]" (Gor
+                // Muldrak's Salamanders): a matching source can't target.
+                if let Some(src) = source_card_id
+                    && self.battlefield.has_prevent_static()
+                    && self.player_protected_from_source(*p, src)
+                {
+                    return Err(GameError::InvalidTarget);
+                }
                 return Ok(());
             }
             Target::Permanent(c) => c,
@@ -16709,6 +16717,30 @@ impl GameState {
 
     /// True if `player` controls any permanent granting "you have hexproof"
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
+    /// CR 702.16 — `player` controls a `ControllerProtectionFromMatching`
+    /// static whose quality `src` (a permanent, or a card wherever it is) has.
+    pub(crate) fn player_protected_from_source(&self, player: usize, src: crate::card::CardId) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().filter(|c| c.controller == player).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                StaticEffect::ControllerProtectionFromMatching { filter } => {
+                    if self.battlefield_find(src).is_some() {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::types::Target::Permanent(src),
+                            player,
+                            Some(src),
+                        )
+                    } else {
+                        self.find_card_anywhere(src)
+                            .is_some_and(|card| self.evaluate_requirement_on_card(filter, card, player))
+                    }
+                }
+                _ => false,
+            })
+        })
+    }
+
     pub fn player_has_static_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.players.get(player).is_some_and(|p| p.hexproof_until_next_turn || p.hexproof_this_turn)
@@ -22285,7 +22317,25 @@ impl GameState {
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            let picks: Vec<CardId> = if ability.exile_other_top {
+            let picks: Vec<CardId> = if let Some(total) = ability.exile_other_total_mv {
+                let mv = |id: &CardId| {
+                    self.players[p].graveyard.iter().find(|c| c.id == *id).map_or(0, |c| c.definition.cost.cmc())
+                };
+                let mut by_mv = candidates.clone();
+                by_mv.sort_by_key(|id| std::cmp::Reverse(mv(id)));
+                let (mut sum, mut picks) = (0u32, Vec::new());
+                for id in by_mv {
+                    if sum >= total {
+                        break;
+                    }
+                    sum += mv(&id);
+                    picks.push(id);
+                }
+                if sum < total {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                picks
+            } else if ability.exile_other_top {
                 // "Exile the top [filter] card of your graveyard" — the
                 // graveyard is ordered, so the last matches are forced.
                 candidates.iter().rev().copied().take(count).collect()

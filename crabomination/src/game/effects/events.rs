@@ -99,7 +99,12 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::Proliferated { .. } => bits!(K::Proliferated),
         E::SagaFinalChapterResolved { .. } => bits!(K::SagaFinalChapterResolved),
         E::Foraged { .. } => bits!(K::Foraged),
-        E::Investigated { .. } | E::Exploited { .. } | E::Enlisted { .. } | E::DieResult { .. } | E::Bent { .. } => {
+        E::Investigated { .. }
+        | E::Exploited { .. }
+        | E::Enlisted { .. }
+        | E::BecameRenowned { .. }
+        | E::DieResult { .. }
+        | E::Bent { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
         }
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
@@ -282,6 +287,7 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         }
         (A::Exploited, GameEvent::Exploited { .. })
         | (A::Enlisted, GameEvent::Enlisted { .. })
+        | (A::BecameRenowned, GameEvent::BecameRenowned { .. })
         | (A::DieResult, GameEvent::DieResult { .. }) => true,
         (A::Bent(want), GameEvent::Bent { kind, .. }) => want.is_none_or(|w| w == *kind),
         _ => false,
@@ -1462,6 +1468,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CreatureFought { controller: player, .. }
         | GameEvent::Exploited { controller: player, .. }
         | GameEvent::Enlisted { controller: player, .. }
+        | GameEvent::BecameRenowned { controller: player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::PaidLife { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
@@ -1569,7 +1576,8 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureFought { card_id, .. }
         | GameEvent::Exploited { card_id, .. }
-        | GameEvent::Enlisted { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        | GameEvent::Enlisted { card_id, .. }
+        | GameEvent::BecameRenowned { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentExiled { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardExiledFrom { card_id, .. } => Some(EntityRef::Card(*card_id)),
@@ -2008,6 +2016,7 @@ mod tests {
             E::Investigated { player: 0, first_this_turn: true },
             E::Exploited { card_id: c, controller: 0 },
             E::Enlisted { card_id: c, controller: 0 },
+            E::BecameRenowned { card_id: c, controller: 0 },
             E::EvidenceCollected { player: 0 },
             E::GiftGiven { player: 0 },
             E::ClassLevelReached { source: c, player: 0, level: 2 },
@@ -2177,6 +2186,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::Investigated { first_only: true }),
             K::Performed(crate::effect::KeywordAct::Exploited),
             K::Performed(crate::effect::KeywordAct::Enlisted),
+            K::Performed(crate::effect::KeywordAct::BecameRenowned),
             K::Performed(crate::effect::KeywordAct::DieResult),
             K::Performed(crate::effect::KeywordAct::Bent(None)),
             K::EvidenceCollected,

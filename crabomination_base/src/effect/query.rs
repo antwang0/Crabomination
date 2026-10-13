@@ -191,6 +191,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::LastDamagerControllerOf(s) => Some(s),
         // A filter, not a selector — it cannot hold a target.
         PlayerRef::MostControlledMatching(_)
+        | PlayerRef::EachWithFewestControlled(_)
         // A nested ref, peeled by the callers that recurse.
         | PlayerRef::OpponentOf(_)
         | PlayerRef::Target(_)

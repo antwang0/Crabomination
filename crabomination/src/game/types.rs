@@ -2924,6 +2924,8 @@ pub enum GameEvent {
     Exploited { card_id: CardId, controller: usize },
     /// CR 702.154c — attacking `card_id` enlisted a creature.
     Enlisted { card_id: CardId, controller: usize },
+    /// CR 702.112b — `card_id` became renowned (it wasn't before).
+    BecameRenowned { card_id: CardId, controller: usize },
     /// CR 706.2 — one die of a roll came up `result` (after modifiers); one
     /// per die, beside the roll's single `DiceRolled`.
     DieResult { player: usize, result: u8 },

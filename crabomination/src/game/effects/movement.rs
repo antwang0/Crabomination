@@ -50,7 +50,8 @@ pub(crate) mod prevent_static {
     pub const FROM_BLOCKED: u32 = 1 << 4;
     /// `PreventCombatDamageToThisFromMatching`.
     pub const FROM_MATCHING: u32 = 1 << 5;
-    /// `ReduceDamageToControllerFromSource` (Sphere of Purity).
+    /// `ReduceDamageToControllerFromSource` (Sphere of Purity) /
+    /// `ControllerProtectionFromMatching` (Gor Muldrak).
     pub const REDUCE_FROM_SOURCE: u32 = 1 << 6;
     /// `PreventSmallDamageToThis` (Callous Giant).
     pub const SMALL_DAMAGE: u32 = 1 << 7;
@@ -94,9 +95,8 @@ pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
                 }
                 SE::PreventAllDamageToThisFromBlocked => prevent_static::FROM_BLOCKED,
                 SE::PreventCombatDamageToThisFromMatching { .. } => prevent_static::FROM_MATCHING,
-                SE::ReduceDamageToControllerFromSource { .. } => {
-                    prevent_static::REDUCE_FROM_SOURCE
-                }
+                SE::ReduceDamageToControllerFromSource { .. }
+                | SE::ControllerProtectionFromMatching { .. } => prevent_static::REDUCE_FROM_SOURCE,
                 SE::PreventSmallDamageToThis { .. } => prevent_static::SMALL_DAMAGE,
                 SE::PreventDamageToAttachedPerPermanent { .. } => {
                     prevent_static::ATTACHED_PER_PERM
@@ -768,6 +768,10 @@ impl GameState {
                         filter,
                         amount,
                     } => Some((filter.clone(), *amount)),
+                    // CR 702.16e — protection prevents all of it.
+                    crate::effect::StaticEffect::ControllerProtectionFromMatching { filter } => {
+                        Some((filter.clone(), u32::MAX))
+                    }
                     _ => None,
                 })
                 .filter(|(filter, _)| {
@@ -1728,12 +1732,13 @@ impl GameState {
         if amount == 0 {
             return;
         }
-        // Case of the Burning Masks — tally the distinct sources each seat
-        // controlled that have dealt damage this turn.
-        if let (Some(src), Some(seat)) = (source, from_controller)
-            && !self.turn.damage_sources_this_turn.contains(&(seat, src))
-        {
-            self.turn.damage_sources_this_turn.push((seat, src));
+        // Case of the Burning Masks / Dragon Cultist — tally the damage each
+        // source dealt while each seat controlled it.
+        if let (Some(src), Some(seat)) = (source, from_controller) {
+            match self.turn.damage_sources_this_turn.iter_mut().find(|(s, c, _)| *s == seat && *c == src) {
+                Some((_, _, n)) => *n = n.saturating_add(amount),
+                None => self.turn.damage_sources_this_turn.push((seat, src, amount)),
+            }
         }
         if let Some(src) = source {
             match self.turn.damage_by_source_this_turn.iter_mut().find(|(s, _)| *s == src) {

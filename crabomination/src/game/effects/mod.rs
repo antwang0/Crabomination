@@ -19223,8 +19223,12 @@ impl GameState {
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 for id in ids {
-                    if let Some(c) = self.battlefield_find_mut(id) {
+                    // CR 702.112c — only the first resolution renowns it.
+                    if self.battlefield_find(id).is_some_and(|c| !c.renowned)
+                        && let Some(c) = self.battlefield_find_mut(id)
+                    {
                         c.renowned = true;
+                        events.push(GameEvent::BecameRenowned { card_id: id, controller: c.controller });
                     }
                 }
                 Ok(())
@@ -45363,6 +45367,21 @@ impl GameState {
                         .collect(),
                 )
             }
+            PlayerRef::EachWithFewestControlled(filter) => {
+                let count = |p: usize| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && self.evaluate_requirement_static(filter, &crate::game::types::Target::Permanent(c.id), p, None)
+                        })
+                        .count()
+                };
+                let alive: Vec<(usize, usize)> =
+                    self.living_seats().map(|p| (p, count(p))).collect();
+                let least = alive.iter().map(|&(_, n)| n).min().unwrap_or(0);
+                self.apnap_sort(alive.into_iter().filter(|&(_, n)| n == least).map(|(p, _)| p).collect())
+            }
             PlayerRef::EachPlayerWithoutMaxSpeed => self.apnap_sort(
                 (0..self.players.len())
                     .filter(|i| self.players[*i].is_alive() && self.players[*i].speed < 4)
@@ -45654,9 +45673,9 @@ impl GameState {
             PlayerRef::EachTeammate => {
                 self.teammates(ctx.controller).into_iter().find(|i| self.players[*i].is_alive())
             }
-            PlayerRef::EachPlayerExceptControllerOf(_) | PlayerRef::EachPlayerSourceAttackedThisTurn => {
-                self.resolve_players(pref, ctx).into_iter().next()
-            }
+            PlayerRef::EachPlayerExceptControllerOf(_)
+            | PlayerRef::EachPlayerSourceAttackedThisTurn
+            | PlayerRef::EachWithFewestControlled(_) => self.resolve_players(pref, ctx).into_iter().next(),
             PlayerRef::EnchantedPlayer => ctx
                 .source
                 .and_then(|src| self.battlefield_find(src))

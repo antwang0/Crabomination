@@ -901,6 +901,7 @@ fn card_has_prevent_static(c: &CardInstance) -> bool {
                 | S::PreventAllDamageToThisFromBlocked
                 | S::PreventCombatDamageToThisFromMatching { .. }
                 | S::ReduceDamageToControllerFromSource { .. }
+                | S::ControllerProtectionFromMatching { .. }
                 | S::PreventSmallDamageToThis { .. }
                 | S::PreventDamageToAttachedPerPermanent { .. }
                 | S::PreventDamageByRemovingCounters { .. }

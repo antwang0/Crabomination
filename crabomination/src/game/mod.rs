@@ -1482,11 +1482,13 @@ pub struct TurnRegistries {
     /// Best There Is). Cleared at cleanup.
     #[serde(default)]
     pub(crate) creature_damage_sources: Vec<CardId>,
-    /// Distinct (controller, source) pairs that have dealt damage this turn.
-    /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
-    /// (Case of the Burning Masks). Cleared at the turn boundary.
+    /// Distinct (controller, source) pairs that have dealt damage this turn,
+    /// with the damage dealt under that controller. Powers
+    /// `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast` (Case of
+    /// the Burning Masks) and `SourceYouControlledDealtDamageThisTurnAtLeast`
+    /// (Dragon Cultist). Cleared at the turn boundary.
     #[serde(default)]
-    pub(crate) damage_sources_this_turn: Vec<(usize, CardId)>,
+    pub(crate) damage_sources_this_turn: Vec<(usize, CardId, u32)>,
     /// Damage each source has dealt this turn, after prevention (Chandra,
     /// Fire of Kaladesh's "if Chandra has dealt 3 or more damage this
     /// turn"). Cleared at the turn boundary.
@@ -13379,6 +13381,10 @@ impl GameState {
     pub(crate) fn pt_reduction_in_scope(&self) -> bool {
         self.continuous_effects.has_family(mod_families::TOUGHNESS_REDUCE)
             || self.battlefield.has_toughness_reducer(card_can_reduce_toughness)
+            // An emblem's static (The Capitoline Triad's base 9/9).
+            || self.players.iter().any(|p| {
+                p.emblems.iter().any(|em| em.statics.iter().any(|sa| static_effect_reduces_toughness(&sa.effect)))
+            })
     }
 
     /// Run `f` with the gathered continuous-effect set memoized, so every
@@ -35020,6 +35026,8 @@ fn static_effect_to_effects(
             | StaticEffect::ReduceCombatDamageToControllerWhileUntapped(_)
             // Consulted in `apply_prevention_shields` (Sphere of Purity).
             | StaticEffect::ReduceDamageToControllerFromSource { .. }
+            // CR 702.16 — consulted there and at the player-target gate.
+            | StaticEffect::ControllerProtectionFromMatching { .. }
             // Phyrexian Unlife — consulted at the loss SBA + damage funnels.
             | StaticEffect::ControllerDoesntLoseFromLife
             | StaticEffect::ControllerDoesntLoseForZeroLife

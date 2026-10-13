@@ -131,6 +131,10 @@ pub enum PlayerRef {
     /// filter than every other player (Thoughtbound Primoc). Unresolved on a
     /// tie, so the effect does nothing.
     MostControlledMatching(Box<SelectionRequirement>),
+    /// Every living player tied for the fewest permanents matching the filter
+    /// they control, in APNAP order ("each player who controls the fewest
+    /// creatures" — Gor Muldrak, Amphinologist).
+    EachWithFewestControlled(Box<SelectionRequirement>),
     /// The player the source remembered (`CardInstance.chosen_player`, stamped
     /// by [`Effect::RememberPlayerOnSource`]) — "that player" on a later
     /// trigger. Soul Scourge, Laquatus's Champion.
@@ -198,6 +202,7 @@ impl PlayerRef {
                 | PlayerRef::EachTeammate
                 | PlayerRef::EachPlayerExceptControllerOf(_)
                 | PlayerRef::EachPlayerSourceAttackedThisTurn
+                | PlayerRef::EachWithFewestControlled(_)
         )
     }
 }
@@ -2378,6 +2383,9 @@ pub enum Predicate {
     /// "[N] or more sources you controlled dealt damage this turn" (Case of
     /// the Burning Masks). Counts distinct sources per controller-at-the-time.
     SourcesYouControlledDealtDamageThisTurnAtLeast(u32),
+    /// "If a source you controlled dealt [N] or more damage this turn"
+    /// (Dragon Cultist): one source's damage while you controlled it.
+    SourceYouControlledDealtDamageThisTurnAtLeast(u32),
     /// `who` has cast at least `at_least` spells on the current turn.
     /// Backed by `Player.spells_cast_this_game_turn`. Used by Burrog Barrage
     /// ("if you've cast another instant or sorcery spell this turn, …")
@@ -4064,6 +4072,9 @@ pub enum KeywordAct {
     /// CR 702.154c — an attacking creature enlisted a creature; the attacker
     /// is the subject (Aradesh, the Founder).
     Enlisted,
+    /// CR 702.112b — a permanent became renowned; it is the subject (Valeron
+    /// Wardens' "whenever a creature you control becomes renowned").
+    BecameRenowned,
     /// CR 706.2 — one die's result, one event per die rolled (the roll as a
     /// whole is `EventKind::RolledDice`); the result is the event amount, so
     /// "whenever you roll a 4 or higher" pairs it with `DieResultAtLeast`

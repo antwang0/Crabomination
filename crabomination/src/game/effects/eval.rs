@@ -3307,10 +3307,15 @@ impl GameState {
             Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast(n) => {
                 self.turn.damage_sources_this_turn
                     .iter()
-                    .filter(|(seat, _)| *seat == ctx.controller)
+                    .filter(|(seat, _, _)| *seat == ctx.controller)
                     .count() as u32
                     >= *n
             }
+            Predicate::SourceYouControlledDealtDamageThisTurnAtLeast(n) => self
+                .turn
+                .damage_sources_this_turn
+                .iter()
+                .any(|&(seat, _, dealt)| seat == ctx.controller && dealt >= *n),
             Predicate::CardsToGraveyardThisTurnAtLeast { who, at_least } => self
                 .resolve_players(who, ctx)
                 .iter()
