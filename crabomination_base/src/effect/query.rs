@@ -1455,6 +1455,7 @@ impl Effect {
             Effect::ManifestDread { who } => player_has_target(who),
             Effect::ManifestDreadRepeatThenCounters { .. } => false,
             Effect::Cloak { .. } => false,
+            Effect::CloakPileWithTop { what, count } => sel_has_target(what) || value_has_target(count),
             Effect::CatchUpBasicLands { .. } => false,
             Effect::ExileUntilDuplicateName { .. } => false,
             Effect::ExileFromHandTaxed { from, .. } => sel_has_target(from),
@@ -2839,6 +2840,7 @@ impl Effect {
             | Effect::GrantMiracleReduced { what, .. }
             | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
+            | Effect::CloakPileWithTop { what, .. }
             | Effect::PutFaceDownAsCyberman { what, .. }
             | Effect::ExileWithSource { what }
             | Effect::RemoveAllCountersDiscountNextSpell { what }
@@ -5468,6 +5470,7 @@ impl Effect {
                 | Effect::GrantMiracleReduced { what, .. }
                 | Effect::Exile { what }
             | Effect::ReturnFaceDownAsForest { what }
+            | Effect::CloakPileWithTop { what, .. }
             | Effect::PutFaceDownAsCyberman { what, .. }
                 | Effect::ChangeSpellTarget { what }
                 | Effect::CounterSpell { what }

@@ -11554,6 +11554,12 @@ pub enum Effect {
         from_hand: bool,
     },
 
+    /// "Exile [what] and the top `count` cards of your library in a face-down
+    /// pile, shuffle that pile, then cloak those cards. They enter tapped"
+    /// (Become Anonymous, CR 702.182). `what` is exiled first; whatever of it
+    /// reached exile (a commander sent home doesn't) joins the pile.
+    CloakPileWithTop { what: Selector, count: Value },
+
     /// Reveal the top `count` cards of the controller's library; an opponent
     /// chooses one of them, which goes to the controller's hand. Each
     /// remaining revealed card is exiled, gaining `counter` if `Some`.

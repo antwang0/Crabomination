@@ -26911,6 +26911,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CloakPileWithTop { what, count } => {
+                use rand::seq::SliceRandom;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let mut pile = Vec::new();
+                let mut owner = ctx.controller;
+                for id in self.resolve_selector(what, ctx).iter().filter_map(|e| e.as_permanent_id()) {
+                    let Some(o) = self.battlefield_find(id).map(|c| c.owner) else { continue };
+                    owner = o;
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    if self.exile.iter().any(|c| c.id == id) {
+                        pile.push(id);
+                    }
+                }
+                pile.extend(self.players[owner].library.iter().take(n).map(|c| c.id));
+                pile.shuffle(&mut self.rng.draw());
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: true };
+                let mut cloaked = Vec::new();
+                for id in pile {
+                    if let Some(c) = self.find_card_anywhere_mut(id) {
+                        c.cloaked = true;
+                    }
+                    self.face_down_onto_battlefield(id, crate::card::CardInstance::turn_face_down, &dest, ctx, events);
+                    cloaked.push(id);
+                }
+                self.scratch.last_moved_cards = cloaked;
+                Ok(())
+            }
+
             Effect::ManifestDread { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
