@@ -4320,6 +4320,10 @@ pub(crate) struct TempControl {
     /// `while_source_tapped`.
     #[serde(default)]
     pub(crate) while_matches: Option<crate::card::SelectionRequirement>,
+    /// Garland, Royal Kidnapper: the steal holds only while this seat is the
+    /// monarch. Swept alongside `while_source_tapped`.
+    #[serde(default)]
+    pub(crate) while_monarch: Option<usize>,
     /// `Duration::UntilEndOfYourNextTurn` (Treasure Nabber): the player
     /// whose next turn it is and the turn the steal began on. Reverted in
     /// that player's first cleanup after `installed.1`.

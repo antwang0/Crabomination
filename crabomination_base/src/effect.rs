@@ -9282,6 +9282,11 @@ pub enum Effect {
     /// `filter`" (Rootwater Matriarch: "for as long as that creature is
     /// enchanted"). The SBA sweep hands it back once it stops matching.
     GainControlWhileMatches { what: Selector, filter: crate::card::SelectionRequirement },
+    /// CR 611.2c — "gain control of [what] for as long as `monarch` is the
+    /// monarch" (Garland, Royal Kidnapper). `monarch` is resolved once, at
+    /// resolution; the SBA sweep returns the permanent when that seat stops
+    /// being the monarch.
+    GainControlWhileMonarch { what: Selector, monarch: PlayerRef },
     /// CR 611.2c — "gain control of that permanent for as long as that Aura is
     /// attached to it" (Eriette, the Beguiler). The Aura is
     /// `ctx.trigger_source`; the stolen permanent is whatever it's attached to.

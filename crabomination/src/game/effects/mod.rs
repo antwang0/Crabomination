@@ -21189,6 +21189,7 @@ impl GameState {
                             while_you_control_source: false,
                             while_counter: None,
                             while_matches: None,
+                            while_monarch: None,
                             installed,
                         });
                     }
@@ -21288,6 +21289,7 @@ impl GameState {
                             while_you_control_source: false,
                             while_counter: None,
                             while_matches: None,
+                            while_monarch: None,
                             installed: None,
                         });
                     }
@@ -21315,6 +21317,7 @@ impl GameState {
                             while_you_control_source: true,
                             while_counter: None,
                             while_matches: None,
+                            while_monarch: None,
                             installed: None,
                         });
                     }
@@ -21394,6 +21397,7 @@ impl GameState {
                         while_you_control_source: false,
                         while_counter: None,
                         while_matches: None,
+                        while_monarch: None,
                         installed: None,
                     });
                 }
@@ -21422,6 +21426,7 @@ impl GameState {
                         while_you_control_source: false,
                         while_counter: None,
                         while_matches: None,
+                        while_monarch: None,
                         installed: None,
                     });
                 }
@@ -21448,6 +21453,7 @@ impl GameState {
                             while_you_control_source: false,
                             while_counter: None,
                             while_matches: None,
+                            while_monarch: None,
                             installed: None,
                         });
                     }
@@ -21474,6 +21480,7 @@ impl GameState {
                             while_you_control_source: false,
                             while_counter: Some(*kind),
                             while_matches: None,
+                            while_monarch: None,
                             installed: None,
                         });
                     }
@@ -21500,6 +21507,35 @@ impl GameState {
                             while_you_control_source: false,
                             while_counter: None,
                             while_matches: Some(filter.clone()),
+                            while_monarch: None,
+                            installed: None,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainControlWhileMonarch { what, monarch } => {
+                // CR 611.2c — the steal lasts while `monarch` is the monarch;
+                // the SBA sweep unwinds it once they aren't.
+                let Some(seat) = self.resolve_player(monarch, ctx) else { return Ok(()) };
+                let new_ctrl = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(prev) = self.change_control(cid, new_ctrl)
+                        && !self.temporary_control.iter().any(|t| t.card == cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: cid,
+                            original_controller: prev,
+                            duration: crate::effect::Duration::Permanent,
+                            source: ctx.source,
+                            while_source_tapped: false,
+                            while_source_attached: false,
+                            while_you_control_source: false,
+                            while_counter: None,
+                            while_matches: None,
+                            while_monarch: Some(seat),
                             installed: None,
                         });
                     }
@@ -30953,6 +30989,7 @@ impl GameState {
                             while_you_control_source: false,
                             while_counter: None,
                             while_matches: None,
+                            while_monarch: None,
                             installed: None,
                         });
                     }

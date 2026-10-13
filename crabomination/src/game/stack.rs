@@ -7405,6 +7405,7 @@ impl GameState {
                     || tc.while_you_control_source
                     || tc.while_counter.is_some()
                     || tc.while_matches.is_some()
+                    || tc.while_monarch.is_some()
             })
         {
             let all = std::mem::take(&mut self.temporary_control);
@@ -7423,6 +7424,7 @@ impl GameState {
                     && tc.while_counter.is_none_or(|k| {
                         self.battlefield_find(tc.card).is_some_and(|c| c.counter_count(k) > 0)
                     })
+                    && tc.while_monarch.is_none_or(|seat| self.monarch == Some(seat))
                     && tc.while_matches.as_ref().is_none_or(|filter| {
                         self.battlefield_find(tc.card).is_some_and(|c| {
                             self.evaluate_requirement_static(

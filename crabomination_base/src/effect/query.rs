@@ -2191,6 +2191,7 @@ impl Effect {
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainControlWhileMatches { what, .. }
+            | Effect::GainControlWhileMonarch { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::CounterAbilityAndStripSource { what }
@@ -2888,6 +2889,7 @@ impl Effect {
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainControlWhileMatches { what, .. }
+            | Effect::GainControlWhileMonarch { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
@@ -3597,6 +3599,7 @@ impl Effect {
                 | Effect::GainControlWhileYouControlSource { .. }
                 | Effect::GainControlWhileSourceTapped { .. }
                 | Effect::GainControlWhileMatches { .. }
+                | Effect::GainControlWhileMonarch { .. }
                 // A stack slot (Subtlety) — the spell's caster loses it.
                 | Effect::CounterSpell { .. }
                 | Effect::MoveSpellToZone { .. } => true,
@@ -5502,6 +5505,7 @@ impl Effect {
                 | Effect::GainControlWhileSourceTapped { what }
                 | Effect::GainControlWhileCounter { what, .. }
             | Effect::GainControlWhileMatches { what, .. }
+            | Effect::GainControlWhileMonarch { what, .. }
                 | Effect::GainKeywordsYourCreaturesHave { what, .. }
                     | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }
