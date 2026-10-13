@@ -174,6 +174,18 @@ the handoff.
   `Effect::CombatDamageToPlayersBecomesDrawsThisTurn` (Sokrates, CR 615),
   `StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities` (Rowan's Talent, CR 707.10),
   `SelectionRequirement::ChosenPermanentOfSource` (Havengul Mystery's returned creature).
+- **Seats 1180-1186** (Leonardo da Vinci, The Ancient One, Tameshi, Lucy MacLean, Sun Quan,
+  Vorinclex Monstrous Raider, Teysa Opulent Oligarch). **Primitives:**
+  `StaticEffect::FirstTokensEachTurnCopyEquipped` (Mirrormind Crown, CR 614.1a — the batch is
+  the resolution, `scratch.mirrormind_active`), `Effect::MayCastCreatureFromGraveyardThisTurnAs`
+  (The Tomb of Aclazotz's finality + Vampire rider). Lim-Dûl's Hex's "{B} or {3}" is two nested
+  taxes — audited safe (`no_shipped_card_nests_two_answer_log_arms`).
+- **Bot (CR 603.3b):** Eloise, Nephalia Sleuth under March of the Machines investigates into a
+  0/0 Clue that dies and investigates again — a real mandatory loop, but the controller wins it
+  by resolving Bastion of Remembrance / Meathook drains first. The default order buried every
+  drain until the action cap (seeds 11128 g9, 11142 g3). A Commander bot now pushes
+  opponent-hurting triggers last (resolve first) and token makers first
+  (`server/trigger_order.rs`).
 - **FIXED — Elesh Norn (MOM):** "whenever a source an opponent controls deals damage to you **or a
   permanent you control**, that source's controller loses 2 life unless they pay {1}". The
   player half is `PlayerDamaged` + `OpponentSourceDamagedYou` (subject = dealer); the permanent
