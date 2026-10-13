@@ -168,6 +168,12 @@ the handoff.
   `Effect::EachPlayerGainsChosenFromRightNeighbor` (CR 101.4), `SpendRestriction::
   ForetellActionOrInstantSorcery` (+ `SpellKind.foretell_action`), `SelectionRequirement::
   TriggerPlayer`, `EntersAsCopy.exile_copied` (CR 603.12), `Effect::SetCopyTypeLine` (CR 707.9b).
+- **Seats 1170-1179** (Calamity, The Speed Demon, Valki, Vorinclex, Eloise, Genku, Pharika,
+  Jacob Hauken, Sokrates, The Second Doctor): `cmdr_edhrec14`'s primitive-blocked one-card gaps.
+  **Primitives:** `Value::SurveilKeptOnTopThisEffect` (Starving Revenant),
+  `Effect::CombatDamageToPlayersBecomesDrawsThisTurn` (Sokrates, CR 615),
+  `StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities` (Rowan's Talent, CR 707.10),
+  `SelectionRequirement::ChosenPermanentOfSource` (Havengul Mystery's returned creature).
 - **FIXED — Elesh Norn (MOM):** "whenever a source an opponent controls deals damage to you **or a
   permanent you control**, that source's controller loses 2 life unless they pay {1}". The
   player half is `PlayerDamaged` + `OpponentSourceDamagedYou` (subject = dealer); the permanent
