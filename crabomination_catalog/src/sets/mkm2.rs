@@ -450,7 +450,7 @@ pub fn coveted_falcon() -> CardDefinition {
                     effect: Box::new(Effect::Seq(vec![
                         Effect::GainControl {
                             what: target_n(0),
-                            to: Some(PlayerRef::EachOpponent),
+                            to: Some(PlayerRef::HostileOpponent),
                             duration: Duration::Permanent,
                         },
                         draw(1),

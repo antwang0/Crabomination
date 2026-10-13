@@ -323,7 +323,7 @@ pub fn rohgahh_of_kher_keep() -> CardDefinition {
                                 R::IsSource.or(R::HasName("Kobolds of Kher Keep".into())),
                             ),
                         ),
-                        to: Some(PlayerRef::EachOpponent),
+                        to: Some(PlayerRef::HostileOpponent),
                         duration: Duration::Permanent,
                     },
                 ]))),

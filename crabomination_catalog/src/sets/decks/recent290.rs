@@ -187,7 +187,7 @@ pub fn discerning_financier() -> CardDefinition {
                         R::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure)
                             .and(R::ControlledByYou),
                     ),
-                    to: Some(PlayerRef::EachOpponent),
+                    to: Some(PlayerRef::HostileOpponent),
                     duration: Duration::Permanent,
                 },
                 Effect::Draw {

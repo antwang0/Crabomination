@@ -2155,7 +2155,7 @@ pub fn goblin_festival() -> CardDefinition {
                     on_heads: Box::new(Effect::Noop),
                     on_tails: Box::new(Effect::GainControl {
                         what: Selector::This,
-                        to: Some(PlayerRef::EachOpponent),
+                        to: Some(PlayerRef::HostileOpponent),
                         duration: Duration::Permanent,
                     }),
                 },

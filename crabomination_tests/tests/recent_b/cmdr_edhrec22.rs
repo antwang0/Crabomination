@@ -254,3 +254,28 @@ fn feywild_caretaker_dragons_with_the_initiative() {
     drain_stack(&mut g);
     assert_eq!(named(&g, "Faerie Dragon"), 1);
 }
+
+/// Bug fix (seat 1067's pod, seed 22104): a "an opponent gains control"
+/// donation named `EachOpponent` in a singular slot and panicked at 3+ seats.
+/// Discerning Financier now hands its Treasure to one opponent.
+#[test]
+fn discerning_financier_donates_to_one_opponent_in_a_pod() {
+    let mut g = pod(3);
+    let fin = ready(&mut g, 0, catalog::discerning_financier());
+    let treasure = g.add_token_to_battlefield(0, &crabomination_base::tokens::treasure_token());
+    g.add_card_to_library(0, catalog::island());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fin,
+        ability_index: 0,
+        target: Some(Target::Permanent(treasure)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("donate");
+    drain_stack(&mut g);
+    let to = g.battlefield.iter().find(|c| c.id == treasure).expect("still there").controller;
+    assert!(to == 1 || to == 2);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
