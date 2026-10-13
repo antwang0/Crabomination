@@ -149,6 +149,12 @@ the handoff.
   `StaticEffect::GraveyardCardsHaveJumpStart` (CR 702.133, `effective_jump_start`; the bot's recast
   block reads it behind a `BoardFacts` flag), `Effect::MayPayXUpTo` (Shanna's capped X). Cosmic
   Rebirth always takes its "you may put it onto the battlefield" (INCOMPLETE_CARDS).
+- **Seats 1216-1220** (Orah, Meria, Trazyn, Melek Reforged Researcher, O-Kagachi): fifteen cards in
+  `decks::cmdr_edhrec36`, no new primitive. **FIXED:** the destroy/sacrifice death funnel never
+  bound the dying creature's mana value before auto-targeting its own "this or another" trigger
+  (CR 603.10a), so Orah / Scrap Trawler / Jackdaw Savior found no "lesser mana value" target when
+  destroyed rather than killed by damage. Kyodai's indestructible lasts while Kyodai is on the
+  battlefield, not while you control it (INCOMPLETE_CARDS).
 - **FIXED — three bug classes the batch found:** (1) `EventKind::CrewsOrSaddles` baked "during
   your main phase" into every crew/saddle trigger — six cards that print no rider (Gearshift Ace,
   Veteran Motorist, Mobilizer Mech, Ghost Ark, Mighty Servant of Leuk-o, Stubborn Burrowfiend)
