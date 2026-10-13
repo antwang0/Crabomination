@@ -43,7 +43,7 @@ impl GameState {
 
     /// The legal hosts for [`choose_attach_host`](Self::choose_attach_host),
     /// the headless pick first.
-    fn attach_hosts_for(&self, card: CardId, host: Option<CardId>, creatures_only: bool, p: usize) -> Vec<CardId> {
+    pub(crate) fn attach_hosts_for(&self, card: CardId, host: Option<CardId>, creatures_only: bool, p: usize) -> Vec<CardId> {
         let Some(def) = self.find_card_anywhere(card).map(|c| c.definition.clone()) else { return Vec::new() };
         let fits = |id: CardId| -> bool {
             let Some(h) = self.battlefield_find(id) else { return false };
@@ -113,7 +113,7 @@ impl GameState {
 
     /// Attach the Aura a `Move` just put onto the battlefield (see
     /// [`aura_hosts_for_move`](Self::aura_hosts_for_move)).
-    pub(super) fn attach_moved_aura(&mut self, card: CardId, host: CardId, events: &mut Vec<GameEvent>) {
+    pub(crate) fn attach_moved_aura(&mut self, card: CardId, host: CardId, events: &mut Vec<GameEvent>) {
         if let Some(c) = self.battlefield_find_mut(card) {
             c.attached_to = Some(host);
             events.push(GameEvent::AttachmentMoved { attachment: card, attached_to: Some(host) });

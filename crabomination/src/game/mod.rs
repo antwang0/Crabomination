@@ -22885,6 +22885,36 @@ impl GameState {
                 }
                 self.in_draw_double = false;
             }
+            // Reed Richards — the turn's first draw other than the drawer's
+            // own draw-step draw becomes `count`. The draw has happened, so
+            // "first" is one qualifying draw on the counter.
+            let own_step_draw = if self.active_player_idx != p {
+                0
+            } else {
+                match self.step {
+                    crate::game::TurnStep::Untap | crate::game::TurnStep::Upkeep => 0,
+                    crate::game::TurnStep::Draw => self.players[p].cards_drawn_this_step.min(1),
+                    _ => 1,
+                }
+            };
+            if self.players[p].cards_drawn_this_turn.saturating_sub(own_step_draw) == 1 {
+                let extra = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p)
+                    .flat_map(|c| c.definition.static_abilities.iter())
+                    .find_map(|sa| match sa.effect {
+                        crate::effect::StaticEffect::FirstExtraDrawEachTurnBecomes { count } => Some(count),
+                        _ => None,
+                    });
+                if let Some(count) = extra {
+                    self.in_draw_double = true;
+                    for _ in 1..count {
+                        self.draw_one_or_deck(p, events);
+                    }
+                    self.in_draw_double = false;
+                }
+            }
         }
         if drew { DrawOutcome::Drew } else { DrawOutcome::EmptyLibrary }
     }
@@ -29730,6 +29760,21 @@ impl GameState {
                             self.exile_found_for_hijacker(card, h, &mut events);
                         } else if let Some(card) = taken {
                             self.place_card_in_dest(card, player, &to, &mut events);
+                            // CR 303.4f — a searched Aura put onto the battlefield
+                            // enters attached to something it can enchant (the
+                            // headless pick; a search resolves without a prompt).
+                            // With nothing to enchant the SBA bins it (CR 303.4i
+                            // would leave it in the library).
+                            if let Some((aura_ctrl, true)) = self
+                                .battlefield_find(*card_id)
+                                .map(|c| (c.controller, c.definition.is_aura() && c.attached_to.is_none()))
+                                && let Some(host) = self
+                                    .attach_hosts_for(*card_id, None, false, aura_ctrl)
+                                    .into_iter()
+                                    .find(|h| h != card_id)
+                            {
+                                self.attach_moved_aura(*card_id, host, &mut events);
+                            }
                             // CR 607 — `place_card_in_dest` carries no effect
                             // context, so the linked-exile stamp is applied here.
                             if matches!(to, crate::effect::ZoneDest::ExileWithSourceStamp)
@@ -34732,6 +34777,7 @@ fn static_effect_to_effects(
             // NoMaximumHandSize / OpponentsMaxHandSizeReduced — consulted
             // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize
+            | StaticEffect::FirstExtraDrawEachTurnBecomes { .. }
             | StaticEffect::AllPlayersNoMaximumHandSize
             // DiscardToLibraryTop (Library of Leng) — read by `discard_card`.
             | StaticEffect::DiscardToLibraryTop

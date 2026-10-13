@@ -3618,6 +3618,10 @@ pub enum StaticEffect {
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,
     /// Thought Vessel, Spellbook, Library of Leng-adjacent statics.
     NoMaximumHandSize,
+    /// CR 614 — "The first time you would draw a card each turn except the
+    /// first card you draw during each of your draw steps, you draw `count`
+    /// cards instead" (Reed Richards, Smartest Man). Read in `draw_one`.
+    FirstExtraDrawEachTurnBecomes { count: u32 },
     /// CR 614 — "If an effect causes you to discard a card, discard it, but
     /// you may put it on top of your library instead of into your graveyard"
     /// (Library of Leng). Read by `discard_card`; keeping the card is always
