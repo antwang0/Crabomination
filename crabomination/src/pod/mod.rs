@@ -7470,6 +7470,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::REDSHIFT_COMMANDERS,
             main: decks::REDSHIFT_MAIN,
         },
+        // Seat 1170: Calamity, Galloping Inferno's EDHREC average deck. `--pod-decks 1170`.
+        PodDeck {
+            name: "Calamity, Galloping Inferno (R)",
+            commanders: decks::CALAMITY_COMMANDERS,
+            main: decks::CALAMITY_MAIN,
+        },
+        // Seat 1171: The Speed Demon's EDHREC average deck. `--pod-decks 1171`.
+        PodDeck {
+            name: "The Speed Demon (B)",
+            commanders: decks::THE_SPEED_DEMON_COMMANDERS,
+            main: decks::THE_SPEED_DEMON_MAIN,
+        },
+        // Seat 1172: Valki, God of Lies's EDHREC average deck. `--pod-decks 1172`.
+        PodDeck {
+            name: "Valki, God of Lies (BR)",
+            commanders: decks::VALKI_COMMANDERS,
+            main: decks::VALKI_MAIN,
+        },
+        // Seat 1173: Vorinclex's EDHREC average deck. `--pod-decks 1173`.
+        PodDeck {
+            name: "Vorinclex (G)",
+            commanders: decks::VORINCLEX_COMMANDERS,
+            main: decks::VORINCLEX_MAIN,
+        },
+        // Seat 1174: Eloise, Nephalia Sleuth's EDHREC average deck. `--pod-decks 1174`.
+        PodDeck {
+            name: "Eloise, Nephalia Sleuth (UB)",
+            commanders: decks::ELOISE_COMMANDERS,
+            main: decks::ELOISE_MAIN,
+        },
+        // Seat 1175: Genku, Future Shaper's EDHREC average deck. `--pod-decks 1175`.
+        PodDeck {
+            name: "Genku, Future Shaper (WU)",
+            commanders: decks::GENKU_COMMANDERS,
+            main: decks::GENKU_MAIN,
+        },
+        // Seat 1176: Pharika, God of Affliction's EDHREC average deck. `--pod-decks 1176`.
+        PodDeck {
+            name: "Pharika, God of Affliction (BG)",
+            commanders: decks::PHARIKA_COMMANDERS,
+            main: decks::PHARIKA_MAIN,
+        },
+        // Seat 1177: Jacob Hauken, Inspector's EDHREC average deck. `--pod-decks 1177`.
+        PodDeck {
+            name: "Jacob Hauken, Inspector (U)",
+            commanders: decks::JACOB_HAUKEN_COMMANDERS,
+            main: decks::JACOB_HAUKEN_MAIN,
+        },
+        // Seat 1178: Sokrates, Athenian Teacher's EDHREC average deck. `--pod-decks 1178`.
+        PodDeck {
+            name: "Sokrates, Athenian Teacher (WU)",
+            commanders: decks::SOKRATES_COMMANDERS,
+            main: decks::SOKRATES_MAIN,
+        },
+        // Seat 1179: The Second Doctor and Vislor Turlough's EDHREC average deck. `--pod-decks 1179`.
+        PodDeck {
+            name: "The Second Doctor and Vislor Turlough (WUB)",
+            commanders: decks::THE_SECOND_DOCTOR_COMMANDERS,
+            main: decks::THE_SECOND_DOCTOR_MAIN,
+        },
     ]
 }
 
@@ -10429,6 +10489,16 @@ mod tests {
             ("Dion, Bahamut's Dominant", &[0x0EA4]),
             ("Zirda, the Dawnwaker", &[0x0EA5]),
             ("Redshift, Rocketeer Chief", &[0x0EA6]),
+            ("Calamity, Galloping Inferno", &[0x0EA7]),
+            ("The Speed Demon", &[0x0EA8]),
+            ("Valki, God of Lies", &[0x0EA9]),
+            ("Vorinclex", &[0x0EAA]),
+            ("Eloise, Nephalia Sleuth", &[0x0EAB]),
+            ("Genku, Future Shaper", &[0x0EAC]),
+            ("Pharika, God of Affliction", &[0x0EAD]),
+            ("Jacob Hauken, Inspector", &[0x0EAE]),
+            ("Sokrates, Athenian Teacher", &[0x0EAF]),
+            ("The Second Doctor and Vislor Turlough", &[0x0EB0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
