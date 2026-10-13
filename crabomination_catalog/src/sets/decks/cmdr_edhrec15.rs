@@ -3912,3 +3912,141 @@ pub fn poppet_stitcher() -> CardDefinition {
         ..creature("Poppet Stitcher", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 3)
     }
 }
+
+/// The Sentry, Golden Guardian — {3}{W} 5/5 flying, vigilance,
+/// indestructible. ETB: target opponent creates The Void, a legendary 5/5
+/// black flying, indestructible Horror Villain that attacks each combat.
+pub fn the_sentry_golden_guardian() -> CardDefinition {
+    let void = TokenDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying, Keyword::Indestructible, Keyword::MustAttack],
+        ..token("The Void", 5, 5, vec![Color::Black], vec![CreatureType::Horror, CreatureType::Villain])
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Indestructible],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 1,
+            filter: R::OpponentPlayer,
+            effect: Box::new(Effect::CreateToken { who: PlayerRef::Target(0), count: Value::ONE, definition: Arc::new(void) }),
+        })],
+        ..legend("The Sentry, Golden Guardian", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Hero], 5, 5)
+    }
+}
+
+/// Lucy MacLean, Positively Armed — {4}{W} 3/5. Golden Rule: whenever a
+/// token enters, you may have target player other than its controller
+/// create a token copy of it, then draw if an opponent did — once each turn.
+pub fn lucy_maclean_positively_armed() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(trigger_is(R::IsToken)),
+            "Have another player copy that token?",
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 1,
+                filter: R::Player.and(R::Not(Box::new(R::TriggerPlayer))),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::Target(0),
+                        count: Value::ONE,
+                        source: Selector::TriggerSource,
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![],
+                        no_mana_cost: false,
+                        enters_with_counters: None,
+                        remove_keywords: vec![],
+                    },
+                    Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::OpponentPlayer },
+                        then: Box::new(draw(1)),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
+        )],
+        ..legend(
+            "Lucy MacLean, Positively Armed",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Human, CreatureType::Survivor],
+            3,
+            5,
+        )
+    }
+}
+
+/// Superior Spider-Man — {2}{U}{B} 4/4. Mind Swap: may enter as a copy of
+/// any creature card in a graveyard, except named Superior Spider-Man and a
+/// 4/4 Spider Human Hero in addition; when you do, exile that card.
+pub fn superior_spider_man() -> CardDefinition {
+    CardDefinition {
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Creature,
+            from_graveyards: true,
+            keep_name: true,
+            extra_creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            override_pt: Some((4, 4)),
+            exile_copied: true,
+            ..Default::default()
+        }),
+        ..legend(
+            "Superior Spider-Man",
+            cost(&[generic(2), u(), b()]),
+            vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            4,
+            4,
+        )
+    }
+}
+
+/// Taskmaster, Mercenary Mimic — {2}{U}{B} 3/5. At the beginning of your
+/// first main phase, until your next turn he becomes a copy of up to one
+/// target creature or creature card in a graveyard, except named Taskmaster
+/// and a legendary Human Mercenary Villain creature.
+pub fn taskmaster_mercenary_mimic() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::Creature.and(R::OnBattlefield.or(R::InGraveyard)).and(R::OtherThanSource),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::BecomeCopyOfFor {
+                        what: Selector::This,
+                        source: Selector::Target(0),
+                        duration: Duration::UntilNextTurn,
+                        non_legendary: false,
+                    },
+                    Effect::AmendCopy {
+                        what: Selector::This,
+                        keep_activated: vec![],
+                        keep_triggered: vec![],
+                        pt: None,
+                        keep_name: true,
+                        legendary: true,
+                        keywords: vec![],
+                        card_types: vec![],
+                    },
+                    Effect::SetCopyTypeLine {
+                        what: Selector::This,
+                        creature_types: vec![CreatureType::Human, CreatureType::Mercenary, CreatureType::Villain],
+                    },
+                ])),
+            },
+        }],
+        ..legend(
+            "Taskmaster, Mercenary Mimic",
+            cost(&[generic(2), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Mercenary, CreatureType::Villain],
+            3,
+            5,
+        )
+    }
+}

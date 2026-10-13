@@ -1692,3 +1692,62 @@ fn poppet_stitcher_makes_zombies_then_a_factory() {
     assert_eq!((z.power, z.toughness), (3, 3));
     assert!(!z.keywords().contains(&Keyword::Decayed), "lost all abilities");
 }
+
+/// The Sentry hands an opponent The Void; Lucy MacLean's Golden Rule copies
+/// that token for a player other than its controller (drawing if that's an
+/// opponent), once each turn.
+#[test]
+fn the_sentry_gives_the_void_and_lucy_copies_it() {
+    let mut g = pod(3);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::lucy_maclean_positively_armed());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    let sentry = g.add_card_to_hand(0, catalog::the_sentry_golden_guardian());
+    cast(&mut g, sentry, &[Target::Player(1)]).expect("sentry");
+    let voids: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "The Void").map(|c| c.controller).collect();
+    assert_eq!(voids.len(), 2, "The Void and Lucy's copy: {voids:?}");
+    assert_eq!(voids[0], 1, "the opponent got The Void");
+    assert_ne!(voids[1], 1, "the copy went to a player other than its controller");
+    let drew = if voids[1] == 0 { 0 } else { 1 };
+    assert_eq!(g.players[0].hand.len(), hand + drew, "draw only when an opponent made the copy");
+}
+
+/// Superior Spider-Man (CR 707.9b, 603.12): enters as a 4/4 copy of a
+/// graveyard creature card, keeping its name and adding Spider Human Hero,
+/// then exiles the copied card.
+#[test]
+fn superior_spider_man_copies_a_graveyard_creature() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_graveyard(1, catalog::serra_angel());
+    let spidey = g.add_card_to_hand(0, catalog::superior_spider_man());
+    cast(&mut g, spidey, &[]).expect("spider-man");
+    let c = g.computed_permanent(spidey).expect("on the battlefield");
+    assert_eq!(c.def.name, "Superior Spider-Man");
+    assert!(c.keywords().contains(&Keyword::Flying), "Serra's flying");
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(g.exile.iter().any(|e| e.id == angel), "the Angel card was exiled");
+}
+
+/// Taskmaster, Mercenary Mimic: at your first main phase he becomes a copy
+/// of a creature, keeping his name and his legendary Human Mercenary
+/// Villain type line.
+#[test]
+fn taskmaster_copies_at_the_first_main_phase() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let tm = ready(&mut g, 0, catalog::taskmaster_mercenary_mimic());
+    ready(&mut g, 1, catalog::serra_angel());
+    g.step = TurnStep::Draw;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let c = g.computed_permanent(tm).unwrap();
+    assert_eq!(c.def.name, "Taskmaster, Mercenary Mimic");
+    assert!(c.keywords().contains(&Keyword::Flying) && c.keywords().contains(&Keyword::Vigilance));
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(c.def.subtypes.creature_types.contains(&crabomination::card::CreatureType::Mercenary));
+    assert!(!c.def.subtypes.creature_types.contains(&crabomination::card::CreatureType::Angel));
+}
