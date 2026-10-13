@@ -44,8 +44,8 @@ pub fn aurelias_fury() -> CardDefinition {
 
 /// Nightveil Specter — {U/B}{U/B}{U/B} 2/3 Specter. Flying; combat damage to a
 /// player exiles that player's top library card, and its controller may play
-/// lands / cast spells from among cards exiled with it (modeled as a
-/// while-exiled may-play grant paying the card's own cost).
+/// lands / cast spells from among cards exiled with it (while it remains on
+/// the battlefield — a new object has no link to them, CR 607.2a).
 pub fn nightveil_specter() -> CardDefinition {
     let ub = || hybrid(Color::Blue, Color::Black);
     CardDefinition {
@@ -64,7 +64,10 @@ pub fn nightveil_specter() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::DefendingPlayer,
                 count: Value::Const(1),
-                duration: MayPlayDuration::WhileExiled,
+                duration: MayPlayDuration::WhileSourceOnBattlefield {
+                    source: crate::card::CardId(0),
+                    one_spell_a_turn: false,
+                },
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

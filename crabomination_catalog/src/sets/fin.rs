@@ -6342,7 +6342,7 @@ pub fn ardyn_the_usurper() -> CardDefinition {
 
 /// Lightning, Security Sergeant — {2}{R} 2/3 Human Soldier with menace. Whenever
 /// she deals combat damage to a player, exile the top card of your library; you
-/// may play it (modeled as "for as long as it remains exiled").
+/// may play that card for as long as you control Lightning.
 pub fn lightning_security_sergeant() -> CardDefinition {
     CardDefinition {
         name: "Lightning, Security Sergeant",
@@ -6361,7 +6361,10 @@ pub fn lightning_security_sergeant() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                duration: crate::card::MayPlayDuration::WhileExiled,
+                duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
+                    source: crate::card::CardId(0),
+                    one_spell_a_turn: false,
+                },
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

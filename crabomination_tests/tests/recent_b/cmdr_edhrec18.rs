@@ -1283,3 +1283,25 @@ fn careful_consideration_discount_needs_your_main_phase() {
     cast(&mut g, cc, &[]).expect("instant");
     assert_eq!(g.players[0].hand.len(), 1, "drew four, discarded three");
 }
+
+/// Nightveil Specter — "You may play lands and cast spells from among cards
+/// exiled with this creature." (CR 607.2a linked abilities: the permission
+/// ends when the Specter leaves.)
+#[test]
+fn nightveil_specter_permission_ends_when_it_leaves() {
+    let mut g = pod(2);
+    let specter = ready(&mut g, 0, catalog::nightveil_specter());
+    let top = g.add_card_to_library(1, catalog::grizzly_bears());
+    declare(&mut g, 0, &[(specter, 1)]).unwrap();
+    block(&mut g, 1, vec![]).unwrap();
+    combat_damage(&mut g);
+    let perm = g.exile.iter().find(|c| c.id == top).and_then(|c| c.may_play_until).expect("exiled, playable");
+    assert_eq!(perm.player, 0);
+    let mut events = vec![];
+    g.sacrifice_one(specter, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    assert!(
+        g.exile.iter().find(|c| c.id == top).unwrap().may_play_until.is_none(),
+        "the link ends with the Specter"
+    );
+}
