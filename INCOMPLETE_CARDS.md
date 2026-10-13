@@ -2096,3 +2096,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Experimental Overload | the returned instant or sorcery is the engine's pick (the priciest) | `Selector::take_priciest` |
 | 🟡 Jace, Reality Sculptor | the 0 can be activated under 25 loyalty among your Jaces and does nothing then ("activate only if" is checked at resolution) | `LoyaltyAbility` has no condition field |
 | 🟡 The Misty Mountains Cold | "if you do" reads the Saga still being on the battlefield, not the sacrifice's outcome | `SelectorExists(This)` gate |
+| 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
+| 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
