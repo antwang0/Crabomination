@@ -1347,6 +1347,9 @@ pub enum Value {
     /// Aven Heartstabber ("five or more mana values among cards in your
     /// graveyard").
     DistinctManaValuesInGraveyard(PlayerRef),
+    /// Distinct mana values among the cards in `who`'s hand (Atemsis,
+    /// All-Seeing's "at least six different mana values").
+    DistinctManaValuesInHand(PlayerRef),
     /// Distinct mana values among cards matching `filter` in `who`'s
     /// graveyard — Eris, Roar of the Storm ("for each different mana value
     /// among instant and sorcery cards in your graveyard").

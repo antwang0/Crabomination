@@ -11693,7 +11693,8 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         // Spell kind gates spend-restricted mana ("spend only to cast …")
         // by the cast card's types — see `CardDefinition::spell_kind`.
-        let spell_kind = self.spell_kind_for(p, &card);
+        let mut spell_kind = self.spell_kind_for(p, &card);
+        spell_kind.kicked = kicked;
         // CR 601.2g — float-spend confirmation. If the caster has pre-existing
         // floating mana that the cost could *either* spend *or* avoid (untapped
         // sources can cover it), ask before auto-spending it instead of silently

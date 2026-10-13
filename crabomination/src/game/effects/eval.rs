@@ -1639,6 +1639,13 @@ impl GameState {
                 })
                 .map(|n| n as i32)
                 .sum(),
+            Value::DistinctManaValuesInHand(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                let mut mvs: Vec<u32> = self.players[p].hand.iter().map(|c| c.definition.cost.cmc()).collect();
+                mvs.sort_unstable();
+                mvs.dedup();
+                mvs.len() as i32
+            }
             Value::DistinctManaValuesInGraveyard(who) => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 let mut mvs: Vec<u32> = self.players[p]

@@ -664,6 +664,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast an instant or sorcery spell or to gain
     /// a Class level" (Sorcerer Class). Reads `SpellKind::class_level`.
     InstantSorceryOrClassLevel,
+    /// "Spend this mana only to cast an instant or sorcery spell or a kicked
+    /// spell" (Volshe Tideturner). Reads `SpellKind::kicked`.
+    InstantSorceryOrKicked,
     /// "Spend this mana only to cast artifact spells or activate
     /// abilities of artifacts." (Power Depot, Mishra's Workshop kin.)
     ArtifactOnly,
@@ -922,6 +925,7 @@ impl SpendRestriction {
         Some(match self {
             SpendRestriction::InstantSorceryOnly => "only instants and sorceries",
             SpendRestriction::InstantSorceryOrClassLevel => "only instants, sorceries and Class levels",
+            SpendRestriction::InstantSorceryOrKicked => "only instants, sorceries and kicked spells",
             SpendRestriction::ArtifactOnly => "only artifacts",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
@@ -1030,6 +1034,7 @@ impl SpendRestriction {
         match self {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
             SpendRestriction::InstantSorceryOrClassLevel => kind.instant_or_sorcery || kind.class_level,
+            SpendRestriction::InstantSorceryOrKicked => kind.instant_or_sorcery || kind.kicked,
             SpendRestriction::ArtifactOnly => kind.artifact,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
@@ -1236,6 +1241,8 @@ pub struct SpellKind {
     pub any_color: bool,
     /// Casting a Lesson spell (Hermitic Herbalist's Lesson-only mana).
     pub lesson: bool,
+    /// CR 702.33 — the spell is being cast kicked (Volshe Tideturner's mana).
+    pub kicked: bool,
     /// Casting a Shrine spell (White Lotus Hideout's "Lesson or Shrine").
     pub shrine: bool,
     /// Casting a spell with devoid (Corrupted Crossroads).
