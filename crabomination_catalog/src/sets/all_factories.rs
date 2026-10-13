@@ -14408,6 +14408,13 @@ static DECKS: &[Factory] = &[
     super::decks::tom_bert_and_william,
     super::decks::bebop_rocksteady,
     super::decks::part_in_friendship,
+    // cmdr_edhrec43 (session 01VkPyqk)
+    super::decks::tsagan_raider_warlord,
+    super::decks::kinscaer_sentry,
+    super::decks::smellerbee_rebel_fighter,
+    super::decks::lobelia_sackville_baggins,
+    super::decks::lash_of_the_balrog,
+    super::decks::visions_of_ruin,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

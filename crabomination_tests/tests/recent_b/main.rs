@@ -245,3 +245,4 @@ mod cmdr_edhrec41;
 mod cmdr_most_built;
 mod cmdr_edhrec40;
 mod cmdr_edhrec42;
+mod cmdr_edhrec43;
