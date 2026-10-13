@@ -87,7 +87,7 @@ fn cr_702_92a_ekthi_arms_every_equipment() {
     assert_eq!(germ.len(), 1);
     assert_eq!(g.battlefield_find(lances).unwrap().attached_to, Some(germ[0]));
     let cp = g.computed_permanent(germ[0]).unwrap();
-    assert_eq!((cp.power, cp.toughness), (0 + 2 + 1, 0 + 1), "+2/+0 Lances, +1/+1 Ekthi");
+    assert_eq!((cp.power, cp.toughness), (3, 1), "a 0/0 Germ: +2/+0 Lances, +1/+1 Ekthi");
     assert!(cp.keywords().contains(&Keyword::FirstStrike), "your turn");
     let steel = g.add_card_to_hand(0, catalog::swordsmans_steel());
     let hand = g.players[0].hand.len();
