@@ -3851,6 +3851,16 @@ static DECKS: &[Factory] = &[
     super::decks::borborygmos_and_fblthp,
     super::decks::fblthp_impossibly_lost,
     super::decks::fblthp_knows_the_way,
+    // cmdr_rank2k_h (session 01CwrNTA)
+    super::decks::bards_company,
+    super::decks::blightbeetle,
+    super::decks::courageous_resolve,
+    super::decks::disruption_protocol,
+    super::decks::extraction_specialist,
+    super::decks::induced_amnesia,
+    super::decks::samut_tyrant_of_naktamun,
+    super::decks::temporal_extortion,
+    super::decks::tyrant_of_discord,
     // cmdr_rank2k_g (session 01CwrNTA)
     super::decks::aegis_of_the_legion,
     super::decks::augur_il_vec,
