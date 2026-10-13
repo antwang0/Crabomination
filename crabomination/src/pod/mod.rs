@@ -8010,6 +8010,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SASAYA_COMMANDERS,
             main: decks::SASAYA_MAIN,
         },
+        // Seat 1260: Rohgahh, Kher Keep Overlord's EDHREC average deck. `--pod-decks 1260`.
+        PodDeck {
+            name: "Rohgahh, Kher Keep Overlord (BR)",
+            commanders: decks::ROHGAHH_COMMANDERS,
+            main: decks::ROHGAHH_MAIN,
+        },
+        // Seat 1261: Experiment Kraj's EDHREC average deck. `--pod-decks 1261`.
+        PodDeck {
+            name: "Experiment Kraj (UG)",
+            commanders: decks::EXPERIMENT_KRAJ_COMMANDERS,
+            main: decks::EXPERIMENT_KRAJ_MAIN,
+        },
+        // Seat 1262: Abigale, Eloquent First-Year's EDHREC average deck. `--pod-decks 1262`.
+        PodDeck {
+            name: "Abigale, Eloquent First-Year (WB)",
+            commanders: decks::ABIGALE_2_COMMANDERS,
+            main: decks::ABIGALE_2_MAIN,
+        },
     ]
 }
 
@@ -11101,6 +11119,9 @@ mod tests {
             ("Samut, Vizier of Naktamun", &[0x0EFE]),
             ("The Walls of Ba Sing Se", &[0x0EFF]),
             ("Sasaya, Orochi Ascendant", &[0x0F00]),
+            ("Rohgahh, Kher Keep Overlord", &[0x0F01]),
+            ("Experiment Kraj", &[0x0F02]),
+            ("Abigale, Eloquent First-Year", &[0x0F03]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

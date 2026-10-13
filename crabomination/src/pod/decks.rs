@@ -35828,3 +35828,85 @@ pub const SASAYA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const ROHGAHH_COMMANDERS: &[CardFactory] = &[rohgahh_kher_keep_overlord];
+
+/// **Rohgahh, Kher Keep Overlord**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 12 Mountains + 8 Swamps = 99.
+/// Rohgahh, Kher Keep Overlord (EDHREC, fetched 2026-10-13).
+pub const ROHGAHH_MAIN: &[CardFactory] = &[
+    arcane_signet, carnelian_orb_of_dragonkind, cloudstone_curio, dragons_hoard,
+    dragonstorm_globe, firdoch_core, lightning_greaves, maskwood_nexus, rakdos_signet, sol_ring,
+    talisman_of_indulgence, vanquishers_banner, blazemire_verge, blood_crypt, bojuka_bog,
+    command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge, kher_keep, luxury_suite,
+    path_of_ancestry, rakdos_carnarium, smoldering_marsh, sulfurous_springs, tainted_peak,
+    temple_of_malice, akul_the_unrepentant, bladewing_the_risen, bloodline_pretender,
+    changeling_outcast, changeling_wayfinder, crimson_kobolds, crookshank_kobolds,
+    decadent_dragon, dragonspeaker_shaman, ganax_astral_hunter, goldspan_dragon, graveshifter,
+    kobold_drill_sergeant, kobold_overlord, kobold_taskmaster, kobolds_of_kher_keep,
+    kolaghan_the_storms_fury, lathliss_dragon_queen, minion_of_the_mighty, nogi_draco_zealot,
+    reckless_barbarian, rivaz_of_the_claw, rograkh_son_of_rohgahh, rosnakht_heir_of_rohgahh,
+    scourge_of_valkas, skeletal_changeling, taunting_kobold, taurean_mauler,
+    universal_automaton, utvara_hellkite, venomous_changeling, crucible_of_fire, dragon_tempest,
+    impact_tremors, phyrexian_arena, shared_animosity, bedevil, chaos_warp,
+    corrupted_conviction, dark_ritual, deadly_dispute, nameless_inversion, rakdos_charm,
+    terminate, village_rites, blasphemous_act, crux_of_fate, feed_the_swarm, nights_whisper,
+    sign_in_blood, vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const EXPERIMENT_KRAJ_COMMANDERS: &[CardFactory] = &[experiment_kraj];
+
+/// **Experiment Kraj**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Forests + 10 Islands = 99.
+/// Experiment Kraj (EDHREC, fetched 2026-10-13).
+pub const EXPERIMENT_KRAJ_MAIN: &[CardFactory] = &[
+    arcane_signet, illusionists_bracers, lightning_greaves, simic_signet, sol_ring,
+    swiftfoot_boots, thousand_year_elixir, breeding_pool, command_tower, dreamroot_cascade,
+    flooded_grove, hinterland_harbor, llanowar_reborn, novijen_heart_of_progress,
+    oran_rief_the_vastwood, rejuvenating_springs, reliquary_tower, simic_growth_chamber,
+    temple_of_mystery, vineglimmer_snarl, yavimaya_coast, arcanis_the_omnipotent,
+    biomancers_familiar, cytoplast_manipulator, devoted_druid, evolution_witness,
+    experiment_one, fathom_mage, fertilid, forgotten_ancient, gilder_bairn, gyre_engineer,
+    gyre_sage, herald_of_secret_streams, horseshoe_crab, incubation_druid,
+    kami_of_whispered_hopes, kioras_follower, knacksaw_clique, marvin_murderous_mimic,
+    master_biomancer, murkfiend_liege, pili_pala, plaxcaster_frogling, rishkar_peema_renegade,
+    sage_of_hours, simic_manipulator, simic_ragworm, thornling, triskelion, vigean_graftmage,
+    viridian_joiner, vorel_of_the_hull_clade, zameck_guildmage, branching_evolution,
+    bred_for_the_hunt, freed_from_the_real, hardened_scales, primal_empathy, simic_ascendancy,
+    training_grounds, beast_within, counterspell, growth_spiral, heroic_intervention,
+    inspiring_call, negate, plasm_capture, pongify, rapid_hybridization, voidslime, cultivate,
+    kodamas_reach, natures_lore, neoform, rampant_growth, wave_goodbye,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island, island, island, island,
+];
+
+pub const ABIGALE_2_COMMANDERS: &[CardFactory] = &[abigale_eloquent_first_year];
+
+/// **Abigale, Eloquent First-Year**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Plains + 11 Swamps = 99.
+/// Abigale, Eloquent First-Year (EDHREC, fetched 2026-10-13).
+pub const ABIGALE_2_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, fellwar_stone, orzhov_signet, panharmonicon, sol_ring,
+    sword_of_hearth_and_home, talisman_of_hierarchy, bleachbone_verge, bojuka_bog,
+    caves_of_koilos, command_tower, exotic_orchard, fetid_heath, godless_shrine,
+    isolated_chapel, marsh_flats, orzhov_basilica, shattered_sanctum, shineshadow_snarl,
+    tainted_field, vault_of_champions, archfiend_of_the_dross, charming_prince,
+    egon_god_of_death, enduring_tenacity, flickerwisp, gilraen_dunedain_protector,
+    haliya_guided_by_light, hunted_horror, kalakscion_hunger_tyrant, loran_of_the_third_path,
+    lupine_prototype, monoist_sentry, nyxathid, phelia_exuberant_shepherd, phyrexian_soulgorger,
+    plague_reaver, relic_golem, restoration_angel, rot_curse_rakshasa, rotting_regisaur,
+    shakedown_heavy, sun_titan, tragedy_feaster, traxos_scourge_of_kroog, waning_wurm,
+    witch_enchanter, woolly_razorback, xu_ifit_osteoharmonist, yargle_glutton_of_urborg,
+    yathan_tombguard, airbender_ascension, black_market_connections, far_traveler,
+    phyrexian_arena, teleportation_circle, tocasias_welcome, acrobatic_maneuver,
+    anguished_unmaking, cloudshift, despark, eerie_interlude, ephemerate, flicker_of_fate,
+    parting_gust, path_to_exile, personify, scrollshift, slip_on_the_ring, swords_to_plowshares,
+    avatars_wrath, damning_verdict, daydream, nights_whisper, sign_in_blood, unearth,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
