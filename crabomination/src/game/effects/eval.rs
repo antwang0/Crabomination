@@ -4334,6 +4334,9 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.battlefield.iter().any(|c| c.controller == p && card_is_outlaw(c))
             }
+            Predicate::NoPermanentLeftBattlefieldThisTurn => {
+                !self.players.iter().any(|pl| pl.permanent_left_battlefield_this_turn)
+            }
             Predicate::RevoltActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),

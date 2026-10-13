@@ -2212,6 +2212,10 @@ pub enum Predicate {
     /// control this turn. Backed by
     /// `Player.permanent_left_battlefield_this_turn`.
     RevoltActive { who: PlayerRef },
+    /// No permanent left the battlefield this turn, under anyone's control
+    /// (Sarevok, Deathbringer) — every player's
+    /// `permanent_left_battlefield_this_turn` is clear.
+    NoPermanentLeftBattlefieldThisTurn,
     /// A creature left the battlefield under `who`'s control this turn (Tale
     /// of Momo's cost reduction). Backed by
     /// `Player.creature_left_battlefield_this_turn`.
