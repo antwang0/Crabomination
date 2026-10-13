@@ -1105,17 +1105,20 @@ pub fn march_of_swirling_mist() -> CardDefinition {
 /// Ian Malcolm's permission, handed to the active player: they may cast the
 /// cards exiled with Ian that they don't own this turn, mana of any type.
 fn ian_turn_grant() -> Effect {
-    let theirs = Selector::CardsInZone { who: PlayerRef::EachOpponent, zone: Zone::Exile, filter: R::ExiledWithSource };
+    let theirs = || Selector::CardsInZone { who: PlayerRef::EachOpponent, zone: Zone::Exile, filter: R::ExiledWithSource };
     Effect::EachPlayerDoes {
         who: PlayerRef::ActivePlayer,
-        body: Box::new(Effect::GrantMayPlay {
-            what: theirs,
-            duration: MayPlayDuration::EndOfThisTurn,
-            to_owner: false,
-            exile_after: false,
-            pay_own_cost: true,
-            any_color: true,
-        }),
+        body: Box::new(Effect::Seq(vec![
+            Effect::GrantMayPlay {
+                what: theirs(),
+                duration: MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: true,
+            },
+            Effect::GrantedCastOnly { what: theirs() },
+        ])),
     }
 }
 
@@ -1123,8 +1126,7 @@ fn ian_turn_grant() -> Effect {
 /// Whenever a player draws their second card each turn, they exile their top
 /// card with Ian. During each player's turn, that player may cast spells from
 /// among the cards exiled with Ian they don't own, mana of any type. The
-/// permission is stamped at each upkeep and after each exile, for the turn
-/// (a land among them can be played too — INCOMPLETE_CARDS).
+/// permission is stamped at each upkeep and after each exile, for the turn.
 pub fn ian_malcolm_chaotician() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
