@@ -223,6 +223,14 @@ the handoff.
   the resolution, `scratch.mirrormind_active`), `Effect::MayCastCreatureFromGraveyardThisTurnAs`
   (The Tomb of Aclazotz's finality + Vampire rider). Lim-Dûl's Hex's "{B} or {3}" is two nested
   taxes — audited safe (`no_shipped_card_nests_two_answer_log_arms`).
+- **Seats 1198-1202** (Thromok, Ellie and Alan, Grothama, Havi, Korvold Gleeful Glutton), 10 cards.
+  **Primitives:** `Keyword::Devour(n)` (CR 702.82; `Devour(0)` is Dragon Broodmother's "devour X,
+  X counters each"), `ActivatedAbility.tap_total_power` (Mossbridge Troll's "tap any number of
+  untapped creatures with total power 10 or more"), `StaticEffect::RegeneratesInsteadOfDestroyed`,
+  `StaticEffect::ColoredOnlyCostReduction` (Bard Class level 2 reduces only pips the spell has,
+  CR 601.2f; the colored reducer now peels `WhileClassLevelAtLeast`),
+  `Value::CardTypesSacrificedThisTurn` (Korvold's self-discount). Headless devour sacrifices only
+  tokens of power ≤ 1.
 - **Bot (CR 603.3b):** Eloise, Nephalia Sleuth under March of the Machines investigates into a
   0/0 Clue that dies and investigates again — a real mandatory loop, but the controller wins it
   by resolving Bastion of Remembrance / Meathook drains first. The default order buried every

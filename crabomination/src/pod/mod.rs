@@ -7638,6 +7638,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VANNIFAR_COMMANDERS,
             main: decks::VANNIFAR_MAIN,
         },
+        // Seat 1198: Thromok the Insatiable's EDHREC average deck. `--pod-decks 1198`.
+        PodDeck {
+            name: "Thromok the Insatiable (RG)",
+            commanders: decks::THROMOK_THE_INSATIABLE_COMMANDERS,
+            main: decks::THROMOK_THE_INSATIABLE_MAIN,
+        },
+        // Seat 1199: Ellie and Alan, Paleontologists's EDHREC average deck. `--pod-decks 1199`.
+        PodDeck {
+            name: "Ellie and Alan, Paleontologists (WUG)",
+            commanders: decks::ELLIE_AND_ALAN_COMMANDERS,
+            main: decks::ELLIE_AND_ALAN_MAIN,
+        },
+        // Seat 1200: Grothama, All-Devouring's EDHREC average deck. `--pod-decks 1200`.
+        PodDeck {
+            name: "Grothama, All-Devouring (G)",
+            commanders: decks::GROTHAMA_COMMANDERS,
+            main: decks::GROTHAMA_MAIN,
+        },
+        // Seat 1201: Havi, the All-Father's EDHREC average deck. `--pod-decks 1201`.
+        PodDeck {
+            name: "Havi, the All-Father (WRG)",
+            commanders: decks::HAVI_COMMANDERS,
+            main: decks::HAVI_MAIN,
+        },
+        // Seat 1202: Korvold, Gleeful Glutton's EDHREC average deck. `--pod-decks 1202`.
+        PodDeck {
+            name: "Korvold, Gleeful Glutton (BRG)",
+            commanders: decks::KORVOLD_2_COMMANDERS,
+            main: decks::KORVOLD_2_MAIN,
+        },
     ]
 }
 
@@ -10660,6 +10690,11 @@ mod tests {
             ("River Song", &[0x0EC0]),
             ("Zurzoth, Chaos Rider", &[0x0EC1]),
             ("Vannifar, Evolved Enigma", &[0x0EC2]),
+            ("Thromok the Insatiable", &[0x0EC3]),
+            ("Ellie and Alan, Paleontologists", &[0x0EC4]),
+            ("Grothama, All-Devouring", &[0x0EC5]),
+            ("Havi, the All-Father", &[0x0EC6]),
+            ("Korvold, Gleeful Glutton", &[0x0EC7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
