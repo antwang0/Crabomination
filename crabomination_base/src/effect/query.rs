@@ -2059,7 +2059,8 @@ impl Effect {
             }
             Effect::LoseKeyword { what, .. }
             | Effect::CantHaveKeywordThisTurn { what, .. }
-            | Effect::LoseAllLandwalk { what, .. } => sel_has_target(what),
+            | Effect::LoseAllLandwalk { what, .. }
+            | Effect::LoseProtectiveKeywords { what, .. } => sel_has_target(what),
             Effect::SkipNextUntap { what } => sel_has_target(what),
             Effect::SkipPlayerUntapStep { player } => player_has_target(player),
             Effect::LandsDontUntapNextUntapStep { who }
@@ -3292,6 +3293,7 @@ impl Effect {
             | Effect::LoseKeyword { what, .. }
             | Effect::CantHaveKeywordThisTurn { what, .. }
             | Effect::LoseAllLandwalk { what, .. }
+            | Effect::LoseProtectiveKeywords { what, .. }
             | Effect::SkipNextUntap { what }
             | Effect::GrantTriggeredAbility { what, .. }
             | Effect::WatchCombatDamageUntilYourNextTurn { what, .. }
@@ -5700,6 +5702,7 @@ impl Effect {
                 | Effect::LoseKeyword { what, .. }
                 | Effect::CantHaveKeywordThisTurn { what, .. }
                 | Effect::LoseAllLandwalk { what, .. }
+            | Effect::LoseProtectiveKeywords { what, .. }
                 | Effect::SkipNextUntap { what }
                 | Effect::GrantTriggeredAbility { what, .. }
                 | Effect::WatchCombatDamageUntilYourNextTurn { what, .. }

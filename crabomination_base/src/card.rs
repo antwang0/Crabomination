@@ -2756,6 +2756,7 @@ impl Keyword {
                 | K::ProtectionFromInstants
                 | K::ProtectionFromEverything
                 | K::ProtectionFromOwnColors
+                | K::ProtectionFromChosenPlayer
                 | K::ProtectionFromColorsOutsideCommanderIdentity => 1,
                 K::Landwalk(_) | K::LandwalkFiltered(_) | K::DomainLandwalk | K::LegendaryLandwalk => 2,
                 K::Hexproof
@@ -2772,6 +2773,16 @@ impl Keyword {
             0 => std::mem::discriminant(self) == std::mem::discriminant(wanted),
             f => family(self) == f,
         }
+    }
+
+    /// Any protection variant (CR 702.16).
+    pub fn is_protection(&self) -> bool {
+        self.answers_listed(&Keyword::ProtectionFromEverything)
+    }
+
+    /// Any hexproof variant (CR 702.11).
+    pub fn is_hexproof(&self) -> bool {
+        self.answers_listed(&Keyword::Hexproof)
     }
 
     /// CR 702.124 — a keyword that only matters while building a Commander

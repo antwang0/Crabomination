@@ -8521,6 +8521,10 @@ pub enum Effect {
     /// Layer-6 removal of every landwalk variant at once, which
     /// `LoseKeyword`'s exact match can't express.
     LoseAllLandwalk { what: Selector, duration: Duration },
+    /// "… lose hexproof, protection, … and ward" (Shay Cormac): every
+    /// hexproof, protection and ward instance each permanent has as this
+    /// resolves, any variant, as `LoseAllLandwalk` does landwalk.
+    LoseProtectiveKeywords { what: Selector, duration: Duration },
     /// Each permanent picked by `what` doesn't untap during its
     /// controller's next untap step (Vorinclex's land lock, Exert-style
     /// `skip_next_untap` flag).

@@ -18903,24 +18903,22 @@ impl GameState {
 
             // CR 702.15 — Hammerheim. Enumerate the permanent's *computed*
             // landwalk keywords (printed or granted) and shed each one.
-            Effect::LoseAllLandwalk { what, duration } => {
+            Effect::LoseAllLandwalk { what, duration } | Effect::LoseProtectiveKeywords { what, duration } => {
+                use crate::card::Keyword as K;
+                let landwalk = matches!(effect, Effect::LoseAllLandwalk { .. });
+                let family = |k: &K| {
+                    if landwalk {
+                        matches!(k, K::Landwalk(_) | K::LandwalkFiltered(_) | K::DomainLandwalk)
+                    } else {
+                        matches!(k, K::Ward(_)) || k.is_protection() || k.is_hexproof()
+                    }
+                };
                 let indefinite = matches!(duration, Duration::Permanent);
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let cp = self.computed_permanent(cid);
-                    let walks: Vec<crate::card::Keyword> = cp
-                        .iter()
-                        .flat_map(|cp| cp.keywords().iter())
-                        .filter(|k| {
-                            matches!(
-                                k,
-                                crate::card::Keyword::Landwalk(_)
-                                    | crate::card::Keyword::LandwalkFiltered(_)
-                                    | crate::card::Keyword::DomainLandwalk
-                            )
-                        })
-                        .cloned()
-                        .collect();
+                    let walks: Vec<crate::card::Keyword> =
+                        cp.iter().flat_map(|cp| cp.keywords().iter()).filter(|k| family(k)).cloned().collect();
                     let Some(c) = self.battlefield_find_mut(cid) else { continue };
                     let list = if indefinite {
                         &mut c.removed_keywords
