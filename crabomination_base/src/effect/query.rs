@@ -5585,6 +5585,7 @@ impl Effect {
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }
                 | Effect::CantAttackThisTurn { what }
+                | Effect::CombatDamageToPlayersBecomesDrawsThisTurn { what }
                 | Effect::TurnFaceUpFree { what, .. }
                 | Effect::OwnerShufflesInExilesTopPlaysOrCasts { what }
                 | Effect::PutFaceDownOntoBattlefield { what }
