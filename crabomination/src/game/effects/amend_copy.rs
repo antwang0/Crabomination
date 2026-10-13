@@ -74,4 +74,26 @@ impl GameState {
         }
         Ok(())
     }
+
+    /// `Effect::SetCopyTypeLine` — each `what`'s copied type line becomes
+    /// exactly "creature — `creature_types`" (CR 707.9b, 205.1a).
+    pub(super) fn set_copy_type_line(
+        &mut self,
+        what: &Selector,
+        creature_types: &[crate::card::CreatureType],
+        ctx: &EffectContext,
+    ) {
+        let ids: Vec<CardId> =
+            self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()).collect();
+        for cid in ids {
+            let Some(c) = self.battlefield.find_by_id_mut(cid) else { continue };
+            if c.face_down {
+                continue;
+            }
+            let mut def = (*c.copiable_definition()).clone();
+            def.card_types = vec![CardType::Creature];
+            def.subtypes = crate::card::Subtypes { creature_types: creature_types.to_vec(), ..Default::default() };
+            c.set_copiable_definition(std::sync::Arc::new(def));
+        }
+    }
 }

@@ -2215,7 +2215,7 @@ impl Effect {
                 sel_has_target(what) || sel_has_target(source)
             }
             Effect::NextEntriesEnterAsCopy { of } => sel_has_target(of),
-            Effect::AmendCopy { what, .. } => sel_has_target(what),
+            Effect::AmendCopy { what, .. } | Effect::SetCopyTypeLine { what, .. } => sel_has_target(what),
             Effect::Attach { what, to }
             | Effect::AttachAnyNumberTo { what, to }
             | Effect::AttachDistinctToEach { what, to } => sel_has_target(what) || sel_has_target(to),

@@ -2925,6 +2925,11 @@ pub enum SelectionRequirement {
     /// other than this artifact's owner" is `Player.and(Not(SourceOwnerPlayer))`
     /// (Crown of Doom).
     SourceOwnerPlayer,
+    /// The player bound as the firing event's subject or actor
+    /// (`GameState.trigger_event_player_scratch`), as a player target — "target
+    /// player other than its controller" on a "whenever a token enters"
+    /// trigger is `Player.and(Not(TriggerPlayer))` (Lucy MacLean).
+    TriggerPlayer,
     /// "Target opponent who has/controls at least `by` more (or `fewer`)
     /// `what` than you do" — the EXO Keeper and Oath cycles' catch-up
     /// restriction, checked as the target is chosen.
@@ -5973,6 +5978,10 @@ pub struct EntersAsCopy {
     /// Stolen Identity).
     #[serde(default)]
     pub lock_copied: bool,
+    /// "When you do, exile that card" (Superior Spider-Man): a reflexive
+    /// trigger (CR 603.12) exiles the graveyard card the copy was taken from.
+    #[serde(default)]
+    pub exile_copied: bool,
     /// "As this enters, you may have it become a copy of … **until end of
     /// turn**" (Cursed Mirror): the copy, and every rider above, ends at the
     /// cleanup step (`BecomeCopyOfFor`) and the printed card returns.

@@ -2702,6 +2702,18 @@ impl GameState {
                 events.extend(evs);
             }
         }
+        // CR 603.12 — "When you do, exile that card" (Superior Spider-Man).
+        if spec.exile_copied
+            && let Some(crate::game::types::Target::Permanent(copied)) = ctx.targets.first().cloned()
+        {
+            let exile = Effect::Move {
+                what: crate::effect::Selector::ExactObjects(vec![copied]),
+                to: crate::effect::ZoneDest::Exile,
+            };
+            if let Ok(evs) = self.resolve_effect_driven(&Effect::ReflexiveTrigger { body: Box::new(exile) }, &ctx) {
+                events.extend(evs);
+            }
+        }
         // Layer the copy-exception abilities/keywords on top of the
         // copiable characteristics (e.g. Phantasmal Image's sacrifice rider),
         // and restore the copier's own name for the CR 707.2 name-retention
@@ -36766,6 +36778,11 @@ impl GameState {
             Effect::AmendCopy { what, keep_activated, keep_triggered, pt, keep_name, legendary, keywords, card_types } => {
                 let (pt, name, legend) = (*pt, *keep_name, *legendary);
                 self.amend_copy(what, keep_activated, keep_triggered, pt, name, legend, keywords, card_types, ctx)
+            }
+
+            Effect::SetCopyTypeLine { what, creature_types } => {
+                self.set_copy_type_line(what, creature_types, ctx);
+                Ok(())
             }
 
             Effect::BecomeCopyOfFor { what, source, duration, non_legendary } => {

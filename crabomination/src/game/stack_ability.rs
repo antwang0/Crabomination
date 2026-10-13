@@ -189,7 +189,7 @@ impl GameState {
             R::Any | R::HasAbilityOnStack => true,
             R::HasTriggeredAbilityOnStack => !*activated,
             // CR 115.5 — not a spell; never the resolving object itself.
-            R::IsSpellOnStack | R::Player | R::OpponentPlayer => false,
+            R::IsSpellOnStack | R::Player | R::OpponentPlayer | R::TriggerPlayer => false,
             R::ControlledByYou => *owner == controller,
             // Emissary of Grudges: the ability's controller is the chosen one.
             R::ControlledByChosenPlayerOfSource => source

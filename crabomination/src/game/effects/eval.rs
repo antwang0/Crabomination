@@ -5173,6 +5173,7 @@ impl GameState {
             R::OpponentPlayer
             | R::YouPlayer
             | R::SourceOwnerPlayer
+            | R::TriggerPlayer
             | R::PlayerAttackedThisTurn
             | R::PlayerAttackedYouLastTurn => Some(false),
             _ => None,
@@ -5306,6 +5307,9 @@ impl GameState {
                 matches!(target, Target::Player(p) if !self.same_team(*p, controller))
             }
             R::YouPlayer => matches!(target, Target::Player(p) if *p == controller),
+            R::TriggerPlayer => {
+                matches!(target, Target::Player(p) if self.trigger_event_player_scratch == Some(*p))
+            }
             R::SourceOwnerPlayer => matches!(target, Target::Player(p)
                 if source.and_then(|s| self.find_card_owner(s)) == Some(*p)),
             R::OpponentTallyDiffers { what, by, fewer } => {
@@ -7114,6 +7118,7 @@ impl GameState {
             | R::OpponentPlayer
             | R::YouPlayer
             | R::SourceOwnerPlayer
+            | R::TriggerPlayer
             | R::OpponentTallyDiffers { .. }
             | R::PlayerAttackedThisTurn
             | R::PlayerAttackedYouLastTurn => false,

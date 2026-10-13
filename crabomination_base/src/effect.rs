@@ -9927,6 +9927,11 @@ pub enum Effect {
         #[serde(default)]
         non_legendary: bool,
     },
+    /// CR 707.9b — "except he's a legendary Human Mercenary Villain creature"
+    /// (Taskmaster, Mercenary Mimic): after a copy effect on `what`, its
+    /// copiable type line becomes exactly creature with `creature_types` —
+    /// the copied card types and creature types are replaced, not added to.
+    SetCopyTypeLine { what: Selector, creature_types: Vec<crate::card::CreatureType> },
     /// CR 707.9a/b — the "except …" of a copy effect that just ran on `what`:
     /// rewrites the copiable values it installed, so a later copy of `what`
     /// sees them too. `keep_activated` / `keep_triggered` index the copier's
