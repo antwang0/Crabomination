@@ -54,8 +54,9 @@ pub fn jackdaw_savior() -> CardDefinition {
 
 /// Clement, the Worrywort — {1}{G}{U} 3/3 Legendary Frog Druid, Vigilance. When
 /// Clement or another creature you control enters, return up to one target
-/// creature you control with lesser mana value to its owner's hand. (The
-/// Frog-mana-granting static is omitted — no granted-mana-ability primitive.)
+/// creature you control with lesser mana value to its owner's hand. Frogs you
+/// control have "{T}: Add {G} or {U}. Spend this mana only to cast a creature
+/// spell."
 pub fn clement_the_worrywort() -> CardDefinition {
     CardDefinition {
         name: "Clement, the Worrywort",
@@ -68,6 +69,29 @@ pub fn clement_the_worrywort() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Frogs you control have \"{T}: Add {G} or {U}. Spend this mana only to cast a creature spell.\"",
+            effect: crate::effect::StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Frog).and(R::ControlledByYou),
+                ),
+                ability: crate::card::ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: crate::effect::ManaPayload::Restricted(
+                            Box::new(crate::effect::ManaPayload::OfColors(
+                                vec![crate::mana::Color::Green, crate::mana::Color::Blue],
+                                Value::ONE,
+                            )),
+                            crate::mana::SpendRestriction::CreatureOnly,
+                        ),
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)

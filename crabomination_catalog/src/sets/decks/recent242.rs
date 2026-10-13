@@ -194,7 +194,8 @@ pub fn case_of_the_filched_falcon() -> CardDefinition {
 /// Case of the Uneaten Feast — {W} Enchantment — Case. Whenever a creature you
 /// control enters, gain 1 life. Solve: you've gained 5+ life this turn. Solved:
 /// Sacrifice this Case: creature cards in your graveyard gain "you may cast this
-/// card from your graveyard" until end of turn (modeled as a flashback grant).
+/// card from your graveyard" until end of turn (granted to the cards there as
+/// it resolves; the cast pays the card's own cost and doesn't exile it).
 pub fn case_of_the_uneaten_feast() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -220,12 +221,17 @@ pub fn case_of_the_uneaten_feast() -> CardDefinition {
             },
             solved_activated: vec![ActivatedAbility {
                 sac_cost: true,
-                effect: Effect::GrantFlashbackThisTurn {
+                effect: Effect::GrantMayPlay {
                     what: Selector::CardsInZone {
                         who: PlayerRef::You,
                         zone: Zone::Graveyard,
                         filter: R::Creature,
                     },
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: false,
                 },
                 ..Default::default()
             }],

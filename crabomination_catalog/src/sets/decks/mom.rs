@@ -22,8 +22,8 @@ fn siege() -> Subtypes {
 
 /// Invasion of Zendikar // Awakened Skyclave — {3}{G} Siege, defense 3. ETB:
 /// search up to two basic lands onto the battlefield tapped. Back: a 4/4
-/// Elemental with vigilance, haste, and a {T}: any-color mana ability (the
-/// "it's also a land" rider is omitted).
+/// Elemental with vigilance, haste, and a {T}: any-color mana ability; as long
+/// as it's on the battlefield, it's a land in addition to its other types.
 pub fn invasion_of_zendikar() -> CardDefinition {
     let skyclave = CardDefinition {
         name: "Awakened Skyclave",
@@ -36,6 +36,14 @@ pub fn invasion_of_zendikar() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Haste],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "As long as this creature is on the battlefield, it's a land in addition to its other types.",
+            effect: crate::effect::StaticEffect::AddCardTypeToMatching {
+                applies_to: Selector::This,
+                card_type: CardType::Land,
+                artifact_subtype: None,
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),

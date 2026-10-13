@@ -1465,3 +1465,61 @@ fn zero_point_ballad_reanimates_at_x_six() {
     cast_full(&mut g, 0, zpb, &[], None, Some(5)).unwrap();
     assert!(g.battlefield.iter().all(|c| c.id != theirs));
 }
+
+/// Clement, the Worrywort — "Frogs you control have '{T}: Add {G} or {U}.
+/// Spend this mana only to cast a creature spell.'" (CR 106.6 mana spending
+/// restriction.) Clement is a Frog: it taps itself for creature-only mana.
+#[test]
+fn clement_frogs_tap_for_creature_mana() {
+    let mut g = pod(2);
+    let clement = ready(&mut g, 0, catalog::clement_the_worrywort());
+    assert_eq!(g.granted_abilities_for(clement).len(), 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: clement,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("granted mana ability");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "one creature-only mana");
+    let bolt = g.add_card_to_hand(0, catalog::giant_growth());
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(perm(clement)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "creature-spell-only mana"
+    );
+}
+
+/// Invasion of Zendikar // Awakened Skyclave — "As long as this creature is
+/// on the battlefield, it's a land in addition to its other types." (CR
+/// 205.1b.)
+#[test]
+fn awakened_skyclave_is_a_land_creature() {
+    let mut g = pod(2);
+    let def = catalog::invasion_of_zendikar();
+    let back = (*def.back_face.clone().unwrap()).clone();
+    let sky = g.add_card_to_battlefield(0, back);
+    let cp = g.computed_permanent(sky).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+}
+
+/// Case of the Uneaten Feast — "Solved — Sacrifice this Case: Creature cards
+/// in your graveyard gain 'You may cast this card from your graveyard' until
+/// end of turn." (CR 601.2; no exile rider, unlike flashback.)
+#[test]
+fn case_of_the_uneaten_feast_lets_graveyard_creatures_be_cast() {
+    let mut g = pod(2);
+    let case = g.add_card_to_battlefield(0, catalog::case_of_the_uneaten_feast());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let def = catalog::case_of_the_uneaten_feast();
+    let solved = &def.case.as_ref().unwrap().solved_activated[0];
+    g.resolve_effect(&solved.effect, &crabomination::game::effects::EffectContext::for_ability(case, 0, None))
+        .unwrap();
+    let perm = g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until;
+    assert!(perm.is_some_and(|p| p.player == 0), "castable from the graveyard this turn");
+}
