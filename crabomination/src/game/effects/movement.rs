@@ -800,7 +800,8 @@ impl GameState {
                     )
                 })
                 .map(|(_, n)| n)
-                .sum();
+                // A protection static shaves `u32::MAX`; two of them saturate.
+                .fold(0u32, u32::saturating_add);
             let soaked = shaved.min(amount);
             if soaked > 0 {
                 events.push(GameEvent::DamagePrevented {
