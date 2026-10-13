@@ -126,8 +126,8 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-12 (Commander run, `01NRsiVW`, cmdr_edhrec15) — 80 EDHREC seats from ranks 1001-1500's two-card gaps
 
-- **Seats 963-1002 and 1013-1052** (renumbered once on a rebase: `011PQ8Uk` landed 1003-1012
-  meanwhile — drop your own seat commits, rebase, re-run `scripts/seat_decks.py`): EDHREC decks
+- **Seats 963-1002, 1013-1046 and 1063-1068** (renumbered twice on rebases: `011PQ8Uk` landed
+  1003-1012 and `01L4tuaB` 1047-1062 meanwhile — drop your own seat commits, rebase, re-run `scripts/seat_decks.py`): EDHREC decks
   ranked 686-1475 completed by `decks::cmdr_edhrec15` (141 cards; tests
   `recent_b/cmdr_edhrec15.rs`). Release sweeps `pod_sweep.py` seeds 96-103: 922 games, two
   CR 104.4 draws, one 76-turn board cap (Krenko + Soldier tokens), one action cap (below).

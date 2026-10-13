@@ -3152,7 +3152,8 @@ bool; `activate_loyalty_ability` scans the board's statics once. Release
                  peak_rss 30.9 MiB; games_per_s 286.69 (one run, not a reading)
 pools (300/arch) cube 2,399 + 1 CR 104.4 draw / sos 1,500 / sealed 3,600 — 0 stalls
 pod sweeps       scripts/pod_sweep.py release seeds 96-103, 4/6/8 seats over the new
-                 seats: 922 games (seed 103: all of 963-1052, 200 games, bad 0) — two CR 104.4 draws, one 76-turn board cap (Krenko
+                 seats: 922 games (seed 103: all of then-963-1052, 200 games, bad 0; the
+                 last six were re-seated 1063-1068 on a rebase) — two CR 104.4 draws, one 76-turn board cap (Krenko
                  + Soldier tokens), one action cap (Godo + Helm of the Host: fixed,
                  ENGINE_BACKLOG)
 suite            25,551 tests, 25,548 green; the three red were fixed and re-run

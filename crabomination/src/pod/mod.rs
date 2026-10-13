@@ -6828,6 +6828,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OWEN_GRADY_COMMANDERS,
             main: decks::OWEN_GRADY_MAIN,
         },
+        // Seat 1063: Rydia, Summoner of Mist's EDHREC average deck. `--pod-decks 1063`.
+        PodDeck {
+            name: "Rydia, Summoner of Mist (RG)",
+            commanders: decks::RYDIA_COMMANDERS,
+            main: decks::RYDIA_MAIN,
+        },
+        // Seat 1064: Sheoldred's EDHREC average deck. `--pod-decks 1064`.
+        PodDeck {
+            name: "Sheoldred (B)",
+            commanders: decks::SHEOLDRED_COMMANDERS,
+            main: decks::SHEOLDRED_MAIN,
+        },
+        // Seat 1065: Patron of the Moon's EDHREC average deck. `--pod-decks 1065`.
+        PodDeck {
+            name: "Patron of the Moon (U)",
+            commanders: decks::PATRON_OF_THE_MOON_COMMANDERS,
+            main: decks::PATRON_OF_THE_MOON_MAIN,
+        },
+        // Seat 1066: Pia Nalaar, Chief Mechanic's EDHREC average deck. `--pod-decks 1066`.
+        PodDeck {
+            name: "Pia Nalaar, Chief Mechanic (URG)",
+            commanders: decks::PIA_NALAAR_COMMANDERS,
+            main: decks::PIA_NALAAR_MAIN,
+        },
+        // Seat 1067: Bane, Lord of Darkness's EDHREC average deck. `--pod-decks 1067`.
+        PodDeck {
+            name: "Bane, Lord of Darkness (WUB)",
+            commanders: decks::BANE_COMMANDERS,
+            main: decks::BANE_MAIN,
+        },
+        // Seat 1068: Nevinyrral, Urborg Tyrant's EDHREC average deck. `--pod-decks 1068`.
+        PodDeck {
+            name: "Nevinyrral, Urborg Tyrant (WUB)",
+            commanders: decks::NEVINYRRAL_COMMANDERS,
+            main: decks::NEVINYRRAL_MAIN,
+        },
     ]
 }
 
@@ -9680,6 +9716,12 @@ mod tests {
             ("Greasefang, Okiba Boss", &[0x0E39]),
             ("The Emperor of Palamecia", &[0x0E3A]),
             ("Owen Grady, Raptor Trainer", &[0x0E3B]),
+            ("Rydia, Summoner of Mist", &[0x0E3C]),
+            ("Sheoldred", &[0x0E3D]),
+            ("Patron of the Moon", &[0x0E3E]),
+            ("Pia Nalaar, Chief Mechanic", &[0x0E3F]),
+            ("Bane, Lord of Darkness", &[0x0E40]),
+            ("Nevinyrral, Urborg Tyrant", &[0x0E41]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
