@@ -9276,6 +9276,120 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ETRATA_2_COMMANDERS,
             main: decks::ETRATA_2_MAIN,
         },
+        // Seat 1471: Karn, Gilded Guardian's EDHREC average deck. `--pod-decks 1471`.
+        PodDeck {
+            name: "Karn, Gilded Guardian (WUBRG)",
+            commanders: decks::KARN_3_COMMANDERS,
+            main: decks::KARN_3_MAIN,
+        },
+        // Seat 1472: Astor, Bearer of Blades's EDHREC average deck. `--pod-decks 1472`.
+        PodDeck {
+            name: "Astor, Bearer of Blades (WR)",
+            commanders: decks::ASTOR_COMMANDERS,
+            main: decks::ASTOR_MAIN,
+        },
+        // Seat 1473: Witch-king of Angmar's EDHREC average deck. `--pod-decks 1473`.
+        PodDeck {
+            name: "Witch-king of Angmar (B)",
+            commanders: decks::WITCH_KING_OF_ANGMAR_COMMANDERS,
+            main: decks::WITCH_KING_OF_ANGMAR_MAIN,
+        },
+        // Seat 1474: Questing Beast's EDHREC average deck. `--pod-decks 1474`.
+        PodDeck {
+            name: "Questing Beast (G)",
+            commanders: decks::QUESTING_BEAST_COMMANDERS,
+            main: decks::QUESTING_BEAST_MAIN,
+        },
+        // Seat 1475: Hildibrand Manderville's EDHREC average deck. `--pod-decks 1475`.
+        PodDeck {
+            name: "Hildibrand Manderville (WB)",
+            commanders: decks::HILDIBRAND_MANDERVILLE_COMMANDERS,
+            main: decks::HILDIBRAND_MANDERVILLE_MAIN,
+        },
+        // Seat 1476: Casal, Lurkwood Pathfinder's EDHREC average deck. `--pod-decks 1476`.
+        PodDeck {
+            name: "Casal, Lurkwood Pathfinder (G)",
+            commanders: decks::CASAL_COMMANDERS,
+            main: decks::CASAL_MAIN,
+        },
+        // Seat 1477: Ivora, Insatiable Heir's EDHREC average deck. `--pod-decks 1477`.
+        PodDeck {
+            name: "Ivora, Insatiable Heir (R)",
+            commanders: decks::IVORA_COMMANDERS,
+            main: decks::IVORA_MAIN,
+        },
+        // Seat 1478: Green Goblin, Nemesis's EDHREC average deck. `--pod-decks 1478`.
+        PodDeck {
+            name: "Green Goblin, Nemesis (BR)",
+            commanders: decks::GREEN_GOBLIN_COMMANDERS,
+            main: decks::GREEN_GOBLIN_MAIN,
+        },
+        // Seat 1479: Jedit Ojanen, Mercenary's EDHREC average deck. `--pod-decks 1479`.
+        PodDeck {
+            name: "Jedit Ojanen, Mercenary (WUG)",
+            commanders: decks::JEDIT_OJANEN_COMMANDERS,
+            main: decks::JEDIT_OJANEN_MAIN,
+        },
+        // Seat 1480: Shaun, Father of Synths's EDHREC average deck. `--pod-decks 1480`.
+        PodDeck {
+            name: "Shaun, Father of Synths (UR)",
+            commanders: decks::SHAUN_COMMANDERS,
+            main: decks::SHAUN_MAIN,
+        },
+        // Seat 1481: Linden, the Steadfast Queen's EDHREC average deck. `--pod-decks 1481`.
+        PodDeck {
+            name: "Linden, the Steadfast Queen (W)",
+            commanders: decks::LINDEN_COMMANDERS,
+            main: decks::LINDEN_MAIN,
+        },
+        // Seat 1482: Jori En, Ruin Diver's EDHREC average deck. `--pod-decks 1482`.
+        PodDeck {
+            name: "Jori En, Ruin Diver (UR)",
+            commanders: decks::JORI_EN_COMMANDERS,
+            main: decks::JORI_EN_MAIN,
+        },
+        // Seat 1483: Faramir, Steward of Gondor's EDHREC average deck. `--pod-decks 1483`.
+        PodDeck {
+            name: "Faramir, Steward of Gondor (WU)",
+            commanders: decks::FARAMIR_COMMANDERS,
+            main: decks::FARAMIR_MAIN,
+        },
+        // Seat 1484: Seshiro the Anointed's EDHREC average deck. `--pod-decks 1484`.
+        PodDeck {
+            name: "Seshiro the Anointed (G)",
+            commanders: decks::SESHIRO_THE_ANOINTED_COMMANDERS,
+            main: decks::SESHIRO_THE_ANOINTED_MAIN,
+        },
+        // Seat 1485: Stenn, Paranoid Partisan's EDHREC average deck. `--pod-decks 1485`.
+        PodDeck {
+            name: "Stenn, Paranoid Partisan (WU)",
+            commanders: decks::STENN_COMMANDERS,
+            main: decks::STENN_MAIN,
+        },
+        // Seat 1486: Brimaz, King of Oreskos's EDHREC average deck. `--pod-decks 1486`.
+        PodDeck {
+            name: "Brimaz, King of Oreskos (W)",
+            commanders: decks::BRIMAZ_2_COMMANDERS,
+            main: decks::BRIMAZ_2_MAIN,
+        },
+        // Seat 1487: Sidisi, Undead Vizier's EDHREC average deck. `--pod-decks 1487`.
+        PodDeck {
+            name: "Sidisi, Undead Vizier (B)",
+            commanders: decks::SIDISI_3_COMMANDERS,
+            main: decks::SIDISI_3_MAIN,
+        },
+        // Seat 1488: Syr Elenora, the Discerning's EDHREC average deck. `--pod-decks 1488`.
+        PodDeck {
+            name: "Syr Elenora, the Discerning (U)",
+            commanders: decks::SYR_ELENORA_COMMANDERS,
+            main: decks::SYR_ELENORA_MAIN,
+        },
+        // Seat 1489: Neyam Shai Murad's EDHREC average deck. `--pod-decks 1489`.
+        PodDeck {
+            name: "Neyam Shai Murad (WB)",
+            commanders: decks::NEYAM_SHAI_MURAD_COMMANDERS,
+            main: decks::NEYAM_SHAI_MURAD_MAIN,
+        },
     ]
 }
 
@@ -12577,6 +12691,25 @@ mod tests {
             ("Valentin, Dean of the Vein", &[0x0FD1]),
             ("Princess Yue", &[0x0FD2]),
             ("Etrata, Deadly Fugitive", &[0x0FD3]),
+            ("Karn, Gilded Guardian", &[0x0FD4]),
+            ("Astor, Bearer of Blades", &[0x0FD5]),
+            ("Witch-king of Angmar", &[0x0FD6]),
+            ("Questing Beast", &[0x0FD7]),
+            ("Hildibrand Manderville", &[0x0FD8]),
+            ("Casal, Lurkwood Pathfinder", &[0x0FD9]),
+            ("Ivora, Insatiable Heir", &[0x0FDA]),
+            ("Green Goblin, Nemesis", &[0x0FDB]),
+            ("Jedit Ojanen, Mercenary", &[0x0FDC]),
+            ("Shaun, Father of Synths", &[0x0FDD]),
+            ("Linden, the Steadfast Queen", &[0x0FDE]),
+            ("Jori En, Ruin Diver", &[0x0FDF]),
+            ("Faramir, Steward of Gondor", &[0x0FE0]),
+            ("Seshiro the Anointed", &[0x0FE1]),
+            ("Stenn, Paranoid Partisan", &[0x0FE2]),
+            ("Brimaz, King of Oreskos", &[0x0FE3]),
+            ("Sidisi, Undead Vizier", &[0x0FE4]),
+            ("Syr Elenora, the Discerning", &[0x0FE5]),
+            ("Neyam Shai Murad", &[0x0FE6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
