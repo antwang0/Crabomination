@@ -33934,3 +33934,31 @@ pub const THE_CAPITOLINE_TRIAD_MAIN: &[CardFactory] = &[
     // Basics
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
 ];
+
+pub const ALISAIE_LEVEILLEUR_2_COMMANDERS: &[CardFactory] = &[alisaie_leveilleur, alphinaud_leveilleur];
+
+/// **Alisaie Leveilleur and Alphinaud Leveilleur**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 8 Plains = 98.
+/// Alisaie Leveilleur and Alphinaud Leveilleur (EDHREC, fetched 2026-10-13).
+pub const ALISAIE_LEVEILLEUR_2_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, benders_waterskin, dancers_chakrams, fellwar_stone,
+    mind_stone, rammas_echor_ancient_shield, sol_ring, talisman_of_progress, thought_vessel,
+    adarkar_wastes, azorius_chancery, command_tower, deserted_beach, exotic_orchard,
+    flooded_strand, floodfarm_verge, glacial_fortress, hallowed_fountain, port_town,
+    prairie_stream, reliquary_tower, sea_of_clouds, skycloud_expanse, temple_of_enlightenment,
+    archmage_emeritus, archmage_of_runes, bastion_protector, clarion_spirit, cosmogrand_zenith,
+    hermes_overseer_of_elpis, high_fae_trickster, highspire_bell_ringer, homunculus_horde,
+    hullbreaker_horror, krile_baldesion, lavinia_foil_to_conspiracy, ledger_shredder, lyse_hext,
+    monastery_mentor, station_monitor, sunstar_lightsmith, taigam_master_opportunist,
+    the_council_of_four, uthros_psionicist, wingblade_disciple, aligned_heart,
+    champions_from_beyond, ghostly_prison, leyline_of_anticipation, monk_class, propaganda,
+    storm_of_saruman, teferis_ageless_insight, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, brainstorm, consider, counterspell, dovins_veto, focus_the_mind,
+    frantic_search, generous_gift, opt, path_to_exile, restoration_magic, rewind, snap,
+    stroke_of_midnight, swords_to_plowshares, unwind, teferi_time_raveler,
+    approach_of_the_second_sun, austere_command, gitaxian_probe, ponder, preordain,
+    supreme_verdict,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
