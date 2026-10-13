@@ -3150,6 +3150,24 @@ exile pays with its spell kind. Release `bot_ladder` at `86a7e43cd`, Xeon @ 2.10
                  peak_rss 31.7 MiB; games_per_s 344.34 (one run, not a reading)
 pools (1200/arch) seed 9301: cube 9,590 + 10 CR 104.4 draws / sos 6,000 / sealed 14,400 — 0 stalls
 pods (debug)     22 blocks, 4/6 seats, ~550 games: one panic (fixed, 3ce9a8490), one CR 104.4a draw
+### 2026-10-13 (Commander run, `01NRsiVW`, third firing) — guardrail; 16 EDHREC seats, eight primitives, one bot fix
+
+Hot-path touch: `event_actor` checks one more `DamageDealt` shape before its
+card walk, and `actor_for_scope` one more; a bot target ask on a pending
+damage trigger filters its legal list once (`server/damage_pick.rs`).
+Release `bot_ladder` at `a3773019b`, Xeon @ 2.10 GHz (4 cores), toolchain 1.99.0.
+
+```text
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs 1);
+                 peak_rss 33.8 MiB
+pools (300/arch) cube 2,399 + 1 CR 104.4 draw / sos 1,500 / sealed 3,600 — unchanged
+pod sweeps       release seeds 104-110 over seats 1094-1101, 1109-1114, 1149-1156:
+                 1,180 games; two undecided before the bot fix (Vindicator/Raptors
+                 draw — fixed, game re-run decided; Impostor Syndrome 56-turn board
+                 cap — open); 400 games after it, bad 0
+suite            25,684 / 0 / 6 (all but the long pole); workspace clippy 0 after
+                 one collapsible_if; release-fast check clean
 ```
 
 ### 2026-10-12 (Commander run, `01NRsiVW`, second firing) — guardrail; 80 EDHREC seats, twenty card primitives
