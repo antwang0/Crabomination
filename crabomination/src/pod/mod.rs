@@ -9462,6 +9462,90 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_BEAST_COMMANDERS,
             main: decks::THE_BEAST_MAIN,
         },
+        // Seat 1502: Aragorn and Arwen, Wed's EDHREC average deck. `--pod-decks 1502`.
+        PodDeck {
+            name: "Aragorn and Arwen, Wed (WG)",
+            commanders: decks::ARAGORN_AND_ARWEN_COMMANDERS,
+            main: decks::ARAGORN_AND_ARWEN_MAIN,
+        },
+        // Seat 1503: Immard, the Stormcleaver's EDHREC average deck. `--pod-decks 1503`.
+        PodDeck {
+            name: "Immard, the Stormcleaver (WUR)",
+            commanders: decks::IMMARD_COMMANDERS,
+            main: decks::IMMARD_MAIN,
+        },
+        // Seat 1504: Dalakos, Crafter of Wonders's EDHREC average deck. `--pod-decks 1504`.
+        PodDeck {
+            name: "Dalakos, Crafter of Wonders (UR)",
+            commanders: decks::DALAKOS_COMMANDERS,
+            main: decks::DALAKOS_MAIN,
+        },
+        // Seat 1505: Agrus Kos, Eternal Soldier's EDHREC average deck. `--pod-decks 1505`.
+        PodDeck {
+            name: "Agrus Kos, Eternal Soldier (WR)",
+            commanders: decks::AGRUS_KOS_COMMANDERS,
+            main: decks::AGRUS_KOS_MAIN,
+        },
+        // Seat 1506: General Kudro of Drannith's EDHREC average deck. `--pod-decks 1506`.
+        PodDeck {
+            name: "General Kudro of Drannith (WB)",
+            commanders: decks::GENERAL_KUDRO_OF_DRANNITH_COMMANDERS,
+            main: decks::GENERAL_KUDRO_OF_DRANNITH_MAIN,
+        },
+        // Seat 1507: Deathleaper, Terror Weapon's EDHREC average deck. `--pod-decks 1507`.
+        PodDeck {
+            name: "Deathleaper, Terror Weapon (RG)",
+            commanders: decks::DEATHLEAPER_COMMANDERS,
+            main: decks::DEATHLEAPER_MAIN,
+        },
+        // Seat 1508: Atris, Oracle of Half-Truths's EDHREC average deck. `--pod-decks 1508`.
+        PodDeck {
+            name: "Atris, Oracle of Half-Truths (UB)",
+            commanders: decks::ATRIS_COMMANDERS,
+            main: decks::ATRIS_MAIN,
+        },
+        // Seat 1509: Grunn, the Lonely King's EDHREC average deck. `--pod-decks 1509`.
+        PodDeck {
+            name: "Grunn, the Lonely King (G)",
+            commanders: decks::GRUNN_COMMANDERS,
+            main: decks::GRUNN_MAIN,
+        },
+        // Seat 1510: Moira Brown, Guide Author's EDHREC average deck. `--pod-decks 1510`.
+        PodDeck {
+            name: "Moira Brown, Guide Author (WR)",
+            commanders: decks::MOIRA_BROWN_COMMANDERS,
+            main: decks::MOIRA_BROWN_MAIN,
+        },
+        // Seat 1511: Mole Man, Moloid Master's EDHREC average deck. `--pod-decks 1511`.
+        PodDeck {
+            name: "Mole Man, Moloid Master (G)",
+            commanders: decks::MOLE_MAN_COMMANDERS,
+            main: decks::MOLE_MAN_MAIN,
+        },
+        // Seat 1512: Haytham Kenway's EDHREC average deck. `--pod-decks 1512`.
+        PodDeck {
+            name: "Haytham Kenway (WU)",
+            commanders: decks::HAYTHAM_KENWAY_COMMANDERS,
+            main: decks::HAYTHAM_KENWAY_MAIN,
+        },
+        // Seat 1513: Tishana, Voice of Thunder's EDHREC average deck. `--pod-decks 1513`.
+        PodDeck {
+            name: "Tishana, Voice of Thunder (UG)",
+            commanders: decks::TISHANA_COMMANDERS,
+            main: decks::TISHANA_MAIN,
+        },
+        // Seat 1514: Gandalf, Friend of the Shire's EDHREC average deck. `--pod-decks 1514`.
+        PodDeck {
+            name: "Gandalf, Friend of the Shire (U)",
+            commanders: decks::GANDALF_3_COMMANDERS,
+            main: decks::GANDALF_3_MAIN,
+        },
+        // Seat 1515: Kagha, Shadow Archdruid's EDHREC average deck. `--pod-decks 1515`.
+        PodDeck {
+            name: "Kagha, Shadow Archdruid (BG)",
+            commanders: decks::KAGHA_COMMANDERS,
+            main: decks::KAGHA_MAIN,
+        },
     ]
 }
 
@@ -12794,6 +12878,20 @@ mod tests {
             ("Radagast, Wizard of Wilds", &[0x0FF0]),
             ("Liliana the Faultless", &[0x0FF1]),
             ("The Beast, Deathless Prince", &[0x0FF2]),
+            ("Aragorn and Arwen, Wed", &[0x0FF3]),
+            ("Immard, the Stormcleaver", &[0x0FF4]),
+            ("Dalakos, Crafter of Wonders", &[0x0FF5]),
+            ("Agrus Kos, Eternal Soldier", &[0x0FF6]),
+            ("General Kudro of Drannith", &[0x0FF7]),
+            ("Deathleaper, Terror Weapon", &[0x0FF8]),
+            ("Atris, Oracle of Half-Truths", &[0x0FF9]),
+            ("Grunn, the Lonely King", &[0x0FFA]),
+            ("Moira Brown, Guide Author", &[0x0FFB]),
+            ("Mole Man, Moloid Master", &[0x0FFC]),
+            ("Haytham Kenway", &[0x0FFD]),
+            ("Tishana, Voice of Thunder", &[0x0FFE]),
+            ("Gandalf, Friend of the Shire", &[0x0FFF]),
+            ("Kagha, Shadow Archdruid", &[0x1000]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
