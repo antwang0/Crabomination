@@ -7332,6 +7332,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MINSC_COMMANDERS,
             main: decks::MINSC_MAIN,
         },
+        // Seat 1147: Sarulf, Realm Eater's EDHREC average deck. `--pod-decks 1147`.
+        PodDeck {
+            name: "Sarulf, Realm Eater (BG)",
+            commanders: decks::SARULF_COMMANDERS,
+            main: decks::SARULF_MAIN,
+        },
+        // Seat 1148: Svella, Ice Shaper's EDHREC average deck. `--pod-decks 1148`.
+        PodDeck {
+            name: "Svella, Ice Shaper (RG)",
+            commanders: decks::SVELLA_COMMANDERS,
+            main: decks::SVELLA_MAIN,
+        },
+        // Seat 1149: Shanid, Sleepers' Scourge's EDHREC average deck. `--pod-decks 1149`.
+        PodDeck {
+            name: "Shanid, Sleepers' Scourge (WBR)",
+            commanders: decks::SHANID_COMMANDERS,
+            main: decks::SHANID_MAIN,
+        },
+        // Seat 1150: Mr. Orfeo, the Boulder's EDHREC average deck. `--pod-decks 1150`.
+        PodDeck {
+            name: "Mr. Orfeo, the Boulder (BRG)",
+            commanders: decks::MR_ORFEO_COMMANDERS,
+            main: decks::MR_ORFEO_MAIN,
+        },
+        // Seat 1151: Acererak the Archlich's EDHREC average deck. `--pod-decks 1151`.
+        PodDeck {
+            name: "Acererak the Archlich (B)",
+            commanders: decks::ACERERAK_THE_ARCHLICH_COMMANDERS,
+            main: decks::ACERERAK_THE_ARCHLICH_MAIN,
+        },
+        // Seat 1152: Neyith of the Dire Hunt's EDHREC average deck. `--pod-decks 1152`.
+        PodDeck {
+            name: "Neyith of the Dire Hunt (RG)",
+            commanders: decks::NEYITH_OF_THE_DIRE_HUNT_COMMANDERS,
+            main: decks::NEYITH_OF_THE_DIRE_HUNT_MAIN,
+        },
+        // Seat 1153: Etrata, the Silencer's EDHREC average deck. `--pod-decks 1153`.
+        PodDeck {
+            name: "Etrata, the Silencer (UB)",
+            commanders: decks::ETRATA_COMMANDERS,
+            main: decks::ETRATA_MAIN,
+        },
+        // Seat 1154: Hidetsugu, Devouring Chaos's EDHREC average deck. `--pod-decks 1154`.
+        PodDeck {
+            name: "Hidetsugu, Devouring Chaos (BR)",
+            commanders: decks::HIDETSUGU_COMMANDERS,
+            main: decks::HIDETSUGU_MAIN,
+        },
     ]
 }
 
@@ -10268,6 +10316,14 @@ mod tests {
             ("Parnesse, the Subtle Brush", &[0x0E8D]),
             ("Kassandra, Eagle Bearer", &[0x0E8E]),
             ("Minsc, Beloved Ranger", &[0x0E8F]),
+            ("Sarulf, Realm Eater", &[0x0E90]),
+            ("Svella, Ice Shaper", &[0x0E91]),
+            ("Shanid, Sleepers' Scourge", &[0x0E92]),
+            ("Mr. Orfeo, the Boulder", &[0x0E93]),
+            ("Acererak the Archlich", &[0x0E94]),
+            ("Neyith of the Dire Hunt", &[0x0E95]),
+            ("Etrata, the Silencer", &[0x0E96]),
+            ("Hidetsugu, Devouring Chaos", &[0x0E97]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
