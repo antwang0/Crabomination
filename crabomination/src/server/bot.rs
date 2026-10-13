@@ -7446,6 +7446,9 @@ struct BoardFacts {
     /// A retrace grant is on the board or an emblem (Deeproot Historian,
     /// Six, Wrenn and Six's emblem).
     grants_retrace: bool,
+    /// A `GraveyardCardsHaveJumpStart` static is on the board (Niv-Mizzet,
+    /// Supreme).
+    grants_jump_start: bool,
     /// A replicate-granting static is on the board (Hatchery Sliver).
     grants_replicate: bool,
     /// A graveyard-cast permission is on the board (Muldrotha, Gisa).
@@ -7478,6 +7481,7 @@ impl BoardFacts {
                     matches!(sa.effect, crate::effect::StaticEffect::GraveyardCardsHaveRetrace { .. })
                 })
             }),
+            grants_jump_start: false,
             grants_replicate: false,
             grants_gy_cast: false,
             grants_gy_cast_any_turn: false,
@@ -7515,6 +7519,7 @@ impl BoardFacts {
                     | SE::GraveyardCardsHaveEscapeMatching { .. } => f.grants_escape = true,
                     SE::GraveyardCardsHaveRetrace { .. }
                     | SE::GraveyardPermanentsHaveRetraceDuringYourTurn => f.grants_retrace = true,
+                    SE::GraveyardCardsHaveJumpStart { .. } => f.grants_jump_start = true,
                     SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
                         f.grants_replicate = true
                     }
@@ -7778,6 +7783,11 @@ pub(super) fn cast_candidates<'a>(
         }
         | if facts.grants_retrace && !state.players[seat].graveyard.is_empty() {
             spec::GY_RETRACE
+        } else {
+            0
+        }
+        | if facts.grants_jump_start && !state.players[seat].graveyard.is_empty() {
+            spec::GY_RECAST
         } else {
             0
         }
@@ -9218,6 +9228,7 @@ pub(super) fn cast_candidates<'a>(
         use crate::card::Keyword;
         let recastable = c.effective_flashback().is_some()
             || c.has_jump_start()
+            || (facts.grants_jump_start && state.effective_jump_start(c, seat))
             || c.definition.keywords.has_kw(&Keyword::GraveyardCast);
         if recastable {
             let (target, additional_targets) = if c.definition.effect.requires_target() {

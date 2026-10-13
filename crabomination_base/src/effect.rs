@@ -5024,6 +5024,9 @@ pub enum Effect {
     /// so `Value::XFromCost` reads the chosen amount. Tester of the
     /// Tangential's "pay {X}: move X +1/+1 counters".
     MayPayX { description: String, body: Box<Effect> },
+    /// [`Effect::MayPayX`] with X at most `cap` ("X can't be greater than the
+    /// amount of life you gained this turn" — Shanna, Purifying Blade).
+    MayPayXUpTo { description: String, cap: Value, body: Box<Effect> },
     /// "You may pay {X}{X}" — [`Effect::MayPayX`] with the payment `times` ×
     /// X (Numa, Joraga Chieftain). Opaque to the target walkers: a targeted
     /// body goes inside an [`Effect::Reflexive`].

@@ -8420,6 +8420,7 @@ impl GameState {
             }
 
             Effect::MayPayX { description, body }
+            | Effect::MayPayXUpTo { description, body, .. }
             | Effect::MayPayXTimes { description, body, .. }
             | Effect::MayPayXPlus { description, body, .. }
             | Effect::MayPayXOfColor { description, body, .. } => {
@@ -8447,6 +8448,10 @@ impl GameState {
                     + self.mana_source_candidates(ctx.controller).len() as u32)
                     .saturating_sub(reserved)
                     / times;
+                let pool_max = match effect {
+                    Effect::MayPayXUpTo { cap, .. } => pool_max.min(self.evaluate_value(cap, ctx).max(0) as u32),
+                    _ => pool_max,
+                };
                 if pool_max == 0 {
                     return Ok(());
                 }

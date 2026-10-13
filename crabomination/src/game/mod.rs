@@ -10906,6 +10906,21 @@ impl GameState {
         })
     }
 
+    /// CR 702.133 — `card` in `p`'s graveyard has jump-start: printed, granted
+    /// until end of turn, or by a `GraveyardCardsHaveJumpStart` static `p`
+    /// controls (Niv-Mizzet, Supreme).
+    pub fn effective_jump_start(&self, card: &crate::card::CardInstance, p: usize) -> bool {
+        use crate::effect::StaticEffect;
+        card.has_jump_start()
+            || self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect, StaticEffect::GraveyardCardsHaveJumpStart { filter }
+                            if self.evaluate_requirement_on_card(filter, card, p))
+                    })
+            })
+    }
+
     /// True when `card` can be retraced from `p`'s graveyard: printed
     /// Retrace, else Six's "during your turn, nonland permanent cards in
     /// your graveyard have retrace" grant.
@@ -34672,6 +34687,7 @@ fn static_effect_to_effects(
             | StaticEffect::OwnedCardsOffBattlefieldHaveCardType { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::GraveyardCardsHaveRetrace { .. }
+            | StaticEffect::GraveyardCardsHaveJumpStart { .. }
             | StaticEffect::YourGraveyardLandsHaveDredge(_)
             | StaticEffect::CollectsLeaverCounters
             | StaticEffect::OpponentsCantActivateArtifactAbilities

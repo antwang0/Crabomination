@@ -1421,7 +1421,7 @@ fn graveyard_entry(
             .has_flashback()
             .cloned()
             .or_else(|| {
-                (card.has_jump_start()
+                (state.effective_jump_start(card, seat)
                     || card.definition.keywords.contains(&crate::card::Keyword::GraveyardCast))
                 .then(|| card.definition.cost.clone())
             })
@@ -2823,7 +2823,7 @@ fn structural_children(effect: &Effect) -> Vec<&Effect> {
         Effect::MayDo { body, .. }
         | Effect::MayDoBy { body, .. }
         | Effect::MayPay { body, .. }
-        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
+        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. } | Effect::MayPayXUpTo { body, .. }
         | Effect::CapTargetsAt { body, .. }
         | Effect::CapTargetsAtX { body }
         | Effect::TargetsExactlyX { body }
@@ -2925,7 +2925,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         // just runs `body`), so it must be transparent here too or a card
         // whose whole effect sits under one reads "Activate".
         Effect::Reflexive { body }
-        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. }
+        | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. } | Effect::MayPayXUpTo { body, .. }
         | Effect::OptionalTargets { body, .. }
         | Effect::WithX { body, .. } => ability_effect_label(body),
         Effect::MayDiscard { then, .. }

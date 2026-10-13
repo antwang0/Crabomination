@@ -2286,6 +2286,9 @@ pub enum StaticEffect {
     /// "[filter] cards in your graveyard have retrace" (Deeproot Historian),
     /// read by `GameState::effective_retrace`.
     GraveyardCardsHaveRetrace { filter: SelectionRequirement },
+    /// CR 702.133 — "each [filter] card in your graveyard has jump-start"
+    /// (Niv-Mizzet, Supreme), read by `GameState::effective_jump_start`.
+    GraveyardCardsHaveJumpStart { filter: SelectionRequirement },
     /// "Land cards in your graveyard have dredge N" (The Necrobloom, CR
     /// 702.52) — read by `GameState::try_dredge_instead_of_draw`.
     YourGraveyardLandsHaveDredge(u32),
