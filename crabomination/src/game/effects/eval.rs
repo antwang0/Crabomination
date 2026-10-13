@@ -6013,6 +6013,7 @@ impl GameState {
                     R::HasFreerunning => card.definition.alternative_cost.as_ref().is_some_and(|a| a.freerunning),
                     R::HasNoAbilities => card.definition.has_no_abilities(),
                     R::HasCyclingAbility => card.definition.has_cycling_ability(),
+                    R::HasActivatedAbility => card.definition.has_activated_ability(),
                     R::HasDisturb => card.definition.has_disturb(),
                     R::HasFlashback => card.definition.has_flashback_ability(),
                     R::HasMadness => {
@@ -7243,6 +7244,7 @@ impl GameState {
             R::HasFreerunning => card.definition.alternative_cost.as_ref().is_some_and(|a| a.freerunning),
             R::HasNoAbilities => card.definition.has_no_abilities(),
             R::HasCyclingAbility => card.definition.has_cycling_ability(),
+            R::HasActivatedAbility => card.definition.has_activated_ability(),
             R::HasDisturb => card.definition.has_disturb(),
             R::HasFlashback => card.definition.has_flashback_ability(),
             R::HasMadness => {

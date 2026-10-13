@@ -34614,6 +34614,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
             | StaticEffect::HasActivatedAbilitiesOfBattlefieldLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
+            | StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn
             | StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | StaticEffect::HasActivatedAbilitiesOfExiledWithCounter { .. }
             | StaticEffect::CostReductionPerCounterOnSource { .. }

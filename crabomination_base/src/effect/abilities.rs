@@ -3128,6 +3128,10 @@ pub enum StaticEffect {
     /// it" (Myr Welder). A self-static: `granted_abilities_for` folds in every
     /// activated ability printed on a card stamped `exiled_with = this`.
     HasActivatedAbilitiesOfExiledWithSelf,
+    /// `HasActivatedAbilitiesOfExiledWithSelf`, each borrowed ability only
+    /// once each turn (CR 602.5b — Locus of Enlightenment, the cards used to
+    /// craft it).
+    HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn,
     /// "This permanent has all activated abilities of all cards you own in
     /// exile with [counter] counters on them" (Mairsil, the Pretender's cage
     /// counters). A self-static like `HasActivatedAbilitiesOfExiledWithSelf`,

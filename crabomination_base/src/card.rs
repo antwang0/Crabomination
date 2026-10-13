@@ -3003,6 +3003,10 @@ pub enum SelectionRequirement {
     /// The card has any cycling ability (Cycling / CyclingLife /
     /// Landcycling — CR 702.29). Zenith Flare's graveyard count.
     HasCyclingAbility,
+    /// Has an activated ability — printed, a loyalty ability, or a keyword
+    /// that is one (equip, crew, reconfigure, cycling): The Enigma Jewel's
+    /// "four or more nonlands with activated abilities".
+    HasActivatedAbility,
     /// Has a Morph / Megamorph / Disguise ability (Backslide).
     HasMorphAbility,
     /// CR 702.173 — has freerunning, printed ("a card with freerunning" —
@@ -8245,6 +8249,18 @@ impl CardDefinition {
 
     /// CR 702.29 — does this card print a cycling ability of any kind
     /// (plain, life-paying, landcycling or typecycling)?
+    /// CR 602.1 — any activated ability: printed, loyalty (CR 606.1), or a
+    /// keyword that is one. See `SelectionRequirement::HasActivatedAbility`.
+    pub fn has_activated_ability(&self) -> bool {
+        !self.activated_abilities.is_empty()
+            || !self.loyalty_abilities.is_empty()
+            || self.has_cycling_ability()
+            || self
+                .keywords
+                .iter()
+                .any(|k| matches!(k, Keyword::Equip(_) | Keyword::Crew(_) | Keyword::Reconfigure(_)))
+    }
+
     pub fn has_cycling_ability(&self) -> bool {
         self.keywords.iter().any(|k| {
             matches!(

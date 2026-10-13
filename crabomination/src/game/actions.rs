@@ -1274,6 +1274,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     for sa in &def.static_abilities {
         match sa.effect {
             SE::HasActivatedAbilitiesOfExiledWithSelf
+            | SE::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn
             | SE::HasActivatedAbilitiesOfOwnedExiledWithCounter { .. }
             | SE::HasActivatedAbilitiesOfExiledWithCounter { .. }
             | SE::HasActivatedAbilitiesOfGraveyardCreatures
@@ -20402,7 +20403,8 @@ impl GameState {
         let mut brained: Option<crate::card::CounterType> = None;
         for sa in &me.definition.static_abilities {
             match sa.effect {
-                StaticEffect::HasActivatedAbilitiesOfExiledWithSelf => welder = true,
+                StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
+                | StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn => welder = true,
                 StaticEffect::HasActivatedAbilitiesOfOwnedExiledWithCounter { counter } => {
                     caged = Some(counter)
                 }
@@ -21466,6 +21468,19 @@ impl GameState {
                         e.owner == src.controller
                             && e.counter_count(kind) > 0
                             && e.definition.activated_abilities.contains(&g)
+                    })
+                {
+                    g.once_per_turn = true;
+                }
+                // Locus of Enlightenment — the same cap on the abilities of
+                // the cards used to craft it.
+                if !g.once_per_turn
+                    && g.max_activations_per_turn.is_none()
+                    && src.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn)
+                    })
+                    && self.exile.iter().any(|e| {
+                        e.exiled_with == Some(src.id) && e.definition.activated_abilities.contains(&g)
                     })
                 {
                     g.once_per_turn = true;
