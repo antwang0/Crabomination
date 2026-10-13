@@ -160,6 +160,11 @@ enum Probe {
 /// asked seat's policy.
 fn resolve_probe(g: &mut GameState, w: &super::bot::EvalWeights) -> Probe {
     let board0 = g.battlefield.len();
+    // Tokens minted, not board size: Eloise under March of the Machines
+    // investigates into a 0/0 Clue that dies and investigates again, so the
+    // board never grows while the loop runs (sweep seed 11232, game 28).
+    let minted = |g: &GameState| g.players.iter().map(|p| p.tokens_created_this_turn as usize).sum::<usize>();
+    let minted0 = minted(g);
     for _ in 0..PROBE_PASSES_PER_SEAT * g.players.len() {
         if g.is_game_over() {
             return if matches!(g.game_over, Some(None)) { Probe::Loop } else { Probe::Drained };
@@ -180,7 +185,8 @@ fn resolve_probe(g: &mut GameState, w: &super::bot::EvalWeights) -> Probe {
     }
     // Not "no shallower than it began": a loop under a Room spell and two
     // cast triggers settles at depth 2 below their 3 (seed 4600500 game 4).
-    if !g.stack.is_empty() && g.battlefield.len() >= board0 + PROBE_GROWTH { Probe::Loop } else { Probe::Unknown }
+    let grew = g.battlefield.len() >= board0 + PROBE_GROWTH || minted(g) >= minted0 + PROBE_GROWTH;
+    if !g.stack.is_empty() && grew { Probe::Loop } else { Probe::Unknown }
 }
 
 /// Resolve `post` (an action's settled state): a loop already running — Polyraptor cast beside Marauding Raptor, a Room door
@@ -499,5 +505,25 @@ mod tests {
         assert_eq!(attacks(&g), 1, "an open board is attacked");
         g.combat_phases_this_turn = 13;
         assert_eq!(attacks(&g), 0, "the thirteenth combat is skipped");
+    }
+
+    /// CR 104.4b — March of the Machines beside Eloise, Nephalia Sleuth: every
+    /// Clue is a 0/0 that dies and investigates again. The board never grows,
+    /// so the probe counts minted tokens (sweep seed 11232, game 28).
+    #[test]
+    fn casting_march_of_the_machines_beside_eloise_primes_a_loop() {
+        let mut g = crate::game::multi_player_game(3);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(0, crate::catalog::eloise_nephalia_sleuth());
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let march = g.add_card_to_hand(0, crate::catalog::march_of_the_machines());
+        g.players[0].mana_pool.add(Color::Blue, 4);
+        let w = crate::server::bot::EvalWeights::default();
+        let cast = GameAction::CastSpell { card_id: march, target: None, additional_targets: Vec::new(), mode: None, x_value: None };
+        let post = GameState::accept_on(&g, cast).expect("castable");
+        assert!(sets_up_loop(&g, &post, 0, &w));
     }
 }
