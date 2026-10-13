@@ -36026,3 +36026,31 @@ pub const KELETH_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const BORBORYGMOS_AND_FBLTHP_COMMANDERS: &[CardFactory] = &[borborygmos_and_fblthp];
+
+/// **Borborygmos and Fblthp**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 8 Forests + 5 Islands + 5 Mountains = 99.
+/// Borborygmos and Fblthp (EDHREC, fetched 2026-10-13).
+pub const BORBORYGMOS_AND_FBLTHP_MAIN: &[CardFactory] = &[
+    arcane_signet, conduit_of_worlds, crucible_of_worlds, monument_to_endurance, sol_ring,
+    zuran_orb, boseiju_who_endures, bountiful_landscape, breeding_pool, cinder_glade,
+    command_tower, evolving_wilds, exotic_orchard, frontier_bivouac, gruul_turf,
+    hinterland_harbor, izzet_boilerworks, ketria_triome, misty_rainforest, reliquary_tower,
+    rootbound_crag, scalding_tarn, simic_growth_chamber, steam_vents, stomping_ground,
+    sulfur_falls, wooded_foothills, aesi_tyrant_of_gyre_strait, aftermath_analyst,
+    azusa_lost_but_seeking, body_of_knowledge, bonny_pall_clearcutter, borborygmos_enraged,
+    brash_taunter, dryad_of_the_ilysian_grove, eternal_witness, fblthp_impossibly_lost,
+    fblthp_knows_the_way, glint_horn_buccaneer, icetill_explorer, lotus_cobra,
+    mina_and_denn_wildborn, oracle_of_mul_daya, ramunap_excavator, rielle_the_everwise, six,
+    slogurk_the_overslime, surly_badgersaur, tannuk_memorial_ensign, tatyova_benthic_druid,
+    tireless_provisioner, world_shaper, abundance, exploration, repercussion, seismic_assault,
+    spelunking, trade_routes, valakut_exploration, an_offer_you_cant_refuse, beast_within,
+    chaos_warp, counterspell, crop_rotation, entish_restoration, growth_spiral, harrow, negate,
+    pair_o_dice_lost, wrenn_and_seven, blasphemous_act, creeping_renaissance, cultivate,
+    farseek, kodamas_reach, life_from_the_loam, natures_lore, nyleas_intervention,
+    rampant_growth, splendid_reclamation, worldsouls_rage,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, mountain, mountain, mountain, mountain, mountain,
+];

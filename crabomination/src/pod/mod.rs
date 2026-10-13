@@ -8052,6 +8052,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KELETH_COMMANDERS,
             main: decks::KELETH_MAIN,
         },
+        // Seat 1267: Borborygmos and Fblthp's EDHREC average deck. `--pod-decks 1267`.
+        PodDeck {
+            name: "Borborygmos and Fblthp (URG)",
+            commanders: decks::BORBORYGMOS_AND_FBLTHP_COMMANDERS,
+            main: decks::BORBORYGMOS_AND_FBLTHP_MAIN,
+        },
     ]
 }
 
@@ -11149,6 +11155,7 @@ mod tests {
             ("Verrak, Warped Sengir", &[0x0F05]),
             ("Zuko, Firebending Master", &[0x0F06]),
             ("Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful", &[0x0F07]),
+            ("Borborygmos and Fblthp", &[0x0F08]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
