@@ -3136,6 +3136,32 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-12 (Commander run, `01NRsiVW`, second firing) — guardrail; 80 EDHREC seats, twenty card primitives
+
+Hot-path touch: `damage_scaling_in_scope` reads one more per-player flag
+(Isengard's triple) and `scale_damage_to` one more arm; the noncombat bonus,
+cost-reduction and extra-mana walks carry one more arm each;
+`extra_land_plays_per_turn` walks every permanent behind its land lane
+instead of the controller's (Storm Cauldron); a bounce to hand stores one
+bool; `activate_loyalty_ability` scans the board's statics once. Release
+`bot_ladder` at `77ee6de93`, Xeon @ 2.10 GHz (4 cores), toolchain 1.99.0.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs 1);
+                 peak_rss 30.9 MiB; games_per_s 286.69 (one run, not a reading)
+pools (300/arch) cube 2,399 + 1 CR 104.4 draw / sos 1,500 / sealed 3,600 — 0 stalls
+pod sweeps       scripts/pod_sweep.py release seeds 96-103, 4/6/8 seats over the new
+                 seats: 922 games (seed 103: all of 963-1052, 200 games, bad 0) — two CR 104.4 draws, one 76-turn board cap (Krenko
+                 + Soldier tokens), one action cap (Godo + Helm of the Host: fixed,
+                 ENGINE_BACKLOG)
+suite            25,551 tests, 25,548 green; the three red were fixed and re-run
+                 (Runadi's dropped grant, two registration audits that read a file
+                 edited mid-run)
+long pole        cr_903_5a_the_official_precon_seats_play_pod_games 2,426 s at 1,050
+                 seats (debug, 4 cores, one seed a row); workspace clippy 0 after one fix
+```
+
 ### 2026-10-12 (Commander run, `01NRsiVW`) — guardrail; 183 EDHREC seats, eight card primitives
 
 Hot-path touch: `life_payable` became `cost_life_payable` (one life-lane bit
