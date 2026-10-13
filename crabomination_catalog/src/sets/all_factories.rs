@@ -3844,6 +3844,10 @@ static DECKS: &[Factory] = &[
     super::decks::keleth_sunmane_familiar,
     super::decks::yoshimaru_beloved_companion,
     super::decks::elspeth_resplendent,
+    // cmdr_edhrec50 (session 01VkPyqk)
+    super::decks::borborygmos_and_fblthp,
+    super::decks::fblthp_impossibly_lost,
+    super::decks::fblthp_knows_the_way,
     super::decks::gandalf_friend_of_the_shire,
     super::decks::ringwraiths,
     super::decks::sauron_the_necromancer,
