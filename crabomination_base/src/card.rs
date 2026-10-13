@@ -2085,6 +2085,11 @@ pub enum Keyword {
     /// this creature enters with N +1/+1 counters on it." Carried for display;
     /// the counters ride an ETB trigger (`shortcut::bloodthirst`).
     Bloodthirst(u32),
+    /// CR 702.82 — Devour N: "As this enters, you may sacrifice any number of
+    /// creatures. It enters with N times that many +1/+1 counters." `0` is
+    /// "Devour X, where X is the number of creatures devoured this way"
+    /// (Thromok the Insatiable). Applied at entry (`apply_devour_etb`).
+    Devour(u32),
     Banding,
     /// CR 702.22d/j — "bands with other [quality]". Creatures matching the
     /// quality may attack as a band as long as one of them has this ability,

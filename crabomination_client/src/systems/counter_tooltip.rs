@@ -1037,6 +1037,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackOrBlockUnlessDescend(_) => "Descend — can't attack or block unless there are that many or more permanent cards in your graveyard.",
         K::CantAttackOrBlockUnlessCityBlessing => "Can't attack or block unless you have the city's blessing.",
         K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
+        K::Devour(_) => "As it enters, you may sacrifice creatures; it enters with +1/+1 counters for each.",
         K::CantBeBlockedIfControllerCastSpells(_) => "Can't be blocked if you've cast that many or more spells this turn.",
         K::Sneak(_) => "You may cast it for its sneak cost by returning an unblocked attacker you control to its owner's hand.",
         K::Frenzy(_) => "Whenever this attacks and isn't blocked, it gets +N/+0 until end of turn.",
@@ -1415,6 +1416,8 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // Counter / cost keywords that previously printed the raw `{:?}` shape.
         K::Poisonous(n) => format!("Poisonous {n}"),
         K::Bloodthirst(n) => format!("Bloodthirst {n}"),
+        K::Devour(0) => "Devour X".to_string(),
+        K::Devour(n) => format!("Devour {n}"),
         K::CyclingLife(n) => format!("Cycling—Pay {n} life"),
         K::CyclingSacrifice(_) => "Cycling—Sacrifice".to_string(),
         K::Impending(n) => format!("Impending {n}"),

@@ -2010,10 +2010,26 @@ pub fn colored_cost_reduction_for_spell(
             continue;
         }
         for sa in &src.definition.static_abilities {
-            if let StaticEffect::ColoredCostReduction { filter, less } = &sa.effect
-                && state.evaluate_requirement_on_card(filter, card, caster)
-            {
-                out.symbols.extend(less.symbols.iter().cloned());
+            // Class levels gate it (Bard Class's level 2).
+            match state.active_static(&sa.effect, src) {
+                Some(StaticEffect::ColoredCostReduction { filter, less })
+                    if state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    out.symbols.extend(less.symbols.iter().cloned());
+                }
+                Some(StaticEffect::ColoredOnlyCostReduction { filter, less })
+                    if state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    // Only pips the spell's cost has (count-aware).
+                    let mut have = card.definition.cost.symbols.clone();
+                    for pip in &less.symbols {
+                        if let Some(i) = have.iter().position(|s| s == pip) {
+                            have.remove(i);
+                            out.symbols.push(pip.clone());
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -3040,6 +3056,7 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
                 | SE::ControllerSorceriesAsFlash => cast_static::FLASH,
                 SE::ColoredSpellTax { .. } => cast_static::COLORED_TAX,
                 SE::ColoredCostReduction { .. }
+                | SE::ColoredOnlyCostReduction { .. }
                 | SE::PhyrexianPipForSpells { .. }
                 | SE::PhyrexianPipsForAllSpells { .. } => cast_static::COLORED_REDUCTION,
                 SE::SpellCostFloor { .. } => cast_static::COST_FLOOR,
@@ -22897,13 +22914,34 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
                 .collect();
-            if candidates.len() < count {
-                return Err(GameError::SelectionRequirementViolated);
+            if let Some(need) = ability.tap_total_power {
+                // Mossbridge Troll — "other than this creature"; biggest
+                // first, so the fewest are tapped.
+                candidates.retain(|id| *id != card_id);
+                let power = |id: &CardId| self.computed_permanent(*id).map_or(0, |c| c.power.max(0) as u32);
+                candidates.sort_by_key(|id| (std::cmp::Reverse(power(id)), *id));
+                let mut sum = 0;
+                let mut picks = Vec::new();
+                for id in candidates {
+                    if sum >= need {
+                        break;
+                    }
+                    sum += power(&id);
+                    picks.push(id);
+                }
+                if sum < need {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                picks
+            } else {
+                if candidates.len() < count {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                // Sort the source last so it's tapped only if needed.
+                candidates.sort_by_key(|id| (*id == card_id, *id));
+                candidates.truncate(count);
+                candidates
             }
-            // Sort the source last so it's tapped only if needed.
-            candidates.sort_by_key(|id| (*id == card_id, *id));
-            candidates.truncate(count);
-            candidates
         } else {
             Vec::new()
         };

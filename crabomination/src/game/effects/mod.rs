@@ -3807,7 +3807,7 @@ impl GameState {
         if !no_regen
             && self
                 .battlefield_find(cid)
-                .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
+                .map(|c| Self::has_regeneration(c))
                 .unwrap_or(false)
         {
             self.apply_regeneration(cid, events);

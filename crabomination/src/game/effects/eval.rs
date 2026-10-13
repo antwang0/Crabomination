@@ -2353,6 +2353,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].artifacts_or_creatures_sacrificed_this_turn as i32)
                 .unwrap_or(0),
+            Value::CardTypesSacrificedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].sacrificed_card_types_this_turn.count_ones() as i32)
+                .unwrap_or(0),
             Value::CreaturesDiedThisTurnTotal => self
                 .players
                 .iter()

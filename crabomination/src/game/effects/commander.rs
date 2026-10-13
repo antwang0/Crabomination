@@ -873,3 +873,82 @@ impl GameState {
             .is_some_and(|c| c.chosen_permanent == Some(cid))
     }
 }
+
+impl GameState {
+    /// CR 702.82 — Devour `per` as `cid` enters: its controller may sacrifice
+    /// any number of other creatures; it enters with `per` +1/+1 counters for
+    /// each (`per == 0`: Devour X, X the number devoured — that many squared).
+    /// A prompting seat picks; a headless one feeds it its tokens of power 1
+    /// or less.
+    pub(crate) fn apply_devour_etb(&mut self, cid: CardId, per: u32, events: &mut Vec<crate::game::types::GameEvent>) {
+        use crate::card::CounterType;
+        let Some(me) = self.battlefield_find(cid) else { return };
+        let ctrl = me.controller;
+        let candidates: Vec<(CardId, String)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.id != cid && c.controller == ctrl && self.computed_is_creature(c) && self.can_be_sacrificed(c.id))
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        if candidates.is_empty() {
+            return;
+        }
+        let chosen: Vec<CardId> = if self.seat_prompts(ctrl) {
+            match self.decider.decide(&Decision::ChooseCards {
+                source: cid,
+                prompt: "Devour: sacrifice any number of creatures".to_string(),
+                candidates: candidates.clone(),
+                min: 0,
+                max: candidates.len() as u32,
+                eligible: None,
+                value: crate::decision::PickValue::Cost,
+            }) {
+                DecisionAnswer::Cards(c) => c.into_iter().filter(|id| candidates.iter().any(|(k, _)| k == id)).collect(),
+                _ => Vec::new(),
+            }
+        } else {
+            candidates
+                .iter()
+                .map(|(id, _)| *id)
+                .filter(|id| {
+                    self.battlefield_find(*id).is_some_and(|c| c.is_token)
+                        && self.computed_permanent(*id).is_some_and(|c| c.power <= 1)
+                })
+                .collect()
+        };
+        let mut devoured = 0u32;
+        for id in chosen {
+            if self.battlefield_find(id).is_some() {
+                self.sacrifice_one(id, ctrl, events);
+                devoured += 1;
+            }
+        }
+        let n = if per == 0 { devoured * devoured } else { devoured * per };
+        if n == 0 {
+            return;
+        }
+        let n = self.place_counters(cid, CounterType::PlusOnePlusOne, n);
+        if n > 0 {
+            events.push(crate::game::types::GameEvent::CounterAdded {
+                card_id: cid,
+                counter_type: CounterType::PlusOnePlusOne,
+                count: n,
+                placer: self.resolution_causer,
+            });
+        }
+    }
+}
+
+impl GameState {
+    /// CR 701.15 — `c` would regenerate instead of being destroyed: a shield,
+    /// or Mossbridge Troll's "if this creature would be destroyed, regenerate
+    /// it" — unless it can't be regenerated this turn.
+    pub(crate) fn has_regeneration(c: &CardInstance) -> bool {
+        !c.cant_regenerate_this_turn
+            && (c.regeneration_shields > 0
+                || c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::RegeneratesInsteadOfDestroyed)))
+    }
+}

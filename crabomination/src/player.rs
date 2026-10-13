@@ -1152,6 +1152,11 @@ pub struct PlayerData {
     /// Same clock.
     #[serde(default)]
     pub artifacts_or_creatures_sacrificed_this_turn: u32,
+    /// The permanent card types (one bit each: artifact, battle, creature,
+    /// enchantment, kindred, land, planeswalker) among permanents this player
+    /// sacrificed this turn (Korvold, Gleeful Glutton). Same clock.
+    #[serde(default)]
+    pub sacrificed_card_types_this_turn: u8,
     /// "Face-down spells you cast this turn cost {N} less to cast" (Goblin
     /// Maskmaker). Summed into `face_down_cast_cost`; cleared in
     /// `finish_cleanup` alongside `turn_spell_discounts`.
@@ -1862,6 +1867,7 @@ impl Player {
             foods_sacrificed_this_turn: 0,
             clues_sacrificed_this_turn: 0,
             artifacts_or_creatures_sacrificed_this_turn: 0,
+            sacrificed_card_types_this_turn: 0,
             creatures_cast_this_turn: 0,
             historic_spells_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,

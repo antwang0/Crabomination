@@ -8672,11 +8672,13 @@ impl GameState {
         // CR 702.54a/c — each Bloodthirst N: "if an opponent was dealt damage
         // this turn, this permanent enters with N +1/+1 counters on it."
         let mut bloodthirst = 0u32;
+        let mut devour = None;
         for k in card.definition.keywords.iter() {
             match k {
                 Keyword::Fading(n) if spec.is_none() => spec = Some((CounterType::Fade, *n)),
                 Keyword::Vanishing(n) if spec.is_none() => spec = Some((CounterType::Time, *n)),
                 Keyword::Bloodthirst(n) => bloodthirst += *n,
+                Keyword::Devour(n) => devour = Some(*n),
                 _ => {}
             }
         }
@@ -8685,6 +8687,9 @@ impl GameState {
         }
         if bloodthirst > 0 {
             self.apply_bloodthirst_etb(cid, bloodthirst, events);
+        }
+        if let Some(per) = devour {
+            self.apply_devour_etb(cid, per, events);
         }
         let Some((kind, n)) = spec else { return };
         // CR 614.1c / 614.16 — "enters with" counters take the chain and the
@@ -25170,6 +25175,14 @@ impl GameState {
                         .get(card_id)
                         .is_some_and(|c| self.computed_has_card_type(c, crate::card::CardType::Creature));
                     let was_token = self.died_card_snapshots.get(card_id).is_some_and(|c| c.is_token);
+                    let type_bits = self.died_card_snapshots.get(card_id).map_or(0u8, |c| {
+                        use crate::card::CardType as T;
+                        [T::Artifact, T::Battle, T::Creature, T::Enchantment, T::Kindred, T::Land, T::Planeswalker]
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, t)| self.computed_has_card_type(c, (*t).clone()))
+                            .fold(0u8, |m, (i, _)| m | (1 << i))
+                    });
                     let (was_food, was_clue) = self.died_card_snapshots.get(card_id).map_or((false, false), |c| {
                         let subs = &c.definition.subtypes.artifact_subtypes;
                         (
@@ -25197,6 +25210,7 @@ impl GameState {
                             pl.artifacts_or_creatures_sacrificed_this_turn =
                                 pl.artifacts_or_creatures_sacrificed_this_turn.saturating_add(1);
                         }
+                        pl.sacrificed_card_types_this_turn |= type_bits;
                     }
                     if !was_token && *who == self.active_player_idx {
                         self.wake_nontoken_sacrifice_grants(*who);
@@ -34054,6 +34068,7 @@ fn static_effect_to_effects(
             | StaticEffect::AllPlayersSpellsCostLess { .. }
             | StaticEffect::AllPlayersCostReduction { .. }
             | StaticEffect::ColoredCostReduction { .. }
+            | StaticEffect::ColoredOnlyCostReduction { .. }
             | StaticEffect::PhyrexianPipForSpells { .. }
             | StaticEffect::PhyrexianPipsForAllSpells { .. }
             | StaticEffect::ColoredSpellTax { .. }
@@ -34353,6 +34368,7 @@ fn static_effect_to_effects(
             | StaticEffect::AttachedPlaneswalkerHasLoyaltyAbilities { .. }
             | StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities
             | StaticEffect::FirstTokensEachTurnCopyEquipped
+            | StaticEffect::RegeneratesInsteadOfDestroyed
             | StaticEffect::YourPlaneswalkersSurviveZeroLoyalty
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.

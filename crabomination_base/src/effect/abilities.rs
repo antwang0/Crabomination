@@ -645,6 +645,10 @@ pub enum StaticEffect {
     /// `ManaCost::reduce_by_cost`, so an unmatched colored pip falls back to
     /// removing one generic instead. Mandatory, like every cost reduction.
     ColoredCostReduction { filter: SelectionRequirement, less: crate::mana::ManaCost },
+    /// [`Self::ColoredCostReduction`] that "reduces only the amount of colored
+    /// mana you pay" (Bard Class): a pip the spell's cost lacks reduces
+    /// nothing rather than a generic.
+    ColoredOnlyCostReduction { filter: SelectionRequirement, less: crate::mana::ManaCost },
     /// CR 601.2f / 118.3 — "As an additional cost to cast [filter] spells, you
     /// may pay 2 life. Those spells cost {C} less to cast if you paid life
     /// this way" (the Defiler cycle). One `{C}` pip becomes `{C/P}`: the
@@ -2158,6 +2162,10 @@ pub enum StaticEffect {
     /// that many tokens that are copies of equipped creature" (Mirrormind
     /// Crown; CR 614.1a, read by `token_replacement_for`).
     FirstTokensEachTurnCopyEquipped,
+    /// "If this creature would be destroyed, regenerate it" (Mossbridge
+    /// Troll; CR 701.15): an unending regeneration shield, read wherever a
+    /// shield is (`has_regeneration`).
+    RegeneratesInsteadOfDestroyed,
     /// "Planeswalkers you control aren't put into their owners' graveyards
     /// for having 0 loyalty" (Sanctum Lurker) — exempts them from CR 704.5i.
     YourPlaneswalkersSurviveZeroLoyalty,
@@ -4610,6 +4618,12 @@ pub struct ActivatedAbility {
     /// the least that makes a "power X or less" target legal (Aryel).
     #[serde(default)]
     pub tap_n_x: bool,
+    /// "Tap any number of untapped [`tap_n_filter`] you control with total
+    /// power N or greater:" (Mossbridge Troll): the count is ignored; the
+    /// highest-power matches other than the source are tapped until their
+    /// power reaches N.
+    #[serde(default)]
+    pub tap_total_power: Option<u32>,
     /// Optional cost: return a *different* permanent the activator controls
     /// matching this filter to its owner's hand (CR 602.5b "Return a [filter]
     /// you control to its owner's hand:" costs). Mirrors `sac_other_filter`

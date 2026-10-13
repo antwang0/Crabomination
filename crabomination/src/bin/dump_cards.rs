@@ -130,6 +130,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::FirebendingExperience => "Firebending",
         Keyword::Sneak(_) => "Sneak",
         Keyword::Bloodthirst(_) => "Bloodthirst",
+        Keyword::Devour(_) => "Devour",
         Keyword::Flanking => "Flanking",
         Keyword::Bushido(_) => "Bushido",
         Keyword::Melee => "Melee",

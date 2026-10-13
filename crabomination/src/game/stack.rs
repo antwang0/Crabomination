@@ -5182,6 +5182,7 @@ impl GameState {
             pl.foods_sacrificed_this_turn = 0;
             pl.clues_sacrificed_this_turn = 0;
             pl.artifacts_or_creatures_sacrificed_this_turn = 0;
+            pl.sacrificed_card_types_this_turn = 0;
             pl.dealt_combat_damage_to_player_this_turn = false;
             // CR 702.173a — Freerunning's combat-damage gate is per-turn.
             if pl.freerunning_unlocked_this_turn {
@@ -8013,7 +8014,7 @@ impl GameState {
             let has_regen = self
                 .battlefield
                 .find_by_id(id)
-                .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
+                .map(Self::has_regeneration)
                 .unwrap_or(false);
             if has_regen && !dies_by_lethal_toughness {
                 self.apply_regeneration(id, events);
