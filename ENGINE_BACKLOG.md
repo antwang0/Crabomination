@@ -124,6 +124,37 @@ the handoff.
 8. **The concurrent eighteenth run (`01Xu59CH`, ENGINE_BACKLOG "eighteenth Commander run"):** CR 601.2c (every required slot at cast; ratchet `spells_requiring_two_targets_print_no_optional_target`), CR 701.21a (only a controller sacrifices), CR 115.3 (an "up to N" instance under an `If`), `LastMoved` never names a commander gone home (Tinybones), Gishath's "any number" pick + the bot declining a loop-starting entry (Polyraptor), loop watch sees face-down faces, Soul Cauldron sink gate, Subtlety, seat 356 Anti-Venom; `audit_cr_citations.py` catches a real-but-wrong keyword number (report 0; absent numbers 61 → 48). **Sweeps: plain 181001/182001/187001, `--a dflt` 183001, fuzzed strict 184001/185001/186001 — ~48,000 pod games, 6 aborts, all fixed.** Fuzz (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`) found 4 of the 6: run it every session. **Gates at `80eea8640`:** strict suite 24,889 / 2 / 5 (both the reveal answer-log leak, fixed concurrently); workspace clippy 0; `--bench` 196,176 / 27.64 / 613.0 byte-identical, both determinism checks ok; paired A/B vs the run's base +3.3 % (PERF). (Both of its open rows are closed: a `TriggerSource` that left its graveyard before resolution is a new object (CR 400.7), and a counter is now growth to the loop watch.)
 9. **The concurrent nineteenth run (`01Vk2K6g`, ENGINE_BACKLOG "nineteenth Commander run"):** seats 357-368, 372-375 and 379 (Avatar Aang: bending events, `KeywordAct::Bent`) (Fire Lord Zuko … Toph, the First Metalbender; ~140 cards in `decks::cmdr_edhrec3`, 20 primitives), each 40 debug pod games decided. ⚠ It built Miirym + Tiamat in parallel with the other session; its copies were dropped at the rebase — fetch before *starting* a deck. Gates at `f2d66e817`: suite 25,282 / 0 / 6 (after registering Avatar Kyoshi) + the long-pole `cr_903_5a_the_official_precon_seats_play_pod_games` (2,011 s), clippy 0, `--bench` byte-identical + both determinism checks, release pod smoke 970 games (4/6/19 seats + the new seats) 0 panics, 1 undecided (a Miirym / Astral Dragon / Ureni token board cap). Final tip `5ccaee51b`: suite 25,316 / 0 / 6, clippy 0, `--bench` byte-identical. Then audit sweeps 197001 + fuzzed 198001 over seats 335-378 only (`pod_sweep.py --decks 335-378`, 2,220 games): 0 aborts; an Anti-Venom / All Will Be One loop fixed (CR 109.5: a damage-to-counters replacement's controller puts the counters). Scan after seat 379: Iroh 4, Lorehold 4, High Perfect Morcant 6, Obeka 7, Galadriel 7 (scry triggers, the Ring).
 
+## FIXED/OPEN 2026-10-13 (Commander run, `01CwrNTA`) — EDHREC ranks 1501-2000
+
+- **Seats** 1270-1425 (156 zero-gap decks), 1428-1468, 1471-1515, 1677-1682, 1706-1715 — the
+  twenty-page rescan's ranks 1501-2000, completed by `decks::cmdr_rank2k_a`..`f` (146 cards; tests
+  `recent_b/cmdr_rank2k_*.rs`). Seat races with `01VkPyqk` (ranks 2001-2500) moved three batches:
+  drop the seat commit, rebase, re-run `scripts/seat_decks.py` from the saved slug list.
+- **FIXED (CR 903.4b):** a "choose its color before the game begins" commander (Clara Oswald) chose
+  only at game start and the validator never saw it, so seat 1269 (Fourteenth Doctor + Clara, five
+  colours) failed `cr_903_5a_target_decks_are_legal_commander_decks`. `format::
+  chosen_commander_color` reads the one colour the 99 need; validator and `seat_commanders` use it,
+  and the choice joins `commander_identity`.
+- **FIXED (CR 122.2):** `exile_remove_at` kept an exiled card's counters — Karn, the Great
+  Creator's wish took a Rayami blood-countered card to hand with it (pod seed 59438 game 4).
+- **FIXED (walkers disagreed):** the spell-tax walker matched raw statics while the reduction walker
+  peeled `active_static`'s gates — a tax behind `WhileYourTurn` (Paladin Class) was never charged.
+  `DynamicPt::PermanentsOnBattlefieldMatching` passed no source, so `OtherThanSource` counted itself.
+- **FIXED (bot):** the `GY_RECUR` sink gate assumed graveyard grants reach creature cards; Mishra,
+  Tamer of Mak Fawa unearths artifacts (seed 67705 game 5). **FIXED:** Edgar's Awakening's "when you
+  discard this card" was a `DiscardActivated` hand activation; it is a `CardDiscarded` trigger
+  from the graveyard (Bartered Cow uses the same shape).
+- **New primitives:** `SpendRestriction::KickedSpellsOnly`, `Value::CastSpellPipsOf`,
+  `R::ManaValueLessThanSacrificed`.
+- **OPEN:** `StaticEffect::WhileCondition` wrapping `AnthemForFilter` is not peeled by the layer
+  pass (Path of Bravery and Paladin Class use `PumpTeamIf` instead; no shipped card wraps an anthem).
+  The ranks 1501-2000 leftovers need primitives: Killing Wave (sacrifice unless pay X life each),
+  Knight-Errant of Eos (MV ≤ convokers), Torrent of Souls (two slots behind spent-colour gates),
+  Glorious Sunrise (a land gains a mana ability until end of turn), Khalni Hydra (coloured cost
+  reduction per creature), Horn of the Mark ("two or more attack *a* player"), Raff (tap exactly
+  two), Bard's Company (recruit's nonland check). ⚠ The long-pole pod test took 4,109 s under load
+  at 1,515 seats.
+
 ## FIXED/OPEN 2026-10-13 (Commander run, `019gJJoX`) — six EDHREC seats from the unclaimed primitive gaps
 
 - **Seats 1187-1193** (Ganax solo, Ganax // Acolyte of Bahamut, Aragorn Hornburg Hero, Alisaie

@@ -2055,6 +2055,13 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kamahl's Will | the land mode animates every land you control, untargeted, rather than "any number of target lands" | an any-number target mode ahead of a single-target mode would claim twenty optional slots before it |
 | 🟡 Kang the Conqueror | "During that turn, power-up abilities can't be activated" is not modelled — the extra turn allows other power-ups | no turn-scoped power-up lock |
 | 🟡 Fblthp, Knows the Way | its X basic lands needn't have different names | `SearchUpToN` doesn't enforce the rider |
+| 🟡 Gorm the Great | "must be blocked by two or more creatures if able" is only "must be blocked if able" | no minimum-blockers requirement |
+| 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
+| 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
+| 🟡 Loch Mare | "remove a counter" spends only its -1/-1 counters | `remove_counter_cost` names one kind |
+| 🟡 Scrap Welder | the returned artifact card is chosen as the ability resolves, not targeted | targets are fixed before the sacrifice that sets X |
+| 🟡 Fathom Fleet Swordjack | attacking a planeswalker, its trigger hits that planeswalker's controller | `PlayerRef::DefendingPlayer` |
+| 🟡 Angel of Condemnation | the exert is paid as the ability resolves (`SkipNextUntap`), not as a cost | no exert activation cost |
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
 | 🟡 Scion of Halaster | the first-draw replacement is live while you control any commander of yours, a noncreature one included | `Predicate::ControlsOwnCommander` has no creature filter |
 | 🟡 Tilonalli's Summoner | whether its Elementals are exiled is settled by the city's blessing as they're made, not at the end step | `ExileAtNextEndStep` carries no condition |
