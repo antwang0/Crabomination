@@ -2025,7 +2025,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Pir, Imaginative Rascal | the extra counter lands only on creatures and artifacts you control, not enchantments, lands, planeswalkers or teammates' permanents | `StaticEffect::ExtraCounterAllKinds` is scoped to the controller's creatures and artifacts |
 | 🟡 Nine Lives | damage that can't be prevented still becomes an incarnation counter instead of being dealt | `ReplaceDamageToYouWithCountersOnSource` is a replacement (CR 614), not a prevention (CR 615) |
 | 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
-| 🟡 Nahiri, Forged in Fury | an exiled Equipment card still costs its mana | `ExileTopAndGrantMayPlay` grants one paid permission for every card it exiles |
 | 🟡 Gandalf the White | only an *entering* legendary permanent or artifact doubles triggers; a leaving one doesn't | `DoubleControllerEtbTriggers` has no leave-the-battlefield half |
 | 🟡 Jade Monolith | redirects the next damage from any source, not one of your choice | `RedirectNextDamageTo` has no source filter |
 | 🟡 Shared Summons | the two creature cards needn't have different names | `SearchUpToN` has no distinct-name constraint |
@@ -2047,7 +2046,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Tarrasque | "as long as it was cast" misses casts from exile and the command zone | reads `WasCastFromHand`/`Library`/`Graveyard` |
 | 🟡 Invoke Justice | the counters go among your own creatures and Vehicles ("target player" is always you) | no permanent filter keyed to a player target |
 | 🟡 Phyrexian Purge | the 3 life per target is lost as the spell resolves, not paid as a cast cost | no per-target life surcharge in the cast pipeline |
-| 🟡 Doors of Durin | the top card is always revealed (the "you may" isn't asked) | a creature on top always joins the attack |
 | 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
 | 🟡 Bane, Lord of Darkness | a nontoken creature of yours dying always draws you a card; the target opponent's choice to let you put a creature card with lesser or equal toughness from hand onto the battlefield instead isn't offered | no "target opponent chooses for you" ask with a toughness-bounded hand put |
 | 🟡 Queen Kayla bin-Kroog | the mana value 1, 2 and 3 cards return one after another, not together (their enter triggers see each other in order) | `ChooseSomeAmong` per mana value; no shared simultaneous put |

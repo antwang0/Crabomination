@@ -2435,7 +2435,7 @@ pub fn phyrexian_purge() -> CardDefinition {
 }
 
 /// Doors of Durin — {3}{R}{G} legendary artifact. Whenever you attack: scry 2,
-/// then reveal your top card; a creature card enters tapped and attacking,
+/// then you may reveal your top card; a creature card enters tapped and attacking,
 /// with trample if you control a Dwarf and hexproof if you control an Elf
 /// until your next turn.
 pub fn doors_of_durin() -> CardDefinition {
@@ -2450,18 +2450,21 @@ pub fn doors_of_durin() -> CardDefinition {
             event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-                Effect::If {
-                    cond: Predicate::EntityMatches { what: top_card(), filter: R::Creature },
-                    then: Box::new(Effect::Seq(vec![
-                        Effect::Move {
-                            what: top_card(),
-                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-                        },
-                        Effect::JoinCombatAttacking { what: Selector::LastMoved },
-                        rider(CreatureType::Dwarf, Keyword::Trample),
-                        rider(CreatureType::Elf, Keyword::Hexproof),
-                    ])),
-                    else_: Box::new(Effect::Noop),
+                Effect::MayDo {
+                    description: "Reveal the top card of your library?".into(),
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: top_card(), filter: R::Creature },
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Move {
+                                what: top_card(),
+                                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                            },
+                            Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                            rider(CreatureType::Dwarf, Keyword::Trample),
+                            rider(CreatureType::Elf, Keyword::Hexproof),
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    }),
                 },
             ]),
         }],

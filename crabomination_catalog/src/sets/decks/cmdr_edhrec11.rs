@@ -1406,22 +1406,43 @@ pub fn samwise_the_stouthearted() -> CardDefinition {
 
 /// Nahiri, Forged in Fury — {4}{R}{W} 5/4 Kor Artificer, affinity for
 /// Equipment. An equipped creature of yours attacking exiles your top card,
-/// playable this turn.
+/// playable this turn; an Equipment spell cast this way is free.
 pub fn nahiri_forged_in_fury() -> CardDefinition {
     CardDefinition {
         affinity_filter: Some(R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou)),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsEquipped }),
-            effect: Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: true,
-                uncast_penalty: None,
-            },
+            // "You may cast Equipment spells this way without paying their
+            // mana costs": an Equipment's grant is free, anything else pays.
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                    to: ZoneDest::Exile,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::ExiledThisResolution { filter: R::Any },
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    },
+                    then: Box::new(Effect::GrantMayPlay {
+                        what: Selector::ExiledThisResolution { filter: R::Any },
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: false,
+                        any_color: false,
+                    }),
+                    else_: Box::new(Effect::GrantMayPlay {
+                        what: Selector::ExiledThisResolution { filter: R::Any },
+                        duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    }),
+                },
+            ]),
         }],
         ..legend("Nahiri, Forged in Fury", cost(&[generic(4), r(), w()]), vec![CreatureType::Kor, CreatureType::Artificer], 5, 4)
     }

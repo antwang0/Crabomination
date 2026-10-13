@@ -1582,3 +1582,29 @@ fn deaths_oasis_return_is_the_controllers_pick() {
     assert!(g.players[0].hand.iter().any(|c| c.id == elf), "the chosen Elf");
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
 }
+
+/// Nahiri, Forged in Fury — "You may play that card this turn. You may cast
+/// Equipment spells this way without paying their mana costs." (CR 118.9.)
+/// An exiled Equipment casts with no mana; anything else still pays.
+#[test]
+fn nahiri_casts_exiled_equipment_free() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::nahiri_forged_in_fury());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+    let top = g.add_card_to_library(0, catalog::bonesplitter());
+    declare(&mut g, 0, &[(bear, 1)]).unwrap();
+    let ex = g.exile.iter().find(|c| c.id == top).expect("exiled");
+    let perm = ex.may_play_until.expect("granted");
+    assert!(perm.player == 0 && !perm.cast_only, "{perm:?}");
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("free Equipment");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == top));
+}

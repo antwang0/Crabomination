@@ -757,6 +757,20 @@ fn phyrexian_purge_charges_three_life_a_target() {
     assert_eq!(g.players[0].life, 14);
 }
 
+/// Says yes to Doors of Durin's optional reveal; everything else is the auto
+/// decider's.
+struct YesToReveal;
+impl crabomination::decision::Decider for YesToReveal {
+    fn decide(&mut self, d: &crabomination::decision::Decision) -> crabomination::decision::DecisionAnswer {
+        match d {
+            crabomination::decision::Decision::OptionalTrigger { .. } => {
+                crabomination::decision::DecisionAnswer::Bool(true)
+            }
+            _ => crabomination::decision::AutoDecider.decide(d),
+        }
+    }
+}
+
 /// Doors of Durin (CR 508.4): a creature on top enters tapped and attacking,
 /// with trample while you control a Dwarf.
 #[test]
@@ -767,6 +781,8 @@ fn doors_of_durin_sends_the_top_creature_in() {
     ready(&mut g, 0, catalog::doors_of_durin());
     ready(&mut g, 0, catalog::dwarven_trader());
     let att = ready(&mut g, 0, catalog::gray_ogre());
+    // "You may reveal" — take it (the auto decider declines optional asks).
+    g.decider = Box::new(YesToReveal);
     declare(&mut g, &[(att, 1)]).expect("attack");
     let joined: Vec<_> = g.attacking.iter().map(|a| a.attacker).filter(|&id| id != att).collect();
     assert_eq!(joined.len(), 1, "one creature joined");
