@@ -3851,6 +3851,15 @@ static DECKS: &[Factory] = &[
     super::decks::borborygmos_and_fblthp,
     super::decks::fblthp_impossibly_lost,
     super::decks::fblthp_knows_the_way,
+    // cmdr_rank2k_e (session 01CwrNTA)
+    super::decks::destined_lead,
+    super::decks::ellyn_harbreeze_busybody,
+    super::decks::mirage_mockery,
+    super::decks::mirror_mockery,
+    super::decks::namor_the_sub_mariner,
+    super::decks::ochran_assassin,
+    super::decks::river_sneak,
+    super::decks::wanderwine_prophets,
     // cmdr_rank2k_d (session 01CwrNTA)
     super::decks::archwing_dragon,
     super::decks::arwen_mortal_queen,
