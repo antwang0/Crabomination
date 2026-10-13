@@ -29,6 +29,11 @@ MOD = os.path.join(ROOT, "crabomination", "src", "pod", "mod.rs")
 WUBRG = "WUBRG"
 
 
+def esc(s):
+    """A Rust string-literal body (Miles "Tails" Prower)."""
+    return s.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def identity(names):
     cache = json.load(open(os.path.join(ROOT, "scripts", ".scryfall_cache.json"), encoding="utf-8"))
     ci = set()
@@ -46,7 +51,7 @@ def main():
     decks_rs = open(DECKS, encoding="utf-8").read()
     mod_rs = open(MOD, encoding="utf-8").read()
     seat = max(int(n) for n in re.findall(r"// Seat (\d+):", mod_rs))
-    seed = max(int(n, 16) for n in re.findall(r'\("[^"]+", &\[0x([0-9A-F]+)\]\),\n        \];', mod_rs))
+    seed = max(int(n, 16) for n in re.findall(r'\("(?:[^"\\]|\\.)+", &\[0x([0-9A-F]+)\]\),\n        \];', mod_rs))
     pods, rows = [], []
     for slug in slugs:
         page = json.load(open(os.path.join(cache, "avg", slug + ".json"), encoding="utf-8"))
@@ -67,16 +72,16 @@ def main():
         pods.append(
             f"        // Seat {seat}: {title}'s EDHREC average deck. `--pod-decks {seat}`.\n"
             f"        PodDeck {{\n"
-            f"            name: \"{label}\",\n"
+            f"            name: \"{esc(label)}\",\n"
             f"            commanders: decks::{const}_COMMANDERS,\n"
             f"            main: decks::{const}_MAIN,\n"
             f"        }},\n"
         )
-        rows.append(f'            ("{title}", &[0x{seed:04X}]),\n')
+        rows.append(f'            ("{esc(title)}", &[0x{seed:04X}]),\n')
         print(f"seat {seat}: {label} ({const})")
     end = mod_rs.index("    ]\n}\n\n/// `seats` decks for a pod")
     mod_rs = mod_rs[:end] + "".join(pods) + mod_rs[end:]
-    m = list(re.finditer(r'\("[^"]+", &\[0x[0-9A-F]+\]\),\n(        \];)', mod_rs))[-1]
+    m = list(re.finditer(r'\("(?:[^"\\]|\\.)+", &\[0x[0-9A-F]+\]\),\n(        \];)', mod_rs))[-1]
     mod_rs = mod_rs[: m.start(1)] + "".join(rows) + mod_rs[m.start(1):]
     open(DECKS, "w", encoding="utf-8").write(decks_rs)
     open(MOD, "w", encoding="utf-8").write(mod_rs)

@@ -7392,6 +7392,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RIA_IVOR_COMMANDERS,
             main: decks::RIA_IVOR_MAIN,
         },
+        // Seat 1157: Bruna, Light of Alabaster's EDHREC average deck. `--pod-decks 1157`.
+        PodDeck {
+            name: "Bruna, Light of Alabaster (WU)",
+            commanders: decks::BRUNA_2_COMMANDERS,
+            main: decks::BRUNA_2_MAIN,
+        },
+        // Seat 1158: Samwise Gamgee's EDHREC average deck. `--pod-decks 1158`.
+        PodDeck {
+            name: "Samwise Gamgee (WG)",
+            commanders: decks::SAMWISE_GAMGEE_COMMANDERS,
+            main: decks::SAMWISE_GAMGEE_MAIN,
+        },
+        // Seat 1159: Gilgamesh, Master-at-Arms's EDHREC average deck. `--pod-decks 1159`.
+        PodDeck {
+            name: "Gilgamesh, Master-at-Arms (R)",
+            commanders: decks::GILGAMESH_COMMANDERS,
+            main: decks::GILGAMESH_MAIN,
+        },
+        // Seat 1160: Miles "Tails" Prower's EDHREC average deck. `--pod-decks 1160`.
+        PodDeck {
+            name: "Miles \"Tails\" Prower (WU)",
+            commanders: decks::MILES_TAILS_PROWER_COMMANDERS,
+            main: decks::MILES_TAILS_PROWER_MAIN,
+        },
+        // Seat 1161: Maralen of the Mornsong's EDHREC average deck. `--pod-decks 1161`.
+        PodDeck {
+            name: "Maralen of the Mornsong (B)",
+            commanders: decks::MARALEN_OF_THE_MORNSONG_COMMANDERS,
+            main: decks::MARALEN_OF_THE_MORNSONG_MAIN,
+        },
+        // Seat 1162: Ojer Pakpatiq, Deepest Epoch's EDHREC average deck. `--pod-decks 1162`.
+        PodDeck {
+            name: "Ojer Pakpatiq, Deepest Epoch (U)",
+            commanders: decks::OJER_PAKPATIQ_COMMANDERS,
+            main: decks::OJER_PAKPATIQ_MAIN,
+        },
     ]
 }
 
@@ -10338,6 +10374,12 @@ mod tests {
             ("Hidetsugu, Devouring Chaos", &[0x0E97]),
             ("Elesh Norn, Grand Cenobite", &[0x0E98]),
             ("Ria Ivor, Bane of Bladehold", &[0x0E99]),
+            ("Bruna, Light of Alabaster", &[0x0E9A]),
+            ("Samwise Gamgee", &[0x0E9B]),
+            ("Gilgamesh, Master-at-Arms", &[0x0E9C]),
+            ("Miles \"Tails\" Prower", &[0x0E9D]),
+            ("Maralen of the Mornsong", &[0x0E9E]),
+            ("Ojer Pakpatiq, Deepest Epoch", &[0x0E9F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
