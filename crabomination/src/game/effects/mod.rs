@@ -3809,7 +3809,7 @@ impl GameState {
         if !no_regen
             && self
                 .battlefield_find(cid)
-                .map(|c| Self::has_regeneration(c))
+                .map(Self::has_regeneration)
                 .unwrap_or(false)
         {
             self.apply_regeneration(cid, events);

@@ -2025,7 +2025,7 @@ pub fn colored_cost_reduction_for_spell(
                     for pip in &less.symbols {
                         if let Some(i) = have.iter().position(|s| s == pip) {
                             have.remove(i);
-                            out.symbols.push(pip.clone());
+                            out.symbols.push(*pip);
                         }
                     }
                 }
