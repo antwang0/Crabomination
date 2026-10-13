@@ -23990,6 +23990,7 @@ impl GameState {
                 life_paid: life_spent,
                 ninjutsu: false,
                 mana: ability_is_mana,
+                loyalty: false,
             });
         }
 

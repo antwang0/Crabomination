@@ -2850,6 +2850,9 @@ pub enum GameEvent {
         /// `ActivationTrait::ManaWithoutTap` sees it; every other activation
         /// listener reads "an ability" as a non-mana one.
         mana: bool,
+        /// CR 606.1 — a loyalty ability (Way of the Paradox's "whenever you
+        /// activate a loyalty ability"); `source` is the planeswalker.
+        loyalty: bool,
     },
     /// `source` is the permanent that produced the mana (a tapped land, a mana
     /// rock, …) when known, so clients can anchor mana-flow visuals to it.

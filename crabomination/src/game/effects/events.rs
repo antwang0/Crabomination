@@ -231,7 +231,7 @@ fn event_payload_matches(
         }
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, loyalty, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -243,6 +243,7 @@ fn event_payload_matches(
                 T::Exhaust => *exhaust,
                 T::Adapt => *adapt,
                 T::Ninjutsu => *ninjutsu,
+                T::Loyalty => *loyalty,
             }
         }
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land, .. }) => {
@@ -403,7 +404,7 @@ fn reference_event_kind_matches(
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { mana, .. }) => !mana,
         (
             EventKind::AbilityActivatedWith(t),
-            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, .. },
+            GameEvent::AbilityActivated { exhaust, sacrificed, life_paid, adapt, ninjutsu, mana, loyalty, .. },
         ) => {
             use crate::effect::ActivationTrait as T;
             match t {
@@ -415,6 +416,7 @@ fn reference_event_kind_matches(
                 T::Exhaust => *exhaust,
                 T::Adapt => *adapt,
                 T::Ninjutsu => *ninjutsu,
+                T::Loyalty => *loyalty,
             }
         }
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
@@ -1947,12 +1949,13 @@ mod tests {
             E::LandPlayed { player: 0, card_id: c, played: true, from_hand: true },
             E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
             E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false },
-            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 2, ninjutsu: false, mana: false },
-            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: true },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 2, ninjutsu: false, mana: false, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: true, life_paid: 0, ninjutsu: false, mana: true, loyalty: false },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false, sacrificed: false, life_paid: 0, ninjutsu: false, mana: false, loyalty: true },
             E::ManaAdded { player: 0, color: crate::mana::Color::Green, source: Some(c) },
             E::ColorlessManaAdded { player: 0, source: None },
             E::PermanentEntered { card_id: c },
@@ -2212,6 +2215,7 @@ mod tests {
             K::AbilityActivatedWith(crate::effect::ActivationTrait::Adapt),
             K::AbilityActivatedWith(crate::effect::ActivationTrait::Sacrifice),
             K::AbilityActivatedWith(crate::effect::ActivationTrait::ManaWithoutTap),
+            K::AbilityActivatedWith(crate::effect::ActivationTrait::Loyalty),
             K::CardLeftGraveyard,
             K::CardExiled,
             K::CardExiledFrom(crate::effect::exile_from::GRAVEYARD),

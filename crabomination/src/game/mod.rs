@@ -24203,6 +24203,7 @@ impl GameState {
             life_paid: 0,
             ninjutsu: true,
             mana: false,
+            loyalty: false,
         });
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).
@@ -28399,6 +28400,19 @@ impl GameState {
             GameEvent::LoyaltyAbilityActivated {
                 planeswalker: card_id,
                 loyalty_change,
+            },
+            // CR 606.1 — a loyalty ability is an activated ability: "whenever
+            // you activate an ability" sees it (Rings of Brighthearth ruling).
+            GameEvent::AbilityActivated {
+                source: card_id,
+                exhaust: false,
+                adapt: false,
+                tap_cost: false,
+                sacrificed: false,
+                life_paid: 0,
+                ninjutsu: false,
+                mana: false,
+                loyalty: true,
             },
             GameEvent::LoyaltyChanged {
                 card_id,
