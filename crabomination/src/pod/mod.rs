@@ -7530,6 +7530,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_SECOND_DOCTOR_COMMANDERS,
             main: decks::THE_SECOND_DOCTOR_MAIN,
         },
+        // Seat 1180: Leonardo da Vinci's EDHREC average deck. `--pod-decks 1180`.
+        PodDeck {
+            name: "Leonardo da Vinci (U)",
+            commanders: decks::LEONARDO_DA_VINCI_COMMANDERS,
+            main: decks::LEONARDO_DA_VINCI_MAIN,
+        },
+        // Seat 1181: The Ancient One's EDHREC average deck. `--pod-decks 1181`.
+        PodDeck {
+            name: "The Ancient One (UB)",
+            commanders: decks::THE_ANCIENT_ONE_COMMANDERS,
+            main: decks::THE_ANCIENT_ONE_MAIN,
+        },
+        // Seat 1182: Tameshi, Reality Architect's EDHREC average deck. `--pod-decks 1182`.
+        PodDeck {
+            name: "Tameshi, Reality Architect (WU)",
+            commanders: decks::TAMESHI_COMMANDERS,
+            main: decks::TAMESHI_MAIN,
+        },
+        // Seat 1183: Lucy MacLean, Positively Armed's EDHREC average deck. `--pod-decks 1183`.
+        PodDeck {
+            name: "Lucy MacLean, Positively Armed (W)",
+            commanders: decks::LUCY_MACLEAN_COMMANDERS,
+            main: decks::LUCY_MACLEAN_MAIN,
+        },
+        // Seat 1184: Sun Quan, Lord of Wu's EDHREC average deck. `--pod-decks 1184`.
+        PodDeck {
+            name: "Sun Quan, Lord of Wu (U)",
+            commanders: decks::SUN_QUAN_COMMANDERS,
+            main: decks::SUN_QUAN_MAIN,
+        },
+        // Seat 1185: Vorinclex, Monstrous Raider's EDHREC average deck. `--pod-decks 1185`.
+        PodDeck {
+            name: "Vorinclex, Monstrous Raider (G)",
+            commanders: decks::VORINCLEX_2_COMMANDERS,
+            main: decks::VORINCLEX_2_MAIN,
+        },
+        // Seat 1186: Teysa, Opulent Oligarch's EDHREC average deck. `--pod-decks 1186`.
+        PodDeck {
+            name: "Teysa, Opulent Oligarch (WB)",
+            commanders: decks::TEYSA_3_COMMANDERS,
+            main: decks::TEYSA_3_MAIN,
+        },
     ]
 }
 
@@ -10499,6 +10541,13 @@ mod tests {
             ("Jacob Hauken, Inspector", &[0x0EAE]),
             ("Sokrates, Athenian Teacher", &[0x0EAF]),
             ("The Second Doctor and Vislor Turlough", &[0x0EB0]),
+            ("Leonardo da Vinci", &[0x0EB1]),
+            ("The Ancient One", &[0x0EB2]),
+            ("Tameshi, Reality Architect", &[0x0EB3]),
+            ("Lucy MacLean, Positively Armed", &[0x0EB4]),
+            ("Sun Quan, Lord of Wu", &[0x0EB5]),
+            ("Vorinclex, Monstrous Raider", &[0x0EB6]),
+            ("Teysa, Opulent Oligarch", &[0x0EB7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
