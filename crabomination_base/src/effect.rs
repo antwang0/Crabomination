@@ -1072,6 +1072,10 @@ pub enum Value {
     /// power too); 0 when none. Szat's Will's "the greatest power among
     /// creature cards exiled this way".
     GreatestPowerAmongCards(Box<Selector>),
+    /// The greatest computed power *or* toughness among the battlefield
+    /// permanents the selector resolves to; 0 when none (Freelance Muscle's
+    /// "greatest power and/or toughness among other creatures you control").
+    GreatestPowerOrToughnessAmong(Box<Selector>),
     /// Number of cards in `who`'s library. Used by Body of Research's
     /// "for each card in your library" Fractal-token scaling.
     LibrarySizeOf(PlayerRef),

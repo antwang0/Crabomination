@@ -1130,6 +1130,14 @@ impl GameState {
                 .max()
                 .unwrap_or(0)
                 .max(0),
+            Value::GreatestPowerOrToughnessAmong(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_permanent_id())
+                .filter_map(|cid| self.computed_permanent(cid).map(|c| c.power.max(c.toughness)))
+                .max()
+                .unwrap_or(0)
+                .max(0),
             Value::MaxGraveyardSize => self
                 .players
                 .iter()
