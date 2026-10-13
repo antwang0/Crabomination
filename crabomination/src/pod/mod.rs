@@ -7572,6 +7572,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEYSA_3_COMMANDERS,
             main: decks::TEYSA_3_MAIN,
         },
+        // Seat 1187: Ganax, Astral Hunter's EDHREC average deck. `--pod-decks 1187`.
+        PodDeck {
+            name: "Ganax, Astral Hunter (R)",
+            commanders: decks::GANAX_2_COMMANDERS,
+            main: decks::GANAX_2_MAIN,
+        },
+        // Seat 1188: Ganax, Astral Hunter and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 1188`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Acolyte of Bahamut (RG)",
+            commanders: decks::GANAX_3_COMMANDERS,
+            main: decks::GANAX_3_MAIN,
+        },
+        // Seat 1189: Aragorn, Hornburg Hero's EDHREC average deck. `--pod-decks 1189`.
+        PodDeck {
+            name: "Aragorn, Hornburg Hero (WRG)",
+            commanders: decks::ARAGORN_2_COMMANDERS,
+            main: decks::ARAGORN_2_MAIN,
+        },
+        // Seat 1190: Alisaie Leveilleur's EDHREC average deck. `--pod-decks 1190`.
+        PodDeck {
+            name: "Alisaie Leveilleur (W)",
+            commanders: decks::ALISAIE_LEVEILLEUR_COMMANDERS,
+            main: decks::ALISAIE_LEVEILLEUR_MAIN,
+        },
+        // Seat 1191: Gor Muldrak, Amphinologist's EDHREC average deck. `--pod-decks 1191`.
+        PodDeck {
+            name: "Gor Muldrak, Amphinologist (UG)",
+            commanders: decks::GOR_MULDRAK_COMMANDERS,
+            main: decks::GOR_MULDRAK_MAIN,
+        },
+        // Seat 1192: The Capitoline Triad's EDHREC average deck. `--pod-decks 1192`.
+        PodDeck {
+            name: "The Capitoline Triad (C)",
+            commanders: decks::THE_CAPITOLINE_TRIAD_COMMANDERS,
+            main: decks::THE_CAPITOLINE_TRIAD_MAIN,
+        },
     ]
 }
 
@@ -10548,6 +10584,12 @@ mod tests {
             ("Sun Quan, Lord of Wu", &[0x0EB5]),
             ("Vorinclex, Monstrous Raider", &[0x0EB6]),
             ("Teysa, Opulent Oligarch", &[0x0EB7]),
+            ("Ganax, Astral Hunter", &[0x0EB8]),
+            ("Ganax, Astral Hunter and Acolyte of Bahamut", &[0x0EB9]),
+            ("Aragorn, Hornburg Hero", &[0x0EBA]),
+            ("Alisaie Leveilleur", &[0x0EBB]),
+            ("Gor Muldrak, Amphinologist", &[0x0EBC]),
+            ("The Capitoline Triad", &[0x0EBD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
