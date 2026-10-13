@@ -7866,6 +7866,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GOGO_COMMANDERS,
             main: decks::GOGO_MAIN,
         },
+        // Seat 1236: Raphael, Fiendish Savior's EDHREC average deck. `--pod-decks 1236`.
+        PodDeck {
+            name: "Raphael, Fiendish Savior (BR)",
+            commanders: decks::RAPHAEL_COMMANDERS,
+            main: decks::RAPHAEL_MAIN,
+        },
+        // Seat 1237: Mishra, Claimed by Gix's EDHREC average deck. `--pod-decks 1237`.
+        PodDeck {
+            name: "Mishra, Claimed by Gix (BR)",
+            commanders: decks::MISHRA_2_COMMANDERS,
+            main: decks::MISHRA_2_MAIN,
+        },
+        // Seat 1238: Tom, Bert, and William's EDHREC average deck. `--pod-decks 1238`.
+        PodDeck {
+            name: "Tom, Bert, and William (BG)",
+            commanders: decks::TOM_COMMANDERS,
+            main: decks::TOM_MAIN,
+        },
     ]
 }
 
@@ -10926,6 +10944,9 @@ mod tests {
             ("Uugguu, the Omniplasm", &[0x0EE6]),
             ("Edea, Possessed Sorceress", &[0x0EE7]),
             ("Gogo, Master of Mimicry", &[0x0EE8]),
+            ("Raphael, Fiendish Savior", &[0x0EE9]),
+            ("Mishra, Claimed by Gix", &[0x0EEA]),
+            ("Tom, Bert, and William", &[0x0EEB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

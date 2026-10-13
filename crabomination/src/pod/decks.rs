@@ -35150,3 +35150,87 @@ pub const GOGO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island,
 ];
+
+pub const RAPHAEL_COMMANDERS: &[CardFactory] = &[raphael_fiendish_savior];
+
+/// **Raphael, Fiendish Savior**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Swamps = 99.
+/// Raphael, Fiendish Savior (EDHREC, fetched 2026-10-13).
+pub const RAPHAEL_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, commanders_sphere, lightning_greaves, rakdos_signet,
+    skullclamp, sol_ring, swiftfoot_boots, talisman_of_indulgence, blood_crypt, bloodfell_caves,
+    bojuka_bog, command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge,
+    luxury_suite, path_of_ancestry, rakdos_carnarium, shadowblood_ridge, smoldering_marsh,
+    tainted_peak, temple_of_malice, archfiend_of_depravity, balor, body_dropper,
+    elturel_survivors, fiendish_duo, great_unclean_one, grim_hireling, harvester_of_souls,
+    hellrider, herald_of_slaanesh, hidetsugu_devouring_chaos, hobblefiend, kardur_doomscourge,
+    karlach_fury_of_avernus, mahadi_emporium_master, mayhem_devil, orcus_prince_of_undeath,
+    perforating_artist, rakdos_lord_of_riots, rakdos_patron_of_chaos, rakdos_the_showstopper,
+    reaper_from_the_abyss, sin_prodder, spiteful_prankster, the_balrog_durins_bane, torch_fiend,
+    varragoth_bloodsky_sire, wildfire_devils, witty_roastmaster, zurzoth_chaos_rider,
+    black_market_connections, goblin_bombardment, impact_tremors, lilianas_contract,
+    phyrexian_arena, unholy_annex_ritual_chamber, bedevil, chaos_warp, corrupted_conviction,
+    dance_with_devils, dark_ritual, deadly_dispute, rakdos_charm, terminate, village_rites,
+    zariel_archduke_of_avernus, blasphemous_act, burn_down_the_house, demonic_counsel,
+    devils_playground, faithless_looting, feed_the_swarm, reanimate, vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const MISHRA_2_COMMANDERS: &[CardFactory] = &[mishra_claimed_by_gix];
+
+/// **Mishra, Claimed by Gix**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 9 Mountains + 9 Swamps = 99.
+/// Mishra, Claimed by Gix (EDHREC, fetched 2026-10-13).
+pub const MISHRA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, dolmen_gate, fellwar_stone, lightning_greaves, mind_stone, rakdos_signet,
+    skullclamp, sol_ring, strionic_resonator, swiftfoot_boots, talisman_of_indulgence,
+    urabrasks_forge, blightstep_pathway, blood_crypt, bojuka_bog, command_tower,
+    dragonskull_summit, exotic_orchard, foreboding_ruins, hanweir_battlements, haunted_ridge,
+    luxury_suite, rakdos_carnarium, shadowblood_ridge, smoldering_marsh, sulfurous_springs,
+    tainted_peak, temple_of_malice, anger, combat_celebrant, death_tyrant,
+    garna_bloodfist_of_keld, gix_yawgmoth_praetor, goblin_engineer, goblin_rabblemaster,
+    hanweir_garrison, hellrider, kardur_doomscourge, karlach_fury_of_avernus, krenko_mob_boss,
+    krenko_tin_street_kingpin, lagomos_hand_of_hatred, legion_warboss, loyal_apprentice,
+    mahadi_emporium_master, mishra_tamer_of_mak_fawa, moraug_fury_of_akoum, neheb_the_eternal,
+    phyrexian_dragon_engine, professional_face_breaker, siege_gang_commander,
+    siege_gang_lieutenant, solemn_simulacrum, squee_dubious_monarch, tilonallis_summoner,
+    urabrask_the_hidden, bitterblossom, black_market_connections, impact_tremors,
+    phyrexian_arena, phyrexian_reclamation, rising_of_the_day, bedevil, chaos_warp, dark_ritual,
+    deadly_dispute, infernal_grasp, rakdos_charm, terminate, village_rites,
+    zariel_archduke_of_avernus, blasphemous_act, diabolic_intent, faithless_looting,
+    feed_the_swarm, jeskas_will, nights_whisper, reanimate, song_of_totentanz,
+    tempt_with_vengeance, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const TOM_COMMANDERS: &[CardFactory] = &[tom_bert_and_william];
+
+/// **Tom, Bert, and William**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Forests + 9 Swamps = 99.
+/// Tom, Bert, and William (EDHREC, fetched 2026-10-13).
+pub const TOM_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_essence, sol_ring, talisman_of_resilience, the_skullspore_nexus,
+    thought_vessel, bojuka_bog, command_tower, deathcap_glade, llanowar_wastes,
+    necroblossom_snarl, overgrown_tomb, reliquary_tower, tainted_wood, twilight_mire,
+    underground_mortuary, undergrowth_stadium, verdant_catacombs, vernal_fen, wastewood_verge,
+    woodland_cemetery, anticausal_vestige, bebop_rocksteady, beifongs_bounty_hunters,
+    birds_of_paradise, bygone_colossus, daemogoth_titan, dina_essence_brewer,
+    disciple_of_freyalise, elves_of_deep_shadow, elvish_mystic, eternal_witness,
+    fanatic_of_rhonas, ghalta_primal_hunger, goreclaw_terror_of_qal_sisma, grave_researcher,
+    honest_rutstein, jarad_golgari_lich_lord, junji_the_midnight_sky, kalakscion_hunger_tyrant,
+    llanowar_elves, phyrexian_soulgorger, protean_hulk, psychosis_crawler, rot_curse_rakshasa,
+    rotting_regisaur, sakura_tribe_elder, selvala_heart_of_the_wilds, slumbering_trudge,
+    the_gitrog_ravenous_ride, topiary_stomper, wayward_swordtooth, xu_ifit_osteoharmonist,
+    yargle_and_multani, animate_dead, garruks_uprising, greater_good, part_in_friendship,
+    wild_growth, abrupt_decay, assassins_trophy, beast_within, dark_ritual, deadly_rollick,
+    heroic_intervention, malakir_rebirth, revitalizing_repast, tear_asunder, culling_ritual,
+    cultivate, farseek, living_death, natures_lore, rampant_growth, reanimate,
+    rise_of_the_dark_realms, three_visits, toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
