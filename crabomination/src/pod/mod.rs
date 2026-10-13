@@ -10878,6 +10878,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HAKTOS_THE_UNSCARRED_COMMANDERS,
             main: decks::HAKTOS_THE_UNSCARRED_MAIN,
         },
+        // Seat 1738: Amzu, Swarm's Hunger's EDHREC average deck. `--pod-decks 1738`.
+        PodDeck {
+            name: "Amzu, Swarm's Hunger (BG)",
+            commanders: decks::AMZU_COMMANDERS,
+            main: decks::AMZU_MAIN,
+        },
+        // Seat 1739: Evra, Halcyon Witness's EDHREC average deck. `--pod-decks 1739`.
+        PodDeck {
+            name: "Evra, Halcyon Witness (W)",
+            commanders: decks::EVRA_COMMANDERS,
+            main: decks::EVRA_MAIN,
+        },
+        // Seat 1740: Ertai, the Corrupted's EDHREC average deck. `--pod-decks 1740`.
+        PodDeck {
+            name: "Ertai, the Corrupted (WUB)",
+            commanders: decks::ERTAI_COMMANDERS,
+            main: decks::ERTAI_MAIN,
+        },
+        // Seat 1741: Ilharg, the Raze-Boar's EDHREC average deck. `--pod-decks 1741`.
+        PodDeck {
+            name: "Ilharg, the Raze-Boar (R)",
+            commanders: decks::ILHARG_COMMANDERS,
+            main: decks::ILHARG_MAIN,
+        },
+        // Seat 1742: Faramir, Prince of Ithilien's EDHREC average deck. `--pod-decks 1742`.
+        PodDeck {
+            name: "Faramir, Prince of Ithilien (WU)",
+            commanders: decks::FARAMIR_2_COMMANDERS,
+            main: decks::FARAMIR_2_MAIN,
+        },
+        // Seat 1743: Piper Wright, Publick Reporter's EDHREC average deck. `--pod-decks 1743`.
+        PodDeck {
+            name: "Piper Wright, Publick Reporter (U)",
+            commanders: decks::PIPER_WRIGHT_COMMANDERS,
+            main: decks::PIPER_WRIGHT_MAIN,
+        },
+        // Seat 1744: Ultimecia, Time Sorceress's EDHREC average deck. `--pod-decks 1744`.
+        PodDeck {
+            name: "Ultimecia, Time Sorceress (UB)",
+            commanders: decks::ULTIMECIA_COMMANDERS,
+            main: decks::ULTIMECIA_MAIN,
+        },
+        // Seat 1745: Saffi Eriksdotter's EDHREC average deck. `--pod-decks 1745`.
+        PodDeck {
+            name: "Saffi Eriksdotter (WG)",
+            commanders: decks::SAFFI_ERIKSDOTTER_COMMANDERS,
+            main: decks::SAFFI_ERIKSDOTTER_MAIN,
+        },
+        // Seat 1746: Geist of Saint Thalia's EDHREC average deck. `--pod-decks 1746`.
+        PodDeck {
+            name: "Geist of Saint Thalia (U)",
+            commanders: decks::GEIST_OF_SAINT_THALIA_COMMANDERS,
+            main: decks::GEIST_OF_SAINT_THALIA_MAIN,
+        },
     ]
 }
 
@@ -14446,6 +14500,15 @@ mod tests {
             ("Lyra, Tolarian Archangel", &[0x10DC]),
             ("The Indomitable", &[0x10DD]),
             ("Haktos the Unscarred", &[0x10DE]),
+            ("Amzu, Swarm's Hunger", &[0x10DF]),
+            ("Evra, Halcyon Witness", &[0x10E0]),
+            ("Ertai, the Corrupted", &[0x10E1]),
+            ("Ilharg, the Raze-Boar", &[0x10E2]),
+            ("Faramir, Prince of Ithilien", &[0x10E3]),
+            ("Piper Wright, Publick Reporter", &[0x10E4]),
+            ("Ultimecia, Time Sorceress", &[0x10E5]),
+            ("Saffi Eriksdotter", &[0x10E6]),
+            ("Geist of Saint Thalia", &[0x10E7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
