@@ -236,3 +236,20 @@ fn web_watch_mana_only_for_exile_casts() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(exiled_bear).is_some());
 }
+
+/// Parker Luck: two target players each lose the other's top card's mana
+/// value and put their own into their hand.
+#[test]
+fn parker_luck_crosses_the_reveals() {
+    let mut g = pod(3);
+    g.add_card_to_library(1, catalog::craw_wurm());
+    g.add_card_to_library(2, catalog::lightning_bolt());
+    let def = catalog::parker_luck();
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(1), Target::Player(2)];
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("resolve");
+    assert_eq!((g.players[1].life, g.players[2].life), (19, 14), "the bolt's 1 and the wurm's 6");
+    assert_eq!(g.players[1].hand[0].definition.name, "Craw Wurm");
+    assert_eq!(g.players[2].hand[0].definition.name, "Lightning Bolt");
+    assert_eq!(g.players[0].life, 20);
+}

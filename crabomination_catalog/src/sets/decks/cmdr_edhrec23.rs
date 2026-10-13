@@ -248,3 +248,39 @@ pub fn interdimensional_web_watch() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Parker Luck — {2}{B} enchantment. At the beginning of your end step, two
+/// target players each reveal their top card, each loses life equal to the
+/// other's card's mana value, then each puts their card into their hand.
+pub fn parker_luck() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    let slot = |n: u8| {
+        let filter = if n == 0 { R::Player } else { R::Player.and(R::OtherThanTargetSlot(0)) };
+        Selector::TargetFiltered { slot: n, filter }
+    };
+    let seat = |n: u8| PlayerRef::ControllerOf(Box::new(slot(n)));
+    let top_mv = |n: u8| {
+        Value::ManaValueOf(Box::new(Selector::TopOfLibrary { who: seat(n), count: Value::ONE }))
+    };
+    let to_hand = |n: u8| Effect::Move {
+        what: Selector::TopOfLibrary { who: seat(n), count: Value::ONE },
+        to: ZoneDest::Hand(seat(n)),
+    };
+    CardDefinition {
+        name: "Parker Luck",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::End), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::RevealTopOfLibrary { who: seat(0) },
+                Effect::RevealTopOfLibrary { who: seat(1) },
+                Effect::LoseLife { who: slot(0), amount: top_mv(1) },
+                Effect::LoseLife { who: slot(1), amount: top_mv(0) },
+                to_hand(0),
+                to_hand(1),
+            ]),
+        }],
+        ..Default::default()
+    }
+}
