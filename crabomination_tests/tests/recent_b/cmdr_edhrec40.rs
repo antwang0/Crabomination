@@ -318,3 +318,43 @@ fn cr_611_2c_garland_holds_a_hostage_while_they_reign() {
     g.check_state_based_actions();
     assert_eq!(g.battlefield_find(bear).unwrap().controller, monarch, "its owner lost the crown");
 }
+
+fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// CR 702.167 / 602.5b — The Enigma Jewel crafts with four nonlands that have
+/// activated abilities; the Locus borrows their abilities, each once a turn,
+/// and copies every non-mana ability its controller activates.
+#[test]
+fn cr_702_167_locus_borrows_and_copies_crafted_abilities() {
+    let mut g = pod(2);
+    let jewel = g.add_card_to_battlefield(0, catalog::the_enigma_jewel());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::jhoiras_timebug());
+    }
+    let clock = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(clock).unwrap().counters.insert(CounterType::Time, 5);
+    flood(&mut g, 0);
+    activate(&mut g, jewel, 1, None).expect("craft");
+    assert_eq!(g.battlefield_find(jewel).unwrap().definition.name, "Locus of Enlightenment");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(jewel)).count(), 4);
+    g.battlefield_find_mut(jewel).unwrap().tapped = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(0), DecisionAnswer::Amount(0)]));
+    let printed = catalog::the_enigma_jewel().back_face.unwrap().activated_abilities.len();
+    activate(&mut g, jewel, printed, Some(Target::Permanent(clock))).expect("borrowed Timebug ability");
+    assert_eq!(g.battlefield_find(clock).unwrap().counter_count(CounterType::Time), 3, "the ability and its copy");
+    g.battlefield_find_mut(jewel).unwrap().tapped = false;
+    assert!(activate(&mut g, jewel, printed, Some(Target::Permanent(clock))).is_err(), "once each turn");
+}

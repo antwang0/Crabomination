@@ -8,8 +8,9 @@ use crate::card::{
     Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{etb, target_any, target_filtered};
-use crate::effect::{ActivationTrait, Duration, Effect, PlayerRef, VoteOption, ZoneDest};
+use crate::effect::shortcut::{craft, etb, target_any, target_filtered};
+use crate::effect::{ActivationTrait, Duration, Effect, ManaPayload, PlayerRef, VoteOption, ZoneDest};
+use crate::mana::SpendRestriction;
 use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
 use crabomination_base::tokens::treasure_token;
 use crabomination_base::turn_step::TurnStep;
@@ -531,5 +532,57 @@ pub fn garland_royal_kidnapper() -> CardDefinition {
             3,
             4,
         )
+    }
+}
+
+// ── Gogo, Master of Mimicry ──────────────────────────────────────────────────
+
+/// The Enigma Jewel // Locus of Enlightenment — {U} legendary artifact. Enters
+/// tapped; {T}: {C}{C} for abilities only. Craft with four nonlands with
+/// activated abilities {8}{U} (the printed "four or more" crafts with exactly
+/// four). Locus: the crafted cards' activated abilities, each once a turn;
+/// whenever you activate a non-mana ability, copy it.
+pub fn the_enigma_jewel() -> CardDefinition {
+    let locus = CardDefinition {
+        name: "Locus of Enlightenment",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        color_indicator: vec![Color::Blue],
+        static_abilities: vec![StaticAbility {
+            description: "Locus of Enlightenment has each activated ability of the exiled cards used to craft it. \
+                          You may activate each of those abilities only once each turn.",
+            effect: StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl),
+            effect: Effect::CopyActivatedAbilityMayChooseTargets,
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Enigma Jewel",
+        cost: cost(&[u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "The Enigma Jewel enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colorless(Value::Const(2))),
+                        SpendRestriction::AbilitiesOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            craft(cost(&[generic(8), u()]), R::Nonland.and(R::HasActivatedAbility), 4),
+        ],
+        back_face: Some(Box::new(locus)),
+        ..Default::default()
     }
 }
