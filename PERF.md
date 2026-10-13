@@ -3308,6 +3308,8 @@ pods (release)   pod_sweep 9907 seats 1040-1108 × 4,6 × 4 = 120 games, 0 bad;
                  MillUntilLands looping on a landless shuffle-back library
                  (seed 990884), fixed (52eaea9f3); 9909 every deck × 4,6 ×
                  2 = 970 games at the tip, 0 undecided
+audit build      overflow + debug-assertions: pod_sweep 9910 seats 1040-1169
+                 × 4,6 × 2 = 110 games, 0 panics, 0 undecided
 ```
 
 ### 2026-10-13 (Commander run, `01L4tuaB`, third leg) — guardrail; 58 cards, seats 1047-1060
