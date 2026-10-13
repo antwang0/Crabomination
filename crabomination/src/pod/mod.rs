@@ -6864,6 +6864,156 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NEVINYRRAL_COMMANDERS,
             main: decks::NEVINYRRAL_MAIN,
         },
+        // Seat 1069: Smaug, Wicked Worm's EDHREC average deck. `--pod-decks 1069`.
+        PodDeck {
+            name: "Smaug, Wicked Worm (BR)",
+            commanders: decks::SMAUG_COMMANDERS,
+            main: decks::SMAUG_MAIN,
+        },
+        // Seat 1070: Nikya of the Old Ways's EDHREC average deck. `--pod-decks 1070`.
+        PodDeck {
+            name: "Nikya of the Old Ways (RG)",
+            commanders: decks::NIKYA_OF_THE_OLD_WAYS_COMMANDERS,
+            main: decks::NIKYA_OF_THE_OLD_WAYS_MAIN,
+        },
+        // Seat 1071: Phelddagrif's EDHREC average deck. `--pod-decks 1071`.
+        PodDeck {
+            name: "Phelddagrif (WUG)",
+            commanders: decks::PHELDDAGRIF_COMMANDERS,
+            main: decks::PHELDDAGRIF_MAIN,
+        },
+        // Seat 1072: Ashaya, Soul of the Wild's EDHREC average deck. `--pod-decks 1072`.
+        PodDeck {
+            name: "Ashaya, Soul of the Wild (G)",
+            commanders: decks::ASHAYA_COMMANDERS,
+            main: decks::ASHAYA_MAIN,
+        },
+        // Seat 1073: Zidane, Tantalus Thief's EDHREC average deck. `--pod-decks 1073`.
+        PodDeck {
+            name: "Zidane, Tantalus Thief (WR)",
+            commanders: decks::ZIDANE_COMMANDERS,
+            main: decks::ZIDANE_MAIN,
+        },
+        // Seat 1074: Shadrix Silverquill's EDHREC average deck. `--pod-decks 1074`.
+        PodDeck {
+            name: "Shadrix Silverquill (WB)",
+            commanders: decks::SHADRIX_SILVERQUILL_COMMANDERS,
+            main: decks::SHADRIX_SILVERQUILL_MAIN,
+        },
+        // Seat 1075: Gandalf the White's EDHREC average deck. `--pod-decks 1075`.
+        PodDeck {
+            name: "Gandalf the White (W)",
+            commanders: decks::GANDALF_THE_WHITE_COMMANDERS,
+            main: decks::GANDALF_THE_WHITE_MAIN,
+        },
+        // Seat 1076: Oskar, Rubbish Reclaimer's EDHREC average deck. `--pod-decks 1076`.
+        PodDeck {
+            name: "Oskar, Rubbish Reclaimer (UB)",
+            commanders: decks::OSKAR_COMMANDERS,
+            main: decks::OSKAR_MAIN,
+        },
+        // Seat 1077: Xanathar, Guild Kingpin's EDHREC average deck. `--pod-decks 1077`.
+        PodDeck {
+            name: "Xanathar, Guild Kingpin (UB)",
+            commanders: decks::XANATHAR_COMMANDERS,
+            main: decks::XANATHAR_MAIN,
+        },
+        // Seat 1078: Y'shtola Rhul's EDHREC average deck. `--pod-decks 1078`.
+        PodDeck {
+            name: "Y'shtola Rhul (U)",
+            commanders: decks::YSHTOLA_RHUL_COMMANDERS,
+            main: decks::YSHTOLA_RHUL_MAIN,
+        },
+        // Seat 1079: Mass of Mysteries's EDHREC average deck. `--pod-decks 1079`.
+        PodDeck {
+            name: "Mass of Mysteries (WUBRG)",
+            commanders: decks::MASS_OF_MYSTERIES_COMMANDERS,
+            main: decks::MASS_OF_MYSTERIES_MAIN,
+        },
+        // Seat 1080: Ozox, the Clattering King's EDHREC average deck. `--pod-decks 1080`.
+        PodDeck {
+            name: "Ozox, the Clattering King (B)",
+            commanders: decks::OZOX_COMMANDERS,
+            main: decks::OZOX_MAIN,
+        },
+        // Seat 1081: The Sixth Doctor and Romana II's EDHREC average deck. `--pod-decks 1081`.
+        PodDeck {
+            name: "The Sixth Doctor and Romana II (WUG)",
+            commanders: decks::THE_SIXTH_DOCTOR_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_MAIN,
+        },
+        // Seat 1082: Electro, Assaulting Battery's EDHREC average deck. `--pod-decks 1082`.
+        PodDeck {
+            name: "Electro, Assaulting Battery (R)",
+            commanders: decks::ELECTRO_COMMANDERS,
+            main: decks::ELECTRO_MAIN,
+        },
+        // Seat 1083: Ozai, the Phoenix King's EDHREC average deck. `--pod-decks 1083`.
+        PodDeck {
+            name: "Ozai, the Phoenix King (BR)",
+            commanders: decks::OZAI_COMMANDERS,
+            main: decks::OZAI_MAIN,
+        },
+        // Seat 1084: Ruby, Daring Tracker's EDHREC average deck. `--pod-decks 1084`.
+        PodDeck {
+            name: "Ruby, Daring Tracker (RG)",
+            commanders: decks::RUBY_COMMANDERS,
+            main: decks::RUBY_MAIN,
+        },
+        // Seat 1085: Kami of the Crescent Moon's EDHREC average deck. `--pod-decks 1085`.
+        PodDeck {
+            name: "Kami of the Crescent Moon (U)",
+            commanders: decks::KAMI_OF_THE_CRESCENT_MOON_COMMANDERS,
+            main: decks::KAMI_OF_THE_CRESCENT_MOON_MAIN,
+        },
+        // Seat 1086: Ashling, Flame Dancer's EDHREC average deck. `--pod-decks 1086`.
+        PodDeck {
+            name: "Ashling, Flame Dancer (R)",
+            commanders: decks::ASHLING_3_COMMANDERS,
+            main: decks::ASHLING_3_MAIN,
+        },
+        // Seat 1087: Captain Sisay's EDHREC average deck. `--pod-decks 1087`.
+        PodDeck {
+            name: "Captain Sisay (WG)",
+            commanders: decks::CAPTAIN_SISAY_COMMANDERS,
+            main: decks::CAPTAIN_SISAY_MAIN,
+        },
+        // Seat 1088: Kethis, the Hidden Hand's EDHREC average deck. `--pod-decks 1088`.
+        PodDeck {
+            name: "Kethis, the Hidden Hand (WBG)",
+            commanders: decks::KETHIS_COMMANDERS,
+            main: decks::KETHIS_MAIN,
+        },
+        // Seat 1089: Chevill, Bane of Monsters's EDHREC average deck. `--pod-decks 1089`.
+        PodDeck {
+            name: "Chevill, Bane of Monsters (BG)",
+            commanders: decks::CHEVILL_COMMANDERS,
+            main: decks::CHEVILL_MAIN,
+        },
+        // Seat 1090: Nashi, Searcher in the Dark's EDHREC average deck. `--pod-decks 1090`.
+        PodDeck {
+            name: "Nashi, Searcher in the Dark (UB)",
+            commanders: decks::NASHI_COMMANDERS,
+            main: decks::NASHI_MAIN,
+        },
+        // Seat 1091: Mirko Vosk, Mind Drinker's EDHREC average deck. `--pod-decks 1091`.
+        PodDeck {
+            name: "Mirko Vosk, Mind Drinker (UB)",
+            commanders: decks::MIRKO_VOSK_COMMANDERS,
+            main: decks::MIRKO_VOSK_MAIN,
+        },
+        // Seat 1092: Purphoros, Bronze-Blooded's EDHREC average deck. `--pod-decks 1092`.
+        PodDeck {
+            name: "Purphoros, Bronze-Blooded (R)",
+            commanders: decks::PURPHOROS_2_COMMANDERS,
+            main: decks::PURPHOROS_2_MAIN,
+        },
+        // Seat 1093: Wilson, Refined Grizzly and Flaming Fist's EDHREC average deck. `--pod-decks 1093`.
+        PodDeck {
+            name: "Wilson, Refined Grizzly and Flaming Fist (WG)",
+            commanders: decks::WILSON_COMMANDERS,
+            main: decks::WILSON_MAIN,
+        },
     ]
 }
 
@@ -9722,6 +9872,31 @@ mod tests {
             ("Pia Nalaar, Chief Mechanic", &[0x0E3F]),
             ("Bane, Lord of Darkness", &[0x0E40]),
             ("Nevinyrral, Urborg Tyrant", &[0x0E41]),
+            ("Smaug, Wicked Worm", &[0x0E42]),
+            ("Nikya of the Old Ways", &[0x0E43]),
+            ("Phelddagrif", &[0x0E44]),
+            ("Ashaya, Soul of the Wild", &[0x0E45]),
+            ("Zidane, Tantalus Thief", &[0x0E46]),
+            ("Shadrix Silverquill", &[0x0E47]),
+            ("Gandalf the White", &[0x0E48]),
+            ("Oskar, Rubbish Reclaimer", &[0x0E49]),
+            ("Xanathar, Guild Kingpin", &[0x0E4A]),
+            ("Y'shtola Rhul", &[0x0E4B]),
+            ("Mass of Mysteries", &[0x0E4C]),
+            ("Ozox, the Clattering King", &[0x0E4D]),
+            ("The Sixth Doctor and Romana II", &[0x0E4E]),
+            ("Electro, Assaulting Battery", &[0x0E4F]),
+            ("Ozai, the Phoenix King", &[0x0E50]),
+            ("Ruby, Daring Tracker", &[0x0E51]),
+            ("Kami of the Crescent Moon", &[0x0E52]),
+            ("Ashling, Flame Dancer", &[0x0E53]),
+            ("Captain Sisay", &[0x0E54]),
+            ("Kethis, the Hidden Hand", &[0x0E55]),
+            ("Chevill, Bane of Monsters", &[0x0E56]),
+            ("Nashi, Searcher in the Dark", &[0x0E57]),
+            ("Mirko Vosk, Mind Drinker", &[0x0E58]),
+            ("Purphoros, Bronze-Blooded", &[0x0E59]),
+            ("Wilson, Refined Grizzly and Flaming Fist", &[0x0E5A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
