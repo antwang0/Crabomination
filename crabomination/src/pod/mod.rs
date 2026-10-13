@@ -10818,6 +10818,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RIKKU_COMMANDERS,
             main: decks::RIKKU_MAIN,
         },
+        // Seat 1728: Koll, the Forgemaster's EDHREC average deck. `--pod-decks 1728`.
+        PodDeck {
+            name: "Koll, the Forgemaster (WR)",
+            commanders: decks::KOLL_COMMANDERS,
+            main: decks::KOLL_MAIN,
+        },
+        // Seat 1729: Crosis, the Purger's EDHREC average deck. `--pod-decks 1729`.
+        PodDeck {
+            name: "Crosis, the Purger (UBR)",
+            commanders: decks::CROSIS_COMMANDERS,
+            main: decks::CROSIS_MAIN,
+        },
+        // Seat 1730: Rashel, Fist of Torm's EDHREC average deck. `--pod-decks 1730`.
+        PodDeck {
+            name: "Rashel, Fist of Torm (W)",
+            commanders: decks::RASHEL_COMMANDERS,
+            main: decks::RASHEL_MAIN,
+        },
+        // Seat 1731: Lyna, Veil of Vengeance's EDHREC average deck. `--pod-decks 1731`.
+        PodDeck {
+            name: "Lyna, Veil of Vengeance (WUB)",
+            commanders: decks::LYNA_COMMANDERS,
+            main: decks::LYNA_MAIN,
+        },
+        // Seat 1732: Firion, Wild Rose Warrior's EDHREC average deck. `--pod-decks 1732`.
+        PodDeck {
+            name: "Firion, Wild Rose Warrior (R)",
+            commanders: decks::FIRION_COMMANDERS,
+            main: decks::FIRION_MAIN,
+        },
+        // Seat 1733: Aurelia, Exemplar of Justice's EDHREC average deck. `--pod-decks 1733`.
+        PodDeck {
+            name: "Aurelia, Exemplar of Justice (WR)",
+            commanders: decks::AURELIA_3_COMMANDERS,
+            main: decks::AURELIA_3_MAIN,
+        },
+        // Seat 1734: Enkira, Hostile Scavenger's EDHREC average deck. `--pod-decks 1734`.
+        PodDeck {
+            name: "Enkira, Hostile Scavenger (BG)",
+            commanders: decks::ENKIRA_COMMANDERS,
+            main: decks::ENKIRA_MAIN,
+        },
+        // Seat 1735: Lyra, Tolarian Archangel's EDHREC average deck. `--pod-decks 1735`.
+        PodDeck {
+            name: "Lyra, Tolarian Archangel (U)",
+            commanders: decks::LYRA_COMMANDERS,
+            main: decks::LYRA_MAIN,
+        },
+        // Seat 1736: The Indomitable's EDHREC average deck. `--pod-decks 1736`.
+        PodDeck {
+            name: "The Indomitable (U)",
+            commanders: decks::THE_INDOMITABLE_COMMANDERS,
+            main: decks::THE_INDOMITABLE_MAIN,
+        },
+        // Seat 1737: Haktos the Unscarred's EDHREC average deck. `--pod-decks 1737`.
+        PodDeck {
+            name: "Haktos the Unscarred (WR)",
+            commanders: decks::HAKTOS_THE_UNSCARRED_COMMANDERS,
+            main: decks::HAKTOS_THE_UNSCARRED_MAIN,
+        },
     ]
 }
 
@@ -14376,6 +14436,16 @@ mod tests {
             ("Danny Pink", &[0x10D2]),
             ("Shang-Chi and the Ten Rings", &[0x10D3]),
             ("Rikku, Resourceful Guardian", &[0x10D4]),
+            ("Koll, the Forgemaster", &[0x10D5]),
+            ("Crosis, the Purger", &[0x10D6]),
+            ("Rashel, Fist of Torm", &[0x10D7]),
+            ("Lyna, Veil of Vengeance", &[0x10D8]),
+            ("Firion, Wild Rose Warrior", &[0x10D9]),
+            ("Aurelia, Exemplar of Justice", &[0x10DA]),
+            ("Enkira, Hostile Scavenger", &[0x10DB]),
+            ("Lyra, Tolarian Archangel", &[0x10DC]),
+            ("The Indomitable", &[0x10DD]),
+            ("Haktos the Unscarred", &[0x10DE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
