@@ -10932,6 +10932,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GEIST_OF_SAINT_THALIA_COMMANDERS,
             main: decks::GEIST_OF_SAINT_THALIA_MAIN,
         },
+        // Seat 1747: Zask, Skittering Swarmlord's EDHREC average deck. `--pod-decks 1747`.
+        PodDeck {
+            name: "Zask, Skittering Swarmlord (BG)",
+            commanders: decks::ZASK_COMMANDERS,
+            main: decks::ZASK_MAIN,
+        },
+        // Seat 1748: Jin-Gitaxias's EDHREC average deck. `--pod-decks 1748`.
+        PodDeck {
+            name: "Jin-Gitaxias (U)",
+            commanders: decks::JIN_GITAXIAS_COMMANDERS,
+            main: decks::JIN_GITAXIAS_MAIN,
+        },
+        // Seat 1749: Aatchik, Emerald Radian's EDHREC average deck. `--pod-decks 1749`.
+        PodDeck {
+            name: "Aatchik, Emerald Radian (BG)",
+            commanders: decks::AATCHIK_COMMANDERS,
+            main: decks::AATCHIK_MAIN,
+        },
+        // Seat 1750: Jin-Gitaxias, Progress Tyrant's EDHREC average deck. `--pod-decks 1750`.
+        PodDeck {
+            name: "Jin-Gitaxias, Progress Tyrant (U)",
+            commanders: decks::JIN_GITAXIAS_2_COMMANDERS,
+            main: decks::JIN_GITAXIAS_2_MAIN,
+        },
+        // Seat 1751: Svyelun of Sea and Sky's EDHREC average deck. `--pod-decks 1751`.
+        PodDeck {
+            name: "Svyelun of Sea and Sky (U)",
+            commanders: decks::SVYELUN_OF_SEA_AND_SKY_COMMANDERS,
+            main: decks::SVYELUN_OF_SEA_AND_SKY_MAIN,
+        },
+        // Seat 1752: The Swarmweaver's EDHREC average deck. `--pod-decks 1752`.
+        PodDeck {
+            name: "The Swarmweaver (BG)",
+            commanders: decks::THE_SWARMWEAVER_COMMANDERS,
+            main: decks::THE_SWARMWEAVER_MAIN,
+        },
+        // Seat 1753: Jin-Gitaxias, Core Augur's EDHREC average deck. `--pod-decks 1753`.
+        PodDeck {
+            name: "Jin-Gitaxias, Core Augur (U)",
+            commanders: decks::JIN_GITAXIAS_3_COMMANDERS,
+            main: decks::JIN_GITAXIAS_3_MAIN,
+        },
     ]
 }
 
@@ -14509,6 +14551,13 @@ mod tests {
             ("Ultimecia, Time Sorceress", &[0x10E5]),
             ("Saffi Eriksdotter", &[0x10E6]),
             ("Geist of Saint Thalia", &[0x10E7]),
+            ("Zask, Skittering Swarmlord", &[0x10E8]),
+            ("Jin-Gitaxias", &[0x10E9]),
+            ("Aatchik, Emerald Radian", &[0x10EA]),
+            ("Jin-Gitaxias, Progress Tyrant", &[0x10EB]),
+            ("Svyelun of Sea and Sky", &[0x10EC]),
+            ("The Swarmweaver", &[0x10ED]),
+            ("Jin-Gitaxias, Core Augur", &[0x10EE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

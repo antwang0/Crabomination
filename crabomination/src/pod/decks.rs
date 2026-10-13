@@ -49389,3 +49389,194 @@ pub const GEIST_OF_SAINT_THALIA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island,
 ];
+
+pub const ZASK_COMMANDERS: &[CardFactory] = &[zask_skittering_swarmlord];
+
+/// **Zask, Skittering Swarmlord**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 11 Forests + 7 Swamps = 99.
+/// Zask, Skittering Swarmlord (EDHREC, fetched 2026-10-13).
+pub const ZASK_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, ashnods_altar, cauldron_of_essence, hedge_shredder,
+    skullclamp, sol_ring, bojuka_bog, command_tower, deathcap_glade, evolving_wilds,
+    fabled_passage, golgari_rot_farm, llanowar_wastes, overgrown_tomb, path_of_ancestry,
+    swarmyard, tainted_wood, terramorphic_expanse, underground_mortuary, undergrowth_stadium,
+    verdant_catacombs, woodland_cemetery, yavimaya_cradle_of_growth, aatchik_emerald_radian,
+    amzu_swarms_hunger, ant_queen, blightbeetle, broodhatch_nantuko, canoptek_scarab_swarm,
+    canoptek_tomb_sentinel, caustic_caterpillar, circuit_mender, crash_of_rhino_beetles,
+    fumulus_the_infestation, giant_adephage, giant_ankheg, grist_voracious_larva, haywire_mite,
+    horizon_explorer, hornet_nest, hornet_queen, huskburster_swarm, icetill_explorer,
+    izoni_thousand_eyed, living_hive, mazirek_kraul_death_priest, moldgraf_millipede,
+    molt_tender, nantuko_elder, scute_mob, scute_swarm, seedship_broodtender,
+    spring_leaf_avenger, springheart_nantuko, the_swarmweaver, crawling_infestation,
+    crawling_sensation, exploration, insidious_roots, moldervine_reclamation,
+    ripples_of_undeath, the_hunger_tide_rises, assassins_trophy, beast_within, crop_rotation,
+    entish_restoration, grisly_salvage, harrow, putrefy, village_rites, grist_the_hunger_tide,
+    bala_ged_recovery, culling_ritual, cultivate, dread_return, kodamas_reach, natures_lore,
+    rampant_growth, swarmyard_massacre, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const JIN_GITAXIAS_COMMANDERS: &[CardFactory] = &[jin_gitaxias];
+
+/// **Jin-Gitaxias**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Jin-Gitaxias (EDHREC, fetched 2026-10-13).
+pub const JIN_GITAXIAS_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, decanter_of_endless_water, everflowing_chalice,
+    ichormoon_gauntlet, midnight_clock, mind_stone, mindsplice_apparatus, sapphire_medallion,
+    sol_ring, staff_of_compleation, thought_vessel, thran_dynamo, castle_vantress,
+    karns_bastion, myriad_landscape, mystic_sanctuary, otawara_soaring_city, reliquary_tower,
+    archmage_emeritus, baral_chief_of_compliance, chrome_host_seedshark, consecrated_sphinx,
+    defiler_of_dreams, dreamtide_whale, flux_channeler, hullbreaker_horror,
+    jin_gitaxias_core_augur, jin_gitaxias_progress_tyrant, laboratory_maniac,
+    phyrexian_metamorph, psychosis_crawler, tekuthal_inquiry_dominus, thassas_oracle,
+    thrummingbird, inexorable_tide, mystic_remora, omniscience, propaganda, rhystic_study,
+    teferis_ageless_insight, wizard_class, aetherize, an_offer_you_cant_refuse, arcane_denial,
+    archmages_charm, brainstorm, counterspell, cyclonic_rift, experimental_augury,
+    fierce_guardianship, frantic_search, high_tide, mana_drain, negate, pongify,
+    prologue_to_phyresis, reject_imperfection, serum_snare, steady_progress, unwind,
+    jace_wielder_of_mysteries, narset_parter_of_veils, contentious_plan, enter_the_infinite,
+    ponder, sea_gate_restoration, solve_the_equation, tezzerets_gambit, time_stretch,
+    vivisurgeons_insight, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const AATCHIK_COMMANDERS: &[CardFactory] = &[aatchik_emerald_radian];
+
+/// **Aatchik, Emerald Radian**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Forests + 9 Swamps = 99.
+/// Aatchik, Emerald Radian (EDHREC, fetched 2026-10-13).
+pub const AATCHIK_MAIN: &[CardFactory] = &[
+    altar_of_dementia, arcane_signet, ashnods_altar, broodheart_engine, cauldron_of_essence,
+    golgari_signet, hedge_shredder, skullclamp, sol_ring, talisman_of_resilience, bojuka_bog,
+    command_tower, darkmoss_bridge, deathcap_glade, golgari_rot_farm, llanowar_wastes,
+    necroblossom_snarl, overgrown_tomb, swarmyard, tainted_wood, tree_of_tales, twilight_mire,
+    undergrowth_stadium, vault_of_whispers, woodland_cemetery, aftermath_analyst,
+    amzu_swarms_hunger, ant_queen, blood_artist, canoptek_scarab_swarm, caustic_caterpillar,
+    eternal_witness, fumulus_the_infestation, grist_voracious_larva, haywire_mite, hornet_nest,
+    hornet_queen, icetill_explorer, izoni_thousand_eyed, mazirek_kraul_death_priest,
+    mirkwood_bats, molt_tender, nyx_weaver, old_rutstein, sakura_tribe_elder, scute_swarm,
+    seedship_broodtender, six, skull_prophet, springheart_nantuko, stitchers_supplier,
+    syr_konrad_the_grim, the_swarmweaver, umbral_collar_zealot, viscera_seer,
+    zask_skittering_swarmlord, zulaport_cutthroat, crawling_infestation, crawling_sensation,
+    doubling_season, moldervine_reclamation, ripples_of_undeath, the_hunger_tide_rises,
+    assassins_trophy, beast_within, deadly_dispute, grapple_with_the_past, grisly_salvage,
+    putrefy, village_rites, grist_the_hunger_tide, blasphemous_edict, culling_ritual, cultivate,
+    dread_return, rampant_growth, reanimate, swarmyard_massacre, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const JIN_GITAXIAS_2_COMMANDERS: &[CardFactory] = &[jin_gitaxias_progress_tyrant];
+
+/// **Jin-Gitaxias, Progress Tyrant**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Jin-Gitaxias, Progress Tyrant (EDHREC, fetched 2026-10-13).
+pub const JIN_GITAXIAS_2_MAIN: &[CardFactory] = &[
+    arcane_signet, everflowing_chalice, gilded_lotus, hedron_archive, isochron_scepter,
+    lightning_greaves, midnight_clock, mind_stone, sapphire_medallion, sculpting_steel,
+    sky_diamond, sol_ring, swiftfoot_boots, thought_vessel, thran_dynamo, twinning_staff,
+    unwinding_clock, academy_ruins, buried_ruin, inventors_fair, mystic_sanctuary,
+    otawara_soaring_city, reliquary_tower, seat_of_the_synod, archmage_emeritus,
+    baral_chief_of_compliance, blightsteel_colossus, emry_lurker_of_the_loch, etherium_sculptor,
+    foundry_inspector, hullbreaker_horror, jin_gitaxias, jin_gitaxias_core_augur,
+    padeem_consul_of_innovation, palladium_myr, phyrexian_metamorph, shimmer_myr, silver_myr,
+    solemn_simulacrum, spellskite, the_reality_chip, thought_monitor, urza_lord_high_artificer,
+    mechanized_production, mystic_remora, propaganda, rhystic_study, an_offer_you_cant_refuse,
+    arcane_denial, blue_suns_zenith, brainstorm, counterspell, cyclonic_rift, dramatic_reversal,
+    frantic_search, high_tide, mana_drain, mystical_tutor, narsets_reversal, negate, pongify,
+    rapid_hybridization, swan_song, narset_parter_of_veils, blue_suns_twilight, expropriate,
+    fabricate, ponder, preordain, solve_the_equation, thoughtcast, time_warp,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const SVYELUN_OF_SEA_AND_SKY_COMMANDERS: &[CardFactory] = &[svyelun_of_sea_and_sky];
+
+/// **Svyelun of Sea and Sky**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Svyelun of Sea and Sky (EDHREC, fetched 2026-10-13).
+pub const SVYELUN_OF_SEA_AND_SKY_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, heralds_horn, kefnets_monument, patchwork_banner,
+    sapphire_medallion, sol_ring, thought_vessel, vanquishers_banner, castle_vantress,
+    mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city, path_of_ancestry,
+    reliquary_tower, attuma_atlantean_warlord, coralhelm_commander, daughter_of_the_deep,
+    deepchannel_mentor, emperor_mihail_ii, harbinger_of_the_seas, harbinger_of_the_tides,
+    kopala_warden_of_waves, lord_of_atlantis, lullmage_mentor, master_of_the_pearl_trident,
+    merfolk_sovereign, merfolk_trickster, merrow_harbinger, merrow_reejerey, mist_dancer,
+    mist_cloaked_herald, river_sneak, seafloor_oracle, seahunter, silvergill_adept,
+    stonybrook_banneret, tempest_caller, thada_adel_acquisitor, thieving_skydiver, tide_shaper,
+    tishanas_tidebinder, triton_shorestalker, true_name_nemesis, vodalian_hexcatcher,
+    wanderwine_prophets, deeproot_pilgrimage, deeproot_waters, kindred_discovery,
+    merrow_commerce, reconnaissance_mission, reflections_of_littjara, rhystic_study,
+    spreading_seas, aetherize, an_offer_you_cant_refuse, brainstorm, counterspell,
+    cyclonic_rift, harmonized_crescendo, high_tide, negate, pongify, rapid_hybridization,
+    reality_shift, thassas_rebuff, aquitects_will, distant_melody, ponder, raise_the_palisade,
+    spectral_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const THE_SWARMWEAVER_COMMANDERS: &[CardFactory] = &[the_swarmweaver];
+
+/// **The Swarmweaver**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Forests + 9 Swamps = 99.
+/// The Swarmweaver (EDHREC, fetched 2026-10-13).
+pub const THE_SWARMWEAVER_MAIN: &[CardFactory] = &[
+    arcane_signet, conduit_of_worlds, golgari_signet, hedge_shredder, skullclamp, sol_ring,
+    talisman_of_resilience, bojuka_bog, command_tower, evolving_wilds, golgari_rot_farm,
+    jungle_hollow, llanowar_wastes, necroblossom_snarl, overgrown_tomb, swarmyard, tainted_wood,
+    temple_of_malady, terramorphic_expanse, twilight_mire, woodland_cemetery,
+    aatchik_emerald_radian, altanak_the_thrice_called, amzu_swarms_hunger, ant_queen,
+    arasta_of_the_endless_web, blex_vexing_pest, blightbeetle, broodspinner,
+    caustic_caterpillar, fumulus_the_infestation, giant_adephage, grist_voracious_larva,
+    haywire_mite, hornet_nest, hornet_queen, huskburster_swarm, icetill_explorer,
+    ishkanah_grafwidow, izoni_thousand_eyed, mazirek_kraul_death_priest, nyx_weaver,
+    old_rutstein, scute_swarm, shelob_child_of_ungoliant, skyfisher_spider,
+    spineseeker_centipede, spinner_of_souls, springheart_nantuko, twitching_doll,
+    zask_skittering_swarmlord, crawling_infestation, crawling_sensation, curse_of_clinging_webs,
+    deadbridge_chant, deathreap_ritual, insidious_roots, the_hunger_tide_rises, arachnogenesis,
+    assassins_trophy, beast_within, drag_to_the_roots, grapple_with_the_past, grisly_salvage,
+    harrow, putrefy, second_harvest, grist_the_hunger_tide, cultivate, dread_return,
+    natures_lore, rampant_growth, reanimate, rise_of_the_witch_king, spider_spawning,
+    squirming_emergence, swarmyard_massacre, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const JIN_GITAXIAS_3_COMMANDERS: &[CardFactory] = &[jin_gitaxias_core_augur];
+
+/// **Jin-Gitaxias, Core Augur**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Jin-Gitaxias, Core Augur (EDHREC, fetched 2026-10-13).
+pub const JIN_GITAXIAS_3_MAIN: &[CardFactory] = &[
+    arcane_signet, caged_sun, decanter_of_endless_water, everflowing_chalice, gilded_lotus,
+    lightning_greaves, mind_stone, sapphire_medallion, sky_diamond, sol_ring, spellbook,
+    the_water_crystal, thought_vessel, thran_dynamo, vensers_journal, castle_vantress,
+    myriad_landscape, mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city,
+    reliquary_tower, temple_of_the_false_god, body_of_knowledge, chasm_skulker,
+    consecrated_sphinx, defiler_of_dreams, geode_golem, hullbreaker_horror, jin_gitaxias,
+    jin_gitaxias_progress_tyrant, laboratory_maniac, nezahal_primal_tide, phyrexian_metamorph,
+    psychosis_crawler, silver_myr, solemn_simulacrum, sturmgeist, thassas_oracle,
+    thryx_the_sudden_storm, triskaidekaphile, ominous_seas, omniscience, propaganda,
+    psychic_corrosion, rhystic_study, teferis_ageless_insight, wizard_class, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, blue_suns_zenith, brainstorm, counterspell,
+    cyclonic_rift, dispel, high_tide, mana_drain, mystical_tutor, negate, pongify, rewind,
+    swan_song, unwind, jace_wielder_of_mysteries, narset_parter_of_veils, blue_suns_twilight,
+    enter_the_infinite, ponder, preordain, sea_gate_restoration, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
