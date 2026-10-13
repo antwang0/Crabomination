@@ -1404,8 +1404,7 @@ pub fn splashy_spellcaster() -> CardDefinition {
 // ── claude/modern_decks: OTJ / MKM / KLD / NEO wave ───────────────────────────
 
 /// Subterranean Schooner — {1}{U} 3/4 Vehicle, Crew 1. Whenever it attacks,
-/// target creature you control explores. (The "that crewed it this turn"
-/// restriction is approximated as any creature you control.)
+/// target creature that crewed it this turn explores.
 pub fn subterranean_schooner() -> CardDefinition {
     use crate::card::ArtifactSubtype;
     CardDefinition {
@@ -1423,7 +1422,7 @@ pub fn subterranean_schooner() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Explore {
                 who: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::CrewedSourceThisTurn),
                 ),
             },
         }],

@@ -1334,3 +1334,43 @@ fn vampire_socialite_vampires_enter_bigger_after_life_loss() {
     cast(&mut g, v, &[]).unwrap();
     assert_eq!(pt(&g, v), (3, 3));
 }
+
+/// Caradora, Heart of Alacria — "If one or more +1/+1 counters would be put
+/// on a creature or Vehicle you control, that many plus one … instead."
+/// (CR 614.1a.) An uncrewed Vehicle gets the extra counter too.
+#[test]
+fn caradora_adds_a_counter_to_a_vehicle() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::caradora_heart_of_alacria());
+    let ship = g.add_card_to_battlefield(0, catalog::subterranean_schooner());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(ship, 0, None);
+    g.resolve_effect(
+        &crabomination::effect::Effect::AddCounter {
+            what: crabomination::effect::Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: crabomination::effect::Value::ONE,
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == ship).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2
+    );
+}
+
+/// Slicer, Hired Muscle — "If you do, untap Slicer, goad it, and it can't be
+/// sacrificed this turn." (CR 701.21 sacrifice.)
+#[test]
+fn slicer_rented_out_cant_be_sacrificed() {
+    let mut g = pod(2);
+    let slicer = ready(&mut g, 0, catalog::slicer_hired_muscle());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let s = g.computed_permanent(slicer).unwrap();
+    assert_eq!(s.controller, 1, "rented out");
+    assert!(s.keywords().contains(&Keyword::CantBeSacrificed));
+}

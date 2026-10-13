@@ -902,8 +902,8 @@ pub fn fearless_swashbuckler() -> CardDefinition {
 
 /// Caradora, Heart of Alacria — {2}{G}{W} 4/2 legendary Human Knight. ETB search
 /// your library for a Mount or Vehicle card to hand. If one or more +1/+1
-/// counters would be put on a creature you control, that many plus one are put
-/// instead. (The Vehicle half of the counter rider is dropped.)
+/// counters would be put on a creature or Vehicle you control, that many plus
+/// one are put instead.
 pub fn caradora_heart_of_alacria() -> CardDefinition {
     CardDefinition {
         name: "Caradora, Heart of Alacria",
@@ -917,8 +917,12 @@ pub fn caradora_heart_of_alacria() -> CardDefinition {
         power: 4,
         toughness: 2,
         static_abilities: vec![StaticAbility {
-            description: "Extra +1/+1 counter whenever counters are placed on your creatures.",
-            effect: StaticEffect::ExtraPlusOneCounters,
+            description: "If one or more +1/+1 counters would be put on a creature or Vehicle you control, that many plus one +1/+1 counters are put on it instead.",
+            effect: StaticEffect::ExtraPlusOneCountersMatching {
+                filter: R::Creature
+                    .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                    .and(R::ControlledByYou),
+            },
         }],
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,

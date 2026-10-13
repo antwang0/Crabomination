@@ -76,9 +76,10 @@ pub fn slicer_high_speed_antagonist() -> CardDefinition {
     }
 }
 
-/// Slicer, Hired Muscle — {4}{R} 3/4. Each opponent's upkeep, rent it out or
-/// it converts. (The printed "it can't be sacrificed this turn" rider is
-/// dropped — there is no sacrifice lock.)
+/// Slicer, Hired Muscle — {4}{R} 3/4. At the beginning of each opponent's
+/// upkeep, you may have that player gain control of it until end of turn; if
+/// you do, untap it, goad it, and it can't be sacrificed this turn. If you
+/// don't, convert it.
 pub fn slicer_hired_muscle() -> CardDefinition {
     let rent = Effect::Seq(vec![
         Effect::GainControl {
@@ -88,6 +89,11 @@ pub fn slicer_hired_muscle() -> CardDefinition {
         },
         Effect::Untap { what: Selector::This, up_to: None },
         Effect::Goad { what: Selector::This },
+        Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::CantBeSacrificed,
+            duration: Duration::EndOfTurn,
+        },
     ]);
     CardDefinition {
         keywords: vec![Keyword::DoubleStrike, Keyword::Haste],
