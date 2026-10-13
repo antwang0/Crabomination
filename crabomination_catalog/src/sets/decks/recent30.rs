@@ -611,7 +611,7 @@ pub fn endrider_spikespitter() -> CardDefinition {
 }
 
 /// Aether Syphon — {1}{U}{U} Artifact. Start your engines! {2}, {T}: Draw a
-/// card. (The max-speed draw-mill rider is dropped.)
+/// card. Max speed — whenever you draw a card, each opponent mills two.
 pub fn aether_syphon() -> CardDefinition {
     CardDefinition {
         name: "Aether Syphon",

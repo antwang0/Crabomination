@@ -2613,7 +2613,7 @@ pub fn demonic_bargain() -> CardDefinition {
 }
 
 /// Thirst for Discovery — {2}{U} Instant. Draw three cards, then discard two
-/// cards unless you discard a basic land card (modeled as discard two).
+/// cards unless you discard a basic land card.
 pub fn thirst_for_discovery() -> CardDefinition {
     CardDefinition {
         name: "Thirst for Discovery",
@@ -2624,10 +2624,11 @@ pub fn thirst_for_discovery() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
+            Effect::DiscardUnlessKind {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                instead: crate::card::SelectionRequirement::Land
+                    .and(crate::card::SelectionRequirement::HasSupertype(crate::card::Supertype::Basic)),
             },
         ]),
         ..Default::default()

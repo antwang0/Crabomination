@@ -801,3 +801,101 @@ fn rune_of_might_on_equipment_pumps_the_wielder() {
     assert_eq!(pt(&g, bear), (4, 4), "+1/+1 Flail, +1/+1 relayed Rune");
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
 }
+
+/// Thirst for Discovery — "Draw three cards. Then discard two cards
+/// unless you discard a basic land card." (CR 701.9a discard; the
+/// "unless" exemption is the DiscardUnlessKind shape). With only basic
+/// Islands drawn, a single Island is pitched and the hand keeps two.
+#[test]
+fn thirst_for_discovery_pitches_one_basic_land() {
+    let mut g = pod(2);
+    g.players[0].hand.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::thirst_for_discovery());
+    cast(&mut g, id, &[]).expect("castable");
+    assert_eq!(g.players[0].hand.len(), 2, "drew 3, pitched one basic land");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count(), 1);
+}
+
+/// Without a basic land among the cards, Thirst for Discovery discards two.
+#[test]
+fn thirst_for_discovery_discards_two_without_a_basic() {
+    let mut g = pod(2);
+    g.players[0].hand.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let id = g.add_card_to_hand(0, catalog::thirst_for_discovery());
+    cast(&mut g, id, &[]).expect("castable");
+    assert_eq!(g.players[0].hand.len(), 1, "drew 3, discarded 2");
+}
+
+/// The Endstone — "your life total becomes half your starting life total,
+/// rounded up" (CR 119.5 set life total; CR 903.7 Commander starts at 40):
+/// a 40-life seat ends its turn at 20, not the 2-player 10.
+#[test]
+fn the_endstone_halves_the_commander_starting_life() {
+    let mut g = pod(2);
+    g.players[0].starting_life = 40;
+    g.players[0].life = 37;
+    g.add_card_to_battlefield(0, catalog::the_endstone());
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// Nexus of Fate — "If Nexus of Fate would be put into a graveyard from
+/// anywhere, reveal it and shuffle it into its owner's library instead."
+/// (CR 614.6.) It resolves and lands in the library, not the graveyard.
+#[test]
+fn nexus_of_fate_shuffles_back_after_resolving() {
+    let mut g = pod(2);
+    let lib = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::nexus_of_fate());
+    cast(&mut g, id, &[]).expect("castable");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != id));
+    assert_eq!(g.players[0].library.len(), lib + 1);
+}
+
+/// Part the Waterveil — "Take an extra turn after this one. Exile Part the
+/// Waterveil." (CR 608.2n: the exile replaces the graveyard trip.)
+#[test]
+fn part_the_waterveil_exiles_itself() {
+    let mut g = pod(2);
+    let id = g.add_card_to_hand(0, catalog::part_the_waterveil());
+    cast(&mut g, id, &[]).expect("castable");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != id));
+    assert!(g.exile.iter().any(|c| c.id == id));
+}
+
+/// Llanowar Greenwidow — "Domain — {7}{G}: Return this card from your
+/// graveyard to the battlefield tapped. This ability costs {1} less to
+/// activate for each basic land type among lands you control." (CR 702.
+/// domain ability word; CR 601.2f cost reduction.) Three basic types make it
+/// {4}{G}, so five mana is enough.
+#[test]
+fn llanowar_greenwidow_domain_discount() {
+    let mut g = pod(2);
+    for land in [catalog::forest(), catalog::island(), catalog::swamp()] {
+        let id = g.add_card_to_battlefield(0, land);
+        // Tapped, so only the floating five can pay.
+        g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = true;
+    }
+    let spider = g.add_card_to_graveyard(0, catalog::llanowar_greenwidow());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spider,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{4}{G} after domain 3");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == spider && c.tapped));
+}

@@ -233,8 +233,8 @@ pub fn hush() -> CardDefinition {
 /// Llanowar Greenwidow — {2}{G} 4/3 Spider with reach and trample. {7}{G},
 /// exile from graveyard isn't required — return it from your graveyard to the
 /// battlefield tapped (no timing rider is printed; it shipped sorcery-speed until 2026-09-07); if it
-/// would then leave the battlefield it's exiled instead. (The Domain cost
-/// reduction is dropped.)
+/// would then leave the battlefield it's exiled instead. Domain — it costs
+/// {1} less to activate for each basic land type among lands you control.
 pub fn llanowar_greenwidow() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -251,6 +251,7 @@ pub fn llanowar_greenwidow() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(7), g()]),
             from_graveyard: true,
+            cost_reduction_value: Some(Value::DomainCount(PlayerRef::You)),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,

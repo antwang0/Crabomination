@@ -3465,10 +3465,8 @@ pub fn volcanic_hammer() -> CardDefinition {
 /// Slagstorm — {1}{R}{R} Sorcery. Choose one — Slagstorm deals 3 damage to
 /// each creature; or Slagstorm deals 3 damage to each player.
 ///
-/// Modal sweeper — modeled as `ChooseMode` over the two `ForEach` halves.
-/// AutoDecider picks mode 0 (clear opposing creatures) since that's the
-/// gameplay-default line; UI/bot can supply `mode: Some(1)` for the
-/// player-burn half.
+/// A `ChooseMode` over the two `ForEach` halves; the caster picks the mode
+/// at cast time (`mode: Some(1)` for the player-burn half).
 pub fn slagstorm() -> CardDefinition {
     use crate::effect::shortcut::each_creature;
     CardDefinition {
@@ -17650,8 +17648,7 @@ pub fn maul_splicer() -> CardDefinition {
 }
 
 /// Sengir Autocrat — {3}{B} 2/2 Human. ETB create three 0/1 black Serf tokens.
-/// (The "exile all Serfs when this leaves" rider is dropped — tracked in
-/// TODO.md.)
+/// When it leaves the battlefield, exile all Serf tokens.
 pub fn sengir_autocrat() -> CardDefinition {
     use crate::card::TokenDefinition;
     use crate::effect::shortcut::etb;
@@ -17679,8 +17676,6 @@ pub fn sengir_autocrat() -> CardDefinition {
                 ..Default::default()
             }),
         }),
-        // "When this creature leaves the battlefield, exile all Serf tokens" —
-        // shipped missing (the `cnt` audit column, 2026-09-10).
         TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
             effect: Effect::Exile {
@@ -26348,8 +26343,7 @@ pub fn icetill_explorer() -> CardDefinition {
 
 /// The Endstone — {7} Legendary Artifact. Whenever you play a land or cast a
 /// spell, draw a card. At the beginning of your end step, your life total
-/// becomes half your starting life total, rounded up (modeled as 10 for the
-/// default 20-life game).
+/// becomes half your starting life total, rounded up (20 in Commander).
 pub fn the_endstone() -> CardDefinition {
     use crate::card::Supertype;
     use crate::game::TurnStep;
@@ -26378,7 +26372,7 @@ pub fn the_endstone() -> CardDefinition {
                 ),
                 effect: Effect::SetLifeTotal {
                     who: Selector::You,
-                    amount: Value::Const(10),
+                    amount: Value::HalvedRoundUp(Box::new(Value::StartingLifeTotal)),
                 },
             },
         ],

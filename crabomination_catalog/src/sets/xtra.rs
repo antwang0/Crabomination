@@ -67,14 +67,16 @@ pub fn capture_of_jingzhou() -> CardDefinition {
 }
 
 /// Nexus of Fate — {5}{U}{U} Instant. "Take an extra turn after this
-/// one." (The shuffle-instead-of-graveyard rider is omitted — no
-/// leaves-graveyard replacement primitive yet.)
+/// one. If Nexus of Fate would be put into a graveyard from anywhere,
+/// reveal it and shuffle it into its owner's library instead." (CR 614.6,
+/// the Darksteel Colossus replacement.)
 pub fn nexus_of_fate() -> CardDefinition {
     CardDefinition {
         name: "Nexus of Fate",
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: extra_turn_body(),
+        shuffles_into_library_instead: true,
         ..Default::default()
     }
 }
@@ -82,7 +84,7 @@ pub fn nexus_of_fate() -> CardDefinition {
 /// Part the Waterveil — {4}{U}{U} Sorcery. Take an extra turn after this
 /// one. Awaken 6—{6}{U}{U} (CR 702.113): cast for the awaken cost to also
 /// put six +1/+1 counters on target land you control; it becomes a 0/0
-/// Elemental creature with haste. (The self-exile rider is omitted.)
+/// Elemental creature with haste. Exile Part the Waterveil (as it resolves).
 pub fn part_the_waterveil() -> CardDefinition {
     use crate::card::{
         AlternativeCost, CounterType, CreatureType, Keyword, SelectionRequirement, Selector, Value,
@@ -117,6 +119,7 @@ pub fn part_the_waterveil() -> CardDefinition {
             ])),
             ..Default::default()
         }),
+        exile_on_resolve: true,
         ..Default::default()
     }
 }
