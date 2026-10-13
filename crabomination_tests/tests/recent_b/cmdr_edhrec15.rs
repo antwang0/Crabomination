@@ -1751,3 +1751,73 @@ fn taskmaster_copies_at_the_first_main_phase() {
     assert!(c.def.subtypes.creature_types.contains(&crabomination::card::CreatureType::Mercenary));
     assert!(!c.def.subtypes.creature_types.contains(&crabomination::card::CreatureType::Angel));
 }
+
+/// Huatli, Poet of Unity // Roar of the Fifth People: fetches a basic, then
+/// flips into the Saga — Dinosaurs, a creature mana grant from chapter II,
+/// a Dinosaur tutor, then double strike and trample.
+#[test]
+fn huatli_flips_into_roar_of_the_fifth_people() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let huatli = g.add_card_to_hand(0, catalog::huatli_poet_of_unity());
+    cast(&mut g, huatli, &[]).expect("huatli");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "a basic to hand");
+    g.clear_sickness(huatli);
+    activate(&mut g, huatli, 0, None).expect("flip");
+    let saga = g.battlefield.iter().find(|c| c.definition.name == "Roar of the Fifth People").map(|c| c.id).expect("saga");
+    assert_eq!(tokens_named(&g, "Dinosaur"), 2);
+    let dino = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Dinosaur").map(|c| c.id).unwrap();
+    g.clear_sickness(dino);
+    assert!(activate(&mut g, dino, 0, None).is_err(), "no mana grant before chapter II");
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, dino, 0, None).expect("chapter II: {T}: R, G or W");
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    let c = g.computed_permanent(dino).unwrap();
+    assert!(c.keywords().contains(&Keyword::DoubleStrike) && c.keywords().contains(&Keyword::Trample));
+}
+
+/// Intrepid Paleontologist: exiles a graveyard card; a Dinosaur creature
+/// card you own exiled this way can be cast and enters with a finality
+/// counter.
+#[test]
+fn intrepid_paleontologist_casts_exiled_dinosaurs() {
+    let mut g = pod(2);
+    let pal = ready(&mut g, 0, catalog::intrepid_paleontologist());
+    let dino = g.add_card_to_graveyard(0, catalog::ghalta_the_unstoppable());
+    activate(&mut g, pal, 1, Some(Target::Permanent(dino))).expect("exile");
+    assert!(g.exile.iter().any(|c| c.id == dino));
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: dino,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from exile");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(dino).expect("Ghalta entered");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+}
+
+/// Nashi, Moon's Legacy (CR 707.12): attacking exiles a legendary card from
+/// your graveyard and casts a copy of it, paying its cost — the copy of a
+/// permanent spell becomes a token.
+#[test]
+fn nashi_casts_a_copy_of_an_exiled_legend() {
+    let mut g = pod(2);
+    let nashi = ready(&mut g, 0, catalog::nashi_moons_legacy());
+    let bane = g.add_card_to_graveyard(0, catalog::bane_lord_of_darkness());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    flood(&mut g, 0);
+    declare(&mut g, &[(nashi, 1)]).expect("attack");
+    assert!(g.exile.iter().any(|c| c.id == bane), "the card was exiled");
+    assert_eq!(tokens_named(&g, "Bane, Lord of Darkness"), 1, "its copy resolved as a token");
+}

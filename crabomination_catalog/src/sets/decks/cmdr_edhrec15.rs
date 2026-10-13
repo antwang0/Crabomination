@@ -4050,3 +4050,140 @@ pub fn taskmaster_mercenary_mimic() -> CardDefinition {
         )
     }
 }
+
+/// Huatli, Poet of Unity // Roar of the Fifth People — {2}{G} 2/3. ETB: a
+/// basic land card to hand. {3}{R/W}{R/W} (sorcery): exile her, return
+/// transformed. Saga: I — two 3/3 Dinosaurs; II — the Saga gains "your
+/// creatures have '{T}: add {R}, {G} or {W}'"; III — a Dinosaur card to
+/// hand; IV — your Dinosaurs gain double strike and trample this turn.
+pub fn huatli_poet_of_unity() -> CardDefinition {
+    let dinos = || Selector::EachPermanent(yours(R::Creature.and(R::HasCreatureType(CreatureType::Dinosaur))));
+    let roar = CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        static_abilities: vec![static_ab(
+            "Chapter II: creatures you control have \"{T}: Add {R}, {G}, or {W}.\"",
+            StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(yours(R::Creature)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::OfColors(vec![Color::Red, Color::Green, Color::White], Value::ONE),
+                    },
+                    ..Default::default()
+                },
+                condition: Some(Predicate::SourceHasCountersAtLeast { counter: CounterType::Lore, n: 2 }),
+            },
+        )],
+        saga_chapters: vec![
+            (1, make(Value::Const(2), token("Dinosaur", 3, 3, vec![Color::Green], vec![CreatureType::Dinosaur]))),
+            (2, Effect::Noop),
+            (
+                3,
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasCreatureType(CreatureType::Dinosaur),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ),
+            (
+                4,
+                Effect::Seq(vec![grant_eot(dinos(), Keyword::DoubleStrike), grant_eot(dinos(), Keyword::Trample)]),
+            ),
+        ],
+        ..permanent("Roar of the Fifth People", ManaCost::default(), CardType::Enchantment)
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
+            sorcery_speed: true,
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(roar)),
+        ..legend(
+            "Huatli, Poet of Unity",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Bard],
+            2,
+            3,
+        )
+    }
+}
+
+/// Intrepid Paleontologist — {1}{G} 2/2. {T}: any color. {2}: exile target
+/// card from a graveyard. You may cast Dinosaur creature spells from among
+/// cards you own exiled with it; each enters with a finality counter.
+pub fn intrepid_paleontologist() -> CardDefinition {
+    let mine = || R::Creature.and(R::HasCreatureType(CreatureType::Dinosaur)).and(R::OwnedByYou);
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::Seq(vec![
+                    Effect::Move { what: target_filtered(R::InGraveyard), to: ZoneDest::Exile },
+                    Effect::GrantMayPlay {
+                        what: Selector::ExiledThisResolution { filter: mine() },
+                        duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
+                            source: crate::card::CardId(0),
+                            one_spell_a_turn: false,
+                        },
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                    Effect::SpellEntersWithCounters {
+                        what: Selector::ExiledThisResolution { filter: mine() },
+                        kind: CounterType::Finality,
+                        amount: Value::ONE,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..creature("Intrepid Paleontologist", cost(&[generic(1), g()]), vec![CreatureType::Human, CreatureType::Druid], 2, 2)
+    }
+}
+
+/// Nashi, Moon's Legacy — {B}{G}{U} 3/4 menace, ward {1}. Attacking: exile
+/// up to one target legendary or Rat card from your graveyard and copy it;
+/// you may cast the copy, paying its costs (CR 707.12).
+pub fn nashi_moons_legacy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(1)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::HasSupertype(Supertype::Legendary)
+                    .or(R::HasCreatureType(CreatureType::Rat))
+                    .and(R::InYourGraveyard)
+                    .and(R::Not(Box::new(R::Land))),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                    Effect::CastWithoutPayingImmediate {
+                        what: Selector::LastMoved,
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: true,
+                        reduce_generic: 0,
+                        pay_own_cost: true,
+                    },
+                ])),
+            },
+        }],
+        ..legend("Nashi, Moon's Legacy", cost(&[b(), g(), u()]), vec![CreatureType::Rat, CreatureType::Shaman], 3, 4)
+    }
+}
