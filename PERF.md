@@ -3405,6 +3405,9 @@ release pods     pod_sweep decks 1187-1228: 993001 × 4 seats × 240 = 2,640
                  Exquisite Blood against a 99,153-life last opponent, seed
                  99300260, OPEN). The first sweep's board cap (Second Harvest
                  compounding Exalted Sunborn copies, seed 99300254) is fixed.
+power_up         after `ActivatedAbility::power_up` + seat 1268: --bench
+                 196,176 / 27.64 / 613.0 byte-identical; core_rules 2,750 and
+                 golden traces green; pod lib tests 52/52
 ```
 
 ### 2026-10-13 (Commander run, `011PQ8Uk`, second leg) — guardrail; residual riders, one OOM fix
