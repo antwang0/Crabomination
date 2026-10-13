@@ -8104,6 +8104,18 @@ impl GameState {
         is_creature: bool,
     ) -> u32 {
         use crate::card::CounterType;
+        // Blightbeetle — a restriction, not a replacement: nothing to scale.
+        if is_creature
+            && kind == CounterType::PlusOnePlusOne
+            && self.battlefield.iter().any(|c| {
+                !self.same_team(c.controller, ctrl)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::OpponentsCreaturesCantHavePlusOneCounters)
+                    })
+            })
+        {
+            return 0;
+        }
         let mut n = base;
         if is_creature {
             // Winding Constrictor: +1 to any counter kind on a creature you control.
@@ -34964,6 +34976,7 @@ fn static_effect_to_effects(
             // Melira's poison / -1/-1 locks — consulted at their funnels.
             | StaticEffect::PlayerCannotGetPoison
             | StaticEffect::NoMinusCountersOnYourCreatures
+            | StaticEffect::OpponentsCreaturesCantHavePlusOneCounters
             // Search statics (Aven Mindcensor / Leonin Arbiter) — consulted
             // in `Effect::Search` via `search_top_limit_for` /
             // `pay_search_tax`; no layer effect.

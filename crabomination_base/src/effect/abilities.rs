@@ -4220,6 +4220,11 @@ pub enum StaticEffect {
     /// off the spell's controller, like
     /// `YourSpellsHaveSplitSecondIfArtifactManaSpent`.
     YourISSpellsHaveSplitSecond,
+    /// "Creatures your opponents control can't have +1/+1 counters put on
+    /// them" (Blightbeetle). Read by `scaled_counter_count`, which zeroes any
+    /// +1/+1 placement onto a creature an opponent of this static's
+    /// controller controls (entering-with counters included).
+    OpponentsCreaturesCantHavePlusOneCounters,
 }
 
 impl StaticEffect {
