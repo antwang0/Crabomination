@@ -1647,3 +1647,48 @@ fn tezzeret_artifice_master_thopters_and_draws() {
     loyal(&mut g, 1);
     assert_eq!(g.players[0].hand.len(), hand + 2, "three artifacts: two cards");
 }
+
+/// Karfell Harbinger (CR 106.6): its {U} casts an instant but not a
+/// creature spell.
+#[test]
+fn karfell_harbinger_mana_is_for_instants_and_sorceries() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::karfell_harbinger());
+    let sailor = g.add_card_to_hand(0, catalog::spectral_sailor());
+    let try_cast = |g: &mut GameState, id: CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(try_cast(&mut g, sailor).is_err(), "not a creature spell");
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    try_cast(&mut g, opt).expect("an instant");
+}
+
+/// Poppet Stitcher // Poppet Factory: instants and sorceries make decayed
+/// Zombies; at three tokens the upkeep flips it, and the Factory makes the
+/// tokens vanilla 3/3s.
+#[test]
+fn poppet_stitcher_makes_zombies_then_a_factory() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    let stitcher = ready(&mut g, 0, catalog::poppet_stitcher());
+    for _ in 0..3 {
+        let opt = g.add_card_to_hand(0, catalog::opt());
+        cast(&mut g, opt, &[]).expect("opt");
+    }
+    let zombies: Vec<CardId> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Zombie").map(|c| c.id).collect();
+    assert_eq!(zombies.len(), 3);
+    assert!(g.computed_permanent(zombies[0]).unwrap().keywords().contains(&Keyword::Decayed));
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stitcher).unwrap().transformed, "Poppet Factory");
+    let z = g.computed_permanent(zombies[0]).unwrap();
+    assert_eq!((z.power, z.toughness), (3, 3));
+    assert!(!z.keywords().contains(&Keyword::Decayed), "lost all abilities");
+}

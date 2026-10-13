@@ -3840,3 +3840,75 @@ pub fn tezzeret_artifice_master() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Karfell Harbinger — {1}{U} 1/3 Zombie Wizard. {T}: {U}, spent only to
+/// foretell a card from your hand or cast an instant or sorcery spell.
+pub fn karfell_harbinger() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::OfColor(Color::Blue, Value::ONE)),
+                    crate::mana::SpendRestriction::ForetellActionOrInstantSorcery,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature("Karfell Harbinger", cost(&[generic(1), u()]), vec![CreatureType::Zombie, CreatureType::Wizard], 1, 3)
+    }
+}
+
+/// Poppet Stitcher // Poppet Factory — {2}{U} 2/3. Casting an instant or
+/// sorcery makes a 2/2 black decayed Zombie; your upkeep with three or more
+/// creature tokens: may transform. Back: your creature tokens lose all
+/// abilities and have base power and toughness 3/3; your upkeep: may
+/// transform back.
+pub fn poppet_stitcher() -> CardDefinition {
+    let upkeep_flip = |cond: Option<Predicate>| {
+        let event = EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl);
+        TriggeredAbility {
+            event: match cond {
+                Some(c) => event.with_filter(c),
+                None => event,
+            },
+            effect: may("Transform?", Effect::Transform { what: Selector::This }),
+        }
+    };
+    let tokens = || Selector::EachPermanent(yours(R::Creature.and(R::IsToken)));
+    let factory = CardDefinition {
+        static_abilities: vec![
+            static_ab(
+                "Creature tokens you control lose all abilities …",
+                StaticEffect::MatchingLoseAllAbilities { applies_to: tokens() },
+            ),
+            static_ab(
+                "… and have base power and toughness 3/3.",
+                StaticEffect::SetBasePtForFilter { applies_to: tokens(), power: 3, toughness: 3 },
+            ),
+        ],
+        triggered_abilities: vec![upkeep_flip(None)],
+        ..permanent("Poppet Factory", ManaCost::default(), CardType::Artifact)
+    };
+    let zombie = TokenDefinition {
+        keywords: vec![Keyword::Decayed],
+        ..token("Zombie", 2, 2, vec![Color::Black], vec![CreatureType::Zombie])
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                )),
+                effect: make(Value::ONE, zombie),
+            },
+            upkeep_flip(Some(Predicate::ValueAtLeast(
+                Value::count(Selector::EachPermanent(yours(R::Creature.and(R::IsToken)))),
+                Value::Const(3),
+            ))),
+        ],
+        back_face: Some(Box::new(factory)),
+        ..creature("Poppet Stitcher", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 3)
+    }
+}

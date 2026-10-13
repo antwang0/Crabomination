@@ -3000,6 +3000,8 @@ static DECKS: &[Factory] = &[
     super::decks::inniaz_the_gale_force,
     super::decks::faerie_slumber_party,
     super::decks::tezzeret_artifice_master,
+    super::decks::karfell_harbinger,
+    super::decks::poppet_stitcher,
     super::decks::gorgon_flail,
     super::decks::rune_of_mortality,
     super::decks::boarding_party,
