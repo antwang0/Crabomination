@@ -141,6 +141,22 @@ the handoff.
 - **FIXED — found by the first 6-seat pod:** two `ControllerProtectionFromMatching` statics (Gor
   Muldrak + a Metamorphic Alteration copy of it) summed `u32::MAX` twice in the prevention
   walk — an overflow panic; the shave is a saturating fold now.
+- **Seats 1203-1208** (Omarthis, Setzer, Kaza, Atemsis, Serah Farron, Lazav Wearer of Faces):
+  twelve cards in `decks::cmdr_edhrec33`. **Primitives:** `Value::DistinctManaValuesInHand`,
+  `SpendRestriction::InstantSorceryOrKicked` (+ `SpellKind.kicked`).
+- **FIXED — three bug classes the batch found:** (1) `EventKind::CrewsOrSaddles` baked "during
+  your main phase" into every crew/saddle trigger — six cards that print no rider (Gearshift Ace,
+  Veteran Motorist, Mobilizer Mech, Ghost Ark, Mighty Servant of Leuk-o, Stubborn Burrowfiend)
+  never fired outside a main phase; the rider is a payload now. (2) The "whenever you attack" push
+  path bound only slot 0 of an "up to N target" trigger (CR 115.1c). (3) `Selector::ControlledBy` /
+  `OwnedBy` over a fan-out `PlayerRef` resolved the first seat only — nine cards say "permanents
+  your opponents control"; a 6-seat pod tripped the fan-out assert.
+- **OPEN:** Senator Peacock's granted Clue subtype is gone from the sacrificed card, so Fleeting
+  Memories / Morska-style "whenever you sacrifice a Clue" miss a Peacock-made Clue (Peacock's own
+  trigger reads "an artifact", which is exact while Peacock is out). `lki_clone` snapshots
+  creature types only.
+- **CR 104.4b true draw:** Ganax + Draconic Visitor (Ganax's own deck) is an unbounded mandatory
+  Dragon loop — release sweep seed 992142 (6 seats) ends at the board cap.
 - **FIXED — the Mondrak board cap (`011PQ8Uk`'s seed 990872):** Romana II copied a token Mondrak,
   Glory Dominus (made non-legendary by The Sixth Doctor) each turn; N Mondraks make 2^N copies and
   an 8-seat pod hit 901. `effect_token_estimate` ignored doublers, so every board gate (casts,
