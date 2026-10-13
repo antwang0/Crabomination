@@ -1840,7 +1840,11 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
     let already_cast = state.players[caster].spells_cast_this_game_turn;
     for src in srcs {
         for sa in &src.definition.static_abilities {
-            match &sa.effect {
+            // Through every gate `active_static` peels, as the reduction walker
+            // does: a tax behind "during your turn" (Paladin Class) or a Class
+            // level was never charged.
+            let Some(effect) = state.active_static(&sa.effect, src) else { continue };
+            match effect {
                 StaticEffect::AdditionalCostAfterFirstSpell { filter, amount }
                     if already_cast > 0
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
