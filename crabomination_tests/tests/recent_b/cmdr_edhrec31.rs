@@ -267,3 +267,18 @@ fn bumis_feast_lecture_earthbends() {
     cast(&mut g, 0, id, &[Target::Permanent(land)], None).expect("cast");
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
+
+/// Bug fix (seed 31401): Hired Giant ramps EACH other player, not just the
+/// first opponent (it panicked the debug fan-out guard in a 4-seat pod).
+#[test]
+fn hired_giant_ramps_every_other_player() {
+    let mut g = pod(3);
+    for seat in [1, 2] {
+        g.add_card_to_library(seat, catalog::forest());
+    }
+    let id = g.add_card_to_hand(0, catalog::hired_giant());
+    cast(&mut g, 0, id, &[], None).expect("cast");
+    for seat in [1, 2] {
+        assert!(g.battlefield.iter().any(|c| c.controller == seat && c.definition.name == "Forest"), "seat {seat}");
+    }
+}

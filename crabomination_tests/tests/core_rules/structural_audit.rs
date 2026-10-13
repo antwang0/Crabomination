@@ -1854,3 +1854,36 @@ fn no_gain_control_hands_a_permanent_to_a_set_of_players() {
     }
     assert!(hits.is_empty(), "GainControl to a fan-out PlayerRef: {hits:?}");
 }
+
+/// Bug fix (seed 31401, a 4-seat pod with Zurzoth's deck): `Search`'s `who`
+/// is ONE searcher, resolved by the singular `resolve_player`, so Hired
+/// Giant's "each other player may search" written as `who: EachOpponent`
+/// searched one library and panicked the debug fan-out guard at 3+ seats.
+/// A per-player search wraps the body in `EachPlayerDoes`.
+#[test]
+fn no_library_search_names_a_set_of_searchers() {
+    use crabomination::effect::Effect;
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut hits: Vec<&'static str> = Vec::new();
+    let bad = |e: &Effect| {
+        matches!(
+            e,
+            Effect::Search { who, .. } | Effect::SearchZones { who, .. } | Effect::SearchPickedBy { who, .. }
+                if who.is_fan_out()
+        )
+    };
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        let mut effects: Vec<&Effect> = vec![&def.effect];
+        effects.extend(def.triggered_abilities.iter().map(|t| &t.effect));
+        effects.extend(def.activated_abilities.iter().map(|a| &a.effect));
+        effects.extend(def.loyalty_abilities.iter().map(|a| &a.effect));
+        if effects.iter().any(|e| e.any_nested(&bad)) {
+            hits.push(def.name);
+        }
+    }
+    assert!(hits.is_empty(), "Search with a fan-out searcher: {hits:?}");
+}

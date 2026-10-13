@@ -462,15 +462,20 @@ pub fn indentured_djinn() -> CardDefinition {
     }
 }
 
-/// Hired Giant — {3}{R} 4/4 that ramps everyone else a land.
+/// Hired Giant — {3}{R} 4/4 that ramps everyone else a land. Each other
+/// player searches their own library (`EachPlayerDoes`): a bare
+/// `Search { who: EachOpponent }` searched only the first opponent's.
 pub fn hired_giant() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Search {
+            effect: Effect::EachPlayerDoes {
                 who: PlayerRef::EachOpponent,
-                filter: R::Land,
-                to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Land,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
             },
         }],
         ..creature("Hired Giant", cost(&[generic(3), r()]), vec![CreatureType::Giant], 4, 4)
