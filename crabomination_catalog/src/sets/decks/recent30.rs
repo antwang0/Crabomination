@@ -332,8 +332,10 @@ pub fn earthrumbler() -> CardDefinition {
     }
 }
 
-/// Elvish Refueler — {2}{G} 2/3 Elf Druid. Exhaust — {1}{G}: Put a +1/+1
-/// counter on it. (The "activate exhaust abilities twice" rider is dropped.)
+/// Elvish Refueler — {2}{G} 2/3 Elf Druid. During your turn, as long as you
+/// haven't activated an exhaust ability this turn, you may activate exhaust
+/// abilities as though they haven't been activated. Exhaust — {1}{G}: Put a
+/// +1/+1 counter on this creature.
 pub fn elvish_refueler() -> CardDefinition {
     CardDefinition {
         name: "Elvish Refueler",
@@ -345,6 +347,10 @@ pub fn elvish_refueler() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, as long as you haven't activated an exhaust ability this turn, you may activate exhaust abilities as though they haven't been activated.",
+            effect: StaticEffect::ExhaustReusableOnYourTurn,
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             exhaust: true,

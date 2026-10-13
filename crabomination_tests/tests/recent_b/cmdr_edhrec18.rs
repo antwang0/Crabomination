@@ -899,3 +899,43 @@ fn llanowar_greenwidow_domain_discount() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == spider && c.tapped));
 }
+
+/// Elvish Refueler — "During your turn, as long as you haven't activated an
+/// exhaust ability this turn, you may activate exhaust abilities as though
+/// they haven't been activated." (CR 702.177a exhaust.) A spent exhaust
+/// ability reactivates once per turn of yours, and never on an opponent's.
+#[test]
+fn elvish_refueler_reopens_one_exhaust_per_turn() {
+    let mut g = pod(2);
+    let elf = ready(&mut g, 0, catalog::elvish_refueler());
+    let pump = |g: &mut GameState| {
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        let r = g.perform_action(GameAction::ActivateAbility {
+            card_id: elf,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        });
+        drain_stack(g);
+        r
+    };
+    let counters = |g: &GameState| {
+        g.battlefield.iter().find(|c| c.id == elf).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    pump(&mut g).expect("first exhaust");
+    assert!(pump(&mut g).is_err(), "already activated an exhaust ability this turn");
+    assert_eq!(counters(&g), 1);
+    // Next turn of yours: reopens once.
+    g.do_cleanup(&mut vec![]);
+    g.active_player_idx = 0;
+    pump(&mut g).expect("refueled");
+    assert_eq!(counters(&g), 2);
+    assert!(pump(&mut g).is_err());
+    // On an opponent's turn the spent mark holds.
+    g.do_cleanup(&mut vec![]);
+    g.active_player_idx = 1;
+    assert!(pump(&mut g).is_err(), "only during your turn");
+}
