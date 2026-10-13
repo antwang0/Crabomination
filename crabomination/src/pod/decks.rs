@@ -30222,3 +30222,59 @@ pub const GREASEFANG_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_EMPEROR_OF_PALAMECIA_COMMANDERS: &[CardFactory] = &[the_emperor_of_palamecia];
+
+/// **The Emperor of Palamecia**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Islands + 11 Mountains = 99.
+/// The Emperor of Palamecia (EDHREC, fetched 2026-10-13).
+pub const THE_EMPEROR_OF_PALAMECIA_MAIN: &[CardFactory] = &[
+    arcane_signet, firemind_vessel, hedron_archive, lightning_greaves, resonating_lute,
+    ring_of_the_lucii, sol_ring, stonespeaker_crystal, swiftfoot_boots, thran_dynamo,
+    cascade_bluffs, command_tower, ferrous_lake, fiery_islet, frostboil_snarl, mystic_sanctuary,
+    rogues_passage, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls,
+    temple_of_epiphany, archmage_emeritus, exhibition_tidecaller, guttersnipe, harmonic_prodigy,
+    kinetic_augur, prompto_argentum, shantotto_tactician_magician, spellheart_chimera,
+    storm_kiln_artist, tellah_great_sage, clout_of_the_dominus, protective_bubble,
+    shark_typhoon, uncover_the_moon_letters, zephids_embrace, aetherize,
+    an_offer_you_cant_refuse, big_score, careful_consideration, channeled_force, chaos_warp,
+    counterspell, decaying_time_loop, drown_in_dreams, fact_or_fiction, fateful_showdown,
+    frantic_search, mystic_confluence, negate, press_the_enemy, rewind, slip_out_the_back,
+    steam_augury, unexpected_windfall, jace_memory_adept, blasphemous_act, bond_of_insight,
+    chandras_ignition, cut_your_losses, epic_experiment, experimental_overload,
+    faithless_looting, full_throttle, gandalfs_sanction, ill_timed_explosion, mana_geyser,
+    mizzixs_mastery, path_of_the_pyromancer, pirates_pillage, rapturous_moment,
+    summons_of_saruman, traumatize, tunnel_vision,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const OWEN_GRADY_COMMANDERS: &[CardFactory] = &[owen_grady_raptor_trainer];
+
+/// **Owen Grady, Raptor Trainer**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 13 Forests + 11 Mountains = 99.
+/// Owen Grady, Raptor Trainer (EDHREC, fetched 2026-10-13).
+pub const OWEN_GRADY_MAIN: &[CardFactory] = &[
+    arcane_signet, dino_dna, herd_heirloom, lightning_greaves, monster_manual, sol_ring,
+    the_great_henge, cavern_of_souls, cinder_glade, command_tower, evolving_wilds, game_trail,
+    gruul_turf, kessig_wolf_run, restless_ridgeline, rockfall_vale, rootbound_crag,
+    stomping_ground, temple_of_abandon, wooded_foothills, apex_altisaur, belligerent_yearling,
+    bonehoard_dracosaur, colossadactyl, curious_altisaur, drover_of_the_mighty,
+    earthshaker_dreadmaw, etali_primal_conqueror, etali_primal_storm, ghalta_primal_hunger,
+    ghalta_stampede_tyrant, gigantosaurus, hulking_raptor, hunting_velociraptor,
+    itzquinth_firstborn_of_gishath, knight_of_the_stampede, marauding_raptor, otepec_huntmaster,
+    palanis_hatcher, quartzwood_crasher, ranging_raptors, regal_imperiosaur, regisaur_alpha,
+    ripjaw_raptor, scytheclaw_raptor, thrashing_brontodon, topiary_stomper, tranquil_frillback,
+    trumpeting_carnosaur, vaultborn_tyrant, wrathful_raptors, garruks_uprising,
+    poetic_ingenuity, rhythm_of_the_wild, shadow_in_the_warp, unnatural_growth, welcome_to,
+    abrade, beast_within, chaos_warp, deflecting_swat, heroic_intervention,
+    return_of_the_wildspeaker, return_to_nature, tyvars_stand, commune_with_dinosaurs,
+    cultivate, farseek, finale_of_devastation, kodamas_reach, rampant_growth,
+    rishkars_expertise, savage_order, stump_stomp, triumphant_chomp,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];

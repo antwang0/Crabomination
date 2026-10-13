@@ -6816,6 +6816,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GREASEFANG_COMMANDERS,
             main: decks::GREASEFANG_MAIN,
         },
+        // Seat 1061: The Emperor of Palamecia's EDHREC average deck. `--pod-decks 1061`.
+        PodDeck {
+            name: "The Emperor of Palamecia (UR)",
+            commanders: decks::THE_EMPEROR_OF_PALAMECIA_COMMANDERS,
+            main: decks::THE_EMPEROR_OF_PALAMECIA_MAIN,
+        },
+        // Seat 1062: Owen Grady, Raptor Trainer's EDHREC average deck. `--pod-decks 1062`.
+        PodDeck {
+            name: "Owen Grady, Raptor Trainer (RG)",
+            commanders: decks::OWEN_GRADY_COMMANDERS,
+            main: decks::OWEN_GRADY_MAIN,
+        },
     ]
 }
 
@@ -9666,6 +9678,8 @@ mod tests {
             ("Maha, Its Feathers Night", &[0x0E37]),
             ("General Ferrous Rokiric", &[0x0E38]),
             ("Greasefang, Okiba Boss", &[0x0E39]),
+            ("The Emperor of Palamecia", &[0x0E3A]),
+            ("Owen Grady, Raptor Trainer", &[0x0E3B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
