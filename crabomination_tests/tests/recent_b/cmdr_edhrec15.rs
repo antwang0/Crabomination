@@ -2077,3 +2077,125 @@ fn havengul_laboratory_flips_on_three_clues() {
     cast_as(&mut g, 1, blade, &[perm(angel)]).expect("doom blade");
     assert!(!g.battlefield_find(lab).unwrap().transformed, "back to the Laboratory");
 }
+
+fn loyalty_at(g: &mut GameState, pw: CardId, i: usize, target: Option<Target>) -> Result<(), String> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: pw, ability_index: i, target, x_value: None })
+        .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Garruk, Unleashed: +1 is +3/+3 and trample; −2 makes a Beast and adds a
+/// loyalty when an opponent has more creatures. Garruk, Caller of Beasts:
+/// +1 takes every creature among the top five.
+#[test]
+fn the_garruks_pump_beasts_and_dig() {
+    let mut g = pod(2);
+    let gu = ready(&mut g, 0, catalog::garruk_unleashed());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    loyalty_at(&mut g, gu, 0, Some(perm(bear))).expect("+1");
+    assert_eq!(pt(&g, bear), (5, 5));
+    for _ in 0..3 {
+        ready(&mut g, 1, catalog::grizzly_bears());
+    }
+    g.battlefield_find_mut(gu).unwrap().loyalty_uses_this_turn = 0;
+    loyalty_at(&mut g, gu, 1, None).expect("-2");
+    assert_eq!(tokens_named(&g, "Beast"), 1);
+    assert_eq!(g.battlefield_find(gu).unwrap().counter_count(CounterType::Loyalty), 5 - 2 + 1, "three Bears beat two");
+    let gc = ready(&mut g, 0, catalog::garruk_caller_of_beasts());
+    library(&mut g, 0, 2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    loyalty_at(&mut g, gc, 0, None).expect("+1");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the two Bears of the top five");
+}
+
+/// Copy Artifact enters as a copy of an artifact and stays an enchantment.
+#[test]
+fn copy_artifact_copies_an_artifact() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::sol_ring());
+    let ca = g.add_card_to_hand(0, catalog::copy_artifact());
+    cast(&mut g, ca, &[]).expect("copy artifact");
+    let c = g.computed_permanent(ca).unwrap();
+    assert_eq!(c.def.name, "Sol Ring");
+    assert!(c.card_types().contains(&CardType::Enchantment) && c.card_types().contains(&CardType::Artifact));
+}
+
+/// Lim-Dûl's Hex: each player who can't pay {B} or {3} takes 1 at your
+/// upkeep.
+#[test]
+fn lim_duls_hex_pings_each_player_who_cant_pay() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::lim_duls_hex());
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!([g.players[0].life, g.players[1].life, g.players[2].life], [19, 19, 19]);
+}
+
+/// Wail of the Forgotten: one mode without descend — the bounce.
+#[test]
+fn wail_of_the_forgotten_bounces() {
+    let mut g = pod(2);
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    let wail = g.add_card_to_hand(0, catalog::wail_of_the_forgotten());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wail,
+        target: Some(perm(ring)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("wail");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == ring));
+}
+
+/// Leonardo da Vinci: looting away an artifact card makes a 0/2 flying
+/// Thopter copy of it.
+#[test]
+fn leonardo_turns_a_discarded_artifact_into_a_thopter() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::sol_ring());
+    let leo = ready(&mut g, 0, catalog::leonardo_da_vinci());
+    g.players[0].hand.clear();
+    activate(&mut g, leo, 1, None).expect("loot");
+    let t = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Sol Ring").map(|c| c.id).expect("a copy");
+    let c = g.computed_permanent(t).unwrap();
+    assert_eq!((c.power, c.toughness), (0, 2));
+    assert!(c.keywords().contains(&Keyword::Flying));
+    assert!(c.def.subtypes.creature_types.contains(&crabomination::card::CreatureType::Thopter));
+}
+
+/// Tarrian's Journal // The Tomb of Aclazotz: discard your hand to flip;
+/// the Tomb's creature cast from the graveyard enters with a finality
+/// counter as a Vampire.
+#[test]
+fn tarrians_journal_flips_and_raises_a_vampire() {
+    let mut g = pod(2);
+    let journal = ready(&mut g, 0, catalog::tarrians_journal());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, journal, 1, None).expect("flip");
+    assert!(g.players[0].hand.is_empty(), "discarded the hand");
+    assert!(g.battlefield_find(journal).unwrap().transformed);
+    g.battlefield_find_mut(journal).unwrap().tapped = false;
+    activate(&mut g, journal, 1, None).expect("tomb");
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast from the graveyard");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("entered");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+    assert!(c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Vampire));
+}

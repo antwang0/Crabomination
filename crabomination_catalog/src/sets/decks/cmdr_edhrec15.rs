@@ -4621,3 +4621,305 @@ pub fn havengul_laboratory() -> CardDefinition {
         )
     }
 }
+
+fn garruk(name: &'static str, mana: ManaCost, loyalty: Vec<crate::effect::LoyaltyAbility>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Garruk], ..Default::default() },
+        base_loyalty: 4,
+        loyalty_abilities: loyalty,
+        ..Default::default()
+    }
+}
+
+fn walker_emblem(name: &str, event: EventSpec) -> Effect {
+    Effect::CreateEmblem {
+        who: PlayerRef::You,
+        name: name.into(),
+        statics: vec![],
+        triggered: vec![TriggeredAbility {
+            event,
+            effect: may(
+                "Search your library for a creature card?",
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ),
+        }],
+    }
+}
+
+/// Garruk, Caller of Beasts — {4}{G}{G}, loyalty 4. +1: reveal five,
+/// creatures to hand, the rest on the bottom. −3: a green creature card from
+/// hand onto the battlefield. −7: emblem — casting a creature spell may
+/// fetch a creature onto the battlefield.
+pub fn garruk_caller_of_beasts() -> CardDefinition {
+    use crate::effect::LoyaltyAbility;
+    garruk(
+        "Garruk, Caller of Beasts",
+        cost(&[generic(4), g(), g()]),
+        vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::RevealTopTakeMatchingToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(5),
+                    filter: R::Creature,
+                    distinct_powers: false,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: R::Creature.and(R::HasColor(Color::Green)),
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                    return_eot: false,
+                    then: None,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: walker_emblem(
+                    "Garruk, Caller of Beasts",
+                    EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(R::Creature)),
+                ),
+                ..Default::default()
+            },
+        ],
+    )
+}
+
+/// Garruk, Unleashed — {2}{G}{G}, loyalty 4. +1: up to one target creature
+/// gets +3/+3 and trample. −2: a 3/3 Beast, then a loyalty counter if an
+/// opponent controls more creatures. −7: emblem — your end step may fetch a
+/// creature onto the battlefield.
+pub fn garruk_unleashed() -> CardDefinition {
+    use crate::effect::LoyaltyAbility;
+    garruk(
+        "Garruk, Unleashed",
+        cost(&[generic(2), g(), g()]),
+        vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Seq(vec![
+                        eot_pump(Selector::Target(0), 3, 3),
+                        grant_eot(Selector::Target(0), Keyword::Trample),
+                    ])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    make(Value::ONE, token("Beast", 3, 3, vec![Color::Green], vec![CreatureType::Beast])),
+                    Effect::If {
+                        cond: Predicate::AnOpponentControlsMoreCreatures,
+                        then: Box::new(Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::Loyalty,
+                            amount: Value::ONE,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: walker_emblem(
+                    "Garruk, Unleashed",
+                    EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                ),
+                ..Default::default()
+            },
+        ],
+    )
+}
+
+/// Copy Artifact — {1}{U} enchantment that may enter as a copy of any
+/// artifact, still an enchantment.
+pub fn copy_artifact() -> CardDefinition {
+    CardDefinition {
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Artifact,
+            extra_card_types: vec![CardType::Enchantment],
+            ..Default::default()
+        }),
+        ..permanent("Copy Artifact", cost(&[generic(1), u()]), CardType::Enchantment)
+    }
+}
+
+/// Lim-Dûl's Hex — {1}{B} enchantment. Your upkeep: 1 damage to each player
+/// unless they pay {B} or {3} (offered {B} first, then {3}).
+pub fn lim_duls_hex() -> CardDefinition {
+    let pay = |c: ManaCost, then: Effect| Effect::UnlessPlayerPays {
+        who: PlayerRef::Triggerer,
+        cost: crate::card::WardCost::Mana(c),
+        then: Box::new(then),
+        if_paid: None,
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachPlayer),
+                body: Box::new(pay(
+                    cost(&[b()]),
+                    pay(
+                        cost(&[generic(3)]),
+                        Effect::DealDamage { to: Selector::Player(PlayerRef::Triggerer), amount: Value::ONE },
+                    ),
+                )),
+            },
+        }],
+        ..permanent("Lim-Dûl's Hex", cost(&[generic(1), b()]), CardType::Enchantment)
+    }
+}
+
+/// Wail of the Forgotten — {U}{B} sorcery. Choose one (descend 8: one or
+/// more) — bounce target nonland permanent; target opponent discards; look
+/// at the top three, one to hand and the rest to the graveyard.
+pub fn wail_of_the_forgotten() -> CardDefinition {
+    CardDefinition {
+        modes_widen: Some(crate::card::ModesWiden::If(Predicate::ValueAtLeast(
+            Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Permanent },
+            Value::Const(8),
+        ))),
+        ..spell(
+            "Wail of the Forgotten",
+            cost(&[u(), b()]),
+            CardType::Sorcery,
+            Effect::ChooseModesCast {
+                modes: vec![
+                    Effect::Move {
+                        what: target_filtered(R::Permanent.and(R::Nonland)),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    },
+                    Effect::Discard { who: target_filtered(R::OpponentPlayer), amount: Value::ONE, random: false },
+                    Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                        who: PlayerRef::You,
+                        count: Value::Const(3),
+                        rest_to_graveyard: true,
+                        take: Some(Value::ONE),
+                        ..Default::default()
+                    })),
+                ],
+                min: 1,
+                max: 1,
+                allow_repeats: false,
+            },
+        )
+    }
+}
+
+/// Leonardo da Vinci — {2}{U} 3/3. {3}{U}{U}: your Thopters have base
+/// power and toughness X/X this turn, X your hand size. {2}{U},{T}: loot; a
+/// discarded artifact card is exiled for a token copy that's a 0/2 flying
+/// Thopter artifact creature too.
+pub fn leonardo_da_vinci() -> CardDefinition {
+    let thopters = || Selector::EachPermanent(yours(R::Creature.and(R::HasCreatureType(CreatureType::Thopter))));
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), u(), u()]),
+                effect: Effect::SetBasePT {
+                    what: thopters(),
+                    power: Value::HandSizeOf(PlayerRef::You),
+                    toughness: Value::HandSizeOf(PlayerRef::You),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), u()]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    draw(1),
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Move {
+                        what: Selector::DiscardedThisResolution { filter: R::Artifact },
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: Selector::ExiledThisResolution { filter: R::Artifact },
+                        extra_creature_types: vec![CreatureType::Thopter],
+                        extra_card_types: vec![CardType::Artifact, CardType::Creature],
+                        override_pt: Some((0, 2)),
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![Keyword::Flying],
+                        no_mana_cost: false,
+                        enters_with_counters: None,
+                        remove_keywords: vec![],
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..legend("Leonardo da Vinci", cost(&[generic(2), u()]), vec![CreatureType::Human, CreatureType::Artificer], 3, 3)
+    }
+}
+
+/// Tarrian's Journal // The Tomb of Aclazotz — {1}{B} legendary artifact.
+/// {T}, sacrifice another artifact or creature (sorcery): draw. {2},{T},
+/// discard your hand: transform. Back, a legendary land: {T}: {B}; {T}: you
+/// may cast a creature spell from your graveyard this turn — it enters with
+/// a finality counter and is a Vampire too.
+pub fn tarrians_journal() -> CardDefinition {
+    let tomb = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        ..land(
+            "The Tomb of Aclazotz",
+            vec![
+                tap_add(Color::Black),
+                ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::MayCastCreatureFromGraveyardThisTurnAs { creature_type: CreatureType::Vampire },
+                    ..Default::default()
+                },
+            ],
+        )
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                sac_other_filter: Some((R::Artifact.or(R::Creature).and(R::OtherThanSource).and(R::ControlledByYou), 1)),
+                effect: draw(1),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                discard_hand_cost: true,
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Book], ..Default::default() },
+        back_face: Some(Box::new(tomb)),
+        ..permanent("Tarrian's Journal", cost(&[generic(1), b()]), CardType::Artifact)
+    }
+}
