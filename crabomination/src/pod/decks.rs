@@ -35910,3 +35910,59 @@ pub const ABIGALE_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const KAIMA_COMMANDERS: &[CardFactory] = &[kaima_the_fractured_calm];
+
+/// **Kaima, the Fractured Calm**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Forests + 10 Mountains = 99.
+/// Kaima, the Fractured Calm (EDHREC, fetched 2026-10-13).
+pub const KAIMA_MAIN: &[CardFactory] = &[
+    arcane_signet, gruul_signet, sol_ring, swiftfoot_boots, cinder_glade, command_tower,
+    game_trail, gruul_turf, karplusan_forest, kessig_wolf_run, mossfire_valley, rockfall_vale,
+    rogues_passage, rootbound_crag, skarrg_the_rage_pits, stomping_ground, temple_of_abandon,
+    aura_gnarlid, bothersome_quasit, chishiro_the_shattered_blade, destiny_spinner,
+    eidolon_of_blossoms, generous_visitor, goblin_anarchomancer, herald_of_the_pantheon,
+    kami_of_transience, knickknack_ouphe, sanctum_weaver, setessan_champion, tanglespan_lookout,
+    tricksters_elk, vengeful_ancestor, verduran_enchantress, wildsear_scouring_maw,
+    ancestral_mask, aspect_of_mongoose, audacity, bequeathal, convenient_target,
+    crown_of_flames, demonic_ruckus, draconic_destiny, dragon_mantle, enchantresss_presence,
+    fiery_mantle, fortitude, fruit_of_the_first_tree, keen_sense, kenriths_transformation,
+    lignify, one_with_nature, rancor, rune_of_might, shiny_impetus, sluggishness,
+    sticky_fingers, the_sound_of_drums, undying_rage, unquenchable_fury, utopia_sprawl,
+    vow_of_lightning, vow_of_wildness, wild_growth, beast_within, chaos_warp,
+    heroic_intervention, royal_treatment, silkguard, tamiyos_safekeeping, blasphemous_act,
+    cultivate, decimate, disrupt_decorum, kodamas_reach, rampant_growth, smoke_spirits_aid,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const VERRAK_COMMANDERS: &[CardFactory] = &[verrak_warped_sengir];
+
+/// **Verrak, Warped Sengir**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 8 Plains + 10 Swamps = 99.
+/// Verrak, Warped Sengir (EDHREC, fetched 2026-10-13).
+pub const VERRAK_MAIN: &[CardFactory] = &[
+    arcane_signet, crucible_of_worlds, expedition_map, glass_cast_heart, orzhov_signet,
+    sinister_monolith, sol_ring, staff_of_compleation, tainted_sigil, talisman_of_hierarchy,
+    arid_mesa, bloodstained_mire, command_tower, eclipsed_steppe, elven_passage, flooded_strand,
+    godless_shrine, isolated_chapel, marsh_flats, polluted_delta, prismatic_vista,
+    shadowy_backstreet, sunlit_marsh, turbulent_moor, urborg_tomb_of_yawgmoth,
+    verdant_catacombs, war_room, windswept_heath, bloodtracker, carmen_cruel_skymarcher,
+    chainer_dementia_master, children_of_korlis, crypt_ghast, elas_il_kor_sadistic_pilgrim,
+    erebos_god_of_the_dead, forsworn_paladin, gray_merchant_of_asphodel, krrik_son_of_yawgmoth,
+    kambal_consul_of_allocation, mister_negative, priest_of_fell_rites,
+    razaketh_the_foulblooded, rhox_faithmender, serra_paragon, soul_warden, souls_attendant,
+    street_wraith, sun_titan, suture_priest, treasure_dredger, vilis_broker_of_blood,
+    vito_thorn_of_the_dusk_rose, vona_butcher_of_magan, arguels_blood_fast,
+    authority_of_the_consuls, axis_of_mortality, blind_obedience, font_of_agonies, greed,
+    lunar_convocation, phyrexian_reclamation, righteous_aura, sanguine_bond,
+    underworld_connections, anguished_unmaking, brought_back, despark, fracture, generous_gift,
+    heliods_intervention, inkshield, path_to_exile, swords_to_plowshares, damn,
+    debt_to_the_deathless, exsanguinate, fumigate, repay_in_kind, sevinnes_reclamation,
+    sign_in_blood, toxic_deluge,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];

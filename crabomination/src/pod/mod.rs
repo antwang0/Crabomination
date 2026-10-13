@@ -8028,6 +8028,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ABIGALE_2_COMMANDERS,
             main: decks::ABIGALE_2_MAIN,
         },
+        // Seat 1263: Kaima, the Fractured Calm's EDHREC average deck. `--pod-decks 1263`.
+        PodDeck {
+            name: "Kaima, the Fractured Calm (RG)",
+            commanders: decks::KAIMA_COMMANDERS,
+            main: decks::KAIMA_MAIN,
+        },
+        // Seat 1264: Verrak, Warped Sengir's EDHREC average deck. `--pod-decks 1264`.
+        PodDeck {
+            name: "Verrak, Warped Sengir (WB)",
+            commanders: decks::VERRAK_COMMANDERS,
+            main: decks::VERRAK_MAIN,
+        },
     ]
 }
 
@@ -11122,6 +11134,8 @@ mod tests {
             ("Rohgahh, Kher Keep Overlord", &[0x0F01]),
             ("Experiment Kraj", &[0x0F02]),
             ("Abigale, Eloquent First-Year", &[0x0F03]),
+            ("Kaima, the Fractured Calm", &[0x0F04]),
+            ("Verrak, Warped Sengir", &[0x0F05]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
