@@ -1019,3 +1019,36 @@ fn pride_of_the_clouds_counts_every_flyer() {
     g.add_card_to_battlefield(2, catalog::serra_angel());
     assert_eq!(pt(&g, pride), (3, 3));
 }
+
+/// Susurian Voidborn — "Whenever this creature or another creature or
+/// artifact you control dies, target opponent loses 1 life and you gain 1
+/// life." (CR 700.4: an artifact put into a graveyard from the battlefield
+/// dies.)
+#[test]
+fn susurian_voidborn_drains_on_an_artifact_death() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::susurian_voidborn());
+    let rock = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let mut events = vec![];
+    g.sacrifice_one(rock, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.players[0].life, 21);
+}
+
+/// Perigee Beckoner — "another target creature you control gets +2/+0 and
+/// gains 'When this creature dies, return it to the battlefield tapped under
+/// its owner's control.'" (CR 603.6c leaves-the-battlefield trigger.)
+#[test]
+fn perigee_beckoner_returns_the_target_tapped() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let horror = g.add_card_to_hand(0, catalog::perigee_beckoner());
+    cast(&mut g, horror, &[perm(bear)]).expect("castable");
+    assert_eq!(pt(&g, bear), (4, 2));
+    let mut events = vec![];
+    g.sacrifice_one(bear, 0, &mut events);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear && c.tapped), "back, tapped");
+}

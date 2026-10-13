@@ -4991,8 +4991,8 @@ pub fn thawbringer() -> CardDefinition {
 }
 
 /// Susurian Voidborn — {2}{B} Creature — Vampire Soldier 2/2. Whenever this or
-/// another creature you control dies, target opponent loses 1 life and you gain
-/// 1. Warp {B}. (The printed "or artifact" branch is approximated to creatures.)
+/// another creature or artifact you control dies, target opponent loses 1 life
+/// and you gain 1. Warp {B}.
 pub fn susurian_voidborn() -> CardDefinition {
     CardDefinition {
         name: "Susurian Voidborn",
@@ -5005,7 +5005,14 @@ pub fn susurian_voidborn() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            // CR 700.4 — "dies" covers an artifact going to the graveyard
+            // from the battlefield too.
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                },
+            ),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {
                     who: target_filtered(SelectionRequirement::OpponentPlayer),
@@ -7132,9 +7139,9 @@ pub fn starfield_vocalist() -> CardDefinition {
     }
 }
 
-/// Perigee Beckoner — {4}{B} 4/5 Horror. ETB: another target creature you control
-/// gets +2/+0 until end of turn. Warp {2}{B}. (The granted "dies → return tapped"
-/// rider is dropped.)
+/// Perigee Beckoner — {4}{B} 4/5 Horror. ETB: until end of turn, another target
+/// creature you control gets +2/+0 and gains "When this creature dies, return it
+/// to the battlefield tapped under its owner's control." Warp {1}{B}.
 pub fn perigee_beckoner() -> CardDefinition {
     CardDefinition {
         name: "Perigee Beckoner",
@@ -7146,17 +7153,30 @@ pub fn perigee_beckoner() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
-        triggered_abilities: vec![etb(Effect::PumpPT {
-            what: Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou)
-                    .and(SelectionRequirement::OtherThanSource),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
             },
-            power: Value::Const(2),
-            toughness: Value::Const(0),
-            duration: Duration::EndOfTurn,
-        })],
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                    effect: Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         alternative_cost: Some(warp(cost(&[generic(1), b()]))),
         ..Default::default()
     }
