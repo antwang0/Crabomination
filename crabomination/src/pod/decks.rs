@@ -36054,3 +36054,33 @@ pub const BORBORYGMOS_AND_FBLTHP_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
     island, island, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const MISTER_FANTASTIC_COMMANDERS: &[CardFactory] = &[mister_fantastic];
+
+/// **Mister Fantastic**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 5 Forests + 4 Islands + 2 Mountains + 4 Plains = 99.
+/// Mister Fantastic (EDHREC, fetched 2026-10-13).
+pub const MISTER_FANTASTIC_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, lightning_greaves, mirage_mirror,
+    negative_zone_portal, sol_ring, the_fantasticar, unstable_molecule_suit, baxter_building,
+    breeding_pool, canopy_vista, cinder_glade, clifftop_retreat, command_tower, evolving_wilds,
+    exotic_orchard, fabled_passage, glacial_fortress, hallowed_fountain, hinterland_harbor,
+    path_of_ancestry, prairie_stream, radiant_summit, rejuvenating_springs, rootbound_crag,
+    scorched_geyser, sodden_verdure, sulfur_falls, sunpetal_grove, terramorphic_expanse,
+    alicia_masters_skilled_sculptor, birds_of_paradise, black_bolt_inhuman_king,
+    council_of_reeds, crystal_inhuman_princess, franklin_richards_ascendant,
+    galactus_devourer_of_worlds, herbie_lovable_robot, human_torch, human_torch_johnny_storm,
+    invisible_woman, invisible_woman_sue_storm, lockjaw_slobbering_teleporter,
+    medusa_inhuman_queen, mister_fantastic_reed_richards, namor_atlantean_king, power_pack,
+    the_thing, the_thing_ben_grimm, valeria_richards_precocious, willie_lumpkin_postman,
+    annie_joins_up, cosmic_crucible, jeskai_ascendancy, minds_dilation, monologue_tax,
+    path_of_discovery, whirlwind_of_thought, beast_within, bovine_intervention,
+    clever_concealment, counterspell, first_family, galvanic_iteration, heroic_intervention,
+    invisible_force_field, path_to_exile, swords_to_plowshares, cultivate, expressive_iteration,
+    fantastic_elasticity, farseek, flame_on, hull_breach, into_the_time_vortex,
+    its_clobberin_time, nova_flame, quantum_misalignment, recurring_insight, seize_the_day,
+    taunt_from_the_rampart, terramorph, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, island, island, island, island, mountain, mountain,
+    plains, plains, plains, plains,
+];

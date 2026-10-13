@@ -8058,6 +8058,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BORBORYGMOS_AND_FBLTHP_COMMANDERS,
             main: decks::BORBORYGMOS_AND_FBLTHP_MAIN,
         },
+        // Seat 1268: Mister Fantastic's EDHREC average deck. `--pod-decks 1268`.
+        PodDeck {
+            name: "Mister Fantastic (WURG)",
+            commanders: decks::MISTER_FANTASTIC_COMMANDERS,
+            main: decks::MISTER_FANTASTIC_MAIN,
+        },
     ]
 }
 
@@ -11156,6 +11162,7 @@ mod tests {
             ("Zuko, Firebending Master", &[0x0F06]),
             ("Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful", &[0x0F07]),
             ("Borborygmos and Fblthp", &[0x0F08]),
+            ("Mister Fantastic", &[0x0F09]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

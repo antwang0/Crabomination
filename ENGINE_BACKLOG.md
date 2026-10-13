@@ -152,6 +152,9 @@ the handoff.
 - **Seats 1221-1223** (Ekthi, Cynette, Elda): eight cards in `decks::cmdr_edhrec37`, no new
   primitive. Elda's "first nonlegendary creature spell each turn" is a once-a-turn cast trigger, so
   an Elda entering after such a spell grants demonstrate to the next one (INCOMPLETE_CARDS).
+- **Seat 1268** (Mister Fantastic): Human Torch, Invisible Woman, The Thing in
+  `decks::cmdr_edhrec52`. **Primitive:** `ActivatedAbility::power_up` (CR 702.193 — once per
+  object, and the cost less the source's mana cost the turn it entered, colored pips matching).
 - **FIXED — the closing release sweep (3,270 games over seats 1187-1228, 0 panics, 3 undecided):**
   (1) CR 614.13 / 111.1 — "for each …, create a token" minted copy by copy under the doublings
   as they grew, so Second Harvest over two Exalted Sunborn tokens compounded (766 Sunborns, seed
