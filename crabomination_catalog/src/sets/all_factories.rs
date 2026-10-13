@@ -3851,6 +3851,13 @@ static DECKS: &[Factory] = &[
     super::decks::borborygmos_and_fblthp,
     super::decks::fblthp_impossibly_lost,
     super::decks::fblthp_knows_the_way,
+    // cmdr_rank2k_k (session 01CwrNTA)
+    super::decks::descent_of_the_dragons,
+    super::decks::down_in_the_valley,
+    super::decks::drizzt_do_urden,
+    super::decks::icingdeath_frost_tyrant,
+    super::decks::karrthus_tyrant_of_jund,
+    super::decks::thranduil_the_strategist,
     // cmdr_rank2k_j (session 01CwrNTA)
     super::decks::cryptic_annelid,
     super::decks::devouring_swarm,
