@@ -301,14 +301,19 @@ impl GameState {
 
     /// Tokens `e` would mint if it resolved now under `ctx`: `CreateToken` /
     /// `CreateTokenCopyOf` counts, one per `Populate`, `Seq` summed, and a
-    /// `ForEach` scaled by how many its selector picks. The bot's
-    /// board-bound gates read it; anything else counts 0.
+    /// `ForEach` scaled by how many its selector picks, each mint under the
+    /// controller's doublers (CR 614.13). The bot's board-bound gates read
+    /// it; anything else counts 0.
     pub(crate) fn effect_token_estimate(&self, e: &crate::effect::Effect, ctx: &EffectContext) -> i64 {
         use crate::effect::Effect;
         match e {
             Effect::CreateToken { count, .. }
             | Effect::CreateTokenCopyOf { count, .. }
-            | Effect::CreateTokenAttacking { count, .. } => i64::from(self.evaluate_value(count, ctx).max(0)),
+            | Effect::CreateTokenAttacking { count, .. } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                // A Mondrak board turned one Romana II copy into 901 tokens.
+                i64::from(if n == 0 { 0 } else { self.doubled_token_count(ctx.controller, n) })
+            }
             Effect::Populate { .. } => 1,
             Effect::MayDo { body, .. } => self.effect_token_estimate(body, ctx),
             Effect::Investigate { body } => self.effect_token_estimate(body, ctx),

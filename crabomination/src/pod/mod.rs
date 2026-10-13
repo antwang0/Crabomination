@@ -7778,6 +7778,41 @@ impl RepeatGuard {
     }
 }
 
+/// Doublings past which one more token doubler makes any later mint a
+/// board-bound batch (`2^10` is `MAX_BATTLEFIELD`).
+const POD_TOKEN_DOUBLER_CEILING: u32 = 10;
+
+/// An activation the bot picked that would carry the battlefield past the
+/// board gate — its tokens under the seat's doublers (CR 614.13), or token
+/// copies of a doubler that take the seat to [`POD_TOKEN_DOUBLER_CEILING`]
+/// doublings. Romana II copying a token Mondrak, Glory Dominus each turn ran
+/// an eight-seat pod to 901 Mondraks and the board cap (seed 990872, game 5).
+/// The loop plays a pass instead; mana abilities are never gated.
+fn token_blowup(g: &GameState, seat: usize, action: &crate::game::GameAction) -> bool {
+    use crate::effect::{Effect, StaticEffect};
+    let crate::game::GameAction::ActivateAbility { card_id, ability_index, target, .. } = action else {
+        return false;
+    };
+    let Some(ab) = g.battlefield_find(*card_id).and_then(|c| c.definition.activated_abilities.get(*ability_index))
+    else {
+        return false;
+    };
+    if !ab.effect.any_nested(&|e| matches!(e, Effect::CreateToken { .. } | Effect::CreateTokenCopyOf { .. })) {
+        return false;
+    }
+    let mut ctx = crate::game::effects::EffectContext::for_ability(*card_id, seat, target.clone());
+    ctx.source = Some(*card_id);
+    let made = g.effect_token_estimate(&ab.effect, &ctx);
+    if g.battlefield.len() as i64 + made > crate::recommend::BOARD_GATE as i64 {
+        return true;
+    }
+    let copies_doubler = matches!(target, Some(crate::game::Target::Permanent(t)) if g
+        .battlefield_find(*t)
+        .is_some_and(|c| c.definition.static_abilities.iter().any(|sa| matches!(sa.effect, StaticEffect::DoubleTokens))))
+        && ab.effect.any_nested(&|e| matches!(e, Effect::CreateTokenCopyOf { .. }));
+    copies_doubler && i64::from(g.token_doublers_for(seat)) + made >= i64::from(POD_TOKEN_DOUBLER_CEILING)
+}
+
 /// `CRAB_POD_TRACE=<n>`: from action `n` on, every accepted action of a pod
 /// game on stderr — turn, step, stack depth, seat, action — and every
 /// rejected one as a `REJECT` line with the engine's error. Names a capped
@@ -8065,7 +8100,7 @@ fn play_pod_game(
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
             let crate::server::bot::BotStep { mut action, mut settled } = step;
             let cast_name = action.cast_card_id().and_then(|id| g.find_card_anywhere(id)).map(|c| c.definition.name);
-            if !repeats.admit_named(g.turn_number, seat, &action, cast_name) {
+            if !repeats.admit_named(g.turn_number, seat, &action, cast_name) || token_blowup(&g, seat, &action) {
                 action = crate::game::GameAction::PassPriority;
                 settled = None;
             }
@@ -10862,6 +10897,30 @@ mod tests {
     ///
     /// When a rules change legitimately moves one, re-bless it in the same
     /// commit and say why in the message.
+    /// CR 614.13 — Romana II copying a token Mondrak, Glory Dominus under
+    /// nine Mondraks is a 512-token batch of doublers: the pod plays a pass.
+    /// One Mondrak copies freely (seed 990872, game 5 ran to 901 Mondraks).
+    #[test]
+    fn cr_614_13_a_doubler_copy_past_the_ceiling_is_passed() {
+        let mut g = crate::game::multi_player_game(4);
+        let romana = g.add_card_to_battlefield(0, crate::catalog::romana_ii());
+        g.clear_sickness(romana);
+        let first = g.add_card_to_battlefield(0, crate::catalog::mondrak_glory_dominus());
+        let act = crate::game::GameAction::ActivateAbility {
+            card_id: romana,
+            ability_index: 0,
+            target: Some(crate::game::Target::Permanent(first)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        };
+        assert!(!token_blowup(&g, 0, &act), "one doubler: two copies");
+        for _ in 0..8 {
+            g.add_card_to_battlefield(0, crate::catalog::mondrak_glory_dominus());
+        }
+        assert!(token_blowup(&g, 0, &act), "nine doublers: 512 more");
+    }
+
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
