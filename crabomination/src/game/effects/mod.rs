@@ -41043,11 +41043,14 @@ impl GameState {
                 // "Until you exile another card with this": the new exile
                 // revokes the permission on the source's previous card.
                 let linked = *duration == crate::card::MayPlayDuration::UntilSourceExilesAnother;
+                // `WhileSourceOnBattlefield` binds the real source too
+                // (Nightveil Specter's "cards exiled with this creature").
                 let source_bound = matches!(
                     duration,
                     crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. }
                         | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
                         | crate::card::MayPlayDuration::TurnsLoreCounterPutOnSource { .. }
+                        | crate::card::MayPlayDuration::WhileSourceOnBattlefield { .. }
                 );
                 if linked && let Some(src) = ctx.source {
                     for c in self.exile.iter_mut().filter(|c| c.exiled_with == Some(src)) {
