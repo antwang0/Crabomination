@@ -124,6 +124,37 @@ the handoff.
 8. **The concurrent eighteenth run (`01Xu59CH`, ENGINE_BACKLOG "eighteenth Commander run"):** CR 601.2c (every required slot at cast; ratchet `spells_requiring_two_targets_print_no_optional_target`), CR 701.21a (only a controller sacrifices), CR 115.3 (an "up to N" instance under an `If`), `LastMoved` never names a commander gone home (Tinybones), Gishath's "any number" pick + the bot declining a loop-starting entry (Polyraptor), loop watch sees face-down faces, Soul Cauldron sink gate, Subtlety, seat 356 Anti-Venom; `audit_cr_citations.py` catches a real-but-wrong keyword number (report 0; absent numbers 61 → 48). **Sweeps: plain 181001/182001/187001, `--a dflt` 183001, fuzzed strict 184001/185001/186001 — ~48,000 pod games, 6 aborts, all fixed.** Fuzz (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`) found 4 of the 6: run it every session. **Gates at `80eea8640`:** strict suite 24,889 / 2 / 5 (both the reveal answer-log leak, fixed concurrently); workspace clippy 0; `--bench` 196,176 / 27.64 / 613.0 byte-identical, both determinism checks ok; paired A/B vs the run's base +3.3 % (PERF). (Both of its open rows are closed: a `TriggerSource` that left its graveyard before resolution is a new object (CR 400.7), and a counter is now growth to the loop watch.)
 9. **The concurrent nineteenth run (`01Vk2K6g`, ENGINE_BACKLOG "nineteenth Commander run"):** seats 357-368, 372-375 and 379 (Avatar Aang: bending events, `KeywordAct::Bent`) (Fire Lord Zuko … Toph, the First Metalbender; ~140 cards in `decks::cmdr_edhrec3`, 20 primitives), each 40 debug pod games decided. ⚠ It built Miirym + Tiamat in parallel with the other session; its copies were dropped at the rebase — fetch before *starting* a deck. Gates at `f2d66e817`: suite 25,282 / 0 / 6 (after registering Avatar Kyoshi) + the long-pole `cr_903_5a_the_official_precon_seats_play_pod_games` (2,011 s), clippy 0, `--bench` byte-identical + both determinism checks, release pod smoke 970 games (4/6/19 seats + the new seats) 0 panics, 1 undecided (a Miirym / Astral Dragon / Ureni token board cap). Final tip `5ccaee51b`: suite 25,316 / 0 / 6, clippy 0, `--bench` byte-identical. Then audit sweeps 197001 + fuzzed 198001 over seats 335-378 only (`pod_sweep.py --decks 335-378`, 2,220 games): 0 aborts; an Anti-Venom / All Will Be One loop fixed (CR 109.5: a damage-to-counters replacement's controller puts the counters). Scan after seat 379: Iroh 4, Lorehold 4, High Perfect Morcant 6, Obeka 7, Galadriel 7 (scry triggers, the Ring).
 
+## FIXED/OPEN 2026-10-13 (Commander run, `01BJKf54`) — 89 EDHREC seats from the 1500 rescan's one- and two-card gaps
+
+- **Seats 1061-1062, 1069-1093, 1102-1108, 1115-1154** — `decks::cmdr_edhrec21`..`cmdr_edhrec27`
+  (136 cards, tests `recent_b/cmdr_edhrec21.rs`..`27.rs`). Seat numbers moved twice on rebases
+  (the other session landed 1063-1068, 1094-1101, 1109-1114): drop your seat commit, take
+  upstream's `pod/` files, re-run `scripts/seat_decks.py`. Debug pods: 22 blocks, 4-6 seats,
+  ~550 games, all decided bar one legitimate CR 104.4a draw (Arcbond + Repercussion killed the
+  last two seats at once, seed 27106 game 10).
+- **FIXED (pod panic, seed 22104):** five "an opponent gains control" donations (Coveted Falcon,
+  Discerning Financier, Rohgahh, Goblin Festival, Fickle Efreet) passed `EachOpponent` as
+  `GainControl`'s single new controller; at 3+ seats `resolve_player`'s fan-out guard panicked.
+  Now `HostileOpponent`; `no_gain_control_hands_a_permanent_to_a_set_of_players` kills the class.
+- **FIXED (walkers disagreed):** `target_filter_for_slot` didn't surface `SacrificeSelected` /
+  `SacrificePermanent` slots that `requires_target` counted.
+- **FIXED (dead grants):** combat-damage dispatch phases 1.5/1.6 read printed `YourControl` /
+  `AnyPlayer` listeners only, so a statics-granted "whenever one or more creatures you control
+  deal combat damage" never fired (Feywild Visitor's Background grant). The statics leg runs
+  when such a grant exists; its once-per-batch key is the grant's position.
+- **FIXED:** `AddCreatureTypeToMatching` over a live filter (`IsCommander`) was dropped whole —
+  it now rides the live `SetBasePtForFilter` pass (Raised by Giants). The paid may-play cast
+  from exile paid with a default `SpellKind` (no restricted mana could fund it).
+- **New primitives:** `CounteredSpellZone::ExileSuspended`, `StaticEffect::ControllerCastsOnlyOnTurnUpTo`,
+  `SpendRestriction::SpellFromExile` (+ `SpellKind::from_exile`), `Value::OpponentsDealtDamageThisTurn`,
+  `Value::GreatestPowerOrToughnessAmong`, `Effect::ExchangeLifeWithSourcePower`, `CreatureType::Gnoll`.
+- **OPEN, each a primitive:** Firesong and Sunspeaker (a life-gain event that knows its source —
+  `EventKind`'s mask is full), Zevlor (copy-per-other-opponent next spell), Herald of Leshrac
+  (cumulative upkeep paid by stealing a land), Defiler of Dreams (optional life-for-{U} cost),
+  Acolyte of Bahamut (a Background granting a cost reduction), Leonardo da Vinci, Mirrormind
+  Crown; Jace, Reality Sculptor's "activate only if" (no `LoyaltyAbility` condition field).
+  Whtz and Maular are Rulebreakers (not Commander-legal) — never seat them.
+
 ## FIXED/OPEN 2026-10-12 (Commander run, `01NRsiVW`, cmdr_edhrec15) — 80 EDHREC seats from ranks 1001-1500's two-card gaps
 
 - **Seats 963-1002, 1013-1046 and 1063-1068** (renumbered twice on rebases: `011PQ8Uk` landed
