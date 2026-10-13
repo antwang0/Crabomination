@@ -7104,6 +7104,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KYLOX_COMMANDERS,
             main: decks::KYLOX_MAIN,
         },
+        // Seat 1109: Geralf, the Fleshwright's EDHREC average deck. `--pod-decks 1109`.
+        PodDeck {
+            name: "Geralf, the Fleshwright (U)",
+            commanders: decks::GERALF_COMMANDERS,
+            main: decks::GERALF_MAIN,
+        },
+        // Seat 1110: The Sentry, Golden Guardian's EDHREC average deck. `--pod-decks 1110`.
+        PodDeck {
+            name: "The Sentry, Golden Guardian (W)",
+            commanders: decks::THE_SENTRY_COMMANDERS,
+            main: decks::THE_SENTRY_MAIN,
+        },
+        // Seat 1111: Taskmaster, Mercenary Mimic's EDHREC average deck. `--pod-decks 1111`.
+        PodDeck {
+            name: "Taskmaster, Mercenary Mimic (UB)",
+            commanders: decks::TASKMASTER_COMMANDERS,
+            main: decks::TASKMASTER_MAIN,
+        },
+        // Seat 1112: Huatli, Poet of Unity's EDHREC average deck. `--pod-decks 1112`.
+        PodDeck {
+            name: "Huatli, Poet of Unity (WRG)",
+            commanders: decks::HUATLI_COMMANDERS,
+            main: decks::HUATLI_MAIN,
+        },
+        // Seat 1113: Nashi, Moon's Legacy's EDHREC average deck. `--pod-decks 1113`.
+        PodDeck {
+            name: "Nashi, Moon's Legacy (UBG)",
+            commanders: decks::NASHI_2_COMMANDERS,
+            main: decks::NASHI_2_MAIN,
+        },
+        // Seat 1114: Tekuthal, Inquiry Dominus's EDHREC average deck. `--pod-decks 1114`.
+        PodDeck {
+            name: "Tekuthal, Inquiry Dominus (U)",
+            commanders: decks::TEKUTHAL_COMMANDERS,
+            main: decks::TEKUTHAL_MAIN,
+        },
     ]
 }
 
@@ -10002,6 +10038,12 @@ mod tests {
             ("Omnath, Locus of the Roil", &[0x0E67]),
             ("Radha, Heir to Keld", &[0x0E68]),
             ("Kylox, Visionary Inventor", &[0x0E69]),
+            ("Geralf, the Fleshwright", &[0x0E6A]),
+            ("The Sentry, Golden Guardian", &[0x0E6B]),
+            ("Taskmaster, Mercenary Mimic", &[0x0E6C]),
+            ("Huatli, Poet of Unity", &[0x0E6D]),
+            ("Nashi, Moon's Legacy", &[0x0E6E]),
+            ("Tekuthal, Inquiry Dominus", &[0x0E6F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
