@@ -3860,6 +3860,7 @@ static DECKS: &[Factory] = &[
     super::decks::ochran_assassin,
     super::decks::river_sneak,
     super::decks::wanderwine_prophets,
+    super::decks::gorm_the_great,
     // cmdr_rank2k_d (session 01CwrNTA)
     super::decks::archwing_dragon,
     super::decks::arwen_mortal_queen,

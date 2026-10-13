@@ -269,3 +269,18 @@ pub fn wanderwine_prophets() -> CardDefinition {
         )
     }
 }
+
+/// Gorm the Great — {3}{G} legendary 2/7 vigilance Giant Warrior, partner with
+/// Virtus the Veiled; must be blocked if able. (The "by two or more creatures
+/// if able" half is not modelled — INCOMPLETE_CARDS.)
+pub fn gorm_the_great() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::PartnerWith("Virtus the Veiled".into()),
+            Keyword::Vigilance,
+            Keyword::MustBeBlocked,
+        ],
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search("Virtus the Veiled")],
+        ..legend("Gorm the Great", cost(&[generic(3), g()]), vec![CreatureType::Giant, CreatureType::Warrior], 2, 7)
+    }
+}
