@@ -1446,6 +1446,11 @@ pub enum Value {
     /// the trigger's subject on the stack (Rumbling Aftershocks). Zero when the
     /// subject isn't a spell.
     CastSpellTimesKicked,
+    /// The mana symbols of `color` in the *triggering* spell's mana cost — a
+    /// hybrid or Phyrexian pip counts once if it holds the color (CR 202.1,
+    /// counted as devotion counts it). Namor the Sub-Mariner's "create that
+    /// many". Zero when the subject isn't a card.
+    CastSpellPipsOf(crate::mana::Color),
     /// Total mana spent paying the originating spell's cost. Stashed on
     /// `StackItem::Spell.mana_spent` at cast time, propagated onto
     /// spell-cast `StackItem::Trigger.mana_spent`, and read from

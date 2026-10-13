@@ -1899,6 +1899,26 @@ impl GameState {
                     })
                 })
                 .unwrap_or(0),
+            Value::CastSpellPipsOf(color) => ctx
+                .trigger_source
+                .and_then(|e| e.as_card_id())
+                .and_then(|cid| self.find_card_anywhere(cid))
+                .map(|card| {
+                    card.definition
+                        .cost
+                        .symbols
+                        .iter()
+                        .filter(|sym| match sym {
+                            ManaSymbol::Colored(c)
+                            | ManaSymbol::Phyrexian(c)
+                            | ManaSymbol::MonoHybrid(_, c)
+                            | ManaSymbol::ColorlessHybrid(c) => c == color,
+                            ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => a == color || b == color,
+                            _ => false,
+                        })
+                        .count() as i32
+                })
+                .unwrap_or(0),
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when
                 // the just-cast spell is still on the stack (trigger
