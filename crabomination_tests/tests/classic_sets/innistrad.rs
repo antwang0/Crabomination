@@ -2191,6 +2191,10 @@ fn sanguine_statuette_etb_and_animate() {
     let stat = g.move_card_to_battlefield_for_test(0, catalog::sanguine_statuette());
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Blood"), 1, "ETB Blood token");
+    // "You may have it become …" — take it.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.resolve_effect(
         &catalog::sanguine_statuette().triggered_abilities[1].effect,
         &EffectContext::for_ability(stat, 0, None),

@@ -645,8 +645,8 @@ pub fn suppression_ray() -> CardDefinition {
 /// Bloodsoaked Insight // Sanguine Morass — {5}{B/R}{B/R} Sorcery. Target
 /// opponent exiles the top three cards of their library; until the end of your
 /// next turn you may play them, spending mana of any type. Back is a B/R
-/// tapland. (The "costs {1} less per life your opponents lost this turn" rider
-/// is omitted.)
+/// tapland. This spell costs {1} less to cast for each 1 life your opponents
+/// have lost this turn.
 pub fn bloodsoaked_insight() -> CardDefinition {
     use crate::mana::hybrid;
     CardDefinition {
@@ -657,14 +657,18 @@ pub fn bloodsoaked_insight() -> CardDefinition {
             hybrid(Color::Black, Color::Red),
         ]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ExileTopAndGrantMayPlay {
-            who: PlayerRef::Target(0),
-            count: Value::Const(3),
-            duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: true,
-            max_mana_value: None,
-            pay_own_cost: false,
-            uncast_penalty: None,
+        self_cost_reduction_per: Some((Value::TotalLifeLostThisTurn(PlayerRef::EachOpponent), 1)),
+        effect: Effect::TargetPlayerThen {
+            filter: crate::card::SelectionRequirement::OpponentPlayer,
+            then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::Target(0),
+                count: Value::Const(3),
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: true,
+                max_mana_value: None,
+                pay_own_cost: false,
+                uncast_penalty: None,
+            }),
         },
         back_face: Some(Box::new(dual_tapland(
             "Sanguine Morass",

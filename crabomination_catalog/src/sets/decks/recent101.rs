@@ -246,7 +246,7 @@ pub fn suit_up() -> CardDefinition {
 
 /// Careful Consideration — {2}{U}{U} Instant. You draw four cards, then discard
 /// three (two if cast in your main phase). (Printed "target player" is modeled as
-/// you — the standard self-cast; main-phase discount honored via the step check.)
+/// you — the standard self-cast.)
 pub fn careful_consideration() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
@@ -259,9 +259,13 @@ pub fn careful_consideration() -> CardDefinition {
                 amount: Value::Const(4),
             },
             Effect::If {
-                cond: Predicate::Any(vec![
-                    Predicate::CurrentStepIs(TurnStep::PreCombatMain),
-                    Predicate::CurrentStepIs(TurnStep::PostCombatMain),
+                // "During your main phase" (CR 505.1) — not an opponent's.
+                cond: Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::Any(vec![
+                        Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+                        Predicate::CurrentStepIs(TurnStep::PostCombatMain),
+                    ]),
                 ]),
                 then: Box::new(Effect::Discard {
                     who: Selector::You,

@@ -1232,12 +1232,26 @@ pub fn guidelight_pathmaker() -> CardDefinition {
 }
 
 /// Country Roads — Land. `{T}: Add {W}.` `{1}{W}, {T}, Sacrifice this land:
-/// Create a 1/1 colorless Pilot creature token. Sorcery speed.` (The "enters
-/// tapped unless you control a Mount or Vehicle" clause is dropped.)
+/// Create a 1/1 colorless Pilot creature token. Sorcery speed.` It enters
+/// tapped unless you control a Mount or a Vehicle.
 pub fn country_roads() -> CardDefinition {
     CardDefinition {
         name: "Country Roads",
         card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped unless you control a Mount or a Vehicle.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Mount)
+                            .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                            .and(R::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                },
+            },
+        }],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

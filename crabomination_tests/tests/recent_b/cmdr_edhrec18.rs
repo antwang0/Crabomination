@@ -1200,3 +1200,86 @@ fn mill_until_land_ends_on_a_shuffle_back_library() {
     cast(&mut g, bolt, &[Target::Player(1)]).unwrap();
     assert_eq!(g.players[1].library.len(), 3, "each Nexus shuffled back; the reveal stopped");
 }
+
+/// Bloodsoaked Insight — "This spell costs {1} less to cast for each 1 life
+/// your opponents have lost this turn" (CR 601.2f; summed over every
+/// opponent in a pod), and "target opponent" can't be you.
+#[test]
+fn bloodsoaked_insight_discounts_by_total_opponent_life_loss() {
+    let mut g = pod(3);
+    g.players[1].life_lost_this_turn = 2;
+    g.players[2].life_lost_this_turn = 3;
+    for p in [1, 2] {
+        for _ in 0..3 {
+            g.add_card_to_library(p, catalog::island());
+        }
+    }
+    let insight = g.add_card_to_hand(0, catalog::bloodsoaked_insight());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: insight, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "target opponent"
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: insight, target: Some(Target::Player(2)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("five life lost pays the generic five");
+    drain_stack(&mut g);
+    assert_eq!(g.players[2].library.len(), 0, "the target's top three are exiled");
+}
+
+/// Blitzball — "Activate only if an opponent was dealt combat damage by a
+/// legendary creature this turn." (CR 602.5b.) A nonlegendary hit doesn't
+/// open it; a legendary one does.
+#[test]
+fn blitzball_needs_a_legendary_hit() {
+    let mut g = pod(2);
+    let ball = ready(&mut g, 0, catalog::blitzball());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    declare(&mut g, 0, &[(bear, 1)]).unwrap();
+    block(&mut g, 1, vec![]).unwrap();
+    combat_damage(&mut g);
+    let sac = |g: &mut GameState| {
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(sac(&mut g).is_err(), "the Bear isn't legendary");
+    let legend = ready(&mut g, 0, catalog::isamaru_hound_of_konda());
+    g.players[1].creatures_that_combat_damaged_me_this_turn.push(legend);
+    sac(&mut g).expect("a legendary creature connected");
+}
+
+/// Country Roads — "This land enters tapped unless you control a Mount or a
+/// Vehicle." (CR 614.1c.)
+#[test]
+fn country_roads_enters_tapped_without_a_vehicle() {
+    let mut g = pod(2);
+    let land = g.add_card_to_hand(0, catalog::country_roads());
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.id == land && c.tapped));
+}
+
+/// Careful Consideration — "If you cast this spell during your main phase,
+/// instead … discards two cards." (CR 505.1: an opponent's main phase isn't
+/// yours.) Cast in an opponent's main phase it discards three.
+#[test]
+fn careful_consideration_discount_needs_your_main_phase() {
+    let mut g = pod(2);
+    g.active_player_idx = 1;
+    g.players[0].hand.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let cc = g.add_card_to_hand(0, catalog::careful_consideration());
+    cast(&mut g, cc, &[]).expect("instant");
+    assert_eq!(g.players[0].hand.len(), 1, "drew four, discarded three");
+}

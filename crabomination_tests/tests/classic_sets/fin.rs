@@ -3094,7 +3094,8 @@ fn opera_love_song_pumps_creatures() {
     assert_eq!(g.computed_permanent(b).unwrap().power, 4, "second target +2/+0");
 }
 
-/// Blitzball taps for any color; its GOOOOAAAALLL draw needs a combat hit.
+/// Blitzball taps for any color; its GOOOOAAAALLL draw needs an opponent hit
+/// by a legendary creature this turn.
 #[test]
 fn blitzball_mana_and_conditional_draw() {
     let mut g = two_player_game();
@@ -3113,7 +3114,8 @@ fn blitzball_mana_and_conditional_draw() {
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "can't draw without a combat hit this turn");
-    g.players[0].dealt_combat_damage_to_player_this_turn = true;
+    let legend = g.add_card_to_battlefield(0, catalog::isamaru_hound_of_konda());
+    g.players[1].creatures_that_combat_damaged_me_this_turn.push(legend);
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,

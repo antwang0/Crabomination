@@ -6011,9 +6011,8 @@ pub fn opera_love_song() -> CardDefinition {
 }
 
 /// Blitzball — {3} Artifact. {T}: Add one mana of any color. "GOOOOAAAALLL!" —
-/// {T}, Sacrifice this artifact: draw two cards, if you dealt combat damage to a
-/// player this turn. (The printed "an opponent was dealt combat damage by a
-/// legendary creature this turn" is approximated as your own combat hit.)
+/// {T}, Sacrifice this artifact: draw two cards. Activate only if an opponent
+/// was dealt combat damage by a legendary creature this turn.
 pub fn blitzball() -> CardDefinition {
     CardDefinition {
         name: "Blitzball",
@@ -6031,9 +6030,13 @@ pub fn blitzball() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 sac_cost: true,
-                condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn {
-                    who: PlayerRef::You,
-                }),
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::PlayersDealtCombatDamageThisTurnBy {
+                        who: PlayerRef::EachOpponent,
+                        by: Box::new(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+                    },
+                    Value::ONE,
+                )),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(2),

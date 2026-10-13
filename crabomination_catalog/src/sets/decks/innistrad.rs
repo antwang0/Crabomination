@@ -4652,7 +4652,7 @@ pub fn pyre_spawn() -> CardDefinition {
 
 /// Sanguine Statuette — {1}{R} Artifact. ETB create a Blood token. Whenever you
 /// sacrifice a Blood token, this becomes a 3/3 Vampire artifact creature with
-/// haste until end of turn (the "you may" is modeled as automatic).
+/// haste until end of turn (you may).
 pub fn sanguine_statuette() -> CardDefinition {
     CardDefinition {
         name: "Sanguine Statuette",
@@ -4670,13 +4670,16 @@ pub fn sanguine_statuette() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
                     }),
-                effect: Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::Const(3),
-                    toughness: Value::Const(3),
-                    creature_types: vec![CreatureType::Vampire],
-                    keywords: vec![Keyword::Haste],
-                    duration: Duration::EndOfTurn,
+                effect: Effect::MayDo {
+                    description: "Make Sanguine Statuette a 3/3 Vampire with haste?".into(),
+                    body: Box::new(Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        creature_types: vec![CreatureType::Vampire],
+                        keywords: vec![Keyword::Haste],
+                        duration: Duration::EndOfTurn,
+                    }),
                 },
             },
         ],
