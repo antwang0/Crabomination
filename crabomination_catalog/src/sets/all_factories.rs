@@ -3895,6 +3895,12 @@ static DECKS: &[Factory] = &[
     super::decks::the_fourteenth_doctor,
     super::decks::rose_noble,
     super::decks::the_fifteenth_doctor,
+    // cmdr_edhrec53 (session 01VkPyqk)
+    super::decks::roiling_canopy,
+    super::decks::old_growth_troll,
+    super::decks::sandman_shifting_scoundrel,
+    super::decks::the_muckslinger_gang,
+    super::decks::soul_immolation,
     super::decks::gandalf_friend_of_the_shire,
     super::decks::ringwraiths,
     super::decks::sauron_the_necromancer,
