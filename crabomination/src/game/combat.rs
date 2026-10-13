@@ -2941,11 +2941,19 @@ impl GameState {
                     continue;
                 }
                 let (mode, auto_target) = self.trigger_mode_and_target(&effect, ctrl, Some(src));
-                for (effect, auto_target) in
-                    std::iter::repeat_n((effect, auto_target), fires)
+                // CR 115.1c — "up to N target" slots past the first (Master's
+                // Guidance's "each of up to two target attacking creatures").
+                let additional =
+                    self.auto_extra_targets_for(effect.targeting_view(mode), src, ctrl, auto_target.clone());
+                for (effect, auto_target, additional) in
+                    std::iter::repeat_n((effect, auto_target, additional), fires)
                 {
                     self.push_stack(
-                        TriggerPush::new(src, ctrl, effect).target(auto_target).mode(mode).build(),
+                        TriggerPush::new(src, ctrl, effect)
+                            .target(auto_target)
+                            .additional_targets(additional)
+                            .mode(mode)
+                            .build(),
                     );
                 }
             }
