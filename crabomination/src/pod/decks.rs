@@ -41668,3 +41668,58 @@ pub const VALENTIN_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const PRINCESS_YUE_COMMANDERS: &[CardFactory] = &[princess_yue];
+
+/// **Princess Yue**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Princess Yue (EDHREC, fetched 2026-10-13).
+pub const PRINCESS_YUE_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_shared_souls, kefnets_monument, machine_gods_effigy, mind_stone,
+    planetarium_of_wan_shi_tong, sapphire_medallion, sol_ring, the_water_crystal,
+    thought_vessel, arid_archway, deserted_temple, guildless_commons, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower,
+    thespians_stage, vesuva, clever_impersonator, clone_card, copycrook, defiler_of_dreams,
+    faerie_mastermind, fallowsage, ghostly_pilferer, gigantoplasm, glasspool_mimic, hedron_crab,
+    homunculus_horde, hulking_metamorph, kitesail_larcenist, matoya_archon_elder, mirror_image,
+    mirrorhall_mimic, naga_fleshcrafter, omni_changeling, phantasmal_image, phyrexian_metamorph,
+    platinum_angel, river_kelpie, roil_elemental, ruin_crab, stunt_double,
+    tui_and_la_moon_and_ocean, undercover_operative, visage_bandit, vizier_of_many_faces,
+    wall_of_stolen_identity, waxen_shapethief, wonderscape_sage, wormfang_newt, wormfang_turtle,
+    copy_land, imprisoned_in_the_moon, propaganda, retreat_to_coralhelm, aetherize,
+    an_offer_you_cant_refuse, consult_the_star_charts, counterspell, frantic_search,
+    ghostly_flicker, pongify, rapid_hybridization, sink_into_stupor, snap, unwind,
+    consuming_tide, devastation_tide, sea_gate_restoration, season_of_weaving,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];
+
+pub const ETRATA_2_COMMANDERS: &[CardFactory] = &[etrata_deadly_fugitive];
+
+/// **Etrata, Deadly Fugitive**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Swamps = 99.
+/// Etrata, Deadly Fugitive (EDHREC, fetched 2026-10-13).
+pub const ETRATA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, cryptic_coat, dimir_signet, fellwar_stone,
+    lightning_greaves, maskwood_nexus, scroll_of_fate, sol_ring, swiftfoot_boots,
+    talisman_of_dominance, access_tunnel, brotherhood_headquarters, choked_estuary,
+    command_tower, darkwater_catacombs, dimir_aqueduct, drowned_catacomb, exotic_orchard,
+    morphic_pool, path_of_ancestry, rogues_passage, shipwreck_marsh, sunken_hollow,
+    tainted_isle, underground_river, watery_grave, achilles_davenport, assassin_initiate,
+    aven_heartstabber, basim_ibn_ishaq, brotherhood_spy, changeling_outcast, desmond_miles,
+    etrata_the_silencer, evie_frye, ezio_blade_of_vengeance, guildsworn_prowler, hired_poisoner,
+    hookblade_veteran, hullcarver, jacob_frye, lydia_frye, mari_the_killing_quill,
+    massacre_girl, massacre_girl_known_killer, ramses_assassin_lord, roshan_hidden_magister,
+    royal_assassin, ruthless_ripper, satoru_the_infiltrator, silumgar_assassin,
+    thieving_amalgam, unstoppable_slasher, arcane_adaptation, black_market_connections,
+    cover_of_darkness, leyline_of_transformation, primordial_mist, rooftop_bypass,
+    they_came_from_the_pipes, training_grounds, an_offer_you_cant_refuse, arcane_denial,
+    become_anonymous, chain_assassination, counterspell, ghostly_flicker, memory_lapse, negate,
+    withering_torment, back_in_town, eagle_vision, feed_the_swarm, ghastly_conscription,
+    kindred_dominance, restart_sequence, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

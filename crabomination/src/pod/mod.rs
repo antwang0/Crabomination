@@ -9264,6 +9264,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VALENTIN_COMMANDERS,
             main: decks::VALENTIN_MAIN,
         },
+        // Seat 1469: Princess Yue's EDHREC average deck. `--pod-decks 1469`.
+        PodDeck {
+            name: "Princess Yue (U)",
+            commanders: decks::PRINCESS_YUE_COMMANDERS,
+            main: decks::PRINCESS_YUE_MAIN,
+        },
+        // Seat 1470: Etrata, Deadly Fugitive's EDHREC average deck. `--pod-decks 1470`.
+        PodDeck {
+            name: "Etrata, Deadly Fugitive (UB)",
+            commanders: decks::ETRATA_2_COMMANDERS,
+            main: decks::ETRATA_2_MAIN,
+        },
     ]
 }
 
@@ -12563,6 +12575,8 @@ mod tests {
             ("Thrakkus the Butcher", &[0x0FCF]),
             ("Hawkeye, Young Avenger", &[0x0FD0]),
             ("Valentin, Dean of the Vein", &[0x0FD1]),
+            ("Princess Yue", &[0x0FD2]),
+            ("Etrata, Deadly Fugitive", &[0x0FD3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
