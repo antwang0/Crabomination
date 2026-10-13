@@ -915,6 +915,9 @@ pub enum SpendRestriction {
     /// spell or source with the type, a Kindred one included (CR 308.3);
     /// `CreatureOfTypeOrItsAbility` is the creature-only wording.
     TypeSpellOrItsAbility(crate::card::CreatureType),
+    /// "Spend this mana only to cast kicked spells" (Elfhame Druid). Reads
+    /// `SpellKind::kicked`.
+    KickedSpellsOnly,
 }
 
 impl SpendRestriction {
@@ -926,6 +929,7 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOnly => "only instants and sorceries",
             SpendRestriction::InstantSorceryOrClassLevel => "only instants, sorceries and Class levels",
             SpendRestriction::InstantSorceryOrKicked => "only instants, sorceries and kicked spells",
+            SpendRestriction::KickedSpellsOnly => "only kicked spells",
             SpendRestriction::ArtifactOnly => "only artifacts",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
@@ -1035,6 +1039,7 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
             SpendRestriction::InstantSorceryOrClassLevel => kind.instant_or_sorcery || kind.class_level,
             SpendRestriction::InstantSorceryOrKicked => kind.instant_or_sorcery || kind.kicked,
+            SpendRestriction::KickedSpellsOnly => kind.kicked,
             SpendRestriction::ArtifactOnly => kind.artifact,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
