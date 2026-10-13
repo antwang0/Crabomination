@@ -10644,6 +10644,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLACK_WIDOW_COMMANDERS,
             main: decks::BLACK_WIDOW_MAIN,
         },
+        // Seat 1699: Torgaar, Famine Incarnate's EDHREC average deck. `--pod-decks 1699`.
+        PodDeck {
+            name: "Torgaar, Famine Incarnate (B)",
+            commanders: decks::TORGAAR_COMMANDERS,
+            main: decks::TORGAAR_MAIN,
+        },
+        // Seat 1700: Takeno, Samurai General's EDHREC average deck. `--pod-decks 1700`.
+        PodDeck {
+            name: "Takeno, Samurai General (W)",
+            commanders: decks::TAKENO_COMMANDERS,
+            main: decks::TAKENO_MAIN,
+        },
+        // Seat 1701: Sekki, Seasons' Guide's EDHREC average deck. `--pod-decks 1701`.
+        PodDeck {
+            name: "Sekki, Seasons' Guide (G)",
+            commanders: decks::SEKKI_COMMANDERS,
+            main: decks::SEKKI_MAIN,
+        },
+        // Seat 1702: Taigam, Sidisi's Hand's EDHREC average deck. `--pod-decks 1702`.
+        PodDeck {
+            name: "Taigam, Sidisi's Hand (UB)",
+            commanders: decks::TAIGAM_3_COMMANDERS,
+            main: decks::TAIGAM_3_MAIN,
+        },
+        // Seat 1703: Kira, Great Glass-Spinner's EDHREC average deck. `--pod-decks 1703`.
+        PodDeck {
+            name: "Kira, Great Glass-Spinner (U)",
+            commanders: decks::KIRA_COMMANDERS,
+            main: decks::KIRA_MAIN,
+        },
+        // Seat 1704: Goro-Goro, Disciple of Ryusei's EDHREC average deck. `--pod-decks 1704`.
+        PodDeck {
+            name: "Goro-Goro, Disciple of Ryusei (R)",
+            commanders: decks::GORO_GORO_COMMANDERS,
+            main: decks::GORO_GORO_MAIN,
+        },
+        // Seat 1705: Tromokratis's EDHREC average deck. `--pod-decks 1705`.
+        PodDeck {
+            name: "Tromokratis (U)",
+            commanders: decks::TROMOKRATIS_COMMANDERS,
+            main: decks::TROMOKRATIS_MAIN,
+        },
     ]
 }
 
@@ -14173,6 +14215,13 @@ mod tests {
             ("Dragonlord Silumgar", &[0x10B5]),
             ("Sigarda, Heron's Grace", &[0x10B6]),
             ("Black Widow, Agile Avenger", &[0x10B7]),
+            ("Torgaar, Famine Incarnate", &[0x10B8]),
+            ("Takeno, Samurai General", &[0x10B9]),
+            ("Sekki, Seasons' Guide", &[0x10BA]),
+            ("Taigam, Sidisi's Hand", &[0x10BB]),
+            ("Kira, Great Glass-Spinner", &[0x10BC]),
+            ("Goro-Goro, Disciple of Ryusei", &[0x10BD]),
+            ("Tromokratis", &[0x10BE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
