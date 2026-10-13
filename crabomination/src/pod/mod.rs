@@ -7746,6 +7746,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAMSES_COMMANDERS,
             main: decks::RAMSES_MAIN,
         },
+        // Seat 1216: Orah, Skyclave Hierophant's EDHREC average deck. `--pod-decks 1216`.
+        PodDeck {
+            name: "Orah, Skyclave Hierophant (WB)",
+            commanders: decks::ORAH_COMMANDERS,
+            main: decks::ORAH_MAIN,
+        },
+        // Seat 1217: Meria, Scholar of Antiquity's EDHREC average deck. `--pod-decks 1217`.
+        PodDeck {
+            name: "Meria, Scholar of Antiquity (RG)",
+            commanders: decks::MERIA_COMMANDERS,
+            main: decks::MERIA_MAIN,
+        },
+        // Seat 1218: Trazyn the Infinite's EDHREC average deck. `--pod-decks 1218`.
+        PodDeck {
+            name: "Trazyn the Infinite (B)",
+            commanders: decks::TRAZYN_THE_INFINITE_COMMANDERS,
+            main: decks::TRAZYN_THE_INFINITE_MAIN,
+        },
+        // Seat 1219: Melek, Reforged Researcher's EDHREC average deck. `--pod-decks 1219`.
+        PodDeck {
+            name: "Melek, Reforged Researcher (UR)",
+            commanders: decks::MELEK_2_COMMANDERS,
+            main: decks::MELEK_2_MAIN,
+        },
+        // Seat 1220: O-Kagachi, Vengeful Kami's EDHREC average deck. `--pod-decks 1220`.
+        PodDeck {
+            name: "O-Kagachi, Vengeful Kami (WUBRG)",
+            commanders: decks::O_KAGACHI_COMMANDERS,
+            main: decks::O_KAGACHI_MAIN,
+        },
     ]
 }
 
@@ -10786,6 +10816,11 @@ mod tests {
             ("Niv-Mizzet, Supreme", &[0x0ED2]),
             ("Varolz, the Scar-Striped", &[0x0ED3]),
             ("Ramses, Assassin Lord", &[0x0ED4]),
+            ("Orah, Skyclave Hierophant", &[0x0ED5]),
+            ("Meria, Scholar of Antiquity", &[0x0ED6]),
+            ("Trazyn the Infinite", &[0x0ED7]),
+            ("Melek, Reforged Researcher", &[0x0ED8]),
+            ("O-Kagachi, Vengeful Kami", &[0x0ED9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
