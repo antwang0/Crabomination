@@ -1828,6 +1828,12 @@ pub const MAX_STACK_ITEMS: usize = 8 * MAX_BATTLEFIELD;
 /// gated board over the bound one at a time.
 pub const BOARD_GATE: usize = MAX_BATTLEFIELD - MAX_BATTLEFIELD / 8;
 
+/// Doublings past which one more token doubler makes any later mint a
+/// board-bound batch (`2^10` is `MAX_BATTLEFIELD`): the pod loop passes on an
+/// activation that copies a doubler that far, and a populate's default pick
+/// skips a doubler token there.
+pub const TOKEN_DOUBLER_CEILING: u32 = 10;
+
 /// [`BOARD_GATE`]'s stack sibling: an optional free cast is declined once this
 /// many spells are on the stack, an eighth short of [`MAX_STACK`]. Jadzi's
 /// magecraft under Thousand-Year Storm recast its top card into the bound

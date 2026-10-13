@@ -358,9 +358,16 @@ impl GameState {
         let mut ctx = EffectContext::for_spell(caster, None, 0, 0);
         let own = match self.find_card_anywhere(id) {
             Some(card)
+                // "For each token you control, create a token that's a copy"
+                // (Second Harvest) is a `ForEach`: with Exalted Sunborn tokens
+                // out it minted 766 more and board-capped a pod (seed
+                // 99300254) while the gate priced it at 0.
                 if matches!(
                     card.definition.effect,
                     crate::effect::Effect::CreateToken { .. }
+                        | crate::effect::Effect::CreateTokenCopyOf { .. }
+                        | crate::effect::Effect::Populate { .. }
+                        | crate::effect::Effect::ForEach { .. }
                         | crate::effect::Effect::Investigate { .. }
                         | crate::effect::Effect::Seq(_)
                 ) =>

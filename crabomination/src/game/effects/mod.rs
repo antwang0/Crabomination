@@ -6003,34 +6003,49 @@ impl GameState {
             }
             Effect::ForEach { selector, body } => {
                 let entities = self.resolve_selector(selector, ctx);
-                for (i, ent) in entities.iter().copied().enumerate() {
-                    let mut sub_ctx = ctx.clone();
-                    sub_ctx.trigger_source = Some(ent);
-                    self.run_effect(body, &sub_ctx, events)?;
-                    // `trigger_source` is a context field, and a parked
-                    // continuation comes back under the stack item's context —
-                    // so this entity's own remainder needs re-binding, and the
-                    // entities after it need splicing, both by naming the
-                    // entity inside the effect.
-                    rewrap_parked(&mut self.suspend_signal, |carried| Effect::ForEach {
-                        selector: selector_for_entity(&ent),
-                        body: Box::new(carried),
-                    });
-                    if splice_after_suspend(&mut self.suspend_signal, || {
-                        Effect::seq(
-                            entities[i + 1..]
-                                .iter()
-                                .map(|e| Effect::ForEach {
-                                    selector: selector_for_entity(e),
-                                    body: body.clone(),
-                                })
-                                .collect(),
-                        )
-                    }) {
-                        return Ok(());
-                    }
+                // CR 614.13 / 111.1 — "for each …, create a token" is one
+                // event: the doublings are the ones in place before it.
+                let freeze = self.scratch.token_doubler_freeze.is_none()
+                    && entities.len() > 1
+                    && body.any_nested(&|e| matches!(e, Effect::CreateToken { .. } | Effect::CreateTokenCopyOf { .. }));
+                if freeze {
+                    let frozen = (0..self.players.len()).map(|p| self.token_doublers_for(p)).collect();
+                    self.scratch.token_doubler_freeze = Some(frozen);
                 }
-                Ok(())
+                let r = (|| -> Result<(), crate::game::GameError> {
+                    for (i, ent) in entities.iter().copied().enumerate() {
+                        let mut sub_ctx = ctx.clone();
+                        sub_ctx.trigger_source = Some(ent);
+                        self.run_effect(body, &sub_ctx, events)?;
+                        // `trigger_source` is a context field, and a parked
+                        // continuation comes back under the stack item's context —
+                        // so this entity's own remainder needs re-binding, and the
+                        // entities after it need splicing, both by naming the
+                        // entity inside the effect.
+                        rewrap_parked(&mut self.suspend_signal, |carried| Effect::ForEach {
+                            selector: selector_for_entity(&ent),
+                            body: Box::new(carried),
+                        });
+                        if splice_after_suspend(&mut self.suspend_signal, || {
+                            Effect::seq(
+                                entities[i + 1..]
+                                    .iter()
+                                    .map(|e| Effect::ForEach {
+                                        selector: selector_for_entity(e),
+                                        body: body.clone(),
+                                    })
+                                    .collect(),
+                            )
+                        }) {
+                            return Ok(());
+                        }
+                    }
+                    Ok(())
+                })();
+                if freeze {
+                    self.scratch.token_doubler_freeze = None;
+                }
+                r
             }
 
             Effect::EachPlayerDoes { who, body } => {
@@ -24179,7 +24194,29 @@ impl GameState {
                     .filter(|c| c.is_token && c.controller == p && self.computed_is_creature(c))
                     .map(|c| (c.id, c.definition.name.to_string(), c.power()))
                     .collect();
-                let Some(best) = tokens.iter().max_by_key(|t| t.2).map(|t| t.0) else {
+                // CR 614.13 — a copy of a token doubler under k doublers is
+                // 2^k more doublers; once that reaches the ceiling, every
+                // later mint is board-bound (Elda's demonstrated Exalted
+                // Sunborn token, populated each upkeep by Growing Ranks: 766
+                // Sunborns and a board cap, seed 99300254). The default skips
+                // such a doubler when another token is there to copy.
+                let made = self.scaled_token_count(p, 1, true);
+                let runaway = |id: CardId| {
+                    self.token_doublers_for(p).saturating_add(made) >= crate::recommend::TOKEN_DOUBLER_CEILING
+                        && self.battlefield_find(id).is_some_and(|c| {
+                            c.definition
+                                .static_abilities
+                                .iter()
+                                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::DoubleTokens))
+                        })
+                };
+                let Some(best) = tokens
+                    .iter()
+                    .filter(|t| !runaway(t.0))
+                    .max_by_key(|t| t.2)
+                    .or_else(|| tokens.iter().max_by_key(|t| t.2))
+                    .map(|t| t.0)
+                else {
                     self.clear_answer_log();
                     return Ok(());
                 };

@@ -8204,9 +8204,8 @@ impl RepeatGuard {
     }
 }
 
-/// Doublings past which one more token doubler makes any later mint a
-/// board-bound batch (`2^10` is `MAX_BATTLEFIELD`).
-const POD_TOKEN_DOUBLER_CEILING: u32 = 10;
+/// [`crate::recommend::TOKEN_DOUBLER_CEILING`], the pod loop's name for it.
+const POD_TOKEN_DOUBLER_CEILING: u32 = crate::recommend::TOKEN_DOUBLER_CEILING;
 
 /// An activation the bot picked that would carry the battlefield past the
 /// board gate — its tokens under the seat's doublers (CR 614.13), or token

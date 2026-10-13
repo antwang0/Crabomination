@@ -98,3 +98,79 @@ fn cr_702_92a_ekthi_arms_every_equipment() {
     assert!(germs.contains(&steel_germ));
     assert_eq!(g.computed_permanent(steel_germ).unwrap().power, 4 + 1);
 }
+
+/// CR 111.1 / 707.10f — a demonstrated copy of a permanent spell becomes a
+/// token as it resolves; it isn't "created", so a token doubler (Exalted
+/// Sunborn) doesn't double it.
+#[test]
+fn cr_707_10f_a_resolved_spell_copy_is_not_a_created_token() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::elda_conjurer_of_spectacle());
+    g.add_card_to_battlefield(0, catalog::exalted_sunborn());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, None).expect("bear");
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 2, "the bear and one copy");
+}
+
+/// CR 701.32 / 614.13 — populating a token doubler under three doublers
+/// would add eight more; the default pick copies the other token instead.
+#[test]
+fn cr_701_32_populate_skips_a_runaway_doubler() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::parallel_lives());
+    g.add_card_to_battlefield(0, catalog::parallel_lives());
+    let sunborn = g.add_card_to_battlefield(0, catalog::exalted_sunborn());
+    g.battlefield_find_mut(sunborn).unwrap().is_token = true;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().is_token = true;
+    let rites = g.add_card_to_hand(0, catalog::rootborn_defenses());
+    cast(&mut g, rites, None).expect("populate");
+    assert_eq!(named(&g, 0, "Exalted Sunborn").len(), 1);
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 1 + 8, "three doublings");
+}
+
+/// CR 614.13 — a bot holds Second Harvest ("for each token you control, a
+/// copy") when its tokens under its doublers would overflow the board: the
+/// gate priced a `ForEach` spell at 0, and an Elda pod's Exalted Sunborn
+/// tokens board-capped (seed 99300254). With two tokens it casts it.
+#[test]
+fn cr_614_13_bot_holds_a_board_bound_second_harvest() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let casts = |sunborns: usize| {
+        let mut g = pod(2);
+        stock_libraries(&mut g, 10);
+        for _ in 0..sunborns {
+            let s = g.add_card_to_battlefield(0, catalog::exalted_sunborn());
+            g.battlefield_find_mut(s).unwrap().is_token = true;
+        }
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        let harvest = g.add_card_to_hand(0, catalog::second_harvest());
+        // An instant: the bot casts it in an opponent's end step.
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        let a = HeuristicBot::new().next_action(&g, 0);
+        matches!(a, Some(GameAction::CastSpell { card_id, .. }) if card_id == harvest)
+    };
+    assert!(casts(2), "two tokens under two doublers: eight copies");
+    assert!(!casts(9), "nine under nine: 4,608 copies");
+}
+
+/// CR 614.13 / 111.1 — Second Harvest makes its copies in one event: two
+/// Exalted Sunborn tokens under their own two doublings become eight more,
+/// not a doubling that compounds copy by copy (one resolution once minted
+/// 766 Sunborns).
+#[test]
+fn cr_614_13_for_each_copies_share_one_doubling() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        let s = g.add_card_to_battlefield(0, catalog::exalted_sunborn());
+        g.battlefield_find_mut(s).unwrap().is_token = true;
+    }
+    let harvest = g.add_card_to_hand(0, catalog::second_harvest());
+    cast(&mut g, harvest, None).expect("harvest");
+    assert_eq!(named(&g, 0, "Exalted Sunborn").len(), 2 + 2 * 4);
+}

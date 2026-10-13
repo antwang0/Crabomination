@@ -2541,6 +2541,12 @@ pub struct ResolutionScratch {
     /// `Effect::WithTriggerBatch` bound; restored as its body ends.
     #[serde(skip)]
     pub(crate) bound_trigger_batch: Vec<CardId>,
+    /// CR 614.13 / 111.1 — each seat's token doublings, frozen while a
+    /// "for each …, create a token" resolves: its tokens are made in one
+    /// event, so a doubler it makes (Second Harvest copying an Exalted
+    /// Sunborn token) doesn't double its siblings. `None` outside one.
+    #[serde(skip)]
+    pub(crate) token_doubler_freeze: Option<Vec<u32>>,
     /// Transient: entities (creatures + players) that actually took damage
     /// during the current resolution. Powers `Selector::DamagedThisResolution`
     /// — "tap each creature damaged this way / those players can't cast
@@ -7770,6 +7776,9 @@ impl GameState {
     /// multiply rather than just add.)
     pub fn token_doublers_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
+        if let Some(frozen) = self.scratch.token_doubler_freeze.as_ref().and_then(|f| f.get(seat)) {
+            return *frozen;
+        }
         self.battlefield
             .iter()
             .map(|c| {
