@@ -763,9 +763,8 @@ pub fn moss_diamond() -> CardDefinition {
 /// cards, then discard three cards at random."
 ///
 /// A classic Skred-Red staple. Discard-3-at-random is wired via
-/// `Effect::Discard { random: true }` so the engine picks three random
-/// hand cards rather than letting the caster choose — matches the
-/// printed "at random" cost.
+/// `Effect::Discard { random: true }`: three random hand cards, not the
+/// caster's choice.
 pub fn goblin_lore() -> CardDefinition {
     CardDefinition {
         name: "Goblin Lore",

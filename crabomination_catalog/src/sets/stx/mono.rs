@@ -195,10 +195,8 @@ pub fn frost_trickster() -> CardDefinition {
 /// Fractal creature token. Put a +1/+1 counter on it for each card in your
 /// library."
 ///
-/// Now wired (push XVI) via the new `Value::LibrarySizeOf` primitive —
-/// the Fractal enters with one +1/+1 counter per library card, matching
-/// the printed Oracle exactly. Earlier revisions approximated this as
-/// `GraveyardSizeOf` because `LibrarySize` wasn't a primitive.
+/// Wired via `Value::LibrarySizeOf` — the Fractal enters with one +1/+1
+/// counter per library card.
 pub fn body_of_research() -> CardDefinition {
     let fractal = TokenDefinition {
         name: "Fractal".to_string(),

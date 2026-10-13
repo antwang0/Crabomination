@@ -11287,9 +11287,7 @@ pub fn strangle() -> CardDefinition {
 /// Dreadbore — {B}{R} Sorcery. Destroy target creature or planeswalker.
 ///
 /// Sorcery-speed Hero's Downfall at one less mana — kills creatures and
-/// planeswalkers without restriction (no regen / nonblack riders). The
-/// "can't be regenerated" clause collapses (no observable regeneration
-/// site in the engine).
+/// planeswalkers without restriction (no regen / nonblack riders).
 pub fn dreadbore() -> CardDefinition {
     CardDefinition {
         name: "Dreadbore",
@@ -35464,8 +35462,8 @@ pub fn rabbit_response() -> CardDefinition {
 }
 
 /// Brazen Collector — {1}{R} 2/1 Raccoon Rogue with First Strike. Whenever it
-/// attacks, add {R}. (The "this mana doesn't empty between steps/phases" rider
-/// is dropped — the pool already persists through the attack step in-engine.)
+/// attacks, add {R}. Until end of turn, you don't lose this mana as steps and
+/// phases end.
 pub fn brazen_collector() -> CardDefinition {
     CardDefinition {
         name: "Brazen Collector",
@@ -35480,9 +35478,9 @@ pub fn brazen_collector() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::AddMana {
+            effect: Effect::AddManaKeptThisTurn {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![Color::Red]),
+                colors: vec![Color::Red],
             },
         }],
         ..Default::default()

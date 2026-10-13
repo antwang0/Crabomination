@@ -992,3 +992,19 @@ fn werewolf_pack_leader_sets_base_five_three() {
     assert_eq!(pt(&g, wolf), (6, 4), "base 5/3 plus the counter");
     assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::Trample));
 }
+
+/// Brazen Collector — "Whenever this creature attacks, add {R}. Until end of
+/// turn, you don't lose this mana as steps and phases end." (CR 500.4 pools
+/// empty between steps; the rider exempts this {R}.)
+#[test]
+fn brazen_collector_mana_survives_step_ends() {
+    let mut g = pod(2);
+    let bc = ready(&mut g, 0, catalog::brazen_collector());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: bc, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "kept through the step end");
+}

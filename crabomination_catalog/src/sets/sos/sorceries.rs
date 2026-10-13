@@ -1951,7 +1951,7 @@ pub fn social_snub() -> CardDefinition {
 /// `CardDefinition::additional_cost_pay_x_life` (CR 601.2h, same as
 /// Vicious Rivalry): X is chosen at cast, the life is paid on cast and
 /// stays paid if countered, no {X} mana pip. The reanimation matches the printed
-/// **exact mana value X** (not the prior `≤ 2` approximation): a
+/// **exact mana value X**: a
 /// per-iteration `Predicate::ValueEquals(ManaValueOf(card), XFromCost)`
 /// gate over every artifact/creature card in the graveyard returns all
 /// of them — a true mass reanimation at the chosen X. Tests:
