@@ -1044,6 +1044,9 @@ pub enum CounterType {
     /// Kaya the Inexorable's ghostform counter (a reminder; the granted
     /// trigger works without it).
     Ghostform,
+    /// Liege of the Tangle's awakening counters (each marked land is an 8/8
+    /// Elemental creature while it has one).
+    Awakening,
 }
 
 /// Every zone a card can occupy.
