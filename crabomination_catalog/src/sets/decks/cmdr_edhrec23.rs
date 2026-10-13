@@ -284,3 +284,41 @@ pub fn parker_luck() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vaevictis Asmadi, the Dire — {3}{B}{R}{G} 6/6 legendary Elder Dragon,
+/// flying. Whenever it attacks, for each player, choose target permanent that
+/// player controls; they sacrifice it, then reveal their top card and put it
+/// onto the battlefield if it's a permanent card.
+pub fn vaevictis_asmadi_the_dire() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::ForEachPlayerTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Permanent,
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::SacrificeSelected { what: Selector::Target(0) },
+                    Effect::EachPlayerDoes {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        body: Box::new(Effect::RevealTopDeployIfMatch {
+                            filter: R::PermanentCard,
+                            haste: false,
+                            sacrifice_at_next_end_step: false,
+                            miss_to_graveyard: false,
+                            tapped: false,
+                        }),
+                    },
+                ])),
+            }),
+        })],
+        ..creature(
+            "Vaevictis Asmadi, the Dire",
+            cost(&[generic(3), b(), r(), g()]),
+            vec![CreatureType::Elder, CreatureType::Dragon],
+            6,
+            6,
+        )
+    }
+}

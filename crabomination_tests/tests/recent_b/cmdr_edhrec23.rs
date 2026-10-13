@@ -253,3 +253,25 @@ fn parker_luck_crosses_the_reveals() {
     assert_eq!(g.players[2].hand[0].definition.name, "Lightning Bolt");
     assert_eq!(g.players[0].life, 20);
 }
+
+/// Vaevictis Asmadi, the Dire: each targeted permanent's controller
+/// sacrifices it and deploys their top card if it's a permanent.
+#[test]
+fn vaevictis_sacrifices_and_redeploys() {
+    let mut g = pod(3);
+    let vae = ready(&mut g, 0, catalog::vaevictis_asmadi_the_dire());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let giant = ready(&mut g, 2, catalog::hill_giant());
+    g.add_card_to_library(1, catalog::craw_wurm());
+    g.add_card_to_library(2, catalog::lightning_bolt());
+    let def = catalog::vaevictis_asmadi_the_dire();
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(vae);
+    ctx.targets = vec![Target::Permanent(bear), Target::Permanent(giant)];
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("resolve");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(giant).is_none());
+    let wurm = g.battlefield.iter().find(|c| c.definition.name == "Craw Wurm").expect("deployed");
+    assert_eq!(wurm.controller, 1);
+    assert_eq!(g.players[2].library.len(), 1, "the Bolt stays on top");
+}

@@ -3244,6 +3244,7 @@ static DECKS: &[Factory] = &[
     super::decks::fires_of_invention,
     super::decks::interdimensional_web_watch,
     super::decks::parker_luck,
+    super::decks::vaevictis_asmadi_the_dire,
     super::decks::flickering_hound,
     super::decks::unlicensed_hearse,
     super::decks::abdel_adrian_gorions_ward,
