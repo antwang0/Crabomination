@@ -7957,6 +7957,8 @@ pub(super) fn cast_candidates<'a>(
                     Some(t) => (Some(t), Vec::new()),
                     None => continue,
                 }
+            } else if is_boon_player_aura(&c.definition) {
+                (Some(crate::game::Target::Player(seat)), Vec::new())
             } else if mode_effect.requires_target() && c.definition.cost_per_extra_target.is_some() {
                 // CR 601.2f strive / Fireball — each target beyond the first costs
                 // more, and X already spent the whole pool: the slot walker's
@@ -8020,6 +8022,7 @@ pub(super) fn cast_candidates<'a>(
             // filter, so the scored eval / the search judges which side the
             // spell wants instead of inheriting the picker's guess.
             let player_alt = if w.player_target_arms
+                && !is_boon_player_aura(&c.definition)
                 && let Some(Target::Player(p)) = &target
                 && let Some(req) = mode_effect.target_filter_for_slot_in_mode_kicked(0, mode, false)
             {
@@ -19146,6 +19149,27 @@ fn is_beneficial_aura(def: &CardDefinition) -> bool {
                     && !bonus.keywords.is_empty()
                     && keyword_value(&bonus.keywords, 2, &EvalWeights::default()) > 0))
     })
+}
+
+/// An "enchant player" Aura whose every trigger only adds to its enchanted
+/// player's turn (Shadow of the Second Sun's extra beginning phase): its
+/// caster enchants itself. The generic walk aims a player slot at an
+/// opponent, and the outcome eval can't see a phase that hasn't happened.
+fn is_boon_player_aura(def: &CardDefinition) -> bool {
+    use crate::card::EnchantmentSubtype;
+    def.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
+        && !def.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Curse)
+        && matches!(def.effect.primary_target_filter(), Some(crate::card::SelectionRequirement::Player))
+        && !def.triggered_abilities.is_empty()
+        && def.triggered_abilities.iter().all(|t| {
+            matches!(
+                t.effect,
+                Effect::AdditionalBeginningPhase { .. }
+                    | Effect::AdditionalUpkeepStep { .. }
+                    | Effect::AdditionalCombatPhase { .. }
+                    | Effect::AdditionalCombatPhaseAfterMain { .. }
+            )
+        })
 }
 
 fn beneficial_aura_host(
