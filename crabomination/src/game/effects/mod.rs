@@ -16044,6 +16044,9 @@ impl GameState {
                     for card in cards {
                         let cid = card.id;
                         self.exile.push(card);
+                        // `Selector::ExiledThisResolution` — Invasion of
+                        // Kaldheim's "draw that many … cards exiled this way".
+                        self.scratch.exiled_card_ids_this_resolution.push(cid);
                         // CR 603.2c — "one or more cards are put into exile
                         // from your hand" (Ranar, Hero of Bretagard).
                         self.note_exiled_from_hand_or_by(p);
@@ -27062,6 +27065,20 @@ impl GameState {
                     .resolve_source_power(power)
                     .resolve_x(ctx.x_value)
                     .resolve_converge(ctx.converged_value);
+                // The matcher is source-blind: "a name not among the cards
+                // exiled with this" (Omenpath Journey) is concretized here.
+                let filter = match ctx.source {
+                    Some(sid) if filter.mentions_exiled_names() => {
+                        let names: Vec<&str> = self
+                            .exile
+                            .iter()
+                            .filter(|c| c.exiled_with == Some(sid))
+                            .map(|c| c.definition.name)
+                            .collect();
+                        filter.resolve_exiled_names(&names)
+                    }
+                    _ => filter,
+                };
                 let mut candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()

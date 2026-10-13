@@ -4389,6 +4389,38 @@ impl SelectionRequirement {
     /// (Velomachus Lorehold's "with mana value less than or equal to this
     /// creature's power"), so source-less card matchers (library walks)
     /// evaluate a plain `ManaValueAtMost`. Same shape as `resolve_x`.
+    /// True when the filter reads [`Self::SameNameAsExiledWithSource`] — a
+    /// source-blind matcher (a library search) concretizes it first with
+    /// [`Self::resolve_exiled_names`].
+    pub fn mentions_exiled_names(&self) -> bool {
+        match self {
+            Self::SameNameAsExiledWithSource => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_exiled_names() || b.mentions_exiled_names(),
+            Self::Not(inner) => inner.mentions_exiled_names(),
+            _ => false,
+        }
+    }
+
+    /// [`Self::SameNameAsExiledWithSource`] as the names `names` of the cards
+    /// exiled with the source (Omenpath Journey's "different names").
+    pub fn resolve_exiled_names(&self, names: &[&str]) -> Self {
+        match self {
+            Self::SameNameAsExiledWithSource => names
+                .iter()
+                .map(|n| Self::HasName((*n).to_string()))
+                .reduce(|a, b| Self::Or(Box::new(a), Box::new(b)))
+                .unwrap_or_else(|| Self::Not(Box::new(Self::Any))),
+            Self::And(a, b) => {
+                Self::And(Box::new(a.resolve_exiled_names(names)), Box::new(b.resolve_exiled_names(names)))
+            }
+            Self::Or(a, b) => {
+                Self::Or(Box::new(a.resolve_exiled_names(names)), Box::new(b.resolve_exiled_names(names)))
+            }
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_exiled_names(names))),
+            other => other.clone(),
+        }
+    }
+
     pub fn resolve_source_power(&self, power: i32) -> Self {
         match self {
             Self::ManaValueAtMostSourcePower => Self::ManaValueAtMost(power.max(0) as u32),
