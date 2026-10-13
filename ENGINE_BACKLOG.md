@@ -182,6 +182,8 @@ the handoff.
   last opponent sits at 1 (a 4-seat pod with Belbe/River Song/Zurzoth, seed 31402 game 13; 1,324 s
   debug to the 4,000-play cap). Not seated — the debug long-pole test gives each row 50,000
   actions. Same lever as Preston/Elesh Norn and Cathars' Crusade.
+- **Branch red at `8db1822bf`, fixed upstream since:** the target walkers disagreed on Sokrates'
+  slot (`997fc92e2`); `game_state_stays_small` read 1,688 > 1,680 bytes (`d5524458f`).
 - **OPEN:** Hidetsugu and Kairi's Mirage Mockery — entwine over two targeted modes needs distinct
   target slots per mode (unverified); unclaimed.
 

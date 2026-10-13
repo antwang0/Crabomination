@@ -3136,6 +3136,27 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-13 (Commander run, `01BJKf54`, close) — guardrail; 17 more seats, 59 cards, two primitives
+
+Hot-path touch: none on the 2-player path — `EntersAsCopy::copied_counters` runs only for a
+copier that prints it; `Keyword::CantBeTargetedByOpponentSpellsMatching` is one more arm in
+`spell_protection_blocks`' keyword walk. Release `bot_ladder` at `8db1822bf`, same host,
+cold release build 13m51s.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); --threads 1 identical
+pods (debug)     smoke over all 1197 seats: 2×200 four-seat + 60 six-seat games (seeds
+                 31501-31503) — 460/460 decided, 0 panics, 0 stalls; new-seat blocks
+                 (seeds 31201-31431, ~330 games): one panic (Hired Giant, fixed a2ab313b5),
+                 one action-cap stall (The Cabbage Merchant's infinite; deck left unseated)
+```
+Suite (`CRAB_ANSWER_LOG=strict`, `CARGO_INCREMENTAL=0` — the disk filled with incremental
+caches on) at `8db1822bf`: 25,832 run / 25,829 pass / 3 fail / 5 skip, long pole `cr_903_5a_…`
+~2,670 s on four cores at 1,197 seats. All three failures were the branch's, from concurrent
+engine commits, and are fixed upstream since: two target walkers disagreeing on Sokrates
+(`997fc92e2`) and `game_state_stays_small` at 1,688 bytes (`d5524458f`).
+Workspace clippy 0.
 ### 2026-10-13 (Commander run, `01BJKf54`) — guardrail; 89 EDHREC seats, 136 cards
 
 Hot-path touch: `fire_combat_damage_triggers` phase 1.5 asks `trigger_grant_sources`
