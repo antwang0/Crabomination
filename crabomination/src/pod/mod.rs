@@ -9006,6 +9006,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EXCAVA_COMMANDERS,
             main: decks::EXCAVA_MAIN,
         },
+        // Seat 1426: The Earth King's EDHREC average deck. `--pod-decks 1426`.
+        PodDeck {
+            name: "The Earth King (G)",
+            commanders: decks::THE_EARTH_KING_COMMANDERS,
+            main: decks::THE_EARTH_KING_MAIN,
+        },
+        // Seat 1427: The Muckslinger Gang's EDHREC average deck. `--pod-decks 1427`.
+        PodDeck {
+            name: "The Muckslinger Gang (BRG)",
+            commanders: decks::THE_MUCKSLINGER_GANG_COMMANDERS,
+            main: decks::THE_MUCKSLINGER_GANG_MAIN,
+        },
     ]
 }
 
@@ -12262,6 +12274,8 @@ mod tests {
             ("Izoni, Center of the Web", &[0x0FA4]),
             ("The Dawning Archaic", &[0x0FA5]),
             ("Excava, the Risen Past", &[0x0FA6]),
+            ("The Earth King", &[0x0FA7]),
+            ("The Muckslinger Gang", &[0x0FA8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

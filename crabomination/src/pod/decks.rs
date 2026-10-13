@@ -40484,3 +40484,60 @@ pub const EXCAVA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const THE_EARTH_KING_COMMANDERS: &[CardFactory] = &[the_earth_king];
+
+/// **The Earth King**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 33 Forests = 99.
+/// The Earth King (EDHREC, fetched 2026-10-13).
+pub const THE_EARTH_KING_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, herd_heirloom, sol_ring, the_great_henge, ba_sing_se,
+    mosswort_bridge, reliquary_tower, roiling_canopy, avenger_of_zendikar, beast_whisperer,
+    beorn_the_fierce, craterhoof_behemoth, elvish_mystic, fanatic_of_rhonas,
+    flopsie_bumis_buddy, garruks_packleader, ghalta_primal_hunger, glacier_godmaw,
+    goreclaw_terror_of_qal_sisma, kogla_the_titan_ape, llanowar_elves, mightform_harmonizer,
+    mossborn_hydra, old_growth_troll, outcaster_trailblazer, prowling_serpopard,
+    rampaging_baloths, raucous_audience, rhonas_the_indomitable, sandman_shifting_scoundrel,
+    sazhs_chocobo, scrapshooter, scute_swarm, spinner_of_souls, surrak_and_goreclaw,
+    surrak_elusive_hunter, the_boulder_ready_to_rumble, tifa_lockhart, tireless_provisioner,
+    titania_natures_force, topiary_stomper, colossal_majesty, earthbender_ascension,
+    elemental_bond, garruks_uprising, sapling_nursery, tribute_to_the_world_tree,
+    unnatural_growth, wild_growth, beast_within, entish_restoration, heroic_intervention,
+    origin_of_metalbending, return_of_the_wildspeaker, smugglers_surprise, snakeskin_veil,
+    nissa_ascended_animist, become_the_avalanche, cultivate, ezuris_predation, natures_lore,
+    rampant_growth, rishkars_expertise, shamanic_revelation, shared_roots,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const THE_MUCKSLINGER_GANG_COMMANDERS: &[CardFactory] = &[the_muckslinger_gang];
+
+/// **The Muckslinger Gang**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 6 Forests + 4 Mountains + 3 Swamps = 99.
+/// The Muckslinger Gang (EDHREC, fetched 2026-10-13).
+pub const THE_MUCKSLINGER_GANG_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, sol_ring, swiftfoot_boots, the_great_henge,
+    the_skullspore_nexus, blood_crypt, bloodstained_mire, command_tower, dragonskull_summit,
+    exotic_orchard, karplusan_forest, llanowar_wastes, luxury_suite, mosswort_bridge,
+    overgrown_tomb, reliquary_tower, rootbound_crag, savage_lands, spire_garden,
+    stomping_ground, susur_secundi_void_altar, undergrowth_stadium, verdant_catacombs,
+    wooded_foothills, woodland_cemetery, ziatoras_proving_ground, alesha_who_laughs_at_fate,
+    arwen_weaver_of_hope, birds_of_paradise, dina_essence_brewer, disciple_of_bolas,
+    disciple_of_freyalise, dragonhawk_fates_tempest, fanatic_of_rhonas, ghalta_primal_hunger,
+    ghoulcaller_gisa, gleeful_arsonist, goreclaw_terror_of_qal_sisma, gwenna_eyes_of_gaea,
+    halana_and_alena, ignoble_hierarch, ilysian_caryatid, jarad_golgari_lich_lord,
+    jenova_ancient_calamity, kami_of_whispered_hopes, mona_lisa_science_geek, nested_shambler,
+    ouroboroid, outcaster_trailblazer, railway_brawler, selvala_heart_of_the_wilds,
+    terror_of_the_peaks, the_gitrog_ravenous_ride, thundermane_dragon, tom_bert_and_william,
+    topiary_lecturer, vaultborn_tyrant, ziatora_the_incinerator, elemental_bond,
+    garruks_uprising, greater_good, monstrous_vortex, rhythm_of_the_wild, sarkhans_unsealing,
+    unnatural_growth, warstorm_surge, assassins_trophy, beast_within, bolt_bend,
+    entish_restoration, fling, heroic_intervention, kazuuls_fury, return_of_the_wildspeaker,
+    tend_the_pests, minsc_boo_timeless_heroes, chandras_ignition, ezuris_predation, farseek,
+    lifes_legacy, natures_lore, rishkars_expertise, soul_immolation, stump_stomp, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp,
+];
