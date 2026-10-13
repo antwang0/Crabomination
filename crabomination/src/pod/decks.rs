@@ -49804,3 +49804,91 @@ pub const TATYOVA_2_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, island, island, island, island, island,
     island, island, island,
 ];
+
+pub const THRANDUIL_THE_STRATEGIST_COMMANDERS: &[CardFactory] = &[thranduil_the_strategist];
+
+/// **Thranduil the Strategist**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 12 Forests + 7 Islands = 99.
+/// Thranduil the Strategist (EDHREC, fetched 2026-10-13).
+pub const THRANDUIL_THE_STRATEGIST_MAIN: &[CardFactory] = &[
+    arcane_signet, crucible_of_worlds, lightning_greaves, skullclamp, sol_ring,
+    thousand_year_elixir, boseiju_who_endures, breeding_pool, command_tower, dreamroot_cascade,
+    elven_passage, evolving_wilds, fabled_passage, hinterland_harbor, misty_rainforest,
+    rejuvenating_springs, reliquary_tower, simic_growth_chamber, sodden_verdure,
+    terramorphic_expanse, three_tree_city, windswept_heath, yavimaya_coast,
+    yavimaya_cradle_of_growth, aesi_tyrant_of_gyre_strait, allosaurus_shepherd,
+    ancient_greenwarden, arwen_weaver_of_hope, azusa_lost_but_seeking, beast_whisperer,
+    circle_of_dreams_druid, craterhoof_behemoth, dionus_elvish_archdruid, elrond_moon_reader,
+    elven_raft_steerer, elvish_archdruid, elvish_champion, elvish_mystic, elvish_warmaster,
+    ezuri_renegade_leader, farhaven_elf, fyndhorn_elves, galadhrim_brigade, imperious_perfect,
+    leaf_crowned_visionary, llanowar_elves, marwyn_the_nurturer, nissa_resurgent_animist,
+    oracle_of_mul_daya, priest_of_titania, reclamation_sage, tatyova_benthic_druid,
+    thranduils_company, thranduil_sindarin_liege, tireless_provisioner, wood_elves,
+    doubling_season, down_in_the_valley, exploration, kindred_discovery, retreat_to_coralhelm,
+    rhystic_study, an_offer_you_cant_refuse, arcane_denial, beast_within, counterspell,
+    crop_rotation, cyclonic_rift, galadhrim_ambush, growth_spiral, heroic_intervention,
+    swan_song, cultivate, farseek, finale_of_devastation, natures_lore, raise_the_palisade,
+    rampant_growth, three_visits, through_the_forest_gate,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island,
+];
+
+pub const KARRTHUS_COMMANDERS: &[CardFactory] = &[karrthus_tyrant_of_jund];
+
+/// **Karrthus, Tyrant of Jund**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 6 Forests + 7 Mountains + 4 Swamps = 99.
+/// Karrthus, Tyrant of Jund (EDHREC, fetched 2026-10-13).
+pub const KARRTHUS_MAIN: &[CardFactory] = &[
+    arcane_signet, carnelian_orb_of_dragonkind, dragons_hoard, heralds_horn,
+    jade_orb_of_dragonkind, orb_of_dragonkind, sol_ring, urzas_incubator, blood_crypt,
+    bloodstained_mire, cinder_glade, command_tower, dragonskull_summit, exotic_orchard,
+    haven_of_the_spirit_dragon, maelstrom_of_the_spirit_dragon, overgrown_tomb,
+    path_of_ancestry, rootbound_crag, savage_lands, smoldering_marsh, spire_garden,
+    stomping_ground, verdant_catacombs, wooded_foothills, woodland_cemetery,
+    ziatoras_proving_ground, ancient_copper_dragon, atarka_world_render, balefire_dragon,
+    bladewing_the_risen, dragonborn_champion, dragonlords_servant, dragonmaster_outcast,
+    dragonspeaker_shaman, drakuseth_maw_of_flames, earthquake_dragon, ganax_astral_hunter,
+    goldspan_dragon, hellkite_charger, hellkite_tyrant, ignoble_hierarch,
+    klauth_unrivaled_ancient, kolaghan_the_storms_fury, lathliss_dragon_queen, old_gnawbone,
+    rivaz_of_the_claw, savage_ventmaw, scavenger_regent, scourge_of_valkas,
+    scourge_of_the_throne, terror_of_the_peaks, thrakkus_the_butcher, thunderbreak_regent,
+    utvara_hellkite, wrathful_red_dragon, crucible_of_fire, dracogenesis, dragon_tempest,
+    elemental_bond, encroaching_dragonstorm, garruks_uprising, rhythm_of_the_wild,
+    assassins_trophy, beast_within, chaos_warp, heroic_intervention, return_of_the_wildspeaker,
+    sarkhans_triumph, terminate, sarkhan_fireblood, blasphemous_act, crux_of_fate, cultivate,
+    descent_of_the_dragons, farseek, kodamas_reach, natures_lore, patriarchs_bidding,
+    rampant_growth, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp,
+];
+
+pub const DRIZZT_DOURDEN_COMMANDERS: &[CardFactory] = &[drizzt_dourden];
+
+/// **Drizzt Do'Urden**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Forests + 9 Plains = 99.
+/// Drizzt Do'Urden (EDHREC, fetched 2026-10-13).
+pub const DRIZZT_DOURDEN_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, behemoth_sledge, blackblade_reforged, lightning_greaves,
+    ozolith_the_shattered_spire, selesnya_signet, sol_ring, swiftfoot_boots, the_ozolith,
+    whispersilk_cloak, blossoming_sands, bountiful_promenade, canopy_vista, command_tower,
+    evolving_wilds, fortified_village, gavony_township, overgrown_farmland, rogues_passage,
+    selesnya_sanctuary, sungrass_prairie, sunpetal_grove, temple_garden, temple_of_plenty,
+    abzan_battle_priest, abzan_falconer, ancient_bronze_dragon, avacyns_pilgrim,
+    beast_whisperer, catti_brie_of_mithral_hall, champion_of_lambholt, conclave_mentor,
+    duskshell_crawler, elvish_mystic, force_of_savagery, forgotten_ancient,
+    ghalta_primal_hunger, good_fortune_unicorn, icingdeath_frost_tyrant,
+    kami_of_whispered_hopes, kodama_of_the_west_tree, kutzil_malamet_exemplar,
+    laezel_vlaakiths_champion, llanowar_elves, luminarch_aspirant, managorger_hydra,
+    pridemalkin, renata_called_to_the_hunt, shalai_voice_of_plenty, sovereign_okinec_ahau,
+    branching_evolution, felidar_retreat, garruks_uprising, greater_good, hardened_scales,
+    hydras_growth, rancor, ranger_class, beast_within, gaeas_gift, generous_gift,
+    gift_of_the_viper, heroic_intervention, inspiring_call, path_to_exile,
+    return_of_the_wildspeaker, snakeskin_veil, swords_to_plowshares, ajani_the_greathearted,
+    cultivate, divine_reckoning, farseek, kodamas_reach, natures_lore, rampant_growth,
+    single_combat, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

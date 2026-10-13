@@ -11022,6 +11022,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TATYOVA_2_COMMANDERS,
             main: decks::TATYOVA_2_MAIN,
         },
+        // Seat 1762: Thranduil the Strategist's EDHREC average deck. `--pod-decks 1762`.
+        PodDeck {
+            name: "Thranduil the Strategist (UG)",
+            commanders: decks::THRANDUIL_THE_STRATEGIST_COMMANDERS,
+            main: decks::THRANDUIL_THE_STRATEGIST_MAIN,
+        },
+        // Seat 1763: Karrthus, Tyrant of Jund's EDHREC average deck. `--pod-decks 1763`.
+        PodDeck {
+            name: "Karrthus, Tyrant of Jund (BRG)",
+            commanders: decks::KARRTHUS_COMMANDERS,
+            main: decks::KARRTHUS_MAIN,
+        },
+        // Seat 1764: Drizzt Do'Urden's EDHREC average deck. `--pod-decks 1764`.
+        PodDeck {
+            name: "Drizzt Do'Urden (WG)",
+            commanders: decks::DRIZZT_DOURDEN_COMMANDERS,
+            main: decks::DRIZZT_DOURDEN_MAIN,
+        },
     ]
 }
 
@@ -14614,6 +14632,9 @@ mod tests {
             ("Naban, Dean of Iteration", &[0x10F4]),
             ("Matoya, Archon Elder", &[0x10F5]),
             ("Tatyova, Steward of Tides", &[0x10F6]),
+            ("Thranduil the Strategist", &[0x10F7]),
+            ("Karrthus, Tyrant of Jund", &[0x10F8]),
+            ("Drizzt Do'Urden", &[0x10F9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
