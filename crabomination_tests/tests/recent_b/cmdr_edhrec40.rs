@@ -254,3 +254,67 @@ fn cr_702_73a_omni_changeling_copies_with_changeling() {
     assert_eq!(cp.def.name, "Grizzly Bears");
     assert!(cp.keywords().contains(&Keyword::Changeling), "changeling: every creature type");
 }
+
+/// Edea steals a creature at her beginning of combat, untapped and hasty;
+/// when a creature she controls but doesn't own dies it goes home and she
+/// draws.
+#[test]
+fn edea_borrows_and_returns_creatures() {
+    use crabomination::card::Keyword;
+    let mut g = pod(3);
+    stock_libraries(&mut g, 5);
+    g.add_card_to_battlefield(0, catalog::edea_possessed_sorceress());
+    let bear = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.controller, 0);
+    assert!(!b.tapped);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
+    let hand = g.players[0].hand.len();
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, Some(Target::Permanent(bear))).expect("shock");
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(2), "back under its owner");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// CR 122.1h — Chaos Shrine's Black Crystal banks a dead creature and brings
+/// it back at upkeep with a finality counter.
+#[test]
+fn cr_122_1h_black_crystal_returns_with_finality() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::chaos_shrines_black_crystal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    cast(&mut g, shock, Some(Target::Permanent(bear))).expect("shock");
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled, not in the graveyard");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let back = named(&g, 0, "Grizzly Bears");
+    assert_eq!(back.len(), 1);
+    assert_eq!(g.battlefield_find(back[0]).unwrap().counter_count(CounterType::Finality), 1);
+}
+
+/// CR 724 / 611.2c — Garland makes an opponent the monarch, takes one of
+/// their creatures (+2/+2 while it's Garland's), and loses it when the crown
+/// moves on.
+#[test]
+fn cr_611_2c_garland_holds_a_hostage_while_they_reign() {
+    let mut g = pod(3);
+    let bears = [g.add_card_to_battlefield(1, catalog::grizzly_bears()), g.add_card_to_battlefield(2, catalog::grizzly_bears())];
+    let garland = g.add_card_to_hand(0, catalog::garland_royal_kidnapper());
+    cast(&mut g, garland, None).expect("garland");
+    let monarch = g.monarch.expect("an opponent was crowned");
+    assert_ne!(monarch, 0);
+    let bear = bears[monarch - 1];
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "the kidnap trigger");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+2/+2 while not its owner's");
+    assert_eq!(g.battlefield_find(bears[2 - monarch]).unwrap().controller, 3 - monarch, "only the monarch's");
+    g.monarch = Some(3 - monarch);
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, monarch, "its owner lost the crown");
+}

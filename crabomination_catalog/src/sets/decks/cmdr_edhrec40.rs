@@ -9,7 +9,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
-use crate::effect::{ActivationTrait, Effect, PlayerRef, VoteOption, ZoneDest};
+use crate::effect::{ActivationTrait, Duration, Effect, PlayerRef, VoteOption, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, Color, ManaCost};
 use crabomination_base::tokens::treasure_token;
 use crabomination_base::turn_step::TurnStep;
@@ -397,5 +397,139 @@ pub fn gutter_grime() -> CardDefinition {
             ]),
         }],
         ..Default::default()
+    }
+}
+
+// ── Edea, Possessed Sorceress ────────────────────────────────────────────────
+
+fn not_owned() -> R {
+    R::Not(Box::new(R::OwnedByYou))
+}
+
+/// Edea, Possessed Sorceress — {2}{U}{B}{R} legendary 2/5 Human Warlock. Ward
+/// {2}. Your beginning of combat: steal an opponent's creature until end of
+/// turn, untapped and hasty. A creature you control but don't own dying
+/// returns to its owner's battlefield, and you draw.
+pub fn edea_possessed_sorceress() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![
+            your_step(
+                TurnStep::BeginCombat,
+                Effect::Seq(vec![
+                    Effect::GainControl {
+                        what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                        to: None,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::Untap { what: Selector::Target(0), up_to: None },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ]),
+            ),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: not_owned() }),
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
+                            tapped: false,
+                        },
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ]),
+            },
+        ],
+        ..legend(
+            "Edea, Possessed Sorceress",
+            cost(&[generic(2), u(), b(), r()]),
+            vec![CreatureType::Human, CreatureType::Warlock],
+            2,
+            5,
+        )
+    }
+}
+
+/// Chaos Shrine's Black Crystal — {3}{B} legendary artifact. A nontoken
+/// creature you control dying is exiled with it; your upkeep: you may put one
+/// of those onto the battlefield under your control with a finality counter.
+pub fn chaos_shrines_black_crystal() -> CardDefinition {
+    let picked = || Selector::SeparatedPile { chosen: true };
+    CardDefinition {
+        name: "Chaos Shrine's Black Crystal",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken }),
+                effect: Effect::Move { what: Selector::TriggerSource, to: ZoneDest::ExileWithSourceStamp },
+            },
+            your_step(
+                TurnStep::Upkeep,
+                Effect::MayDo {
+                    description: "Put a creature card exiled with Chaos Shrine's Black Crystal onto the battlefield?"
+                        .into(),
+                    body: Box::new(Effect::ChooseOneAmong {
+                        what: Selector::CardsInZone {
+                            who: PlayerRef::EachPlayer,
+                            zone: Zone::Exile,
+                            filter: R::Creature.and(R::ExiledWithSource),
+                        },
+                        chooser: PlayerRef::You,
+                        chosen: Box::new(Effect::Seq(vec![
+                            Effect::Move {
+                                what: picked(),
+                                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            },
+                            Effect::AddCounter { what: picked(), kind: CounterType::Finality, amount: Value::ONE },
+                        ])),
+                        other: Box::new(Effect::Noop),
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Garland, Royal Kidnapper — {2}{U}{B} legendary 3/4 Human Knight. Enters:
+/// target opponent becomes the monarch. Whenever an opponent becomes the
+/// monarch, steal a creature they control for as long as they're the monarch.
+/// Your creatures you don't own get +2/+2 and can't be sacrificed.
+pub fn garland_royal_kidnapper() -> CardDefinition {
+    let stolen = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(not_owned()));
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch {
+                who: PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer })),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameMonarch, EventScope::OpponentControl),
+                effect: Effect::GainControlWhileMonarch {
+                    what: target_filtered(R::Creature.and(R::ControlledByTriggerPlayer)),
+                    monarch: PlayerRef::Triggerer,
+                },
+            },
+        ],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control but don't own get +2/+2.",
+                effect: StaticEffect::PumpPT { applies_to: stolen(), power: 2, toughness: 2 },
+            },
+            StaticAbility {
+                description: "Creatures you control but don't own can't be sacrificed.",
+                effect: StaticEffect::GrantKeyword { applies_to: stolen(), keyword: Keyword::CantBeSacrificed },
+            },
+        ],
+        ..legend(
+            "Garland, Royal Kidnapper",
+            cost(&[generic(2), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            3,
+            4,
+        )
     }
 }

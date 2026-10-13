@@ -14394,6 +14394,9 @@ static DECKS: &[Factory] = &[
     super::decks::uugguu_the_omniplasm,
     super::decks::omni_changeling,
     super::decks::gutter_grime,
+    super::decks::edea_possessed_sorceress,
+    super::decks::chaos_shrines_black_crystal,
+    super::decks::garland_royal_kidnapper,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
