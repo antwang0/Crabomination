@@ -14382,6 +14382,12 @@ static DECKS: &[Factory] = &[
     super::decks::amazing_spider_girl,
     super::decks::silk_web_weaver,
     super::decks::spider_man_india,
+    // cmdr_edhrec40 (session 01VkPyqk)
+    super::decks::shadow_of_the_second_sun,
+    super::decks::jhoiras_timebug,
+    super::decks::way_of_the_necromancer,
+    super::decks::way_of_the_paradox,
+    super::decks::vraska_relic_seeker,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
