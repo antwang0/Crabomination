@@ -10548,6 +10548,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KAIRI_COMMANDERS,
             main: decks::KAIRI_MAIN,
         },
+        // Seat 1683: Kogla, the Titan Ape's EDHREC average deck. `--pod-decks 1683`.
+        PodDeck {
+            name: "Kogla, the Titan Ape (G)",
+            commanders: decks::KOGLA_COMMANDERS,
+            main: decks::KOGLA_MAIN,
+        },
+        // Seat 1684: Danitha Capashen, Paragon's EDHREC average deck. `--pod-decks 1684`.
+        PodDeck {
+            name: "Danitha Capashen, Paragon (W)",
+            commanders: decks::DANITHA_CAPASHEN_COMMANDERS,
+            main: decks::DANITHA_CAPASHEN_MAIN,
+        },
+        // Seat 1685: Kang Prime's EDHREC average deck. `--pod-decks 1685`.
+        PodDeck {
+            name: "Kang Prime (UB)",
+            commanders: decks::KANG_PRIME_COMMANDERS,
+            main: decks::KANG_PRIME_MAIN,
+        },
+        // Seat 1686: Roalesk, Apex Hybrid's EDHREC average deck. `--pod-decks 1686`.
+        PodDeck {
+            name: "Roalesk, Apex Hybrid (UG)",
+            commanders: decks::ROALESK_COMMANDERS,
+            main: decks::ROALESK_MAIN,
+        },
+        // Seat 1687: Nils, Discipline Enforcer's EDHREC average deck. `--pod-decks 1687`.
+        PodDeck {
+            name: "Nils, Discipline Enforcer (W)",
+            commanders: decks::NILS_COMMANDERS,
+            main: decks::NILS_MAIN,
+        },
+        // Seat 1688: Alena, Kessig Trapper and Halana, Kessig Ranger's EDHREC average deck. `--pod-decks 1688`.
+        PodDeck {
+            name: "Alena, Kessig Trapper and Halana, Kessig Ranger (RG)",
+            commanders: decks::ALENA_COMMANDERS,
+            main: decks::ALENA_MAIN,
+        },
+        // Seat 1689: Ludevic, Necro-Alchemist and Sidar Kondo of Jamuraa's EDHREC average deck. `--pod-decks 1689`.
+        PodDeck {
+            name: "Ludevic, Necro-Alchemist and Sidar Kondo of Jamuraa (WURG)",
+            commanders: decks::LUDEVIC_COMMANDERS,
+            main: decks::LUDEVIC_MAIN,
+        },
+        // Seat 1690: Jaya Ballard, Task Mage's EDHREC average deck. `--pod-decks 1690`.
+        PodDeck {
+            name: "Jaya Ballard, Task Mage (R)",
+            commanders: decks::JAYA_BALLARD_COMMANDERS,
+            main: decks::JAYA_BALLARD_MAIN,
+        },
+        // Seat 1691: Maximus, Knight Apparent's EDHREC average deck. `--pod-decks 1691`.
+        PodDeck {
+            name: "Maximus, Knight Apparent (R)",
+            commanders: decks::MAXIMUS_COMMANDERS,
+            main: decks::MAXIMUS_MAIN,
+        },
+        // Seat 1692: Ben-Ben, Akki Hermit's EDHREC average deck. `--pod-decks 1692`.
+        PodDeck {
+            name: "Ben-Ben, Akki Hermit (R)",
+            commanders: decks::BEN_BEN_COMMANDERS,
+            main: decks::BEN_BEN_MAIN,
+        },
+        // Seat 1693: Tiana, Ship's Caretaker's EDHREC average deck. `--pod-decks 1693`.
+        PodDeck {
+            name: "Tiana, Ship's Caretaker (WR)",
+            commanders: decks::TIANA_COMMANDERS,
+            main: decks::TIANA_MAIN,
+        },
+        // Seat 1694: Gwendlyn Di Corci's EDHREC average deck. `--pod-decks 1694`.
+        PodDeck {
+            name: "Gwendlyn Di Corci (UBR)",
+            commanders: decks::GWENDLYN_DI_CORCI_COMMANDERS,
+            main: decks::GWENDLYN_DI_CORCI_MAIN,
+        },
+        // Seat 1695: Zuko, Conflicted's EDHREC average deck. `--pod-decks 1695`.
+        PodDeck {
+            name: "Zuko, Conflicted (BR)",
+            commanders: decks::ZUKO_2_COMMANDERS,
+            main: decks::ZUKO_2_MAIN,
+        },
+        // Seat 1696: Dragonlord Silumgar's EDHREC average deck. `--pod-decks 1696`.
+        PodDeck {
+            name: "Dragonlord Silumgar (UB)",
+            commanders: decks::DRAGONLORD_SILUMGAR_COMMANDERS,
+            main: decks::DRAGONLORD_SILUMGAR_MAIN,
+        },
+        // Seat 1697: Sigarda, Heron's Grace's EDHREC average deck. `--pod-decks 1697`.
+        PodDeck {
+            name: "Sigarda, Heron's Grace (WG)",
+            commanders: decks::SIGARDA_3_COMMANDERS,
+            main: decks::SIGARDA_3_MAIN,
+        },
+        // Seat 1698: Black Widow, Agile Avenger's EDHREC average deck. `--pod-decks 1698`.
+        PodDeck {
+            name: "Black Widow, Agile Avenger (WR)",
+            commanders: decks::BLACK_WIDOW_COMMANDERS,
+            main: decks::BLACK_WIDOW_MAIN,
+        },
     ]
 }
 
@@ -14061,6 +14157,22 @@ mod tests {
             ("Gorm the Great and Virtus the Veiled", &[0x10A5]),
             ("Loki, Lord of Misrule", &[0x10A6]),
             ("Kairi, the Swirling Sky", &[0x10A7]),
+            ("Kogla, the Titan Ape", &[0x10A8]),
+            ("Danitha Capashen, Paragon", &[0x10A9]),
+            ("Kang Prime", &[0x10AA]),
+            ("Roalesk, Apex Hybrid", &[0x10AB]),
+            ("Nils, Discipline Enforcer", &[0x10AC]),
+            ("Alena, Kessig Trapper and Halana, Kessig Ranger", &[0x10AD]),
+            ("Ludevic, Necro-Alchemist and Sidar Kondo of Jamuraa", &[0x10AE]),
+            ("Jaya Ballard, Task Mage", &[0x10AF]),
+            ("Maximus, Knight Apparent", &[0x10B0]),
+            ("Ben-Ben, Akki Hermit", &[0x10B1]),
+            ("Tiana, Ship's Caretaker", &[0x10B2]),
+            ("Gwendlyn Di Corci", &[0x10B3]),
+            ("Zuko, Conflicted", &[0x10B4]),
+            ("Dragonlord Silumgar", &[0x10B5]),
+            ("Sigarda, Heron's Grace", &[0x10B6]),
+            ("Black Widow, Agile Avenger", &[0x10B7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
