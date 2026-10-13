@@ -7884,6 +7884,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TOM_COMMANDERS,
             main: decks::TOM_MAIN,
         },
+        // Seat 1239: Tsagan, Raider Warlord's EDHREC average deck. `--pod-decks 1239`.
+        PodDeck {
+            name: "Tsagan, Raider Warlord (WBR)",
+            commanders: decks::TSAGAN_COMMANDERS,
+            main: decks::TSAGAN_MAIN,
+        },
+        // Seat 1240: The Balrog, Durin's Bane's EDHREC average deck. `--pod-decks 1240`.
+        PodDeck {
+            name: "The Balrog, Durin's Bane (BR)",
+            commanders: decks::THE_BALROG_COMMANDERS,
+            main: decks::THE_BALROG_MAIN,
+        },
     ]
 }
 
@@ -10947,6 +10959,8 @@ mod tests {
             ("Raphael, Fiendish Savior", &[0x0EE9]),
             ("Mishra, Claimed by Gix", &[0x0EEA]),
             ("Tom, Bert, and William", &[0x0EEB]),
+            ("Tsagan, Raider Warlord", &[0x0EEC]),
+            ("The Balrog, Durin's Bane", &[0x0EED]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

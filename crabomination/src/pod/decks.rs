@@ -35234,3 +35234,62 @@ pub const TOM_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const TSAGAN_COMMANDERS: &[CardFactory] = &[tsagan_raider_warlord];
+
+/// **Tsagan, Raider Warlord**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 6 Mountains + 5 Plains + 3 Swamps = 99.
+/// Tsagan, Raider Warlord (EDHREC, fetched 2026-10-13).
+pub const TSAGAN_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, lightning_greaves, sol_ring, swiftfoot_boots,
+    talisman_of_conviction, talisman_of_hierarchy, talisman_of_indulgence, amonkhet_raceway,
+    arid_mesa, battlefield_forge, blood_crypt, bloodstained_mire, clifftop_retreat,
+    command_tower, dragonskull_summit, exotic_orchard, godless_shrine, isolated_chapel,
+    luxury_suite, marsh_flats, muraganda_raceway, nomad_outpost, sacred_foundry, savai_triome,
+    shattered_sanctum, spectator_seating, sundown_pass, vault_of_champions,
+    vault_of_the_archangel, adeline_resplendent_cathar, ainok_strike_leader,
+    alesha_who_laughs_at_fate, ankle_shanker, archetype_of_aggression, archetype_of_courage,
+    aurelia_the_warleader, battlefield_raptor, blade_historian, burnout_bashtronaut,
+    drana_liberator_of_malakir, endrider_catalyzer, far_fortune_end_boss, gas_guzzler,
+    gastal_thrillseeker, goldhound, hazoret_godseeker, iroas_god_of_victory,
+    isshin_two_heavens_as_one, karlach_fury_of_avernus, kinscaer_sentry,
+    knight_of_the_white_orchid, knuckles_the_echidna, kwende_pride_of_femeref, legion_loyalist,
+    lightning_army_of_one, mardu_siegebreaker, odric_lunarch_marshal, professional_face_breaker,
+    smellerbee_rebel_fighter, swiftblade_vindicator, thalia_heretic_cathar, the_speed_demon,
+    voice_of_victory, all_out_assault, black_market_connections, kickoff_celebrations,
+    momentum_breaker, reconnaissance, rising_of_the_day, windcrag_siege, akromas_will,
+    anguished_unmaking, boros_charm, chaos_warp, crackling_doom, deflecting_swat,
+    flawless_maneuver, path_to_exile, swords_to_plowshares, blasphemous_act, full_throttle,
+    nights_whisper, ruinous_ultimatum, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp,
+];
+
+pub const THE_BALROG_COMMANDERS: &[CardFactory] = &[the_balrog_durins_bane];
+
+/// **The Balrog, Durin's Bane**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 10 Mountains + 10 Swamps = 99.
+/// The Balrog, Durin's Bane (EDHREC, fetched 2026-10-13).
+pub const THE_BALROG_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, commanders_sphere, mind_stone, phyrexian_altar, rakdos_signet,
+    sol_ring, talisman_of_indulgence, the_reaver_cleaver, blood_crypt, bloodstained_mire,
+    bojuka_bog, command_tower, dragonskull_summit, evolving_wilds, foreboding_ruins,
+    haunted_ridge, luxury_suite, mines_of_moria, rogues_passage, shadowblood_ridge,
+    smoldering_marsh, sulfurous_springs, tainted_peak, terramorphic_expanse, academy_manufactor,
+    accursed_marauder, captain_lannery_storm, crime_novelist, fleshbag_marauder,
+    gadrak_the_crown_scourge, goldspan_dragon, greedy_freebooter, grim_hireling,
+    impulsive_pilferer, juri_master_of_the_revue, kalain_reclusive_painter,
+    lobelia_sackville_baggins, mahadi_emporium_master, mayhem_devil, merciless_executioner,
+    mirkwood_bats, morbid_opportunist, pitiless_plunderer, plaguecrafter,
+    professional_face_breaker, ruthless_technomancer, smaug_wicked_worm, the_balrog_of_moria,
+    viscera_seer, warren_soultrader, xorn, black_market_connections, descent_into_avernus,
+    rain_of_riches, revel_in_riches, spiteful_banditry, there_and_back_again, big_score,
+    chaos_warp, corrupted_conviction, dark_ritual, deadly_dispute, nasty_end, sheoldreds_edict,
+    terminate, unexpected_windfall, village_rites, blasphemous_act, blasphemous_edict,
+    blood_money, crack_the_earth, fatal_grudge, feed_the_swarm, innocent_blood,
+    lash_of_the_balrog, seize_the_spoils, victimize, visions_of_ruin,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
