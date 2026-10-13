@@ -3901,6 +3901,12 @@ static DECKS: &[Factory] = &[
     super::decks::sandman_shifting_scoundrel,
     super::decks::the_muckslinger_gang,
     super::decks::soul_immolation,
+    // cmdr_edhrec54 (session 01VkPyqk)
+    super::decks::princess_yue,
+    super::decks::hulking_metamorph,
+    super::decks::guildsworn_prowler,
+    super::decks::hookblade_veteran,
+    super::decks::become_anonymous,
     super::decks::gandalf_friend_of_the_shire,
     super::decks::ringwraiths,
     super::decks::sauron_the_necromancer,
