@@ -12405,7 +12405,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::EachPlayerKeepsNSacrificesRest { keep, filter } => {
+            Effect::EachPlayerKeepsNSacrificesRest { keep, filter, destroy } => {
                 let keep = self.evaluate_value(keep, ctx).max(0) as usize;
                 let source = ctx.source.unwrap_or(CardId(0));
                 // APNAP order; each player picks their own keepers (asked of
@@ -12465,7 +12465,9 @@ impl GameState {
                 self.clear_answer_log();
                 for cid in doomed {
                     let who = self.battlefield_find(cid).map(|c| c.controller);
-                    if let Some(who) = who {
+                    if *destroy {
+                        self.destroy_permanent(cid, false, events);
+                    } else if let Some(who) = who {
                         self.sacrifice_one(cid, who, events);
                     }
                 }

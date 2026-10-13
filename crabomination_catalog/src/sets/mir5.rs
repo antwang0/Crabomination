@@ -851,6 +851,7 @@ pub fn natural_balance() -> CardDefinition {
             Effect::EachPlayerKeepsNSacrificesRest {
                 keep: Value::Const(5),
                 filter: Some(R::Land),
+                destroy: false,
             },
             Effect::CatchUpBasicLands { target: Some(Value::Const(5)), tapped: false },
         ]),

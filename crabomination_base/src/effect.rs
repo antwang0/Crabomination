@@ -5781,6 +5781,11 @@ pub enum Effect {
         /// lands-only). `None` = every permanent (Razia's Purification).
         #[serde(default)]
         filter: Option<SelectionRequirement>,
+        /// "Destroy all other [filter] permanents" instead of sacrificing
+        /// them (Fall of the First Civilization's III): indestructible and
+        /// regeneration apply (CR 701.8), and the rest are destroyed at once.
+        #[serde(default)]
+        destroy: bool,
     },
     /// "Each player returns a permanent matching `filter` they control to its
     /// owner's hand" (Curfew). APNAP order; each player picks their own, and a

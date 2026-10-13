@@ -544,6 +544,8 @@ pub enum PlaneswalkerSubtype {
     Basri,
     // Zariel, Archduke of Avernus (Raphael's and Mishra's EDHREC decks).
     Zariel,
+    // Mu Yanling, Sky Dancer (Mu Yanling, Wind Rider's EDHREC deck).
+    Yanling,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

@@ -332,6 +332,7 @@ pub fn razias_purification() -> CardDefinition {
         effect: Effect::EachPlayerKeepsNSacrificesRest {
             filter: None,
             keep: Value::Const(3),
+            destroy: false,
         },
         ..Default::default()
     }

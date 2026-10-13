@@ -356,7 +356,7 @@ pub fn planetary_annihilation() -> CardDefinition {
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::EachPlayerKeepsNSacrificesRest { keep: Value::Const(6), filter: Some(R::Land) },
+            Effect::EachPlayerKeepsNSacrificesRest { keep: Value::Const(6), filter: Some(R::Land), destroy: false },
             Effect::DealDamage { to: Selector::EachPermanent(R::Creature), amount: Value::Const(6) },
         ]),
         ..Default::default()

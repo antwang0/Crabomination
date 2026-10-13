@@ -455,7 +455,7 @@ pub fn promise_of_loyalty() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::EachPlayerKeepsNSacrificesRest { keep: Value::ONE, filter: Some(R::Creature) },
+            Effect::EachPlayerKeepsNSacrificesRest { keep: Value::ONE, filter: Some(R::Creature), destroy: false },
             Effect::AddCounter { what: Selector::EachPermanent(R::Creature), kind: CounterType::Vow, amount: Value::ONE },
             Effect::GrantCantAttackYou {
                 what: Selector::EachPermanent(R::Creature.and(R::WithCounter(CounterType::Vow))),
