@@ -266,3 +266,4 @@ mod cmdr_edhrec54;
 mod cmdr_edhrec55;
 mod cmdr_edhrec56;
 mod cmdr_edhrec57;
+mod cmdr_edhrec58;
