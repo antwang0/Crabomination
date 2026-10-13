@@ -250,3 +250,4 @@ mod cmdr_edhrec43;
 mod cmdr_edhrec44;
 mod cmdr_edhrec45;
 mod cmdr_edhrec46;
+mod cmdr_edhrec47;
