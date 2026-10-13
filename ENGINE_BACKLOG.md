@@ -239,7 +239,8 @@ the handoff.
 - **Seats 1516-1661** (EDHREC ranks 2001-2500: 125 zero-gap decks plus 21 one-card-gap cards in
   `decks::cmdr_edhrec55`/`56`): new `Predicate::PlayedCardFromExileThisTurn` (Visions of Phyrexia;
   `Player.played_land_from_exile_this_turn`) and `Predicate::NoPermanentLeftBattlefieldThisTurn`
-  (Sarevok). **OPEN:** Maraxus of Keld the creature shares its name with the Vanguard avatar the
+  (Sarevok); seats 1662-1676 and 1683-1698 follow from `cmdr_edhrec57`/`58` (28 cards, no new primitive; one
+  CR 104.4a draw in the smoke). **OPEN:** Maraxus of Keld the creature shares its name with the Vanguard avatar the
   catalog carries, so its deck resolves to the avatar and fails CR 903.3; Kamahl's Will's land mode
   is untargeted (twenty optional slots would precede the other mode's target).
 - **New primitives:** `Effect::GainControlWhileMonarch` (`TempControl.while_monarch`, Garland),

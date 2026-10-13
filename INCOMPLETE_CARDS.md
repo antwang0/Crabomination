@@ -2053,6 +2053,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Fifteenth Doctor | improvise goes to your first spell each turn if it's nonartifact, not to your first nonartifact spell (an artifact cast first turns it off) | no "first nonartifact spell this turn" predicate |
 | 🟡 The Muckslinger Gang | "creature spells you control and creature cards you own in any zone other than the battlefield or the stack get +3/+3" is not modelled — only the battlefield half (other creatures not attacking or blocking get +3/+3) | an off-battlefield P/T static read by every hand/graveyard/stack power check; no free board-presence lane to gate it |
 | 🟡 Kamahl's Will | the land mode animates every land you control, untargeted, rather than "any number of target lands" | an any-number target mode ahead of a single-target mode would claim twenty optional slots before it |
+| 🟡 Kang the Conqueror | "During that turn, power-up abilities can't be activated" is not modelled — the extra turn allows other power-ups | no turn-scoped power-up lock |
 | 🟡 Fblthp, Knows the Way | its X basic lands needn't have different names | `SearchUpToN` doesn't enforce the rider |
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
 | 🟡 Scion of Halaster | the first-draw replacement is live while you control any commander of yours, a noncreature one included | `Predicate::ControlsOwnCommander` has no creature filter |
