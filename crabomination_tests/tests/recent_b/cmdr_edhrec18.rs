@@ -1374,3 +1374,43 @@ fn slicer_rented_out_cant_be_sacrificed() {
     assert_eq!(s.controller, 1, "rented out");
     assert!(s.keywords().contains(&Keyword::CantBeSacrificed));
 }
+
+/// Zurgo, Thunder's Decree — "During your end step, Warrior tokens you control
+/// have 'This token can't be sacrificed.'" (CR 701.21a.) Mobilize's end-step
+/// sacrifice leaves the tokens.
+#[test]
+fn zurgo_keeps_its_mobilized_warriors() {
+    let mut g = pod(2);
+    let zurgo = ready(&mut g, 0, catalog::zurgo_thunders_decree());
+    declare(&mut g, 0, &[(zurgo, 1)]).unwrap();
+    let warriors = || {
+        |g: &GameState| g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Warrior").count()
+    };
+    assert_eq!(warriors()(&g), 2, "mobilize 2");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(warriors()(&g), 2, "can't be sacrificed during your end step");
+    // Control: without Zurgo, Mobilize's token goes at the end step.
+    let mut g = pod(2);
+    let vanguard = ready(&mut g, 0, catalog::zurgos_vanguard());
+    declare(&mut g, 0, &[(vanguard, 1)]).unwrap();
+    assert_eq!(warriors()(&g), 1);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(warriors()(&g), 0, "sacrificed");
+}
+
+/// Magmatic Galleon — "Whenever one or more creatures your opponents control
+/// are dealt excess noncombat damage, create a Treasure token." (CR 120.4a
+/// excess damage.)
+#[test]
+fn magmatic_galleon_makes_treasure_on_excess_damage() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::magmatic_galleon());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[perm(bear)]).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
+}

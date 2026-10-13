@@ -5811,8 +5811,9 @@ pub fn thousand_moons_infantry() -> CardDefinition {
 }
 
 /// Magmatic Galleon — {3}{R}{R} Artifact — Vehicle 5/5, Crew 2. ETB: deal 5
-/// damage to target creature an opponent controls. (The excess-noncombat-damage
-/// Treasure trigger is approximated away.)
+/// damage to target creature an opponent controls. Whenever one or more
+/// creatures your opponents control are dealt excess noncombat damage, create a
+/// Treasure token.
 pub fn magmatic_galleon() -> CardDefinition {
     CardDefinition {
         name: "Magmatic Galleon",
@@ -5825,12 +5826,27 @@ pub fn magmatic_galleon() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Crew(2)],
-        triggered_abilities: vec![etb(Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-            ),
-            amount: Value::Const(5),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(5),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealtExcessNoncombatDamage, EventScope::OpponentControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    })
+                    .once_per_batch(),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(treasure_token()),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

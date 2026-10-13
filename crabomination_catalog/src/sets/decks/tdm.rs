@@ -2196,8 +2196,8 @@ pub fn roar_of_endless_song() -> CardDefinition {
 }
 
 /// Zurgo, Thunder's Decree — {R}{W}{B} 2/4 Orc Warrior with Mobilize 2.
-/// (The "Warrior tokens can't be sacrificed during your end step" persistence
-/// rider is approximated away — the Mobilize tokens sacrifice as normal.)
+/// During your end step, Warrior tokens you control have "This token can't be
+/// sacrificed" (so Mobilize's end-step sacrifice leaves them).
 pub fn zurgo_thunders_decree() -> CardDefinition {
     CardDefinition {
         name: "Zurgo, Thunder's Decree",
@@ -2211,6 +2211,23 @@ pub fn zurgo_thunders_decree() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![mobilize(2)],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "During your end step, Warrior tokens you control have \"This token can't be sacrificed.\"",
+            effect: crate::effect::StaticEffect::WhileCondition {
+                condition: crate::effect::Predicate::All(vec![
+                    crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::End),
+                ]),
+                inner: Box::new(crate::effect::StaticEffect::GrantKeyword {
+                    applies_to: crate::card::Selector::EachPermanent(
+                        crate::card::SelectionRequirement::IsToken
+                            .and(crate::card::SelectionRequirement::HasCreatureType(CreatureType::Warrior))
+                            .and(crate::card::SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: crate::card::Keyword::CantBeSacrificed,
+                }),
+            },
+        }],
         ..Default::default()
     }
 }
