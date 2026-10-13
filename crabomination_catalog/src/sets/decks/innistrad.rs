@@ -3315,7 +3315,8 @@ pub fn diregraf_rebirth() -> CardDefinition {
 }
 
 /// Edgar's Awakening — {3}{B}{B} Sorcery. Return target creature card from your
-/// graveyard to the battlefield. (The discard-mode hand-return rider is omitted.)
+/// graveyard to the battlefield. When you discard it, you may pay {B} to return
+/// a creature card from your graveyard to your hand.
 pub fn edgars_awakening() -> CardDefinition {
     CardDefinition {
         name: "Edgar's Awakening",
@@ -3331,17 +3332,27 @@ pub fn edgars_awakening() -> CardDefinition {
             },
         },
         // "When you discard this card, you may pay {B}. When you do, return
-        // target creature card from your graveyard to your hand" — shipped
-        // missing (the `cnt` audit column, 2026-09-10). The discard-activated
-        // slot is the engine's "discard this: .." shape; its reflexive body is
-        // targetless, so the card is chosen at resolution.
-        discard_activated: Some(Box::new(crate::card::DiscardActivated {
-            cost: cost(&[b()]),
-            effect: Effect::ReturnGraveyardCardsToHand {
-                filter: SelectionRequirement::Creature,
-                max: Value::ONE,
+        // target creature card from your graveyard to your hand" — a trigger
+        // from the graveyard on its own discard (CR 603.6c's look-back), not
+        // a "discard this card:" activation (it shipped as one, so it could
+        // be discarded at will from hand). The return is targetless; the card
+        // is chosen at resolution.
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(
+                crate::card::EventKind::CardDiscarded,
+                crate::card::EventScope::FromYourGraveyard,
+            )
+            .with_filter(crate::card::Predicate::TriggerSourceIsSelf),
+            effect: Effect::MayPay {
+                description: "Pay {B} to return a creature card from your graveyard to your hand?".into(),
+                mana_cost: cost(&[b()]),
+                body: Box::new(Effect::ReturnGraveyardCardsToHand {
+                    filter: SelectionRequirement::Creature,
+                    max: Value::ONE,
+                }),
+                else_: None,
             },
-        })),
+        }],
         ..Default::default()
     }
 }

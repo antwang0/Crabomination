@@ -2623,17 +2623,32 @@ fn crawling_infestation_spawns_insect() {
 
 /// Edgar's Awakening's "When you discard this card, you may pay {B}. When you
 /// do, return target creature card from your graveyard to your hand" shipped
-/// missing (the `cnt` audit column, 2026-09-10).
+/// missing (the `cnt` audit column, 2026-09-10), then as a "discard this
+/// card:" activation that let it be discarded at will. It is a trigger on
+/// being discarded (CR 603.6c).
 #[test]
 fn edgars_awakening_discarded_for_b_returns_a_creature_card() {
     let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
     let edgar = g.add_card_to_hand(0, catalog::edgars_awakening());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Black, 1);
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateDiscardAbility { card_id: edgar }).expect("discard it for {{B}}");
+    assert!(g.perform_action(GameAction::ActivateDiscardAbility { card_id: edgar }).is_err(), "no discard activation");
+    let winds = g.add_card_to_hand(0, catalog::tolarian_winds());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: winds, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Tolarian Winds");
+    // Resolve the Winds alone; the discard trigger then waits on the stack.
+    while g.stack.iter().any(|si| matches!(si, crabomination::game::types::StackItem::Spell { .. })) {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == edgar), "discarded");
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the Bear came back to hand");
-    assert_eq!(g.players[0].mana_pool.total(), 0);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{B}} paid");
 }
