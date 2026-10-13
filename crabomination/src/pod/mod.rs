@@ -10974,6 +10974,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JIN_GITAXIAS_3_COMMANDERS,
             main: decks::JIN_GITAXIAS_3_MAIN,
         },
+        // Seat 1754: Grist, the Hunger Tide's EDHREC average deck. `--pod-decks 1754`.
+        PodDeck {
+            name: "Grist, the Hunger Tide (BG)",
+            commanders: decks::GRIST_2_COMMANDERS,
+            main: decks::GRIST_2_MAIN,
+        },
+        // Seat 1755: Jyoti, Moag Ancient's EDHREC average deck. `--pod-decks 1755`.
+        PodDeck {
+            name: "Jyoti, Moag Ancient (UG)",
+            commanders: decks::JYOTI_COMMANDERS,
+            main: decks::JYOTI_MAIN,
+        },
+        // Seat 1756: Jolrael, Voice of Zhalfir's EDHREC average deck. `--pod-decks 1756`.
+        PodDeck {
+            name: "Jolrael, Voice of Zhalfir (UG)",
+            commanders: decks::JOLRAEL_2_COMMANDERS,
+            main: decks::JOLRAEL_2_MAIN,
+        },
+        // Seat 1757: Brigone, Soldier of Meletis's EDHREC average deck. `--pod-decks 1757`.
+        PodDeck {
+            name: "Brigone, Soldier of Meletis (W)",
+            commanders: decks::BRIGONE_COMMANDERS,
+            main: decks::BRIGONE_MAIN,
+        },
+        // Seat 1758: Storvald, Frost Giant Jarl's EDHREC average deck. `--pod-decks 1758`.
+        PodDeck {
+            name: "Storvald, Frost Giant Jarl (WUG)",
+            commanders: decks::STORVALD_COMMANDERS,
+            main: decks::STORVALD_MAIN,
+        },
+        // Seat 1759: Naban, Dean of Iteration's EDHREC average deck. `--pod-decks 1759`.
+        PodDeck {
+            name: "Naban, Dean of Iteration (U)",
+            commanders: decks::NABAN_COMMANDERS,
+            main: decks::NABAN_MAIN,
+        },
+        // Seat 1760: Matoya, Archon Elder's EDHREC average deck. `--pod-decks 1760`.
+        PodDeck {
+            name: "Matoya, Archon Elder (U)",
+            commanders: decks::MATOYA_COMMANDERS,
+            main: decks::MATOYA_MAIN,
+        },
+        // Seat 1761: Tatyova, Steward of Tides's EDHREC average deck. `--pod-decks 1761`.
+        PodDeck {
+            name: "Tatyova, Steward of Tides (UG)",
+            commanders: decks::TATYOVA_2_COMMANDERS,
+            main: decks::TATYOVA_2_MAIN,
+        },
     ]
 }
 
@@ -14558,6 +14606,14 @@ mod tests {
             ("Svyelun of Sea and Sky", &[0x10EC]),
             ("The Swarmweaver", &[0x10ED]),
             ("Jin-Gitaxias, Core Augur", &[0x10EE]),
+            ("Grist, the Hunger Tide", &[0x10EF]),
+            ("Jyoti, Moag Ancient", &[0x10F0]),
+            ("Jolrael, Voice of Zhalfir", &[0x10F1]),
+            ("Brigone, Soldier of Meletis", &[0x10F2]),
+            ("Storvald, Frost Giant Jarl", &[0x10F3]),
+            ("Naban, Dean of Iteration", &[0x10F4]),
+            ("Matoya, Archon Elder", &[0x10F5]),
+            ("Tatyova, Steward of Tides", &[0x10F6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
