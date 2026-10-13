@@ -24314,6 +24314,7 @@ impl GameState {
                             CounteredSpellZone::Exile
                                 | CounteredSpellZone::ExileWithSource
                                 | CounteredSpellZone::ExilePlotted
+                                | CounteredSpellZone::ExileSuspended(_)
                         );
                         if card.cast_via_flashback && !card.is_token && !exiling {
                             self.exile.push(*card);
@@ -24391,6 +24392,19 @@ impl GameState {
                                 let mut c = *card;
                                 c.exiled_with = ctx.source;
                                 self.exile.push(c);
+                            }
+                            CounteredSpellZone::ExileSuspended(n) => {
+                                let mut c = *card;
+                                let cid = c.id;
+                                c.granted_suspend = true;
+                                c.add_counters(CounterType::Time, *n);
+                                self.exile.push(c);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: CounterType::Time,
+                                    count: *n,
+                                    placer: self.resolution_causer,
+                                });
                             }
                             CounteredSpellZone::ExilePlotted => {
                                 let cid = card.id;

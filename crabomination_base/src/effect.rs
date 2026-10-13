@@ -3274,6 +3274,9 @@ pub enum CounteredSpellZone {
     /// Exile stamped `exiled_with` = the countering source, so the source can
     /// name what it took later (Shell of the Last Kappa).
     ExileWithSource,
+    /// CR 702.62a — exile with `n` time counters; a card without suspend gains
+    /// it (Delay).
+    ExileSuspended(u32),
     /// "…put that card onto the battlefield under your control instead"
     /// (Desertion). Cards that fail the filter fall back to the graveyard.
     CountererBattlefieldIfMatching(Box<SelectionRequirement>),
