@@ -4955,3 +4955,265 @@ pub fn defiler_of_dreams() -> CardDefinition {
         ..creature("Defiler of Dreams", cost(&[generic(3), u(), u()]), vec![CreatureType::Phyrexian, CreatureType::Sphinx], 4, 3)
     }
 }
+
+/// Thromok the Insatiable — {3}{R}{G} 0/0 Hellion. Devour X, X the number
+/// devoured: that many squared +1/+1 counters (CR 702.82).
+pub fn thromok_the_insatiable() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Devour(0)],
+        ..legend("Thromok the Insatiable", cost(&[generic(3), r(), g()]), vec![CreatureType::Hellion], 0, 0)
+    }
+}
+
+/// Dragon Broodmother — {2}{R}{R}{R}{G} 4/4 flying Dragon. At the beginning
+/// of each upkeep, a 1/1 red and green flying Dragon with devour 2.
+pub fn dragon_broodmother() -> CardDefinition {
+    let whelp = TokenDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Devour(2)],
+        ..token("Dragon", 1, 1, vec![Color::Red, Color::Green], vec![CreatureType::Dragon])
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: make(Value::ONE, whelp),
+        }],
+        ..creature("Dragon Broodmother", cost(&[generic(2), r(), r(), r(), g()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Ellie and Alan, Paleontologists — {2}{G}{W}{U} 2/5. {T}, exile a
+/// creature card from your graveyard (sorcery): discover X, X its mana
+/// value.
+pub fn ellie_and_alan_paleontologists() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            exile_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Discover {
+                n: Value::ManaValueOf(Box::new(Selector::CostExiledCards)),
+                filter: None,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Ellie and Alan, Paleontologists",
+            cost(&[generic(2), g(), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Scientist],
+            2,
+            5,
+        )
+    }
+}
+
+/// Savage Land Dinosaur — {4}{G}{G} 7/6 trample; basic landcycling {2}.
+pub fn savage_land_dinosaur() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Typecycling(Box::new((cost(&[generic(2)]), R::IsBasicLand)))],
+        ..creature("Savage Land Dinosaur", cost(&[generic(4), g(), g()]), vec![CreatureType::Dinosaur], 7, 6)
+    }
+}
+
+/// Baru, Wurmspeaker — {2}{G}{G} 3/3. Your Wurms get +2/+2 and trample.
+/// {7}{G},{T}: a 4/4 Wurm, costing {X} less, X your greatest Wurm power.
+pub fn baru_wurmspeaker() -> CardDefinition {
+    let wurms = || Selector::EachPermanent(yours(R::Creature.and(R::HasCreatureType(CreatureType::Wurm))));
+    CardDefinition {
+        static_abilities: vec![
+            static_ab("Wurms you control get +2/+2 …", StaticEffect::PumpPT { applies_to: wurms(), power: 2, toughness: 2 }),
+            static_ab("… and have trample.", StaticEffect::GrantKeyword { applies_to: wurms(), keyword: Keyword::Trample }),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7), g()]),
+            tap_cost: true,
+            cost_reduction_value: Some(Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(
+                R::Creature.and(R::HasCreatureType(CreatureType::Wurm)),
+            )))),
+            effect: make(Value::ONE, token("Wurm", 4, 4, vec![Color::Green], vec![CreatureType::Wurm])),
+            ..Default::default()
+        }],
+        ..legend("Baru, Wurmspeaker", cost(&[generic(2), g(), g()]), vec![CreatureType::Human, CreatureType::Druid], 3, 3)
+    }
+}
+
+/// Mossbridge Troll — {5}{G}{G} 5/5. Destruction regenerates it instead.
+/// Tap untapped other creatures you control with total power 10 or more:
+/// +20/+20 until end of turn.
+pub fn mossbridge_troll() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "If this creature would be destroyed, regenerate it.",
+            StaticEffect::RegeneratesInsteadOfDestroyed,
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((R::Creature, 0)),
+            tap_total_power: Some(10),
+            effect: eot_pump(Selector::This, 20, 20),
+            ..Default::default()
+        }],
+        ..creature("Mossbridge Troll", cost(&[generic(5), g(), g()]), vec![CreatureType::Troll], 5, 5)
+    }
+}
+
+/// Havi, the All-Father — {3}{R}{G}{W} 6/6. Indestructible with four or
+/// more historic cards in your graveyard. Sage Project: Havi or another
+/// legendary creature of yours dying returns a legendary creature card with
+/// lesser mana value from your graveyard, tapped.
+pub fn havi_the_all_father() -> CardDefinition {
+    let historic = R::Artifact
+        .or(R::HasSupertype(Supertype::Legendary))
+        .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga));
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "Havi has indestructible as long as there are four or more historic cards in your graveyard.",
+            StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Indestructible,
+                condition: Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: historic },
+                    Value::Const(4),
+                ),
+            },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(trigger_is(R::HasSupertype(Supertype::Legendary))),
+            effect: Effect::Move {
+                what: target_filtered(
+                    R::Creature
+                        .and(R::HasSupertype(Supertype::Legendary))
+                        .and(R::InYourGraveyard)
+                        .and(R::ManaValueLessThanEventAmount),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        }],
+        ..legend("Havi, the All-Father", cost(&[generic(3), r(), g(), w()]), vec![CreatureType::God, CreatureType::Warrior], 6, 6)
+    }
+}
+
+/// Bard Class — {R}{G} Class. Level 1: your legendary creatures enter with
+/// an extra +1/+1 counter. Level 2 ({R}{G}): legendary spells cost {R}{G}
+/// less (colored mana only). Level 3 ({3}{R}{G}): casting a legendary spell
+/// exiles your top two; you may play them this turn.
+pub fn bard_class() -> CardDefinition {
+    let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
+        mana_cost: mana,
+        sorcery_speed: true,
+        condition: Some(Predicate::SourceClassLevelIs(from)),
+        effect: Effect::AdvanceClassLevel,
+        ..Default::default()
+    };
+    let legendary = || R::HasSupertype(Supertype::Legendary);
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Class], ..Default::default() },
+        static_abilities: vec![
+            static_ab(
+                "Legendary creatures you control enter with an additional +1/+1 counter on them.",
+                StaticEffect::MatchingEntersWithExtraCounters {
+                    filter: R::Creature.and(legendary()).and(R::ControlledByYou),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: 1,
+                },
+            ),
+            static_ab(
+                "Level 2 — Legendary spells you cast cost {R}{G} less to cast.",
+                StaticEffect::WhileClassLevelAtLeast {
+                    n: 2,
+                    inner: Box::new(StaticEffect::ColoredOnlyCostReduction { filter: legendary(), less: cost(&[r(), g()]) }),
+                },
+            ),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::SourceClassLevelAtLeast(3),
+                trigger_is(legendary()),
+            ])),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+        }],
+        activated_abilities: vec![level_up(cost(&[r(), g()]), 1), level_up(cost(&[generic(3), r(), g()]), 2)],
+        ..permanent("Bard Class", cost(&[r(), g()]), CardType::Enchantment)
+    }
+}
+
+/// Korvold, Gleeful Glutton — {5}{B}{R}{G} Legendary 4/4 Dragon Noble. Costs
+/// {1} less for each card type among permanents you've sacrificed this turn.
+/// Flying, trample, haste. Combat damage to a player: put X +1/+1 counters on
+/// it and draw X cards, X = permanent types among cards in your graveyard.
+pub fn korvold_gleeful_glutton() -> CardDefinition {
+    let x = || Value::PermanentTypesInGraveyard(PlayerRef::You);
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Haste],
+        self_cost_reduction_per: Some((Value::CardTypesSacrificedThisTurn(PlayerRef::You), 1)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: x() },
+                Effect::Draw { who: Selector::You, amount: x() },
+            ]),
+        }],
+        ..legend(
+            "Korvold, Gleeful Glutton",
+            cost(&[generic(5), b(), r(), g()]),
+            vec![CreatureType::Dragon, CreatureType::Noble],
+            4,
+            4,
+        )
+    }
+}
+
+/// Invasion of Ergamon // Truga Cliffcharger — {R}{G} Battle — Siege, defense
+/// 5. ETB: create a Treasure, then you may discard a card; if you do, draw a
+/// card. Back: a 3/4 trample Rhino; ETB: you may discard a card; if you do,
+/// search your library for a land or battle card to your hand.
+pub fn invasion_of_ergamon() -> CardDefinition {
+    use crate::card::BattleSubtype;
+    let discard_then = |rider: Effect| {
+        may(
+            "discard a card",
+            Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::If {
+                    cond: Predicate::DiscardedThisEffect { who: PlayerRef::You },
+                    then: Box::new(rider),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    };
+    let cliffcharger = CardDefinition {
+        color_indicator: vec![Color::Red, Color::Green],
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(discard_then(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::Land.or(R::HasCardType(CardType::Battle)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        }))],
+        ..creature("Truga Cliffcharger", ManaCost::default(), vec![CreatureType::Rhino], 3, 4)
+    };
+    CardDefinition {
+        name: "Invasion of Ergamon",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![BattleSubtype::Siege], ..Default::default() },
+        defense: 5,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(crabomination_base::tokens::treasure_token()),
+            },
+            discard_then(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+        ]))],
+        back_face: Some(Box::new(cliffcharger)),
+        ..Default::default()
+    }
+}

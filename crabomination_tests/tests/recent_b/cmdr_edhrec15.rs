@@ -2232,3 +2232,188 @@ fn defiler_of_dreams_draws_on_blue_permanents() {
     assert_eq!(g.players[0].life, 18);
     assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
 }
+
+/// Devour (CR 702.82): Thromok's Devour X eats three tokens for nine
+/// counters; Dragon Broodmother's upkeep Dragon devours 2 per creature.
+#[test]
+fn devour_thromok_and_broodmother() {
+    let mut g = pod(2);
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, alarm, &[]).expect("two Soldiers");
+    let one = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, one, &[]).expect("two more");
+    let soldiers: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Soldier").map(|c| c.id).collect();
+    g.battlefield_find_mut(soldiers[3]).unwrap().controller = 1;
+    let thromok = g.add_card_to_hand(0, catalog::thromok_the_insatiable());
+    cast(&mut g, thromok, &[]).expect("thromok");
+    assert_eq!(pt(&g, thromok), (9, 9), "three devoured, three squared");
+    assert_eq!(tokens_named(&g, "Soldier"), 1, "the opponent's stays");
+    ready(&mut g, 0, catalog::dragon_broodmother());
+    let more = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, more, &[]).expect("two Soldiers");
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let dragon = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Dragon").map(|c| c.id).expect("a Dragon");
+    assert_eq!(pt(&g, dragon), (5, 5), "two Soldiers at two counters each");
+}
+
+/// Ellie and Alan, Paleontologists (CR 701.57): exiling a five-drop from
+/// the graveyard discovers 5.
+#[test]
+fn ellie_and_alan_discover_by_the_exiled_creature() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    library(&mut g, 0, 2);
+    let ea = ready(&mut g, 0, catalog::ellie_and_alan_paleontologists());
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    activate(&mut g, ea, 0, None).expect("discover");
+    assert!(g.exile.iter().any(|c| c.id == angel), "the Angel paid the cost");
+    let got = g.battlefield_find(bears).is_some() || g.players[0].hand.iter().any(|c| c.id == bears);
+    assert!(got, "the Bears were discovered");
+}
+
+/// Baru, Wurmspeaker: Wurms are +2/+2 tramplers, and a 6/6 Wurm makes the
+/// next Wurm cost {1}{G}.
+#[test]
+fn baru_discounts_wurms_by_their_power() {
+    let mut g = pod(2);
+    let baru = ready(&mut g, 0, catalog::baru_wurmspeaker());
+    activate(&mut g, baru, 0, None).expect("first Wurm");
+    let wurm = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Wurm").map(|c| c.id).unwrap();
+    assert_eq!(pt(&g, wurm), (6, 6));
+    assert!(g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::Trample));
+    g.battlefield_find_mut(baru).unwrap().tapped = false;
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: baru,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{7}{G} less 6");
+    drain_stack(&mut g);
+    assert_eq!(tokens_named(&g, "Wurm"), 2);
+}
+
+/// Mossbridge Troll (CR 701.15): destruction regenerates it; tapping 10
+/// power of other creatures makes it +20/+20.
+#[test]
+fn mossbridge_troll_regenerates_and_grows() {
+    let mut g = pod(2);
+    let troll = ready(&mut g, 0, catalog::mossbridge_troll());
+    let angels: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::serra_angel())).collect();
+    activate(&mut g, troll, 0, None).expect("tap twelve power");
+    assert_eq!(pt(&g, troll), (25, 25));
+    assert!(angels.iter().all(|a| g.battlefield_find(*a).unwrap().tapped));
+    let blade = g.add_card_to_hand(1, catalog::doom_blade());
+    cast_as(&mut g, 1, blade, &[perm(troll)]).expect("doom blade");
+    assert!(g.battlefield_find(troll).is_some_and(|c| c.tapped), "regenerated, tapped");
+}
+
+/// Havi, the All-Father: four historic cards make it indestructible; a
+/// legendary creature of yours dying returns a cheaper legend, tapped.
+#[test]
+fn havi_returns_a_lesser_legend() {
+    let mut g = pod(2);
+    let havi = ready(&mut g, 0, catalog::havi_the_all_father());
+    let ind = |g: &GameState| g.computed_permanent(havi).unwrap().keywords().contains(&Keyword::Indestructible);
+    assert!(!ind(&g));
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::sol_ring());
+    }
+    assert!(ind(&g), "four artifacts in the graveyard");
+    let bane = ready(&mut g, 0, catalog::bane_lord_of_darkness());
+    let jackal = g.add_card_to_graveyard(0, catalog::jackal_genius_geneticist());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast_as(&mut g, 1, bolt, &[perm(bane)]).expect("bolt Bane");
+    assert!(g.battlefield_find(jackal).is_some_and(|c| c.tapped), "Jackal (2) under Bane (4), tapped");
+}
+
+/// Bard Class: legendary creatures enter with a counter; level 2 takes
+/// {R}{G} off a legendary spell's colored pips only; level 3 exiles two to
+/// play on a legendary cast.
+#[test]
+fn bard_class_levels_up() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let bard = g.add_card_to_hand(0, catalog::bard_class());
+    cast(&mut g, bard, &[]).expect("bard class");
+    let jackal = g.add_card_to_hand(0, catalog::jackal_genius_geneticist());
+    cast(&mut g, jackal, &[]).expect("jackal");
+    assert_eq!(g.battlefield_find(jackal).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    activate(&mut g, bard, 0, None).expect("level 2");
+    let kayla = g.add_card_to_hand(0, catalog::queen_kayla_bin_kroog());
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: kayla, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{1}{R}{W} less {R}");
+    drain_stack(&mut g);
+    activate(&mut g, bard, 1, None).expect("level 3");
+    let exiled = g.exile.len();
+    let bane = g.add_card_to_hand(0, catalog::bane_lord_of_darkness());
+    cast(&mut g, bane, &[]).expect("bane");
+    assert_eq!(g.exile.len(), exiled + 2, "two exiled to play");
+}
+
+/// Korvold, Gleeful Glutton: sacrificing an artifact creature takes {2} off
+/// (two card types); its combat damage then counts the permanent types in
+/// your graveyard (artifact, creature) for counters and draws.
+#[test]
+fn korvold_gleeful_glutton_feeds_on_sacrifice_types() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let altar = ready(&mut g, 0, catalog::ashnods_altar());
+    ready(&mut g, 0, catalog::ornithopter());
+    activate(&mut g, altar, 0, None).expect("sacrifice the Ornithopter");
+    let korvold = g.add_card_to_hand(0, catalog::korvold_gleeful_glutton());
+    for c in [Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: korvold, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{5}{B}{R}{G} less {2}, with the altar's {C}{C}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(korvold).is_some());
+    let hand = g.players[0].hand.len();
+    declare(&mut g, &[(korvold, 1)]).expect("haste");
+    combat_damage(&mut g);
+    assert_eq!(pt(&g, korvold), (6, 6), "two +1/+1 counters");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "two cards");
+}
+
+/// Invasion of Ergamon: a Treasure and a rummage on entry; defeated
+/// (CR 310.11), Truga Cliffcharger's discard fetches a land.
+#[test]
+fn invasion_of_ergamon_rummages_then_charges() {
+    use crabomination::decision::{DecisionAnswer as A, ScriptedDecider};
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let first = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_ergamon());
+    g.decider = Box::new(ScriptedDecider::new([A::Bool(true), A::Discard(vec![first])]));
+    cast(&mut g, inv, &[]).expect("invasion");
+    assert_eq!(tokens_named(&g, "Treasure"), 1);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == first), "discarded");
+    assert_eq!(g.players[0].hand.len(), 1, "drew one");
+    let second = g.players[0].hand[0].id;
+    g.decider = Box::new(ScriptedDecider::new([A::Bool(true), A::Discard(vec![second]), A::Search(Some(forest))]));
+    g.battlefield_find_mut(inv).unwrap().remove_counters(CounterType::Defense, 5);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let charger = g.battlefield.iter().find(|c| c.definition.name == "Truga Cliffcharger").map(|c| c.id).expect("back face");
+    assert_eq!(pt(&g, charger), (3, 4));
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "fetched the Forest");
+}
