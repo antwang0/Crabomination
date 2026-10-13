@@ -761,3 +761,27 @@ fn runadi_grants_haste_at_three_counters() {
     let haste = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste);
     assert!(haste(&g, a) && !haste(&g, b));
 }
+
+/// Shay Cormac strips every protection and ward instance, not just hexproof.
+#[test]
+fn shay_cormac_strips_protection_and_ward() {
+    let mut g = pod(2);
+    let shay = ready(&mut g, 0, catalog::shay_cormac());
+    let su = ready(&mut g, 1, catalog::su_chi_cave_guard());
+    let knight = ready(&mut g, 1, catalog::white_knight());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shay,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let kw = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().to_vec();
+    assert!(!kw(&g, su).iter().any(|k| matches!(k, Keyword::Ward(_))), "ward gone");
+    assert!(!kw(&g, knight).iter().any(|k| k.is_protection()), "protection gone");
+}

@@ -2946,8 +2946,8 @@ pub fn dark_dabbling() -> CardDefinition {
 }
 
 /// Shay Cormac — {W}{B} 1/1 legendary Human Knight Rogue. {1}: permanents
-/// your opponents control lose hexproof, indestructible and shroud until end
-/// of turn (protection and ward stay — INCOMPLETE_CARDS). An opponent's
+/// your opponents control lose hexproof, indestructible, protection, shroud and
+/// ward until end of turn (the instances they have then). An opponent's
 /// creature you target gets a bounty counter; a creature with a bounty
 /// counter dying puts two +1/+1 counters on Shay.
 pub fn shay_cormac() -> CardDefinition {
@@ -2960,9 +2960,12 @@ pub fn shay_cormac() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Seq(vec![
-                strip(Keyword::Hexproof),
                 strip(Keyword::Indestructible),
                 strip(Keyword::Shroud),
+                Effect::LoseProtectiveKeywords {
+                    what: Selector::EachPermanent(R::ControlledByOpponent),
+                    duration: Duration::EndOfTurn,
+                },
             ]),
             ..Default::default()
         }],
