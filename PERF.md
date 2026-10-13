@@ -3383,6 +3383,30 @@ pods (release)   pod_sweep 9931 every deck × 4,6 × 1 = 510 games, 0 bad; 9932
                  undecided
 ```
 
+### 2026-10-13 (Commander run, `019gJJoX`, second half) — guardrail; seats 1224-1228
+
+Hot-path touches: a `ForEach` whose body mints tokens snapshots each seat's
+doublings once (`scratch.token_doubler_freeze`; `any_nested` runs only for
+a ForEach over two or more entities); `token_doublers_for` reads the
+snapshot first; `spell_token_estimate` prices three more root shapes;
+populate's default pick reads the doubler count. Release `bot_ladder` at
+`0bc259ebd`.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split)
+suite            nextest --workspace minus the precon pod long pole: 26,249
+                 run, 26,249 passed, 6 skipped (golden traces included)
+clippy           workspace --all-targets: 2 identity_op warnings in a new
+                 test, fixed (literal P/T); recheck of recent_b timed out
+release pods     pod_sweep decks 1187-1228: 993001 × 4 seats × 240 = 2,640
+                 games, 993002 × 6 × 90 = 630 games — 0 panics, 2 undecided
+                 (0.06 %): one CR 104.4b draw, one action cap (Sanguine Bond +
+                 Exquisite Blood against a 99,153-life last opponent, seed
+                 99300260, OPEN). The first sweep's board cap (Second Harvest
+                 compounding Exalted Sunborn copies, seed 99300254) is fixed.
+```
+
 ### 2026-10-13 (Commander run, `011PQ8Uk`, second leg) — guardrail; residual riders, one OOM fix
 
 Hot-path touches: `MillUntilLands` counts a budget per revealed card;

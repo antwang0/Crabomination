@@ -152,6 +152,18 @@ the handoff.
 - **Seats 1221-1223** (Ekthi, Cynette, Elda): eight cards in `decks::cmdr_edhrec37`, no new
   primitive. Elda's "first nonlegendary creature spell each turn" is a once-a-turn cast trigger, so
   an Elda entering after such a spell grants demonstrate to the next one (INCOMPLETE_CARDS).
+- **FIXED — the closing release sweep (3,270 games over seats 1187-1228, 0 panics, 3 undecided):**
+  (1) CR 614.13 / 111.1 — "for each …, create a token" minted copy by copy under the doublings
+  as they grew, so Second Harvest over two Exalted Sunborn tokens compounded (766 Sunborns, seed
+  99300254, board cap); a token-making `ForEach` now freezes each seat's doublings
+  (`scratch.token_doubler_freeze`). The bot's board-bound cast gate also priced such a spell at
+  0 — `spell_token_estimate` read only `CreateToken` / `Investigate` / `Seq` roots — and now
+  prices `ForEach`, `CreateTokenCopyOf` and `Populate`. (2) A populate's default pick (highest
+  power) copied a token doubler however many doublings that made; it now skips a doubler once the
+  copies reach `recommend::TOKEN_DOUBLER_CEILING` (the pod loop's `token_blowup` ceiling, shared).
+- **OPEN — Sanguine Bond + Exquisite Blood against a 99,153-life last opponent** (seed 99300260,
+  6 seats, action cap): a finite mandatory loop that outruns the 32k-action cap; the life totals
+  (p0 at -104,729, the winner at 99,153) look like an earlier unbounded gain worth tracing.
 - **Seats 1226-1228** (Abigale Poet Laureate, Grist Voracious Larva, Gandalf the Grey): nine cards
   in `decks::cmdr_edhrec41`, no new primitive (Grist's −6 is `CreateTokenCopyOf` +
   `AmendCopiableValues` per graveyard creature; Amzu's "greatest mana value among them" is
