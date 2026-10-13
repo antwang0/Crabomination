@@ -3302,6 +3302,39 @@ audit build      overflow + debug-assertions at 1f1447f38+2: pod_sweep 9905 × 4
                  / Chatterfang token engine at 1,024 permanents, seed 990772)
 ```
 
+### 2026-10-13 (Commander run, `019gJJoX`) — guardrail; 36 seats, five bug classes
+
+Hot-path touches: `effect_token_estimate` sizes each mint by
+`doubled_token_count` (a battlefield walk only when a token effect is
+estimated); `pt_reduction_in_scope` walks each player's emblems when the
+two cheaper gates miss; the "whenever you attack" push fills extra target
+slots; `ControlledBy`/`OwnedBy` take a `resolve_players` branch only for a
+fan-out ref; the pod loop asks `token_blowup` per bot activation (Commander
+only). Release `bot_ladder` at `e4401f55d`, toolchain 1.99, Xeon @ 2.80 GHz
+(4 cores).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 (also at 18ae3fad8 mid-run); determinism ok (all pairs split);
+                 --threads 1 identical; peak_rss 33.9 MiB; games_per_s 242.18
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean
+golden traces    unchanged (core_rules::golden_trace, pod digests) after each
+                 engine commit
+suite            nextest --workspace (no client), strict answer log: 25,849
+                 run, 25,842 passed, 5 skipped; the 7 red were a mid-run
+                 unregistered card file and two upstream fixes, all green on
+                 re-run at the tip
+clippy           workspace --all-targets: 0
+pods (release)   pod_sweep 9931 every deck × 4,6 × 1 = 510 games, 0 bad; 9932
+                 seats 1180-1223 × 4,6,8 × 3 = 75 games, 1 CR 104.4b draw (Syr
+                 Konrad + The Mindskinner, seed 993284); 9921 seats 1140-1193
+                 × 4,6,8 × 4 = 120 games, 1 board cap (Ganax + Draconic
+                 Visitor, a true mandatory loop, seed 992142)
+2-player pools   cube 1,600 / sos 1,000 / sealed 2,400 games at seed 9933, 0
+                 undecided
+```
+
 ### 2026-10-13 (Commander run, `011PQ8Uk`, second leg) — guardrail; residual riders, one OOM fix
 
 Hot-path touches: `MillUntilLands` counts a budget per revealed card;
