@@ -7428,6 +7428,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::OJER_PAKPATIQ_COMMANDERS,
             main: decks::OJER_PAKPATIQ_MAIN,
         },
+        // Seat 1163: Eriette, the Beguiler's EDHREC average deck. `--pod-decks 1163`.
+        PodDeck {
+            name: "Eriette, the Beguiler (WUB)",
+            commanders: decks::ERIETTE_2_COMMANDERS,
+            main: decks::ERIETTE_2_MAIN,
+        },
+        // Seat 1164: Gyruda, Doom of Depths's EDHREC average deck. `--pod-decks 1164`.
+        PodDeck {
+            name: "Gyruda, Doom of Depths (UB)",
+            commanders: decks::GYRUDA_COMMANDERS,
+            main: decks::GYRUDA_MAIN,
+        },
+        // Seat 1165: Charix, the Raging Isle's EDHREC average deck. `--pod-decks 1165`.
+        PodDeck {
+            name: "Charix, the Raging Isle (U)",
+            commanders: decks::CHARIX_COMMANDERS,
+            main: decks::CHARIX_MAIN,
+        },
+        // Seat 1166: Zo-Zu the Punisher's EDHREC average deck. `--pod-decks 1166`.
+        PodDeck {
+            name: "Zo-Zu the Punisher (R)",
+            commanders: decks::ZO_ZU_THE_PUNISHER_COMMANDERS,
+            main: decks::ZO_ZU_THE_PUNISHER_MAIN,
+        },
+        // Seat 1167: Dion, Bahamut's Dominant's EDHREC average deck. `--pod-decks 1167`.
+        PodDeck {
+            name: "Dion, Bahamut's Dominant (W)",
+            commanders: decks::DION_COMMANDERS,
+            main: decks::DION_MAIN,
+        },
+        // Seat 1168: Zirda, the Dawnwaker's EDHREC average deck. `--pod-decks 1168`.
+        PodDeck {
+            name: "Zirda, the Dawnwaker (WR)",
+            commanders: decks::ZIRDA_COMMANDERS,
+            main: decks::ZIRDA_MAIN,
+        },
+        // Seat 1169: Redshift, Rocketeer Chief's EDHREC average deck. `--pod-decks 1169`.
+        PodDeck {
+            name: "Redshift, Rocketeer Chief (RG)",
+            commanders: decks::REDSHIFT_COMMANDERS,
+            main: decks::REDSHIFT_MAIN,
+        },
     ]
 }
 
@@ -10380,6 +10422,13 @@ mod tests {
             ("Miles \"Tails\" Prower", &[0x0E9D]),
             ("Maralen of the Mornsong", &[0x0E9E]),
             ("Ojer Pakpatiq, Deepest Epoch", &[0x0E9F]),
+            ("Eriette, the Beguiler", &[0x0EA0]),
+            ("Gyruda, Doom of Depths", &[0x0EA1]),
+            ("Charix, the Raging Isle", &[0x0EA2]),
+            ("Zo-Zu the Punisher", &[0x0EA3]),
+            ("Dion, Bahamut's Dominant", &[0x0EA4]),
+            ("Zirda, the Dawnwaker", &[0x0EA5]),
+            ("Redshift, Rocketeer Chief", &[0x0EA6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
