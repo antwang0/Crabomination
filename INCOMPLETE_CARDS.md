@@ -2102,3 +2102,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Soul Exchange | the +2/+2 counter "if the exiled creature was a Thrull" is dropped — the cast's exile-a-creature cost isn't remembered | `AdditionalCastCost::ExilePermanent` |
 | 🟡 Gix's Command | "up to one creature" for the counters mode is the engine's pick among yours | `Selector::one_of` |
 | 🟡 Kassandra, Eagle Bearer | the draw reads any equipped creature, not one with a *legendary* Equipment | `R::IsEquipped` |
+| 🟡 Ravenloft Adventurer | the die-to-exile-with-a-hit-counter replacement is a dies trigger (the creature still "dies"), as Mari, the Killing Quill's | `CreatureDied` → `Move` + `AddCounter` |
+| 🟡 Ziatora's Envoy | the top card can't be played as a land, and a miss is drawn rather than put into hand | `CastTopFreeIfElseDraw` |
+| 🟡 Acererak the Archlich | "if you haven't completed Tomb of Annihilation" reads any completed dungeon | `Value::DungeonsCompleted` |
