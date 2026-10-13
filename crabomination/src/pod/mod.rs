@@ -7806,6 +7806,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CLEOPATRA_COMMANDERS,
             main: decks::CLEOPATRA_MAIN,
         },
+        // Seat 1226: Abigale, Poet Laureate's EDHREC average deck. `--pod-decks 1226`.
+        PodDeck {
+            name: "Abigale, Poet Laureate (WB)",
+            commanders: decks::ABIGALE_COMMANDERS,
+            main: decks::ABIGALE_MAIN,
+        },
+        // Seat 1227: Grist, Voracious Larva's EDHREC average deck. `--pod-decks 1227`.
+        PodDeck {
+            name: "Grist, Voracious Larva (BG)",
+            commanders: decks::GRIST_COMMANDERS,
+            main: decks::GRIST_MAIN,
+        },
+        // Seat 1228: Gandalf the Grey's EDHREC average deck. `--pod-decks 1228`.
+        PodDeck {
+            name: "Gandalf the Grey (UR)",
+            commanders: decks::GANDALF_THE_GREY_COMMANDERS,
+            main: decks::GANDALF_THE_GREY_MAIN,
+        },
     ]
 }
 
@@ -10856,6 +10874,9 @@ mod tests {
             ("Elda, Conjurer of Spectacle", &[0x0EDC]),
             ("Jared Carthalion, True Heir", &[0x0EDD]),
             ("Cleopatra, Exiled Pharaoh", &[0x0EDE]),
+            ("Abigale, Poet Laureate", &[0x0EDF]),
+            ("Grist, Voracious Larva", &[0x0EE0]),
+            ("Gandalf the Grey", &[0x0EE1]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

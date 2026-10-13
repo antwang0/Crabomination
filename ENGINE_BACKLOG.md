@@ -152,6 +152,10 @@ the handoff.
 - **Seats 1221-1223** (Ekthi, Cynette, Elda): eight cards in `decks::cmdr_edhrec37`, no new
   primitive. Elda's "first nonlegendary creature spell each turn" is a once-a-turn cast trigger, so
   an Elda entering after such a spell grants demonstrate to the next one (INCOMPLETE_CARDS).
+- **Seats 1226-1228** (Abigale Poet Laureate, Grist Voracious Larva, Gandalf the Grey): nine cards
+  in `decks::cmdr_edhrec41`, no new primitive (Grist's −6 is `CreateTokenCopyOf` +
+  `AmendCopiableValues` per graveyard creature; Amzu's "greatest mana value among them" is
+  `HighestManaValueAmong(TriggerBatch)` under `OverTriggerBatch`).
 - **Seats 1224-1225** (Jared Carthalion, Cleopatra): five cards in `decks::cmdr_edhrec38`.
   **Primitive:** `Effect::CantBecomeMonarchThisTurn` (Jared; `set_monarch` no-ops for a barred
   seat). **FIXED:** (1) combat damage-to-counters statics bypassed `active_static`, so Jared's

@@ -34869,3 +34869,86 @@ pub const CLEOPATRA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ABIGALE_COMMANDERS: &[CardFactory] = &[abigale_poet_laureate];
+
+/// **Abigale, Poet Laureate**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 12 Plains + 10 Swamps = 99.
+/// Abigale, Poet Laureate (EDHREC, fetched 2026-10-13).
+pub const ABIGALE_MAIN: &[CardFactory] = &[
+    arcane_signet, diary_of_dreams, orzhov_signet, pearl_medallion, sol_ring,
+    talisman_of_hierarchy, bojuka_bog, caves_of_koilos, command_tower, desolate_mire,
+    eclipsed_steppe, fetid_heath, godless_shrine, isolated_chapel, shattered_sanctum,
+    shineshadow_snarl, skycoach_waypoint, tainted_field, temple_of_silence,
+    vault_of_the_archangel, abzan_falconer, agent_of_the_fates, ainok_bond_kin,
+    breena_the_demagogue, brigone_soldier_of_meletis, conciliators_duelist, cosmogrand_zenith,
+    deathbringer_liege, defacing_duskmage, dusk_legion_duelist, envoy_of_the_ancestors,
+    felisa_fang_of_silverquill, forum_necroscribe, generous_pup, giggling_skitterspike,
+    hagra_constrictor, hopeful_initiate, informed_inkwright, inkling_mascot,
+    killian_ink_duelist, lecturing_scornmage, melancholic_poet, mer_ek_nightblade,
+    metastatic_evangel, monastery_mentor, phalanx_leader, quill_blade_laureate,
+    scheming_silvertongue, scolding_administrator, snooping_page, stirring_hopesinger,
+    tethmos_high_priest, tormented_hero, whiskervale_forerunner, yathan_tombguard,
+    graduation_day, leaders_talent, resourceful_defense, together_forever, anguished_unmaking,
+    despark, duty_beyond_death, erode, fracture, generous_gift, inkshield, masterful_flourish,
+    path_to_exile, silverquill_charm, swords_to_plowshares, cost_of_brilliance, damn,
+    damning_verdict, dig_site_inventory, killians_confidence, practiced_offense,
+    requisition_raid,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GRIST_COMMANDERS: &[CardFactory] = &[grist_voracious_larva];
+
+/// **Grist, Voracious Larva**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 9 Forests + 9 Swamps = 99.
+/// Grist, Voracious Larva (EDHREC, fetched 2026-10-13).
+pub const GRIST_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_essence, conduit_of_worlds, hedge_shredder, skullclamp, sol_ring,
+    bojuka_bog, command_tower, dakmor_salvage, deathcap_glade, golgari_rot_farm,
+    llanowar_wastes, necroblossom_snarl, overgrown_tomb, phyrexian_tower, shifting_woodland,
+    tainted_wood, twilight_mire, underground_mortuary, undergrowth_stadium, verdant_catacombs,
+    woodland_cemetery, aatchik_emerald_radian, aftermath_analyst, amzu_swarms_hunger,
+    bloodghast, cankerbloom, colossal_grave_reaver, eternal_witness, fiend_artisan,
+    golgari_grave_troll, grave_researcher, gray_merchant_of_asphodel, haywire_mite,
+    honest_rutstein, hornet_queen, icetill_explorer, izoni_thousand_eyed, massacre_wurm,
+    meren_of_clan_nel_toth, nyx_weaver, old_rutstein, old_stickfingers, reassembling_skeleton,
+    sakura_tribe_elder, scute_swarm, sheoldred_whispering_one, six, skull_prophet,
+    stitchers_supplier, syr_konrad_the_grim, the_swarmweaver, wight_of_the_reliquary,
+    zask_skittering_swarmlord, animate_dead, chthonian_nightmare, crawling_infestation,
+    crawling_sensation, insidious_roots, ripples_of_undeath, assassins_trophy, beast_within,
+    deadly_dispute, entomb, fell_the_profane, grisly_salvage, putrefy, village_rites,
+    grist_the_hunger_tide, buried_alive, dread_return, flare_of_cultivation, life_death,
+    life_from_the_loam, living_death, reanimate, rise_of_the_witch_king, squirming_emergence,
+    toxic_deluge, unearth, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const GANDALF_THE_GREY_COMMANDERS: &[CardFactory] = &[gandalf_the_grey];
+
+/// **Gandalf the Grey**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 10 Islands + 10 Mountains = 99.
+/// Gandalf the Grey (EDHREC, fetched 2026-10-13).
+pub const GANDALF_THE_GREY_MAIN: &[CardFactory] = &[
+    arcane_signet, glamdring, glamdring_foe_hammer, izzet_signet, resonating_lute, sol_ring,
+    talisman_of_creativity, thought_vessel, wizards_staff, cascade_bluffs, command_tower,
+    frostboil_snarl, izzet_boilerworks, mystic_sanctuary, reliquary_tower, riptide_laboratory,
+    shivan_reef, steam_vents, stormcarved_coast, sulfur_falls, temple_of_epiphany,
+    training_center, archaeomancer, archmage_emeritus, archmage_of_runes, coruscation_mage,
+    displacer_kitten, erebor_flamesmith, gandalf_friend_of_the_shire, gandalf_goblins_bane,
+    goblin_electromancer, guttersnipe, harmonic_prodigy, niv_mizzet_parun, storm_kiln_artist,
+    stormcatch_mentor, talrand_sky_summoner, veyran_voice_of_duality, young_pyromancer,
+    fiery_inscription, propaganda, storm_of_saruman, thousand_year_storm, abrade,
+    an_offer_you_cant_refuse, arcane_denial, big_score, blur, brainstorm, chaos_warp, consider,
+    counterspell, display_of_power, essence_flux, flame_of_anor, frantic_search,
+    ghostly_flicker, lightning_bolt, negate, opt, planar_incision, pongify, prismari_command,
+    seething_song, snap, ral_storm_conduit, blasphemous_act, crackle_with_power,
+    expressive_iteration, faithless_looting, gandalfs_sanction, jeskas_will, lorien_revealed,
+    mana_geyser, mizzixs_mastery, ponder, preordain, solve_the_equation, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
