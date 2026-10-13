@@ -6200,9 +6200,9 @@ pub fn golbez_crystal_collector() -> CardDefinition {
 /// Jenova, Ancient Calamity — {2}{B}{G} 1/5 Alien. At the beginning of combat on
 /// your turn, put +1/+1 counters equal to Jenova's power on up to one other
 /// target creature; it becomes a Mutant. Whenever a Mutant you control dies
-/// during your turn, draw cards equal to its power. (The "up to one" is modeled
-/// as a required target; the granted Mutant type is preserved in the death LKI
-/// snapshot, so the dies-draw fires for creatures Jenova turned into Mutants.)
+/// during your turn, draw cards equal to its power. (The granted Mutant type is
+/// preserved in the death LKI snapshot, so the dies-draw fires for creatures
+/// Jenova turned into Mutants.)
 pub fn jenova_ancient_calamity() -> CardDefinition {
     CardDefinition {
         name: "Jenova, Ancient Calamity",
@@ -6221,21 +6221,25 @@ pub fn jenova_ancient_calamity() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::BeginCombat),
                     EventScope::YourControl,
                 ),
-                effect: Effect::Seq(vec![
-                    Effect::AddCounter {
-                        what: target_filtered(
-                            SelectionRequirement::Creature
-                                .and(SelectionRequirement::OtherThanSource),
-                        ),
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::PowerOf(Box::new(Selector::This)),
-                    },
-                    Effect::AddCreatureTypes {
-                        what: Selector::Target(0),
-                        creature_types: vec![CreatureType::Mutant],
-                        duration: Duration::Permanent,
-                    },
-                ]),
+                // "Up to one other target creature" (CR 115.1d).
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::AddCounter {
+                            what: target_filtered(
+                                SelectionRequirement::Creature
+                                    .and(SelectionRequirement::OtherThanSource),
+                            ),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::PowerOf(Box::new(Selector::This)),
+                        },
+                        Effect::AddCreatureTypes {
+                            what: Selector::Target(0),
+                            creature_types: vec![CreatureType::Mutant],
+                            duration: Duration::Permanent,
+                        },
+                    ])),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
