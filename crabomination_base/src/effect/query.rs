@@ -5572,6 +5572,10 @@ impl Effect {
                 // "Target player searches their library" — the slot rides
                 // `who` (Scheming Symmetry's two target players).
                 | Effect::Search { who, .. }
+                // "Target opponent becomes the monarch" (Jared Carthalion,
+                // Garland) reads its slot out of `ControllerOf(TargetFiltered)`.
+                | Effect::BecomeMonarch { who }
+                | Effect::CantBecomeMonarchThisTurn { who }
                 | Effect::YouAndPlayerChooseTheirPermanentsToSacrifice { who, .. } => pref_find(who, slot),
                 Effect::WaiveShroudForPlayerThisTurn { player } => {
                     pref_find(player, slot)
