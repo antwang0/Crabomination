@@ -7320,7 +7320,7 @@ pub fn sami_wildcat_captain() -> CardDefinition {
 }
 
 /// Divert Disaster — {1}{U} Instant. Counter target spell unless its controller
-/// pays {2}. (The "if they pay, you create a Lander" rider is dropped.)
+/// pays {2}. If they do, you create a Lander token.
 pub fn divert_disaster() -> CardDefinition {
     CardDefinition {
         name: "Divert Disaster",
@@ -7722,7 +7722,7 @@ pub fn alpharael_dreaming_acolyte() -> CardDefinition {
 /// Alpharael, Stonechosen — {3}{B}{B} 3/3 Legendary Human Cleric. Ward—Discard
 /// a card. Void — whenever Alpharael attacks, if a nonland permanent left the
 /// battlefield this turn or a spell was warped this turn, defending player
-/// loses half their life, rounded up. (Ward's "at random" rider is dropped.)
+/// loses half their life, rounded up. Ward—Discard a card at random.
 pub fn alpharael_stonechosen() -> CardDefinition {
     CardDefinition {
         name: "Alpharael, Stonechosen",
@@ -7735,7 +7735,7 @@ pub fn alpharael_stonechosen() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Ward(WardCost::Discard(1))],
+        keywords: vec![Keyword::Ward(WardCost::DiscardRandom(1))],
         triggered_abilities: vec![on_attack(Effect::If {
             cond: Predicate::VoidActive {
                 who: PlayerRef::You,
@@ -7898,8 +7898,9 @@ pub fn atomic_microsizer() -> CardDefinition {
 
 /// Dyadrine, Synthesis Amalgam — {X}{G}{W} Legendary Artifact Creature —
 /// Construct 0/1. Trample. Enters with +1/+1 counters equal to the mana spent
-/// to cast it. (The "remove a counter from each of two creatures: draw + Robot"
-/// attack rider is dropped.)
+/// to cast it. Whenever you attack, you may remove a +1/+1 counter from each of
+/// two creatures you control; if you do, draw a card and create a 2/2 Robot
+/// artifact creature token.
 pub fn dyadrine_synthesis_amalgam() -> CardDefinition {
     CardDefinition {
         name: "Dyadrine, Synthesis Amalgam",

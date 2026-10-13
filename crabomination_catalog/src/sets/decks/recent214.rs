@@ -481,10 +481,9 @@ pub fn shipwreck_dowser() -> CardDefinition {
 }
 
 /// Immersturm Predator — {2}{B}{R} 3/3 Vampire Dragon. Flying. Whenever it
-/// becomes tapped, exile a card from a graveyard and put a +1/+1 counter on it.
-/// Sacrifice another creature: it gains indestructible until end of turn and
-/// taps. (Printed "up to one" exile modeled as one; counter kept unconditional
-/// via a sibling trigger so it grows even with empty graveyards.)
+/// becomes tapped, exile up to one target card from a graveyard and put a +1/+1
+/// counter on it. Sacrifice another creature: it gains indestructible until end
+/// of turn; tap it.
 pub fn immersturm_predator() -> CardDefinition {
     CardDefinition {
         name: "Immersturm Predator",

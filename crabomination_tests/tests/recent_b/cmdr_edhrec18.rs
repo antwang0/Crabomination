@@ -1079,3 +1079,107 @@ fn dropkick_bomber_goblin_flies_and_is_sacrificed() {
     assert_eq!(g.players[1].life, 18, "2/2 with the Bomber's lord bonus");
     assert!(g.battlefield.iter().all(|c| c.id != gob), "sacrificed after dealing damage");
 }
+
+/// Salvation Swan — "exile up to one target creature you control without
+/// flying. Return it to the battlefield under its owner's control with a
+/// flying counter on it at the beginning of the next end step." (CR 122.1b
+/// keyword counters; no +1/+1 counter is printed.)
+#[test]
+fn salvation_swan_returns_with_a_flying_counter() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let swan = g.add_card_to_hand(0, catalog::salvation_swan());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: swan,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "blinked");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let back = g.computed_permanent(bear).expect("returned");
+    assert!(back.keywords().contains(&Keyword::Flying));
+    assert_eq!(pt(&g, bear), (2, 2), "no +1/+1 counter");
+}
+
+/// Jace Reawakened — "You can't cast Jace Reawakened during your first,
+/// second, or third turns of the game." (CR 601.2 cast restriction; extra
+/// turns count as turns begun.)
+#[test]
+fn jace_reawakened_waits_for_your_fourth_turn() {
+    let mut g = pod(2);
+    g.starting_player = 1;
+    let jace = g.add_card_to_hand(0, catalog::jace_reawakened());
+    g.players[0].turns_begun = 3;
+    assert!(cast(&mut g, jace, &[]).is_err(), "third turn");
+    g.players[0].turns_begun = 4;
+    cast(&mut g, jace, &[]).expect("fourth turn");
+    assert!(g.battlefield.iter().any(|c| c.id == jace));
+}
+
+/// Hazoret, Godseeker — "Hazoret can't attack or block unless you have max
+/// speed." (CR 702.179 speed; max speed is 4.)
+#[test]
+fn hazoret_godseeker_attacks_only_at_max_speed() {
+    let mut g = pod(2);
+    let god = ready(&mut g, 0, catalog::hazoret_godseeker());
+    assert!(declare(&mut g, 0, &[(god, 1)]).is_err(), "speed below 4");
+    g.players[0].speed = 4;
+    declare(&mut g, 0, &[(god, 1)]).expect("max speed");
+}
+
+/// Far Fortune, End Boss — "Max speed — If a source you control would deal
+/// damage to an opponent …, it deals that much damage plus 1 instead." (CR
+/// 614.1a.)
+#[test]
+fn far_fortune_adds_one_at_max_speed() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::far_fortune_end_boss());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].speed = 4;
+    cast(&mut g, bolt, &[Target::Player(1)]).unwrap();
+    assert_eq!(g.players[1].life, 16);
+}
+
+/// Cynical Loner — "This creature can't be blocked by Glimmers." (CR 509.1b.)
+#[test]
+fn cynical_loner_slips_past_glimmers() {
+    let mut g = pod(2);
+    let loner = ready(&mut g, 0, catalog::cynical_loner());
+    let mut glimmer = catalog::grizzly_bears();
+    glimmer.subtypes.creature_types = vec![crabomination::card::CreatureType::Glimmer];
+    let wall = ready(&mut g, 1, glimmer);
+    declare(&mut g, 0, &[(loner, 1)]).unwrap();
+    assert!(block(&mut g, 1, vec![(wall, loner)]).is_err());
+}
+
+/// Asinine Antics — "You may cast this spell as though it had flash if you pay
+/// {2} more to cast it." (CR 601.2f.) Six mana casts it on an opponent's turn.
+#[test]
+fn asinine_antics_flashes_for_two_more() {
+    let mut g = pod(2);
+    g.active_player_idx = 1;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let antics = g.add_card_to_hand(0, catalog::asinine_antics());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: antics, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "five mana isn't enough at instant speed"
+    );
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: antics, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("six mana flashes it in");
+}

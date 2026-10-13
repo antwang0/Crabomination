@@ -77,8 +77,8 @@ pub fn chancellor_of_tales() -> CardDefinition {
 }
 
 /// Asinine Antics — {2}{U}{U} Sorcery. For each creature your opponents control,
-/// create a Cursed Role token attached to that creature. (The flash-for-{2}-more
-/// mode is omitted.)
+/// create a Cursed Role token attached to that creature. You may cast it as
+/// though it had flash if you pay {2} more.
 pub fn asinine_antics() -> CardDefinition {
     CardDefinition {
         name: "Asinine Antics",
@@ -91,6 +91,7 @@ pub fn asinine_antics() -> CardDefinition {
             },
             definition: std::sync::Arc::new(cursed_role()),
         },
+        flash_surcharge: Some(cost(&[generic(2)])),
         ..Default::default()
     }
 }

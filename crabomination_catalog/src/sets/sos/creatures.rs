@@ -1878,10 +1878,10 @@ pub fn cuboid_colony() -> CardDefinition {
 }
 
 /// Fractal Tender — {3}{G}{U}, 3/3 Elf Wizard. Ward {2}. Increment
-/// (a +1/+1 counter when you spend 5+ mana on a spell). At each end
-/// step, if it gained a counter this turn, mint a 0/0 G/U Fractal with
-/// three +1/+1 counters. Fully wired: Increment via
-/// `increment_self_plus_one()`, the payoff via
+/// (whenever you cast a spell, if the mana spent exceeds its power or
+/// toughness, put a +1/+1 counter on it). At each end step, if you put a
+/// counter on it this turn, mint a 0/0 G/U Fractal with three +1/+1
+/// counters. Increment via `increment_self_plus_one()`, the payoff via
 /// `Predicate::SourceGainedCounterThisTurn`. Approximation: printed
 /// "if *you* put a counter on this creature this turn", but
 /// `SourceGainedCounterThisTurn` doesn't check who put the counter —

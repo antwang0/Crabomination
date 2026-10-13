@@ -391,9 +391,8 @@ pub fn scholarship_sponsor() -> CardDefinition {
 
 /// Radiant Scrollwielder — {2}{R}{W} 2/4 Dwarf Cleric. Instant and sorcery
 /// spells you control have lifelink. At the beginning of your upkeep, exile an
-/// instant or sorcery card from your graveyard and let yourself cast it this
-/// turn (exiled instead of graveyard'd if it would leave). (The "at random"
-/// pick is approximated by the auto-picker.)
+/// instant or sorcery card at random from your graveyard; you may cast it this
+/// turn, and it's exiled instead if it would be put into a graveyard.
 pub fn radiant_scrollwielder() -> CardDefinition {
     let is = SelectionRequirement::HasCardType(CardType::Instant)
         .or(SelectionRequirement::HasCardType(CardType::Sorcery));

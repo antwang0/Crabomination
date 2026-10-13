@@ -1897,8 +1897,8 @@ pub fn hill_gigas() -> CardDefinition {
 
 /// Cid, Timeless Artificer — {2}{W}{U} 4/4 Legendary Human Artificer. Artifact
 /// creatures and Heroes you control get +1/+1 for each Artificer you control
-/// and each Artificer card in your graveyard. Cycling {W}{U}. (The "any number
-/// of copies in a deck" clause is a deck-construction rule, not modeled.)
+/// and each Artificer card in your graveyard. Cycling {W}{U}. A deck can have
+/// any number of cards named Cid, Timeless Artificer.
 pub fn cid_timeless_artificer() -> CardDefinition {
     CardDefinition {
         name: "Cid, Timeless Artificer",
@@ -5929,8 +5929,7 @@ pub fn dragoons_lance() -> CardDefinition {
 
 /// Cloud, Planet's Champion — {3}{R}{W} 4/4 Human Soldier Mercenary. During your
 /// turn, while equipped, Cloud has double strike and indestructible. Equip
-/// abilities you activate cost {2} less. (The reduction is modeled as applying to
-/// all your equips, not just those targeting Cloud.)
+/// abilities you activate that target Cloud cost {2} less.
 pub fn cloud_planets_champion() -> CardDefinition {
     let equipped_this_turn = || {
         Predicate::All(vec![
@@ -6096,8 +6095,7 @@ pub fn seifer_almasy() -> CardDefinition {
 
 /// Raubahn, Bull of Ala Mhigo — {1}{R} 2/2 Human Warrior. Ward—pay life equal to
 /// Raubahn's power. Whenever Raubahn attacks, attach up to one target Equipment
-/// you control to it. (The printed "target attacking creature" is approximated
-/// as Raubahn itself; the "up to one" is a required target.)
+/// you control to target attacking creature.
 pub fn raubahn_bull_of_ala_mhigo() -> CardDefinition {
     CardDefinition {
         name: "Raubahn, Bull of Ala Mhigo",
@@ -8470,12 +8468,10 @@ pub fn kain_traitorous_dragoon() -> CardDefinition {
 }
 
 /// Cecil, Dark Knight // Cecil, Redeemed Paladin — {B} 2/3 Human Knight,
-/// deathtouch (transform DFC). Whenever Cecil deals combat damage to a player,
-/// you lose that much life; then if your life ≤ half your starting life, untap
-/// Cecil and transform it. Back: 4/4 lifelink; when it attacks, other attacking
-/// creatures you control gain indestructible until end of turn.
-/// (Approximation: the front's "deals damage" trigger fires only on combat
-/// damage to a player, the dominant play pattern.)
+/// deathtouch (transform DFC). Whenever Cecil deals damage, you lose that much
+/// life; then if your life ≤ half your starting life, untap Cecil and transform
+/// it. Back: 4/4 lifelink; when it attacks, other attacking creatures you
+/// control gain indestructible until end of turn.
 pub fn cecil_dark_knight() -> CardDefinition {
     let paladin = CardDefinition {
         name: "Cecil, Redeemed Paladin",

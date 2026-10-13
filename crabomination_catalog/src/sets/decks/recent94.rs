@@ -390,11 +390,10 @@ pub fn steelshaper_apprentice() -> CardDefinition {
     }
 }
 
-/// Sylvia Brightspear — {2}{W} 2/2 Human Knight, double strike. Dragons you
-/// control have double strike. Partner with Khorvath Brightflame is the
-/// deck-construction keyword only (its ETB "search for Khorvath" trigger is
-/// dropped), and the "your team" widening is dropped — the static covers
-/// creatures you control.
+/// Sylvia Brightspear — {2}{W} 2/2 Human Knight, double strike. Dragons your
+/// team controls have double strike (your team is you outside Two-Headed
+/// Giant). Partner with Khorvath Brightflame (ETB: target player may search
+/// for Khorvath).
 pub fn sylvia_brightspear() -> CardDefinition {
     CardDefinition {
         name: "Sylvia Brightspear",

@@ -87,8 +87,9 @@ pub fn sanctuary_wall() -> CardDefinition {
 }
 
 /// All-Out Assault — {2}{R}{W}{B} Enchantment. Creatures you control get +1/+1
-/// and have deathtouch; ETB: an additional combat phase followed by an
-/// additional main phase. (The "untap on your next attack" rider is omitted.)
+/// and have deathtouch. ETB, if it's your main phase: an additional combat phase
+/// followed by an additional main phase; when you next attack this turn, untap
+/// each creature you control.
 pub fn all_out_assault() -> CardDefinition {
     let team = Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
     CardDefinition {

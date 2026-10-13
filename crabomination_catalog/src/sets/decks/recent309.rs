@@ -1226,12 +1226,15 @@ pub fn lazav_familiar_stranger() -> CardDefinition {
 
 /// Jace Reawakened — {U}{U} legendary planeswalker, loyalty 3. +1 loots; +1
 /// plots a cheap nonland card from hand; −6 copies your spells for the turn.
-/// (The "can't cast during your first three turns" restriction is dropped —
-/// no turn-number cast gate.)
+/// You can't cast it during your first, second, or third turns of the game.
 pub fn jace_reawakened() -> CardDefinition {
     CardDefinition {
         name: "Jace Reawakened",
         cost: cost(&[u(), u()]),
+        cast_condition: Some(crate::effect::Predicate::ValueAtLeast(
+            crate::effect::Value::TurnsBegunBy(crate::effect::PlayerRef::You),
+            crate::effect::Value::Const(4),
+        )),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
         subtypes: Subtypes {

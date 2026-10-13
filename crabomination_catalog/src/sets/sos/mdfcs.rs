@@ -247,8 +247,8 @@ pub fn honorbound_page() -> CardDefinition {
 ///
 /// Front: 2/2 Human Cleric Wizard with first strike. "At the beginning
 /// of your end step, if an opponent has more cards in hand than you,
-/// this creature becomes prepared." (In multiplayer the hand-size read
-/// over `PlayerRef::EachOpponent` collapses to the two-player case.)
+/// this creature becomes prepared." (`HandSizeOf(EachOpponent)` reads the
+/// largest opponent hand, which is "an opponent has more".)
 ///
 /// Prepare spell: sorcery — printed "You and target opponent each draw
 /// three cards."

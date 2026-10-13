@@ -555,8 +555,8 @@ pub fn katara_water_tribes_hope() -> CardDefinition {
 
 /// Water Tribe Rallier — {1}{W} 2/2 Human Soldier Ally. Waterbend {5}: look at
 /// the top four cards; you may reveal a creature card with power 3 or less and
-/// put it into your hand. (The rest go to the bottom in random order — modeled
-/// as the default "rest stay" disposition.)
+/// put it into your hand. Put the rest on the bottom of your library in a
+/// random order.
 pub fn water_tribe_rallier() -> CardDefinition {
     CardDefinition {
         name: "Water Tribe Rallier",

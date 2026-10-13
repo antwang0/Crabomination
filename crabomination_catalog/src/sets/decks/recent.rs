@@ -3128,8 +3128,7 @@ pub fn dour_port_mage() -> CardDefinition {
 
 /// Three Tree Scribe — {1}{G} 2/3 Frog Druid. Whenever this or another creature
 /// you control leaves the battlefield without dying, put a +1/+1 counter on
-/// target creature you control. (The self-leave half is approximate — the
-/// "another creature you control" case is the one that fires.)
+/// target creature you control.
 pub fn three_tree_scribe() -> CardDefinition {
     CardDefinition {
         name: "Three Tree Scribe",
@@ -5156,8 +5155,8 @@ pub fn hangar_scrounger() -> CardDefinition {
 }
 
 /// Bristlebud Farmer — {2}{G}{G} 5/5 Plant Druid. Trample. ETB: create two
-/// Food tokens. (The attack "sac a Food → mill three, grab a permanent" rider
-/// is omitted.)
+/// Food tokens. Whenever it attacks, you may sacrifice a Food; if you do, mill
+/// three and you may put a permanent card from among them into your hand.
 pub fn bristlebud_farmer() -> CardDefinition {
     CardDefinition {
         name: "Bristlebud Farmer",
@@ -12885,9 +12884,9 @@ pub fn reckless_fireweaver() -> CardDefinition {
     }
 }
 
-/// Disciple of the Vault — {B} 1/1 Human Cleric. Whenever an artifact is
-/// sacrificed, you may have target opponent lose 1. (The "put into a graveyard"
-/// destroy case is approximated to the sacrifice path.)
+/// Disciple of the Vault — {B} 1/1 Human Cleric. Whenever an artifact is put
+/// into a graveyard from the battlefield, you may have target opponent lose 1
+/// life.
 pub fn disciple_of_the_vault() -> CardDefinition {
     CardDefinition {
         name: "Disciple of the Vault",

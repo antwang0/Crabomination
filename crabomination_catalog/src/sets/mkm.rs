@@ -104,8 +104,7 @@ pub fn sample_collector() -> CardDefinition {
 
 /// Barbed Servitor — {3}{B} 1/1 Artifact Creature — Construct. Indestructible;
 /// ETB suspect itself; combat damage to a player → draw + lose 1 life; when
-/// dealt damage, each opponent loses that much life (modeled as each opponent
-/// rather than a single target).
+/// dealt damage, target opponent loses that much life.
 pub fn barbed_servitor() -> CardDefinition {
     CardDefinition {
         name: "Barbed Servitor",

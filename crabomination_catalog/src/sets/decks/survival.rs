@@ -172,10 +172,9 @@ pub fn kona_rescue_beastie() -> CardDefinition {
 }
 
 /// Cynical Loner — {1}{B} 3/1. Survival: search your library for a card, put it
-/// into your graveyard, then shuffle. (The "can't be blocked by Glimmers" rider
-/// is omitted.)
+/// into your graveyard, then shuffle. It can't be blocked by Glimmers.
 pub fn cynical_loner() -> CardDefinition {
-    survivor(
+    let mut def = survivor(
         "Cynical Loner",
         cost(&[generic(1), b()]),
         vec![CreatureType::Human, CreatureType::Survivor],
@@ -186,7 +185,9 @@ pub fn cynical_loner() -> CardDefinition {
             filter: SelectionRequirement::Any,
             to: ZoneDest::Graveyard,
         },
-    )
+    );
+    def.keywords.push(Keyword::CantBeBlockedByCreatureType(CreatureType::Glimmer));
+    def
 }
 
 /// Glimmer Seeker — {2}{W} 3/3. Survival: draw a card if you control a Glimmer

@@ -2851,8 +2851,9 @@ pub fn sokka_lateral_strategist() -> CardDefinition {
 // ── Batch 7: magecraft Clue / ETB Food / Flash tapper / attack earthbend X ──
 
 /// The Mechanist, Aerial Artisan — {2}{U} 1/3 legendary Human Artificer Ally.
-/// Whenever you cast a noncreature spell, create a Clue. (The {T} token-animate
-/// ability is dropped.)
+/// Whenever you cast a noncreature spell, create a Clue. {T}: Until end of turn,
+/// target artifact token you control becomes a 3/1 Construct artifact creature
+/// with flying.
 pub fn the_mechanist_aerial_artisan() -> CardDefinition {
     CardDefinition {
         name: "The Mechanist, Aerial Artisan",

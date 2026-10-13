@@ -1089,8 +1089,7 @@ pub fn channeled_force() -> CardDefinition {
 // ── Stonebound Mentor (STX — original creature) ────────────────────────────
 
 /// Stonebound Mentor — {1}{R}{W} 3/3 Spirit Advisor. "Whenever one or more
-/// cards leave your graveyard, scry 1." (The "one or more" batch collapses to
-/// a per-card trigger.)
+/// cards leave your graveyard, scry 1." (One trigger per batch.)
 pub fn stonebound_mentor() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
@@ -1712,34 +1711,19 @@ pub fn cleansing_wildfire() -> CardDefinition {
 // ── Tendrils of Agony (STA reprint, Scourge) ────────────────────────────────
 
 /// Tendrils of Agony — {2}{B}{B} Sorcery (Strixhaven Mystical Archive).
-/// "Target opponent loses 2 life and you gain 2 life. Storm (When you
+/// "Target player loses 2 life and you gain 2 life. Storm (When you
 /// cast this spell, copy it for each other spell cast before it this
-/// turn. You may choose new targets for the copies.)"
-///
-/// The canonical Scourge Storm finisher. Storm here is approximated as a
-/// `Repeat(StormCount + 1, Drain 2)` — equivalent to N+1 resolutions of
-/// "drain 2" where N is the spells-cast-before count. This is functionally
-/// identical to printed Storm for Tendrils's drain payload: each copy
-/// would resolve drain 2 independently, but the engine fuses them into
-/// a single Repeat without separate stack items. The targeted-opponent
-/// half collapses to each-opponent (matching the multi-target collapse
-/// used throughout the catalog for drain-each-opp Magecraft payoffs).
-///
-/// `Value::StormCount` is backed by `spells_cast_this_turn - 1`, so
-/// Tendrils-as-the-fifth-spell-of-the-turn fires `4 + 1 = 5` drain-2
-/// instances (total drain 10).
+/// turn. You may choose new targets for the copies.)" (CR 702.40.)
 pub fn tendrils_of_agony() -> CardDefinition {
     CardDefinition {
         name: "Tendrils of Agony",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Repeat {
-            count: Value::Sum(vec![Value::StormCount, Value::Const(1)]),
-            body: Box::new(Effect::Drain {
-                from: target_filtered(SelectionRequirement::Player),
-                to: Selector::You,
-                amount: Value::Const(2),
-            }),
+        keywords: vec![Keyword::Storm],
+        effect: Effect::Drain {
+            from: target_filtered(SelectionRequirement::Player),
+            to: Selector::You,
+            amount: Value::Const(2),
         },
         ..Default::default()
     }

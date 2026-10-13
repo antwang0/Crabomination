@@ -932,7 +932,8 @@ pub fn caradora_heart_of_alacria() -> CardDefinition {
 
 /// Far Fortune, End Boss — {2}{B}{R} 4/5 legendary Human Mercenary. Start your
 /// engines! Whenever you attack, Far Fortune deals 1 damage to each opponent.
-/// (The "max speed — deal +1 damage" replacement is dropped.)
+/// Max speed — a source you control deals +1 damage to an opponent or a
+/// permanent an opponent controls (CR 614.1a).
 pub fn far_fortune_end_boss() -> CardDefinition {
     CardDefinition {
         name: "Far Fortune, End Boss",
@@ -946,6 +947,18 @@ pub fn far_fortune_end_boss() -> CardDefinition {
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::StartYourEngines],
+        static_abilities: vec![StaticAbility {
+            description: "Max speed — If a source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                inner: Box::new(StaticEffect::AddDamageToOpponents {
+                    source_color: None,
+                    amount: 1,
+                    other: false,
+                    or_artifact: false,
+                }),
+            },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
             effect: Effect::DealDamage {
@@ -959,8 +972,7 @@ pub fn far_fortune_end_boss() -> CardDefinition {
 
 /// Hazoret, Godseeker — {1}{R} 5/3 legendary God. Indestructible, haste; Start
 /// your engines! `{1}, {T}: Target creature with power 2 or less can't be
-/// blocked this turn.` (The "can't attack unless max speed" restriction is
-/// dropped.)
+/// blocked this turn.` Hazoret can't attack or block unless you have max speed.
 pub fn hazoret_godseeker() -> CardDefinition {
     CardDefinition {
         name: "Hazoret, Godseeker",
@@ -978,6 +990,19 @@ pub fn hazoret_godseeker() -> CardDefinition {
             Keyword::Haste,
             Keyword::StartYourEngines,
         ],
+        static_abilities: [Keyword::CantAttack, Keyword::CantBlock]
+            .into_iter()
+            .map(|keyword| StaticAbility {
+                description: "Hazoret can't attack or block unless you have max speed.",
+                effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                    keyword,
+                    condition: Predicate::Not(Box::new(Predicate::SpeedAtLeast {
+                        who: PlayerRef::You,
+                        speed: 4,
+                    })),
+                },
+            })
+            .collect(),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
