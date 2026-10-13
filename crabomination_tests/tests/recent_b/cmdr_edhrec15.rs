@@ -1845,3 +1845,219 @@ fn elesh_norn_taxes_damage_to_you_and_yours() {
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(g.players[1].life, 16, "damage to a permanent of yours counts too");
 }
+
+/// Sivriss, Nightmare Speaker: one mill per opponent, and each milled card
+/// comes back unless that opponent pays 3 life.
+#[test]
+fn sivriss_mills_one_per_opponent_back_unless_they_pay() {
+    let mut g = pod(3);
+    library(&mut g, 0, 3);
+    let sivriss = ready(&mut g, 0, catalog::sivriss_nightmare_speaker());
+    ready(&mut g, 0, catalog::ornithopter());
+    let (hand, lives) = (g.players[0].hand.len(), [g.players[1].life, g.players[2].life]);
+    activate(&mut g, sivriss, 0, None).expect("sivriss");
+    let returned = g.players[0].hand.len() - hand;
+    let paid = [1, 2].iter().filter(|&&p| g.players[p].life == lives[p - 1] - 3).count();
+    assert_eq!(g.players[0].library.len(), 1, "two opponents, two mills");
+    assert_eq!(returned + paid, 2, "each card returned or paid for");
+}
+
+/// Tameshi, Reality Architect: returning a land as the cost draws a card
+/// (a noncreature permanent went to hand, once a turn), and an artifact
+/// with mana value X or less comes back from the graveyard.
+#[test]
+fn tameshi_bounces_a_land_to_reanimate_an_artifact() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let tameshi = ready(&mut g, 0, catalog::tameshi_reality_architect());
+    let island = ready(&mut g, 0, catalog::island());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let hand = g.players[0].hand.len();
+    activate_x(&mut g, tameshi, 0, Some(perm(ring)), Some(1)).expect("tameshi");
+    assert!(g.battlefield_find(ring).is_some(), "Sol Ring returned");
+    assert!(g.players[0].hand.iter().any(|c| c.id == island), "the land went home");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the Island and a drawn card");
+}
+
+/// Starving Revenant: both surveiled cards kept on top are drawn at 3 life
+/// each; with descend 8 every draw drains the opponent for 1.
+#[test]
+fn starving_revenant_draws_what_it_keeps_and_descends() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    for _ in 0..8 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let hand = g.players[0].hand.len();
+    let rev = g.add_card_to_hand(0, catalog::starving_revenant());
+    cast(&mut g, rev, &[]).expect("revenant");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "two kept, two drawn");
+    assert_eq!(g.players[0].life, 20 - 6 + 2);
+    assert_eq!(g.players[1].life, 18, "descend 8 on each draw");
+}
+
+/// Sokrates, Athenian Teacher (CR 615): the targeted attacker's combat
+/// damage to a player is prevented, and both players draw half of it.
+#[test]
+fn sokrates_turns_combat_damage_into_draws() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    library(&mut g, 1, 3);
+    let sok = ready(&mut g, 0, catalog::sokrates_athenian_teacher());
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    activate(&mut g, sok, 0, Some(perm(angel))).expect("dialogue");
+    let hands = (g.players[0].hand.len(), g.players[1].hand.len());
+    declare(&mut g, &[(angel, 1)]).expect("attack");
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 20, "the 4 damage was prevented");
+    assert_eq!((g.players[0].hand.len(), g.players[1].hand.len()), (hands.0 + 2, hands.1 + 2));
+}
+
+/// Clone Shell: imprints one of the top four face down; when it dies the
+/// imprinted creature card enters.
+#[test]
+fn clone_shell_releases_its_imprinted_creature() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let shell = g.add_card_to_hand(0, catalog::clone_shell());
+    cast(&mut g, shell, &[]).expect("shell");
+    assert!(g.exile.iter().any(|c| c.id == angel && c.face_down), "the Angel hides face down");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast_as(&mut g, 1, bolt, &[perm(shell)]).expect("bolt");
+    assert_eq!(g.battlefield_find(angel).map(|c| c.controller), Some(0));
+}
+
+/// Rowan's Talent (CR 707.10): a loyalty ability of the enchanted
+/// planeswalker is copied; the Aura's own +1 shows up past the printed ones.
+#[test]
+fn rowans_talent_copies_loyalty_abilities() {
+    let mut g = pod(2);
+    let tez = ready(&mut g, 0, catalog::tezzeret_artifice_master());
+    let talent = g.add_card_to_hand(0, catalog::rowans_talent());
+    cast(&mut g, talent, &[perm(tez)]).expect("talent");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: tez, ability_index: 0, target: None, x_value: None })
+        .expect("+1 thopter");
+    drain_stack(&mut g);
+    assert_eq!(tokens_named(&g, "Thopter"), 2, "the +1 and its copy");
+    g.battlefield_find_mut(tez).unwrap().loyalty_uses_this_turn = 0;
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: tez, ability_index: 3, target: Some(perm(bear)), x_value: None })
+        .expect("the Talent's +1");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (6, 2), "+2/+0 twice");
+}
+
+/// Vorinclex // The Grand Evolution: two Forests to hand, then the Saga —
+/// two milled creatures enter, seven counters spread, a fight grant, and
+/// Vorinclex returns front face up.
+#[test]
+fn vorinclex_runs_the_grand_evolution() {
+    let mut g = pod(2);
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let v = g.add_card_to_hand(0, catalog::vorinclex());
+    cast(&mut g, v, &[]).expect("vorinclex");
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Forest").count(), 2);
+    g.clear_sickness(v);
+    activate(&mut g, v, 0, None).expect("transform");
+    let saga = g.battlefield.iter().find(|c| c.definition.name == "The Grand Evolution").map(|c| c.id).expect("saga");
+    let bears = || g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears(), 2, "both milled creatures entered");
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    let counters: u32 = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0)
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(counters, 7);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Vorinclex"), "front face up again");
+}
+
+/// Jacob Hauken, Inspector // Hauken's Insight: the {T} hides a hand card
+/// face down and may pay to transform; the Insight hides the top card each
+/// upkeep and casts one of its cards free, once a turn.
+#[test]
+fn jacob_hauken_hides_cards_and_casts_one_free() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    library(&mut g, 0, 3);
+    let jacob = ready(&mut g, 0, catalog::jacob_hauken_inspector());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Discard(vec![bolt]),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    activate(&mut g, jacob, 0, None).expect("inspect");
+    assert!(g.exile.iter().any(|c| c.id == bolt && c.face_down), "the drawn Bolt hides face down");
+    assert!(g.battlefield_find(jacob).unwrap().transformed, "paid {{4}}{{U}}{{U}}");
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let hidden: Vec<CardId> = g.exile.iter().filter(|c| c.exiled_with == Some(jacob)).map(|c| c.id).collect();
+    assert_eq!(hidden.len(), 2, "the upkeep hid the top card too");
+    g.step = TurnStep::PreCombatMain;
+    let free = |g: &mut GameState, id: CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: id,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    free(&mut g, hidden[0]).expect("one free cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert!(free(&mut g, hidden[1]).is_err(), "once each turn");
+}
+
+/// Havengul Laboratory // Havengul Mystery: three Clues sacrificed in a
+/// turn flip it at the end step, returning a creature card; when that
+/// creature leaves, it flips back.
+#[test]
+fn havengul_laboratory_flips_on_three_clues() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let lab = ready(&mut g, 0, catalog::havengul_laboratory());
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    for _ in 0..3 {
+        g.battlefield_find_mut(lab).unwrap().tapped = false;
+        activate(&mut g, lab, 1, None).expect("investigate");
+    }
+    let clues: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Clue").map(|c| c.id).collect();
+    assert_eq!(clues.len(), 3);
+    for c in clues {
+        activate(&mut g, c, 0, None).expect("crack a Clue");
+    }
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lab).unwrap().transformed, "Havengul Mystery");
+    assert!(g.battlefield_find(angel).is_some(), "the Angel came back");
+    let blade = g.add_card_to_hand(1, catalog::doom_blade());
+    cast_as(&mut g, 1, blade, &[perm(angel)]).expect("doom blade");
+    assert!(!g.battlefield_find(lab).unwrap().transformed, "back to the Laboratory");
+}

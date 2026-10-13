@@ -4263,3 +4263,358 @@ pub fn elesh_norn() -> CardDefinition {
         ..legend("Elesh Norn", cost(&[generic(2), w(), w()]), vec![CreatureType::Phyrexian, CreatureType::Praetor], 3, 5)
     }
 }
+
+/// Sivriss, Nightmare Speaker — {3}{B} 3/3; choose a Background. {T},
+/// sacrifice another creature or an artifact: for each opponent, mill a
+/// card, then return it to hand unless that player pays 3 life.
+pub fn sivriss_nightmare_speaker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::ChooseABackground],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature.and(R::OtherThanSource).or(R::Artifact).and(R::ControlledByYou), 1)),
+            effect: Effect::ForEachOpponent {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::Mill { who: Selector::You, amount: Value::ONE },
+                    Effect::UnlessPlayerPays {
+                        who: PlayerRef::Triggerer,
+                        cost: crate::card::WardCost::Life(3),
+                        then: Box::new(Effect::Move { what: Selector::LastMoved, to: ZoneDest::Hand(PlayerRef::You) }),
+                        if_paid: None,
+                    },
+                ])),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Sivriss, Nightmare Speaker",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Snake, CreatureType::Cleric, CreatureType::Warlock],
+            3,
+            3,
+        )
+    }
+}
+
+/// Tameshi, Reality Architect — {2}{U} 2/3. One or more noncreature
+/// permanents returned to hand: draw, once each turn. {X}{W}, return a land
+/// you control to hand (sorcery): an artifact or enchantment card with mana
+/// value X or less from your graveyard to the battlefield.
+pub fn tameshi_reality_architect() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec { once_per_turn: true, ..EventSpec::new(EventKind::PermanentReturnedToHand, EventScope::AnyPlayer) }
+                .with_filter(trigger_is(R::Not(Box::new(R::Creature)))),
+            effect: draw(1),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::x(), w()]),
+            sorcery_speed: true,
+            return_permanent_cost: Some((R::Land.and(R::ControlledByYou), 1)),
+            effect: Effect::Move {
+                what: target_filtered(
+                    R::Artifact.or(R::HasCardType(CardType::Enchantment)).and(R::InYourGraveyard).and(R::ManaValueAtMostXFromCost),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..legend("Tameshi, Reality Architect", cost(&[generic(2), u()]), vec![CreatureType::Moonfolk, CreatureType::Wizard], 2, 3)
+    }
+}
+
+/// Starving Revenant — {2}{B}{B} 4/4. ETB: surveil 2, then draw a card and
+/// lose 3 life for each card put on top. Descend 8 — drawing a card with
+/// eight or more permanent cards in your graveyard drains a target
+/// opponent for 1.
+pub fn starving_revenant() -> CardDefinition {
+    let kept = || Value::SurveilKeptOnTopThisEffect;
+    let descend = Predicate::ValueAtLeast(
+        Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Permanent },
+        Value::Const(8),
+    );
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: kept() },
+                Effect::LoseLife { who: Selector::You, amount: Value::Times(Box::new(kept()), Box::new(Value::Const(3))) },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(descend),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 1,
+                    filter: R::OpponentPlayer,
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::LoseLife { who: Selector::Target(0), amount: Value::ONE },
+                        gain(1),
+                    ])),
+                },
+            },
+        ],
+        ..creature("Starving Revenant", cost(&[generic(2), b(), b()]), vec![CreatureType::Spirit, CreatureType::Horror], 4, 4)
+    }
+}
+
+/// Sokrates, Athenian Teacher — {1}{W}{U} 0/4 defender; hexproof while
+/// untapped. {T}: until end of turn, target creature's combat damage to a
+/// player is prevented and both its controller and that player draw half
+/// that many cards, rounded down.
+pub fn sokrates_athenian_teacher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        static_abilities: vec![static_ab(
+            "Sokrates has hexproof as long as it's untapped.",
+            StaticEffect::SelfHasKeywordWhile { keyword: Keyword::Hexproof, condition: R::Untapped },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::CombatDamageToPlayersBecomesDrawsThisTurn { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..legend(
+            "Sokrates, Athenian Teacher",
+            cost(&[generic(1), w(), u()]),
+            vec![CreatureType::Human, CreatureType::Advisor],
+            0,
+            4,
+        )
+    }
+}
+
+/// Clone Shell — {5} 2/2 artifact Shapeshifter. Imprint: look at the top
+/// four, exile one face down, the rest on the bottom. Dies: turn it face
+/// up; a creature card enters under your control.
+pub fn clone_shell() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![
+            etb(Effect::Hideaway { count: Value::Const(4) }),
+            crate::effect::shortcut::on_dies(Effect::RevealImprintDeployCreature),
+        ],
+        ..creature("Clone Shell", cost(&[generic(5)]), vec![CreatureType::Shapeshifter], 2, 2)
+    }
+}
+
+/// Rowan's Talent — {2}{R}{R} Aura, enchant planeswalker. It has "[+1]: up
+/// to one target creature gets +2/+0, first strike and trample this turn";
+/// each loyalty ability you activate of it is copied.
+pub fn rowans_talent() -> CardDefinition {
+    let rally = Effect::ApplyToTargets {
+        max_targets: 1,
+        min_targets: 0,
+        filter: R::Creature,
+        effect: Box::new(Effect::Seq(vec![
+            eot_pump(Selector::Target(0), 2, 0),
+            grant_eot(Selector::Target(0), Keyword::FirstStrike),
+            grant_eot(Selector::Target(0), Keyword::Trample),
+        ])),
+    };
+    CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Planeswalker) },
+        static_abilities: vec![
+            static_ab(
+                "Enchanted planeswalker has \"[+1]: Up to one target creature gets +2/+0 and gains first strike and trample until end of turn.\"",
+                StaticEffect::AttachedPlaneswalkerHasLoyaltyAbilities {
+                    abilities: vec![crate::effect::LoyaltyAbility { loyalty_cost: 1, effect: rally, ..Default::default() }],
+                },
+            ),
+            static_ab(
+                "Whenever you activate a loyalty ability of enchanted planeswalker, copy that ability.",
+                StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities,
+            ),
+        ],
+        ..permanent("Rowan's Talent", cost(&[generic(2), r(), r()]), CardType::Enchantment)
+    }
+}
+
+/// Vorinclex // The Grand Evolution — {3}{G}{G} 6/6 trample, reach. ETB: up
+/// to two Forest cards to hand. {6}{G}{G} (sorcery): exile it, return
+/// transformed. Saga: I — mill ten, up to two milled creature cards enter;
+/// II — distribute seven +1/+1 counters among your creatures; III — your
+/// creatures gain "{1}: fight target creature you don't control" this turn,
+/// then the Saga returns front face up.
+pub fn vorinclex() -> CardDefinition {
+    let fight = ActivatedAbility {
+        mana_cost: cost(&[generic(1)]),
+        effect: Effect::Fight {
+            attacker: Selector::This,
+            defender: target_filtered(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))),
+        },
+        ..Default::default()
+    };
+    let evolution = CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::Mill { who: Selector::You, amount: Value::Const(10) },
+                    Effect::ChooseSomeAmong {
+                        what: Selector::MatchingAmong { inner: Box::new(Selector::LastMoved), filter: R::Creature },
+                        chooser: PlayerRef::You,
+                        count: Value::Const(2),
+                        up_to: true,
+                        chosen: Box::new(Effect::Move {
+                            what: Selector::SeparatedPile { chosen: true },
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                        other: Box::new(Effect::Noop),
+                    },
+                ]),
+            ),
+            (
+                2,
+                Effect::DistributeCounters {
+                    total: Value::Const(7),
+                    counter: CounterType::PlusOnePlusOne,
+                    filter: yours(R::Creature),
+                    max_targets: 7,
+                },
+            ),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::GrantActivatedAbilityToMatching {
+                        filter: yours(R::Creature),
+                        ability: Box::new(fight),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::ExileSelfReturnFrontFace,
+                ]),
+            ),
+        ],
+        ..permanent("The Grand Evolution", ManaCost::default(), CardType::Enchantment)
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: R::HasLandType(LandType::Forest),
+            to: ZoneDest::Hand(PlayerRef::You),
+            count: Value::Const(2),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), g(), g()]),
+            sorcery_speed: true,
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(evolution)),
+        ..legend("Vorinclex", cost(&[generic(3), g(), g()]), vec![CreatureType::Phyrexian, CreatureType::Praetor], 6, 6)
+    }
+}
+
+/// Jacob Hauken, Inspector // Hauken's Insight — {1}{U} 0/2. {T}: draw,
+/// exile a card from hand face down (yours to look at); you may pay
+/// {4}{U}{U} to transform it. Back: upkeep, exile your top card face down;
+/// once each turn play a card exiled with it without paying its mana cost.
+pub fn jacob_hauken_inspector() -> CardDefinition {
+    let linked = || Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Exile, filter: R::ExiledWithSource };
+    let insight = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Hideaway { count: Value::ONE },
+                Effect::GrantMayPlay {
+                    what: linked(),
+                    duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
+                        source: crate::card::CardId(0),
+                        one_spell_a_turn: false,
+                    },
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: false,
+                    any_color: false,
+                },
+                Effect::OneCastPerTurnAmongGranted { what: linked() },
+            ]),
+        }],
+        ..permanent("Hauken's Insight", ManaCost::default(), CardType::Enchantment)
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                draw(1),
+                Effect::ExileChosenFromHand {
+                    from: Selector::You,
+                    count: Value::ONE,
+                    filter: R::Any,
+                    link_to_source: true,
+                    face_down: true,
+                },
+                Effect::MayPay {
+                    description: "Pay {4}{U}{U} to transform Jacob Hauken?".into(),
+                    mana_cost: cost(&[generic(4), u(), u()]),
+                    body: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: None,
+                },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(insight)),
+        ..legend("Jacob Hauken, Inspector", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Advisor], 0, 2)
+    }
+}
+
+/// Havengul Laboratory // Havengul Mystery — legendary land. {T}: {C}.
+/// {4},{T}: investigate. Your end step, three or more Clues sacrificed this
+/// turn: transform. Back: transforming into it returns a creature card from
+/// your graveyard; when that creature leaves, transform back. {T}, pay 1
+/// life: {B}.
+pub fn havengul_laboratory() -> CardDefinition {
+    let flip = || Effect::Transform { what: Selector::This };
+    let mystery = CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::Move {
+                        what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::RememberPermanentOnSource { what: Selector::LastMoved },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::AnyPlayer)
+                    .with_filter(trigger_is(R::ChosenPermanentOfSource)),
+                effect: flip(),
+            },
+        ],
+        ..land(
+            "Havengul Mystery",
+            vec![ActivatedAbility { life_cost: 1, ..tap_add(Color::Black) }],
+        )
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl).with_filter(
+                Predicate::ValueAtLeast(Value::CluesSacrificedThisTurn(PlayerRef::You), Value::Const(3)),
+            ),
+            effect: flip(),
+        }],
+        back_face: Some(Box::new(mystery)),
+        ..land(
+            "Havengul Laboratory",
+            vec![
+                tap_add_colorless(),
+                ActivatedAbility {
+                    mana_cost: cost(&[generic(4)]),
+                    tap_cost: true,
+                    effect: crate::effect::shortcut::investigate(1),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+}
