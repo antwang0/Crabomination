@@ -2050,6 +2050,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Bane, Lord of Darkness | a nontoken creature of yours dying always draws you a card; the target opponent's choice to let you put a creature card with lesser or equal toughness from hand onto the battlefield instead isn't offered | no "target opponent chooses for you" ask with a toughness-bounded hand put |
 | 🟡 Queen Kayla bin-Kroog | the mana value 1, 2 and 3 cards return one after another, not together (their enter triggers see each other in order) | `ChooseSomeAmong` per mana value; no shared simultaneous put |
 | 🟡 Faerie Slumber Party | your creatures, then each opponent's, return in separate batches rather than all at once | per-opponent `ForEachOpponent` bounce so "each opponent who controlled one" can be counted |
+| 🟡 The Enigma Jewel | craft takes exactly four nonlands with activated abilities, never more | `craft_exile_cost` is a fixed count |
+| 🟡 Jhoira's Timebug | can target only a permanent with a time counter (or a suspended card), not any permanent you control | the target filter carries the effect's "if it has a time counter" |
 | 🟡 Elda, Conjurer of Spectacle | entering after a nonlegendary creature spell this turn, the next one still gets demonstrate | a once-per-turn cast trigger, not a count of this turn's nonlegendary creature spells |
 | 🟡 Kyodai, Soul of Kamigawa | the indestructible lasts while Kyodai is on the battlefield, not only while you control it | `Duration::WhileSourceOnBattlefield` has no control rider |
 | 🟡 Cosmic Rebirth | a mana value 3 or less card always goes onto the battlefield (the "you may" isn't asked) | `ZoneDest::IfCard` |
