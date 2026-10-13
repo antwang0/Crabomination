@@ -16934,7 +16934,7 @@ impl GameState {
                         .iter()
                         .filter(|c| {
                             self.requirement_on_permanent(
-                                filter, c, card.controller, None, &gates,
+                                filter, c, card.controller, Some(card.id), &gates,
                             )
                         })
                         .count() as i32;
