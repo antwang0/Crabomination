@@ -7014,6 +7014,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WILSON_COMMANDERS,
             main: decks::WILSON_MAIN,
         },
+        // Seat 1094: Titania, Nature's Force's EDHREC average deck. `--pod-decks 1094`.
+        PodDeck {
+            name: "Titania, Nature's Force (G)",
+            commanders: decks::TITANIA_2_COMMANDERS,
+            main: decks::TITANIA_2_MAIN,
+        },
+        // Seat 1095: Titania, Voice of Gaea's EDHREC average deck. `--pod-decks 1095`.
+        PodDeck {
+            name: "Titania, Voice of Gaea (G)",
+            commanders: decks::TITANIA_3_COMMANDERS,
+            main: decks::TITANIA_3_MAIN,
+        },
+        // Seat 1096: Queen Kayla bin-Kroog's EDHREC average deck. `--pod-decks 1096`.
+        PodDeck {
+            name: "Queen Kayla bin-Kroog (WR)",
+            commanders: decks::QUEEN_KAYLA_BIN_KROOG_COMMANDERS,
+            main: decks::QUEEN_KAYLA_BIN_KROOG_MAIN,
+        },
+        // Seat 1097: Jackal, Genius Geneticist's EDHREC average deck. `--pod-decks 1097`.
+        PodDeck {
+            name: "Jackal, Genius Geneticist (UG)",
+            commanders: decks::JACKAL_COMMANDERS,
+            main: decks::JACKAL_MAIN,
+        },
+        // Seat 1098: Lluwen, Imperfect Naturalist's EDHREC average deck. `--pod-decks 1098`.
+        PodDeck {
+            name: "Lluwen, Imperfect Naturalist (BG)",
+            commanders: decks::LLUWEN_COMMANDERS,
+            main: decks::LLUWEN_MAIN,
+        },
+        // Seat 1099: Marvin, Murderous Mimic's EDHREC average deck. `--pod-decks 1099`.
+        PodDeck {
+            name: "Marvin, Murderous Mimic (C)",
+            commanders: decks::MARVIN_COMMANDERS,
+            main: decks::MARVIN_MAIN,
+        },
+        // Seat 1100: Tawnos, Solemn Survivor's EDHREC average deck. `--pod-decks 1100`.
+        PodDeck {
+            name: "Tawnos, Solemn Survivor (WUB)",
+            commanders: decks::TAWNOS_2_COMMANDERS,
+            main: decks::TAWNOS_2_MAIN,
+        },
+        // Seat 1101: Inniaz, the Gale Force's EDHREC average deck. `--pod-decks 1101`.
+        PodDeck {
+            name: "Inniaz, the Gale Force (WU)",
+            commanders: decks::INNIAZ_COMMANDERS,
+            main: decks::INNIAZ_MAIN,
+        },
     ]
 }
 
@@ -9897,6 +9945,14 @@ mod tests {
             ("Mirko Vosk, Mind Drinker", &[0x0E58]),
             ("Purphoros, Bronze-Blooded", &[0x0E59]),
             ("Wilson, Refined Grizzly and Flaming Fist", &[0x0E5A]),
+            ("Titania, Nature's Force", &[0x0E5B]),
+            ("Titania, Voice of Gaea", &[0x0E5C]),
+            ("Queen Kayla bin-Kroog", &[0x0E5D]),
+            ("Jackal, Genius Geneticist", &[0x0E5E]),
+            ("Lluwen, Imperfect Naturalist", &[0x0E5F]),
+            ("Marvin, Murderous Mimic", &[0x0E60]),
+            ("Tawnos, Solemn Survivor", &[0x0E61]),
+            ("Inniaz, the Gale Force", &[0x0E62]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
