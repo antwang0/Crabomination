@@ -306,10 +306,11 @@ impl GameState {
     pub(crate) fn effect_token_estimate(&self, e: &crate::effect::Effect, ctx: &EffectContext) -> i64 {
         use crate::effect::Effect;
         match e {
-            Effect::CreateToken { count, .. } | Effect::CreateTokenCopyOf { count, .. } => {
-                i64::from(self.evaluate_value(count, ctx).max(0))
-            }
+            Effect::CreateToken { count, .. }
+            | Effect::CreateTokenCopyOf { count, .. }
+            | Effect::CreateTokenAttacking { count, .. } => i64::from(self.evaluate_value(count, ctx).max(0)),
             Effect::Populate { .. } => 1,
+            Effect::MayDo { body, .. } => self.effect_token_estimate(body, ctx),
             Effect::Investigate { body } => self.effect_token_estimate(body, ctx),
             Effect::Seq(es) => es.iter().map(|e| self.effect_token_estimate(e, ctx)).sum(),
             // A branch the estimate can't settle is priced at its larger arm.
@@ -433,12 +434,50 @@ impl GameState {
                 scales |= e > 0 && has_for_each(&t.effect);
             }
         }
+        // Isshin doubles every attack-caused trigger (CR 603.2d) besides the
+        // ally/type doublers.
         let fires = if n > 0 {
             1 + crate::game::actions::ally_trigger_extra_fires(self, c.controller, attacker)
+                + self.attack_trigger_extra_fires(c.controller)
         } else {
             1
         };
-        (n, scales, fires)
+        // Another permanent's "whenever a [Warrior] attacks" (Najeela, the
+        // Blade-Blossom) mints for this attacker too, once per fire of its own
+        // source — Isshin doubled a Najeela pod's Warriors past the board
+        // bound in one combat (8-seat sweep seed 990448). Added to every fire
+        // of the attacker's own triggers: an over-count only trims more. Read
+        // only on a board already big enough for one combat to near the bound.
+        let controller = c.controller;
+        let mut other = 0i64;
+        let crowded = self.battlefield.len() >= crate::recommend::BOARD_GATE / 16;
+        for src in self.battlefield.iter().filter(|s| crowded && s.id != attacker) {
+            for t in &src.definition.triggered_abilities {
+                let scoped = match t.event.scope {
+                    crate::card::EventScope::AnyPlayer => true,
+                    crate::card::EventScope::YourControl | crate::card::EventScope::AnotherOfYours => {
+                        src.controller == controller
+                    }
+                    _ => false,
+                };
+                if t.event.kind != crate::card::EventKind::Attacks || !scoped {
+                    continue;
+                }
+                let mut tctx = EffectContext::for_trigger(src.id, src.controller, None, 0);
+                tctx.trigger_source = Some(EntityRef::Permanent(attacker));
+                if t.event.filter.as_ref().is_some_and(|f| !self.evaluate_predicate(f, &tctx)) {
+                    continue;
+                }
+                let e = self.effect_token_estimate(&t.effect, &tctx);
+                if e > 0 {
+                    let fires = 1
+                        + crate::game::actions::ally_trigger_extra_fires(self, src.controller, src.id)
+                        + self.attack_trigger_extra_fires(src.controller);
+                    other += e * fires as i64;
+                }
+            }
+        }
+        (n + other, scales, fires)
     }
 
     pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {

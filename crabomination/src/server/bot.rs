@@ -31021,6 +31021,34 @@ mod stack_response_tests {
         assert!(pick_copy_response(&g, 0, &EvalWeights::default()).is_none(), "a full board doesn't");
     }
 
+    /// The board-bound trim counts another permanent's "whenever a Warrior
+    /// attacks" token and Isshin's doubling: Najeela under Isshin ran an
+    /// 8-seat pod past the bound in one combat (sweep seed 990448).
+    #[test]
+    fn board_bound_attacks_counts_najeela_under_isshin() {
+        let mut g = crate::game::multi_player_game(2);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        for def in [catalog::najeela_the_blade_blossom(), catalog::isshin_two_heavens_as_one()] {
+            let id = g.add_card_to_battlefield(0, def);
+            g.clear_sickness(id);
+        }
+        let attacks: Vec<Attack> = (0..300)
+            .map(|_| {
+                let id = g.add_card_to_battlefield(0, catalog::goblin_piker());
+                g.clear_sickness(id);
+                Attack { attacker: id, target: AttackTarget::Player(1) }
+            })
+            .collect();
+        for _ in 0..100 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        let start = g.battlefield.len();
+        let kept = board_bound_attacks(&g, attacks);
+        assert!(start + 2 * kept.len() <= crate::recommend::BOARD_GATE, "{} kept from {start}", kept.len());
+        assert!(kept.len() > 100, "the trim keeps what fits");
+    }
+
     /// CR 707.10 — Stella Lee copies the bot's own Divination with her
     /// "{T}: copy target instant or sorcery spell you control" once three
     /// spells are cast this turn, and not before.
