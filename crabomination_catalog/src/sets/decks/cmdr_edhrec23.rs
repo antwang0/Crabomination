@@ -322,3 +322,108 @@ pub fn vaevictis_asmadi_the_dire() -> CardDefinition {
         )
     }
 }
+
+/// Desert Were-Worm — {4}{R}{R} 0/5 Dragon Wurm. +2/+0 per Mountain you
+/// control. The first time each turn you attack with total power 12 or more,
+/// untap the attackers; an additional combat phase follows this one.
+pub fn desert_were_worm() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +2/+0 for each Mountain you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: R::HasLandType(crate::card::LandType::Mountain),
+                per_power: 2,
+                per_toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                once_per_turn: true,
+                ..EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(
+                    Predicate::AttackedWithTotalPowerAtLeast { who: PlayerRef::You, at_least: 12 },
+                )
+            },
+            effect: Effect::Seq(vec![
+                Effect::Untap {
+                    what: Selector::EachPermanent(R::IsAttacking.and(R::ControlledByYou)),
+                    up_to: None,
+                },
+                Effect::AdditionalCombatPhase { count: Value::ONE },
+            ]),
+        }],
+        ..creature("Desert Were-Worm", cost(&[generic(4), r(), r()]), vec![CreatureType::Dragon, CreatureType::Wurm], 0, 5)
+    }
+}
+
+/// Thicket Crasher — {3}{G} 4/3 Elemental Rhino, trample. Other Elementals
+/// you control have trample.
+pub fn thicket_crasher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Other Elementals you control have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Elemental).and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..creature("Thicket Crasher", cost(&[generic(3), g()]), vec![CreatureType::Elemental, CreatureType::Rhino], 4, 3)
+    }
+}
+
+/// Thorn Mammoth — {5}{G}{G} 6/6 Elephant, trample. Whenever it or another
+/// creature you control enters, it fights up to one target creature you don't
+/// control.
+pub fn thorn_mammoth() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Fight {
+                    attacker: Selector::This,
+                    defender: target_filtered(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))),
+                }),
+            },
+        }],
+        ..creature("Thorn Mammoth", cost(&[generic(5), g(), g()]), vec![CreatureType::Elephant], 6, 6)
+    }
+}
+
+/// Elminster's Simulacrum — {4}{U}{U} instant. For each opponent, a token
+/// copy of up to one target creature that player controls.
+pub fn elminsters_simulacrum() -> CardDefinition {
+    CardDefinition {
+        name: "Elminster's Simulacrum",
+        cost: cost(&[generic(4), crate::mana::u(), crate::mana::u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ForEachOpponentTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Creature.and(R::ControlledByOpponent),
+                effect: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::Target(0),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                }),
+            }),
+        },
+        ..Default::default()
+    }
+}

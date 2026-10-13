@@ -275,3 +275,56 @@ fn vaevictis_sacrifices_and_redeploys() {
     assert_eq!(wurm.controller, 1);
     assert_eq!(g.players[2].library.len(), 1, "the Bolt stays on top");
 }
+
+/// Desert Were-Worm grows per Mountain; a 12-power attack untaps the
+/// attackers and banks an extra combat, once a turn.
+#[test]
+fn desert_were_worm_extra_combat_at_twelve_power() {
+    let mut g = pod(2);
+    for _ in 0..6 {
+        ready(&mut g, 0, catalog::mountain());
+    }
+    let worm = ready(&mut g, 0, catalog::desert_were_worm());
+    assert_eq!(pt(&g, worm), (12, 5));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: worm, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(worm).unwrap().tapped, "untapped");
+    assert_eq!(g.additional_combat_phases, 1);
+}
+
+/// Thorn Mammoth fights when another creature of yours enters.
+#[test]
+fn thorn_mammoth_fights_on_entries() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::thorn_mammoth());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast(&mut g, 0, elf, &[]).expect("cast");
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "the Mammoth fought the bear");
+}
+
+/// Thicket Crasher gives other Elementals trample.
+#[test]
+fn thicket_crasher_lends_trample() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::thicket_crasher());
+    let other = ready(&mut g, 0, catalog::thicket_crasher());
+    let champ = ready(&mut g, 0, catalog::champion_of_the_path());
+    assert!(g.computed_permanent(champ).unwrap().keywords().contains(&Keyword::Trample));
+    assert!(g.computed_permanent(other).unwrap().keywords().contains(&Keyword::Trample));
+}
+
+/// Elminster's Simulacrum copies one creature per opponent.
+#[test]
+fn elminsters_simulacrum_copies_per_opponent() {
+    let mut g = pod(3);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 2, catalog::hill_giant());
+    let id = g.add_card_to_hand(0, catalog::elminsters_simulacrum());
+    cast(&mut g, 0, id, &[Target::Permanent(a), Target::Permanent(b)]).expect("cast");
+    let mine: Vec<&str> = g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token).map(|c| c.definition.name).collect();
+    assert_eq!(mine.len(), 2, "{mine:?}");
+}
