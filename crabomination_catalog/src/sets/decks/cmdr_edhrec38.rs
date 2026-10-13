@@ -46,12 +46,13 @@ fn you_are_monarch() -> Predicate {
 /// that many +1/+1 counters.
 pub fn jared_carthalion_true_heir() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::BecomeMonarch {
-                who: PlayerRef::ControllerOf(Box::new(Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer })),
-            },
-            Effect::CantBecomeMonarchThisTurn { who: PlayerRef::You },
-        ]))],
+        triggered_abilities: vec![etb(Effect::TargetPlayerThen {
+            filter: R::OpponentPlayer,
+            then: Box::new(Effect::Seq(vec![
+                Effect::BecomeMonarch { who: PlayerRef::Target(0) },
+                Effect::CantBecomeMonarchThisTurn { who: PlayerRef::You },
+            ])),
+        })],
         static_abilities: vec![StaticAbility {
             description: "If damage would be dealt to Jared Carthalion while you're the monarch, prevent that \
                           damage and put that many +1/+1 counters on it.",
