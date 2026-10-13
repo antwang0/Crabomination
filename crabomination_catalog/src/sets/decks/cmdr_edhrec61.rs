@@ -1,5 +1,5 @@
-//! Commander: EDHREC ranks 2001-2500, two-card gaps — Anax and Cymede (Cleon,
-//! Emerge Unscathed), Fumiko the Lowblood (Bloodmark Mentor, Slumbering
+//! Commander: EDHREC ranks 2001-2500, two-card gaps — Anax and Cymede (Cleon;
+//! Emerge Unscathed is `cmdr_rank2k_j`'s), Fumiko the Lowblood (Bloodmark Mentor, Slumbering
 //! Dragon), Celestial Kirin (Katilda, Faith's Reward) and Kataki (Treasure
 //! Keeper, Faith's Reward). Tests in `tests/recent_b/cmdr_edhrec61.rs`.
 
@@ -9,7 +9,7 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{heroic, on_dies, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
+use crate::effect::{Effect, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -44,22 +44,6 @@ pub fn cleon_merry_champion() -> CardDefinition {
             uncast_penalty: None,
         })],
         ..legend("Cleon, Merry Champion", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Soldier], 2, 2)
-    }
-}
-
-/// Emerge Unscathed — {W} instant. Target creature you control gains
-/// protection from the color of your choice until end of turn. Rebound.
-pub fn emerge_unscathed() -> CardDefinition {
-    CardDefinition {
-        name: "Emerge Unscathed",
-        cost: cost(&[w()]),
-        card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Rebound],
-        effect: Effect::GrantProtectionFromChosenColor {
-            what: target_filtered(R::Creature.and(R::ControlledByYou)),
-            duration: Duration::EndOfTurn,
-        },
-        ..Default::default()
     }
 }
 

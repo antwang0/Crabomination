@@ -4151,7 +4151,6 @@ static DECKS: &[Factory] = &[
     super::decks::ionize,
     // cmdr_edhrec61 (session 01VkPyqk)
     super::decks::cleon_merry_champion,
-    super::decks::emerge_unscathed,
     super::decks::bloodmark_mentor,
     super::decks::slumbering_dragon,
     super::decks::faiths_reward,
