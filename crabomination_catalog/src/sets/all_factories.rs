@@ -3851,6 +3851,10 @@ static DECKS: &[Factory] = &[
     super::decks::borborygmos_and_fblthp,
     super::decks::fblthp_impossibly_lost,
     super::decks::fblthp_knows_the_way,
+    // cmdr_rank2k_i (session 01CwrNTA)
+    super::decks::attuma_atlantean_warlord,
+    super::decks::jin_gitaxias,
+    super::decks::the_hunger_tide_rises,
     // cmdr_rank2k_h (session 01CwrNTA)
     super::decks::bards_company,
     super::decks::blightbeetle,
