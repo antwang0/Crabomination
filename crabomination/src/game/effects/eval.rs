@@ -2298,6 +2298,11 @@ impl GameState {
                 .into_iter()
                 .filter(|p| self.players[*p].lost_life_this_turn)
                 .count() as i32,
+            Value::OpponentsDealtDamageThisTurn => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .filter(|p| self.players[*p].was_dealt_damage_this_turn)
+                .count() as i32,
             Value::MulticoloredSpellsCastThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].multicolored_spells_cast_this_turn as i32)

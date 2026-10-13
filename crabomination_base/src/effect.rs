@@ -1580,6 +1580,9 @@ pub enum Value {
     /// How many of the controller's opponents lost life this turn (Kaito,
     /// Bane of Nightmares' 0).
     OpponentsWhoLostLifeThisTurn,
+    /// How many of the controller's opponents were dealt damage this turn
+    /// (Gnoll War Band's discount). Backed by `Player.was_dealt_damage_this_turn`.
+    OpponentsDealtDamageThisTurn,
     /// Living players (the controller included) who lost life this turn —
     /// Reaper's Scythe's "a soul counter for each player who lost life this
     /// turn".

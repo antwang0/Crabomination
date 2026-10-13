@@ -387,6 +387,8 @@ pub enum CreatureType {
     Echidna,
     // Marvel (Super-Skrull).
     Skrull,
+    // Forgotten Realms (Gnoll War Band).
+    Gnoll,
 }
 
 /// Land subtypes (basic land types + others).
