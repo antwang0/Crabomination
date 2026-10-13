@@ -542,6 +542,8 @@ pub enum PlaneswalkerSubtype {
     Mordenkainen,
     // Basri Ket (Lae'zel's EDHREC deck).
     Basri,
+    // Zariel, Archduke of Avernus (Raphael's and Mishra's EDHREC decks).
+    Zariel,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

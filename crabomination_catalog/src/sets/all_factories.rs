@@ -14398,6 +14398,16 @@ static DECKS: &[Factory] = &[
     super::decks::chaos_shrines_black_crystal,
     super::decks::garland_royal_kidnapper,
     super::decks::the_enigma_jewel,
+    // cmdr_edhrec42 (session 01VkPyqk)
+    super::decks::dance_with_devils,
+    super::decks::devils_playground,
+    super::decks::zariel_archduke_of_avernus,
+    super::decks::hanweir_battlements,
+    super::decks::hanweir_the_writhing_township,
+    super::decks::tilonallis_summoner,
+    super::decks::tom_bert_and_william,
+    super::decks::bebop_and_rocksteady,
+    super::decks::part_in_friendship,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
