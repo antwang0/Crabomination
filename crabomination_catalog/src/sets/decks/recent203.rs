@@ -206,9 +206,9 @@ pub fn elenda_saint_of_dusk() -> CardDefinition {
 }
 
 /// Quilled Greatwurm — {4}{G}{G} 7/7 Wurm, Trample. Whenever a creature you
-/// control deals combat damage to a player during your turn, put that many +1/+1
-/// counters on it. (The graveyard-cast-by-removing-counters rider is approximated
-/// away.)
+/// control deals combat damage during your turn, put that many +1/+1 counters
+/// on it. (Residual: "you may cast this card from your graveyard by removing
+/// six counters from among creatures you control" is not modeled.)
 pub fn quilled_greatwurm() -> CardDefinition {
     CardDefinition {
         name: "Quilled Greatwurm",
@@ -222,11 +222,8 @@ pub fn quilled_greatwurm() -> CardDefinition {
         toughness: 7,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::YourControl,
-            )
-            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(EventKind::DealsCombatDamage, EventScope::YourControl)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::AddCounter {
                 what: Selector::TriggerSource,
                 kind: CounterType::PlusOnePlusOne,

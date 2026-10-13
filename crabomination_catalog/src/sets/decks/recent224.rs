@@ -18,7 +18,8 @@ fn ward_1() -> Keyword {
 
 /// Long River Lurker — {2}{U} 2/3 Frog Scout. Ward {1}; other Frogs you control
 /// have ward {1}; when it enters, a target creature you control can't be blocked
-/// this turn. (The "blink it after it connects" rider is not modeled.)
+/// this turn; whenever that creature deals combat damage this turn, you may
+/// exile it and return it under its owner's control.
 pub fn long_river_lurker() -> CardDefinition {
     CardDefinition {
         name: "Long River Lurker",
@@ -42,14 +43,27 @@ pub fn long_river_lurker() -> CardDefinition {
                 keyword: ward_1(),
             },
         }],
-        triggered_abilities: vec![etb(Effect::GrantKeyword {
-            what: Selector::TargetFiltered {
-                slot: 0,
-                filter: R::Creature.and(R::ControlledByYou),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
             },
-            keyword: Keyword::Unblockable,
-            duration: Duration::EndOfTurn,
-        })],
+            Effect::GrantTriggeredAbility {
+                what: Selector::Target(0),
+                trigger: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealsCombatDamage, EventScope::SelfSource),
+                    effect: Effect::MayDo {
+                        description: "Exile it and return it to the battlefield?".into(),
+                        body: Box::new(Effect::ExileAndReturnToOwner { what: Selector::This }),
+                    },
+                }),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         ..Default::default()
     }
 }

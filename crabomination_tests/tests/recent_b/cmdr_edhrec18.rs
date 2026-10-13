@@ -1414,3 +1414,36 @@ fn magmatic_galleon_makes_treasure_on_excess_damage() {
     cast(&mut g, bolt, &[perm(bear)]).unwrap();
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1);
 }
+
+/// Quilled Greatwurm — "Whenever a creature you control deals combat damage
+/// during your turn, put that many +1/+1 counters on it." (CR 510.2: damage to
+/// a blocker counts too.)
+#[test]
+fn quilled_greatwurm_counts_damage_to_blockers() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::quilled_greatwurm());
+    let tusker = ready(&mut g, 0, catalog::kalonian_tusker());
+    let chump = ready(&mut g, 1, catalog::llanowar_elves());
+    declare(&mut g, 0, &[(tusker, 1)]).unwrap();
+    block(&mut g, 1, vec![(chump, tusker)]).unwrap();
+    combat_damage(&mut g);
+    assert_eq!(pt(&g, tusker), (6, 6), "three counters from the blocked hit");
+}
+
+/// Long River Lurker — "Whenever that creature deals combat damage this turn,
+/// you may exile it. If you do, return it to the battlefield under its owner's
+/// control." (CR 603.6a; the returned creature is untapped.)
+#[test]
+fn long_river_lurker_blinks_the_unblockable_creature() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let lurker = g.add_card_to_hand(0, catalog::long_river_lurker());
+    cast(&mut g, lurker, &[perm(bear)]).unwrap();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    declare(&mut g, 0, &[(bear, 1)]).unwrap();
+    block(&mut g, 1, vec![]).unwrap();
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 18);
+    let b = g.battlefield.iter().find(|c| c.id == bear).expect("back on the battlefield");
+    assert!(!b.tapped, "returned untapped");
+}
