@@ -8763,7 +8763,7 @@ impl GameState {
         let cost = self.foretell_action_cost(p);
         let forced_only = self.players[p].manual_mana;
         // Niko Defies Destiny's mana may pay the action ("to foretell cards").
-        let kind = crate::mana::SpellKind { foretell: true, ..Default::default() };
+        let kind = crate::mana::SpellKind { foretell: true, foretell_action: true, ..Default::default() };
         let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         let mut events = receipt.auto_events;
         let mut card = self

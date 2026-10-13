@@ -733,6 +733,11 @@ pub enum SpendRestriction {
     /// `SpellKind.foretell`, set for a spell with a foretell cost and on the
     /// foretell special action's {2}.
     ForetellOnly,
+    /// "Spend this mana only to foretell a card from your hand or cast an
+    /// instant or sorcery spell" (Karfell Harbinger): the foretell special
+    /// action's {2} (`SpellKind.foretell_action`) or an instant/sorcery cast —
+    /// not a foretold card cast later.
+    ForetellActionOrInstantSorcery,
     /// "If that mana is spent on an instant or sorcery spell, that spell
     /// can't be countered." (Boseiju, Who Shelters All.) Unrestricted spend;
     /// funding an instant/sorcery stamps the cast uncounterable like
@@ -945,6 +950,7 @@ impl SpendRestriction {
             SpendRestriction::LessonOrShrineSpellsOnly => "only Lesson or Shrine spells",
             SpendRestriction::DevoidSpellsOnly => "only devoid spells",
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
+            SpendRestriction::ForetellActionOrInstantSorcery => "only to foretell or cast instants and sorceries",
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
             SpendRestriction::KnightOrEquipmentSpells => "only Knight and Equipment spells",
@@ -1080,6 +1086,9 @@ impl SpendRestriction {
             SpendRestriction::LessonOrShrineSpellsOnly => kind.lesson || kind.shrine,
             SpendRestriction::DevoidSpellsOnly => kind.devoid,
             SpendRestriction::ForetellOnly => kind.foretell,
+            SpendRestriction::ForetellActionOrInstantSorcery => {
+                kind.foretell_action || (kind.instant_or_sorcery && !kind.activating_ability)
+            }
             SpendRestriction::EquipmentOnly => kind.equipment,
             SpendRestriction::AuraOrEquipmentSpells => {
                 !kind.activating_ability && (kind.equipment || kind.aura)
@@ -1234,6 +1243,9 @@ pub struct SpellKind {
     /// Casting a spell that has foretell, or paying the foretell action's
     /// {2} (Niko Defies Destiny's chapter II mana).
     pub foretell: bool,
+    /// Paying the foretell special action itself (CR 702.143a), not a spell
+    /// with foretell (Karfell Harbinger's mana).
+    pub foretell_action: bool,
     /// Casting an Equipment spell, or activating an ability of an Equipment
     /// (Freya Crescent's "cast an Equipment spell or activate an equip ability").
     pub equipment: bool,

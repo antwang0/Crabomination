@@ -8004,6 +8004,7 @@ impl CardDefinition {
             shrine: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Shrine),
             devoid: self.keywords.has_kw(&Keyword::Devoid),
             foretell: self.foretell_cost.is_some(),
+            foretell_action: false,
             equipment: self.is_equipment(),
             vehicle: self.is_vehicle(),
             aura: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura),
