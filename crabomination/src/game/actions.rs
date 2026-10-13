@@ -14950,7 +14950,13 @@ impl GameState {
             self.players[p].free_exile_cast_used_this_turn = true;
         } else if let Some(cost) = alt_cast_cost {
             let forced_only = self.players[p].manual_mana;
-            let mut receipt = match self.try_pay_with_auto_tap_mode(p, &cost, forced_only) {
+            // The spell's own kind, so spend-restricted mana (Interdimensional
+            // Web Watch's "only to cast spells from exile") sees what it funds.
+            let kind = match self.find_card_anywhere(card_id) {
+                Some(c) => self.spell_kind_for(p, c),
+                None => crate::mana::SpellKind::default(),
+            };
+            let mut receipt = match self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind) {
                 Ok(r) => r,
                 Err(e) if zone == crate::card::Zone::Exile => self.pay_exile_cast_with_convoke(p, card_id, &cost, forced_only).ok_or(e)?,
                 Err(e) => return Err(e),

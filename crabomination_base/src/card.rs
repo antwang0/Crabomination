@@ -8024,6 +8024,7 @@ impl CardDefinition {
             // sets it.
             commander: false,
             from_graveyard: false,
+            from_exile: false,
             colors,
         }
     }

@@ -365,11 +365,13 @@ pub(crate) struct CommanderManaScry {
 impl GameState {
     /// `CardDefinition::spell_kind` plus the one field only the game can fill:
     /// CR 903.3 — whether `card` is `seat`'s own commander — and whether a
-    /// graveyard-cast permission hopped it into hand (CR 601.2a).
+    /// graveyard-cast permission hopped it into hand or it is being cast out
+    /// of exile (CR 601.2a).
     pub fn spell_kind_for(&self, seat: usize, card: &CardInstance) -> SpellKind {
         let mut kind = card.definition.spell_kind();
         kind.from_graveyard =
             self.casting_hop == Some((card.id, crate::game::HopFrom::Graveyard));
+        kind.from_exile = self.exile.iter().any(|c| c.id == card.id);
         kind.not_owned = card.owner != seat;
         kind.commander = self
             .players

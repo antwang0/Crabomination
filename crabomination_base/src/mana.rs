@@ -858,6 +858,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a spell from your graveyard." (Lord of
     /// the Forsaken.) Reads [`SpellKind::from_graveyard`].
     SpellFromGraveyard,
+    /// "Spend this mana only to cast spells from exile." (Interdimensional
+    /// Web Watch.) Reads [`SpellKind::from_exile`].
+    SpellFromExile,
     /// "Spend this mana only to cast monocolored spells of that color"
     /// (Throne of Eldraine). The color is the source's chosen one, bound when
     /// the mana is made (`ManaPayload::RestrictedToChosenColorMono`).
@@ -972,6 +975,7 @@ impl SpendRestriction {
             }
             SpendRestriction::TurnFaceUpOnly => "only turning permanents face up",
             SpendRestriction::SpellFromGraveyard => "only spells cast from your graveyard",
+            SpendRestriction::SpellFromExile => "only spells cast from exile",
             SpendRestriction::MonocoloredSpellOf(_) => "only monocolored spells of the chosen color",
             // Riders, not restrictions — the mana spends freely.
             SpendRestriction::InstantSorceryUncounterable
@@ -1132,6 +1136,7 @@ impl SpendRestriction {
             }
             SpendRestriction::TurnFaceUpOnly => kind.turning_face_up,
             SpendRestriction::SpellFromGraveyard => kind.from_graveyard,
+            SpendRestriction::SpellFromExile => kind.from_exile,
             SpendRestriction::MonocoloredSpellOf(c) => {
                 !kind.activating_ability && kind.colors == ColorSet::single(c)
             }
@@ -1286,6 +1291,9 @@ pub struct SpellKind {
     /// permission: flashback, escape, Muldrotha, …). Set by the cast paths,
     /// never by `CardDefinition::spell_kind`. Read by `SpellFromGraveyard`.
     pub from_graveyard: bool,
+    /// The spell is being cast from exile (CR 601.2a). Set by
+    /// `GameState::spell_kind_for`; read by `SpellFromExile`.
+    pub from_exile: bool,
     /// The spell's colors (empty for an ability). Read by
     /// `MonocoloredSpellOf`.
     pub colors: ColorSet,
