@@ -7776,6 +7776,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::O_KAGACHI_COMMANDERS,
             main: decks::O_KAGACHI_MAIN,
         },
+        // Seat 1221: Ekthi, Contaminator Priest's EDHREC average deck. `--pod-decks 1221`.
+        PodDeck {
+            name: "Ekthi, Contaminator Priest (W)",
+            commanders: decks::EKTHI_COMMANDERS,
+            main: decks::EKTHI_MAIN,
+        },
+        // Seat 1222: Cynette, Jelly Drover's EDHREC average deck. `--pod-decks 1222`.
+        PodDeck {
+            name: "Cynette, Jelly Drover (U)",
+            commanders: decks::CYNETTE_COMMANDERS,
+            main: decks::CYNETTE_MAIN,
+        },
+        // Seat 1223: Elda, Conjurer of Spectacle's EDHREC average deck. `--pod-decks 1223`.
+        PodDeck {
+            name: "Elda, Conjurer of Spectacle (WG)",
+            commanders: decks::ELDA_COMMANDERS,
+            main: decks::ELDA_MAIN,
+        },
     ]
 }
 
@@ -10821,6 +10839,9 @@ mod tests {
             ("Trazyn the Infinite", &[0x0ED7]),
             ("Melek, Reforged Researcher", &[0x0ED8]),
             ("O-Kagachi, Vengeful Kami", &[0x0ED9]),
+            ("Ekthi, Contaminator Priest", &[0x0EDA]),
+            ("Cynette, Jelly Drover", &[0x0EDB]),
+            ("Elda, Conjurer of Spectacle", &[0x0EDC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -34727,3 +34727,87 @@ pub const O_KAGACHI_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, island, island, mountain, mountain, plains,
     plains, plains, plains, swamp, swamp,
 ];
+
+pub const EKTHI_COMMANDERS: &[CardFactory] = &[ekthi_contaminator_priest];
+
+/// **Ekthi, Contaminator Priest**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Ekthi, Contaminator Priest (EDHREC, fetched 2026-10-13).
+pub const EKTHI_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, aettir_and_priwen, arcane_signet, argentum_armor, basilisk_collar,
+    bitterthorn_nissas_animus, blackblade_reforged, bloodforged_battle_axe, buster_sword,
+    caduceus_staff_of_hermes, colossus_hammer, commanders_plate, excalibur_sword_of_eden,
+    hulkbuster_armor, kaldra_compleat, lightning_greaves, long_lost_lances,
+    masterwork_of_ingenuity, nettlecyst, orcrist_goblin_cleaver, paradise_mantle, shadowspear,
+    skullclamp, sol_ring, stoneforge_masterwork, swiftfoot_boots, sword_of_feast_and_famine,
+    sword_of_fire_and_ice, sword_of_forge_and_frontier, sword_of_hearth_and_home,
+    sword_of_the_animist, swordsmans_steel, wrecking_ball_arm, adagia_windswept_bastion,
+    ancient_den, buried_ruin, emeria_the_sky_ruin, inventors_fair, monumental_henge,
+    rogues_passage, urzas_saga, war_room, cid_freeflier_pilot, cloud_midgar_mercenary,
+    cloudsteel_kirin, codsworth_handy_helper, danitha_capashen, elesh_norn_grand_cenobite,
+    esper_sentinel, foundry_inspector, halvar_god_of_battle, kili_the_resourceful,
+    puresteel_paladin, sram_senior_edificer, stone_haven_outfitter, stoneforge_mystic,
+    vulpine_harvester, caretakers_talent, forge_anew, intangible_virtue, land_tax, sigardas_aid,
+    akromas_will, dispatch, enlightened_tutor, flawless_maneuver, generous_gift, path_to_exile,
+    swords_to_plowshares, hour_of_reckoning, open_the_armory, sevinnes_reclamation,
+    steelshapers_gift,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const CYNETTE_COMMANDERS: &[CardFactory] = &[cynette_jelly_drover];
+
+/// **Cynette, Jelly Drover**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Cynette, Jelly Drover (EDHREC, fetched 2026-10-13).
+pub const CYNETTE_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, conjurers_closet, heraldic_banner, mind_stone, mirror_box,
+    panharmonicon, patchwork_banner, sapphire_medallion, sky_diamond, sol_ring, thought_vessel,
+    castle_vantress, myriad_landscape, mystic_sanctuary, otawara_soaring_city, reliquary_tower,
+    riptide_laboratory, archetype_of_imagination, auton_soldier, curiosity_crafter,
+    deadeye_navigator, displacer_kitten, dour_port_mage, enduring_curiosity, glasspool_mimic,
+    guard_gomazoa, man_o_war, meneldor_swift_savior, mirror_image, mulldrifter,
+    naban_dean_of_iteration, ornithopter_of_paradise, phantasmal_image,
+    sakashima_of_a_thousand_faces, shadow_puppeteers, spark_double, starfield_vocalist,
+    thassa_deep_dwelling, the_reality_chip, yshtola_rhul, coastal_piracy, endless_evil,
+    extravagant_replication, favorable_winds, gravitational_shift, kindred_discovery,
+    reconnaissance_mission, aetherize, an_offer_you_cant_refuse, arcane_denial, blur,
+    cackling_counterpart, counterspell, displace, essence_flux, ghostly_flicker, high_tide,
+    negate, planar_incision, pongify, rapid_hybridization, teferis_time_twist,
+    irenicuss_vile_duplication, of_one_mind, quantum_misalignment, quasiduplicate,
+    rite_of_replication, splash_portal, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const ELDA_COMMANDERS: &[CardFactory] = &[elda_conjurer_of_spectacle];
+
+/// **Elda, Conjurer of Spectacle**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Forests + 9 Plains = 99.
+/// Elda, Conjurer of Spectacle (EDHREC, fetched 2026-10-13).
+pub const ELDA_MAIN: &[CardFactory] = &[
+    arcane_signet, idol_of_oblivion, sol_ring, thrumming_hivepool, twinning_staff,
+    vedalken_orrery, boseiju_who_endures, bountiful_promenade, branchloft_pathway, brushland,
+    canopy_vista, command_tower, fortified_village, hushwood_verge, lush_portico,
+    overgrown_farmland, reliquary_tower, sunpetal_grove, temple_garden, windswept_heath,
+    yavimaya_cradle_of_growth, avacyns_pilgrim, beast_whisperer, birds_of_paradise,
+    brood_sliver, craterhoof_behemoth, elvish_mystic, enduring_vitality, esper_sentinel,
+    essence_sliver, eternal_witness, exalted_sunborn, fungus_sliver, fyndhorn_elves,
+    gemhide_sliver, harmonic_sliver, heartwood_storyteller, horned_sliver, llanowar_elves,
+    lucy_maclean_positively_armed, manaweft_sliver, master_of_ceremonies, might_sliver,
+    moonshaker_cavalry, muscle_sliver, nesting_dovehawk, pulmonic_sliver, quick_sliver,
+    radagast_of_rhosgobel, reflex_sliver, rumor_gatherer, sakura_tribe_elder, sidewinder_sliver,
+    silverquill_lecturer, sinew_sliver, spinneret_sliver, talon_sliver, ward_sliver,
+    witch_enchanter, wood_elves, anointed_procession, caretakers_talent, growing_ranks,
+    growing_rites_of_itlimoc, parallel_lives, song_of_the_worldsoul, beast_within,
+    druids_deliverance, heroic_intervention, path_to_exile, rootborn_defenses, second_harvest,
+    sundering_growth, swords_to_plowshares, vivien_champion_of_the_wilds, cultivate, farseek,
+    natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
