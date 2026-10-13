@@ -1596,7 +1596,8 @@ fn robber_of_the_rich_exiles_top_when_defender_has_more_cards() {
     // Defender (p1) holds 2 cards; attacker (p0) holds 0 — condition met.
     g.add_card_to_hand(1, catalog::island());
     g.add_card_to_hand(1, catalog::island());
-    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    // "exile the top card of their library" — the defending player's.
+    let top = g.add_card_to_library(1, catalog::lightning_bolt());
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
@@ -1616,7 +1617,8 @@ fn robber_of_the_rich_no_exile_when_defender_has_fewer_cards() {
     let robber = g.add_card_to_battlefield(0, catalog::robber_of_the_rich());
     g.clear_sickness(robber);
     g.add_card_to_hand(0, catalog::island()); // attacker has more — no exile
-    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    // "exile the top card of their library" — the defending player's.
+    let top = g.add_card_to_library(1, catalog::lightning_bolt());
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;

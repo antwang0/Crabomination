@@ -2096,4 +2096,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
 | 🟡 Werewolf Pack Leader | the activation sets base 5/3 and grants trample, but "and isn't a Human" is dropped — no lose-a-creature-type effect | `SetBasePT` + `GrantKeyword` |
+| 🟡 Robber of the Rich | the exiled card is castable only this turn, not "during any turn you attacked with a Rogue" | `ExileTopAndGrantMayPlay { EndOfThisTurn }` |
 | 🟡 Vaevictis Asmadi, the Dire | its per-player target is mandatory in print; `ForEachPlayerTarget` lets a seat leave one out | `ForEachPlayerTarget`'s "up to" |

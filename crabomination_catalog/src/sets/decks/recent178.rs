@@ -99,8 +99,8 @@ pub fn quick_draw_katana() -> CardDefinition {
 
 /// Salvation Swan — {3}{W} 3/3 Bird Cleric with flash and flying. Whenever this
 /// or another Bird you control enters, exile up to one target creature you
-/// control without flying and return it at the next end step. (The printed
-/// flying counter on the returned creature is approximated away.)
+/// control without flying. Return it to the battlefield under its owner's
+/// control with a flying counter on it at the beginning of the next end step.
 pub fn salvation_swan() -> CardDefinition {
     CardDefinition {
         name: "Salvation Swan",
@@ -121,14 +121,37 @@ pub fn salvation_swan() -> CardDefinition {
                 }),
             // "Up to one target" is modeled as a single target (the trigger
             // simply does nothing when you control no eligible nonflyer).
-            effect: Effect::ExileReturnNextEndStep {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::Creature
-                        .and(R::ControlledByYou)
-                        .and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
+            effect: Effect::Seq(vec![
+                Effect::Exile {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature
+                            .and(R::ControlledByYou)
+                            .and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
+                    },
                 },
-            },
+                // CR 400.7 — only the card still in exile comes back.
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::InExile },
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Move {
+                                what: Selector::Target(0),
+                                to: ZoneDest::Battlefield {
+                                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                    tapped: false,
+                                },
+                            },
+                            Effect::AddKeywordCounter {
+                                what: Selector::Target(0),
+                                keyword: Keyword::Flying,
+                                amount: Value::Const(1),
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            ]),
         }],
         ..Default::default()
     }

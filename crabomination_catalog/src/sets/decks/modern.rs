@@ -11761,14 +11761,11 @@ pub fn three_visits() -> CardDefinition {
     }
 }
 
-/// Tale's End — {1}{U} Instant. "Counter target legendary spell,
-/// activated or triggered ability from a legendary source, or saga."
+/// Tale's End — {1}{U} Instant. "Counter target activated ability,
+/// triggered ability, or legendary spell."
 ///
 /// Wired as `ChooseMode([CounterSpell(IsSpellOnStack ∧ Legendary),
-/// CounterAbility(AnyAbility)])`. AutoDecider picks mode 0 (the
-/// counter-the-legendary-spell half is the marquee use). The "saga"
-/// half collapses (no saga primitive yet) but the ability counter
-/// catches saga lore-counter triggers via `CounterAbility`.
+/// CounterAbility(AnyAbility)])`.
 pub fn tales_end() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {
@@ -22936,9 +22933,11 @@ pub fn smugglers_copter() -> CardDefinition {
 
 /// Robber of the Rich — {1}{R} Creature — Human Archer Rogue 2/2.
 /// Reach, Haste. "Whenever this attacks, if defending player has more cards
-/// in hand than you, exile the top card of your library. You may play that
-/// card this turn." (The "mana of any type" rider on the free cast collapses
-/// to the standard may-play permission.)
+/// in hand than you, exile the top card of their library. During any turn you
+/// attacked with a Rogue, you may cast that card and you may spend mana as
+/// though it were mana of any color to cast that spell." Residual: the
+/// permission lasts this turn only (not every later turn you attack with a
+/// Rogue).
 pub fn robber_of_the_rich() -> CardDefinition {
     use crate::card::{MayPlayDuration, TriggeredAbility};
     use crate::effect::{EventKind, EventScope, EventSpec, PlayerRef, Predicate, Value};
@@ -22965,7 +22964,7 @@ pub fn robber_of_the_rich() -> CardDefinition {
                     Value::Sum(vec![Value::HandSizeOf(PlayerRef::You), Value::Const(1)]),
                 ),
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
+                    who: PlayerRef::DefendingPlayer,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
                     pay_any_color: true,
@@ -36174,8 +36173,8 @@ pub fn metallic_mimic() -> CardDefinition {
     }
 }
 
-/// Bounding Krasis — {1}{G}{U} 3/3 Fish Lizard with Flash. ETB: tap target
-/// creature. (The "or untap" choice collapses to tap — the on-curve tempo line.)
+/// Bounding Krasis — {1}{G}{U} 3/3 Fish Lizard with Flash. ETB: you may tap or
+/// untap target creature.
 pub fn bounding_krasis() -> CardDefinition {
     CardDefinition {
         name: "Bounding Krasis",
@@ -67555,7 +67554,7 @@ pub fn neurok_hoversail() -> CardDefinition {
 }
 
 /// Leather Armor — {1} Equipment. Equipped creature gets +0/+1 and has ward {1}.
-/// Equip {0}. (The "once each turn" equip restriction is omitted.)
+/// Equip {0}. Activate only once each turn.
 pub fn leather_armor() -> CardDefinition {
     use crate::card::{EquipBonus, WardCost};
     CardDefinition {
