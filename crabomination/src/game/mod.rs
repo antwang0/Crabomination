@@ -3769,6 +3769,10 @@ pub struct GameState {
     /// replacement hands back isn't replaced again. Transient.
     #[serde(skip)]
     pub(crate) in_chains_replacement: bool,
+    /// CR 614.5 reentrancy guard for Scion of Halaster's first-draw
+    /// replacement — the draw it ends with isn't replaced by it again.
+    #[serde(skip)]
+    pub(crate) in_first_draw_replacement: bool,
     /// `Effect::ExileSelfWithCountdown` fired during this resolution, so the
     /// spell goes to exile with its fuse instead of the graveyard. Transient.
     #[serde(skip)]
@@ -4631,6 +4635,7 @@ impl Clone for GameState {
             in_draw_redirect: self.in_draw_redirect,
             in_damage_redirect: self.in_damage_redirect,
             in_chains_replacement: self.in_chains_replacement,
+            in_first_draw_replacement: self.in_first_draw_replacement,
             exile_resolving_spell_with_countdown: self.exile_resolving_spell_with_countdown,
             in_token_replacement: self.in_token_replacement,
             monarch: self.monarch,
@@ -4860,6 +4865,7 @@ impl GameState {
             in_draw_redirect: false,
             in_damage_redirect: false,
             in_chains_replacement: false,
+            in_first_draw_replacement: false,
             exile_resolving_spell_with_countdown: false,
             in_token_replacement: false,
             monarch: None,
@@ -22365,6 +22371,15 @@ impl GameState {
 
     /// CR 121.2a — the look-N-keep-one draw replacement `p` controls
     /// (Tomorrow, Azami's Familiar), peeled through the gating wrappers.
+    /// Scion of Halaster's first-draw replacement, live for `p`.
+    fn first_draw_mills_one_of_two(&self, p: usize) -> bool {
+        self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(self.active_static(&sa.effect, c), Some(crate::effect::StaticEffect::FirstDrawEachTurnMillsOneOfTwo))
+            })
+        })
+    }
+
     fn look_instead_of_drawing(&self, p: usize) -> Option<(u32, bool)> {
         self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
             c.definition.static_abilities.iter().find_map(|sa| {
@@ -22675,6 +22690,12 @@ impl GameState {
             }
             if self.counter_instead_of_drawing(p).is_some() {
                 applicable.push(DrawDig::CounterOnSource);
+            }
+            if !self.in_first_draw_replacement
+                && self.players[p].cards_drawn_this_turn == 0
+                && self.first_draw_mills_one_of_two(p)
+            {
+                applicable.push(DrawDig::MillOneOfTwo);
             }
             applicable.retain(|k| !declined.contains(k));
             let Some(kind) = self.choose_draw_replacement(p, &applicable) else { break };
@@ -23136,6 +23157,24 @@ impl GameState {
                 if let Ok(mut evs) = self.resolve_effect_driven(&add, &ctx) {
                     events.append(&mut evs);
                 }
+                true
+            }
+            // Scion of Halaster — mandatory: one of the top two into the
+            // graveyard, the other back on top, then the draw (not replaced by
+            // this again, CR 614.5).
+            DrawDig::MillOneOfTwo => {
+                let look = crate::effect::Effect::LookTopKeepOneRestToGraveyard {
+                    count: crate::effect::Value::Const(2),
+                    who: None,
+                    exile_rest: false,
+                    rest_bottom_random: false,
+                };
+                if let Ok(mut evs) = self.resolve_effect_driven(&look, &ctx) {
+                    events.append(&mut evs);
+                }
+                self.in_first_draw_replacement = true;
+                self.draw_one_or_deck(p, events);
+                self.in_first_draw_replacement = false;
                 true
             }
         }
@@ -34990,6 +35029,7 @@ fn static_effect_to_effects(
             // Tomorrow, Azami's Familiar — a draw replacement consulted in
             // `draw_one`; no layer effect.
             | StaticEffect::ReplaceDrawWithLookN { .. }
+            | StaticEffect::FirstDrawEachTurnMillsOneOfTwo
             | StaticEffect::ReplaceDrawWithImpulse { .. }
             | StaticEffect::ReplaceDrawWithExileFaceDownWithSource
             | StaticEffect::DrawsRevealedTaxed { .. }
@@ -36235,6 +36275,9 @@ pub(crate) enum DrawDig {
     RevealUntilKind,
     /// Pursuit of Knowledge — put a counter on the source instead.
     CounterOnSource,
+    /// Scion of Halaster — the turn's first draw: bin one of the top two, then
+    /// draw.
+    MillOneOfTwo,
 }
 
 impl DrawDig {
@@ -36247,6 +36290,7 @@ impl DrawDig {
             DrawDig::Tutor => "Search your library for a card",
             DrawDig::RevealUntilKind => "Reveal until a land or nonland card",
             DrawDig::CounterOnSource => "Put a counter on it instead",
+            DrawDig::MillOneOfTwo => "Look at the top two, bin one, then draw",
         }
     }
 }

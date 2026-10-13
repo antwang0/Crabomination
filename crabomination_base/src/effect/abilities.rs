@@ -3247,6 +3247,11 @@ pub enum StaticEffect {
     /// your library instead. Put one into your hand and the rest on the bottom
     /// in any order." (Tomorrow, Azami's Familiar.) `rest_to_graveyard`: "and
     /// the rest into your graveyard" (Underrealm Lich).
+    /// CR 121.2a / 614 — "The first time you would draw a card each turn,
+    /// instead look at the top two cards of your library. Put one of them into
+    /// your graveyard and the other back on top of your library. Then draw a
+    /// card." (Scion of Halaster's grant to your commander creatures.)
+    FirstDrawEachTurnMillsOneOfTwo,
     ReplaceDrawWithLookN {
         count: u32,
         #[serde(default)]

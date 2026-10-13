@@ -1043,6 +1043,7 @@ fn card_has_draw_static(c: &CardInstance) -> bool {
                 | S::MayDrawFromSourceExilePile
                 | S::MayReplaceDrawWithRevealUntilKind
                 | S::ReplaceDrawWithLookN { .. }
+                | S::FirstDrawEachTurnMillsOneOfTwo
                 | S::ReplaceDrawWithImpulse { .. }
                 | S::ReplaceDrawWithExileFaceDownWithSource
                 | S::ChainsOfMephistopheles

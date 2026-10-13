@@ -3756,6 +3756,10 @@ pub enum SelectionRequirement {
     /// *it*" (Corrosion's rust counters). Reads the candidate's own counters,
     /// unlike `ManaValueEqualsSourceCounters`.
     ManaValueAtMostOwnCounters(CounterType),
+    /// "…with mana value X or less, where X is the number of [kind] counters
+    /// on [this]" (Jhoira, Ageless Innovator). Concretized to
+    /// `ManaValueAtMost(n)` by `resolve_source_counters`; unresolved, false.
+    ManaValueAtMostSourceCounters(CounterType),
     /// MV ≤ the mana value of the card discarded earlier in this resolution
     /// (Argentum Masticore's reflexive destroy).
     ManaValueAtMostDiscardedThisEffect,
@@ -4692,6 +4696,7 @@ impl SelectionRequirement {
     pub fn resolve_source_counters(&self, counts: &dyn Fn(CounterType) -> u32) -> Self {
         match self {
             Self::ManaValueEqualsSourceCounters(kind) => Self::ManaValueExactly(counts(*kind)),
+            Self::ManaValueAtMostSourceCounters(kind) => Self::ManaValueAtMost(counts(*kind)),
             Self::And(a, b) => Self::And(
                 Box::new(a.resolve_source_counters(counts)),
                 Box::new(b.resolve_source_counters(counts)),

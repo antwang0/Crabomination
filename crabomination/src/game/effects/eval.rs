@@ -7564,7 +7564,7 @@ impl GameState {
             R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,
             // Unresolved source-counter MV gate (concretized at resolution
             // via `resolve_source_counters`).
-            R::ManaValueEqualsSourceCounters(_) => false,
+            R::ManaValueEqualsSourceCounters(_) | R::ManaValueAtMostSourceCounters(_) => false,
             // Corrosion — the candidate's own counters, so it reads off a
             // `CardInstance` directly.
             R::ManaValueAtMostOwnCounters(kind) => {
