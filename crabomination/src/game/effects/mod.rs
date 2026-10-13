@@ -2604,6 +2604,12 @@ impl GameState {
             .find_by_id(card_id)
             .map(|c| c.definition.name)
             .unwrap_or("");
+        // …and its own (possibly prototyped) size, for `keep_own_pt`.
+        let original_pt = self
+            .battlefield
+            .find_by_id(card_id)
+            .map(|c| (c.definition.power, c.definition.toughness))
+            .unwrap_or((0, 0));
         // Every legal copy source, never the copier itself.
         let mut candidates: Vec<(CardId, String, i32)> = if spec.from_graveyards {
             self.graveyard_copy_candidates(&spec.filter, controller)
@@ -2730,6 +2736,7 @@ impl GameState {
             || spec.non_legendary
             || spec.not_a_creature
             || spec.override_pt.is_some()
+            || spec.keep_own_pt
             || !spec.add_colors.is_empty()
             || spec.as_vehicle_crew.is_some())
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
@@ -2773,7 +2780,7 @@ impl GameState {
             }
             // CR 707.9b — "except it's 4/4" sets the base P/T, and it beats a
             // copied characteristic-defining ability (Lazotep Convert).
-            if let Some((p, t)) = spec.override_pt {
+            if let Some((p, t)) = spec.override_pt.or(spec.keep_own_pt.then_some(original_pt)) {
                 def.power = p;
                 def.toughness = t;
                 def.dynamic_pt = None;

@@ -6072,6 +6072,12 @@ pub struct EntersAsCopy {
     /// P/T (Lazotep Convert).
     #[serde(default)]
     pub override_pt: Option<(i32, i32)>,
+    /// "…and its power and toughness are equal to this creature's power and
+    /// toughness" (Hulking Metamorph): the copier's own base P/T as it
+    /// enters — its prototype size when cast prototyped (CR 702.160 +
+    /// 707.9b) — overrides the copied values.
+    #[serde(default)]
+    pub keep_own_pt: bool,
     /// CR 707.9 — "except it's black in addition to its other colors"
     /// (Lazotep Convert): colors added to the copied ones.
     #[serde(default)]
