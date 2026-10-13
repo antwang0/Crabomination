@@ -3171,6 +3171,23 @@ exile pays with its spell kind. Release `bot_ladder` at `86a7e43cd`, Xeon @ 2.10
                  peak_rss 31.7 MiB; games_per_s 344.34 (one run, not a reading)
 pools (1200/arch) seed 9301: cube 9,590 + 10 CR 104.4 draws / sos 6,000 / sealed 14,400 — 0 stalls
 pods (debug)     22 blocks, 4/6 seats, ~550 games: one panic (fixed, 3ce9a8490), one CR 104.4a draw
+### 2026-10-13 (Commander run, `01NRsiVW`, third firing, seats 1198-1202) — guardrail; five primitives, one loop watch
+
+Hot-path touch: the SBA destroy path asks `has_regeneration` (one static
+walk on a creature that would be destroyed); a sacrifice ORs a type mask onto
+its player; `note_growth_loop` compares one more depth. Release `bot_ladder`
+at `784b1eef2`, Xeon @ 2.10 GHz (4 cores), toolchain 1.99.0.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok; peak_rss 33.5 MiB
+pod sweep        release seed 113, 4 seats over 1170-1202: 4,320 games, 12 undecided
+                 (8 CR 104.4b draws; 4 action caps, the Konrad/Mindskinner stack loop —
+                 now a draw at ~12.5k actions, debug re-run of games 153 and 162)
+suite            25,851 / 0 / 5; lib 988 and core_rules 2,750 after the loop watch;
+                 workspace clippy 0 after two; release-fast check clean
+```
+
 ### 2026-10-13 (Commander run, `01NRsiVW`, third firing) — guardrail; 16 EDHREC seats, eight primitives, one bot fix
 
 Hot-path touch: `event_actor` checks one more `DamageDealt` shape before its
