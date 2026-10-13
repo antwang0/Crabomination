@@ -9728,6 +9728,14 @@ impl GameState {
         {
             out.push(GameEvent::CardPutIntoGraveyard { player: owner, card_id: id, is_land });
         }
+        // CR 603.10a — the dying creature's mana value is the event amount,
+        // for the auto-target pick as for the resolution (Orah's "Cleric card
+        // with lesser mana value" when Orah herself is destroyed), as the
+        // state-based death funnel already binds it.
+        let died_ev_amount = self.event_amount_for(&GameEvent::CreatureDied { card_id: id });
+        if !leave_triggers.is_empty() {
+            self.trigger_event_amount_scratch = died_ev_amount;
+        }
         for (source, effect, controller, filter) in leave_triggers {
             // CR 603.4/603.10a — a filtered self-death trigger checks its
             // intervening filter against the dying creature (bound as
@@ -9740,7 +9748,7 @@ impl GameState {
                     &GameEvent::CreatureDied { card_id: id },
                     &EventKind::CreatureDied,
                 );
-                ctx.event_amount = self.event_amount_for(&GameEvent::CreatureDied { card_id: id });
+                ctx.event_amount = died_ev_amount;
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
                 }
@@ -9769,7 +9777,7 @@ impl GameState {
                         controller,
                         effect,
                         subject: Some(crate::game::effects::EntityRef::Permanent(id)),
-                        event_amount: self.event_amount_for(&GameEvent::CreatureDied { card_id: id }),
+                        event_amount: died_ev_amount,
                         mode: None,
                         intervening_if: None,
                         actor: None,
@@ -9792,6 +9800,7 @@ impl GameState {
                         .additional_targets(additional)
                         .mode(mode)
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
+                        .event_amount(died_ev_amount)
                         .build(),
                 );
             }
