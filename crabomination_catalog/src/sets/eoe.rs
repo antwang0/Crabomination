@@ -7955,7 +7955,9 @@ pub fn dyadrine_synthesis_amalgam() -> CardDefinition {
 }
 
 /// Zero Point Ballad — {X}{B} Sorcery. Destroy all creatures with toughness X
-/// or less. You lose X life. (The "if X is 6+, reanimate one" rider is dropped.)
+/// or less. You lose X life. If X is 6 or more, return a creature card put into
+/// a graveyard this way to the battlefield under your control (your choice,
+/// CR 608.2d).
 pub fn zero_point_ballad() -> CardDefinition {
     CardDefinition {
         name: "Zero Point Ballad",
@@ -7978,6 +7980,21 @@ pub fn zero_point_ballad() -> CardDefinition {
             Effect::LoseLife {
                 who: Selector::You,
                 amount: Value::XFromCost,
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(6)),
+                then: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::DestroyedThisResolution {
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                    },
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Move {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                    other: Box::new(Effect::Noop),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()

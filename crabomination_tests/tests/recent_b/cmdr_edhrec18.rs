@@ -1447,3 +1447,21 @@ fn long_river_lurker_blinks_the_unblockable_creature() {
     let b = g.battlefield.iter().find(|c| c.id == bear).expect("back on the battlefield");
     assert!(!b.tapped, "returned untapped");
 }
+
+/// Zero Point Ballad — "If X is 6 or more, return a creature card put into a
+/// graveyard this way to the battlefield under your control." (CR 608.2d.)
+#[test]
+fn zero_point_ballad_reanimates_at_x_six() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let zpb = g.add_card_to_hand(0, catalog::zero_point_ballad());
+    cast_full(&mut g, 0, zpb, &[], None, Some(6)).unwrap();
+    let back = g.battlefield.iter().find(|c| c.id == theirs).expect("returned");
+    assert_eq!(back.controller, 0, "under your control");
+    // X below six returns nothing.
+    let mut g = pod(2);
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let zpb = g.add_card_to_hand(0, catalog::zero_point_ballad());
+    cast_full(&mut g, 0, zpb, &[], None, Some(5)).unwrap();
+    assert!(g.battlefield.iter().all(|c| c.id != theirs));
+}

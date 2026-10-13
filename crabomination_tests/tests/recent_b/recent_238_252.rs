@@ -718,7 +718,9 @@ mod recent239 {
         let t = &def.triggered_abilities[0];
         assert_eq!(t.event.kind, EventKind::BecameTarget);
         assert!(t.event.once_per_turn, "first time each turn");
-        match &t.effect {
+        // Your turn: onto the battlefield; otherwise into your hand.
+        let Effect::If { then, .. } = &t.effect else { panic!("not turn-routed") };
+        match &**then {
             Effect::LookPickToHand(lp)
                 if lp.pick_filter.is_some() && lp.to_battlefield && lp.rest_bottom_random =>
             {
@@ -734,6 +736,13 @@ mod recent239 {
         g.resolve_effect(&t.effect, &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
         drain_stack(&mut g);
         assert!(g.battlefield.iter().any(|c| c.id == small), "small creature deployed");
+        // On an opponent's turn the creature goes to hand instead.
+        g.active_player_idx = 1;
+        let second = g.add_card_to_library(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![second])]));
+        g.resolve_effect(&t.effect, &EffectContext::for_trigger(src, 0, None, 0)).unwrap();
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == second), "to hand off-turn");
     }
 
     /// Hollow Marauder costs less per graveyard creature, and its ETB draws only

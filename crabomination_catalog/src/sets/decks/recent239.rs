@@ -734,9 +734,9 @@ pub fn rockface_village() -> CardDefinition {
 
 /// Whiskervale Forerunner — {3}{W} Mouse Bard 3/4. Valiant — the first time it
 /// becomes the target of your spell/ability each turn, look at the top five,
-/// reveal a creature card with mana value 3 or less, and put it onto the
-/// battlefield (approximating the "if it's your turn, else hand" routing);
-/// bottom the rest at random.
+/// you may reveal a creature card with mana value 3 or less — onto the
+/// battlefield if it's your turn, into your hand otherwise; bottom the rest at
+/// random.
 pub fn whiskervale_forerunner() -> CardDefinition {
     CardDefinition {
         name: "Whiskervale Forerunner",
@@ -748,15 +748,24 @@ pub fn whiskervale_forerunner() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![valiant(Effect::LookPickToHand(Box::new(LookPick {
-            who: PlayerRef::You,
-            count: Value::Const(5),
-            pick_filter: Some(R::Creature.and(R::ManaValueAtMost(3))),
-            to_battlefield: true,
-            optional: true,
-            rest_bottom_random: true,
-    ..Default::default()
-})))],
+        triggered_abilities: vec![valiant({
+            let look = |to_battlefield| {
+                Effect::LookPickToHand(Box::new(LookPick {
+                    who: PlayerRef::You,
+                    count: Value::Const(5),
+                    pick_filter: Some(R::Creature.and(R::ManaValueAtMost(3))),
+                    to_battlefield,
+                    optional: true,
+                    rest_bottom_random: true,
+                    ..Default::default()
+                }))
+            };
+            Effect::If {
+                cond: Predicate::IsTurnOf(PlayerRef::You),
+                then: Box::new(look(true)),
+                else_: Box::new(look(false)),
+            }
+        })],
         ..Default::default()
     }
 }
