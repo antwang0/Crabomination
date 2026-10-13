@@ -5572,6 +5572,12 @@ pub enum Effect {
     /// inside its `PayAnyEnergy`). A headless seat takes the wheel when its
     /// hand is smaller than `amount`.
     EachPlayerMayExileHandDraw { amount: Value, play_if_at_least: u32 },
+    /// "Each player gains control of a nonland permanent of your choice
+    /// controlled by the player to their right" (Inniaz, the Gale Force): the
+    /// controller picks one `filter` permanent from each living seat's right
+    /// neighbour (CR 101.4 — the previous seat), then every pick changes
+    /// control at once, for good.
+    EachPlayerGainsChosenFromRightNeighbor { filter: SelectionRequirement },
     /// "Sacrifice/return this unless you pay {E}…" (CR 107.16). Pays `amount`
     /// energy if the controller can afford it; otherwise resolves `otherwise`
     /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when

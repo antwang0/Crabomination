@@ -6205,6 +6205,10 @@ pub enum AdditionalCastCost {
     /// (Soulblast). Concretized to a `SacrificePermanent` of the live count at
     /// cast time.
     SacrificeAll { filter: SelectionRequirement },
+    /// "As an additional cost to cast this spell, sacrifice half the
+    /// [filter] you control, rounded up" (Tectonic Split). Concretized to a
+    /// `SacrificePermanent` of half the live count at cast time.
+    SacrificeHalfRoundedUp { filter: SelectionRequirement },
     /// "As an additional cost, discard N card(s)." When `filter` is set, the
     /// discard is restricted to matching cards ("discard a land card" —
     /// Magmatic Insight); `None` allows any card (Big Score, Illuminate

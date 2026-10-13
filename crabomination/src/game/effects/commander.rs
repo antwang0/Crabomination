@@ -733,6 +733,63 @@ impl GameState {
         }
     }
 
+    /// `Effect::EachPlayerGainsChosenFromRightNeighbor` (Inniaz, the Gale
+    /// Force). For each living seat in turn order, the controller picks one
+    /// matching permanent its right neighbour (the previous living seat)
+    /// controls; then each pick moves to that seat at once. A headless
+    /// controller takes the best permanent for itself and hands each other
+    /// seat the cheapest.
+    pub(crate) fn each_player_gains_chosen_from_right(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        ctx: &crate::game::effects::EffectContext,
+        effect: &crate::effect::Effect,
+    ) {
+        use crate::game::types::Target;
+        let me = ctx.controller;
+        let source = ctx.source.unwrap_or(crate::card::CardId(0));
+        let n = self.players.len();
+        let mut cursor = 0;
+        let mut moves: Vec<(crate::card::CardId, usize)> = Vec::new();
+        for seat in self.seats_in_turn_order_from(me) {
+            let Some(right) = (1..n).map(|k| (seat + n - k) % n).find(|&q| self.players[q].is_alive()) else {
+                continue;
+            };
+            if right == seat {
+                continue;
+            }
+            let mut legal: Vec<(u32, crate::card::CardId)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == right)
+                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), me, Some(source)))
+                .map(|c| (c.definition.cost.cmc(), c.id))
+                .collect();
+            if legal.is_empty() {
+                continue;
+            }
+            // Best first for the controller's own take, cheapest first for
+            // what the others get; the decider's default is the head.
+            legal.sort_by_key(|&(mv, id)| (if seat == me { u32::MAX - mv } else { mv }, id.0));
+            let legal: Vec<Target> = legal.into_iter().map(|(_, id)| Target::Permanent(id)).collect();
+            let Some(Target::Permanent(id)) = self.ask_seat_target_logged(
+                &mut cursor,
+                me,
+                format!("Choose a permanent for P{seat} from P{right}"),
+                source,
+                legal,
+                effect,
+            ) else {
+                return;
+            };
+            moves.push((id, seat));
+        }
+        self.clear_answer_log();
+        for (id, seat) in moves {
+            self.change_control(id, seat);
+        }
+    }
+
     /// `Effect::EachPlayerMayExileHandDraw` (Wheel of Potential). Each living
     /// seat from the controller on (CR 101.4) chooses; then each one that
     /// said yes exiles its hand and draws. Past the threshold the controller

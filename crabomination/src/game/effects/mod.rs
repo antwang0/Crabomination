@@ -16662,6 +16662,11 @@ impl GameState {
                 self.each_player_may_exile_hand_draw(amount, *play_if_at_least, ctx, events, effect)
             }
 
+            Effect::EachPlayerGainsChosenFromRightNeighbor { filter } => {
+                self.each_player_gains_chosen_from_right(filter, ctx, effect);
+                Ok(())
+            }
+
             Effect::ExileUntilNonlandToHandRepeat { again_at_least, damage_each } => {
                 // Demonlord Belzenlok — dig to a nonland, take it, and go
                 // again while the take costs `again_at_least` or more.

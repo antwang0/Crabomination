@@ -1029,6 +1029,7 @@ impl Effect {
             | Effect::ExileTopUntilNonland { .. }
             | Effect::ExileUntilNonlandToHandRepeat { .. }
             | Effect::EachPlayerMayExileHandDraw { .. }
+            | Effect::EachPlayerGainsChosenFromRightNeighbor { .. }
             | Effect::TapAnyNumberThenCounters { .. }
             | Effect::TapAnyNumberThenDraw { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }

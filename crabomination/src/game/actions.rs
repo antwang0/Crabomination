@@ -11331,6 +11331,7 @@ impl GameState {
         // picked the count as the cast's X — concretize into the shared
         // SacrificePermanent payment path.
         for c in additional_costs.iter_mut() {
+            let half = matches!(c, crate::card::AdditionalCastCost::SacrificeHalfRoundedUp { .. });
             match c {
                 crate::card::AdditionalCastCost::SacrificeAnyNumber { filter } => {
                     *c = crate::card::AdditionalCastCost::SacrificePermanent {
@@ -11340,7 +11341,8 @@ impl GameState {
                 }
                 // "Sacrifice all [filter] you control" (Soulblast) — the count
                 // is whatever the caster has right now.
-                crate::card::AdditionalCastCost::SacrificeAll { filter } => {
+                crate::card::AdditionalCastCost::SacrificeAll { filter }
+                | crate::card::AdditionalCastCost::SacrificeHalfRoundedUp { filter } => {
                     let count = self
                         .battlefield
                         .iter()
@@ -11354,6 +11356,8 @@ impl GameState {
                                 )
                         })
                         .count() as u32;
+                    // CR 107.1a — "half, rounded up".
+                    let count = if half { count.div_ceil(2) } else { count };
                     *c = crate::card::AdditionalCastCost::SacrificePermanent {
                         filter: filter.clone(),
                         count,
@@ -12106,7 +12110,7 @@ impl GameState {
             // "Sacrifice one or more" — zero is a legal choice, so the cost
             // is always payable (the cast pipeline concretizes it into a
             // counted SacrificePermanent before payment).
-            A::SacrificeAnyNumber { .. } | A::SacrificeAll { .. } => true,
+            A::SacrificeAnyNumber { .. } | A::SacrificeAll { .. } | A::SacrificeHalfRoundedUp { .. } => true,
             A::Discard { count, filter } => {
                 self.players[p]
                     .hand
@@ -12336,6 +12340,7 @@ impl GameState {
                 // path etc.) means count 0 — no-op.
                 A::SacrificeAnyNumber { .. }
                 | A::SacrificeAll { .. }
+                | A::SacrificeHalfRoundedUp { .. }
                 | A::DiscardXFromCost
                 | A::DiscardXRandomFromCost
                 | A::PayLifeX
