@@ -144,6 +144,11 @@ the handoff.
 - **Seats 1203-1208** (Omarthis, Setzer, Kaza, Atemsis, Serah Farron, Lazav Wearer of Faces):
   twelve cards in `decks::cmdr_edhrec33`. **Primitives:** `Value::DistinctManaValuesInHand`,
   `SpendRestriction::InstantSorceryOrKicked` (+ `SpellKind.kicked`).
+- **Seats 1209-1215** (Niv-Mizzet Reborn, Horde of Notions, Trelasarra, Shanna, Niv-Mizzet Supreme,
+  Varolz, Ramses): seventeen cards in `decks::cmdr_edhrec34`. **Primitives:**
+  `StaticEffect::GraveyardCardsHaveJumpStart` (CR 702.133, `effective_jump_start`; the bot's recast
+  block reads it behind a `BoardFacts` flag), `Effect::MayPayXUpTo` (Shanna's capped X). Cosmic
+  Rebirth always takes its "you may put it onto the battlefield" (INCOMPLETE_CARDS).
 - **FIXED — three bug classes the batch found:** (1) `EventKind::CrewsOrSaddles` baked "during
   your main phase" into every crew/saddle trigger — six cards that print no rider (Gearshift Ace,
   Veteran Motorist, Mobilizer Mech, Ghost Ark, Mighty Servant of Leuk-o, Stubborn Burrowfiend)
