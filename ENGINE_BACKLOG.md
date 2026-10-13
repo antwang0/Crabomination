@@ -255,6 +255,8 @@ the handoff.
   the resolution, `scratch.mirrormind_active`), `Effect::MayCastCreatureFromGraveyardThisTurnAs`
   (The Tomb of Aclazotz's finality + Vampire rider). Lim-Dûl's Hex's "{B} or {3}" is two nested
   taxes — audited safe (`no_shipped_card_nests_two_answer_log_arms`).
+- **Sweep seed 113 (4,320 four-seat games over 1170-1202): 12 undecided** — 8 CR 104.4b draws
+  (Ganax, Astral Hunter's 60-trigger loops; Konrad + Vigor), the 4 Mindskinner action caps above.
 - **Seats 1198-1202** (Thromok, Ellie and Alan, Grothama, Havi, Korvold Gleeful Glutton), 10 cards.
   **Primitives:** `Keyword::Devour(n)` (CR 702.82; `Devour(0)` is Dragon Broodmother's "devour X,
   X counters each"), `ActivatedAbility.tap_total_power` (Mossbridge Troll's "tap any number of
@@ -275,7 +277,11 @@ the handoff.
   misses it and the game reaches the action cap (11232 g28) — FIXED: `loop_hazard`'s probe now
   also reads a never-draining stack that minted 24 tokens as a loop, so the bot declines the
   half that starts it. Syr Konrad
-  + Kozilek, Butcher of Truth reached the action cap at stack 421 (11254 g4) — not yet traced.
+  + Kozilek, Butcher of Truth reached the action cap at stack 421 (11254 g4) — FIXED: The
+  Mindskinner turns each ping into three mills, each milled creature card pings again, and Vigor,
+  Worldspine Wurm and Kozilek shuffle back — a CR 104.4b loop that grows only the stack (sweep
+  seed 113 hit it 4 times in 4,320 games, stack 3,209). `growth_loop.rs` now counts a trigger
+  resolving `STACK_LOOP_DEPTH` (1,024) deep as growth, so it ends as the draw.
 - **FIXED — Elesh Norn (MOM):** "whenever a source an opponent controls deals damage to you **or a
   permanent you control**, that source's controller loses 2 life unless they pay {1}". The
   player half is `PlayerDamaged` + `OpponentSourceDamagedYou` (subject = dealer); the permanent
