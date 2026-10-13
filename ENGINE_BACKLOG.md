@@ -227,6 +227,11 @@ the handoff.
   (`ControllerOf(TargetFiltered)`, Jared Carthalion and Garland) declared an unanswerable slot.
   **FIXED:** Scion's draw guard put `GameState` over its 1,680-byte cap; it lives in
   `ResolutionScratch`.
+- **Seats 1270-1271** (The Earth King, The Muckslinger Gang; `decks::cmdr_edhrec53`, 5 cards): new
+  `AdditionalCastCost::BlightX` (CR 701.68a, Soul Immolation — X capped by the greatest toughness,
+  the counters on the cheapest creature). **OPEN:** The Muckslinger Gang's off-battlefield +3/+3
+  (creature spells and cards in hand/graveyard/library) — 50 off-battlefield P/T reads and no
+  free lane bit to gate a board walk; The Earth King won 21 of 24 debug four-seat pods.
 - **New primitives:** `Effect::GainControlWhileMonarch` (`TempControl.while_monarch`, Garland),
   `R::HasActivatedAbility`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn`
   (Locus of Enlightenment), `StaticEffect::FirstDrawEachTurnMillsOneOfTwo` (a `DrawDig`, Scion of
