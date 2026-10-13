@@ -35574,3 +35574,88 @@ pub const MU_YANLING_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const GALE_COMMANDERS: &[CardFactory] = &[gale_waterdeep_prodigy, scion_of_halaster];
+
+/// **Gale, Waterdeep Prodigy and Scion of Halaster**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Islands + 8 Swamps = 98.
+/// Gale, Waterdeep Prodigy and Scion of Halaster (EDHREC, fetched 2026-10-13).
+pub const GALE_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, mindsplice_apparatus, sol_ring,
+    talisman_of_dominance, thought_vessel, bojuka_bog, choked_estuary, command_tower,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, exotic_orchard, morphic_pool,
+    mystic_sanctuary, shipwreck_marsh, sunken_hollow, tainted_isle, underground_river,
+    watery_grave, archmage_emeritus, archmage_of_runes, baral_chief_of_compliance,
+    emet_selch_of_the_third_seat, haughty_djinn, hullbreaker_horror, ledger_shredder,
+    murmuring_mystic, rona_sheoldreds_faithful, sedgemoor_witch, talrand_sky_summoner,
+    thunderclap_drake, vohar_vodalian_desecrator, wizards_of_thay, case_of_the_ransacked_lab,
+    font_of_magic, rhystic_study, secrets_of_the_dead, an_offer_you_cant_refuse, arcane_denial,
+    brainstorm, cabal_ritual, consider, counterspell, dark_ritual, deadly_rollick,
+    fact_or_fiction, fell_the_profane, frantic_search, infernal_grasp, mystical_tutor, negate,
+    opt, sink_into_stupor, snap, tainted_indulgence, thought_scour, waterlogged_teachings,
+    withering_torment, professor_onyx, breach_the_multiverse, careful_study, feed_the_swarm,
+    gitaxian_probe, nights_whisper, ponder, preordain, reanimate, see_the_truth, serum_visions,
+    singularity_rupture, solve_the_equation, strategic_planning, toxic_deluge, treasure_cruise,
+    unearth, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const JHOIRA_2_COMMANDERS: &[CardFactory] = &[jhoira_ageless_innovator];
+
+/// **Jhoira, Ageless Innovator**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 10 Islands + 7 Mountains = 99.
+/// Jhoira, Ageless Innovator (EDHREC, fetched 2026-10-13).
+pub const JHOIRA_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chimil_the_inner_sun, darksteel_forge, god_pharaohs_statue, izzet_signet,
+    lightning_greaves, magewrights_stone, mind_stone, mirrorworks, mystic_forge, patriars_seal,
+    portal_to_phyrexia, sculpting_steel, sewer_veillance_cam, simulacrum_synthesizer, sol_ring,
+    sting_the_glinting_dagger, swiftfoot_boots, talisman_of_creativity, the_one_ring,
+    the_ten_rings, thousand_year_elixir, thran_dynamo, unwinding_clock, academy_ruins,
+    buried_ruin, cascade_bluffs, command_tower, darksteel_citadel, great_furnace,
+    inventors_fair, minamo_school_at_waters_edge, scalding_tarn, seat_of_the_synod, shivan_reef,
+    silverbluff_bridge, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    blightsteel_colossus, combustible_gearhulk, corridor_monitor, cyberdrive_awakener,
+    emry_lurker_of_the_loch, enthusiastic_mechanaut, etherium_sculptor, foundry_inspector,
+    ioreth_of_the_healing_house, jhoira_weatherlight_captain, kappa_cannoneer,
+    master_transmuter, meteor_golem, myr_battlesphere, padeem_consul_of_innovation,
+    phyrexian_metamorph, solemn_simulacrum, spellskite, steel_hellkite, thought_monitor,
+    triplicate_titan, vizier_of_tumbling_sands, wurmcoil_engine, mystic_remora, rhystic_study,
+    thopter_spy_network, an_offer_you_cant_refuse, chaos_warp, counterspell, deflecting_swat,
+    dramatic_reversal, fierce_guardianship, negate, scour_for_scrap, shore_up,
+    whir_of_invention, tezzeret_cruel_captain, blasphemous_act, fabricate, forging_the_anchor,
+    one_with_the_machine, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const CECILY_COMMANDERS: &[CardFactory] = &[cecily_haunted_mage, othelm_sigardian_outcast];
+
+/// **Cecily, Haunted Mage and Othelm, Sigardian Outcast**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 2 Forests + 3 Islands + 2 Mountains + 2 Plains + 2 Swamps = 98.
+/// Cecily, Haunted Mage and Othelm, Sigardian Outcast (EDHREC, fetched 2026-10-13).
+pub const CECILY_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, commanders_sphere, fellwar_stone, lightning_greaves,
+    sol_ring, swiftfoot_boots, tamiyos_journal, thought_vessel, breeding_pool, command_tower,
+    exotic_orchard, flooded_strand, godless_shrine, hallowed_fountain, havengul_laboratory,
+    ketria_triome, misty_rainforest, overgrown_tomb, path_of_ancestry, polluted_delta,
+    reliquary_tower, sacred_foundry, scalding_tarn, steam_vents, stomping_ground, temple_garden,
+    the_world_tree, verdant_catacombs, watery_grave, windswept_heath, wooded_foothills,
+    zagoth_triome, academy_manufactor, adrix_and_nev_twincasters, arvinox_the_mind_flail,
+    birds_of_paradise, bjorna_nightfall_alchemist, bloom_tender, delighted_halfling,
+    dryad_of_the_ilysian_grove, elmar_ulvenwald_informant, eloise_nephalia_sleuth,
+    erdwal_illuminator, esper_sentinel, eternal_witness, faeburrow_elder,
+    hargilde_kindly_runechanter, ignoble_hierarch, lonis_cryptozoologist, merchant_of_truth,
+    morska_undersea_sleuth, noble_hierarch, sakura_tribe_elder, sophina_spearsage_deserter,
+    tireless_tracker, triskaidekaphile, wernog_riders_chaplain, mystic_remora, rhystic_study,
+    search_the_premises, smothering_tithe, teferis_ageless_insight, thorough_investigation,
+    ulvenwald_mysteries, an_offer_you_cant_refuse, arcane_denial, assassins_trophy,
+    beast_within, counterspell, fierce_guardianship, heroic_intervention, path_to_exile,
+    swords_to_plowshares, the_theorist_jace_beleren, conflux, cultivate, eerie_ultimatum,
+    emergent_ultimatum, farseek, genesis_ultimatum, in_garruks_wake, kodamas_reach,
+    natures_lore, rampant_growth, ruinous_ultimatum, three_visits,
+    // Basics
+    forest, forest, island, island, island, mountain, mountain, plains, plains, swamp, swamp,
+];

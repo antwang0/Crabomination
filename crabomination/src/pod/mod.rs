@@ -7956,6 +7956,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MU_YANLING_COMMANDERS,
             main: decks::MU_YANLING_MAIN,
         },
+        // Seat 1251: Gale, Waterdeep Prodigy and Scion of Halaster's EDHREC average deck. `--pod-decks 1251`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Scion of Halaster (UB)",
+            commanders: decks::GALE_COMMANDERS,
+            main: decks::GALE_MAIN,
+        },
+        // Seat 1252: Jhoira, Ageless Innovator's EDHREC average deck. `--pod-decks 1252`.
+        PodDeck {
+            name: "Jhoira, Ageless Innovator (UR)",
+            commanders: decks::JHOIRA_2_COMMANDERS,
+            main: decks::JHOIRA_2_MAIN,
+        },
+        // Seat 1253: Cecily, Haunted Mage and Othelm, Sigardian Outcast's EDHREC average deck. `--pod-decks 1253`.
+        PodDeck {
+            name: "Cecily, Haunted Mage and Othelm, Sigardian Outcast (WUBRG)",
+            commanders: decks::CECILY_COMMANDERS,
+            main: decks::CECILY_MAIN,
+        },
     ]
 }
 
@@ -11038,6 +11056,9 @@ mod tests {
             ("Hurska Sweet-Tooth", &[0x0EF5]),
             ("RMS Titanic", &[0x0EF6]),
             ("Mu Yanling, Wind Rider", &[0x0EF7]),
+            ("Gale, Waterdeep Prodigy and Scion of Halaster", &[0x0EF8]),
+            ("Jhoira, Ageless Innovator", &[0x0EF9]),
+            ("Cecily, Haunted Mage and Othelm, Sigardian Outcast", &[0x0EFA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
