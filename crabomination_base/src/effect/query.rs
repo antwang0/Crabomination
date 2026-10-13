@@ -1821,6 +1821,7 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::RevealTopTakeMatchingToHand { who, count, .. }
+            | Effect::RevealTopMatchingToGraveyard { who, count, .. }
             | Effect::RevealTopTakeMatchingRestToGraveyard { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }

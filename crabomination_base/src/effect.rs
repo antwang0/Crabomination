@@ -7103,6 +7103,11 @@ pub enum Effect {
     /// order (CR 401.4). "Put any number" is resolved as take-all-matching
     /// (the value-maximizing default). Torsten, Founder of Benalia's
     /// "reveal seven, take creatures and/or lands."
+    /// Reveal the top `count` cards of `who`'s library, put every card matching
+    /// `filter` into their graveyard and the rest on the bottom in a random
+    /// order (The Fourteenth Doctor's "put all Doctor cards revealed this way
+    /// into your graveyard").
+    RevealTopMatchingToGraveyard { who: PlayerRef, count: Value, filter: SelectionRequirement },
     RevealTopTakeMatchingToHand {
         who: PlayerRef,
         count: Value,

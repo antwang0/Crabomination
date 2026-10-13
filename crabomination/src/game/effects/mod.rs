@@ -29638,6 +29638,37 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopMatchingToGraveyard { who, count, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                let binned: Vec<crate::card::CardId> = revealed
+                    .iter()
+                    .copied()
+                    .filter(|id| self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source))
+                    .collect();
+                for id in &binned {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
+                        self.route_to_graveyard(card, events);
+                        // Not a mill (CR 701.13) — but it went from the library
+                        // to the graveyard this turn (The Fourteenth Doctor).
+                        self.note_milled(p, *id);
+                    }
+                }
+                // Bottom the rest in a random order (CR 401.4).
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    revealed.iter().copied().filter(|id| !binned.contains(id)).collect();
+                rest.shuffle(&mut self.rng.draw());
+                for id in rest {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ChooseTypeRevealTopPartition { count } => {
                 let p = ctx.controller;
                 let chosen = self.choose_a_card_type(ctx.source.unwrap_or(CardId(0)));
