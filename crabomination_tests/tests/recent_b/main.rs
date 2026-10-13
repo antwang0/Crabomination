@@ -232,4 +232,5 @@ mod cmdr_edhrec26;
 mod cmdr_edhrec27;
 mod cmdr_edhrec28;
 mod cmdr_edhrec29;
+mod cmdr_edhrec30;
 mod cmdr_most_built;
