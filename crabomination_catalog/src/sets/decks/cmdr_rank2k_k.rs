@@ -142,7 +142,7 @@ pub fn down_in_the_valley() -> CardDefinition {
 /// Entering makes Guenhwyvar, a legendary 4/1 green Cat with trample. Whenever
 /// a creature dies with more power than Drizzt, he gets the difference in
 /// +1/+1 counters.
-pub fn drizzt_do_urden() -> CardDefinition {
+pub fn drizzt_dourden() -> CardDefinition {
     let excess = || Value::Diff(Box::new(Value::PowerOf(Box::new(Selector::TriggerSource))), Box::new(Value::PowerOf(Box::new(Selector::This))));
     CardDefinition {
         keywords: vec![Keyword::DoubleStrike],

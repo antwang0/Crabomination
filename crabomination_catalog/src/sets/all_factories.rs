@@ -3854,7 +3854,7 @@ static DECKS: &[Factory] = &[
     // cmdr_rank2k_k (session 01CwrNTA)
     super::decks::descent_of_the_dragons,
     super::decks::down_in_the_valley,
-    super::decks::drizzt_do_urden,
+    super::decks::drizzt_dourden,
     super::decks::icingdeath_frost_tyrant,
     super::decks::karrthus_tyrant_of_jund,
     super::decks::thranduil_the_strategist,

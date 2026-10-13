@@ -78,7 +78,7 @@ fn down_in_the_valley_breeds_and_rallies_elves() {
 #[test]
 fn drizzt_grows_off_a_bigger_death() {
     let mut g = pod(2);
-    let drizzt = g.add_card_to_hand(0, catalog::drizzt_do_urden());
+    let drizzt = g.add_card_to_hand(0, catalog::drizzt_dourden());
     cast(&mut g, drizzt, None, vec![]);
     assert_eq!(named_for(&g, 0, "Guenhwyvar"), 1);
     let angel = ready(&mut g, 1, catalog::serra_angel());
