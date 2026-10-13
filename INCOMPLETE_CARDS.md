@@ -2051,6 +2051,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Doors of Durin | the top card is always revealed (the "you may" isn't asked) | a creature on top always joins the attack |
 | 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
 | 🟡 Bane, Lord of Darkness | a nontoken creature of yours dying always draws you a card; the target opponent's choice to let you put a creature card with lesser or equal toughness from hand onto the battlefield instead isn't offered | no "target opponent chooses for you" ask with a toughness-bounded hand put |
+| 🟡 Queen Kayla bin-Kroog | the mana value 1, 2 and 3 cards return one after another, not together (their enter triggers see each other in order) | `ChooseSomeAmong` per mana value; no shared simultaneous put |
+| 🟡 Faerie Slumber Party | your creatures, then each opponent's, return in separate batches rather than all at once | per-opponent `ForEachOpponent` bounce so "each opponent who controlled one" can be counted |
 | 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
 | 🟡 Suppressor Skyguard | the shield lasts the turn, not just that combat | `PreventAllCombatDamageToPlayerThisTurn` has no per-combat duration |
 | 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |

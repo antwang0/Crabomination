@@ -157,6 +157,32 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-12 (Commander run, `01NRsiVW`, cmdr_edhrec15) — 80 EDHREC seats from ranks 1001-1500's two-card gaps
 
+- **Third firing (2026-10-13): seats 1094-1101, 1109-1114 and 1155-1156** (renumbered on a rebase:
+  `01BJKf54` landed 1069-1093). Batch J and after, 28 cards: the Titania // Argoth meld
+  (CR 701.42), Queen Kayla, Mishra and Urza (artifact-discard once a turn), Nexus of Becoming,
+  Drillworks Mole, Farmstead Gleaner ({Q} via `untap_self_cost` — Marvin's static already
+  existed), Jackal, Errant, Lluwen, Tectonic Split, Inniaz, Faerie Slumber Party, Tezzeret
+  Artifice Master, Karfell Harbinger, Poppet Stitcher // Factory, The Sentry, Lucy MacLean,
+  Superior Spider-Man, Taskmaster, Huatli // Roar of the Fifth People, Intrepid Paleontologist,
+  Nashi Moon's Legacy. **Primitives:** `AdditionalCastCost::SacrificeHalfRoundedUp`,
+  `Effect::EachPlayerGainsChosenFromRightNeighbor` (CR 101.4), `SpendRestriction::
+  ForetellActionOrInstantSorcery` (+ `SpellKind.foretell_action`), `SelectionRequirement::
+  TriggerPlayer`, `EntersAsCopy.exile_copied` (CR 603.12), `Effect::SetCopyTypeLine` (CR 707.9b).
+- **FIXED — Elesh Norn (MOM):** "whenever a source an opponent controls deals damage to you **or a
+  permanent you control**, that source's controller loses 2 life unless they pay {1}". The
+  player half is `PlayerDamaged` + `OpponentSourceDamagedYou` (subject = dealer); the permanent
+  half is `DealtDamage` + the new `EventScope::OpponentSourceDamagedYourPermanent`, and
+  `event_actor` of damage to a permanent is now the **dealer's** controller (`from_controller`) —
+  `actor_for_scope` (and the emblem matcher) keep keying `YourControl`/`OpponentControl` on the
+  damaged permanent's controller, so enrage scoping is unchanged. Read it as
+  `PlayerRef::TriggerEventPlayer`.
+- **Bot (CR 104.4b):** Phyrexian Vindicator's redirect kept aiming at an indestructible Zetalpa,
+  whose Wrathful Raptors trigger aimed back at the Vindicator (prevented, redirected) — a draw
+  neither seat was forced into (6-seat `--pod-decks 1112,1113,1114,1110,1111,1109 --seed 10842
+  --first 41`). A pending damage trigger now skips opposing permanents its damage can't hurt
+  (indestructible, damage prevented or redirected) when another legal target remains
+  (`server/damage_pick.rs`). Same sweep, still open: a 56-turn board cap from Impostor
+  Syndrome's per-hit token copies (seed 10742).
 - **Seats 963-1002, 1013-1046 and 1063-1068** (renumbered twice on rebases: `011PQ8Uk` landed
   1003-1012 and `01L4tuaB` 1047-1062 meanwhile — drop your own seat commits, rebase, re-run `scripts/seat_decks.py`): EDHREC decks
   ranked 686-1475 completed by `decks::cmdr_edhrec15` (141 cards; tests
