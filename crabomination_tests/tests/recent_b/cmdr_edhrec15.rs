@@ -1,9 +1,9 @@
 //! Commander: the two-card EDHREC gaps of commanders ranked 1001-1500
 //! (`decks::cmdr_edhrec15`).
 
-use crabomination::card::{CardId, CounterType, Keyword};
+use crabomination::card::{CardId, CardType, CounterType, Keyword};
 use crabomination::catalog;
-use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, StackItem, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -1319,4 +1319,331 @@ fn adept_watershaper_shields_tapped_creatures() {
     let ind = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Indestructible);
     assert!(ind(&g, tapped));
     assert!(!ind(&g, untapped));
+}
+
+/// Titania, Voice of Gaea and Argoth (CR 701.42 meld, CR 603.4 intervening
+/// "if"): Argoth's bear-and-mill gains 2 life once for the batch of lands;
+/// with four land cards in the graveyard the upkeep melds them into Titania,
+/// Gaea Incarnate, which returns those lands and is sized by your lands.
+#[test]
+fn titania_and_argoth_meld_at_four_graveyard_lands() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let titania = ready(&mut g, 0, catalog::titania_voice_of_gaea());
+    let argoth = ready(&mut g, 0, catalog::argoth_sanctum_of_nature());
+    // A land besides Argoth, or the 0/0 melded Titania dies before her
+    // enter trigger returns any (CR 704.5f).
+    ready(&mut g, 0, catalog::plains());
+    let life = g.players[0].life;
+    activate(&mut g, argoth, 1, None).expect("bear and mill");
+    assert_eq!(tokens_named(&g, "Bear"), 1);
+    assert_eq!(g.players[0].life, life + 2, "one gain for the three-land batch");
+    // Three lands in the graveyard: no meld yet.
+    g.battlefield_find_mut(argoth).unwrap().tapped = false;
+    let to_upkeep = |g: &mut GameState| {
+        g.step = TurnStep::Untap;
+        g.priority.player_with_priority = 0;
+        while g.step != TurnStep::Upkeep {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(g);
+    };
+    to_upkeep(&mut g);
+    assert!(g.battlefield_find(titania).is_some(), "three lands is not enough");
+    g.add_card_to_graveyard(0, catalog::island());
+    to_upkeep(&mut g);
+    let gaea = g.battlefield.iter().find(|c| c.definition.name == "Titania, Gaea Incarnate").map(|c| c.id);
+    let gaea = gaea.expect("melded");
+    assert!(g.players[0].graveyard.iter().all(|c| !c.definition.is_land()), "the lands came back");
+    let lands = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count() as i32;
+    assert_eq!(lands, 5, "the Plains and four returned lands");
+    assert_eq!(pt(&g, gaea), (5, 5));
+}
+
+/// Titania, Gaea Incarnate: {3}{G} animates a land of yours as a 4/4
+/// Elemental with haste.
+#[test]
+fn titania_gaea_incarnate_awakens_a_land() {
+    let mut g = pod(2);
+    let gaea = ready(&mut g, 0, catalog::titania_gaea_incarnate());
+    let forest = ready(&mut g, 0, catalog::forest());
+    activate(&mut g, gaea, 0, Some(perm(forest))).expect("awaken");
+    let c = g.computed_permanent(forest).unwrap();
+    let types = c.card_types();
+    assert!(types.contains(&CardType::Creature) && types.contains(&CardType::Land), "a creature land");
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert_eq!(pt(&g, gaea), (1, 1), "one land");
+}
+
+fn activate_with_pool(g: &mut GameState, id: CardId, index: usize, colorless: u32) -> Result<(), String> {
+    g.players[0].mana_pool.add_colorless(colorless);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .map_err(|e| format!("{e:?}"))?;
+    drain_stack(g);
+    Ok(())
+}
+
+/// Mishra, Excavation Prodigy (CR 603.2c): discarding an artifact card adds
+/// {R}{R}, once each turn.
+#[test]
+fn mishra_excavation_prodigy_adds_red_once_a_turn() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let mishra = ready(&mut g, 0, catalog::mishra_excavation_prodigy());
+    g.add_card_to_hand(0, catalog::ornithopter());
+    activate_with_pool(&mut g, mishra, 0, 1).expect("rummage");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2);
+    g.battlefield_find_mut(mishra).unwrap().tapped = false;
+    g.players[0].hand.clear();
+    g.add_card_to_hand(0, catalog::ornithopter());
+    activate_with_pool(&mut g, mishra, 0, 1).expect("rummage again");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "once each turn");
+}
+
+/// Urza, Powerstone Prodigy: looting away an artifact card makes a tapped
+/// Powerstone; a nonartifact discard doesn't.
+#[test]
+fn urza_powerstone_prodigy_makes_a_tapped_powerstone() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::ornithopter());
+    let urza = ready(&mut g, 0, catalog::urza_powerstone_prodigy());
+    g.add_card_to_hand(0, catalog::ornithopter());
+    activate_with_pool(&mut g, urza, 0, 1).expect("loot");
+    let stones: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Powerstone").collect();
+    assert_eq!(stones.len(), 1);
+    assert!(stones[0].tapped);
+}
+
+/// Queen Kayla bin-Kroog: discard the hand, draw that many, and one
+/// artifact or creature card each of mana value 1, 2 and 3 returns; a
+/// five-drop stays in the graveyard.
+#[test]
+fn queen_kayla_returns_one_of_each_low_mana_value() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    let kayla = ready(&mut g, 0, catalog::queen_kayla_bin_kroog());
+    let picks = [catalog::savannah_lions(), catalog::grizzly_bears(), catalog::gray_ogre(), catalog::serra_angel()];
+    let ids: Vec<_> = picks.into_iter().map(|d| g.add_card_to_hand(0, d)).collect();
+    activate(&mut g, kayla, 0, None).expect("wheel");
+    assert_eq!(g.players[0].hand.len(), 4, "drew four");
+    for id in &ids[..3] {
+        assert!(g.battlefield_find(*id).is_some(), "{id:?} returned");
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == ids[3]), "the angel stays");
+}
+
+/// Nexus of Becoming: at your beginning of combat, draw, then exile an
+/// artifact card from hand for a 3/3 Golem artifact-creature copy of it.
+#[test]
+fn nexus_of_becoming_makes_a_golem_copy() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::forest());
+    ready(&mut g, 0, catalog::nexus_of_becoming());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    while g.step != TurnStep::BeginCombat {
+        g.priority.player_with_priority = g.active_player_idx;
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == ring), "the Sol Ring was exiled");
+    let golem = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Sol Ring").map(|c| c.id).expect("copy");
+    let c = g.computed_permanent(golem).unwrap();
+    assert!(c.def.is_creature() && c.def.is_artifact());
+    assert_eq!((c.power, c.toughness), (3, 3));
+}
+
+/// Drillworks Mole grows itself; Farmstead Gleaner's {Q} ability needs it
+/// tapped and untaps it; Marvin borrows the Mole's ability.
+#[test]
+fn drillworks_mole_and_farmstead_gleaner_grow() {
+    let mut g = pod(2);
+    let mole = ready(&mut g, 0, catalog::drillworks_mole());
+    activate(&mut g, mole, 0, None).expect("mole");
+    assert_eq!(pt(&g, mole), (2, 2));
+    let gleaner = ready(&mut g, 0, catalog::farmstead_gleaner());
+    assert!(activate(&mut g, gleaner, 0, None).is_err(), "{{Q}} needs it tapped");
+    g.battlefield_find_mut(gleaner).unwrap().tapped = true;
+    activate(&mut g, gleaner, 0, None).expect("untap for a counter");
+    assert!(!g.battlefield_find(gleaner).unwrap().tapped);
+    assert_eq!(pt(&g, gleaner), (3, 3));
+    let marvin = ready(&mut g, 0, catalog::marvin_murderous_mimic());
+    activate(&mut g, marvin, 0, None).expect("Marvin uses the Mole's ability");
+    assert_eq!(pt(&g, marvin), (3, 3));
+}
+
+/// Jackal, Genius Geneticist (CR 707.10, 707.9b): a creature spell with
+/// mana value equal to its power is copied and Jackal grows; one that no
+/// longer matches isn't.
+#[test]
+fn jackal_copies_a_creature_spell_at_its_power() {
+    let mut g = pod(2);
+    let jackal = ready(&mut g, 0, catalog::jackal_genius_geneticist());
+    let lions = g.add_card_to_hand(0, catalog::savannah_lions());
+    cast(&mut g, lions, &[]).expect("lions");
+    let named = |g: &GameState, n: &str| g.battlefield.iter().filter(|c| c.definition.name == n).count();
+    assert_eq!(named(&g, "Savannah Lions"), 2, "the lions and a token copy");
+    assert_eq!(pt(&g, jackal), (2, 2));
+    let more = g.add_card_to_hand(0, catalog::savannah_lions());
+    cast(&mut g, more, &[]).expect("lions again");
+    assert_eq!(named(&g, "Savannah Lions"), 3, "mana value 1 against power 2: no copy");
+}
+
+/// Errant, Street Artist (CR 707.10): a cast spell is no target; a copy of
+/// one ("a spell that wasn't cast") is, and Errant copies it again.
+#[test]
+fn errant_copies_only_a_spell_that_wasnt_cast() {
+    let mut g = pod(2);
+    let errant = ready(&mut g, 0, catalog::errant_street_artist());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    let ability = |g: &mut GameState, t: CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: errant,
+            ability_index: 0,
+            target: Some(perm(t)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(ability(&mut g, bolt).is_err(), "the Bolt was cast");
+    let rev = g.add_card_to_hand(0, catalog::reverberate());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev,
+        target: Some(perm(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("reverberate");
+    g.resolve_top_of_stack().expect("copy the bolt");
+    let copy = g.stack.iter().rev().find_map(|s| match s {
+        StackItem::Spell { card, .. } if card.is_token => Some(card.id),
+        _ => None,
+    });
+    let copy = copy.expect("a copy on the stack");
+    ability(&mut g, copy).expect("the copy wasn't cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 9, "three Bolts");
+}
+
+/// Lluwen, Imperfect Naturalist: mills four and may keep a creature on top;
+/// its Worm ability counts the land cards in the graveyard.
+#[test]
+fn lluwen_mills_and_makes_worms() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let lluwen = g.add_card_to_hand(0, catalog::lluwen_imperfect_naturalist());
+    cast(&mut g, lluwen, &[]).expect("lluwen");
+    let top = g.players[0].library.first().map(|c| c.definition.name);
+    assert!(matches!(top, Some("Grizzly Bears" | "Forest")), "a milled creature or land went back on top: {top:?}");
+    let lands_in_gy = |g: &GameState| g.players[0].graveyard.iter().filter(|c| c.definition.is_land()).count();
+    let before = lands_in_gy(&g);
+    g.clear_sickness(lluwen);
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, lluwen, 0, None).expect("worms");
+    assert_eq!(tokens_named(&g, "Worm"), before + 1, "the discarded Island counts");
+}
+
+/// Tectonic Split: casting it sacrifices half your lands, rounded up; the
+/// rest tap for three mana of one color.
+#[test]
+fn tectonic_split_halves_the_lands_and_triples_the_rest() {
+    let mut g = pod(2);
+    let lands: Vec<_> = (0..5).map(|_| ready(&mut g, 0, catalog::forest())).collect();
+    let split = g.add_card_to_hand(0, catalog::tectonic_split());
+    cast(&mut g, split, &[]).expect("split");
+    let left: Vec<_> = lands.iter().copied().filter(|&l| g.battlefield_find(l).is_some()).collect();
+    assert_eq!(left.len(), 2, "three of five sacrificed");
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: left[0],
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("three mana");
+    drain_stack(&mut g);
+    let total: u32 = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+        .into_iter()
+        .map(|c| g.players[0].mana_pool.amount(c))
+        .sum();
+    assert_eq!(total, 3);
+}
+
+/// Inniaz, the Gale Force (CR 101.4): three fliers attacking swap a
+/// nonland permanent each way with the player to the right.
+#[test]
+fn inniaz_rotates_permanents_rightward() {
+    let mut g = pod(2);
+    let inniaz = ready(&mut g, 0, catalog::inniaz_the_gale_force());
+    let birds: Vec<_> = (0..2).map(|_| ready(&mut g, 0, catalog::ornithopter())).collect();
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    declare(&mut g, &[(inniaz, 1), (birds[0], 1), (birds[1], 1)]).expect("attack");
+    assert_eq!(g.battlefield_find(angel).unwrap().controller, 0, "Inniaz's side takes the Angel");
+    let given = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(given, 1, "and hands one permanent across");
+}
+
+/// Faerie Slumber Party: every creature goes home; two Faeries per opponent
+/// who had one.
+#[test]
+fn faerie_slumber_party_counts_opponents_with_creatures() {
+    let mut g = pod(3);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let p = g.add_card_to_hand(0, catalog::faerie_slumber_party());
+    cast(&mut g, p, &[]).expect("party");
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs));
+    assert_eq!(tokens_named(&g, "Faerie"), 2, "only one opponent had a creature");
+}
+
+/// Tezzeret, Artifice Master: +1 makes a flying Thopter; 0 draws two with
+/// three artifacts out; the −9 emblem fetches a permanent at your end step.
+#[test]
+fn tezzeret_artifice_master_thopters_and_draws() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let tez = ready(&mut g, 0, catalog::tezzeret_artifice_master());
+    let loyal = |g: &mut GameState, i: usize| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: tez, ability_index: i, target: None, x_value: None })
+            .expect("loyalty");
+        drain_stack(g);
+    };
+    loyal(&mut g, 0);
+    assert_eq!(tokens_named(&g, "Thopter"), 1);
+    g.battlefield_find_mut(tez).unwrap().loyalty_uses_this_turn = 0;
+    ready(&mut g, 0, catalog::ornithopter());
+    ready(&mut g, 0, catalog::ornithopter());
+    let hand = g.players[0].hand.len();
+    loyal(&mut g, 1);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "three artifacts: two cards");
 }

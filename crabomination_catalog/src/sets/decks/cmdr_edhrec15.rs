@@ -3312,3 +3312,531 @@ pub fn body_launderer() -> CardDefinition {
         ..creature("Body Launderer", cost(&[generic(2), b(), b()]), vec![CreatureType::Ogre, CreatureType::Rogue], 3, 3)
     }
 }
+
+/// Argoth, Sanctum of Nature — land: tapped unless you control a legendary
+/// green creature; {T}: {G}; {2}{G}{G},{T}: a 2/2 Bear, then mill three
+/// (sorcery speed). Melds with Titania, Voice of Gaea.
+pub fn argoth_sanctum_of_nature() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "This land enters tapped unless you control a legendary green creature.",
+            StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(yours(
+                    R::Creature.and(R::HasSupertype(Supertype::Legendary)).and(R::HasColor(Color::Green)),
+                ))),
+            },
+        )],
+        ..land(
+            "Argoth, Sanctum of Nature",
+            vec![
+                tap_add(Color::Green),
+                ActivatedAbility {
+                    mana_cost: cost(&[generic(2), g(), g()]),
+                    tap_cost: true,
+                    sorcery_speed: true,
+                    effect: Effect::Seq(vec![
+                        make(Value::ONE, token("Bear", 2, 2, vec![Color::Green], vec![CreatureType::Bear])),
+                        Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                    ]),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+}
+
+/// Titania, Voice of Gaea — {1}{G}{G} 3/4 reach. One or more land cards
+/// into your graveyard: gain 2. Upkeep, with four or more land cards in
+/// your graveyard and Argoth: meld into Titania, Gaea Incarnate (CR 701.42).
+pub fn titania_voice_of_gaea() -> CardDefinition {
+    let four_lands = Predicate::ValueAtLeast(
+        Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Land },
+        Value::Const(4),
+    );
+    CardDefinition {
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl).once_per_batch(),
+                effect: gain(2),
+            },
+            TriggeredAbility {
+                // CR 603.4 — intervening "if": checked on trigger and again
+                // on resolution; the meld itself re-checks own-and-control.
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+                    .with_filter(four_lands.clone()),
+                effect: Effect::If {
+                    cond: four_lands,
+                    then: Box::new(Effect::Meld {
+                        partner: "Argoth, Sanctum of Nature".into(),
+                        into: "Titania, Gaea Incarnate".into(),
+                        attacking: false,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..legend("Titania, Voice of Gaea", cost(&[generic(1), g(), g()]), vec![CreatureType::Elemental], 3, 4)
+    }
+}
+
+/// Titania, Gaea Incarnate — the meld of Titania and Argoth: vigilance,
+/// reach, trample, haste, */* = your lands. ETB: every land card in your
+/// graveyard returns tapped. {3}{G}: four +1/+1 counters on target land of
+/// yours; it becomes a 0/0 Elemental creature with haste, still a land.
+pub fn titania_gaea_incarnate() -> CardDefinition {
+    let lands = || Value::CountMatching { sel: Box::new(Selector::EachPermanent(R::ControlledByYou)), filter: R::Land };
+    CardDefinition {
+        // CR 202.1b — the melded face prints no mana cost.
+        no_mana_cost: true,
+        color_indicator: vec![Color::Green],
+        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample, Keyword::Haste],
+        static_abilities: vec![static_ab(
+            "Titania's power and toughness are each equal to the number of lands you control.",
+            StaticEffect::SelfBasePtFromValue { power: lands(), toughness: lands() },
+        )],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::EachMatching { zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You), filter: R::Land },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(R::Land.and(R::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(4),
+                },
+                Effect::BecomeCreature {
+                    what: Selector::Target(0),
+                    power: Value::ZERO,
+                    toughness: Value::ZERO,
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![Keyword::Haste],
+                    duration: Duration::Permanent,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Titania, Gaea Incarnate",
+            ManaCost::default(),
+            vec![CreatureType::Elemental, CreatureType::Avatar],
+            0,
+            0,
+        )
+    }
+}
+
+/// "Whenever you discard one or more artifact cards, …" — once each turn
+/// (CR 603.2c batch, CR 603.3d-style cap): Mishra, Excavation Prodigy and
+/// Urza, Powerstone Prodigy.
+fn on_artifact_discard_once_a_turn(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec { once_per_turn: true, ..EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl) }
+            .with_filter(trigger_is(R::Artifact)),
+        effect,
+    }
+}
+
+/// Mishra, Excavation Prodigy — {2}{R} 2/1 haste; {1},{T}, discard a card:
+/// draw; discarding artifact cards adds {R}{R} once each turn.
+pub fn mishra_excavation_prodigy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: draw(1),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![on_artifact_discard_once_a_turn(Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::OfColor(Color::Red, Value::Const(2)),
+        })],
+        ..legend(
+            "Mishra, Excavation Prodigy",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            2,
+            1,
+        )
+    }
+}
+
+/// Urza, Powerstone Prodigy — {2}{U} 1/3 vigilance; {1},{T}: loot;
+/// discarding artifact cards makes a tapped Powerstone once each turn.
+pub fn urza_powerstone_prodigy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                draw(1),
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![on_artifact_discard_once_a_turn(make(
+            Value::ONE,
+            TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() },
+        ))],
+        ..legend(
+            "Urza, Powerstone Prodigy",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            1,
+            3,
+        )
+    }
+}
+
+/// Queen Kayla bin-Kroog — {1}{R}{W} 2/3. {4},{T} (sorcery): discard your
+/// hand, draw that many, then return up to one discarded artifact or
+/// creature card of each mana value 1, 2 and 3. (The three return one after
+/// another rather than together.)
+pub fn queen_kayla_bin_kroog() -> CardDefinition {
+    let back = |n: u32| Effect::ChooseSomeAmong {
+        what: Selector::DiscardedThisResolution {
+            filter: R::Artifact.or(R::Creature).and(R::ManaValueAtLeast(n)).and(R::ManaValueAtMost(n)),
+        },
+        chooser: PlayerRef::You,
+        count: Value::ONE,
+        up_to: true,
+        chosen: Box::new(Effect::Move {
+            what: Selector::SeparatedPile { chosen: true },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        }),
+        other: Box::new(Effect::Noop),
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::DiscardHandDrawThatMany { who: Selector::You },
+                back(1),
+                back(2),
+                back(3),
+            ]),
+            ..Default::default()
+        }],
+        ..legend("Queen Kayla bin-Kroog", cost(&[generic(1), r(), w()]), vec![CreatureType::Human, CreatureType::Noble], 2, 3)
+    }
+}
+
+/// Nexus of Becoming — {6} artifact. Your beginning of combat: draw, then
+/// you may exile an artifact or creature card from your hand for a token
+/// copy of it that's also a 3/3 Golem artifact creature.
+pub fn nexus_of_becoming() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                draw(1),
+                Effect::ChooseSomeAmong {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Hand,
+                        filter: R::Artifact.or(R::Creature),
+                    },
+                    chooser: PlayerRef::You,
+                    count: Value::ONE,
+                    up_to: true,
+                    chosen: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: Selector::SeparatedPile { chosen: true }, to: ZoneDest::Exile },
+                        Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            source: Selector::ExiledThisResolution { filter: R::Any },
+                            extra_creature_types: vec![CreatureType::Golem],
+                            extra_card_types: vec![CardType::Artifact, CardType::Creature],
+                            override_pt: Some((3, 3)),
+                            override_colors: None,
+                            enters_tapped: false,
+                            non_legendary: false,
+                            legendary: false,
+                            extra_keywords: vec![],
+                            no_mana_cost: false,
+                            enters_with_counters: None,
+                            remove_keywords: vec![],
+                        },
+                    ])),
+                    other: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..permanent("Nexus of Becoming", cost(&[generic(6)]), CardType::Artifact)
+    }
+}
+
+/// Drillworks Mole — {1} 1/1 artifact Mole. {2},{T}: a +1/+1 counter here
+/// and on up to one target commander creature you control.
+pub fn drillworks_mole() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Creature.and(R::IsCommander).and(R::ControlledByYou),
+                    effect: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Drillworks Mole", cost(&[generic(1)]), vec![CreatureType::Mole], 1, 1)
+    }
+}
+
+/// Farmstead Gleaner — {3} 2/2 artifact Scarecrow; doesn't untap in your
+/// untap step; {2},{Q}: a +1/+1 counter on it.
+pub fn farmstead_gleaner() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![static_ab(
+            "This creature doesn't untap during your untap step.",
+            StaticEffect::PreventUntap { applies_to: Selector::This },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            untap_self_cost: true,
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature("Farmstead Gleaner", cost(&[generic(3)]), vec![CreatureType::Scarecrow], 2, 2)
+    }
+}
+
+/// Jackal, Genius Geneticist — {G}{U} 1/1 trample. Casting a creature
+/// spell with mana value equal to Jackal's power: copy it, not legendary
+/// (CR 707.9b), then a +1/+1 counter on Jackal.
+pub fn jackal_genius_geneticist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                trigger_is(R::Creature),
+                Predicate::ValueEquals(
+                    Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    Value::PowerOf(Box::new(Selector::This)),
+                ),
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::CopySpellNotLegendary { what: Selector::TriggerSource },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ]),
+        }],
+        ..legend(
+            "Jackal, Genius Geneticist",
+            cost(&[g(), u()]),
+            vec![CreatureType::Human, CreatureType::Scientist, CreatureType::Villain],
+            1,
+            1,
+        )
+    }
+}
+
+/// Errant, Street Artist — {U} 0/3 flash, defender, haste. {1}{U},{T}: copy
+/// target spell you control that wasn't cast (a copy — CR 707.10), new
+/// targets allowed.
+pub fn errant_street_artist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Defender, Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            tap_cost: true,
+            effect: Effect::CopySpellMayChooseTargets {
+                what: target_filtered(R::IsSpellOnStack.and(R::IsToken).and(R::ControlledByYou)),
+                count: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..legend("Errant, Street Artist", cost(&[u()]), vec![CreatureType::Human, CreatureType::Rogue], 0, 3)
+    }
+}
+
+/// Lluwen, Imperfect Naturalist — {B/G}{B/G} 1/3. ETB: mill four, then may
+/// put a milled creature or land card on top. {2}{B/G}{B/G}{B/G},{T},
+/// discard a land card: a 1/1 Worm per land card in your graveyard.
+pub fn lluwen_imperfect_naturalist() -> CardDefinition {
+    let bg = || hybrid(Color::Black, Color::Green);
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::ChooseSomeAmong {
+                what: Selector::MatchingAmong { inner: Box::new(Selector::LastMoved), filter: R::Creature.or(R::Land) },
+                chooser: PlayerRef::You,
+                count: Value::ONE,
+                up_to: true,
+                chosen: Box::new(Effect::Move {
+                    what: Selector::SeparatedPile { chosen: true },
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+                }),
+                other: Box::new(Effect::Noop),
+            },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), bg(), bg(), bg()]),
+            tap_cost: true,
+            discard_cost: Some((R::Land, 1)),
+            effect: make(
+                Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Land },
+                token("Worm", 1, 1, vec![Color::Black, Color::Green], vec![CreatureType::Worm]),
+            ),
+            ..Default::default()
+        }],
+        ..legend("Lluwen, Imperfect Naturalist", cost(&[bg(), bg()]), vec![CreatureType::Elf, CreatureType::Druid], 1, 3)
+    }
+}
+
+/// Tectonic Split — {4}{G}{G} enchantment, hexproof. Additional cost:
+/// sacrifice half your lands, rounded up. Your lands have "{T}: add three
+/// mana of any one color."
+pub fn tectonic_split() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Hexproof],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeHalfRoundedUp { filter: R::Land }],
+        static_abilities: vec![static_ab(
+            "Lands you control have \"{T}: Add three mana of any one color.\"",
+            StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(yours(R::Land)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(3)) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        )],
+        ..permanent("Tectonic Split", cost(&[generic(4), g(), g()]), CardType::Enchantment)
+    }
+}
+
+/// Inniaz, the Gale Force — {3}{U}{U} 4/4 flier. {2}{W/U}: attacking
+/// fliers get +1/+1 until end of turn. Three or more of your fliers
+/// attacking: each player gains control of a nonland permanent of your
+/// choice from the player to their right.
+pub fn inniaz_the_gale_force() -> CardDefinition {
+    let attacking_fliers = || R::Creature.and(R::HasKeyword(Keyword::Flying)).and(R::IsAttacking);
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), hybrid(Color::White, Color::Blue)]),
+            effect: eot_pump(Selector::EachPermanent(attacking_fliers()), 1, 1),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl).with_filter(Predicate::ValueAtLeast(
+                Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
+                    filter: attacking_fliers(),
+                },
+                Value::Const(3),
+            )),
+            effect: Effect::EachPlayerGainsChosenFromRightNeighbor { filter: R::Nonland },
+        }],
+        ..legend("Inniaz, the Gale Force", cost(&[generic(3), u(), u()]), vec![CreatureType::Djinn], 4, 4)
+    }
+}
+
+/// Faerie Slumber Party — {4}{U}{U} sorcery. Return all creatures to their
+/// owners' hands; for each opponent who controlled one, two 1/1 blue
+/// flying Faeries that can block only fliers. (Yours bounce first, then
+/// each opponent's in turn order — one batch per seat, not one in all.)
+pub fn faerie_slumber_party() -> CardDefinition {
+    let faerie = TokenDefinition {
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
+        ..token("Faerie", 1, 1, vec![Color::Blue], vec![CreatureType::Faerie])
+    };
+    let theirs = || Selector::ControlledBy { who: PlayerRef::Triggerer, filter: R::Creature };
+    spell(
+        "Faerie Slumber Party",
+        cost(&[generic(4), u(), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Move { what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature }, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::ForEachOpponent {
+                body: Box::new(Effect::If {
+                    cond: Predicate::SelectorExists(theirs()),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: theirs(), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                        make(Value::Const(2), faerie),
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        ]),
+    )
+}
+
+/// Tezzeret, Artifice Master — {3}{U}{U} planeswalker, loyalty 5. +1: a 1/1
+/// Thopter artifact creature with flying. 0: draw a card, two with three or
+/// more artifacts. −9: an emblem that puts a permanent card from your
+/// library onto the battlefield at your end step.
+pub fn tezzeret_artifice_master() -> CardDefinition {
+    let thopter = TokenDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        ..token("Thopter", 1, 1, vec![], vec![CreatureType::Thopter])
+    };
+    CardDefinition {
+        name: "Tezzeret, Artifice Master",
+        cost: cost(&[generic(3), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Tezzeret],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            crate::effect::LoyaltyAbility { loyalty_cost: 1, effect: make(Value::ONE, thopter), ..Default::default() },
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::IfPred {
+                        pred: Box::new(Predicate::ValueAtLeast(
+                            Value::count(Selector::EachPermanent(yours(R::Artifact))),
+                            Value::Const(3),
+                        )),
+                        then: Box::new(Value::Const(2)),
+                        else_: Box::new(Value::ONE),
+                    },
+                },
+                ..Default::default()
+            },
+            crate::effect::LoyaltyAbility {
+                loyalty_cost: -9,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Tezzeret, Artifice Master".into(),
+                    statics: vec![],
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                        effect: Effect::Search {
+                            who: PlayerRef::You,
+                            filter: R::Permanent,
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                    }],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
