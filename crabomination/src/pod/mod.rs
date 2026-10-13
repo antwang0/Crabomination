@@ -7230,6 +7230,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GANAX_COMMANDERS,
             main: decks::GANAX_MAIN,
         },
+        // Seat 1130: Brion Stoutarm's EDHREC average deck. `--pod-decks 1130`.
+        PodDeck {
+            name: "Brion Stoutarm (WR)",
+            commanders: decks::BRION_STOUTARM_COMMANDERS,
+            main: decks::BRION_STOUTARM_MAIN,
+        },
+        // Seat 1131: Aerith Gainsborough's EDHREC average deck. `--pod-decks 1131`.
+        PodDeck {
+            name: "Aerith Gainsborough (W)",
+            commanders: decks::AERITH_GAINSBOROUGH_COMMANDERS,
+            main: decks::AERITH_GAINSBOROUGH_MAIN,
+        },
+        // Seat 1132: Olivia, Crimson Bride's EDHREC average deck. `--pod-decks 1132`.
+        PodDeck {
+            name: "Olivia, Crimson Bride (BR)",
+            commanders: decks::OLIVIA_2_COMMANDERS,
+            main: decks::OLIVIA_2_MAIN,
+        },
+        // Seat 1133: Katilda and Lier's EDHREC average deck. `--pod-decks 1133`.
+        PodDeck {
+            name: "Katilda and Lier (WUG)",
+            commanders: decks::KATILDA_AND_LIER_COMMANDERS,
+            main: decks::KATILDA_AND_LIER_MAIN,
+        },
+        // Seat 1134: Endrek Sahr, Master Breeder's EDHREC average deck. `--pod-decks 1134`.
+        PodDeck {
+            name: "Endrek Sahr, Master Breeder (B)",
+            commanders: decks::ENDREK_SAHR_COMMANDERS,
+            main: decks::ENDREK_SAHR_MAIN,
+        },
+        // Seat 1135: Avatar Roku, Firebender's EDHREC average deck. `--pod-decks 1135`.
+        PodDeck {
+            name: "Avatar Roku, Firebender (R)",
+            commanders: decks::AVATAR_ROKU_COMMANDERS,
+            main: decks::AVATAR_ROKU_MAIN,
+        },
+        // Seat 1136: Kraven the Hunter's EDHREC average deck. `--pod-decks 1136`.
+        PodDeck {
+            name: "Kraven the Hunter (BG)",
+            commanders: decks::KRAVEN_THE_HUNTER_COMMANDERS,
+            main: decks::KRAVEN_THE_HUNTER_MAIN,
+        },
+        // Seat 1137: Amarant Coral's EDHREC average deck. `--pod-decks 1137`.
+        PodDeck {
+            name: "Amarant Coral (RG)",
+            commanders: decks::AMARANT_CORAL_COMMANDERS,
+            main: decks::AMARANT_CORAL_MAIN,
+        },
+        // Seat 1138: Inferno of the Star Mounts's EDHREC average deck. `--pod-decks 1138`.
+        PodDeck {
+            name: "Inferno of the Star Mounts (R)",
+            commanders: decks::INFERNO_OF_THE_STAR_MOUNTS_COMMANDERS,
+            main: decks::INFERNO_OF_THE_STAR_MOUNTS_MAIN,
+        },
     ]
 }
 
@@ -10149,6 +10203,15 @@ mod tests {
             ("Toshiro Umezawa", &[0x0E7C]),
             ("Aveline de Grandpré", &[0x0E7D]),
             ("Ganax, Astral Hunter and Feywild Visitor", &[0x0E7E]),
+            ("Brion Stoutarm", &[0x0E7F]),
+            ("Aerith Gainsborough", &[0x0E80]),
+            ("Olivia, Crimson Bride", &[0x0E81]),
+            ("Katilda and Lier", &[0x0E82]),
+            ("Endrek Sahr, Master Breeder", &[0x0E83]),
+            ("Avatar Roku, Firebender", &[0x0E84]),
+            ("Kraven the Hunter", &[0x0E85]),
+            ("Amarant Coral", &[0x0E86]),
+            ("Inferno of the Star Mounts", &[0x0E87]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
