@@ -141,6 +141,13 @@ the handoff.
 - **FIXED — found by the first 6-seat pod:** two `ControllerProtectionFromMatching` statics (Gor
   Muldrak + a Metamorphic Alteration copy of it) summed `u32::MAX` twice in the prevention
   walk — an overflow panic; the shave is a saturating fold now.
+- **FIXED — the Mondrak board cap (`011PQ8Uk`'s seed 990872):** Romana II copied a token Mondrak,
+  Glory Dominus (made non-legendary by The Sixth Doctor) each turn; N Mondraks make 2^N copies and
+  an 8-seat pod hit 901. `effect_token_estimate` ignored doublers, so every board gate (casts,
+  attacks, landfall) under-priced a doubled batch; it now sizes each mint by
+  `doubled_token_count`, and `pod::token_blowup` passes an activation whose batch crosses
+  `BOARD_GATE` or whose doubler copies reach 2^10 doublings. 12/12 decided (was 10/12). Hapatra +
+  Blowfly (seed 990880) decides 12/12 at the tip without a change.
 - **OPEN (bot):** Gor Muldrak's deck never activates its creature-type changers (Imagecrafter,
   Mistform Mutant, Unnatural Selection) — the bot has no "make it a Salamander" plan.
 
