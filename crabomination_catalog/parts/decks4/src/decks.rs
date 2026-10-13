@@ -810,6 +810,9 @@ pub use cmdr_edhrec57::*;
 #[path = "../../../src/sets/decks/cmdr_edhrec58.rs"]
 mod cmdr_edhrec58;
 pub use cmdr_edhrec58::*;
+#[path = "../../../src/sets/decks/cmdr_edhrec59.rs"]
+mod cmdr_edhrec59;
+pub use cmdr_edhrec59::*;
 #[path = "../../../src/sets/decks/cmdr_edhrec39.rs"]
 mod cmdr_edhrec39;
 pub use cmdr_edhrec39::*;
