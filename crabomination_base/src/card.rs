@@ -6467,6 +6467,13 @@ pub enum AdditionalCastCost {
     /// you control (Burning Curiosity's optional "you may blight 1", as a
     /// `kicker_action_cost`). Payable while you control a creature.
     Blight { n: u32 },
+    /// CR 701.68a + 601.2b — "blight X. X can't be greater than the greatest
+    /// toughness among creatures you control" (Soul Immolation): X -1/-1
+    /// counters on a creature you control, X threaded into the spell's X
+    /// (read via `Value::XFromCost`). Auto: X is that greatest toughness and
+    /// the counters go on the cheapest creature (a token first) — X is capped
+    /// by the biggest creature, not the one that takes them.
+    BlightX,
     /// "You may remove any number of `kind` counters from among creatures you
     /// control" as a discount cost (Hierophant Bio-Titan, paired with a
     /// `SelfCostReducedByValue` over the same `count`). `count` is read at

@@ -12257,7 +12257,7 @@ impl GameState {
             // Removing "any number" of counters — zero is legal.
             A::RemoveCountersAmong { .. } => true,
             // CR 701.68b — no creature, no blight.
-            A::Blight { .. } => {
+            A::Blight { .. } | A::BlightX => {
                 self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c))
             }
             A::OneOf(options) => options
@@ -12901,6 +12901,38 @@ impl GameState {
                         ) {
                             events.append(&mut evs);
                         }
+                    }
+                }
+                A::BlightX => {
+                    // X is the greatest toughness among your creatures; the
+                    // counters go on the cheapest creature (a token first).
+                    let mine: Vec<&crate::card::CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && self.computed_is_creature(c))
+                        .collect();
+                    let x = mine.iter().map(|c| self.effective_toughness_on(c).max(0) as u32).max().unwrap_or(0);
+                    let victim = mine
+                        .iter()
+                        .min_by_key(|c| (!c.is_token, c.definition.cost.cmc(), c.id))
+                        .map(|c| c.id);
+                    if let Some(id) = victim
+                        && x > 0
+                    {
+                        let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                        if let Ok(mut evs) = self.resolve_effect(
+                            &Effect::AddCounter {
+                                what: crate::effect::Selector::ExactObjects(vec![id]),
+                                kind: crate::card::CounterType::MinusOneMinusOne,
+                                amount: crate::card::Value::Const(x as i32),
+                            },
+                            &ctx,
+                        ) {
+                            events.append(&mut evs);
+                        }
+                    }
+                    if sac_power.is_none() {
+                        sac_power = Some(x);
                     }
                 }
                 A::RemoveCountersAmong { kind, count } => {
