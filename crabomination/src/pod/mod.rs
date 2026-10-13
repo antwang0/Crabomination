@@ -10422,6 +10422,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DEEKAH_COMMANDERS,
             main: decks::DEEKAH_MAIN,
         },
+        // Seat 1662: Sigarda, Champion of Light's EDHREC average deck. `--pod-decks 1662`.
+        PodDeck {
+            name: "Sigarda, Champion of Light (WG)",
+            commanders: decks::SIGARDA_2_COMMANDERS,
+            main: decks::SIGARDA_2_MAIN,
+        },
+        // Seat 1663: Shang-Chi, Master of Kung Fu's EDHREC average deck. `--pod-decks 1663`.
+        PodDeck {
+            name: "Shang-Chi, Master of Kung Fu (G)",
+            commanders: decks::SHANG_CHI_COMMANDERS,
+            main: decks::SHANG_CHI_MAIN,
+        },
+        // Seat 1664: Lyzolda, the Blood Witch's EDHREC average deck. `--pod-decks 1664`.
+        PodDeck {
+            name: "Lyzolda, the Blood Witch (BR)",
+            commanders: decks::LYZOLDA_COMMANDERS,
+            main: decks::LYZOLDA_MAIN,
+        },
+        // Seat 1665: Multani, Yavimaya's Avatar's EDHREC average deck. `--pod-decks 1665`.
+        PodDeck {
+            name: "Multani, Yavimaya's Avatar (G)",
+            commanders: decks::MULTANI_2_COMMANDERS,
+            main: decks::MULTANI_2_MAIN,
+        },
+        // Seat 1666: Pashalik Mons's EDHREC average deck. `--pod-decks 1666`.
+        PodDeck {
+            name: "Pashalik Mons (R)",
+            commanders: decks::PASHALIK_MONS_COMMANDERS,
+            main: decks::PASHALIK_MONS_MAIN,
+        },
+        // Seat 1667: Sabin, Master Monk's EDHREC average deck. `--pod-decks 1667`.
+        PodDeck {
+            name: "Sabin, Master Monk (R)",
+            commanders: decks::SABIN_COMMANDERS,
+            main: decks::SABIN_MAIN,
+        },
+        // Seat 1668: Rassilon, the War President's EDHREC average deck. `--pod-decks 1668`.
+        PodDeck {
+            name: "Rassilon, the War President (UB)",
+            commanders: decks::RASSILON_COMMANDERS,
+            main: decks::RASSILON_MAIN,
+        },
+        // Seat 1669: Tori D'Avenant, Fury Rider's EDHREC average deck. `--pod-decks 1669`.
+        PodDeck {
+            name: "Tori D'Avenant, Fury Rider (WR)",
+            commanders: decks::TORI_DAVENANT_COMMANDERS,
+            main: decks::TORI_DAVENANT_MAIN,
+        },
+        // Seat 1670: Shanna, Sisay's Legacy's EDHREC average deck. `--pod-decks 1670`.
+        PodDeck {
+            name: "Shanna, Sisay's Legacy (WG)",
+            commanders: decks::SHANNA_2_COMMANDERS,
+            main: decks::SHANNA_2_MAIN,
+        },
+        // Seat 1671: Márton Stromgald's EDHREC average deck. `--pod-decks 1671`.
+        PodDeck {
+            name: "Márton Stromgald (R)",
+            commanders: decks::MARTON_STROMGALD_COMMANDERS,
+            main: decks::MARTON_STROMGALD_MAIN,
+        },
+        // Seat 1672: Whisper, Blood Liturgist's EDHREC average deck. `--pod-decks 1672`.
+        PodDeck {
+            name: "Whisper, Blood Liturgist (B)",
+            commanders: decks::WHISPER_COMMANDERS,
+            main: decks::WHISPER_MAIN,
+        },
+        // Seat 1673: Imaryll, Elfhame Elite's EDHREC average deck. `--pod-decks 1673`.
+        PodDeck {
+            name: "Imaryll, Elfhame Elite (G)",
+            commanders: decks::IMARYLL_COMMANDERS,
+            main: decks::IMARYLL_MAIN,
+        },
+        // Seat 1674: Braulios of Pheres Band's EDHREC average deck. `--pod-decks 1674`.
+        PodDeck {
+            name: "Braulios of Pheres Band (G)",
+            commanders: decks::BRAULIOS_OF_PHERES_BAND_COMMANDERS,
+            main: decks::BRAULIOS_OF_PHERES_BAND_MAIN,
+        },
+        // Seat 1675: Jolrael, Empress of Beasts's EDHREC average deck. `--pod-decks 1675`.
+        PodDeck {
+            name: "Jolrael, Empress of Beasts (G)",
+            commanders: decks::JOLRAEL_COMMANDERS,
+            main: decks::JOLRAEL_MAIN,
+        },
+        // Seat 1676: Frodo, Determined Hero's EDHREC average deck. `--pod-decks 1676`.
+        PodDeck {
+            name: "Frodo, Determined Hero (W)",
+            commanders: decks::FRODO_2_COMMANDERS,
+            main: decks::FRODO_2_MAIN,
+        },
     ]
 }
 
@@ -13914,6 +14004,21 @@ mod tests {
             ("Itzquinth, Firstborn of Gishath", &[0x1090]),
             ("Baird, Argivian Recruiter", &[0x1091]),
             ("Deekah, Fractal Theorist", &[0x1092]),
+            ("Sigarda, Champion of Light", &[0x1093]),
+            ("Shang-Chi, Master of Kung Fu", &[0x1094]),
+            ("Lyzolda, the Blood Witch", &[0x1095]),
+            ("Multani, Yavimaya's Avatar", &[0x1096]),
+            ("Pashalik Mons", &[0x1097]),
+            ("Sabin, Master Monk", &[0x1098]),
+            ("Rassilon, the War President", &[0x1099]),
+            ("Tori D'Avenant, Fury Rider", &[0x109A]),
+            ("Shanna, Sisay's Legacy", &[0x109B]),
+            ("Márton Stromgald", &[0x109C]),
+            ("Whisper, Blood Liturgist", &[0x109D]),
+            ("Imaryll, Elfhame Elite", &[0x109E]),
+            ("Braulios of Pheres Band", &[0x109F]),
+            ("Jolrael, Empress of Beasts", &[0x10A0]),
+            ("Frodo, Determined Hero", &[0x10A1]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
