@@ -3415,7 +3415,7 @@ pub fn hokori_dust_drinker() -> CardDefinition {
 
 /// Throat Slitter — {4}{B} Rat Ninja 2/2 with Ninjutsu {2}{B}. Whenever this
 /// deals combat damage to a player, destroy target nonblack creature that
-/// player controls. (Modeled as a nonblack creature an opponent controls.)
+/// player controls.
 pub fn throat_slitter() -> CardDefinition {
     CardDefinition {
         name: "Throat Slitter",

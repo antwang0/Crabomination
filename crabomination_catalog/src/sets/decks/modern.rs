@@ -33119,7 +33119,7 @@ pub fn anticognition() -> CardDefinition {
 }
 
 /// Pride of the Clouds — {W}{U} Creature — Elemental Cat 1/1. Flying; gets +1/+1
-/// for each other flyer (modeled as flyers *you* control). Forecast — {2}{W}{U},
+/// for each other creature with flying on the battlefield. Forecast — {2}{W}{U},
 /// reveal from hand: create a 1/1 white and blue Bird with flying.
 pub fn pride_of_the_clouds() -> CardDefinition {
     CardDefinition {
@@ -33133,7 +33133,7 @@ pub fn pride_of_the_clouds() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        dynamic_pt: Some(DynamicPt::BasePlusOtherFlyersControlled { base: 1 }),
+        dynamic_pt: Some(DynamicPt::BasePlusOtherFlyersOnBattlefield { base: 1 }),
         activated_abilities: vec![crate::effect::shortcut::forecast(
             cost(&[generic(2), w(), u()]),
             Effect::CreateToken {

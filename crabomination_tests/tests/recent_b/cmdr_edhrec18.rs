@@ -1008,3 +1008,14 @@ fn brazen_collector_mana_survives_step_ends() {
     g.empty_mana_pools();
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "kept through the step end");
 }
+
+/// Pride of the Clouds — "gets +1/+1 for each other creature with flying on
+/// the battlefield" (CR 613.4c): an opponent's flyer counts too.
+#[test]
+fn pride_of_the_clouds_counts_every_flyer() {
+    let mut g = pod(3);
+    let pride = g.add_card_to_battlefield(0, catalog::pride_of_the_clouds());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_battlefield(2, catalog::serra_angel());
+    assert_eq!(pt(&g, pride), (3, 3));
+}

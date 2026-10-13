@@ -79,9 +79,8 @@ pub fn wandertale_mentor() -> CardDefinition {
 }
 
 /// Starseer Mentor — {3}{W}{B} 3/5 Bat Warlock. Flying, vigilance. At your end
-/// step, if you gained or lost life this turn, each opponent loses 3 life unless
-/// they sacrifice a nonland permanent or discard a card. (Printed "target
-/// opponent" modeled as each-opponent, per the aristocrat convention.)
+/// step, if you gained or lost life this turn, target opponent loses 3 life
+/// unless they sacrifice a nonland permanent or discard a card.
 pub fn starseer_mentor() -> CardDefinition {
     CardDefinition {
         name: "Starseer Mentor",
