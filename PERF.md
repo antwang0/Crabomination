@@ -3165,6 +3165,13 @@ pods (release)   pod_sweep 9951 seats 1226-1253 × 4,6,8 × 3 = 48 games, 0 bad;
 pods (debug)     seats 1229-1253, 188 games over seeds 40011-44003, all decided
                  bar one board cap (Second Harvest + Doubling Season + Maskwood
                  Nexus token growth)
+re-gate          after batches 45-51 (seats 1254-1269, 45 more cards,
+                 RevealTopMatchingToGraveyard) at dc9dc0ae8: --bench
+                 byte-identical, thread_determinism ok, peak_rss 33.3 MiB,
+                 games_per_s 261.70 (-1.5 %, inside run-to-run noise; the
+                 decision count is the instrument); clippy 0 (43m43s);
+                 pod_sweep 9961/9962 seats 1254-1269 × 4,6,8 × 3/12 = 135
+                 games, 0 bad
 ```
 
 ### 2026-10-13 (Commander run, `01BJKf54`, close) — guardrail; 17 more seats, 59 cards, two primitives
