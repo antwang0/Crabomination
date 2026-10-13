@@ -3777,6 +3777,11 @@ pub enum SelectionRequirement {
     /// Powers Eldritch Evolution's "creature card with mana value X or less,
     /// where X is 2 plus the sacrificed creature's mana value."
     ManaValueAtMostSacrificedPlus(u32),
+    /// True when the card's mana value is strictly less than the cost-
+    /// sacrificed permanent's (`GameState.sacrificed_mana_value`, 0 when none
+    /// was recorded). Scrap Welder's "artifact card with mana value less than
+    /// X", X being the sacrificed artifact's.
+    ManaValueLessThanSacrificed,
     /// True when the card's mana value is strictly less than the firing
     /// trigger event's amount — for died events, the dying card's mana value
     /// (`GameState.trigger_event_amount_scratch`). Powers Scrap Trawler's
