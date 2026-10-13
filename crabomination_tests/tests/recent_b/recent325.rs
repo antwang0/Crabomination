@@ -287,10 +287,15 @@ fn dalkovan_encampment_taps_for_white_and_musters_attackers() {
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1, "white, not colorless");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 0);
 
-    // The muster ability mints into an existing combat (CR 508.3a).
+    // The muster ability sets up "whenever you attack this turn" (CR 603.7e):
+    // nothing until the attack, then two Warriors join it (CR 508.3a).
     g.battlefield.iter_mut().find(|c| c.id == land).unwrap().tapped = false;
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(attacker);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, land, 1, None);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Warrior"), "not before the attack");
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -298,9 +303,7 @@ fn dalkovan_encampment_taps_for_white_and_musters_attackers() {
         target: AttackTarget::Player(1),
     }]))
     .expect("attack");
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    activate(&mut g, land, 1, None);
+    drain_stack(&mut g);
     let warriors: Vec<_> =
         g.battlefield.iter().filter(|c| c.definition.name == "Warrior").collect();
     assert_eq!(warriors.len(), 2);

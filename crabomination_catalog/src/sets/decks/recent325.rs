@@ -518,13 +518,11 @@ pub fn rite_of_renewal() -> CardDefinition {
 /// `{3}{R}{W}, {T}, Sacrifice` that minted the Warriors off-combat. The
 /// printed land makes **only white**, which is what the mana ratchet caught.
 ///
-/// Residual: the printed third ability is a *delayed* "whenever you attack
-/// this turn", and the tokens go at the beginning of the next end step. The
-/// engine has `OnMatchingAttacksThisTurn` (per attacker, so it over-fires)
-/// and no once-per-combat delayed attack trigger, so the tokens are minted
-/// immediately (and go at the next end step) — strictly *worse* than the
-/// printing (you must activate after attackers are declared), which is the
-/// safe direction for an approximation.
+/// The third ability sets up a delayed attack trigger (CR 603.7e,
+/// `OnYourNextAttackThisTurn`): the Warriors join your next attack this turn
+/// and go at the next end step. Residual: the printed trigger is "whenever
+/// you attack this turn", so an extra combat on the same turn gets no second
+/// pair.
 pub fn dalkovan_encampment() -> CardDefinition {
     CardDefinition {
         name: "Dalkovan Encampment",
@@ -555,12 +553,14 @@ pub fn dalkovan_encampment() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2), w()]),
-                effect: Effect::CreateTokenAttacking {
-                    who: PlayerRef::You,
-                    count: Value::Const(2),
-                    definition: std::sync::Arc::new(warrior_token()),
-                    cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtNextEndStep,
-                    defender: None,
+                effect: Effect::OnYourNextAttackThisTurn {
+                    body: Box::new(Effect::CreateTokenAttacking {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        definition: std::sync::Arc::new(warrior_token()),
+                        cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtNextEndStep,
+                        defender: None,
+                    }),
                 },
                 ..Default::default()
             },
