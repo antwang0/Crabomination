@@ -1406,3 +1406,24 @@ fn cr_611_3a_limited_resources_locks_land_drops_at_ten() {
     g.add_card_to_battlefield(0, catalog::plains());
     assert!(!g.can_player_play_land(0), "ten lands: locked");
 }
+
+/// CR 122.2 / 400.7 — counters an exiled card carries don't follow it out of
+/// exile. Karn, the Great Creator's −2 took a Rayami-exiled artifact creature
+/// back to hand still holding its blood counter (pod seed 59438 game 4).
+#[test]
+fn cr_122_2_a_card_leaving_exile_drops_its_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let canonist = g.add_card_to_exile(0, catalog::ethersworn_canonist());
+    g.exile.iter_mut().find(|c| c.id == canonist).unwrap().add_counters(CounterType::Blood, 1);
+    let karn = g.add_card_to_battlefield(0, catalog::karn_the_great_creator());
+    g.battlefield_find_mut(karn).unwrap().add_counters(CounterType::Loyalty, 5);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: karn, ability_index: 1, target: None, x_value: None })
+        .expect("-2");
+    drain_stack(&mut g);
+    let card = g.players[0].hand.iter().find(|c| c.id == canonist).expect("wished into hand");
+    assert_eq!(card.counter_count(CounterType::Blood), 0);
+}

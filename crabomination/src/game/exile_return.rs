@@ -32,10 +32,23 @@ impl GameState {
         Some(self.exile_remove_at(pos))
     }
 
-    /// [`take_from_exile`](Self::take_from_exile) by position.
+    /// [`take_from_exile`](Self::take_from_exile) by position. CR 122.2 —
+    /// counters an exiled card carried (suspend's time counters, Rayami's
+    /// blood counters) don't follow it out, whichever caller places it next
+    /// (Karn, the Great Creator's wish took one to hand with its blood
+    /// counter, pod seed 59438 game 4); a Skullbriar keeps them (CR 122.2's
+    /// exception is its own text).
     pub(crate) fn exile_remove_at(&mut self, pos: usize) -> CardInstance {
         let mut card = self.exile.remove(pos);
         card.exiled_by = None;
+        if !card.definition.keeps_counters_off_battlefield {
+            if !card.counters.is_empty() {
+                card.counters.clear();
+            }
+            if !card.keyword_counters.is_empty() {
+                card.keyword_counters.clear();
+            }
+        }
         card
     }
 }
