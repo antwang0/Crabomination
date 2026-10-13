@@ -149,6 +149,9 @@ the handoff.
   `StaticEffect::GraveyardCardsHaveJumpStart` (CR 702.133, `effective_jump_start`; the bot's recast
   block reads it behind a `BoardFacts` flag), `Effect::MayPayXUpTo` (Shanna's capped X). Cosmic
   Rebirth always takes its "you may put it onto the battlefield" (INCOMPLETE_CARDS).
+- **Seats 1221-1223** (Ekthi, Cynette, Elda): eight cards in `decks::cmdr_edhrec37`, no new
+  primitive. Elda's "first nonlegendary creature spell each turn" is a once-a-turn cast trigger, so
+  an Elda entering after such a spell grants demonstrate to the next one (INCOMPLETE_CARDS).
 - **Seats 1216-1220** (Orah, Meria, Trazyn, Melek Reforged Researcher, O-Kagachi): fifteen cards in
   `decks::cmdr_edhrec36`, no new primitive. **FIXED:** the destroy/sacrifice death funnel never
   bound the dying creature's mana value before auto-targeting its own "this or another" trigger
