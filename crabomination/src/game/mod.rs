@@ -2363,6 +2363,11 @@ pub struct ResolutionScratch {
     /// written only by a surveil that keeps a card, reset only when non-zero.
     #[serde(skip)]
     pub(crate) surveil_kept_top_this_resolution: u32,
+    /// CR 614.5 reentrancy guard for Scion of Halaster's first-draw
+    /// replacement — the draw it ends with isn't replaced by it again. Here
+    /// for the same size cap; written only while that replacement applies.
+    #[serde(skip)]
+    pub(crate) in_first_draw_replacement: bool,
     /// CR 603.3d — a prompting seat's targeted self-death trigger that fired
     /// mid-resolution, held until the resolution ends so its controller names
     /// the targets (`resolve_top_of_stack` drains it). Empty in bot play.
@@ -3769,10 +3774,6 @@ pub struct GameState {
     /// replacement hands back isn't replaced again. Transient.
     #[serde(skip)]
     pub(crate) in_chains_replacement: bool,
-    /// CR 614.5 reentrancy guard for Scion of Halaster's first-draw
-    /// replacement — the draw it ends with isn't replaced by it again.
-    #[serde(skip)]
-    pub(crate) in_first_draw_replacement: bool,
     /// `Effect::ExileSelfWithCountdown` fired during this resolution, so the
     /// spell goes to exile with its fuse instead of the graveyard. Transient.
     #[serde(skip)]
@@ -4635,7 +4636,6 @@ impl Clone for GameState {
             in_draw_redirect: self.in_draw_redirect,
             in_damage_redirect: self.in_damage_redirect,
             in_chains_replacement: self.in_chains_replacement,
-            in_first_draw_replacement: self.in_first_draw_replacement,
             exile_resolving_spell_with_countdown: self.exile_resolving_spell_with_countdown,
             in_token_replacement: self.in_token_replacement,
             monarch: self.monarch,
@@ -4865,7 +4865,6 @@ impl GameState {
             in_draw_redirect: false,
             in_damage_redirect: false,
             in_chains_replacement: false,
-            in_first_draw_replacement: false,
             exile_resolving_spell_with_countdown: false,
             in_token_replacement: false,
             monarch: None,
@@ -22691,7 +22690,7 @@ impl GameState {
             if self.counter_instead_of_drawing(p).is_some() {
                 applicable.push(DrawDig::CounterOnSource);
             }
-            if !self.in_first_draw_replacement
+            if !self.scratch.in_first_draw_replacement
                 && self.players[p].cards_drawn_this_turn == 0
                 && self.first_draw_mills_one_of_two(p)
             {
@@ -23172,9 +23171,9 @@ impl GameState {
                 if let Ok(mut evs) = self.resolve_effect_driven(&look, &ctx) {
                     events.append(&mut evs);
                 }
-                self.in_first_draw_replacement = true;
+                self.scratch.in_first_draw_replacement = true;
                 self.draw_one_or_deck(p, events);
-                self.in_first_draw_replacement = false;
+                self.scratch.in_first_draw_replacement = false;
                 true
             }
         }
