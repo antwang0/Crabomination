@@ -720,6 +720,9 @@ pub use cmdr_edhrec31::*;
 #[path = "../../../src/sets/decks/cmdr_edhrec32.rs"]
 mod cmdr_edhrec32;
 pub use cmdr_edhrec32::*;
+#[path = "../../../src/sets/decks/cmdr_edhrec33.rs"]
+mod cmdr_edhrec33;
+pub use cmdr_edhrec33::*;
 #[path = "../../../src/sets/decks/cmdr_most_built.rs"]
 mod cmdr_most_built;
 pub use cmdr_most_built::*;
