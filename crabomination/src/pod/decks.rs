@@ -34952,3 +34952,201 @@ pub const GANDALF_THE_GREY_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const BRAIDS_3_COMMANDERS: &[CardFactory] = &[braids_conjurer_adept];
+
+/// **Braids, Conjurer Adept**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Braids, Conjurer Adept (EDHREC, fetched 2026-10-13).
+pub const BRAIDS_3_MAIN: &[CardFactory] = &[
+    arcane_signet, caged_sun, gate_to_the_aether, gilded_lotus, howling_mine, lightning_greaves,
+    mind_stone, portal_to_phyrexia, sapphire_medallion, sky_diamond, sol_ring, swiftfoot_boots,
+    the_magic_mirror, thought_vessel, thran_dynamo, myriad_landscape, mystic_sanctuary,
+    nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower, riptide_laboratory,
+    rogues_passage, agent_of_treachery, ancient_silver_dragon, arcanis_the_omnipotent,
+    archetype_of_imagination, artisan_of_kozilek, blightsteel_colossus, clever_impersonator,
+    clone_card, consecrated_sphinx, hullbreaker_horror, inkwell_leviathan, it_that_betrays,
+    jin_gitaxias_core_augur, jin_gitaxias_progress_tyrant, kami_of_the_crescent_moon,
+    kira_great_glass_spinner, lord_of_change, nezahal_primal_tide, pathrazer_of_ulamog,
+    phyrexian_ingester, phyrexian_metamorph, scourge_of_fleets, sphinx_of_the_second_sun,
+    stormtide_leviathan, tidespout_tyrant, omniscience, paradox_haze, propaganda, rhystic_study,
+    shadow_of_the_second_sun, vanishing, aetherize, an_offer_you_cant_refuse, arcane_denial,
+    brainstorm, counterspell, cyclonic_rift, high_tide, mana_drain, negate, pongify,
+    rapid_hybridization, reality_shift, curse_of_the_swine, rite_of_replication,
+    rush_of_knowledge, show_and_tell, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const TAIGAM_2_COMMANDERS: &[CardFactory] = &[taigam_master_opportunist];
+
+/// **Taigam, Master Opportunist**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Taigam, Master Opportunist (EDHREC, fetched 2026-10-13).
+pub const TAIGAM_2_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, isochron_scepter, midnight_clock, mind_stone,
+    rotating_fireplace, sapphire_medallion, sol_ring, sol_talisman, thought_vessel,
+    twinning_staff, mistrise_village, myriad_landscape, mystic_sanctuary, otawara_soaring_city,
+    reliquary_tower, war_room, archmage_emeritus, archmage_of_runes, eluge_the_shoreless_sea,
+    errant_street_artist, high_fae_trickster, highspire_bell_ringer, hullbreaker_horror,
+    hydroelectric_specimen, jhoiras_timebug, ledger_shredder, mulldrifter, nulldrifter,
+    snapcaster_mage, sphinx_of_the_second_sun, talrand_sky_summoner, thunderclap_drake,
+    time_beetle, uthros_psionicist, as_foretold, leyline_of_anticipation, paradox_haze,
+    propaganda, shadow_of_the_second_sun, storm_of_saruman, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, archmages_charm, brainstorm, clockspinning, consider, counterspell,
+    frantic_search, high_tide, narsets_reversal, opt, pongify, rapid_hybridization,
+    reality_shift, sink_into_stupor, snap, suspend, all_of_history_all_at_once,
+    ancestral_vision, gitaxian_probe, inspiring_refrain, ponder, preordain, serum_visions,
+    temporal_manipulation, time_warp, treasure_cruise, wibbly_wobbly_timey_wimey,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const CARTH_THE_LION_COMMANDERS: &[CardFactory] = &[carth_the_lion];
+
+/// **Carth the Lion**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 11 Forests + 8 Swamps = 99.
+/// Carth the Lion (EDHREC, fetched 2026-10-13).
+pub const CARTH_THE_LION_MAIN: &[CardFactory] = &[
+    arcane_signet, golgari_signet, rings_of_brighthearth, sol_ring, staff_of_compleation,
+    talisman_of_resilience, the_chain_veil, bojuka_bog, command_tower, deathcap_glade,
+    golgari_rot_farm, interplanar_beacon, karns_bastion, llanowar_wastes, overgrown_tomb,
+    tainted_wood, temple_of_malady, twilight_mire, undergrowth_stadium, urborg_tomb_of_yawgmoth,
+    verdant_catacombs, woodland_cemetery, yavimaya_cradle_of_growth, agent_frank_horrigan,
+    birds_of_paradise, cankerbloom, delighted_halfling, elvish_mystic, eternal_witness,
+    evolution_sage, llanowar_elves, pir_imaginative_rascal, reki_the_history_of_kamigawa,
+    sakura_tribe_elder, sanctum_lurker, storrev_devkarin_lich, the_peregrine_dynamo,
+    vorinclex_monstrous_raider, doubling_season, kayas_ghostform, oath_of_liliana,
+    way_of_the_necromancer, way_of_the_paradox, assassins_trophy, atomize, beast_within, fog,
+    heroic_intervention, obscuring_haze, putrefy, garruk_wildspeaker, garruk_apex_predator,
+    garruk_cursed_huntsman, garruk_primal_hunter, garruk_unleashed, liliana_dreadhorde_general,
+    lolth_spider_queen, nissa_ascended_animist, nissa_vital_force, nissa_voice_of_zendikar,
+    nissa_who_shakes_the_world, ob_nixilis_reignited, tevesh_szat_doom_of_fools,
+    ugin_the_spirit_dragon, vraska_the_unseen, vraska_betrayals_sting, vraska_golgari_queen,
+    vraska_relic_seeker, wrenn_and_realmbreaker, wrenn_and_seven, culling_ritual, cultivate,
+    damnation, farseek, kodamas_reach, natures_lore, rampant_growth, three_visits, toxic_deluge,
+    unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const LOOT_2_COMMANDERS: &[CardFactory] = &[loot_the_key_to_everything];
+
+/// **Loot, the Key to Everything**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 6 Forests + 4 Islands + 5 Mountains = 99.
+/// Loot, the Key to Everything (EDHREC, fetched 2026-10-13).
+pub const LOOT_2_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, lightning_greaves, sol_ring, swiftfoot_boots,
+    talisman_of_creativity, talisman_of_curiosity, talisman_of_impulse, breeding_pool,
+    cinder_glade, command_tower, dreamroot_cascade, exotic_orchard, frontier_bivouac,
+    hinterland_harbor, ketria_triome, misty_rainforest, rejuvenating_springs, rockfall_vale,
+    rootbound_crag, scalding_tarn, spire_garden, steam_vents, stomping_ground, sulfur_falls,
+    training_center, wooded_foothills, yavimaya_coast, invasion_of_kaldheim,
+    invasion_of_zendikar, azusa_lost_but_seeking, birds_of_paradise, bonehoard_dracosaur,
+    doc_aurlock_grizzled_genius, dryad_of_the_ilysian_grove, etali_primal_conqueror,
+    etali_primal_storm, faldorn_dread_wolf_herald, flaming_tyrannosaurus, goblin_anarchomancer,
+    hugs_grisly_guardian, iraxxa_empress_of_mars, keeper_of_secrets, laelia_the_blade_reforged,
+    loot_exuberant_explorer, maelstrom_wanderer, nalfeshnee, ornithopter_of_paradise,
+    party_thrasher, sage_of_the_beyond, savvy_trader, tatyova_benthic_druid,
+    the_thirteenth_doctor, tireless_provisioner, tlincalli_hunter, wild_magic_sorcerer,
+    charred_foyer_warped_space, exploration, omenpath_journey, paradox_haze,
+    passionate_archaeologist, the_lost_and_the_damned, utopia_sprawl, valakut_exploration,
+    wild_growth, wild_wasteland, beast_within, chaos_warp, counterspell, cyclonic_rift,
+    delayed_blast_fireball, growth_spiral, heroic_intervention, chandra_torch_of_defiance,
+    oko_thief_of_crowns, xenagos_the_reveler, blasphemous_act, cultivate, escape_to_the_wilds,
+    farseek, jeskas_will, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const UUGGUU_COMMANDERS: &[CardFactory] = &[uugguu_the_omniplasm];
+
+/// **Uugguu, the Omniplasm**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 6 Forests + 4 Islands + 4 Swamps = 99.
+/// Uugguu, the Omniplasm (EDHREC, fetched 2026-10-13).
+pub const UUGGUU_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, cauldron_of_essence, maskwood_nexus, patchwork_banner,
+    phyrexian_altar, sol_ring, breeding_pool, command_tower, deathcap_glade, dreamroot_cascade,
+    drowned_catacomb, exotic_orchard, hinterland_harbor, misty_rainforest, morphic_pool,
+    opulent_palace, overgrown_tomb, path_of_ancestry, phyrexian_tower, polluted_delta,
+    rejuvenating_springs, three_tree_city, undergrowth_stadium, verdant_catacombs, watery_grave,
+    woodland_cemetery, zagoth_triome, acidic_slime, adrix_and_nev_twincasters,
+    aeve_progenitor_ooze, biogenic_ooze, biowaste_blob, chomping_changeling,
+    clever_impersonator, clone_card, gelatinous_cube, glasspool_mimic, green_slime, hecteyes,
+    mirror_image, mitotic_slime, mutable_explorer, necrotic_ooze, omni_changeling,
+    oran_rief_ooze, phantasmal_image, phyrexian_metamorph, predator_ooze,
+    prime_speaker_vannifar, ravenous_slime, roaming_throne, scavenging_ooze,
+    slurrk_all_ingesting, stunt_double, the_mimeoplasm, uchuulon, umori_the_collector,
+    corrupted_zendikon, doubling_season, gutter_grime, kindred_discovery,
+    march_of_the_world_ooze, parallel_lives, springleaf_parade, assassins_trophy, counterspell,
+    deadly_dispute, harmonized_crescendo, heroic_intervention, malakir_rebirth, saw_in_half,
+    second_harvest, village_rites, voidslime, bloodline_bidding, cultivate, distant_melody,
+    farseek, natures_lore, raise_the_palisade, rampant_growth, reanimate, three_visits,
+    victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const EDEA_COMMANDERS: &[CardFactory] = &[edea_possessed_sorceress];
+
+/// **Edea, Possessed Sorceress**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 4 Islands + 4 Mountains + 6 Swamps = 99.
+/// Edea, Possessed Sorceress (EDHREC, fetched 2026-10-13).
+pub const EDEA_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, chaos_shrines_black_crystal, dimir_signet, fellwar_stone,
+    lightning_greaves, phyrexian_altar, rakdos_signet, sol_ring, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, blood_crypt, bloodstained_mire,
+    command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb, exotic_orchard,
+    high_market, luxury_suite, morphic_pool, phyrexian_tower, polluted_delta, reliquary_tower,
+    shipwreck_marsh, shivan_reef, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    watery_grave, xanders_lounge, ayara_widow_of_the_realm, baleful_strix,
+    braids_arisen_nightmare, chameleon_master_of_disguise, disciple_of_bolas, dominus_of_fealty,
+    don_andres_the_renegade, garland_royal_kidnapper, gogo_master_of_mimicry, illuminor_szeras,
+    karlach_fury_of_avernus, kethek_crucible_goliath, morbid_opportunist, nightmare_shepherd,
+    nightscape_familiar, pitiless_plunderer, rakdos_the_muscle, spark_double,
+    the_beast_deathless_prince, umbral_collar_zealot, viscera_seer, warren_soultrader,
+    zara_renegade_recruiter, black_market_connections, goblin_bombardment, impostor_syndrome,
+    industrial_advancement, propaganda, an_offer_you_cant_refuse, arcane_denial, chaos_warp,
+    corrupted_conviction, counterspell, dark_ritual, deadly_dispute, domineering_will, fling,
+    kazuuls_fury, nasty_end, saw_in_half, village_rites, geyadrone_dihada, blasphemous_act,
+    diabolic_intent, feed_the_swarm, insurrection, mass_mutiny, mob_rule, reanimate,
+    seize_the_spotlight, vandalblast, victimize,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const GOGO_COMMANDERS: &[CardFactory] = &[gogo_master_of_mimicry];
+
+/// **Gogo, Master of Mimicry**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 23 Islands = 99.
+/// Gogo, Master of Mimicry (EDHREC, fetched 2026-10-13).
+pub const GOGO_MAIN: &[CardFactory] = &[
+    arcane_signet, basalt_monolith, caged_sun, fellwar_stone, insight_engine, lightning_greaves,
+    mind_stone, sapphire_medallion, sol_ring, swiftfoot_boots, the_enigma_jewel,
+    the_millennium_calendar, the_water_crystal, thought_vessel, thousand_year_elixir,
+    thran_dynamo, waterbending_scroll, wayfarers_bauble, escape_tunnel, evolving_wilds,
+    fabled_passage, flooded_strand, minamo_school_at_waters_edge, misty_rainforest,
+    myriad_landscape, mystic_sanctuary, polluted_delta, prismatic_vista, reliquary_tower,
+    scalding_tarn, terramorphic_expanse, aboleth_spawn, aphetto_alchemist,
+    arcanis_the_omnipotent, benthic_anomaly, burnished_hart, dreamscape_artist,
+    faerie_mastermind, hullbreaker_horror, ioreth_of_the_healing_house, james_wandering_dad,
+    malcolm_alluring_scoundrel, marvin_murderous_mimic, mulldrifter, nulldrifter, omen_hawker,
+    peregrine_drake, pit_automaton, solemn_simulacrum, sphinx_of_the_second_sun, trinket_mage,
+    vizier_of_tumbling_sands, extravagant_replication, mystic_remora, propaganda,
+    shadow_of_the_second_sun, training_grounds, unstoppable_plan, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, counterspell, cyclonic_rift, dramatic_reversal,
+    high_tide, mana_drain, mana_sculpt, pongify, rapid_hybridization, reality_shift, swan_song,
+    teferi_temporal_archmage, tezzeret_the_seeker, fabricate, ponder, sea_gate_restoration,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island,
+];

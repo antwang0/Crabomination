@@ -7824,6 +7824,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GANDALF_THE_GREY_COMMANDERS,
             main: decks::GANDALF_THE_GREY_MAIN,
         },
+        // Seat 1229: Braids, Conjurer Adept's EDHREC average deck. `--pod-decks 1229`.
+        PodDeck {
+            name: "Braids, Conjurer Adept (U)",
+            commanders: decks::BRAIDS_3_COMMANDERS,
+            main: decks::BRAIDS_3_MAIN,
+        },
+        // Seat 1230: Taigam, Master Opportunist's EDHREC average deck. `--pod-decks 1230`.
+        PodDeck {
+            name: "Taigam, Master Opportunist (U)",
+            commanders: decks::TAIGAM_2_COMMANDERS,
+            main: decks::TAIGAM_2_MAIN,
+        },
+        // Seat 1231: Carth the Lion's EDHREC average deck. `--pod-decks 1231`.
+        PodDeck {
+            name: "Carth the Lion (BG)",
+            commanders: decks::CARTH_THE_LION_COMMANDERS,
+            main: decks::CARTH_THE_LION_MAIN,
+        },
+        // Seat 1232: Loot, the Key to Everything's EDHREC average deck. `--pod-decks 1232`.
+        PodDeck {
+            name: "Loot, the Key to Everything (URG)",
+            commanders: decks::LOOT_2_COMMANDERS,
+            main: decks::LOOT_2_MAIN,
+        },
+        // Seat 1233: Uugguu, the Omniplasm's EDHREC average deck. `--pod-decks 1233`.
+        PodDeck {
+            name: "Uugguu, the Omniplasm (UBG)",
+            commanders: decks::UUGGUU_COMMANDERS,
+            main: decks::UUGGUU_MAIN,
+        },
+        // Seat 1234: Edea, Possessed Sorceress's EDHREC average deck. `--pod-decks 1234`.
+        PodDeck {
+            name: "Edea, Possessed Sorceress (UBR)",
+            commanders: decks::EDEA_COMMANDERS,
+            main: decks::EDEA_MAIN,
+        },
+        // Seat 1235: Gogo, Master of Mimicry's EDHREC average deck. `--pod-decks 1235`.
+        PodDeck {
+            name: "Gogo, Master of Mimicry (U)",
+            commanders: decks::GOGO_COMMANDERS,
+            main: decks::GOGO_MAIN,
+        },
     ]
 }
 
@@ -10877,6 +10919,13 @@ mod tests {
             ("Abigale, Poet Laureate", &[0x0EDF]),
             ("Grist, Voracious Larva", &[0x0EE0]),
             ("Gandalf the Grey", &[0x0EE1]),
+            ("Braids, Conjurer Adept", &[0x0EE2]),
+            ("Taigam, Master Opportunist", &[0x0EE3]),
+            ("Carth the Lion", &[0x0EE4]),
+            ("Loot, the Key to Everything", &[0x0EE5]),
+            ("Uugguu, the Omniplasm", &[0x0EE6]),
+            ("Edea, Possessed Sorceress", &[0x0EE7]),
+            ("Gogo, Master of Mimicry", &[0x0EE8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
