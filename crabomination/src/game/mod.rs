@@ -14179,6 +14179,19 @@ impl GameState {
         for card in if any_equipped_bonus { &self.battlefield[..] } else { &[] } {
             let Some(bonus) = &card.definition.equipped_bonus else { continue };
             let Some(target) = card.attached_to else { continue };
+            // The Rune cycle: on an Equipment the bonus is "equipped creature
+            // gets …", so it lands on whatever that Equipment is attached to.
+            let target = if bonus.relays_through_equipment
+                && self.battlefield.find_by_id(target).is_some_and(|h| {
+                    h.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Equipment)
+                }) {
+                match self.battlefield.find_by_id(target).and_then(|h| h.attached_to) {
+                    Some(t) => t,
+                    None => continue,
+                }
+            } else {
+                target
+            };
             // Only apply while the target is still a creature on the bf.
             let Some(host) = self.battlefield.find_by_id(target) else { continue };
             // Volrath's Curse — the host's controller bought a pass out of this

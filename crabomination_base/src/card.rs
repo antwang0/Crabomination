@@ -6463,6 +6463,11 @@ pub struct EquipBonus {
     /// cycle's combat-damage triggers. Empty for the common static-bonus case.
     #[serde(default)]
     pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
+    /// An Aura whose bonus, while it enchants an Equipment, is that
+    /// Equipment's "equipped creature gets …" (the Rune cycle — Rune of Might,
+    /// Rune of Mortality): the bonus lands on the equipped creature.
+    #[serde(default)]
+    pub relays_through_equipment: bool,
     /// Activated abilities granted to the equipped creature (CR 702.6e). Each
     /// resolves as though printed on the creature — its `{T}` taps the
     /// creature, `Selector::This` reads the creature. Surfaced through
