@@ -207,14 +207,20 @@ pub fn auramancers_guise() -> CardDefinition {
 }
 
 /// Rune of Might — {1}{G} Aura Rune, enchant permanent. When it enters, draw a
-/// card. An enchanted creature gets +1/+1 and has trample (the Equipment half
-/// — "equipped creature gets +1/+1 and has trample" — is INCOMPLETE_CARDS).
+/// card. An enchanted creature gets +1/+1 and has trample; on an Equipment,
+/// the creature it equips does.
 pub fn rune_of_might() -> CardDefinition {
     let mut c = aura(
         "Rune of Might",
         cost(&[generic(1), g()]),
         R::Permanent,
-        EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Trample], ..Default::default() },
+        EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Trample],
+            relays_through_equipment: true,
+            ..Default::default()
+        },
     );
     c.triggered_abilities = vec![etb(draw(1))];
     c

@@ -127,8 +127,8 @@ pub fn gorgon_flail() -> CardDefinition {
 }
 
 /// Rune of Mortality — {1}{B} Aura, enchant permanent. When it enters, draw a
-/// card. An enchanted creature has deathtouch (the Equipment half — "equipped
-/// creature has deathtouch" — is INCOMPLETE_CARDS).
+/// card. An enchanted creature has deathtouch; on an Equipment, the creature
+/// it equips does.
 pub fn rune_of_mortality() -> CardDefinition {
     CardDefinition {
         name: "Rune of Mortality",
@@ -136,7 +136,11 @@ pub fn rune_of_mortality() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Permanent) },
-        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Deathtouch], ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Deathtouch],
+            relays_through_equipment: true,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(draw(1))],
         ..Default::default()
     }

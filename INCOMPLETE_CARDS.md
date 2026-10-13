@@ -2064,7 +2064,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Baba Lysaga, Night Witch | can't sacrifice itself; a headless seat sacrifices a full three-type batch or nothing | `sac_any_number_filter` excludes the source; `distinct_type_sac_batch` is the auto-line |
 | 🟡 Sheltering Ancient | every counter of an upkeep goes on the opponents' smallest creature (the engine's pick) | `CumulativeUpkeepCost::PutCounterOnOpponentCreature` auto-pays |
 | 🟡 Tolarian Contempt | the owner's top-or-bottom choice is the engine's | `LibraryPosition::OwnerChoice` auto-picks |
-| 🟡 Rune of Mortality | on an Equipment it grants nothing (the "equipped creature has deathtouch" half) | the Aura's `EquipBonus` keywords reach only the permanent it enchants |
 | 🟡 Disciple of Perdition | at exactly 13 life both modes always happen (the "may choose both" is taken) | `Effect::If` on `PlayerLifeExactly` picks the pair over the one-mode `ChooseMode` |
 | 🟡 Irencrag Feat | the "only one more spell" lock lands when the next spell's cast trigger resolves, so an instant cast in response slips through | `OnYourNextSpellCastThisTurn` + `SilencePlayersThisTurn` |
 | 🟡 Ochre Jelly | the split copy is made as it dies, not at the beginning of the next end step | a captured counter count can't ride `DelayUntilWithCapture` |
@@ -2072,7 +2071,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 In Search of Greatness | the free cast takes mana value up to 1 + the greatest (not exactly), and the enchantment counts itself | `MayCastFromHandFreeMatching { max_mv }` over `GreatestManaValueAmongPermanents(You)` |
 | 🟡 Hooded Blightfang | only combat damage to a planeswalker destroys it | `EventKind::DealsCombatDamageToPlaneswalker`; `EventKind` has no bit for the noncombat kind |
 | 🟡 Akroma, Vision of Ixidor | protection is not counted | there is no "has any protection" requirement atom |
-| 🟡 Rune of Might | on an Equipment it grants nothing ("equipped creature gets +1/+1 and has trample") | `EquipBonus` applies to the attached permanent only, as Rune of Mortality |
 | 🟡 You Look Upon the Tarrasque | "able to block that creature do so" binds the creatures on the battlefield as it resolves; one entering later isn't forced | `Effect::MustBlockTarget` stamps `must_block` per creature |
 | 🟡 The Rise of Sozin | chapter II exiles every card with the name rather than up to four, and from an opponent the engine picks rather than a target | `Effect::NameCardExileMatchingAllZones` |
 | 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |

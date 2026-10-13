@@ -785,3 +785,19 @@ fn shay_cormac_strips_protection_and_ward() {
     assert!(!kw(&g, su).iter().any(|k| matches!(k, Keyword::Ward(_))), "ward gone");
     assert!(!kw(&g, knight).iter().any(|k| k.is_protection()), "protection gone");
 }
+
+/// The Rune cycle on an Equipment: the equipped creature gets the bonus.
+#[test]
+fn rune_of_might_on_equipment_pumps_the_wielder() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let flail = ready(&mut g, 0, catalog::gorgon_flail());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: flail, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let rune = g.add_card_to_hand(0, catalog::rune_of_might());
+    cast(&mut g, rune, &[perm(flail)]).expect("rune on the flail");
+    assert_eq!(pt(&g, bear), (4, 4), "+1/+1 Flail, +1/+1 relayed Rune");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
+}
