@@ -4866,6 +4866,11 @@ pub struct ActivatedAbility {
     /// to false.
     #[serde(default)]
     pub activate_once: bool,
+    /// CR 702.193 — Power-up: "activate only once" (the `activate_once`
+    /// bookkeeping), and if the source entered this turn the cost is reduced
+    /// by its mana cost, colored pips matching colored (CR 702.193b).
+    #[serde(default)]
+    pub power_up: bool,
     /// Craft (CR 702.167) — exile `count` *other* objects matching this
     /// filter from among permanents you control and/or cards in your
     /// graveyard, as an additional cost. Pairs with

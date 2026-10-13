@@ -21914,7 +21914,7 @@ impl GameState {
         // CR 702.177 — Exhaust: an exhaust ability can be activated only once
         // per game. `exhausted_abilities` (never cleared at turn start) records
         // spent indices on the source permanent.
-        if !source_in_gy && !source_in_hand && !source_in_exile && !source_in_command && (ability.exhaust || ability.activate_once) {
+        if !source_in_gy && !source_in_hand && !source_in_exile && !source_in_command && (ability.exhaust || ability.activate_once || ability.power_up) {
             let perm = bf_src!().ok_or(GameError::CardNotOnBattlefield(card_id))?;
             // Elvish Refueler — the controller's first exhaust activation of
             // each of their turns ignores the spent mark.
@@ -23423,6 +23423,14 @@ impl GameState {
                 effective_mana_cost.reduce_generic(*n);
             }
         }
+        // CR 702.193a/b — power-up costs the source's mana cost less the
+        // turn it entered.
+        if ability.power_up {
+            let entered = self.battlefield_find(card_id).filter(|c| c.entered_turn == Some(self.turn_number));
+            if let Some(cost) = entered.map(|c| c.definition.cost.clone()) {
+                effective_mana_cost.reduce_by_cost(&cost);
+            }
+        }
         if let Some(v) = &ability.cost_reduction_value {
             let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
             let n = self.evaluate_value(v, &ctx).max(0) as u32;
@@ -24045,7 +24053,7 @@ impl GameState {
                 Vec::new()
             };
         // CR 702.177 — record the exhaust activation (never cleared this game).
-        if (ability.exhaust || ability.activate_once)
+        if (ability.exhaust || ability.activate_once || ability.power_up)
             && !source_in_gy
             && let Some(card) = self.battlefield.find_by_id_mut(card_id)
             && !card.exhausted_abilities.contains(&ability_index)
