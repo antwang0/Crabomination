@@ -10125,7 +10125,11 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             || c.cold_any(|k| {
                 !k.granted_activated_abilities.is_empty() || !k.granted_activated_eot.is_empty()
             })
-            || (gy_ability_grant && c.definition.is_creature())
+            // A grant's filter decides which cards get it — Mishra, Tamer of
+            // Mak Fawa unearths artifact cards, not creature cards (pod seed
+            // 67705 game 5 tripped the gate's debug check). Asked only when a
+            // grant is out.
+            || (gy_ability_grant && !state.graveyard_granted_abilities(seat, c).is_empty())
         {
             m |= sink::GY_RECUR;
             break;
@@ -21939,6 +21943,24 @@ mod tests {
         g.priority.player_with_priority = 0;
         // The debug assertion inside `gated_pick!` is the check.
         let _ = main_phase_action(&g, 0);
+    }
+
+    /// A graveyard grant's filter decides which cards it reaches: Mishra, Tamer
+    /// of Mak Fawa unearths artifact cards, so a noncreature Sol Ring in the
+    /// graveyard must open the recursion gate (six-seat debug pod, seed 67705).
+    #[test]
+    fn sink_gate_sees_a_granted_unearth_on_an_artifact_card() {
+        use crate::mana::Color;
+        let mut g = crate::game::multi_player_game(3);
+        g.step = TurnStep::PostCombatMain;
+        g.add_card_to_battlefield(0, catalog::mishra_tamer_of_mak_fawa());
+        g.add_card_to_graveyard(0, catalog::sol_ring());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(matches!(action, GameAction::ActivateAbility { ability_index: 1, .. }), "unearths: {action:?}");
     }
 
     /// A `{T}`-plus-energy payoff is the energy sink's too: Aetherworks
