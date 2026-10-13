@@ -7896,6 +7896,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_BALROG_COMMANDERS,
             main: decks::THE_BALROG_MAIN,
         },
+        // Seat 1241: Kwia Vigorbloom's EDHREC average deck. `--pod-decks 1241`.
+        PodDeck {
+            name: "Kwia Vigorbloom (WG)",
+            commanders: decks::KWIA_VIGORBLOOM_COMMANDERS,
+            main: decks::KWIA_VIGORBLOOM_MAIN,
+        },
+        // Seat 1242: Kyodai, Soul of Kamigawa's EDHREC average deck. `--pod-decks 1242`.
+        PodDeck {
+            name: "Kyodai, Soul of Kamigawa (WUBRG)",
+            commanders: decks::KYODAI_COMMANDERS,
+            main: decks::KYODAI_MAIN,
+        },
+        // Seat 1243: Eivor, Wolf-Kissed's EDHREC average deck. `--pod-decks 1243`.
+        PodDeck {
+            name: "Eivor, Wolf-Kissed (WRG)",
+            commanders: decks::EIVOR_COMMANDERS,
+            main: decks::EIVOR_MAIN,
+        },
+        // Seat 1244: Ashaya's Enduring Bond's EDHREC average deck. `--pod-decks 1244`.
+        PodDeck {
+            name: "Ashaya's Enduring Bond (RG)",
+            commanders: decks::ASHAYAS_ENDURING_BOND_COMMANDERS,
+            main: decks::ASHAYAS_ENDURING_BOND_MAIN,
+        },
+        // Seat 1245: The Mighty Thor, Jane Foster's EDHREC average deck. `--pod-decks 1245`.
+        PodDeck {
+            name: "The Mighty Thor, Jane Foster (WU)",
+            commanders: decks::THE_MIGHTY_THOR_COMMANDERS,
+            main: decks::THE_MIGHTY_THOR_MAIN,
+        },
+        // Seat 1246: Azula, Cunning Usurper's EDHREC average deck. `--pod-decks 1246`.
+        PodDeck {
+            name: "Azula, Cunning Usurper (UB)",
+            commanders: decks::AZULA_COMMANDERS,
+            main: decks::AZULA_MAIN,
+        },
+        // Seat 1247: King Macar, the Gold-Cursed's EDHREC average deck. `--pod-decks 1247`.
+        PodDeck {
+            name: "King Macar, the Gold-Cursed (B)",
+            commanders: decks::KING_MACAR_COMMANDERS,
+            main: decks::KING_MACAR_MAIN,
+        },
+        // Seat 1248: Hurska Sweet-Tooth's EDHREC average deck. `--pod-decks 1248`.
+        PodDeck {
+            name: "Hurska Sweet-Tooth (WG)",
+            commanders: decks::HURSKA_SWEET_TOOTH_COMMANDERS,
+            main: decks::HURSKA_SWEET_TOOTH_MAIN,
+        },
+        // Seat 1249: RMS Titanic's EDHREC average deck. `--pod-decks 1249`.
+        PodDeck {
+            name: "RMS Titanic (R)",
+            commanders: decks::RMS_TITANIC_COMMANDERS,
+            main: decks::RMS_TITANIC_MAIN,
+        },
+        // Seat 1250: Mu Yanling, Wind Rider's EDHREC average deck. `--pod-decks 1250`.
+        PodDeck {
+            name: "Mu Yanling, Wind Rider (U)",
+            commanders: decks::MU_YANLING_COMMANDERS,
+            main: decks::MU_YANLING_MAIN,
+        },
     ]
 }
 
@@ -8192,7 +8252,14 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
         "phased out"
     } else if has(&g.exile) {
         "exile"
-    } else if g.stack.iter().any(|si| matches!(si, crate::game::types::StackItem::Spell { card, .. } if card.id == id)) {
+    } else if g.stack.iter().any(|si| matches!(si, crate::game::types::StackItem::Spell { card, .. } if card.id == id))
+        // CR 608.2n — a spell is on the stack until it finishes resolving; one
+        // paused on a decision (a legendary sorcery commander's Discover ask,
+        // Ashaya's Enduring Bond) is carried by the resume, popped from `stack`.
+        || g.pending_decision.as_ref().is_some_and(|d| {
+            matches!(&d.resume, crate::game::types::ResumeContext::Spell { card, .. } if card.id == id)
+        })
+    {
         "the stack"
     } else if g.players.iter().any(|p| has(&p.graveyard)) {
         "a graveyard"
@@ -10961,6 +11028,16 @@ mod tests {
             ("Tom, Bert, and William", &[0x0EEB]),
             ("Tsagan, Raider Warlord", &[0x0EEC]),
             ("The Balrog, Durin's Bane", &[0x0EED]),
+            ("Kwia Vigorbloom", &[0x0EEE]),
+            ("Kyodai, Soul of Kamigawa", &[0x0EEF]),
+            ("Eivor, Wolf-Kissed", &[0x0EF0]),
+            ("Ashaya's Enduring Bond", &[0x0EF1]),
+            ("The Mighty Thor, Jane Foster", &[0x0EF2]),
+            ("Azula, Cunning Usurper", &[0x0EF3]),
+            ("King Macar, the Gold-Cursed", &[0x0EF4]),
+            ("Hurska Sweet-Tooth", &[0x0EF5]),
+            ("RMS Titanic", &[0x0EF6]),
+            ("Mu Yanling, Wind Rider", &[0x0EF7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -267,6 +267,16 @@ the handoff.
   the resolution, `scratch.mirrormind_active`), `Effect::MayCastCreatureFromGraveyardThisTurnAs`
   (The Tomb of Aclazotz's finality + Vampire rider). Lim-Dûl's Hex's "{B} or {3}" is two nested
   taxes — audited safe (`no_shipped_card_nests_two_answer_log_arms`).
+- **Seats 1241-1250** (Kwia, Kyodai, Eivor, Ashaya's Enduring Bond, The Mighty Thor, Azula, King
+  Macar, Hurska, RMS Titanic, Mu Yanling Wind Rider), 17 cards in `cmdr_edhrec39`. Ashaya's
+  Enduring Bond is a legendary *sorcery* commander (CR 903.3a); its Discover ask suspends the
+  resolution with the card held by the resume, which the debug commander invariant read as
+  "nowhere" — FIXED (CR 608.2n: still on the stack). **Primitives:**
+  `EachPlayerKeepsNSacrificesRest.destroy` (Fall of the First Civilization III, CR 701.8),
+  `PlaneswalkerSubtype::Yanling`. Hama's waterbend grant and Myojin's cast-from-hand check are 🟡.
+  Debug smoke: 36 four-seat games over the ten seats, all decided.
+  `verify_cards.py` now refuses an unreadable Scryfall cache and writes it atomically: two
+  TODO-claim commits had shipped a 21- and a 34-entry cache over the 40,073-entry one.
 - **Sweep seed 113 (4,320 four-seat games over 1170-1202): 12 undecided** — 8 CR 104.4b draws
   (Ganax, Astral Hunter's 60-trigger loops; Konrad + Vigor), the 4 Mindskinner action caps above.
 - **Seats 1198-1202** (Thromok, Ellie and Alan, Grothama, Havi, Korvold Gleeful Glutton), 10 cards.
