@@ -35659,3 +35659,88 @@ pub const CECILY_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, island, island, island, mountain, mountain, plains, plains, swamp, swamp,
 ];
+
+pub const AZAMI_COMMANDERS: &[CardFactory] = &[azami_lady_of_scrolls];
+
+/// **Azami, Lady of Scrolls**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Azami, Lady of Scrolls (EDHREC, fetched 2026-10-13).
+pub const AZAMI_MAIN: &[CardFactory] = &[
+    arcane_signet, decanter_of_endless_water, fellwar_stone, isochron_scepter,
+    lightning_greaves, mind_stone, sapphire_medallion, sky_diamond, sol_ring, thought_vessel,
+    cavern_of_souls, minamo_school_at_waters_edge, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, riptide_laboratory, archaeomancer, archmage_emeritus,
+    archmage_of_echoes, baral_chief_of_compliance, cursecatcher, cyclone_summoner, faerie_seer,
+    glen_elendra_archmage, laboratory_maniac, malevolent_hermit, naru_meha_master_wizard,
+    patron_wizard, psychosis_crawler, sigil_tracer, siren_stormtamer, snapcaster_mage,
+    spellseeker, stonybrook_banneret, teferi_mage_of_zhalfir, thassas_oracle,
+    tishanas_tidebinder, tribute_mage, trinket_mage, triskaidekaphile, vedalken_aethermage,
+    venser_shaper_savant, voidmage_prodigy, mind_over_matter, rhystic_study,
+    teferis_ageless_insight, unstoppable_plan, wizard_class, an_offer_you_cant_refuse,
+    arcane_denial, brainstorm, counterspell, cyclonic_rift, dramatic_reversal, high_tide,
+    mana_drain, mana_sculpt, muddle_the_mixture, mystical_tutor, negate, pongify,
+    rapid_hybridization, reality_shift, swan_song, wizards_retort, jace_wielder_of_mysteries,
+    merchant_scroll, ponder, preordain, solve_the_equation, step_through,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const KOLODIN_COMMANDERS: &[CardFactory] = &[kolodin_triumph_caster];
+
+/// **Kolodin, Triumph Caster**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 9 Mountains + 12 Plains = 99.
+/// Kolodin, Triumph Caster (EDHREC, fetched 2026-10-13).
+pub const KOLODIN_MAIN: &[CardFactory] = &[
+    aerial_surveyor, alacrian_armory, arcane_signet, brotherhood_vertibird, colossal_plow,
+    consulate_dreadnought, cultivators_caravan, guidelight_matrix, hoard_hauler, nautiloid_ship,
+    parhelion_ii, peacewalker_colossus, rms_titanic, reaver_titan, reckoner_bankbuster,
+    salvation_engine, skysovereign_consul_flagship, smugglers_copter, sol_ring,
+    surgehacker_mech, talisman_of_conviction, the_prydwen_steel_flagship, the_regalia,
+    the_thanos_copter, thunderhawk_gunship, valors_flagship, weatherlight, battlefield_forge,
+    boros_garrison, buried_ruin, clifftop_retreat, command_tower, country_roads, furycalm_snarl,
+    mech_hangar, muraganda_raceway, rocky_roads, rugged_prairie, sacred_foundry,
+    spectator_seating, sunbillow_verge, sundown_pass, aeronaut_admiral, astor_bearer_of_blades,
+    bulwark_ox, canyon_vaulter, cid_freeflier_pilot, cloudspire_captain, cloudspire_coordinator,
+    depala_pilot_exemplar, foundry_inspector, giant_ox, gilded_ghoda, gloryheath_lynx,
+    guardian_sunmare, hotshot_mechanic, interface_ace, losheel_clockwork_scholar,
+    sanwell_avenger_ace, sram_senior_edificer, voyager_quickwelder, nahiris_resolve,
+    siege_modification, tempered_steel, armed_and_armored, boros_charm, chaos_warp, dispatch,
+    path_to_exile, road_rage, swords_to_plowshares, chandra_spark_hunter, blasphemous_act,
+    from_father_to_son, push_the_limit, start_your_engines, tune_up, wake_the_past,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const SOKKA_AND_SUKI_COMMANDERS: &[CardFactory] = &[sokka_and_suki];
+
+/// **Sokka and Suki**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 4 Islands + 4 Mountains + 6 Plains = 99.
+/// Sokka and Suki (EDHREC, fetched 2026-10-13).
+pub const SOKKA_AND_SUKI_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, anduril_narsil_reforged, arcane_signet, argentum_armor,
+    assimilation_aegis, basilisk_collar, biorganic_carapace, blackblade_reforged,
+    bloodforged_battle_axe, buster_sword, colossus_hammer, conformer_shuriken, conquerors_flail,
+    lightning_greaves, masterwork_of_ingenuity, orcrist_goblin_cleaver, shadowspear, skullclamp,
+    sol_ring, stoneforge_masterwork, swiftfoot_boots, sword_of_feast_and_famine,
+    sword_of_the_animist, swordsmans_steel, talisman_of_conviction, talisman_of_progress,
+    the_reaver_cleaver, trusty_boomerang, wrecking_ball_arm, adarkar_wastes, arid_mesa,
+    battlefield_forge, clifftop_retreat, command_tower, exotic_orchard, flooded_strand,
+    glacial_fortress, hallowed_fountain, mystic_monastery, path_of_ancestry, raugrin_triome,
+    sacred_foundry, sea_of_clouds, shivan_reef, spectator_seating, steam_vents, sulfur_falls,
+    sundown_pass, training_center, akiri_fearless_voyager, bureau_headmaster,
+    cloud_midgar_mercenary, dalakos_crafter_of_wonders, firion_wild_rose_warrior,
+    jhoira_weatherlight_captain, katara_water_tribes_hope, nahiri_forged_in_fury,
+    puresteel_paladin, sephiroth_fallen_hero, sokka_swordmaster, sokka_tenacious_tactician,
+    south_pole_voyager, sram_senior_edificer, stone_haven_outfitter, stoneforge_mystic,
+    the_mighty_thor_jane_foster, the_reality_chip, wartime_protestors, fighter_class,
+    forge_anew, sigardas_aid, sokkas_charge, whirlwind_of_thought, an_offer_you_cant_refuse,
+    boros_charm, counterspell, dispatch, flawless_maneuver, inventory_management, path_to_exile,
+    swords_to_plowshares, blasphemous_act, open_the_armory, steelshapers_gift, united_front,
+    // Basics
+    island, island, island, island, mountain, mountain, mountain, mountain, plains, plains,
+    plains, plains, plains, plains,
+];

@@ -7974,6 +7974,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CECILY_COMMANDERS,
             main: decks::CECILY_MAIN,
         },
+        // Seat 1254: Azami, Lady of Scrolls's EDHREC average deck. `--pod-decks 1254`.
+        PodDeck {
+            name: "Azami, Lady of Scrolls (U)",
+            commanders: decks::AZAMI_COMMANDERS,
+            main: decks::AZAMI_MAIN,
+        },
+        // Seat 1255: Kolodin, Triumph Caster's EDHREC average deck. `--pod-decks 1255`.
+        PodDeck {
+            name: "Kolodin, Triumph Caster (WR)",
+            commanders: decks::KOLODIN_COMMANDERS,
+            main: decks::KOLODIN_MAIN,
+        },
+        // Seat 1256: Sokka and Suki's EDHREC average deck. `--pod-decks 1256`.
+        PodDeck {
+            name: "Sokka and Suki (WUR)",
+            commanders: decks::SOKKA_AND_SUKI_COMMANDERS,
+            main: decks::SOKKA_AND_SUKI_MAIN,
+        },
     ]
 }
 
@@ -11059,6 +11077,9 @@ mod tests {
             ("Gale, Waterdeep Prodigy and Scion of Halaster", &[0x0EF8]),
             ("Jhoira, Ageless Innovator", &[0x0EF9]),
             ("Cecily, Haunted Mage and Othelm, Sigardian Outcast", &[0x0EFA]),
+            ("Azami, Lady of Scrolls", &[0x0EFB]),
+            ("Kolodin, Triumph Caster", &[0x0EFC]),
+            ("Sokka and Suki", &[0x0EFD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
