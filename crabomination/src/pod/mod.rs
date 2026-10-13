@@ -10746,6 +10746,78 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KRENKO_2_COMMANDERS,
             main: decks::KRENKO_2_MAIN,
         },
+        // Seat 1716: Kwende, Pride of Femeref's EDHREC average deck. `--pod-decks 1716`.
+        PodDeck {
+            name: "Kwende, Pride of Femeref (W)",
+            commanders: decks::KWENDE_COMMANDERS,
+            main: decks::KWENDE_MAIN,
+        },
+        // Seat 1717: Tibor and Lumia's EDHREC average deck. `--pod-decks 1717`.
+        PodDeck {
+            name: "Tibor and Lumia (UR)",
+            commanders: decks::TIBOR_AND_LUMIA_COMMANDERS,
+            main: decks::TIBOR_AND_LUMIA_MAIN,
+        },
+        // Seat 1718: Mikaeus, the Lunarch's EDHREC average deck. `--pod-decks 1718`.
+        PodDeck {
+            name: "Mikaeus, the Lunarch (W)",
+            commanders: decks::MIKAEUS_2_COMMANDERS,
+            main: decks::MIKAEUS_2_MAIN,
+        },
+        // Seat 1719: Kurkesh, Onakke Ancient's EDHREC average deck. `--pod-decks 1719`.
+        PodDeck {
+            name: "Kurkesh, Onakke Ancient (R)",
+            commanders: decks::KURKESH_COMMANDERS,
+            main: decks::KURKESH_MAIN,
+        },
+        // Seat 1720: Butch DeLoria, Tunnel Snake's EDHREC average deck. `--pod-decks 1720`.
+        PodDeck {
+            name: "Butch DeLoria, Tunnel Snake (B)",
+            commanders: decks::BUTCH_DELORIA_COMMANDERS,
+            main: decks::BUTCH_DELORIA_MAIN,
+        },
+        // Seat 1721: Patron of the Kitsune's EDHREC average deck. `--pod-decks 1721`.
+        PodDeck {
+            name: "Patron of the Kitsune (W)",
+            commanders: decks::PATRON_OF_THE_KITSUNE_COMMANDERS,
+            main: decks::PATRON_OF_THE_KITSUNE_MAIN,
+        },
+        // Seat 1722: Tinybones, Pocket Nuisance's EDHREC average deck. `--pod-decks 1722`.
+        PodDeck {
+            name: "Tinybones, Pocket Nuisance (B)",
+            commanders: decks::TINYBONES_3_COMMANDERS,
+            main: decks::TINYBONES_3_MAIN,
+        },
+        // Seat 1723: Evin, Waterdeep Opportunist's EDHREC average deck. `--pod-decks 1723`.
+        PodDeck {
+            name: "Evin, Waterdeep Opportunist (B)",
+            commanders: decks::EVIN_COMMANDERS,
+            main: decks::EVIN_MAIN,
+        },
+        // Seat 1724: Krang, the All-Powerful's EDHREC average deck. `--pod-decks 1724`.
+        PodDeck {
+            name: "Krang, the All-Powerful (U)",
+            commanders: decks::KRANG_2_COMMANDERS,
+            main: decks::KRANG_2_MAIN,
+        },
+        // Seat 1725: Danny Pink's EDHREC average deck. `--pod-decks 1725`.
+        PodDeck {
+            name: "Danny Pink (U)",
+            commanders: decks::DANNY_PINK_COMMANDERS,
+            main: decks::DANNY_PINK_MAIN,
+        },
+        // Seat 1726: Shang-Chi and the Ten Rings's EDHREC average deck. `--pod-decks 1726`.
+        PodDeck {
+            name: "Shang-Chi and the Ten Rings (WU)",
+            commanders: decks::SHANG_CHI_AND_THE_TEN_RINGS_COMMANDERS,
+            main: decks::SHANG_CHI_AND_THE_TEN_RINGS_MAIN,
+        },
+        // Seat 1727: Rikku, Resourceful Guardian's EDHREC average deck. `--pod-decks 1727`.
+        PodDeck {
+            name: "Rikku, Resourceful Guardian (U)",
+            commanders: decks::RIKKU_COMMANDERS,
+            main: decks::RIKKU_MAIN,
+        },
     ]
 }
 
@@ -14292,6 +14364,18 @@ mod tests {
             ("Farid, Enterprising Salvager", &[0x10C6]),
             ("Daretti, Rocketeer Engineer", &[0x10C7]),
             ("Krenko, Baron of Tin Street", &[0x10C8]),
+            ("Kwende, Pride of Femeref", &[0x10C9]),
+            ("Tibor and Lumia", &[0x10CA]),
+            ("Mikaeus, the Lunarch", &[0x10CB]),
+            ("Kurkesh, Onakke Ancient", &[0x10CC]),
+            ("Butch DeLoria, Tunnel Snake", &[0x10CD]),
+            ("Patron of the Kitsune", &[0x10CE]),
+            ("Tinybones, Pocket Nuisance", &[0x10CF]),
+            ("Evin, Waterdeep Opportunist", &[0x10D0]),
+            ("Krang, the All-Powerful", &[0x10D1]),
+            ("Danny Pink", &[0x10D2]),
+            ("Shang-Chi and the Ten Rings", &[0x10D3]),
+            ("Rikku, Resourceful Guardian", &[0x10D4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
