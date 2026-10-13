@@ -32865,3 +32865,59 @@ pub const HIDETSUGU_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ELESH_NORN_2_COMMANDERS: &[CardFactory] = &[elesh_norn_grand_cenobite];
+
+/// **Elesh Norn, Grand Cenobite**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Elesh Norn, Grand Cenobite (EDHREC, fetched 2026-10-13).
+pub const ELESH_NORN_2_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, caged_sun, lightning_greaves, marble_diamond, mind_stone,
+    norns_annex, oketras_monument, pearl_medallion, skullclamp, sol_ring, swiftfoot_boots,
+    castle_ardenvale, emeria_the_sky_ruin, minas_tirith, myriad_landscape,
+    nykthos_shrine_to_nyx, reliquary_tower, war_room, windbrisk_heights,
+    adeline_resplendent_cathar, archivist_of_oghma, avacyn_angel_of_hope, aven_mindcensor,
+    crovax_ascendant_hero, defiler_of_faith, drannith_magistrate, elesh_norn,
+    elesh_norn_mother_of_machines, esper_sentinel, grand_abolisher, keeper_of_the_accord,
+    knight_of_the_white_orchid, mangara_the_diplomat, mentor_of_the_meek, mondrak_glory_dominus,
+    mother_of_runes, myrel_shield_of_argive, phyrexian_vindicator, skrelv_defector_mite,
+    solemn_simulacrum, sun_titan, suture_priest, thalia_heretic_cathar, weathered_wayfarer,
+    welcoming_vampire, anointed_procession, authority_of_the_consuls, blind_obedience,
+    cathars_crusade, ghostly_prison, intangible_virtue, land_tax, skrelvs_hive,
+    smothering_tithe, akromas_will, enlightened_tutor, flawless_maneuver, generous_gift,
+    path_to_exile, secure_the_wastes, swords_to_plowshares, teferis_protection,
+    white_suns_zenith, elspeth_suns_champion, austere_command, farewell, increasing_devotion,
+    martial_coup, mass_calcify, white_suns_twilight,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const RIA_IVOR_COMMANDERS: &[CardFactory] = &[ria_ivor_bane_of_bladehold];
+
+/// **Ria Ivor, Bane of Bladehold**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Plains + 10 Swamps = 99.
+/// Ria Ivor, Bane of Bladehold (EDHREC, fetched 2026-10-13).
+pub const RIA_IVOR_MAIN: &[CardFactory] = &[
+    arcane_signet, cranial_plating, glistening_sphere, infested_fleshcutter, mind_stone,
+    nettlecyst, norns_wellspring, orzhov_signet, skullclamp, sol_ring, swiftfoot_boots,
+    talisman_of_hierarchy, throne_of_geth, caves_of_koilos, command_tower, fetid_heath,
+    godless_shrine, isolated_chapel, karns_bastion, mirrex, orzhov_basilica, rogues_passage,
+    shineshadow_snarl, tainted_field, temple_of_silence, the_seedcore, vault_of_the_archangel,
+    basilica_shepherd, bilious_skulldweller, blightbelly_rat, brimaz_blight_of_oreskos,
+    corpse_knight, crawling_chorus, elas_il_kor_sadistic_pilgrim, elesh_norn,
+    elesh_norn_grand_cenobite, flensing_raptor, grafted_butcher, losheel_clockwork_scholar,
+    metastatic_evangel, mirkwood_bats, mite_overseer, mondrak_glory_dominus, myr_convert,
+    norns_choirmaster, pestilent_syphoner, phyrexian_censor, phyrexian_obliterator,
+    phyrexian_vindicator, skrelv_defector_mite, stinging_hivemaster, suture_priest,
+    welcoming_vampire, anointed_procession, behind_the_scenes, cultist_of_the_absolute,
+    fallen_ideal, necrogen_communion, norns_decree, phyrexian_arena, skrelvs_hive,
+    anguished_unmaking, charge_of_the_mites, corrupted_conviction, deadly_dispute, despark,
+    path_to_exile, swords_to_plowshares, village_rites, vraskas_fall, vraska_betrayals_sting,
+    damn, drown_in_ichor, hour_of_reckoning, infectious_inquiry, phyresis_outbreak,
+    vat_emergence, white_suns_twilight,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

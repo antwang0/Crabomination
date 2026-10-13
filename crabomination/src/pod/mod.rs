@@ -7380,6 +7380,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HIDETSUGU_COMMANDERS,
             main: decks::HIDETSUGU_MAIN,
         },
+        // Seat 1155: Elesh Norn, Grand Cenobite's EDHREC average deck. `--pod-decks 1155`.
+        PodDeck {
+            name: "Elesh Norn, Grand Cenobite (W)",
+            commanders: decks::ELESH_NORN_2_COMMANDERS,
+            main: decks::ELESH_NORN_2_MAIN,
+        },
+        // Seat 1156: Ria Ivor, Bane of Bladehold's EDHREC average deck. `--pod-decks 1156`.
+        PodDeck {
+            name: "Ria Ivor, Bane of Bladehold (WB)",
+            commanders: decks::RIA_IVOR_COMMANDERS,
+            main: decks::RIA_IVOR_MAIN,
+        },
     ]
 }
 
@@ -10324,6 +10336,8 @@ mod tests {
             ("Neyith of the Dire Hunt", &[0x0E95]),
             ("Etrata, the Silencer", &[0x0E96]),
             ("Hidetsugu, Devouring Chaos", &[0x0E97]),
+            ("Elesh Norn, Grand Cenobite", &[0x0E98]),
+            ("Ria Ivor, Bane of Bladehold", &[0x0E99]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
