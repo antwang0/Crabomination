@@ -3136,6 +3136,37 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-13 (Commander run, `01VkPyqk`) — guardrail; 15 EDHREC seats, 39 cards, six primitives, three fixes
+
+Hot-path touches: a loyalty activation pushes one more event
+(`AbilityActivated { loyalty: true }`); `ExileHand` records its cards for
+`ExiledThisResolution`; a library search walks `mentions_exiled_names` on
+its filter; `draw_one`'s replacement loop asks one more controller-scoped
+walk, behind the `has_draw_static` lane bit; the SBA control sweep reads one
+more `TempControl` field. Release `bot_ladder` at `3b4ae9f1e`, toolchain
+1.99, Xeon @ 2.10 GHz (4 cores).
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok
+                 (3 vs 1); peak_rss 33.2 MiB; games_per_s 265.61
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean before every push
+golden traces    unchanged (core_rules::golden_trace, pod digests)
+suite            nextest --workspace (no client), strict answer log, at
+                 3b4ae9f1e: 25,928 run, 25,926 passed, 5 skipped; the 2 red
+                 (GameState cap, the BecomeMonarch slot walker) fixed and
+                 re-run green; the long pole cr_903_5a_..._play_pod_games
+                 2,856 s debug on four cores at 1,253 seats
+clippy           workspace --all-targets (no client) at 55e340963: 2 identity_op
+                 in recent_b/cmdr_edhrec37.rs, fixed; 0 after
+pods (release)   pod_sweep 9951 seats 1226-1253 × 4,6,8 × 3 = 48 games, 0 bad;
+                 9952 every deck × 4,6 × 1 = 523 games, 0 bad
+pods (debug)     seats 1229-1253, 188 games over seeds 40011-44003, all decided
+                 bar one board cap (Second Harvest + Doubling Season + Maskwood
+                 Nexus token growth)
+```
+
 ### 2026-10-13 (Commander run, `01BJKf54`, close) — guardrail; 17 more seats, 59 cards, two primitives
 
 Hot-path touch: none on the 2-player path — `EntersAsCopy::copied_counters` runs only for a

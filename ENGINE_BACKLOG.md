@@ -193,6 +193,35 @@ the handoff.
 - **OPEN (bot):** Gor Muldrak's deck never activates its creature-type changers (Imagecrafter,
   Mistform Mutant, Unnatural Selection) — the bot has no "make it a Salamander" plan.
 
+## FIXED/OPEN 2026-10-13 (Commander run, `01VkPyqk`) — 15 EDHREC seats from the 2026-10-13 rescan
+
+- **Seats 1229-1240 and 1251-1253** — `decks::cmdr_edhrec40`/`42`/`43`/`44` (39 cards; tests
+  `recent_b/cmdr_edhrec40.rs`..`44.rs`). Seat numbers moved twice on rebases (`019gJJoX` landed
+  1224-1228, `01NRsiVW` 1241-1250): drop the seat commit, rebase, re-run `scripts/seat_decks.py`.
+- **FIXED (CR 606.1):** a loyalty activation never emitted `AbilityActivated`, so "whenever you
+  activate an ability" (Rings of Brighthearth's ruling copies loyalty abilities) never saw one.
+  `ActivationTrait::Loyalty` is "whenever you activate a loyalty ability" (Way of the Paradox).
+- **FIXED:** `ExileHand` fed nothing to `Selector::ExiledThisResolution` (its graveyard sibling
+  did), so "draw that many" read zero. **FIXED:** `Search`'s matcher is source-blind, so
+  `SameNameAsExiledWithSource` matched every card; the filter is concretized against the
+  source's exiled names first (Omenpath Journey). **FIXED (bot):** a boon enchant-player Aura
+  (Shadow of the Second Sun) was aimed at an opponent — the player-arm eval can't see a phase
+  that hasn't happened.
+- **FIXED (walkers disagreed):** `target_filter_for_slot` had no arm for `BecomeMonarch` /
+  `CantBecomeMonarchThisTurn`, so "target opponent becomes the monarch"
+  (`ControllerOf(TargetFiltered)`, Jared Carthalion and Garland) declared an unanswerable slot.
+  **FIXED:** Scion's draw guard put `GameState` over its 1,680-byte cap; it lives in
+  `ResolutionScratch`.
+- **New primitives:** `Effect::GainControlWhileMonarch` (`TempControl.while_monarch`, Garland),
+  `R::HasActivatedAbility`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn`
+  (Locus of Enlightenment), `StaticEffect::FirstDrawEachTurnMillsOneOfTwo` (a `DrawDig`, Scion of
+  Halaster), `R::ManaValueAtMostSourceCounters` (Jhoira), `PlaneswalkerSubtype::Zariel`.
+- **OPEN:** Tilonalli's Summoner reads the city's blessing as its Elementals are made, not at the
+  end step; Scion of Halaster's grant is live with a noncreature commander too; The Enigma Jewel
+  crafts with exactly four; Jhoira's Timebug targets only something with a time counter
+  (INCOMPLETE_CARDS rows). One debug board cap: Second Harvest under Doubling Season and Maskwood
+  Nexus (seed 40011 game 4 at the pre-rebase numbering) — real token growth.
+
 ## FIXED/OPEN 2026-10-13 (Commander run, `01BJKf54`) — 106 EDHREC seats from the 1500 rescan's one- to three-card gaps
 
 - **Seats 1157-1169 and 1194-1197** — `decks::cmdr_edhrec28`..`cmdr_edhrec31` (59 cards). `scripts/seat_decks.py`
