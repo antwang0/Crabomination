@@ -796,6 +796,32 @@ fn is_spacecraft_with_pt(def: &CardDefinition) -> bool {
         && def.station.iter().any(|b| b.pt.is_some())
 }
 
+/// CR 903.4b — a commander that "chooses its color before the game begins"
+/// (Clara Oswald) takes that color at deck construction, and it joins the
+/// identity. The choice is the one color the 99 need beyond the other
+/// commanders' identity; `None` when no commander chooses, or the 99 need no
+/// color or more than one.
+pub fn chosen_commander_color<'a>(
+    commanders: &[&CardDefinition],
+    main: impl IntoIterator<Item = &'a CardDefinition>,
+) -> Option<crate::mana::Color> {
+    let chooses = |c: &CardDefinition| {
+        c.static_abilities
+            .iter()
+            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::CommanderChoosesColorBeforeGame))
+    };
+    if !commanders.iter().any(|c| chooses(c)) {
+        return None;
+    }
+    let base = commanders.iter().fold(ColorSet::empty(), |acc, c| acc.union(color_identity(c)));
+    let need = main.into_iter().fold(ColorSet::empty(), |acc, c| acc.union(color_identity(c)));
+    let mut extra = crate::mana::Color::ALL.into_iter().filter(|c| need.contains(*c) && !base.contains(*c));
+    match (extra.next(), extra.next()) {
+        (Some(c), None) => Some(c),
+        _ => None,
+    }
+}
+
 /// Validate a Commander-format deck. Runs the generic
 /// [`validate_deck`] checks first (100-card singleton main, etc.),
 /// then layers on Commander-specific rules: at least one commander,
@@ -856,10 +882,15 @@ pub fn validate_commander_deck(
         cmd_errors.push(CommanderDeckError::NotPartners { first: a.name, second: b.name });
     }
 
-    // Combined color identity is the union of every commander's.
+    // Combined color identity is the union of every commander's, plus a
+    // color chosen before the game (CR 903.4b).
     let mut combined = ColorSet::empty();
     for cmd in &deck.commanders {
         combined = combined.union(color_identity(cmd));
+    }
+    let cmd_refs: Vec<&CardDefinition> = deck.commanders.iter().collect();
+    if let Some(c) = chosen_commander_color(&cmd_refs, deck.main.iter()) {
+        combined.insert(c);
     }
 
     // Every main-deck card must fit inside the commander identity.

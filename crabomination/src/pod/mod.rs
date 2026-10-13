@@ -8066,7 +8066,7 @@ pub fn target_decks() -> Vec<PodDeck> {
         },
         // Seat 1269: The Fourteenth Doctor and Clara Oswald's EDHREC average deck. `--pod-decks 1269`.
         PodDeck {
-            name: "The Fourteenth Doctor and Clara Oswald (WURG)",
+            name: "The Fourteenth Doctor and Clara Oswald (WUBRG)",
             commanders: decks::THE_FOURTEENTH_DOCTOR_COMMANDERS,
             main: decks::THE_FOURTEENTH_DOCTOR_MAIN,
         },

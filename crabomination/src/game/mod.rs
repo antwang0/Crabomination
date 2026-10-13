@@ -7255,8 +7255,9 @@ impl GameState {
 
     /// Clara Oswald's Impossible Girl: a commander with
     /// `CommanderChoosesColorBeforeGame` asks its owner for a color before the
-    /// game begins (offered from the other commanders' identity first) and is
-    /// that color from then on (`color_override`).
+    /// game begins — the color its deck was built with (CR 903.4b), else one
+    /// offered from the other commanders' identity first — and is that color
+    /// from then on (`color_override`).
     fn choose_commander_colors(&mut self, seat: usize, ids: &[crate::card::CardId]) {
         use crate::effect::StaticEffect;
         for &id in ids {
@@ -7274,17 +7275,35 @@ impl GameState {
                 .iter()
                 .filter(|c| c.id != id && ids.contains(&c.id))
                 .fold(crate::mana::ColorSet::empty(), |acc, c| acc.union(crate::format::color_identity(&c.definition)));
+            // CR 903.4b — the choice applies during deck construction.
+            let cmd_defs: Vec<&crate::card::CardDefinition> = self.players[seat]
+                .command
+                .iter()
+                .filter(|c| ids.contains(&c.id))
+                .map(|c| -> &crate::card::CardDefinition { &c.definition })
+                .collect();
+            let built = crate::format::chosen_commander_color(
+                &cmd_defs,
+                self.players[seat].library.iter().map(|c| -> &crate::card::CardDefinition { &c.definition }),
+            );
             let mut legal: Vec<crate::mana::Color> =
                 crate::mana::Color::ALL.into_iter().filter(|c| others.contains(*c)).collect();
             legal.extend(crate::mana::Color::ALL.into_iter().filter(|c| !others.contains(*c)));
-            let color = match self.decider.decide(&crate::decision::Decision::ChooseColor { source: id, legal: legal.clone() }) {
-                crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
-                _ => legal[0],
+            // A deck that needs a color was built with it; only a free
+            // choice asks.
+            let color = match built {
+                Some(c) => c,
+                None => match self.decider.decide(&crate::decision::Decision::ChooseColor { source: id, legal: legal.clone() }) {
+                    crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
+                    _ => legal[0],
+                },
             };
             if let Some(card) = self.players[seat].command.iter_mut().find(|c| c.id == id) {
                 card.chosen_color = Some(color);
                 card.definition_make_mut().color_override = Some(vec![color]);
             }
+            // CR 903.4b — "That choice affects the commander's color identity."
+            self.players[seat].commander_identity.insert(color);
         }
     }
 

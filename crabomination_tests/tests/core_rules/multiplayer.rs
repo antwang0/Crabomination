@@ -4847,6 +4847,31 @@ fn cr_903_4_identity_combines_commanders_and_survives_a_zone_change() {
     assert_eq!(g.commander_identity_colors(0), vec![Color::White, Color::Green]);
 }
 
+/// CR 903.4b — a commander that chooses its color before the game begins
+/// (Clara Oswald) makes that choice at deck construction and it joins the
+/// identity: a black card fits a Thirteenth Doctor + Clara deck only as her
+/// color, and the game seats her black with Black in the commander identity.
+#[test]
+fn cr_903_4b_a_color_chosen_before_the_game_joins_the_identity() {
+    use crabomination::format::{validate_commander_deck, CommanderDeckError, Deck};
+    use crabomination::mana::Color;
+    let cmds = || vec![catalog::the_thirteenth_doctor(), catalog::clara_oswald()];
+    let off = |main: Vec<_>| {
+        let err = validate_commander_deck(&Deck { commanders: cmds(), main, sideboard: vec![] }).unwrap_err();
+        err.1.iter().filter(|e| matches!(e, CommanderDeckError::OffColorIdentity { .. })).count()
+    };
+    assert_eq!(off(vec![catalog::doom_blade()]), 0, "black is Clara's color");
+    // Two colors beyond the Doctor's can't both be hers.
+    assert_eq!(off(vec![catalog::doom_blade(), catalog::savannah_lions()]), 2);
+
+    let mut g = game_with_format(Format::Commander, 4);
+    g.add_card_to_library(0, catalog::doom_blade());
+    let ids = g.seat_commanders(0, cmds());
+    let clara = g.players[0].command.iter().find(|c| c.id == ids[1]).unwrap();
+    assert_eq!(clara.definition.printed_colors(), vec![Color::Black]);
+    assert_eq!(g.commander_identity_colors(0), vec![Color::Blue, Color::Black, Color::Green]);
+}
+
 /// Outside a Commander game nobody has a commander, so the identity set is
 /// empty and these cards keep the engine's pre-Commander behaviour: any
 /// color. This is what keeps two-player traces byte-identical.
