@@ -213,3 +213,38 @@ pub fn fires_of_invention() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Interdimensional Web Watch — {4} artifact. ETB: exile the top two cards
+/// of your library; you may play them until the end of your next turn. {T}:
+/// add two mana in any combination of colors, spent only on spells cast from
+/// exile.
+pub fn interdimensional_web_watch() -> CardDefinition {
+    use crate::card::{ActivatedAbility, MayPlayDuration};
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Interdimensional Web Watch",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            duration: MayPlayDuration::EndOfControllersNextTurn,
+            pay_any_color: false,
+            max_mana_value: None,
+            pay_own_cost: true,
+            uncast_penalty: None,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyColors(Value::Const(2))),
+                    crate::mana::SpendRestriction::SpellFromExile,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

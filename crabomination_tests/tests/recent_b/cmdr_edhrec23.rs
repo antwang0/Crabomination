@@ -202,3 +202,37 @@ fn fires_of_invention_free_but_limited() {
     g.players[0].spells_cast_this_game_turn = 0;
     assert!(cast(&mut g, 0, bolt, &[Target::Player(1)]).is_err(), "not on another turn");
 }
+
+/// Interdimensional Web Watch: its two exiled cards are playable, and its
+/// mana pays for a spell cast from exile but not from hand.
+#[test]
+fn web_watch_mana_only_for_exile_casts() {
+    let mut g = pod(2);
+    let exiled_bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let watch = g.add_card_to_hand(0, catalog::interdimensional_web_watch());
+    cast(&mut g, 0, watch, &[]).expect("cast");
+    assert!(g.exile.iter().any(|c| c.id == exiled_bear), "exiled with a may-play");
+    g.players[0].mana_pool = Default::default();
+    g.clear_sickness(watch);
+    let in_hand = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    let from_hand = g.perform_action(GameAction::CastSpell {
+        card_id: in_hand,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(from_hand.is_err(), "Web Watch mana can't pay for a hand spell");
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: exiled_bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Web Watch pays for the exiled bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(exiled_bear).is_some());
+}
