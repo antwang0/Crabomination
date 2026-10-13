@@ -11135,8 +11135,9 @@ pub fn murmuring_mystic() -> CardDefinition {
 }
 
 /// Werewolf Pack Leader — {G}{G} Human Werewolf 3/3. Pack tactics — attacks
-/// with total power 6+: draw a card. {3}{G}: +2/+0 and trample until end of
-/// turn (printed "base 5/3, isn't a Human" approximated as the pump).
+/// with total power 6+: draw a card. {3}{G}: until end of turn it has base
+/// power and toughness 5/3 and gains trample. (Residual: "and isn't a Human"
+/// is dropped — no lose-a-creature-type effect.)
 pub fn werewolf_pack_leader() -> CardDefinition {
     CardDefinition {
         name: "Werewolf Pack Leader",
@@ -11165,10 +11166,10 @@ pub fn werewolf_pack_leader() -> CardDefinition {
             discard_cost: None,
             mana_cost: cost(&[generic(3), g()]),
             effect: Effect::Seq(vec![
-                Effect::PumpPT {
+                Effect::SetBasePT {
                     what: Selector::This,
-                    power: Value::Const(2),
-                    toughness: Value::Const(0),
+                    power: Value::Const(5),
+                    toughness: Value::Const(3),
                     duration: Duration::EndOfTurn,
                 },
                 Effect::GrantKeyword {

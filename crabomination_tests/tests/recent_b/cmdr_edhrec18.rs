@@ -969,3 +969,26 @@ fn bonecache_overseer_opens_after_a_food_sacrifice() {
     activate(&mut g, squirrel).expect("a Food was sacrificed");
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// Werewolf Pack Leader — "{3}{G}: Until end of turn, this creature has base
+/// power and toughness 5/3, gains trample…" (CR 613.4b base P/T in layer
+/// 7b; counters in 7c still apply on top.)
+#[test]
+fn werewolf_pack_leader_sets_base_five_three() {
+    let mut g = pod(2);
+    let wolf = ready(&mut g, 0, catalog::werewolf_pack_leader());
+    g.battlefield.iter_mut().find(|c| c.id == wolf).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wolf,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activates");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, wolf), (6, 4), "base 5/3 plus the counter");
+    assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::Trample));
+}
