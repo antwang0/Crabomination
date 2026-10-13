@@ -2422,6 +2422,12 @@ pub enum StaticEffect {
     /// only to CR 702.177 exhaust abilities of the controller's *other*
     /// permanents.
     OtherExhaustActivationCostReduction { amount: u32 },
+    /// Elvish Refueler — "During your turn, as long as you haven't activated
+    /// an exhaust ability this turn, you may activate exhaust abilities as
+    /// though they haven't been activated." Lifts the CR 702.177 once-per-game
+    /// gate for the controller's first exhaust activation of each of their
+    /// turns.
+    ExhaustReusableOnYourTurn,
     /// CR 702.6 — "You may activate equip abilities any time you could cast an
     /// instant" (Leonin Shikari). Lifts the sorcery-speed gate on the
     /// controller's `GameAction::Equip`.

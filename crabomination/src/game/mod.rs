@@ -1548,6 +1548,11 @@ pub struct TurnRegistries {
     /// Boxing Ring). Stamped by `Effect::Fight`; cleared at cleanup.
     #[serde(default)]
     pub(crate) fought_this_turn: crate::game::types::IdSet<CardId>,
+    /// CR 702.177 — seats that activated an exhaust ability this turn
+    /// (`StaticEffect::ExhaustReusableOnYourTurn`, Elvish Refueler). Stamped
+    /// in `activate_ability`; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) exhaust_activators_this_turn: Vec<usize>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -34526,6 +34531,7 @@ fn static_effect_to_effects(
             | StaticEffect::TaxOpponentAbilitiesTargeting { .. }
             // Consulted directly in `activate_ability`, not a layer effect.
             | StaticEffect::OtherExhaustActivationCostReduction { .. }
+            | StaticEffect::ExhaustReusableOnYourTurn
             // Consulted directly in `equip()`, not a layer effect.
             | StaticEffect::ControllerEquipAtInstantSpeed
             | StaticEffect::EquipCostReduction { .. }

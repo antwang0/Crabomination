@@ -21813,7 +21813,15 @@ impl GameState {
         // spent indices on the source permanent.
         if !source_in_gy && !source_in_hand && !source_in_exile && !source_in_command && (ability.exhaust || ability.activate_once) {
             let perm = bf_src!().ok_or(GameError::CardNotOnBattlefield(card_id))?;
-            if perm.exhausted_abilities.contains(&ability_index) {
+            // Elvish Refueler — the controller's first exhaust activation of
+            // each of their turns ignores the spent mark.
+            let refueled = ability.exhaust
+                && p == self.active_player_idx
+                && !self.turn.exhaust_activators_this_turn.contains(&p)
+                && self.player_has_static(p, |e| {
+                    matches!(e, crate::effect::StaticEffect::ExhaustReusableOnYourTurn)
+                });
+            if perm.exhausted_abilities.contains(&ability_index) && !refueled {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
@@ -23898,7 +23906,12 @@ impl GameState {
             && !source_in_gy
             && let Some(card) = self.battlefield.find_by_id_mut(card_id)
         {
-            card.exhausted_abilities.push(ability_index);
+            if !card.exhausted_abilities.contains(&ability_index) {
+                card.exhausted_abilities.push(ability_index);
+            }
+        }
+        if ability.exhaust && !self.turn.exhaust_activators_this_turn.contains(&p) {
+            self.turn.exhaust_activators_this_turn.push(p);
         }
 
         // P/T of a creature sacrificed as part of this activation's cost,
