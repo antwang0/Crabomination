@@ -10686,6 +10686,66 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TROMOKRATIS_COMMANDERS,
             main: decks::TROMOKRATIS_MAIN,
         },
+        // Seat 1706: Captain Storm, Cosmium Raider's EDHREC average deck. `--pod-decks 1706`.
+        PodDeck {
+            name: "Captain Storm, Cosmium Raider (UR)",
+            commanders: decks::CAPTAIN_STORM_COMMANDERS,
+            main: decks::CAPTAIN_STORM_MAIN,
+        },
+        // Seat 1707: Mishra, Tamer of Mak Fawa's EDHREC average deck. `--pod-decks 1707`.
+        PodDeck {
+            name: "Mishra, Tamer of Mak Fawa (BR)",
+            commanders: decks::MISHRA_3_COMMANDERS,
+            main: decks::MISHRA_3_MAIN,
+        },
+        // Seat 1708: Harbin, Vanguard Aviator's EDHREC average deck. `--pod-decks 1708`.
+        PodDeck {
+            name: "Harbin, Vanguard Aviator (WU)",
+            commanders: decks::HARBIN_COMMANDERS,
+            main: decks::HARBIN_MAIN,
+        },
+        // Seat 1709: Mari, the Killing Quill's EDHREC average deck. `--pod-decks 1709`.
+        PodDeck {
+            name: "Mari, the Killing Quill (B)",
+            commanders: decks::MARI_COMMANDERS,
+            main: decks::MARI_MAIN,
+        },
+        // Seat 1710: Rosnakht, Heir of Rohgahh's EDHREC average deck. `--pod-decks 1710`.
+        PodDeck {
+            name: "Rosnakht, Heir of Rohgahh (R)",
+            commanders: decks::ROSNAKHT_COMMANDERS,
+            main: decks::ROSNAKHT_MAIN,
+        },
+        // Seat 1711: Bruse Tarl, Roving Rancher's EDHREC average deck. `--pod-decks 1711`.
+        PodDeck {
+            name: "Bruse Tarl, Roving Rancher (WR)",
+            commanders: decks::BRUSE_TARL_2_COMMANDERS,
+            main: decks::BRUSE_TARL_2_MAIN,
+        },
+        // Seat 1712: Kaalia, Zenith Seeker's EDHREC average deck. `--pod-decks 1712`.
+        PodDeck {
+            name: "Kaalia, Zenith Seeker (WBR)",
+            commanders: decks::KAALIA_2_COMMANDERS,
+            main: decks::KAALIA_2_MAIN,
+        },
+        // Seat 1713: Farid, Enterprising Salvager's EDHREC average deck. `--pod-decks 1713`.
+        PodDeck {
+            name: "Farid, Enterprising Salvager (R)",
+            commanders: decks::FARID_COMMANDERS,
+            main: decks::FARID_MAIN,
+        },
+        // Seat 1714: Daretti, Rocketeer Engineer's EDHREC average deck. `--pod-decks 1714`.
+        PodDeck {
+            name: "Daretti, Rocketeer Engineer (R)",
+            commanders: decks::DARETTI_2_COMMANDERS,
+            main: decks::DARETTI_2_MAIN,
+        },
+        // Seat 1715: Krenko, Baron of Tin Street's EDHREC average deck. `--pod-decks 1715`.
+        PodDeck {
+            name: "Krenko, Baron of Tin Street (R)",
+            commanders: decks::KRENKO_2_COMMANDERS,
+            main: decks::KRENKO_2_MAIN,
+        },
     ]
 }
 
@@ -14222,6 +14282,16 @@ mod tests {
             ("Kira, Great Glass-Spinner", &[0x10BC]),
             ("Goro-Goro, Disciple of Ryusei", &[0x10BD]),
             ("Tromokratis", &[0x10BE]),
+            ("Captain Storm, Cosmium Raider", &[0x10BF]),
+            ("Mishra, Tamer of Mak Fawa", &[0x10C0]),
+            ("Harbin, Vanguard Aviator", &[0x10C1]),
+            ("Mari, the Killing Quill", &[0x10C2]),
+            ("Rosnakht, Heir of Rohgahh", &[0x10C3]),
+            ("Bruse Tarl, Roving Rancher", &[0x10C4]),
+            ("Kaalia, Zenith Seeker", &[0x10C5]),
+            ("Farid, Enterprising Salvager", &[0x10C6]),
+            ("Daretti, Rocketeer Engineer", &[0x10C7]),
+            ("Krenko, Baron of Tin Street", &[0x10C8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
