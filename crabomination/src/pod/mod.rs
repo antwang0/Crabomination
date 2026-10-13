@@ -7704,6 +7704,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LAZAV_3_COMMANDERS,
             main: decks::LAZAV_3_MAIN,
         },
+        // Seat 1209: Niv-Mizzet Reborn's EDHREC average deck. `--pod-decks 1209`.
+        PodDeck {
+            name: "Niv-Mizzet Reborn (WUBRG)",
+            commanders: decks::NIV_MIZZET_REBORN_COMMANDERS,
+            main: decks::NIV_MIZZET_REBORN_MAIN,
+        },
+        // Seat 1210: Horde of Notions's EDHREC average deck. `--pod-decks 1210`.
+        PodDeck {
+            name: "Horde of Notions (WUBRG)",
+            commanders: decks::HORDE_OF_NOTIONS_COMMANDERS,
+            main: decks::HORDE_OF_NOTIONS_MAIN,
+        },
+        // Seat 1211: Trelasarra, Moon Dancer's EDHREC average deck. `--pod-decks 1211`.
+        PodDeck {
+            name: "Trelasarra, Moon Dancer (WG)",
+            commanders: decks::TRELASARRA_COMMANDERS,
+            main: decks::TRELASARRA_MAIN,
+        },
+        // Seat 1212: Shanna, Purifying Blade's EDHREC average deck. `--pod-decks 1212`.
+        PodDeck {
+            name: "Shanna, Purifying Blade (WUG)",
+            commanders: decks::SHANNA_COMMANDERS,
+            main: decks::SHANNA_MAIN,
+        },
+        // Seat 1213: Niv-Mizzet, Supreme's EDHREC average deck. `--pod-decks 1213`.
+        PodDeck {
+            name: "Niv-Mizzet, Supreme (WUBRG)",
+            commanders: decks::NIV_MIZZET_4_COMMANDERS,
+            main: decks::NIV_MIZZET_4_MAIN,
+        },
+        // Seat 1214: Varolz, the Scar-Striped's EDHREC average deck. `--pod-decks 1214`.
+        PodDeck {
+            name: "Varolz, the Scar-Striped (BG)",
+            commanders: decks::VAROLZ_COMMANDERS,
+            main: decks::VAROLZ_MAIN,
+        },
+        // Seat 1215: Ramses, Assassin Lord's EDHREC average deck. `--pod-decks 1215`.
+        PodDeck {
+            name: "Ramses, Assassin Lord (UB)",
+            commanders: decks::RAMSES_COMMANDERS,
+            main: decks::RAMSES_MAIN,
+        },
     ]
 }
 
@@ -10737,6 +10779,13 @@ mod tests {
             ("Atemsis, All-Seeing", &[0x0ECB]),
             ("Serah Farron", &[0x0ECC]),
             ("Lazav, Wearer of Faces", &[0x0ECD]),
+            ("Niv-Mizzet Reborn", &[0x0ECE]),
+            ("Horde of Notions", &[0x0ECF]),
+            ("Trelasarra, Moon Dancer", &[0x0ED0]),
+            ("Shanna, Purifying Blade", &[0x0ED1]),
+            ("Niv-Mizzet, Supreme", &[0x0ED2]),
+            ("Varolz, the Scar-Striped", &[0x0ED3]),
+            ("Ramses, Assassin Lord", &[0x0ED4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
