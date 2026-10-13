@@ -1561,3 +1561,24 @@ fn genku_rotates_its_token_choices() {
         .collect();
     assert_eq!(names.len(), 3, "Fox, Moonfolk and Rat once each: {names:?}");
 }
+
+/// Death's Oasis — "return a creature card with lesser mana value than the
+/// creature that died from your graveyard to your hand." The card is the
+/// controller's choice (CR 608.2d): a scripted pick takes the cheaper one
+/// over the engine's priciest default.
+#[test]
+fn deaths_oasis_return_is_the_controllers_pick() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::deaths_oasis());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![elf])]));
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    cast(&mut g, murder, &[perm(giant)]).expect("murder");
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf), "the chosen Elf");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}

@@ -962,13 +962,19 @@ pub fn deaths_oasis() -> CardDefinition {
             }),
             effect: Effect::Seq(vec![
                 Effect::Mill { who: Selector::You, amount: Value::Const(2) },
-                Effect::Move {
-                    what: Selector::best_of(Selector::CardsInZone {
+                // The controller picks the returned card (CR 608.2d).
+                Effect::ChooseOneAmong {
+                    what: Selector::CardsInZone {
                         who: PlayerRef::You,
                         zone: Zone::Graveyard,
                         filter: R::Creature.and(R::ManaValueLessThanEventAmount),
+                    },
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Move {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: ZoneDest::Hand(PlayerRef::You),
                     }),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    other: Box::new(Effect::Noop),
                 },
             ]),
         }],
