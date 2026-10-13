@@ -31381,3 +31381,202 @@ pub const INNIAZ_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const VAEVICTIS_ASMADI_COMMANDERS: &[CardFactory] = &[vaevictis_asmadi_the_dire];
+
+/// **Vaevictis Asmadi, the Dire**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 7 Forests + 4 Mountains + 5 Swamps = 99.
+/// Vaevictis Asmadi, the Dire (EDHREC, fetched 2026-10-13).
+pub const VAEVICTIS_ASMADI_MAIN: &[CardFactory] = &[
+    arcane_signet, doors_of_durin, golgari_signet, gruul_signet, heaped_harvest,
+    lightning_greaves, scroll_rack, senseis_divining_top, sol_ring, swiftfoot_boots,
+    blood_crypt, bloodstained_mire, bojuka_bog, cinder_glade, command_tower, dragonskull_summit,
+    evolving_wilds, exotic_orchard, luxury_suite, overgrown_tomb, rootbound_crag, savage_lands,
+    smoldering_marsh, spire_garden, stomping_ground, undergrowth_stadium, verdant_catacombs,
+    wooded_foothills, woodland_cemetery, ziatoras_proving_ground, anger, augur_of_autumn,
+    beledros_witherbloom, birds_of_paradise, elvish_mystic, etali_primal_conqueror,
+    etali_primal_storm, eternal_witness, farhaven_elf, goblin_anarchomancer, harvester_of_souls,
+    hua_tuo_honored_physician, ignoble_hierarch, it_that_betrays, korvold_fae_cursed_king,
+    llanowar_elves, mahadi_emporium_master, mayhem_devil, mazirek_kraul_death_priest,
+    moraug_fury_of_akoum, overseer_of_the_damned, reclamation_sage, sakura_tribe_elder,
+    sepulchral_primordial, solemn_simulacrum, springbloom_druid, terastodon,
+    tergrid_god_of_fright, terror_of_the_peaks, varragoth_bloodsky_sire, wood_elves,
+    wulfgar_of_icewind_dale, ziatora_the_incinerator, aid_from_the_cowl, awakening_zone,
+    fires_of_yavimaya, garruks_uprising, grave_betrayal, haunted_crossroads, lurking_predators,
+    rhythm_of_the_wild, rising_of_the_day, riveteers_ascendancy, sylvan_library,
+    assassins_trophy, beast_within, chaos_warp, vivien_monsters_advocate, cultivate, farseek,
+    kodamas_reach, primal_surge, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const CORMELA_COMMANDERS: &[CardFactory] = &[cormela_glamour_thief];
+
+/// **Cormela, Glamour Thief**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 6 Islands + 4 Mountains + 5 Swamps = 99.
+/// Cormela, Glamour Thief (EDHREC, fetched 2026-10-13).
+pub const CORMELA_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, izzet_signet, rakdos_signet, sol_ring,
+    talisman_of_creativity, talisman_of_dominance, talisman_of_indulgence, blood_crypt,
+    bloodstained_mire, command_tower, crumbling_necropolis, dragonskull_summit,
+    drowned_catacomb, exotic_orchard, luxury_suite, morphic_pool, polluted_delta, scalding_tarn,
+    shivan_reef, steam_vents, sulfur_falls, sulfurous_springs, training_center,
+    underground_river, watery_grave, xanders_lounge, alania_divergent_storm, archmage_emeritus,
+    ashling_rekindled, birgi_god_of_storytelling, dragons_rage_channeler, dualcaster_mage,
+    goblin_electromancer, guttersnipe, keen_duelist, nightscape_familiar, pinnacle_monk,
+    simian_spirit_guide, storm_kiln_artist, stormcatch_mentor, mystic_remora, parker_luck,
+    rhystic_study, an_offer_you_cant_refuse, arcane_denial, big_score, brainstorm, cabal_ritual,
+    chaos_warp, counterspell, dark_ritual, demonic_gifts, dig_through_time, frantic_search,
+    maestros_charm, mystical_tutor, negate, perplex, prismari_command, saw_in_half,
+    silundi_vision, sublime_epiphany, swan_song, waterlogged_teachings, withering_torment,
+    blasphemous_act, breach_the_multiverse, cruel_ultimatum, demonic_tutor, dream_harvest,
+    faithless_looting, fevered_suspicion, grapeshot, improvisation_capstone, jeskas_will,
+    mizzixs_mastery, mutinous_massacre, ponder, preordain, rite_of_replication, toxic_deluge,
+    windfall,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const PIA_NALAAR_2_COMMANDERS: &[CardFactory] = &[pia_nalaar_consul_of_revival];
+
+/// **Pia Nalaar, Consul of Revival**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 12 Mountains + 8 Plains = 99.
+/// Pia Nalaar, Consul of Revival (EDHREC, fetched 2026-10-13).
+pub const PIA_NALAAR_2_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, fellwar_stone, idol_of_oblivion, inspiring_statuary,
+    interdimensional_web_watch, long_range_sensor, skullclamp, sol_ring, talisman_of_conviction,
+    unstable_amulet, battlefield_forge, boros_garrison, castle_embereth, clifftop_retreat,
+    command_tower, cori_mountain_monastery, furycalm_snarl, needleverge_pathway, rugged_prairie,
+    sacred_foundry, spectator_seating, spinerock_knoll, sundown_pass, temple_of_triumph,
+    windbrisk_heights, alibou_ancient_witness, bonehoard_dracosaur, breyas_apprentice,
+    commander_liara_portyr, etali_primal_storm, grenzo_havoc_raiser, inti_seneschal_of_the_sun,
+    laelia_the_blade_reforged, losheel_clockwork_scholar, loyal_apprentice,
+    neyali_suns_vanguard, ornithopter_of_paradise, party_thrasher, plargg_and_nassari,
+    professional_face_breaker, reckless_fireweaver, rose_cutthroat_raider, steel_overseer,
+    stridehangar_automaton, urabrask_heretic_praetor, weftstalker_ardent, wild_magic_sorcerer,
+    charred_foyer_warped_space, count_on_luck, impact_tremors, intangible_virtue,
+    shared_animosity, tempered_steel, valakut_exploration, warleaders_call, wild_wasteland,
+    boros_charm, chaos_warp, delayed_blast_fireball, dispatch, generous_gift, opera_love_song,
+    path_to_exile, swords_to_plowshares, wear_tear, you_find_some_prisoners, quintorius_kand,
+    blasphemous_act, embrace_the_unknown, glimpse_the_impossible, hex_magic, ignite_the_future,
+    inspired_tinkering, jeskas_will, light_up_the_stage, reckless_impulse, rob_the_archives,
+    wrenns_resolve,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const SMAUG_THE_MAGNIFICENT_COMMANDERS: &[CardFactory] = &[smaug_the_magnificent];
+
+/// **Smaug the Magnificent**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Smaug the Magnificent (EDHREC, fetched 2026-10-13).
+pub const SMAUG_THE_MAGNIFICENT_MAIN: &[CardFactory] = &[
+    arcane_signet, coin_of_mastery, diamond_pick_axe, dragons_hoard, goldvein_pick,
+    idol_of_oblivion, lightning_greaves, ruby_medallion, sol_ring, swiftfoot_boots,
+    sword_of_wealth_and_power, the_fire_crystal, the_one_ring, the_reaver_cleaver,
+    arena_of_glory, dragon_cursed_halls, mines_of_moria, nykthos_shrine_to_nyx, rogues_passage,
+    treasure_vault, valakut_the_molten_pinnacle, war_room, academy_manufactor,
+    ancient_copper_dragon, atsushi_the_blazing_sky, bonehoard_dracosaur, cavern_hoard_dragon,
+    crime_novelist, desert_were_worm, gadrak_the_crown_scourge, ganax_astral_hunter,
+    generous_plunderer, gloin_dwarf_emissary, goldlust_triad, goldspan_dragon, hellkite_tyrant,
+    ingenious_artillerist, knuckles_the_echidna, magda_brazen_outlaw, magda_the_hoardmaster,
+    professional_face_breaker, ragavan_nimble_pilferer, reckless_fireweaver, storm_kiln_artist,
+    twinflame_tyrant, xorn, alchemists_talent, descent_into_avernus, rain_of_riches,
+    spiteful_banditry, sticky_fingers, the_misty_mountains_cold, there_and_back_again, abrade,
+    big_score, bolt_bend, bottle_cap_blast, chaos_warp, deflecting_swat, great_train_heist,
+    unexpected_windfall, untimely_malfunction, blasphemous_act, brasss_bounty,
+    desolation_of_smaug, hell_to_pay, hit_the_mother_lode, jeskas_will, pirates_pillage,
+    seize_the_spoils, strike_it_rich, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const OMNATH_2_COMMANDERS: &[CardFactory] = &[omnath_locus_of_the_roil];
+
+/// **Omnath, Locus of the Roil**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 9 Forests + 6 Islands + 4 Mountains = 99.
+/// Omnath, Locus of the Roil (EDHREC, fetched 2026-10-13).
+pub const OMNATH_2_MAIN: &[CardFactory] = &[
+    arcane_signet, conduit_of_worlds, crucible_of_worlds, sol_ring, bountiful_landscape,
+    breeding_pool, cinder_glade, command_tower, evolving_wilds, fabled_passage,
+    frontier_bivouac, gruul_turf, hinterland_harbor, izzet_boilerworks, ketria_triome,
+    misty_rainforest, path_of_ancestry, reliquary_tower, scalding_tarn, simic_growth_chamber,
+    steam_vents, stomping_ground, terramorphic_expanse, wooded_foothills, ancient_greenwarden,
+    animar_soul_of_elements, ashaya_soul_of_the_wild, avenger_of_zendikar,
+    azusa_lost_but_seeking, champion_of_the_path, dryad_of_the_ilysian_grove, fertilid,
+    flamebraider, flamekin_harbinger, forgotten_ancient, leafkin_druid, lotus_cobra,
+    maelstrom_wanderer, mina_and_denn_wildborn, mossborn_hydra, mulldrifter,
+    multani_yavimayas_avatar, omnath_locus_of_rage, phylath_world_sculptor, risen_reef,
+    roil_elemental, scute_swarm, smokebraider, sunderflock, tatyova_benthic_druid,
+    thicket_crasher, titania_protector_of_argoth, twinflame_travelers, exploration,
+    garruks_uprising, rhythm_of_the_wild, spelunking, temur_ascendancy, zendikars_roil,
+    ashlings_command, beast_within, chaos_warp, counterspell, crop_rotation, entish_restoration,
+    growth_spiral, harrow, heroic_intervention, roiling_regrowth, nissa_who_shakes_the_world,
+    blasphemous_act, cultivate, explore, farseek, kodamas_reach, natures_lore, rampant_growth,
+    scapeshift, skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, island, island,
+    island, island, island, island, mountain, mountain, mountain, mountain,
+];
+
+pub const RADHA_COMMANDERS: &[CardFactory] = &[radha_heir_to_keld];
+
+/// **Radha, Heir to Keld**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Forests + 11 Mountains = 99.
+/// Radha, Heir to Keld (EDHREC, fetched 2026-10-13).
+pub const RADHA_MAIN: &[CardFactory] = &[
+    doors_of_durin, sol_ring, wondrous_crucible, blighted_woodland, cinder_glade, command_tower,
+    game_trail, hidden_nursery, hidden_volcano, karplusan_forest, kessig_wolf_run,
+    mossfire_valley, mosswort_bridge, rockfall_vale, rootbound_crag, stomping_ground,
+    invasion_of_zendikar, annoyed_altisaur, apex_devastator, aurora_phoenix, beast_whisperer,
+    bloodbraid_challenger, captivating_crew, combustible_gearhulk, disciple_of_freyalise,
+    drakuseth_maw_of_flames, drumhunter, emergent_woodwurm, etali_primal_storm,
+    garruks_packleader, gruul_ragebeast, hugs_grisly_guardian, kogla_and_yidaro,
+    kogla_the_titan_ape, noise_marine, pinnacle_monk, primeval_herald, radagast_the_brown,
+    rampaging_baloths, rampaging_war_mammoth, screamer_killer, soul_of_new_phyrexia,
+    soul_of_the_harvest, steel_hellkite, sweet_gum_recluse, terastodon, thorn_mammoth,
+    thunderfoot_baloth, trumpeting_carnosaur, tyrants_familiar, bigger_on_the_inside,
+    case_of_the_locked_hothouse, encroaching_dragonstorm, garruks_uprising, monstrous_vortex,
+    sunbirds_invocation, beast_within, big_score, natural_reclamation,
+    return_of_the_wildspeaker, chandra_flameshaper, circuitous_route, creative_technique,
+    explosive_vegetation, hunting_wilds, into_the_time_vortex, let_the_galaxy_burn,
+    map_the_frontier, migration_path, path_of_the_animist, rangers_path, reach_the_horizon,
+    skyshroud_claim, tempt_with_discovery, vastwood_surge, volcanic_torrent,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const KYLOX_COMMANDERS: &[CardFactory] = &[kylox_visionary_inventor];
+
+/// **Kylox, Visionary Inventor**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Mountains = 99.
+/// Kylox, Visionary Inventor (EDHREC, fetched 2026-10-13).
+pub const KYLOX_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, izzet_signet, mind_stone, resonating_lute, sol_ring,
+    talisman_of_creativity, thought_vessel, cascade_bluffs, command_tower, exotic_orchard,
+    frostboil_snarl, izzet_boilerworks, mystic_sanctuary, reliquary_tower, shivan_reef,
+    steam_vents, stormcarved_coast, sulfur_falls, temple_of_epiphany, training_center,
+    archmage_emeritus, balmor_battlemage_captain, deekah_fractal_theorist, goblin_electromancer,
+    guttersnipe, haughty_djinn, melek_reforged_researcher, murmuring_mystic,
+    ovika_enigma_goliath, storm_kiln_artist, stormcatch_mentor, talrand_sky_summoner,
+    third_path_iconoclast, wizards_of_thay, young_pyromancer, metallurgic_summonings,
+    rite_of_the_dragoncaller, shark_typhoon, thousand_year_storm, an_offer_you_cant_refuse,
+    big_score, brainstorm, brainsurge, chaos_warp, counterspell, display_of_power,
+    elminsters_simulacrum, frantic_search, magma_opus, nexus_of_fate, opt, pongify,
+    prismari_command, seething_song, unexpected_windfall, saheeli_sublime_artificer,
+    aminatous_augury, brasss_bounty, call_forth_the_tempest, clone_legion, dragon_fodder,
+    elemental_eruption, empty_the_warrens, experimental_overload, faithless_looting, grapeshot,
+    hit_the_mother_lode, krenkos_command, mana_geyser, minds_desire, mizzixs_mastery,
+    mnemonic_deluge, ponder, preordain, rise_from_the_tides, surge_to_victory, time_stretch,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

@@ -7062,6 +7062,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INNIAZ_COMMANDERS,
             main: decks::INNIAZ_MAIN,
         },
+        // Seat 1102: Vaevictis Asmadi, the Dire's EDHREC average deck. `--pod-decks 1102`.
+        PodDeck {
+            name: "Vaevictis Asmadi, the Dire (BRG)",
+            commanders: decks::VAEVICTIS_ASMADI_COMMANDERS,
+            main: decks::VAEVICTIS_ASMADI_MAIN,
+        },
+        // Seat 1103: Cormela, Glamour Thief's EDHREC average deck. `--pod-decks 1103`.
+        PodDeck {
+            name: "Cormela, Glamour Thief (UBR)",
+            commanders: decks::CORMELA_COMMANDERS,
+            main: decks::CORMELA_MAIN,
+        },
+        // Seat 1104: Pia Nalaar, Consul of Revival's EDHREC average deck. `--pod-decks 1104`.
+        PodDeck {
+            name: "Pia Nalaar, Consul of Revival (WR)",
+            commanders: decks::PIA_NALAAR_2_COMMANDERS,
+            main: decks::PIA_NALAAR_2_MAIN,
+        },
+        // Seat 1105: Smaug the Magnificent's EDHREC average deck. `--pod-decks 1105`.
+        PodDeck {
+            name: "Smaug the Magnificent (R)",
+            commanders: decks::SMAUG_THE_MAGNIFICENT_COMMANDERS,
+            main: decks::SMAUG_THE_MAGNIFICENT_MAIN,
+        },
+        // Seat 1106: Omnath, Locus of the Roil's EDHREC average deck. `--pod-decks 1106`.
+        PodDeck {
+            name: "Omnath, Locus of the Roil (URG)",
+            commanders: decks::OMNATH_2_COMMANDERS,
+            main: decks::OMNATH_2_MAIN,
+        },
+        // Seat 1107: Radha, Heir to Keld's EDHREC average deck. `--pod-decks 1107`.
+        PodDeck {
+            name: "Radha, Heir to Keld (RG)",
+            commanders: decks::RADHA_COMMANDERS,
+            main: decks::RADHA_MAIN,
+        },
+        // Seat 1108: Kylox, Visionary Inventor's EDHREC average deck. `--pod-decks 1108`.
+        PodDeck {
+            name: "Kylox, Visionary Inventor (UR)",
+            commanders: decks::KYLOX_COMMANDERS,
+            main: decks::KYLOX_MAIN,
+        },
     ]
 }
 
@@ -9953,6 +9995,13 @@ mod tests {
             ("Marvin, Murderous Mimic", &[0x0E60]),
             ("Tawnos, Solemn Survivor", &[0x0E61]),
             ("Inniaz, the Gale Force", &[0x0E62]),
+            ("Vaevictis Asmadi, the Dire", &[0x0E63]),
+            ("Cormela, Glamour Thief", &[0x0E64]),
+            ("Pia Nalaar, Consul of Revival", &[0x0E65]),
+            ("Smaug the Magnificent", &[0x0E66]),
+            ("Omnath, Locus of the Roil", &[0x0E67]),
+            ("Radha, Heir to Keld", &[0x0E68]),
+            ("Kylox, Visionary Inventor", &[0x0E69]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
