@@ -1011,6 +1011,10 @@ pub enum StaticEffect {
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_game_turn`.
     OneSpellPerTurn,
+    /// "You can cast spells only during your turn and you can cast no more
+    /// than `max` spells each turn" (Fires of Invention). Binds the source's
+    /// controller only; enforced beside `OneSpellPerTurn`.
+    ControllerCastsOnlyOnTurnUpTo { max: u32 },
     /// CR 303.4a — "Enchanted player can't cast more than one spell each turn"
     /// (Curse of Exhaustion). Scoped to the source Aura's enchanted seat.
     EnchantedPlayerOneSpellPerTurn,

@@ -5742,7 +5742,8 @@ impl GameState {
                     | SE::EnchantedPlayerOneSpellPerTurn
                     | SE::OneNoncreatureSpellPerTurn
                     | SE::OneNonartifactSpellPerTurn
-                    | SE::OneNonPhyrexianSpellPerTurn => cast_lock::ONE_SPELL,
+                    | SE::OneNonPhyrexianSpellPerTurn
+                    | SE::ControllerCastsOnlyOnTurnUpTo { .. } => cast_lock::ONE_SPELL,
                     SE::CantCastSharingColorWithLastCastSpell => cast_lock::MANA_MAZE,
                     SE::NoSpellOrNonbasicLandSharingAPermanentName => cast_lock::NAME,
                     SE::OpponentsCantCastChosenColor | SE::NoOneCastsChosenCardType => cast_lock::CHOSEN_COLOR,
@@ -5823,6 +5824,9 @@ impl GameState {
                 && self.battlefield.iter().any(|c| {
                     c.definition.static_abilities.iter().any(|sa| match sa.effect {
                         StaticEffect::OneSpellPerTurn => pl.spells_cast_this_game_turn >= 1,
+                        StaticEffect::ControllerCastsOnlyOnTurnUpTo { max } => {
+                            c.controller == caster && (active != caster || pl.spells_cast_this_game_turn >= max)
+                        }
                         StaticEffect::EnchantedPlayerOneSpellPerTurn => {
                             c.attached_to_player == Some(caster)
                                 && pl.spells_cast_this_game_turn >= 1
@@ -34974,6 +34978,7 @@ fn static_effect_to_effects(
             | StaticEffect::DamageDoesntCauseControllerLifeLoss
             | StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName
             | StaticEffect::OneSpellPerTurn
+            | StaticEffect::ControllerCastsOnlyOnTurnUpTo { .. }
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer
             | StaticEffect::DoubleDamageToYou
