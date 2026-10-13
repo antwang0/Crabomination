@@ -17832,6 +17832,12 @@ impl GameState {
             }
             Effect::MayCastCreatureFromGraveyardThisTurn => {
                 self.players[ctx.controller].graveyard_creature_cast_turn = Some(self.turn_number);
+                self.players[ctx.controller].graveyard_creature_cast_rider = None;
+                Ok(())
+            }
+            Effect::MayCastCreatureFromGraveyardThisTurnAs { creature_type } => {
+                self.players[ctx.controller].graveyard_creature_cast_turn = Some(self.turn_number);
+                self.players[ctx.controller].graveyard_creature_cast_rider = Some(*creature_type);
                 Ok(())
             }
 

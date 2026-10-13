@@ -6732,6 +6732,21 @@ impl GameState {
                 Ok(evs) => {
                     self.note_left_graveyard(p, card_id, evs);
                     self.players[p].graveyard_creature_cast_turn = None;
+                    // The Tomb of Aclazotz — the spell enters with a finality
+                    // counter and is the rider's type in addition.
+                    if let Some(t) = self.players[p].graveyard_creature_cast_rider.take() {
+                        for item in self.stack.iter_mut() {
+                            if let StackItem::Spell { card, .. } = item
+                                && card.id == card_id
+                            {
+                                card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
+                                let def = card.definition_make_mut();
+                                if !def.subtypes.creature_types.contains(&t) {
+                                    def.subtypes.creature_types.push(t);
+                                }
+                            }
+                        }
+                    }
                     self.entered_from_graveyard_this_turn.insert(card_id);
                 }
             }

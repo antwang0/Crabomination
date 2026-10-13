@@ -9640,6 +9640,10 @@ pub enum Effect {
     /// (Chainer, Nightmare Adept): one cast, any creature card there when
     /// it's cast (`Player::graveyard_creature_cast_turn`).
     MayCastCreatureFromGraveyardThisTurn,
+    /// [`Self::MayCastCreatureFromGraveyardThisTurn`] whose cast "enters with
+    /// a finality counter on it and is a [creature_type] in addition to its
+    /// other types" (The Tomb of Aclazotz's Vampire).
+    MayCastCreatureFromGraveyardThisTurnAs { creature_type: crate::card::CreatureType },
     /// "Put a `filter` card from a graveyard onto the battlefield under your
     /// control" (Victor, Valgavoth's Seneschal). Untargeted: a resolution-time
     /// `Decision::ChooseCards` over *every* graveyard, auto-picking the highest
