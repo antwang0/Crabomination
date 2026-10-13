@@ -18,6 +18,9 @@ impl GameState {
     /// the biggest option (haste breaking a tie) when it beats a creature
     /// token's own body, else the token as printed.
     pub(crate) fn token_replacement_for(&mut self, ctrl: usize, def: &CardDefinition) -> Option<Arc<CardDefinition>> {
+        if let Some(copy) = self.mirrormind_copy(ctrl, def) {
+            return Some(copy);
+        }
         if def.is_creature() {
             let mandatory = self
                 .battlefield
@@ -168,5 +171,28 @@ impl GameState {
             name = rules[i].1.name.clone();
         }
         out.map(crabomination_base::tokens::token_card_arc)
+    }
+
+    /// Mirrormind Crown — the first token batch `ctrl` creates each turn
+    /// becomes copies of the equipped creature (headless seats always take
+    /// it). The batch is the resolution that started it (`mirrormind_active`).
+    fn mirrormind_copy(&mut self, ctrl: usize, _def: &CardDefinition) -> Option<Arc<CardDefinition>> {
+        let (crown, host) = self.battlefield.iter().find_map(|c| {
+            (c.controller == ctrl
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::FirstTokensEachTurnCopyEquipped)))
+            .then_some(c.attached_to)
+            .flatten()
+            .map(|h| (c.id, h))
+        })?;
+        let copy = self.battlefield_find(host).filter(|h| self.computed_is_creature(h))?.copiable_definition();
+        if self.turn.mirrormind_used.contains(&crown) {
+            return (self.scratch.mirrormind_active == Some(crown)).then_some(copy);
+        }
+        self.turn.mirrormind_used.push(crown);
+        self.scratch.mirrormind_active = Some(crown);
+        Some(copy)
     }
 }

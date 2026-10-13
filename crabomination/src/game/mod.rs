@@ -1558,6 +1558,10 @@ pub struct TurnRegistries {
     /// `Effect::CombatDamageToPlayersBecomesDrawsThisTurn`). Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_becomes_draws: Vec<CardId>,
+    /// Mirrormind Crowns that already replaced a token batch this turn
+    /// (`mirrormind_copy`). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) mirrormind_used: Vec<CardId>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -2357,6 +2361,10 @@ pub struct ResolutionScratch {
     /// each resolution's start (CR 614.1a, "that many" share one choice).
     #[serde(skip)]
     pub(crate) token_replacement_pick: Option<(usize, usize, u8)>,
+    /// The Mirrormind Crown whose first-batch replacement this resolution is
+    /// applying (`mirrormind_copy`). Reset between resolutions.
+    #[serde(skip)]
+    pub(crate) mirrormind_active: Option<CardId>,
     /// The object the trigger being targeted or resolved fired on, read by
     /// `SelectionRequirement::OtherThanTriggerSubject`. Stamped only for a
     /// trigger whose filter names it (`stamp_trigger_subject`), so the group
@@ -34338,6 +34346,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlaneswalkersHaveLoyaltyAbilities { .. }
             | StaticEffect::AttachedPlaneswalkerHasLoyaltyAbilities { .. }
             | StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities
+            | StaticEffect::FirstTokensEachTurnCopyEquipped
             | StaticEffect::YourPlaneswalkersSurviveZeroLoyalty
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.
