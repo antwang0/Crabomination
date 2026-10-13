@@ -3210,6 +3210,10 @@ pods (release)   pod_sweep 9901 every deck × 4,6 × 3 = 1,266 games, 1 draw
                  (all seats dead at once, CR 104.4a); 9902 × 3,5,8 × 2 =
                  1,336 games, 1 draw (same shape) and 1 board cap (Najeela +
                  Champion of Lambholt, the known token-combat class)
+after the board-bound attack trim fix (582d413b0): --bench 196,176 / 27.64 /
+                 613.0 byte-identical (games_per_s 255.53); strict suite
+                 25,544 / 0 / 6; pod_sweep 9903 × 4,8 × 2 = 786 games and
+                 9904 × 3,6 × 2 = 1,048 games, 0 undecided
 ```
 
 ### 2026-10-13 (Commander run, `01L4tuaB`, third leg) — guardrail; 58 cards, seats 1047-1060
