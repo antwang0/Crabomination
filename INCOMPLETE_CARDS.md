@@ -2054,6 +2054,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 The Muckslinger Gang | "creature spells you control and creature cards you own in any zone other than the battlefield or the stack get +3/+3" is not modelled — only the battlefield half (other creatures not attacking or blocking get +3/+3) | an off-battlefield P/T static read by every hand/graveyard/stack power check; no free board-presence lane to gate it |
 | 🟡 Kamahl's Will | the land mode animates every land you control, untargeted, rather than "any number of target lands" | an any-number target mode ahead of a single-target mode would claim twenty optional slots before it |
 | 🟡 Kang the Conqueror | "During that turn, power-up abilities can't be activated" is not modelled — the extra turn allows other power-ups | no turn-scoped power-up lock |
+| 🟡 Kid Loki | hexproof goes to each creature you control that gained any counter this turn and has a +1/+1 counter — not only one you put a +1/+1 counter on | the per-turn counter record does not keep who placed which kind |
 | 🟡 Fblthp, Knows the Way | its X basic lands needn't have different names | `SearchUpToN` doesn't enforce the rider |
 | 🟡 Gorm the Great | "must be blocked by two or more creatures if able" is only "must be blocked if able" | no minimum-blockers requirement |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |

@@ -271,7 +271,8 @@ the handoff.
   `decks::cmdr_edhrec55`/`56`): new `Predicate::PlayedCardFromExileThisTurn` (Visions of Phyrexia;
   `Player.played_land_from_exile_this_turn`) and `Predicate::NoPermanentLeftBattlefieldThisTurn`
   (Sarevok); seats 1662-1676 and 1683-1698 follow from `cmdr_edhrec57`/`58` (28 cards, no new primitive; one
-  CR 104.4a draw in the smoke). **OPEN:** Maraxus of Keld the creature shares its name with the Vanguard avatar the
+  CR 104.4a draw in the smoke); 1699-1705 (`cmdr_edhrec59`: the graveyard listener for "combat damage is
+  dealt to you", Vengeful Pharaoh) and 1716-1727 (`cmdr_edhrec60`: `R::GainedCounterThisTurn`, Kid Loki 🟡). **OPEN:** Maraxus of Keld the creature shares its name with the Vanguard avatar the
   catalog carries, so its deck resolves to the avatar and fails CR 903.3; Kamahl's Will's land mode
   is untargeted (twenty optional slots would precede the other mode's target).
 - **New primitives:** `Effect::GainControlWhileMonarch` (`TempControl.while_monarch`, Garland),
