@@ -10350,6 +10350,10 @@ pub enum Effect {
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.
     OneCastAmongGranted { what: Selector },
+    /// Mark the may-play permission on each card `what` resolves to as "you
+    /// may **cast**": a land among them can't be played (Ian Malcolm,
+    /// Chaotician). Chain after `GrantMayPlay`.
+    GrantedCastOnly { what: Selector },
     /// The once-each-turn sibling of `OneCastAmongGranted` (Maralen, Fae
     /// Ascendant: "once each turn, you may cast a spell from among cards
     /// exiled with Maralen this turn"): the grants join the source's group,

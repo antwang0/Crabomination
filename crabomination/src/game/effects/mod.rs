@@ -42303,6 +42303,18 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::GrantedCastOnly { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    if let Some(card) = self.find_card_anywhere_mut(cid)
+                        && let Some(perm) = card.may_play_until.as_mut()
+                    {
+                        perm.cast_only = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::OneCastAmongGranted { what } => {
                 let group = ctx.source;
                 for ent in self.resolve_selector(what, ctx) {

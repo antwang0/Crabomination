@@ -2242,6 +2242,7 @@ impl Effect {
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
             | Effect::OneCastAmongGranted { what }
+            | Effect::GrantedCastOnly { what }
             | Effect::OneCastPerTurnAmongGranted { what }
             | Effect::CapGrantedCastsAtCast { what, .. } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
@@ -3315,6 +3316,7 @@ impl Effect {
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
             | Effect::OneCastAmongGranted { what }
+            | Effect::GrantedCastOnly { what }
             | Effect::OneCastPerTurnAmongGranted { what }
             | Effect::CapGrantedCastsAtCast { what, .. }
             | Effect::DoubleCountersOnEach { what, .. }
