@@ -3837,6 +3837,13 @@ static DECKS: &[Factory] = &[
     super::decks::forsworn_paladin,
     super::decks::arguels_blood_fast,
     super::decks::axis_of_mortality,
+    // cmdr_edhrec49 (session 01VkPyqk)
+    super::decks::zuko_avatar_hunter,
+    super::decks::ghitu_firebreathing,
+    super::decks::lost_in_memories,
+    super::decks::keleth_sunmane_familiar,
+    super::decks::yoshimaru_beloved_companion,
+    super::decks::elspeth_resplendent,
     super::decks::gandalf_friend_of_the_shire,
     super::decks::ringwraiths,
     super::decks::sauron_the_necromancer,
