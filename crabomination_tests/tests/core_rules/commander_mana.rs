@@ -667,7 +667,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | FaceDownSpellsOrTurnFaceUp | TurnFaceUpOnly | CreatureHaste | DragonCreatureHaste | DragonCreatureCounterHexproof | DragonCreatureGainTwo | DragonCreatureScryTwo | PermanentSpellDiscover | CommanderTypeScry
                 | CommanderCastCounters | CommanderCastScry | SmallInstantSorceryExileInstead
                 | RedInstantSorceryCopy | InstantSorceryCopy | XCostsOnly
-                | SpellFromGraveyard
+                | SpellFromGraveyard | SpellFromExile
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | KnightOrEquipmentSpells | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
@@ -739,6 +739,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             RedInstantSorceryCopy,
             XCostsOnly,
             SpellFromGraveyard,
+            SpellFromExile,
             MonocoloredSpellOf(crabomination::mana::Color::Red),
         ]
     };

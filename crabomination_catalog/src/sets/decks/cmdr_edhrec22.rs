@@ -150,17 +150,16 @@ pub fn mercy_killing() -> CardDefinition {
         "Mercy Killing",
         cost(&[generic(2), hybrid(Color::Green, Color::White)]),
         CardType::Instant,
-        Effect::WithX {
-            x: Value::PowerOf(Box::new(target_filtered(R::Creature))),
-            body: Box::new(Effect::Seq(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                    count: Value::XFromCost,
-                    definition: elf,
-                },
-                Effect::SacrificeSelected { what: Selector::Target(0) },
-            ])),
-        },
+        // The tokens are minted first (the power and the controller read live
+        // off the target); the sacrifice carries the target slot.
+        Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::PowerOf(Box::new(Selector::Target(0))),
+                definition: elf,
+            },
+            Effect::SacrificeSelected { what: target_filtered(R::Creature) },
+        ]),
     )
 }
 
