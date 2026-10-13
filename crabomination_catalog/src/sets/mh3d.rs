@@ -760,8 +760,8 @@ pub fn ripples_of_undeath() -> CardDefinition {
 /// Genku, Future Shaper — {2}{W}{U} 2/5 Moonfolk Wizard. Whenever another
 /// nontoken permanent you control leaves the battlefield, create one of three
 /// creature tokens (Fox / Moonfolk / Rat). {3}{W}{U}: put a +1/+1 counter on
-/// each creature you control. (The "hasn't been chosen this turn" rotation is
-/// modeled as a free choice among the three.)
+/// each creature you control. Each token must be one that hasn't been chosen
+/// this turn.
 pub fn genku_future_shaper() -> CardDefinition {
     use crate::card::TokenDefinition;
     let fox = TokenDefinition {
@@ -828,7 +828,9 @@ pub fn genku_future_shaper() -> CardDefinition {
                 what: Selector::TriggerSource,
                 filter: R::NotToken,
             }),
-            effect: Effect::ChooseMode(vec![mk(std::sync::Arc::new(fox)), mk(std::sync::Arc::new(moonfolk)), mk(std::sync::Arc::new(rat))]),
+            effect: Effect::ChooseUnchosenModeThisTurn {
+                modes: vec![mk(std::sync::Arc::new(fox)), mk(std::sync::Arc::new(moonfolk)), mk(std::sync::Arc::new(rat))],
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w(), u()]),

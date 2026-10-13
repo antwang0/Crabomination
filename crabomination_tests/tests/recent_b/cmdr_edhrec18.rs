@@ -1523,3 +1523,41 @@ fn case_of_the_uneaten_feast_lets_graveyard_creatures_be_cast() {
     let perm = g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().may_play_until;
     assert!(perm.is_some_and(|p| p.player == 0), "castable from the graveyard this turn");
 }
+
+/// Obosh, the Preypiercer — "If a source you control with an odd mana value
+/// would deal damage to a permanent or player, it deals double that damage
+/// instead." (CR 614.1a.) An odd-mana-value attacker deals double; an even
+/// one doesn't.
+#[test]
+fn obosh_doubles_odd_mana_value_sources() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::obosh_the_preypiercer());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, 0, &[(elf, 1), (bear, 1)]).unwrap();
+    block(&mut g, 1, vec![]).unwrap();
+    combat_damage(&mut g);
+    assert_eq!(g.players[1].life, 20 - 2 - 2, "the Elf (MV 1) doubles to 2, the Bear (MV 2) stays 2");
+}
+
+/// Genku, Future Shaper — "create a token … that hasn't been chosen this
+/// turn" (CR 700.2 modal choice with a per-turn memory).
+#[test]
+fn genku_rotates_its_token_choices() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::genku_future_shaper());
+    for _ in 0..3 {
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().damage = 99;
+        let evs = g.check_state_based_actions();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    let names: std::collections::BTreeSet<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token)
+        .map(|c| c.definition.name.to_string())
+        .collect();
+    assert_eq!(names.len(), 3, "Fox, Moonfolk and Rat once each: {names:?}");
+}

@@ -45963,9 +45963,10 @@ pub fn lutri_the_spellchaser() -> CardDefinition {
     }
 }
 
-/// Obosh, the Preypiercer — {3}{B/R}{B/R} 3/5 Hellion Horror. (The odd-mana-
-/// value damage-doubling replacement is approximated away.) Companion: deck
-/// contains only odd-mana-value cards and lands.
+/// Obosh, the Preypiercer — {3}{B/R}{B/R} 3/5 Hellion Horror. If a source you
+/// control with an odd mana value would deal damage to a permanent or player,
+/// it deals double that damage instead (CR 614.1a). Companion: deck contains
+/// only odd-mana-value cards and lands.
 pub fn obosh_the_preypiercer() -> CardDefinition {
     CardDefinition {
         name: "Obosh, the Preypiercer",
@@ -45983,6 +45984,12 @@ pub fn obosh_the_preypiercer() -> CardDefinition {
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Companion],
+        static_abilities: vec![StaticAbility {
+            description: "If a source you control with an odd mana value would deal damage to a permanent or player, it deals double that damage instead.",
+            effect: StaticEffect::DoubleDamageFromControlledMatching {
+                filter: SelectionRequirement::ManaValueParity { odd: true },
+            },
+        }],
         companion: Some(crate::card::CompanionRule::NonlandOddManaValue),
         ..Default::default()
     }
