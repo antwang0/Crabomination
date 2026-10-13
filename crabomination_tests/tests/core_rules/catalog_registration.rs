@@ -2740,7 +2740,8 @@ fn every_self_source_trigger_kind_reaches_a_dispatcher() {
             }
             checked += 1;
             let kind = format!("{:?}", ta.event.kind);
-            let kind = kind.split('(').next().unwrap_or(&kind).to_string();
+            // A tuple or struct variant's payload goes (`CrewsOrSaddles { .. }`).
+            let kind = kind.split(['(', ' ']).next().unwrap_or(&kind).to_string();
             if UNPROVEN.iter().any(|(k, _)| *k == kind) {
                 continue;
             }
