@@ -152,6 +152,14 @@ the handoff.
 - **Seats 1221-1223** (Ekthi, Cynette, Elda): eight cards in `decks::cmdr_edhrec37`, no new
   primitive. Elda's "first nonlegendary creature spell each turn" is a once-a-turn cast trigger, so
   an Elda entering after such a spell grants demonstrate to the next one (INCOMPLETE_CARDS).
+- **Seats 1224-1225** (Jared Carthalion, Cleopatra): five cards in `decks::cmdr_edhrec38`.
+  **Primitive:** `Effect::CantBecomeMonarchThisTurn` (Jared; `set_monarch` no-ops for a barred
+  seat). **FIXED:** (1) combat damage-to-counters statics bypassed `active_static`, so Jared's
+  "while you're the monarch" gate never applied in combat; (2) the first of two death triggers
+  naming one dying object tore down its shared LKI snapshot (`lki_still_named`), so Grakmaw's
+  Hydra came out 0/0 beside Cleopatra; (3) CR 725.4 succession handed a departed monarch's crown
+  to a Jared-barred active player, which no-op'd and left the departed seat holding it (pod seed
+  38002 panic) — succession now skips barred seats.
 - **Seats 1216-1220** (Orah, Meria, Trazyn, Melek Reforged Researcher, O-Kagachi): fifteen cards in
   `decks::cmdr_edhrec36`, no new primitive. **FIXED:** the destroy/sacrifice death funnel never
   bound the dying creature's mana value before auto-targeting its own "this or another" trigger

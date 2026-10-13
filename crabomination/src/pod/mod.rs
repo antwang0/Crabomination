@@ -7794,6 +7794,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELDA_COMMANDERS,
             main: decks::ELDA_MAIN,
         },
+        // Seat 1224: Jared Carthalion, True Heir's EDHREC average deck. `--pod-decks 1224`.
+        PodDeck {
+            name: "Jared Carthalion, True Heir (WRG)",
+            commanders: decks::JARED_CARTHALION_COMMANDERS,
+            main: decks::JARED_CARTHALION_MAIN,
+        },
+        // Seat 1225: Cleopatra, Exiled Pharaoh's EDHREC average deck. `--pod-decks 1225`.
+        PodDeck {
+            name: "Cleopatra, Exiled Pharaoh (BG)",
+            commanders: decks::CLEOPATRA_COMMANDERS,
+            main: decks::CLEOPATRA_MAIN,
+        },
     ]
 }
 
@@ -10842,6 +10854,8 @@ mod tests {
             ("Ekthi, Contaminator Priest", &[0x0EDA]),
             ("Cynette, Jelly Drover", &[0x0EDB]),
             ("Elda, Conjurer of Spectacle", &[0x0EDC]),
+            ("Jared Carthalion, True Heir", &[0x0EDD]),
+            ("Cleopatra, Exiled Pharaoh", &[0x0EDE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

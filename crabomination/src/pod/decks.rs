@@ -34811,3 +34811,61 @@ pub const ELDA_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const JARED_CARTHALION_COMMANDERS: &[CardFactory] = &[jared_carthalion_true_heir];
+
+/// **Jared Carthalion, True Heir**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Forests + 6 Mountains + 6 Plains = 99.
+/// Jared Carthalion, True Heir (EDHREC, fetched 2026-10-13).
+pub const JARED_CARTHALION_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, fiendlash, haunted_cloak, lightning_greaves, mithril_coat,
+    pariahs_shield, shadowspear, sol_ring, swiftfoot_boots, bountiful_promenade, canopy_vista,
+    cinder_glade, clifftop_retreat, command_tower, exotic_orchard, jetmirs_garden,
+    jungle_shrine, kessig_wolf_run, rockfall_vale, rogues_passage, rootbound_crag,
+    sacred_foundry, spectator_seating, stomping_ground, sunpetal_grove, temple_garden,
+    throne_of_the_high_city, archon_of_coronation, birds_of_paradise, boros_reckoner,
+    brash_taunter, champions_of_minas_tirith, dawnglade_regent, emberwilde_captain,
+    kediss_emberclaw_familiar, kutzil_malamet_exemplar, okoye_mighty_and_adored, palace_jailer,
+    palace_sentinels, phyrexian_vindicator, protector_of_the_crown, regal_behemoth,
+    sakura_tribe_elder, shalai_and_hallar, skyline_despot, stuffy_doll, ulvenwald_tracker,
+    wayta_trainer_prodigy, brave_the_sands, court_of_ardenvale, court_of_bounty,
+    court_of_embereth, court_of_garenbrig, court_of_grace, court_of_ire, guilty_conscience,
+    pain_for_all, pariah, with_great_power, arcbond, beast_within, boros_charm,
+    fight_for_the_throne, generous_gift, gideons_sacrifice, heroic_intervention, naya_charm,
+    path_to_exile, self_destruct, swords_to_plowshares, blasphemous_act, chain_reaction,
+    cultivate, farseek, kodamas_reach, natures_lore, rampant_growth, solar_blaze,
+    star_of_extinction, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains,
+];
+
+pub const CLEOPATRA_COMMANDERS: &[CardFactory] = &[cleopatra_exiled_pharaoh];
+
+/// **Cleopatra, Exiled Pharaoh**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 11 Forests + 8 Swamps = 99.
+/// Cleopatra, Exiled Pharaoh (EDHREC, fetched 2026-10-13).
+pub const CLEOPATRA_MAIN: &[CardFactory] = &[
+    arcane_signet, ozolith_the_shattered_spire, relic_of_legends, sol_ring, the_great_henge,
+    the_ozolith, thought_vessel, bojuka_bog, command_tower, deathcap_glade, golgari_rot_farm,
+    karns_bastion, llanowar_wastes, necroblossom_snarl, overgrown_tomb, phyrexian_tower,
+    reliquary_tower, tainted_wood, twilight_mire, underground_mortuary, undergrowth_stadium,
+    verdant_catacombs, woodland_cemetery, agent_frank_horrigan, arwen_weaver_of_hope,
+    braids_arisen_nightmare, bristly_bill_spine_sower, chevill_bane_of_monsters,
+    delighted_halfling, drana_liberator_of_malakir, emissary_green, fain_the_broker,
+    glissa_sunslayer, grakmaw_skyclave_ravager, honest_rutstein, jarad_golgari_lich_lord,
+    jenova_ancient_calamity, kami_of_whispered_hopes, kodama_of_the_west_tree,
+    kurbis_harvest_celebrant, legolas_greenleaf, lily_bowen_raging_grandma,
+    massacre_girl_known_killer, meren_of_clan_nel_toth, polukranos_unchained,
+    reki_the_history_of_kamigawa, renata_called_to_the_hunt, reyhan_last_of_the_abzan,
+    rishkar_peema_renegade, skullbriar_the_walking_grave, surrak_and_goreclaw,
+    the_gitrog_ravenous_ride, winding_constrictor, yahenni_undying_partisan,
+    yawgmoth_thran_physician, branching_evolution, court_of_garenbrig, hardened_scales,
+    hollowmurk_siege, innkeepers_talent, sphere_grid, vraska_joins_up, assassins_trophy,
+    atomize, beast_within, gift_of_the_viper, heroic_intervention, inspiring_call, nasty_end,
+    putrefy, revitalizing_repast, cultivate, farseek, natures_lore, rampant_growth, reanimate,
+    rise_of_the_witch_king, three_visits, toxic_deluge, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
