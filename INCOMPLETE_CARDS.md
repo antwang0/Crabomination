@@ -2091,3 +2091,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Giant Ox / Hotshot Mechanic | they also saddle Mounts with toughness / as though 2 greater (the printed cards only crew) | `SelfCrewsSaddlesWithToughness` / `CrewSaddlePowerBonus` cover both |
 | 🟡 Mighty Servant of Leuk-o | "the first time each turn" counts only two-creature crews: crewed by three, then by two, it still gains the draw | `once_per_turn` on a filtered `CrewsOrSaddles` |
 | 🟡 Ride Down | the creatures it blocked "this combat" are read as "this turn" | `Selector::CreaturesBlockedByThisTurn` |
+| 🟡 Tranquil Frillback | each {G} payment buys one mode under its own reflexive trigger, not one trigger choosing up to that many | three `MayPay` → `ReflexiveTrigger` |
+| 🟡 Dino DNA | the copied card is chosen at resolution among those it exiled, not targeted | `ChooseOneAmong` over `R::ExiledWithSource` |
+| 🟡 Experimental Overload | the returned instant or sorcery is the engine's pick (the priciest) | `Selector::take_priciest` |
