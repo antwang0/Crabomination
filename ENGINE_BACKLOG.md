@@ -232,6 +232,10 @@ the handoff.
   the counters on the cheapest creature). **OPEN:** The Muckslinger Gang's off-battlefield +3/+3
   (creature spells and cards in hand/graveyard/library) — 50 off-battlefield P/T reads and no
   free lane bit to gate a board walk; The Earth King won 21 of 24 debug four-seat pods.
+- **Seats 1469-1470** (Princess Yue, Etrata Deadly Fugitive; `decks::cmdr_edhrec54`, 5 cards): new
+  `EntersAsCopy::keep_own_pt` (Hulking Metamorph — the copy keeps its own, possibly prototyped,
+  size) and `Effect::CloakPileWithTop` (Become Anonymous); Princess Yue's Moon rides a back face
+  through the Ojer gods' `ReturnSelfTransformedTappedToOwner`.
 - **New primitives:** `Effect::GainControlWhileMonarch` (`TempControl.while_monarch`, Garland),
   `R::HasActivatedAbility`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelfOnceEachTurn`
   (Locus of Enlightenment), `StaticEffect::FirstDrawEachTurnMillsOneOfTwo` (a `DrawDig`, Scion of
