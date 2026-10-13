@@ -5438,6 +5438,9 @@ impl Effect {
                 Effect::Destroy { what }
                 | Effect::DestroyAndRemember { what }
                 | Effect::DestroyNoRegen { what }
+                // `requires_target` reads these two too; the walks must agree.
+                | Effect::SacrificeSelected { what }
+                | Effect::SacrificePermanent { what }
                 | Effect::Unattach { what }
                 | Effect::ExileIfWouldDieThisTurn { what }
                 | Effect::ExileIfLeavesBattlefield { what }
