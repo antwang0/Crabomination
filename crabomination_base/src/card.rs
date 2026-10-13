@@ -2032,6 +2032,10 @@ pub enum Keyword {
     /// "This can't be the target of [filter] spells" (Karplusan Strider's
     /// "blue or black spells") — `CantBeTargetedBySpells` for matching spells.
     CantBeTargetedBySpellsMatching(Box<SelectionRequirement>),
+    /// "This can't be the target of [filter] spells your opponents control"
+    /// (Fiendslayer Paladin's black or red spells): `CantBeTargetedBySpellsMatching`
+    /// that only stops a spell whose caster isn't this permanent's controller.
+    CantBeTargetedByOpponentSpellsMatching(Box<SelectionRequirement>),
     /// CR 704.5g — "can't be destroyed by lethal damage unless lethal damage
     /// dealt by a single source is marked on it" (Ogre Enforcer). Read against
     /// `CardInstance::max_damage_from_single_source` in the lethal-damage SBA.

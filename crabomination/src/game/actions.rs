@@ -10120,6 +10120,14 @@ impl GameState {
             {
                 return true;
             }
+            // "…of black or red spells your opponents control" (Fiendslayer
+            // Paladin).
+            if let Keyword::CantBeTargetedByOpponentSpellsMatching(f) = kw
+                && p != target_card.controller
+                && self.evaluate_requirement_on_card(f, card, p)
+            {
+                return true;
+            }
             // "Can't be the target of Aura spells" (Bartel Runeaxe,
             // Tetsuo Umezawa) — narrower than protection: only Auras bounce.
             if matches!(kw, Keyword::CantBeTargetedByAuras)

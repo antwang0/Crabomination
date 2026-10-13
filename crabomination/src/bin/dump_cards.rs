@@ -269,6 +269,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::PreventDamageFromMatching(_)
         | Keyword::CantBeTargetedByAbilitiesFromMatching(_)
         | Keyword::CantBeTargetedBySpellsMatching(_)
+        | Keyword::CantBeTargetedByOpponentSpellsMatching(_)
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
         | Keyword::CantBeBlockedExceptByWhilePowerAtMost(_, _)
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
