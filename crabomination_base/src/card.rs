@@ -5970,6 +5970,12 @@ pub struct EntersAsCopy {
     /// enters, not by a trigger. Each entry applies when the copy matches.
     #[serde(default)]
     pub extra_counters: Vec<(SelectionRequirement, CounterType, u32)>,
+    /// CR 707.9 + 614.1c — "except it enters with a shield counter on it if
+    /// you control that creature" (Undercover Operative): like
+    /// `extra_counters`, but `filter` reads the copied permanent (checked
+    /// from the copier's controller's view) rather than the copy.
+    #[serde(default)]
+    pub copied_counters: Vec<(SelectionRequirement, CounterType, u32)>,
     /// "except it's a Vehicle artifact with crew N and it loses all other
     /// card types" (Imposter Mech): the copy is an artifact only, with the
     /// Vehicle subtype and crew N; subtypes of the lost types go with them.

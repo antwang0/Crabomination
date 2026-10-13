@@ -2817,6 +2817,23 @@ impl GameState {
                 }
             }
         }
+        // "…if you control that creature" (Undercover Operative): the
+        // condition reads the copied permanent, still on the battlefield.
+        if let Some(crate::game::types::Target::Permanent(copied)) = ctx.targets.first().cloned() {
+            for (filter, kind, n) in &spec.copied_counters {
+                if self.evaluate_requirement_static(filter, &Target::Permanent(copied), controller, Some(card_id)) {
+                    let n = self.place_counters(card_id, *kind, *n);
+                    if n > 0 {
+                        events.push(GameEvent::CounterAdded {
+                            card_id,
+                            counter_type: *kind,
+                            count: n,
+                            placer: Some(controller),
+                        });
+                    }
+                }
+            }
+        }
         // "Enter TAPPED as a copy" (Vesuva): the tapping is part of this
         // replacement, so it survives the copy overwriting the printed text.
         if spec.tapped
