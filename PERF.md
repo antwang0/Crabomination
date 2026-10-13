@@ -3172,6 +3172,15 @@ re-gate          after batches 45-51 (seats 1254-1269, 45 more cards,
                  decision count is the instrument); clippy 0 (43m43s);
                  pod_sweep 9961/9962 seats 1254-1269 × 4,6,8 × 3/12 = 135
                  games, 0 bad
+re-gate 2        after seats 1426-1705 (cmdr_edhrec53-59, 98 cards; BlightX,
+                 keep_own_pt, CloakPileWithTop, PlayedCardFromExileThisTurn,
+                 NoPermanentLeftBattlefieldThisTurn, graveyard listeners on
+                 ControllerDealtCombatDamage behind the graveyard-trigger
+                 lane) at 4b8736e26: --bench 196,176 / 27.64 / 613.0 / 0
+                 stalls byte-identical, thread_determinism ok, peak_rss 34.4
+                 MiB, games_per_s 304.23; pod_sweep 9971 seats 1270-1470 ×
+                 4,6,8 × 4 = 444 games and 9981 seats 1516-1705 × 4,6,8 × 3
+                 = 312 games, 0 bad
 ```
 
 ### 2026-10-13 (Commander run, `01BJKf54`, close) — guardrail; 17 more seats, 59 cards, two primitives
