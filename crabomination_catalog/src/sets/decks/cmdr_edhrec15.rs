@@ -4923,3 +4923,35 @@ pub fn tarrians_journal() -> CardDefinition {
         ..permanent("Tarrian's Journal", cost(&[generic(1), b()]), CardType::Artifact)
     }
 }
+
+/// Mirrormind Crown — {4} Equipment, equip {2}. While attached to a
+/// creature, the first time you'd create tokens each turn you instead
+/// create that many copies of the equipped creature.
+pub fn mirrormind_crown() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![static_ab(
+            "The first time you would create one or more tokens each turn, you may instead create that many tokens that are copies of equipped creature.",
+            StaticEffect::FirstTokensEachTurnCopyEquipped,
+        )],
+        ..equipment("Mirrormind Crown", cost(&[generic(4)]), cost(&[generic(2)]), EquipBonus::default())
+    }
+}
+
+/// Defiler of Dreams — {3}{U}{U} 4/3 flying Phyrexian Sphinx. Blue
+/// permanent spells may pay 2 life for {U}; casting one draws a card.
+pub fn defiler_of_dreams() -> CardDefinition {
+    let blue_permanent = || R::HasColor(Color::Blue).and(R::PermanentCard);
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![static_ab(
+            "Blue permanent spells may pay 2 life for {U}.",
+            StaticEffect::PhyrexianPipForSpells { filter: blue_permanent(), color: Color::Blue },
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(blue_permanent())),
+            effect: draw(1),
+        }],
+        ..creature("Defiler of Dreams", cost(&[generic(3), u(), u()]), vec![CreatureType::Phyrexian, CreatureType::Sphinx], 4, 3)
+    }
+}

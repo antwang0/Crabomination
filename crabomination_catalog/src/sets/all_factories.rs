@@ -3026,6 +3026,8 @@ static DECKS: &[Factory] = &[
     super::decks::wail_of_the_forgotten,
     super::decks::leonardo_da_vinci,
     super::decks::tarrians_journal,
+    super::decks::mirrormind_crown,
+    super::decks::defiler_of_dreams,
     super::decks::gorgon_flail,
     super::decks::rune_of_mortality,
     super::decks::boarding_party,

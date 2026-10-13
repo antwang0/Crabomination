@@ -805,7 +805,7 @@ fn no_shipped_card_nests_two_answer_log_arms() {
             flagged.push(format!("{}: {h}", def.name));
         }
     }
-    // The seven shipped nestings (Conspiracy Theorist left when its "pay {1}
+    // The eight shipped nestings (Conspiracy Theorist left when its "pay {1}
     // and discard" became one payment; Sail into the West's majority vote
     // clears the log before the winning option, which is its last act —
     // `cmdr_galadriel::sail_into_the_west_embark_resumes_for_ui_seats`). Each is safe for the reason in this test's
@@ -818,6 +818,9 @@ fn no_shipped_card_nests_two_answer_log_arms() {
         "Emberwilde Djinn: MayPayBy > MayPayLife",
         "Forbidden Ritual: MaySacrifice > UnlessPlayerPays",
         "Giant Albatross: MayPay > DestroyEachUnlessPaysLife",
+        // "Unless they pay {B} or {3}": the outer tax clears the log on every
+        // path before its `then`, and the inner tax is that `then`'s last act.
+        "Lim-Dûl's Hex: UnlessPlayerPays > UnlessPlayerPays",
         "Rottenmouth Viper: MaySacrifice > MayDiscard",
         "Sail into the West: Vote > MayDoBy",
         "Skirk Drill Sergeant: MayPay > RevealTopMayPutOntoBattlefield",

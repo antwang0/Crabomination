@@ -2199,3 +2199,36 @@ fn tarrians_journal_flips_and_raises_a_vampire() {
     assert_eq!(c.counter_count(CounterType::Finality), 1);
     assert!(c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Vampire));
 }
+
+/// Mirrormind Crown (CR 614.1a): the first token batch each turn is copies
+/// of the equipped creature; the second is as printed.
+#[test]
+fn mirrormind_crown_copies_the_first_tokens_each_turn() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    let crown = ready(&mut g, 0, catalog::mirrormind_crown());
+    g.battlefield_find_mut(crown).unwrap().attached_to = Some(angel);
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, alarm, &[]).expect("alarm");
+    assert_eq!(tokens_named(&g, "Serra Angel"), 2, "two Angels instead of Soldiers");
+    let again = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    cast(&mut g, again, &[]).expect("alarm again");
+    assert_eq!(tokens_named(&g, "Soldier"), 2, "only the first batch each turn");
+}
+
+/// Defiler of Dreams: a blue permanent spell draws a card, and its {U} can
+/// be 2 life.
+#[test]
+fn defiler_of_dreams_draws_on_blue_permanents() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::defiler_of_dreams());
+    let sailor = g.add_card_to_hand(0, catalog::spectral_sailor());
+    let hand = g.players[0].hand.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: sailor, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("no mana: {U} paid with 2 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18);
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+}
