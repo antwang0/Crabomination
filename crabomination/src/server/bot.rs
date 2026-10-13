@@ -3792,6 +3792,18 @@ fn decide_pending_policy_inner(
         {
             super::fight_pick::pick_killing_fight(state, *source, legal)
         }
+        // A damage trigger skips opposing permanents its damage can't hurt
+        // (`damage_pick.rs`: Vindicator and Raptors ping-ponged over an
+        // indestructible Zetalpa).
+        crate::decision::Decision::ChooseTarget { legal, .. }
+            if super::damage_pick::trim_unhurt(state, seat, legal).is_some() =>
+        {
+            let mut d = decision.clone();
+            if let crate::decision::Decision::ChooseTarget { legal: l, .. } = &mut d {
+                *l = super::damage_pick::trim_unhurt(state, seat, legal).expect("guarded");
+            }
+            decide_pending_policy_inner(state, seat, w, &d, eval_modes)
+        }
         crate::decision::Decision::ChooseTarget { legal, optional, .. } if !legal.is_empty() => {
             // Round 53: judge the corner candidates by settled outcome at
             // the real decision. Inside a sim (`eval_modes` off) the

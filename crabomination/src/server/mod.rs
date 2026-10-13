@@ -119,6 +119,7 @@ mod team_combat;
 mod goad_attach;
 mod library_top;
 mod spell_response;
+mod damage_pick;
 mod fight_pick;
 mod loyalty_pick;
 mod life_draw;
