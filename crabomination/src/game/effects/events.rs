@@ -1183,6 +1183,17 @@ fn event_matches_spec_rest(
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
                 if *p == source.controller && !state.same_team(*fc, source.controller)
         ),
+        EventScope::OpponentSourceDamagedYourPermanent => match event {
+            GameEvent::DamageDealt { to_card: Some(c), from_controller: Some(fc), .. } => {
+                !state.same_team(*fc, source.controller)
+                    && state
+                        .battlefield_find(*c)
+                        .map(|p| p.controller)
+                        .or_else(|| state.died_card_snapshots.get(c).map(|p| p.controller))
+                        == Some(source.controller)
+            }
+            _ => false,
+        },
         EventScope::YourOtherSourceDamagedOpponent => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), from_card, .. }
@@ -1361,6 +1372,11 @@ pub(crate) fn actor_for_scope(
         };
         return state.battlefield_find(cid).map(|c| c.controller);
     }
+    // "Whenever a creature you control is dealt damage" scopes on the damaged
+    // permanent's controller, not the dealer's (`event_actor`).
+    if let GameEvent::DamageDealt { to_card: Some(_), .. } = event {
+        return recipient_actor(state, event);
+    }
     event_actor(state, event)
 }
 
@@ -1395,6 +1411,18 @@ pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize>
     if let Some(p) = event_player(event) {
         return Some(p);
     }
+    // Damage to a permanent was *caused* by its source's controller — the
+    // trigger player of "that source's controller" (Elesh Norn). Scope
+    // matching still keys on the damaged permanent (`actor_for_scope`).
+    if let GameEvent::DamageDealt { to_card: Some(_), from_controller: Some(fc), .. } = event {
+        return Some(*fc);
+    }
+    recipient_actor(state, event)
+}
+
+/// `event_actor`'s card-keyed fallback: the controller of the event's card,
+/// on the battlefield or as it last was.
+fn recipient_actor(state: &GameState, event: &GameEvent) -> Option<usize> {
     let cid = event_card(event)?;
     if let Some(c) = state.battlefield_find(cid) {
         return Some(c.controller);
@@ -1723,10 +1751,10 @@ pub(crate) fn emblem_event_matches(
     }
     match spec.scope {
         EventScope::YourControl | EventScope::SelfSource => {
-            event_actor(state, event).is_some_and(|p| p == controller)
+            actor_for_scope(state, event, &spec.kind).is_some_and(|p| p == controller)
         }
         EventScope::OpponentControl => {
-            event_actor(state, event).is_some_and(|p| !state.same_team(p, controller))
+            actor_for_scope(state, event, &spec.kind).is_some_and(|p| !state.same_team(p, controller))
         }
         EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
         EventScope::YouTapped => matches!(
@@ -1745,6 +1773,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourSourceDamagedOpponent
         | EventScope::YourSourceDamagedAnyPlayer
         | EventScope::OpponentSourceDamagedYou
+        | EventScope::OpponentSourceDamagedYourPermanent
         | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent
         | EventScope::ControllerPlaneswalkerAttackedByOpponent

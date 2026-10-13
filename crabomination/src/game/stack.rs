@@ -1256,6 +1256,7 @@ impl GameState {
             | EventScope::YourCreatureCombatDamagedOpponent
             | EventScope::YourSourceDamagedAnyPlayer
             | EventScope::OpponentSourceDamagedYou
+            | EventScope::OpponentSourceDamagedYourPermanent
             | EventScope::YourOtherSourceDamagedOpponent
             | EventScope::YouTapped
             | EventScope::YouPutCounters

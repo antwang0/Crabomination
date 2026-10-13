@@ -4207,6 +4207,13 @@ pub enum EventScope {
     /// an opponent controls deals damage to you" — Michiko Konda). The damage
     /// dealer's controller is bound as the trigger player.
     OpponentSourceDamagedYou,
+    /// The permanent sibling of `OpponentSourceDamagedYou`, paired with
+    /// `EventKind::DealtDamage`: a source an opponent controls dealt damage to
+    /// a permanent the trigger's controller controls ("… deals damage to you
+    /// or a permanent you control" — Elesh Norn). The subject is the damaged
+    /// permanent; the dealer's controller is the trigger player
+    /// (`PlayerRef::TriggerEventPlayer`).
+    OpponentSourceDamagedYourPermanent,
     /// A permanent **you control** (any, including the source) becomes the
     /// target of a spell or ability an **opponent** controls. Used with
     /// `EventKind::BecameTarget` — Battle Mammoth. Unlike SelfSource, the
