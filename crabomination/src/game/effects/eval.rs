@@ -1521,6 +1521,7 @@ impl GameState {
             Value::PermanentsReturnedThisEffect => self.permanents_returned_this_resolution as i32,
             Value::PermanentsTappedThisEffect => self.permanents_tapped_this_resolution as i32,
             Value::CardsRevealedThisEffect => self.cards_revealed_this_resolution as i32,
+            Value::SurveilKeptOnTopThisEffect => self.surveil_kept_top_this_resolution as i32,
             Value::LandCardsRevealedThisEffect => self.scratch.parley_lands_revealed as i32,
             Value::DiscoveredManaValue => self.scratch.discovered_mana_value as i32,
             Value::LastExiledPower => match self.scratch.exiled_card_ids_this_resolution.last() {
@@ -5133,6 +5134,7 @@ impl GameState {
             R::ControlledByChosenPlayerOfSource => Some(self.controlled_by_chosen_player_of(cid, source)),
             R::IsAttackingTriggerPlayer => Some(self.attacking_trigger_player(cid)),
             R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
+            R::ChosenPermanentOfSource => Some(self.is_chosen_permanent_of(cid, source)),
             R::OtherThanTriggerSubject => Some(self.scratch.trigger_subject != Some(cid)),
             R::ToughnessLessThanTriggerSubject => {
                 let t = self.find_card_anywhere(cid).map(|c| self.card_toughness_anywhere(c));
@@ -6605,6 +6607,7 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    R::ChosenPermanentOfSource => self.is_chosen_permanent_of(*cid, source),
                     R::OtherThanTriggerSubject => self.scratch.trigger_subject != Some(*cid),
                     R::ToughnessLessThanTriggerSubject => {
                         let t = self.find_card_anywhere(*cid).map(|c| self.card_toughness_anywhere(c));
@@ -7603,6 +7606,8 @@ impl GameState {
             // (a card in a graveyard search can't be the source on the
             // battlefield).
             R::OtherThanSource => true,
+            // Source-relative: no source on this walker.
+            R::ChosenPermanentOfSource => false,
             R::OtherThanTriggerSubject => self.scratch.trigger_subject != Some(card.id),
             R::ToughnessLessThanTriggerSubject => {
                 self.trigger_subject_toughness().is_some_and(|s| self.card_toughness_anywhere(card) < s)

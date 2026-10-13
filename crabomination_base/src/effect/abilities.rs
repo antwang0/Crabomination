@@ -2145,6 +2145,10 @@ pub enum StaticEffect {
     /// "Enchanted planeswalker has [loyalty abilities]" (Liliana's Talent):
     /// appended past the printed ones on the planeswalker this is attached to.
     AttachedPlaneswalkerHasLoyaltyAbilities { abilities: Vec<LoyaltyAbility> },
+    /// "Whenever you activate a loyalty ability of enchanted planeswalker,
+    /// copy that ability" (Rowan's Talent): read as the ability goes on the
+    /// stack (`copy_loyalty_ability_for_grants`); the copy keeps its targets.
+    CopyAttachedPlaneswalkerLoyaltyAbilities,
     /// "Planeswalkers you control aren't put into their owners' graveyards
     /// for having 0 loyalty" (Sanctum Lurker) — exempts them from CR 704.5i.
     YourPlaneswalkersSurviveZeroLoyalty,

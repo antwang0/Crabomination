@@ -173,6 +173,7 @@ impl GameState {
         let _ = write!(s, "{:?}|", self.permanents_returned_this_resolution);
         let _ = write!(s, "{:?}|", self.permanents_tapped_this_resolution);
         let _ = write!(s, "{:?}|", self.cards_revealed_this_resolution);
+        let _ = write!(s, "{:?}|", self.surveil_kept_top_this_resolution);
         let _ = write!(s, "{:?}|", self.creature_cards_discarded_this_resolution);
         let _ = write!(s, "{:?}|", self.greatest_discarded_mv_this_resolution);
         let _ = write!(s, "{:?}|", self.shuffle_resolving_spell_into_library);

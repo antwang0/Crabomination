@@ -1282,6 +1282,10 @@ pub enum Value {
     /// in the current resolution — X for the Scent / Seer cycle. Reset between
     /// independent resolutions.
     CardsRevealedThisEffect,
+    /// Cards a surveil earlier in the current resolution left on top of the
+    /// library ("for each card you put on top of your library" — Starving
+    /// Revenant). Reset between independent resolutions.
+    SurveilKeptOnTopThisEffect,
     /// Parley's other count: the land cards revealed by the enclosing
     /// `Effect::Parley` (Phabine's Citizen tokens).
     /// The mana value of the card the last `Effect::Discover` hit this
@@ -9950,6 +9954,11 @@ pub enum Effect {
     /// copiable type line becomes exactly creature with `creature_types` —
     /// the copied card types and creature types are replaced, not added to.
     SetCopyTypeLine { what: Selector, creature_types: Vec<crate::card::CreatureType> },
+    /// "Until end of turn, [what] gains 'If this creature would deal combat
+    /// damage to a player, prevent that damage. This creature's controller
+    /// and that player each draw half that many cards, rounded down'"
+    /// (Sokrates, Athenian Teacher; CR 615).
+    CombatDamageToPlayersBecomesDrawsThisTurn { what: Selector },
     /// CR 707.9a/b — the "except …" of a copy effect that just ran on `what`:
     /// rewrites the copiable values it installed, so a later copy of `what`
     /// sees them too. `keep_activated` / `keep_triggered` index the copier's

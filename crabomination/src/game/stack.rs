@@ -5665,6 +5665,7 @@ impl GameState {
         clear_turn!(self.turned_face_up_this_turn);
         clear_turn!(self.fought_this_turn);
         clear_turn!(self.exhaust_activators_this_turn);
+        clear_turn!(self.combat_damage_becomes_draws);
         clear_cold!(self.damage_exiles_victim_eot);
         clear_cold!(self.damage_denies_regen_eot);
         // Expire event-keyed "when [card] dies this turn" delayed triggers

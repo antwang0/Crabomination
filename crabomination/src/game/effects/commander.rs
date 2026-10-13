@@ -863,3 +863,13 @@ impl GameState {
         Ok(())
     }
 }
+
+impl GameState {
+    /// `SelectionRequirement::ChosenPermanentOfSource`: `cid` is the
+    /// permanent `source` remembers (Havengul Mystery).
+    pub(crate) fn is_chosen_permanent_of(&self, cid: crate::card::CardId, source: Option<crate::card::CardId>) -> bool {
+        source
+            .and_then(|s| self.battlefield_find(s))
+            .is_some_and(|c| c.chosen_permanent == Some(cid))
+    }
+}

@@ -1553,6 +1553,11 @@ pub struct TurnRegistries {
     /// in `activate_ability`; cleared at cleanup.
     #[serde(default)]
     pub(crate) exhaust_activators_this_turn: Vec<usize>,
+    /// Creatures whose combat damage to a player is prevented this turn and
+    /// becomes draws for both players (Sokrates's granted ability,
+    /// `Effect::CombatDamageToPlayersBecomesDrawsThisTurn`). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_becomes_draws: Vec<CardId>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -3176,6 +3181,10 @@ pub struct GameState {
     /// within the current resolution (`Value::CardsRevealedThisEffect`).
     #[serde(skip)]
     pub(crate) cards_revealed_this_resolution: u32,
+    /// Transient: cards surveils left on top within the current resolution
+    /// (`Value::SurveilKeptOnTopThisEffect`).
+    #[serde(skip)]
+    pub(crate) surveil_kept_top_this_resolution: u32,
     /// Transient: count of *creature* cards discarded within the current
     /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
     /// when the discarded card carries `CardType::Creature`. Read by
@@ -4525,6 +4534,7 @@ impl Clone for GameState {
             permanents_returned_this_resolution: self.permanents_returned_this_resolution,
             permanents_tapped_this_resolution: self.permanents_tapped_this_resolution,
             cards_revealed_this_resolution: self.cards_revealed_this_resolution,
+            surveil_kept_top_this_resolution: self.surveil_kept_top_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             greatest_discarded_mv_this_resolution: self.greatest_discarded_mv_this_resolution,
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
@@ -4741,6 +4751,7 @@ impl GameState {
             permanents_returned_this_resolution: 0,
             permanents_tapped_this_resolution: 0,
             cards_revealed_this_resolution: 0,
+            surveil_kept_top_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
             shuffle_resolving_spell_into_library: false,
@@ -29582,6 +29593,7 @@ impl GameState {
                 for c in top_cards.into_iter().rev() {
                     lib.insert(0, c);
                 }
+                self.surveil_kept_top_this_resolution += count.saturating_sub(graveyarded) as u32;
                 out.push(GameEvent::SurveilPerformed { player, looked_at: count, graveyarded });
                 out.push(GameEvent::ScriedOrSurveiled { player, surveil: true, looked_at: count as u32 });
                 Ok(out)
@@ -34325,6 +34337,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasAllOtherPlaneswalkerLoyaltyAbilities
             | StaticEffect::PlaneswalkersHaveLoyaltyAbilities { .. }
             | StaticEffect::AttachedPlaneswalkerHasLoyaltyAbilities { .. }
+            | StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities
             | StaticEffect::YourPlaneswalkersSurviveZeroLoyalty
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.

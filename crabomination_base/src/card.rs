@@ -3894,6 +3894,10 @@ pub enum SelectionRequirement {
     /// source (`CardData::put_onto_battlefield_by`) — Kodama of the East
     /// Tree's "if it wasn't put onto the battlefield with this ability".
     PutOntoBattlefieldBySource,
+    /// The candidate is the permanent the source remembers
+    /// (`chosen_permanent`, `Effect::RememberPermanentOnSource`) — Havengul
+    /// Mystery's "when the creature put onto the battlefield with it leaves".
+    ChosenPermanentOfSource,
     /// True when the candidate card is currently in some player's graveyard
     /// zone. Used to restrict zone-spanning trigger targets — e.g.
     /// Ascendant Dustspeaker / Lorehold Acolyte's "exile up to one target

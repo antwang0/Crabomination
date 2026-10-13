@@ -6006,6 +6006,18 @@ impl GameState {
                     self.mill_instead_of_combat_damage(p, amount, events);
                     return 0;
                 }
+                // CR 615 — Sokrates's Sokratic Dialogue: prevented, and the
+                // attacker's controller and the player each draw half.
+                if amount > 0
+                    && !self.damage_cant_be_prevented_this_turn
+                    && self.turn.combat_damage_becomes_draws.contains(&atk.id)
+                {
+                    events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });
+                    let half = (amount / 2) as usize;
+                    self.draw_n(atk.controller, half, events);
+                    self.draw_n(p, half, events);
+                    return 0;
+                }
                 // CR 614.1 — combat damage is damage too: The Mindskinner,
                 // Crumbling Sanctuary, Delaying Shield and Nefarious Lich
                 // replace it exactly as they replace a spell's.

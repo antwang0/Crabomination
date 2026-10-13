@@ -3382,6 +3382,7 @@ impl GameState {
             self.permanents_returned_this_resolution = 0;
             self.permanents_tapped_this_resolution = 0;
             self.cards_revealed_this_resolution = 0;
+            self.surveil_kept_top_this_resolution = 0;
             self.creature_cards_discarded_this_resolution = 0;
             self.greatest_discarded_mv_this_resolution = 0;
             // Dropped, not cleared: a cleared map keeps its buffer, and
@@ -36824,6 +36825,15 @@ impl GameState {
             Effect::AmendCopy { what, keep_activated, keep_triggered, pt, keep_name, legendary, keywords, card_types } => {
                 let (pt, name, legend) = (*pt, *keep_name, *legendary);
                 self.amend_copy(what, keep_activated, keep_triggered, pt, name, legend, keywords, card_types, ctx)
+            }
+
+            Effect::CombatDamageToPlayersBecomesDrawsThisTurn { what } => {
+                for id in self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_permanent_id()) {
+                    if !self.turn.combat_damage_becomes_draws.contains(&id) {
+                        self.turn.combat_damage_becomes_draws.push(id);
+                    }
+                }
+                Ok(())
             }
 
             Effect::SetCopyTypeLine { what, creature_types } => {

@@ -64,6 +64,21 @@ impl GameState {
     /// copies `p`'s grants owe it (CR 707.10 — a copy keeps the original's
     /// targets), and spend the one-shot grants that applied.
     pub(crate) fn copy_loyalty_ability_for_grants(&mut self, p: usize, source: CardId) {
+        // Rowan's Talent: each Aura of `p`'s on this planeswalker copies it.
+        let auras = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && c.attached_to == Some(source))
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities))
+            .count();
+        if auras > 0
+            && let Some(item) = self.stack.last().cloned()
+        {
+            for _ in 0..auras {
+                self.push_stack(item.clone());
+            }
+        }
         if self.players[p].loyalty_copy_grants.is_empty() {
             return;
         }
