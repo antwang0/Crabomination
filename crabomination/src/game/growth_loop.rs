@@ -17,6 +17,16 @@ use super::{GameEvent, GameState};
 /// permanents), which a one-token-per-cycle loop would otherwise reach first.
 pub const GROWTH_LOOP_DRAW_RESOLUTIONS: u32 = 400;
 
+/// A trigger resolving this deep counts as growth on its own: the stack is
+/// what the loop grows. Syr Konrad under The Mindskinner (each ping becomes
+/// three mills, each milled creature card another ping) beside Vigor,
+/// Worldspine Wurm and Kozilek, Butcher of Truth (each shuffles itself or its
+/// graveyard back) never repeats a board and never adds a permanent; its
+/// stack climbed past 3,000 to the action cap (sweep seed 113, block 11352).
+/// The board bound: a finite fan-out this deep pushes its triggers at once
+/// and drains below the chain's floor on the next resolution.
+pub const STACK_LOOP_DEPTH: usize = crate::recommend::MAX_BATTLEFIELD;
+
 impl GameState {
     /// Called after each top-of-stack resolution with the watch's previous
     /// `(floor, tagged)` — `floor` the chain's first pre-resolution depth (0
@@ -40,6 +50,10 @@ impl GameState {
         let tag = (self.turn_number.wrapping_mul(16).wrapping_add(self.step as u32)) & 0x3F;
         let depth = (depth_before as u32).clamp(1, 0xFFFF);
         let (count, chain_tag) = (tagged >> 6, tagged & 0x3F);
+        // Depth growth holds the floor where it is: the loop's depth
+        // oscillates (each resolution pops one, every few push several).
+        let deep_only = !grew && depth_before >= STACK_LOOP_DEPTH;
+        let grew = grew || deep_only;
         if floor == 0 || chain_tag != tag || depth < floor {
             return if grew { (depth, tag) } else { (0, 0) };
         }
@@ -59,7 +73,7 @@ impl GameState {
         // event fanned out drains below it and starts over (a Lumra land
         // drop under 160 Scute Swarms is 400 growing resolutions, all
         // above the depth-1 trigger that began them — seed 4100128).
-        (floor.max(depth), count << 6 | tag)
+        (if deep_only { floor } else { floor.max(depth) }, count << 6 | tag)
     }
 }
 
@@ -81,6 +95,30 @@ mod tests {
         let mut g = crate::game::multi_player_game(2);
         assert!(run(&mut g, std::iter::repeat_n(1, GROWTH_LOOP_DRAW_RESOLUTIONS as usize + 1)));
         assert_eq!(g.game_over, Some(None));
+    }
+
+    /// CR 104.4b — a chain that grows only the stack past `STACK_LOOP_DEPTH`
+    /// (every third resolution pushes four, the others push none) is a loop.
+    #[test]
+    fn a_climbing_stack_with_no_board_growth_draws() {
+        let mut g = crate::game::multi_player_game(2);
+        let (mut w, mut events, mut d) = ((0, 0), Vec::new(), STACK_LOOP_DEPTH);
+        for i in 0..GROWTH_LOOP_DRAW_RESOLUTIONS as usize * 2 {
+            w = g.note_growth_loop(true, d, false, w, &mut events);
+            d = if i % 3 == 2 { d + 4 } else { d - 1 };
+        }
+        assert_eq!(g.game_over, Some(None));
+    }
+
+    /// A deep stack that only drains is a finite cascade, not a loop.
+    #[test]
+    fn a_draining_deep_stack_does_not_draw() {
+        let mut g = crate::game::multi_player_game(2);
+        let (mut w, mut events) = ((0, 0), Vec::new());
+        for d in (STACK_LOOP_DEPTH..STACK_LOOP_DEPTH * 2).rev() {
+            w = g.note_growth_loop(true, d, false, w, &mut events);
+        }
+        assert!(g.game_over.is_none());
     }
 
     /// CR 104.4b — a finite fan-out that drains (450 Scute Swarm copies off
