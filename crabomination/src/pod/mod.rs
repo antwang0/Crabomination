@@ -9018,6 +9018,252 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_MUCKSLINGER_GANG_COMMANDERS,
             main: decks::THE_MUCKSLINGER_GANG_MAIN,
         },
+        // Seat 1428: Lier, Disciple of the Drowned's EDHREC average deck. `--pod-decks 1428`.
+        PodDeck {
+            name: "Lier, Disciple of the Drowned (U)",
+            commanders: decks::LIER_COMMANDERS,
+            main: decks::LIER_MAIN,
+        },
+        // Seat 1429: The Queen of Dale's EDHREC average deck. `--pod-decks 1429`.
+        PodDeck {
+            name: "The Queen of Dale (W)",
+            commanders: decks::THE_QUEEN_OF_DALE_COMMANDERS,
+            main: decks::THE_QUEEN_OF_DALE_MAIN,
+        },
+        // Seat 1430: Zell Dincht's EDHREC average deck. `--pod-decks 1430`.
+        PodDeck {
+            name: "Zell Dincht (R)",
+            commanders: decks::ZELL_DINCHT_COMMANDERS,
+            main: decks::ZELL_DINCHT_MAIN,
+        },
+        // Seat 1431: Gandalf, Westward Voyager's EDHREC average deck. `--pod-decks 1431`.
+        PodDeck {
+            name: "Gandalf, Westward Voyager (UG)",
+            commanders: decks::GANDALF_COMMANDERS,
+            main: decks::GANDALF_MAIN,
+        },
+        // Seat 1432: Khorvath Brightflame and Sylvia Brightspear's EDHREC average deck. `--pod-decks 1432`.
+        PodDeck {
+            name: "Khorvath Brightflame and Sylvia Brightspear (WR)",
+            commanders: decks::KHORVATH_BRIGHTFLAME_COMMANDERS,
+            main: decks::KHORVATH_BRIGHTFLAME_MAIN,
+        },
+        // Seat 1433: Lazav, Familiar Stranger's EDHREC average deck. `--pod-decks 1433`.
+        PodDeck {
+            name: "Lazav, Familiar Stranger (UB)",
+            commanders: decks::LAZAV_4_COMMANDERS,
+            main: decks::LAZAV_4_MAIN,
+        },
+        // Seat 1434: Kaervek, the Punisher's EDHREC average deck. `--pod-decks 1434`.
+        PodDeck {
+            name: "Kaervek, the Punisher (B)",
+            commanders: decks::KAERVEK_COMMANDERS,
+            main: decks::KAERVEK_MAIN,
+        },
+        // Seat 1435: Rubinia Soulsinger's EDHREC average deck. `--pod-decks 1435`.
+        PodDeck {
+            name: "Rubinia Soulsinger (WUG)",
+            commanders: decks::RUBINIA_SOULSINGER_COMMANDERS,
+            main: decks::RUBINIA_SOULSINGER_MAIN,
+        },
+        // Seat 1436: Donal, Herald of Wings's EDHREC average deck. `--pod-decks 1436`.
+        PodDeck {
+            name: "Donal, Herald of Wings (U)",
+            commanders: decks::DONAL_COMMANDERS,
+            main: decks::DONAL_MAIN,
+        },
+        // Seat 1437: Olivia, Mobilized for War's EDHREC average deck. `--pod-decks 1437`.
+        PodDeck {
+            name: "Olivia, Mobilized for War (BR)",
+            commanders: decks::OLIVIA_3_COMMANDERS,
+            main: decks::OLIVIA_3_MAIN,
+        },
+        // Seat 1438: Sauron, the Necromancer's EDHREC average deck. `--pod-decks 1438`.
+        PodDeck {
+            name: "Sauron, the Necromancer (B)",
+            commanders: decks::SAURON_2_COMMANDERS,
+            main: decks::SAURON_2_MAIN,
+        },
+        // Seat 1439: Yorvo, Lord of Garenbrig's EDHREC average deck. `--pod-decks 1439`.
+        PodDeck {
+            name: "Yorvo, Lord of Garenbrig (G)",
+            commanders: decks::YORVO_COMMANDERS,
+            main: decks::YORVO_MAIN,
+        },
+        // Seat 1440: Lucius the Eternal's EDHREC average deck. `--pod-decks 1440`.
+        PodDeck {
+            name: "Lucius the Eternal (BR)",
+            commanders: decks::LUCIUS_THE_ETERNAL_COMMANDERS,
+            main: decks::LUCIUS_THE_ETERNAL_MAIN,
+        },
+        // Seat 1441: Rayami, First of the Fallen's EDHREC average deck. `--pod-decks 1441`.
+        PodDeck {
+            name: "Rayami, First of the Fallen (UBG)",
+            commanders: decks::RAYAMI_COMMANDERS,
+            main: decks::RAYAMI_MAIN,
+        },
+        // Seat 1442: Hokori, Dust Drinker's EDHREC average deck. `--pod-decks 1442`.
+        PodDeck {
+            name: "Hokori, Dust Drinker (W)",
+            commanders: decks::HOKORI_COMMANDERS,
+            main: decks::HOKORI_MAIN,
+        },
+        // Seat 1443: Malfegor's EDHREC average deck. `--pod-decks 1443`.
+        PodDeck {
+            name: "Malfegor (BR)",
+            commanders: decks::MALFEGOR_COMMANDERS,
+            main: decks::MALFEGOR_MAIN,
+        },
+        // Seat 1444: Grand Warlord Radha's EDHREC average deck. `--pod-decks 1444`.
+        PodDeck {
+            name: "Grand Warlord Radha (RG)",
+            commanders: decks::GRAND_WARLORD_RADHA_COMMANDERS,
+            main: decks::GRAND_WARLORD_RADHA_MAIN,
+        },
+        // Seat 1445: Squee, the Immortal's EDHREC average deck. `--pod-decks 1445`.
+        PodDeck {
+            name: "Squee, the Immortal (R)",
+            commanders: decks::SQUEE_COMMANDERS,
+            main: decks::SQUEE_MAIN,
+        },
+        // Seat 1446: Kels, Fight Fixer's EDHREC average deck. `--pod-decks 1446`.
+        PodDeck {
+            name: "Kels, Fight Fixer (UB)",
+            commanders: decks::KELS_COMMANDERS,
+            main: decks::KELS_MAIN,
+        },
+        // Seat 1447: Radha, Heart of Keld's EDHREC average deck. `--pod-decks 1447`.
+        PodDeck {
+            name: "Radha, Heart of Keld (RG)",
+            commanders: decks::RADHA_2_COMMANDERS,
+            main: decks::RADHA_2_MAIN,
+        },
+        // Seat 1448: Jenara, Asura of War's EDHREC average deck. `--pod-decks 1448`.
+        PodDeck {
+            name: "Jenara, Asura of War (WUG)",
+            commanders: decks::JENARA_COMMANDERS,
+            main: decks::JENARA_MAIN,
+        },
+        // Seat 1449: Sidisi, Regent of the Mire's EDHREC average deck. `--pod-decks 1449`.
+        PodDeck {
+            name: "Sidisi, Regent of the Mire (B)",
+            commanders: decks::SIDISI_2_COMMANDERS,
+            main: decks::SIDISI_2_MAIN,
+        },
+        // Seat 1450: Daxos of Meletis's EDHREC average deck. `--pod-decks 1450`.
+        PodDeck {
+            name: "Daxos of Meletis (WU)",
+            commanders: decks::DAXOS_OF_MELETIS_COMMANDERS,
+            main: decks::DAXOS_OF_MELETIS_MAIN,
+        },
+        // Seat 1451: Gregor, Shrewd Magistrate's EDHREC average deck. `--pod-decks 1451`.
+        PodDeck {
+            name: "Gregor, Shrewd Magistrate (WU)",
+            commanders: decks::GREGOR_COMMANDERS,
+            main: decks::GREGOR_MAIN,
+        },
+        // Seat 1452: Sol'kanar the Swamp King's EDHREC average deck. `--pod-decks 1452`.
+        PodDeck {
+            name: "Sol'kanar the Swamp King (UBR)",
+            commanders: decks::SOLKANAR_THE_SWAMP_KING_COMMANDERS,
+            main: decks::SOLKANAR_THE_SWAMP_KING_MAIN,
+        },
+        // Seat 1453: Shadow, Mysterious Assassin's EDHREC average deck. `--pod-decks 1453`.
+        PodDeck {
+            name: "Shadow, Mysterious Assassin (B)",
+            commanders: decks::SHADOW_COMMANDERS,
+            main: decks::SHADOW_MAIN,
+        },
+        // Seat 1454: Hit-Monkey's EDHREC average deck. `--pod-decks 1454`.
+        PodDeck {
+            name: "Hit-Monkey (G)",
+            commanders: decks::HIT_MONKEY_COMMANDERS,
+            main: decks::HIT_MONKEY_MAIN,
+        },
+        // Seat 1455: Moraug, Fury of Akoum's EDHREC average deck. `--pod-decks 1455`.
+        PodDeck {
+            name: "Moraug, Fury of Akoum (R)",
+            commanders: decks::MORAUG_COMMANDERS,
+            main: decks::MORAUG_MAIN,
+        },
+        // Seat 1456: Quintorius, Field Historian's EDHREC average deck. `--pod-decks 1456`.
+        PodDeck {
+            name: "Quintorius, Field Historian (WR)",
+            commanders: decks::QUINTORIUS_3_COMMANDERS,
+            main: decks::QUINTORIUS_3_MAIN,
+        },
+        // Seat 1457: Alquist Proft, Master Sleuth's EDHREC average deck. `--pod-decks 1457`.
+        PodDeck {
+            name: "Alquist Proft, Master Sleuth (WU)",
+            commanders: decks::ALQUIST_PROFT_COMMANDERS,
+            main: decks::ALQUIST_PROFT_MAIN,
+        },
+        // Seat 1458: Thrun, the Last Troll's EDHREC average deck. `--pod-decks 1458`.
+        PodDeck {
+            name: "Thrun, the Last Troll (G)",
+            commanders: decks::THRUN_2_COMMANDERS,
+            main: decks::THRUN_2_MAIN,
+        },
+        // Seat 1459: Bugenhagen, Wise Elder's EDHREC average deck. `--pod-decks 1459`.
+        PodDeck {
+            name: "Bugenhagen, Wise Elder (G)",
+            commanders: decks::BUGENHAGEN_COMMANDERS,
+            main: decks::BUGENHAGEN_MAIN,
+        },
+        // Seat 1460: Diamond Weapon's EDHREC average deck. `--pod-decks 1460`.
+        PodDeck {
+            name: "Diamond Weapon (G)",
+            commanders: decks::DIAMOND_WEAPON_COMMANDERS,
+            main: decks::DIAMOND_WEAPON_MAIN,
+        },
+        // Seat 1461: Hazezon Tamar's EDHREC average deck. `--pod-decks 1461`.
+        PodDeck {
+            name: "Hazezon Tamar (WRG)",
+            commanders: decks::HAZEZON_TAMAR_COMMANDERS,
+            main: decks::HAZEZON_TAMAR_MAIN,
+        },
+        // Seat 1462: The Gaffer's EDHREC average deck. `--pod-decks 1462`.
+        PodDeck {
+            name: "The Gaffer (W)",
+            commanders: decks::THE_GAFFER_COMMANDERS,
+            main: decks::THE_GAFFER_MAIN,
+        },
+        // Seat 1463: Gandalf, Goblins' Bane's EDHREC average deck. `--pod-decks 1463`.
+        PodDeck {
+            name: "Gandalf, Goblins' Bane (R)",
+            commanders: decks::GANDALF_2_COMMANDERS,
+            main: decks::GANDALF_2_MAIN,
+        },
+        // Seat 1464: Heliod, God of the Sun's EDHREC average deck. `--pod-decks 1464`.
+        PodDeck {
+            name: "Heliod, God of the Sun (W)",
+            commanders: decks::HELIOD_3_COMMANDERS,
+            main: decks::HELIOD_3_MAIN,
+        },
+        // Seat 1465: Lord Skitter, Sewer King's EDHREC average deck. `--pod-decks 1465`.
+        PodDeck {
+            name: "Lord Skitter, Sewer King (B)",
+            commanders: decks::LORD_SKITTER_COMMANDERS,
+            main: decks::LORD_SKITTER_MAIN,
+        },
+        // Seat 1466: Thrakkus the Butcher's EDHREC average deck. `--pod-decks 1466`.
+        PodDeck {
+            name: "Thrakkus the Butcher (RG)",
+            commanders: decks::THRAKKUS_THE_BUTCHER_COMMANDERS,
+            main: decks::THRAKKUS_THE_BUTCHER_MAIN,
+        },
+        // Seat 1467: Hawkeye, Young Avenger's EDHREC average deck. `--pod-decks 1467`.
+        PodDeck {
+            name: "Hawkeye, Young Avenger (R)",
+            commanders: decks::HAWKEYE_COMMANDERS,
+            main: decks::HAWKEYE_MAIN,
+        },
+        // Seat 1468: Valentin, Dean of the Vein's EDHREC average deck. `--pod-decks 1468`.
+        PodDeck {
+            name: "Valentin, Dean of the Vein (BG)",
+            commanders: decks::VALENTIN_COMMANDERS,
+            main: decks::VALENTIN_MAIN,
+        },
     ]
 }
 
@@ -12276,6 +12522,47 @@ mod tests {
             ("Excava, the Risen Past", &[0x0FA6]),
             ("The Earth King", &[0x0FA7]),
             ("The Muckslinger Gang", &[0x0FA8]),
+            ("Lier, Disciple of the Drowned", &[0x0FA9]),
+            ("The Queen of Dale", &[0x0FAA]),
+            ("Zell Dincht", &[0x0FAB]),
+            ("Gandalf, Westward Voyager", &[0x0FAC]),
+            ("Khorvath Brightflame and Sylvia Brightspear", &[0x0FAD]),
+            ("Lazav, Familiar Stranger", &[0x0FAE]),
+            ("Kaervek, the Punisher", &[0x0FAF]),
+            ("Rubinia Soulsinger", &[0x0FB0]),
+            ("Donal, Herald of Wings", &[0x0FB1]),
+            ("Olivia, Mobilized for War", &[0x0FB2]),
+            ("Sauron, the Necromancer", &[0x0FB3]),
+            ("Yorvo, Lord of Garenbrig", &[0x0FB4]),
+            ("Lucius the Eternal", &[0x0FB5]),
+            ("Rayami, First of the Fallen", &[0x0FB6]),
+            ("Hokori, Dust Drinker", &[0x0FB7]),
+            ("Malfegor", &[0x0FB8]),
+            ("Grand Warlord Radha", &[0x0FB9]),
+            ("Squee, the Immortal", &[0x0FBA]),
+            ("Kels, Fight Fixer", &[0x0FBB]),
+            ("Radha, Heart of Keld", &[0x0FBC]),
+            ("Jenara, Asura of War", &[0x0FBD]),
+            ("Sidisi, Regent of the Mire", &[0x0FBE]),
+            ("Daxos of Meletis", &[0x0FBF]),
+            ("Gregor, Shrewd Magistrate", &[0x0FC0]),
+            ("Sol'kanar the Swamp King", &[0x0FC1]),
+            ("Shadow, Mysterious Assassin", &[0x0FC2]),
+            ("Hit-Monkey", &[0x0FC3]),
+            ("Moraug, Fury of Akoum", &[0x0FC4]),
+            ("Quintorius, Field Historian", &[0x0FC5]),
+            ("Alquist Proft, Master Sleuth", &[0x0FC6]),
+            ("Thrun, the Last Troll", &[0x0FC7]),
+            ("Bugenhagen, Wise Elder", &[0x0FC8]),
+            ("Diamond Weapon", &[0x0FC9]),
+            ("Hazezon Tamar", &[0x0FCA]),
+            ("The Gaffer", &[0x0FCB]),
+            ("Gandalf, Goblins' Bane", &[0x0FCC]),
+            ("Heliod, God of the Sun", &[0x0FCD]),
+            ("Lord Skitter, Sewer King", &[0x0FCE]),
+            ("Thrakkus the Butcher", &[0x0FCF]),
+            ("Hawkeye, Young Avenger", &[0x0FD0]),
+            ("Valentin, Dean of the Vein", &[0x0FD1]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
