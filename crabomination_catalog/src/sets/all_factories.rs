@@ -3830,6 +3830,13 @@ static DECKS: &[Factory] = &[
     super::decks::egon_god_of_death,
     super::decks::waning_wurm,
     super::decks::woolly_razorback,
+    // cmdr_edhrec48 (session 01VkPyqk)
+    super::decks::draconic_destiny,
+    super::decks::fruit_of_the_first_tree,
+    super::decks::undying_rage,
+    super::decks::forsworn_paladin,
+    super::decks::arguels_blood_fast,
+    super::decks::axis_of_mortality,
     super::decks::gandalf_friend_of_the_shire,
     super::decks::ringwraiths,
     super::decks::sauron_the_necromancer,
