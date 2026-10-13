@@ -2050,6 +2050,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Bane, Lord of Darkness | a nontoken creature of yours dying always draws you a card; the target opponent's choice to let you put a creature card with lesser or equal toughness from hand onto the battlefield instead isn't offered | no "target opponent chooses for you" ask with a toughness-bounded hand put |
 | 🟡 Queen Kayla bin-Kroog | the mana value 1, 2 and 3 cards return one after another, not together (their enter triggers see each other in order) | `ChooseSomeAmong` per mana value; no shared simultaneous put |
 | 🟡 Faerie Slumber Party | your creatures, then each opponent's, return in separate batches rather than all at once | per-opponent `ForEachOpponent` bounce so "each opponent who controlled one" can be counted |
+| 🟡 Fblthp, Knows the Way | its X basic lands needn't have different names | `SearchUpToN` doesn't enforce the rider |
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
 | 🟡 Scion of Halaster | the first-draw replacement is live while you control any commander of yours, a noncreature one included | `Predicate::ControlsOwnCommander` has no creature filter |
 | 🟡 Tilonalli's Summoner | whether its Elementals are exiled is settled by the city's blessing as they're made, not at the end step | `ExileAtNextEndStep` carries no condition |
