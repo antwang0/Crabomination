@@ -4215,6 +4215,11 @@ pub enum StaticEffect {
         applies_to: Selector,
         ability: Box<crate::card::ActivatedAbility>,
     },
+    /// CR 702.61 — "instant and sorcery spells you control have split second"
+    /// (Samut, Tyrant of Naktamun). Read live by `stack_has_split_second`
+    /// off the spell's controller, like
+    /// `YourSpellsHaveSplitSecondIfArtifactManaSpent`.
+    YourISSpellsHaveSplitSecond,
 }
 
 impl StaticEffect {

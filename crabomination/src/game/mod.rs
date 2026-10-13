@@ -34433,6 +34433,7 @@ fn static_effect_to_effects(
             | StaticEffect::GrantStormToISSpells
             // Read by `stack_has_split_second`; no layer effect.
             | StaticEffect::YourSpellsHaveSplitSecondIfArtifactManaSpent
+            | StaticEffect::YourISSpellsHaveSplitSecond
             // Read by `activate_ability`'s cost path; no layer effect.
             | StaticEffect::MaySpendManaAsAnyColorForYourCreatureAbilities
             // Read by `deal_damage_to_from`'s noncombat funnel.

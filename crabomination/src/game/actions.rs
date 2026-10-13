@@ -1834,6 +1834,15 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
             {
                 tax += pay;
             }
+            crate::card::AdditionalCastCost::TapOrPay { filter, pay }
+                if !state.battlefield.iter().any(|c| {
+                    c.controller == caster
+                        && !c.tapped
+                        && state.evaluate_requirement_static_on(filter, c, caster, None)
+                }) =>
+            {
+                tax += pay;
+            }
             _ => {}
         }
     }
@@ -12250,6 +12259,7 @@ impl GameState {
             // pay half is folded into the cost.
             A::ForageOrPay { .. } | A::DiscardOrPay { .. } => true,
             A::PayLifeOrPay { .. } => true,
+            A::TapOrPay { .. } => true,
             // Need a creature to point at — one you control or one to reveal.
             A::ChooseOrRevealCreature => {
                 self.battlefield.iter().any(|c| c.controller == p && self.computed_is_creature(c))
@@ -12868,6 +12878,17 @@ impl GameState {
                         let mut forage = self.pay_forage(p);
                         events.append(&mut forage);
                     }
+                }
+                A::TapOrPay { filter, .. } => {
+                    // An untapped match pays the tap half; else the pay half
+                    // was already folded into the cost.
+                    let (mut ev, _) = self.pay_additional_costs(
+                        p,
+                        &[A::TapPermanents { filter: filter.clone(), count: 1 }],
+                        None,
+                        None,
+                    );
+                    events.append(&mut ev);
                 }
                 A::PayLifeOrPay { life, .. } => {
                     if self.pays_life_half(p, *life) {
@@ -19882,6 +19903,8 @@ impl GameState {
                     || (card.kicked
                         && card.definition.keywords.has_kw(&crate::card::Keyword::SplitSecondIfKicked))
                     || (card.cast_artifact_mana > 0 && self.grants_artifact_mana_split_second(card.controller))
+                    || ((card.definition.is_instant() || card.definition.is_sorcery())
+                        && self.grants_is_split_second(card.controller))
             }
             _ => false,
         })
@@ -19894,6 +19917,17 @@ impl GameState {
             c.controller == seat
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::YourSpellsHaveSplitSecondIfArtifactManaSpent)
+                })
+        })
+    }
+
+    /// Samut, Tyrant of Naktamun — `seat` controls a
+    /// `YourISSpellsHaveSplitSecond` static.
+    fn grants_is_split_second(&self, seat: usize) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::YourISSpellsHaveSplitSecond)
                 })
         })
     }

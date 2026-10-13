@@ -6501,6 +6501,12 @@ pub enum AdditionalCastCost {
     /// when any option is; the cast pipeline concretizes it to one option
     /// (`GameState::pick_one_of_cost`) before anything is paid.
     OneOf(Vec<AdditionalCastCost>),
+    /// "As an additional cost to cast this spell, tap an untapped [filter]
+    /// you control or pay {N}" (Disruption Protocol). Same auto-pick as the
+    /// other `…OrPay` costs: with an untapped match the tap half is paid
+    /// (lowest-impact pick, as `TapPermanents`), else the pay half joins the
+    /// cost.
+    TapOrPay { filter: SelectionRequirement, pay: u32 },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.
