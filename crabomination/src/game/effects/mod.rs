@@ -35811,6 +35811,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeLifeWithSourcePower => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(power) = self.computed_permanent(src).map(|c| c.power) else {
+                    return Ok(());
+                };
+                let p = ctx.controller;
+                let old_life = self.players[p].life;
+                let base_toughness = self.battlefield_find(src).map(|c| c.definition.toughness).unwrap_or(0);
+                // CR 119.7 — the exchange is a gain or loss of the difference.
+                let delta = power - old_life;
+                let life_effect = if delta >= 0 {
+                    Effect::GainLife { who: Selector::You, amount: crate::effect::Value::Const(delta) }
+                } else {
+                    Effect::LoseLife { who: Selector::You, amount: crate::effect::Value::Const(-delta) }
+                };
+                self.run_effect(&life_effect, ctx, events)?;
+                self.run_effect(
+                    &Effect::SetBasePT {
+                        what: Selector::This,
+                        power: crate::effect::Value::Const(old_life),
+                        toughness: crate::effect::Value::Const(base_toughness),
+                        duration: crate::effect::Duration::Permanent,
+                    },
+                    ctx,
+                    events,
+                )?;
+                Ok(())
+            }
+
             Effect::GrantSpellsFlashThisTurn { who } => {
                 if let Some(seat) = self.resolve_player(who, ctx) {
                     self.players[seat].spells_as_flash_this_turn = true;

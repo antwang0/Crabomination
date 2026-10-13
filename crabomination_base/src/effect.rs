@@ -8590,6 +8590,10 @@ pub enum Effect {
     /// toughness": your life becomes its toughness and its base toughness
     /// becomes your former life total (a layer-7b set, CR 613.4b).
     ExchangeLifeWithSourceToughness,
+    /// Evra, Halcyon Witness — "Exchange your life total with this creature's
+    /// power": your life becomes its power and its base power becomes your
+    /// former life total (layer 7b, CR 613.4b).
+    ExchangeLifeWithSourcePower,
     /// Tree of Perdition — "Exchange target opponent's life total with this
     /// creature's toughness": `who`'s life becomes its toughness and its base
     /// toughness becomes their former life total (CR 119.7, 613.4b).

@@ -1481,7 +1481,7 @@ impl Effect {
             Effect::NextFaceDownSpellCostsLessThisTurn { .. } => false,
             Effect::GrantSpellsFlashThisTurn { .. } => false,
             Effect::EachPlayerKeepsTotalPowerAtMost { .. } => false,
-            Effect::ExchangeLifeWithSourceToughness => false,
+            Effect::ExchangeLifeWithSourceToughness | Effect::ExchangeLifeWithSourcePower => false,
             Effect::ExchangePlayerLifeWithSourceToughness { .. } => false,
             Effect::RadOnCastUntilEndOfTheirNextTurn { .. } => false,
             Effect::NoteCreatureTypeOf { what } => sel_has_target(what),
