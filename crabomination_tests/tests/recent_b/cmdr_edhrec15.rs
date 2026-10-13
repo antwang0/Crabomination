@@ -1821,3 +1821,27 @@ fn nashi_casts_a_copy_of_an_exiled_legend() {
     assert!(g.exile.iter().any(|c| c.id == bane), "the card was exiled");
     assert_eq!(tokens_named(&g, "Bane, Lord of Darkness"), 1, "its copy resolved as a token");
 }
+
+/// Elesh Norn (MOM): damage from an opponent's source to you or to a
+/// permanent you control costs that source's controller 2 life unless they
+/// pay {1}.
+#[test]
+fn elesh_norn_taxes_damage_to_you_and_yours() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::elesh_norn());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt_at = |g: &mut GameState, t: Target| {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(t), additional_targets: vec![], mode: None, x_value: None })
+            .expect("bolt");
+        drain_stack(g);
+    };
+    bolt_at(&mut g, Target::Player(0));
+    assert_eq!(g.players[0].life, 17);
+    assert_eq!(g.players[1].life, 18, "no {{1}} to pay: two life");
+    bolt_at(&mut g, perm(bear));
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[1].life, 16, "damage to a permanent of yours counts too");
+}

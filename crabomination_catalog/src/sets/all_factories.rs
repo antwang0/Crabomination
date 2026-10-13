@@ -3009,6 +3009,7 @@ static DECKS: &[Factory] = &[
     super::decks::huatli_poet_of_unity,
     super::decks::intrepid_paleontologist,
     super::decks::nashi_moons_legacy,
+    super::decks::elesh_norn,
     super::decks::gorgon_flail,
     super::decks::rune_of_mortality,
     super::decks::boarding_party,

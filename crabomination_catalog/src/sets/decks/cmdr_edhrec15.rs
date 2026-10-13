@@ -4187,3 +4187,79 @@ pub fn nashi_moons_legacy() -> CardDefinition {
         ..legend("Nashi, Moon's Legacy", cost(&[b(), g(), u()]), vec![CreatureType::Rat, CreatureType::Shaman], 3, 4)
     }
 }
+
+/// Elesh Norn // The Argent Etchings — {2}{W}{W} 3/5 vigilance. Whenever a
+/// source an opponent controls deals damage to you or a permanent you
+/// control, that source's controller loses 2 life unless they pay {1}.
+/// {2}{W}, sacrifice three other creatures (sorcery): exile her, return
+/// transformed. Saga: I — incubate 2 five times, then transform your
+/// Incubators; II — your creatures +1/+1 and double strike this turn;
+/// III — destroy all other permanents but artifacts, lands and Phyrexians,
+/// then exile the Saga and return it front face up.
+pub fn elesh_norn() -> CardDefinition {
+    let toll = |who: PlayerRef| Effect::UnlessPlayerPays {
+        who: who.clone(),
+        cost: crate::card::WardCost::Mana(cost(&[generic(1)])),
+        then: Box::new(Effect::LoseLife { who: Selector::Player(who), amount: Value::Const(2) }),
+        if_paid: None,
+    };
+    let yours_all = || Selector::EachPermanent(yours(R::Creature));
+    let etchings = CardDefinition {
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(
+                    (0..5)
+                        .map(|_| Effect::Incubate { who: PlayerRef::You, amount: Value::Const(2) })
+                        .chain(std::iter::once(Effect::Transform {
+                            what: Selector::EachPermanent(yours(
+                                R::IsToken.and(R::HasName("Incubator".into())).and(R::Not(Box::new(R::Creature))),
+                            )),
+                        }))
+                        .collect(),
+                ),
+            ),
+            (2, Effect::Seq(vec![eot_pump(yours_all(), 1, 1), grant_eot(yours_all(), Keyword::DoubleStrike)])),
+            (
+                3,
+                Effect::Seq(vec![
+                    Effect::Destroy {
+                        what: Selector::EachPermanent(
+                            R::Not(Box::new(R::Artifact))
+                                .and(R::Not(Box::new(R::Land)))
+                                .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Phyrexian))))
+                                .and(R::OtherThanSource),
+                        ),
+                    },
+                    Effect::ExileSelfReturnFrontFace,
+                ]),
+            ),
+        ],
+        ..permanent("The Argent Etchings", ManaCost::default(), CardType::Enchantment)
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentSourceDamagedYou),
+                effect: toll(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+            },
+            TriggeredAbility {
+                // Recipient-keyed: the dealer's controller is the trigger
+                // player (`PlayerRef::TriggerEventPlayer`).
+                event: EventSpec::new(EventKind::DealtDamage, EventScope::OpponentSourceDamagedYourPermanent),
+                effect: toll(PlayerRef::TriggerEventPlayer),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            sorcery_speed: true,
+            sac_other_filter: Some((R::Creature.and(R::OtherThanSource).and(R::ControlledByYou), 3)),
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(etchings)),
+        ..legend("Elesh Norn", cost(&[generic(2), w(), w()]), vec![CreatureType::Phyrexian, CreatureType::Praetor], 3, 5)
+    }
+}
