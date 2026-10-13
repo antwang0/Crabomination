@@ -1503,6 +1503,10 @@ pub struct TurnRegistries {
     /// cleanup.
     #[serde(default)]
     pub red_noncombat_damage_this_turn: Vec<(usize, u32)>,
+    /// CR 725 — seats that "can't become the monarch this turn" (Jared
+    /// Carthalion, True Heir). `set_monarch` skips them. Cleared at cleanup.
+    #[serde(default)]
+    pub cant_become_monarch_this_turn: Vec<usize>,
     /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
     /// has dealt damage this turn — Backdraft's "half the damage dealt by one
     /// of those sorcery spells". Cleared at cleanup.
@@ -4871,7 +4875,7 @@ impl GameState {
     /// CR 725 — make `player` the monarch. No-op if they already are; emits
     /// `MonarchChanged` on a real change.
     pub fn set_monarch(&mut self, player: usize, events: &mut Vec<GameEvent>) {
-        if self.monarch == Some(player) {
+        if self.monarch == Some(player) || self.turn.cant_become_monarch_this_turn.contains(&player) {
             return;
         }
         self.monarch = Some(player);
@@ -28762,13 +28766,13 @@ impl GameState {
                 }
                 if had_lki {
                     self.resolving_lki_source = None;
-                    if !suspended_again {
+                    if !suspended_again && !self.lki_still_named(source) {
                         self.leaves_bf_lki.remove(&source);
                     }
                 }
                 if let Some(sid) = lki_subject {
                     self.resolving_lki_subject = None;
-                    if !suspended_again {
+                    if !suspended_again && !self.lki_still_named(sid) {
                         self.leaves_bf_lki.remove(&sid);
                     }
                 }

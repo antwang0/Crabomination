@@ -12448,6 +12448,9 @@ pub enum Effect {
     SkipNextCombatPhase { who: PlayerRef },
     /// CR 725 — `who` becomes the monarch. "You become the monarch."
     BecomeMonarch { who: PlayerRef },
+    /// CR 725 — "`who` can't become the monarch this turn" (Jared Carthalion,
+    /// True Heir): every way of becoming it is skipped until cleanup.
+    CantBecomeMonarchThisTurn { who: PlayerRef },
     /// CR 701.54 — "the Ring tempts you." Increments `who`'s ring-temptation
     /// count (capped at 4) and lets them designate a creature they control as
     /// their Ring-bearer. The bearer-specific abilities (can't-be-blocked-by-

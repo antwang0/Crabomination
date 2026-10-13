@@ -3675,13 +3675,13 @@ impl GameState {
                 let suspended = self.pending_decision.is_some();
                 if had_lki {
                     self.resolving_lki_source = None;
-                    if !suspended {
+                    if !suspended && !self.lki_still_named(source) {
                         self.leaves_bf_lki.remove(&source);
                     }
                 }
                 if let Some(sid) = lki_subject {
                     self.resolving_lki_subject = None;
-                    if !suspended {
+                    if !suspended && !self.lki_still_named(sid) {
                         self.leaves_bf_lki.remove(&sid);
                     }
                 }
@@ -5766,6 +5766,7 @@ impl GameState {
         }
         clear_turn!(self.artifact_damage_to_players_this_turn);
         clear_turn!(self.red_noncombat_damage_this_turn);
+        clear_turn!(self.cant_become_monarch_this_turn);
         clear_cold!(self.combat_damage_redirect_this_turn);
         clear_cold!(self.doubled_damage_sources_this_turn);
         clear_cold!(self.assigns_no_combat_damage_this_turn);
@@ -7070,6 +7071,22 @@ impl GameState {
     /// the server's read paths). Engine callers that already hold an events
     /// buffer call [`Self::check_state_based_actions_into`] and skip the
     /// per-sweep `Vec` — see PERF's `(-75)`.
+    /// CR 603.10 — another trigger still on the stack reads `id`'s
+    /// leaves-the-battlefield snapshot, as its source or its dead subject
+    /// (Grakmaw's own death trigger beside Cleopatra's Betrayal over the
+    /// same death): the first to resolve must not tear it down.
+    pub(crate) fn lki_still_named(&self, id: CardId) -> bool {
+        self.stack.iter().any(|si| match si {
+            StackItem::Trigger { source, trigger_source, .. } => {
+                *source == id
+                    || matches!(trigger_source,
+                        Some(crate::game::effects::EntityRef::Card(c) | crate::game::effects::EntityRef::Permanent(c))
+                            if *c == id)
+            }
+            _ => false,
+        })
+    }
+
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
         self.check_state_based_actions_into(&mut events);

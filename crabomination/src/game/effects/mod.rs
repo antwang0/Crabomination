@@ -31618,6 +31618,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantBecomeMonarchThisTurn { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    if !self.turn.cant_become_monarch_this_turn.contains(&p) {
+                        self.turn.cant_become_monarch_this_turn.push(p);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RingTempts { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.ring_tempts(p, events);

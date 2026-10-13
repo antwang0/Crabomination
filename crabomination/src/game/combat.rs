@@ -5581,7 +5581,10 @@ impl GameState {
                 use crate::effect::StaticEffect as SE;
                 let (mut sekki, mut grows, mut kind) = (false, false, None);
                 for sa in &c.definition.static_abilities {
-                    match sa.effect {
+                    // A gated replacement (Jared Carthalion's "while you're
+                    // the monarch") counts while its gate is open.
+                    let Some(effect) = self.active_static(&sa.effect, c) else { continue };
+                    match *effect {
                         SE::PreventDamageToSelfTradingCounters { .. }
                         | SE::PreventDamageToSelfWhileCountersForRad { .. }
                         | SE::PreventDamageToSelfOpponentGainsControl => sekki = true,
@@ -5792,9 +5795,9 @@ impl GameState {
     ) -> Option<(crate::card::CounterType, crate::effect::DamageToCounters, usize)> {
         self.battlefield_find(id)
             .and_then(|c| {
-                c.definition.static_abilities.iter().find_map(|s| match s.effect {
-                    crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind, how } => {
-                        Some((kind, how, c.controller))
+                c.definition.static_abilities.iter().find_map(|s| match self.active_static(&s.effect, c) {
+                    Some(crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind, how }) => {
+                        Some((*kind, *how, c.controller))
                     }
                     _ => None,
                 })

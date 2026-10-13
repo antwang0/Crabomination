@@ -2305,7 +2305,9 @@ impl Effect {
             | Effect::RevealTopEachOpponentChoosesToHand { .. }
             | Effect::ReturnFromGraveyardOpponentChooses { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
-            Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),
+            Effect::BecomeMonarch { who } | Effect::CantBecomeMonarchThisTurn { who } | Effect::Ascend { who } => {
+                player_has_target(who)
+            }
             Effect::BecomeDay | Effect::BecomeNight | Effect::EndTheTurn | Effect::EndTheCombatPhase => false,
             Effect::PreventAllDamageFromChosenSourceThisTurn { .. }
             | Effect::DamagedCreaturesDieThisTurn
