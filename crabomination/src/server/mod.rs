@@ -121,6 +121,7 @@ mod library_top;
 mod spell_response;
 mod damage_pick;
 mod fight_pick;
+mod trigger_order;
 mod loyalty_pick;
 mod life_draw;
 mod life_swap;

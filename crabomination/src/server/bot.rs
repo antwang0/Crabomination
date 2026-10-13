@@ -3792,6 +3792,9 @@ fn decide_pending_policy_inner(
         {
             super::fight_pick::pick_killing_fight(state, *source, legal)
         }
+        crate::decision::Decision::OrderTriggers { .. } if super::trigger_order::order(state, seat).is_some() => {
+            super::trigger_order::order(state, seat).expect("guarded")
+        }
         // A damage trigger skips opposing permanents its damage can't hurt
         // (`damage_pick.rs`: Vindicator and Raptors ping-ponged over an
         // indestructible Zetalpa).
