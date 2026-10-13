@@ -5206,6 +5206,7 @@ impl GameState {
             // Faldorn — a land played from exile enters from exile (the
             // `move_card_to` path records the same for effect moves).
             self.entered_from_exile_this_turn.insert(card.id);
+            self.players[p].played_land_from_exile_this_turn = true;
         }
         if let Some(source) = from_top_capped {
             self.players[p].cast_from_library_top_this_turn = true;

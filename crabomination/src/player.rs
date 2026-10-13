@@ -1095,6 +1095,11 @@ pub struct PlayerData {
     /// "the first spell you cast from exile each turn"). Reset each turn.
     #[serde(default)]
     pub spells_cast_from_exile_this_turn: u32,
+    /// This player played a land from exile this turn (Visions of
+    /// Phyrexia's "if you didn't play a card from exile this turn", with
+    /// `spells_cast_from_exile_this_turn`). Reset each turn.
+    #[serde(default)]
+    pub played_land_from_exile_this_turn: bool,
     /// Instant and sorcery spells this player cast from a graveyard this turn
     /// (Sevinne, the Chronoclasm's "your first … each turn"). Reset each turn.
     #[serde(default)]
@@ -1849,6 +1854,7 @@ impl Player {
             greatest_is_mana_value_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             spells_cast_from_exile_this_turn: 0,
+            played_land_from_exile_this_turn: false,
             instants_sorceries_cast_from_graveyard_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
             extra_etb_p1p1_counters_this_turn: 0,

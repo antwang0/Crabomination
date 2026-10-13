@@ -2632,6 +2632,10 @@ pub enum Predicate {
     /// exile this turn (`Player.spells_cast_from_exile_this_turn == 1`) —
     /// Wild-Magic Sorcerer.
     FirstSpellCastFromExileThisTurn,
+    /// `who` played a card from exile this turn — cast a spell or played a
+    /// land (CR 305.1 / 601.2; Visions of Phyrexia's "if you didn't play a
+    /// card from exile this turn").
+    PlayedCardFromExileThisTurn(PlayerRef),
     /// Two of the cards `what` resolves to share all their card types
     /// (identical card-type sets) — Demonic Covenant's "if two cards that
     /// share all their card types were milled this way".

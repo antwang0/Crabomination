@@ -1084,6 +1084,9 @@ impl GameState {
                     if pl.spells_cast_from_exile_this_turn != 0 {
                         pl.spells_cast_from_exile_this_turn = 0;
                     }
+                    if pl.played_land_from_exile_this_turn {
+                        pl.played_land_from_exile_this_turn = false;
+                    }
                     if pl.instants_sorceries_cast_from_graveyard_this_turn != 0 {
                         pl.instants_sorceries_cast_from_graveyard_this_turn = 0;
                     }
