@@ -180,18 +180,33 @@ pub fn marketback_walker() -> CardDefinition {
 }
 
 /// Momentum Breaker — {1}{B} Enchantment. Start your engines! ETB: each opponent
-/// sacrifices a creature or Vehicle of their choice. {2}, Sacrifice this: gain
-/// life equal to your speed. (The "who can't discards a card" rider is dropped.)
+/// sacrifices a creature or Vehicle of their choice; each opponent who can't
+/// discards a card. {2}, Sacrifice this: gain life equal to your speed.
 pub fn momentum_breaker() -> CardDefinition {
     CardDefinition {
         name: "Momentum Breaker",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Enchantment],
         keywords: vec![Keyword::StartYourEngines],
-        triggered_abilities: vec![etb(Effect::Sacrifice {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            count: Value::ONE,
-            filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+        // Each opponent is the body's controller (`You`) in turn.
+        triggered_abilities: vec![etb(Effect::EachPlayerDoes {
+            who: PlayerRef::EachOpponent,
+            body: Box::new(Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::Creature
+                            .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                            .and(R::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                },
+                then: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::ONE,
+                    filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                }),
+                else_: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+            }),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),

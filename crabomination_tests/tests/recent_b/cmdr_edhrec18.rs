@@ -1305,3 +1305,32 @@ fn nightveil_specter_permission_ends_when_it_leaves() {
         "the link ends with the Specter"
     );
 }
+
+/// Momentum Breaker — "each opponent sacrifices a creature or Vehicle of
+/// their choice. Each opponent who can't discards a card." (CR 101.4 APNAP.)
+#[test]
+fn momentum_breaker_discards_from_an_empty_board() {
+    let mut g = pod(3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[2].hand.clear();
+    g.add_card_to_hand(2, catalog::island());
+    let mb = g.add_card_to_hand(0, catalog::momentum_breaker());
+    cast(&mut g, mb, &[]).unwrap();
+    assert!(g.battlefield.iter().all(|c| c.id != bear), "seat 1 sacrificed its Bear");
+    assert!(g.players[2].hand.is_empty(), "seat 2 had nothing to sacrifice and discarded");
+}
+
+/// Vampire Socialite — "As long as an opponent has lost life this turn, each
+/// other Vampire you control enters with an additional +1/+1 counter on it."
+/// (CR 614.1c.)
+#[test]
+fn vampire_socialite_vampires_enter_bigger_after_life_loss() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::vampire_socialite());
+    g.players[1].lost_life_this_turn = true;
+    let mut vamp = catalog::grizzly_bears();
+    vamp.subtypes.creature_types = vec![crabomination::card::CreatureType::Vampire];
+    let v = g.add_card_to_hand(0, vamp);
+    cast(&mut g, v, &[]).unwrap();
+    assert_eq!(pt(&g, v), (3, 3));
+}

@@ -998,8 +998,8 @@ pub fn heron_blessed_geist() -> CardDefinition {
 
 /// Vampire Socialite — {B}{R} 2/2 Vampire Noble. Menace. ETB, if an opponent
 /// lost life this turn, put a +1/+1 counter on each other Vampire you control.
-/// (The "enters with an extra counter while an opponent lost life" static is
-/// approximated by the ETB; tracked in TODO.md.)
+/// As long as an opponent has lost life this turn, each other Vampire you
+/// control enters with an additional +1/+1 counter on it.
 pub fn vampire_socialite() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -1028,6 +1028,17 @@ pub fn vampire_socialite() -> CardDefinition {
             }),
             else_: Box::new(Effect::Noop),
         })],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "As long as an opponent has lost life this turn, each other Vampire you control enters with an additional +1/+1 counter on it.",
+            effect: crate::effect::StaticEffect::WhileCondition {
+                condition: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+                inner: Box::new(crate::effect::StaticEffect::TypedCreaturesEnterWithExtraCounter {
+                    types: vec![CreatureType::Vampire],
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: 1,
+                }),
+            },
+        }],
         ..Default::default()
     }
 }
