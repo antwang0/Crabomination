@@ -95,7 +95,6 @@ const MAX_VOLUNTARY_COMBATS_PER_TURN: u32 = 12;
 /// deck-construction only ([`Keyword::is_deck_construction`]).
 ///
 /// [`Keyword::is_deck_construction`]: crate::card::Keyword::is_deck_construction
-
 fn in_game_keyword_count(def: &crate::card::CardDefinition) -> usize {
     def.keywords.iter().filter(|k| !k.is_deck_construction()).count()
 }
