@@ -7140,6 +7140,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEKUTHAL_COMMANDERS,
             main: decks::TEKUTHAL_MAIN,
         },
+        // Seat 1115: The Serpent Society's EDHREC average deck. `--pod-decks 1115`.
+        PodDeck {
+            name: "The Serpent Society (BG)",
+            commanders: decks::THE_SERPENT_SOCIETY_COMMANDERS,
+            main: decks::THE_SERPENT_SOCIETY_MAIN,
+        },
+        // Seat 1116: The Master, Multiplied's EDHREC average deck. `--pod-decks 1116`.
+        PodDeck {
+            name: "The Master, Multiplied (BR)",
+            commanders: decks::THE_MASTER_2_COMMANDERS,
+            main: decks::THE_MASTER_2_MAIN,
+        },
+        // Seat 1117: Mayael the Anima's EDHREC average deck. `--pod-decks 1117`.
+        PodDeck {
+            name: "Mayael the Anima (WRG)",
+            commanders: decks::MAYAEL_THE_ANIMA_COMMANDERS,
+            main: decks::MAYAEL_THE_ANIMA_MAIN,
+        },
+        // Seat 1118: Gix, Yawgmoth Praetor's EDHREC average deck. `--pod-decks 1118`.
+        PodDeck {
+            name: "Gix, Yawgmoth Praetor (B)",
+            commanders: decks::GIX_COMMANDERS,
+            main: decks::GIX_MAIN,
+        },
+        // Seat 1119: Arahbo, the First Fang's EDHREC average deck. `--pod-decks 1119`.
+        PodDeck {
+            name: "Arahbo, the First Fang (W)",
+            commanders: decks::ARAHBO_2_COMMANDERS,
+            main: decks::ARAHBO_2_MAIN,
+        },
+        // Seat 1120: Edric, Spymaster of Trest's EDHREC average deck. `--pod-decks 1120`.
+        PodDeck {
+            name: "Edric, Spymaster of Trest (UG)",
+            commanders: decks::EDRIC_COMMANDERS,
+            main: decks::EDRIC_MAIN,
+        },
+        // Seat 1121: Six's EDHREC average deck. `--pod-decks 1121`.
+        PodDeck {
+            name: "Six (G)",
+            commanders: decks::SIX_COMMANDERS,
+            main: decks::SIX_MAIN,
+        },
+        // Seat 1122: Thrun, Breaker of Silence's EDHREC average deck. `--pod-decks 1122`.
+        PodDeck {
+            name: "Thrun, Breaker of Silence (G)",
+            commanders: decks::THRUN_COMMANDERS,
+            main: decks::THRUN_MAIN,
+        },
+        // Seat 1123: Obyra, Dreaming Duelist's EDHREC average deck. `--pod-decks 1123`.
+        PodDeck {
+            name: "Obyra, Dreaming Duelist (UB)",
+            commanders: decks::OBYRA_COMMANDERS,
+            main: decks::OBYRA_MAIN,
+        },
+        // Seat 1124: Ajani, Nacatl Pariah's EDHREC average deck. `--pod-decks 1124`.
+        PodDeck {
+            name: "Ajani, Nacatl Pariah (WR)",
+            commanders: decks::AJANI_COMMANDERS,
+            main: decks::AJANI_MAIN,
+        },
+        // Seat 1125: Shattergang Brothers's EDHREC average deck. `--pod-decks 1125`.
+        PodDeck {
+            name: "Shattergang Brothers (BRG)",
+            commanders: decks::SHATTERGANG_BROTHERS_COMMANDERS,
+            main: decks::SHATTERGANG_BROTHERS_MAIN,
+        },
+        // Seat 1126: Tinybones, the Pickpocket's EDHREC average deck. `--pod-decks 1126`.
+        PodDeck {
+            name: "Tinybones, the Pickpocket (B)",
+            commanders: decks::TINYBONES_2_COMMANDERS,
+            main: decks::TINYBONES_2_MAIN,
+        },
+        // Seat 1127: Toshiro Umezawa's EDHREC average deck. `--pod-decks 1127`.
+        PodDeck {
+            name: "Toshiro Umezawa (B)",
+            commanders: decks::TOSHIRO_UMEZAWA_COMMANDERS,
+            main: decks::TOSHIRO_UMEZAWA_MAIN,
+        },
+        // Seat 1128: Aveline de Grandpré's EDHREC average deck. `--pod-decks 1128`.
+        PodDeck {
+            name: "Aveline de Grandpré (BG)",
+            commanders: decks::AVELINE_DE_GRANDPRE_COMMANDERS,
+            main: decks::AVELINE_DE_GRANDPRE_MAIN,
+        },
+        // Seat 1129: Ganax, Astral Hunter and Feywild Visitor's EDHREC average deck. `--pod-decks 1129`.
+        PodDeck {
+            name: "Ganax, Astral Hunter and Feywild Visitor (UR)",
+            commanders: decks::GANAX_COMMANDERS,
+            main: decks::GANAX_MAIN,
+        },
     ]
 }
 
@@ -10044,6 +10134,21 @@ mod tests {
             ("Huatli, Poet of Unity", &[0x0E6D]),
             ("Nashi, Moon's Legacy", &[0x0E6E]),
             ("Tekuthal, Inquiry Dominus", &[0x0E6F]),
+            ("The Serpent Society", &[0x0E70]),
+            ("The Master, Multiplied", &[0x0E71]),
+            ("Mayael the Anima", &[0x0E72]),
+            ("Gix, Yawgmoth Praetor", &[0x0E73]),
+            ("Arahbo, the First Fang", &[0x0E74]),
+            ("Edric, Spymaster of Trest", &[0x0E75]),
+            ("Six", &[0x0E76]),
+            ("Thrun, Breaker of Silence", &[0x0E77]),
+            ("Obyra, Dreaming Duelist", &[0x0E78]),
+            ("Ajani, Nacatl Pariah", &[0x0E79]),
+            ("Shattergang Brothers", &[0x0E7A]),
+            ("Tinybones, the Pickpocket", &[0x0E7B]),
+            ("Toshiro Umezawa", &[0x0E7C]),
+            ("Aveline de Grandpré", &[0x0E7D]),
+            ("Ganax, Astral Hunter and Feywild Visitor", &[0x0E7E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
