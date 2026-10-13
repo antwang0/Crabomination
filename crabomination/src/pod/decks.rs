@@ -36084,3 +36084,33 @@ pub const MISTER_FANTASTIC_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, island, island, island, island, mountain, mountain,
     plains, plains, plains, plains,
 ];
+
+pub const THE_FOURTEENTH_DOCTOR_COMMANDERS: &[CardFactory] = &[the_fourteenth_doctor, clara_oswald];
+
+/// **The Fourteenth Doctor and Clara Oswald**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 2 Forests + 4 Islands + 2 Mountains + 3 Plains + 1 Swamp = 98.
+/// The Fourteenth Doctor and Clara Oswald (EDHREC, fetched 2026-10-13).
+pub const THE_FOURTEENTH_DOCTOR_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, confession_dial, heroes_podium, maskwood_nexus,
+    relic_of_legends, sol_ring, sonic_screwdriver, tardis, thought_vessel, breeding_pool,
+    command_tower, deserted_beach, dreamroot_cascade, evolving_wilds, exotic_orchard,
+    frontier_bivouac, gallifrey_council_chamber, hallowed_fountain, mystic_monastery,
+    overgrown_farmland, path_of_ancestry, prairie_stream, reliquary_tower, rockfall_vale,
+    seaside_citadel, sparas_headquarters, steam_vents, stomping_ground, stormcarved_coast,
+    sundown_pass, temple_garden, the_world_tree, trenzalore_clocktower,
+    adric_mathematical_genius, jodah_the_unifier, k_9_mark_i, morophon_the_boundless,
+    peri_brown, river_song, roaming_throne, rose_noble, rose_tyler, sarah_jane_smith,
+    tegan_jovanka, the_eighth_doctor, the_eleventh_doctor, the_fifteenth_doctor,
+    the_fifth_doctor, the_first_doctor, the_fourth_doctor, the_fugitive_doctor,
+    the_ninth_doctor, the_second_doctor, the_seventh_doctor, the_sixth_doctor, the_tenth_doctor,
+    the_third_doctor, the_thirteenth_doctor, the_twelfth_doctor, the_war_doctor,
+    an_unearthly_child, as_foretold, bigger_on_the_inside, gallifrey_stands,
+    regenerations_restored, the_day_of_the_doctor, the_eleventh_hour, the_girl_in_the_fireplace,
+    the_night_of_the_doctor, everybody_lives, gallifrey_falls_no_more, heroic_intervention,
+    path_to_exile, reverse_the_polarity, swords_to_plowshares, time_lord_regeneration,
+    cultivate, everything_comes_to_dust, farewell, farseek, primevals_glorious_rebirth,
+    quantum_misalignment, the_five_doctors, three_visits, twice_upon_a_time,
+    // Basics
+    forest, forest, island, island, island, island, mountain, mountain, plains, plains, plains,
+    swamp,
+];

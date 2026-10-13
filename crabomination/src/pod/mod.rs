@@ -8064,6 +8064,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MISTER_FANTASTIC_COMMANDERS,
             main: decks::MISTER_FANTASTIC_MAIN,
         },
+        // Seat 1269: The Fourteenth Doctor and Clara Oswald's EDHREC average deck. `--pod-decks 1269`.
+        PodDeck {
+            name: "The Fourteenth Doctor and Clara Oswald (WURG)",
+            commanders: decks::THE_FOURTEENTH_DOCTOR_COMMANDERS,
+            main: decks::THE_FOURTEENTH_DOCTOR_MAIN,
+        },
     ]
 }
 
@@ -11163,6 +11169,7 @@ mod tests {
             ("Keleth, Sunmane Familiar and Yoshimaru, Ever Faithful", &[0x0F07]),
             ("Borborygmos and Fblthp", &[0x0F08]),
             ("Mister Fantastic", &[0x0F09]),
+            ("The Fourteenth Doctor and Clara Oswald", &[0x0F0A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
