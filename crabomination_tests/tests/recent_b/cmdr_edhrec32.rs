@@ -255,3 +255,65 @@ fn the_capitoline_triad_discounts_and_crowns_your_creatures() {
     let cp = g.computed_permanent(bear).expect("bear");
     assert_eq!((cp.power, cp.toughness), (9, 9));
 }
+
+/// Lavinia investigates on your second spell each turn; her {C}{C} only taps
+/// on an opponent's turn.
+#[test]
+fn lavinia_investigates_on_the_second_spell_and_taps_off_turn() {
+    let mut g = pod(2);
+    let lavinia = ready(&mut g, 0, catalog::lavinia_foil_to_conspiracy());
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast(&mut g, 0, bolt, &[Target::Player(1)]).expect("bolt");
+    }
+    assert_eq!(named(&g, 0, "Clue"), 1);
+    let tap = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: lavinia,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(tap(&mut g).is_err(), "not on your own turn");
+    g.active_player_idx = 1;
+    let before = g.players[0].mana_pool.colorless_amount();
+    tap(&mut g).expect("an opponent's turn");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), before + 2);
+}
+
+/// Monk Class level 3: the upkeep-exiled card is castable only once you've
+/// cast another spell this turn.
+#[test]
+fn monk_class_exiled_card_waits_for_another_spell() {
+    let mut g = pod(2);
+    let class = ready(&mut g, 0, catalog::monk_class());
+    g.battlefield_find_mut(class).unwrap().class_level = 3;
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == top));
+    g.step = TurnStep::PreCombatMain;
+    let from_exile = |g: &mut GameState| {
+        flood(g, 0);
+        g.priority.player_with_priority = 0;
+        let r = g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: top,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        drain_stack(g);
+        r
+    };
+    assert!(from_exile(&mut g).is_err(), "no other spell yet");
+    let other = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, other, &[Target::Player(1)]).expect("first spell");
+    from_exile(&mut g).expect("castable after another spell");
+    assert_eq!(g.players[1].life, 14);
+}

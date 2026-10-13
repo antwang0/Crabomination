@@ -1,6 +1,6 @@
 //! Commander: the last gaps of Ganax (solo and with Acolyte of Bahamut),
-//! Aragorn Hornburg Hero, Alisaie Leveilleur, Gor Muldrak and The Capitoline
-//! Triad (`cmdr_edhrec30` is the previous batch). Tests in
+//! Aragorn Hornburg Hero, Alisaie Leveilleur (solo and with Alphinaud), Gor
+//! Muldrak and The Capitoline Triad (`cmdr_edhrec30` is the previous batch). Tests in
 //! `tests/recent_b/cmdr_edhrec32.rs`.
 
 use crate::card::{
@@ -8,10 +8,11 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{renown, target_filtered};
-use crate::effect::{Duration, Effect, KeywordAct, PlayerRef};
+use crate::card::MayPlayDuration;
+use crate::effect::shortcut::{flurry, investigate, renown, target_filtered};
+use crate::effect::{Duration, Effect, KeywordAct, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{cost, g, generic, hybrid, r, u, w, Color, ManaCost};
 use std::sync::Arc;
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -184,6 +185,82 @@ pub fn sunseed_nurturer() -> CardDefinition {
             1,
             1,
         )
+    }
+}
+
+/// Lavinia, Foil to Conspiracy — {1}{W/U}{W/U} legendary 2/3 Human Detective.
+/// Vigilance. Your second spell each turn investigates. {T}: Add {C}{C};
+/// activate only during an opponent's turn.
+pub fn lavinia_foil_to_conspiracy() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![flurry(investigate(1))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(2)) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Lavinia, Foil to Conspiracy",
+            cost(&[generic(1), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+            vec![CreatureType::Human, CreatureType::Detective],
+            2,
+            3,
+        )
+    }
+}
+
+/// Monk Class — {W}{U} Class. L1: your second spell each turn costs {1} less.
+/// L2 ({W}{U}): return up to one target nonland permanent to its owner's hand.
+/// L3 ({1}{W}{U}): at your upkeep, exile the top card of your library; while
+/// exiled you may cast it once you've cast another spell this turn.
+pub fn monk_class() -> CardDefinition {
+    let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
+        mana_cost: mana,
+        sorcery_speed: true,
+        condition: Some(Predicate::SourceClassLevelIs(from)),
+        effect: Effect::AdvanceClassLevel,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Monk Class",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Class], ..Default::default() },
+        static_abilities: vec![StaticAbility {
+            description: "The second spell you cast each turn costs {1} less to cast.",
+            effect: StaticEffect::CostReductionNthSpell { filter: R::Any, nth: 2, amount: 1 },
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
+                    .with_filter(Predicate::SourceClassLevelIs(2)),
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(R::Permanent.and(R::Nonland)),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+                    .with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: MayPlayDuration::WhileExiledAfterAnotherSpell,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+            },
+        ],
+        activated_abilities: vec![level_up(cost(&[w(), u()]), 1), level_up(cost(&[generic(1), w(), u()]), 2)],
+        ..Default::default()
     }
 }
 

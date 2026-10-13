@@ -3526,6 +3526,8 @@ static DECKS: &[Factory] = &[
     super::decks::anduril_narsil_reforged,
     super::decks::valeron_wardens,
     super::decks::sunseed_nurturer,
+    super::decks::lavinia_foil_to_conspiracy,
+    super::decks::monk_class,
     super::decks::gor_muldrak_amphinologist,
     super::decks::metamorphic_alteration,
     super::decks::the_capitoline_triad,
