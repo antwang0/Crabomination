@@ -217,3 +217,22 @@ fn winter_eladrin_gusts_a_creature_home() {
     cast(&mut g, eladrin, Some(Target::Permanent(bear)));
     assert!(g.players[1].hand.iter().any(|c| c.id == bear));
 }
+
+/// Pol Jamaar dying with its trigger on the stack still draws for the named
+/// type, and its graveyard card carries no stale chosen type (pod seed
+/// 17384: the invariant checker caught the stamp).
+#[test]
+fn pol_jamaar_dead_before_its_trigger_draws_clean() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    ready(&mut g, 0, catalog::silvergill_adept());
+    let pol = g.add_card_to_graveyard(0, catalog::pol_jamaar_illusionist());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Merfolk)]));
+    let etb = catalog::pol_jamaar_illusionist().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&etb, &EffectContext::for_ability(pol, 0, None)).unwrap();
+    assert_eq!(g.players[0].hand.len(), 1);
+    let card = g.players[0].graveyard.iter().find(|c| c.id == pol).unwrap();
+    assert_eq!(card.chosen_creature_type, None);
+}

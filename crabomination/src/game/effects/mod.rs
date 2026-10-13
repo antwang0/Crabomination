@@ -34638,7 +34638,15 @@ impl GameState {
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(crate::game::GameError::DecisionAnswerMismatch);
                 };
+                // Stamp the pick only on a source still on the battlefield or
+                // the stack: one that died with its trigger pending (Pol
+                // Jamaar) is a new object in its graveyard, and the body
+                // reads the pick from the scratch fallback instead.
                 if let Some(sid) = ctx.source
+                    && (self.battlefield_find(sid).is_some()
+                        || self.stack.iter().any(|si| {
+                            matches!(si, crate::game::types::StackItem::Spell { card, .. } if card.id == sid)
+                        }))
                     && let Some(card) = self.find_card_anywhere_mut(sid)
                 {
                     card.chosen_creature_type = Some(ct);
