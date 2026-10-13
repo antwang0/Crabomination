@@ -23911,10 +23911,9 @@ impl GameState {
         if (ability.exhaust || ability.activate_once)
             && !source_in_gy
             && let Some(card) = self.battlefield.find_by_id_mut(card_id)
+            && !card.exhausted_abilities.contains(&ability_index)
         {
-            if !card.exhausted_abilities.contains(&ability_index) {
-                card.exhausted_abilities.push(ability_index);
-            }
+            card.exhausted_abilities.push(ability_index);
         }
         if ability.exhaust && !self.turn.exhaust_activators_this_turn.contains(&p) {
             self.turn.exhaust_activators_this_turn.push(p);
