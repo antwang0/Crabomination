@@ -264,3 +264,4 @@ mod cmdr_rank2k_c;
 mod cmdr_edhrec55;
 mod cmdr_rank2k_d;
 mod cmdr_edhrec56;
+mod cmdr_edhrec57;
