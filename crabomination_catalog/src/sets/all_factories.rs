@@ -3851,6 +3851,10 @@ static DECKS: &[Factory] = &[
     super::decks::borborygmos_and_fblthp,
     super::decks::fblthp_impossibly_lost,
     super::decks::fblthp_knows_the_way,
+    // cmdr_edhrec51 (session 01VkPyqk)
+    super::decks::the_fourteenth_doctor,
+    super::decks::rose_noble,
+    super::decks::the_fifteenth_doctor,
     super::decks::gandalf_friend_of_the_shire,
     super::decks::ringwraiths,
     super::decks::sauron_the_necromancer,

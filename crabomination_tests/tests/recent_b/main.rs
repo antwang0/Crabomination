@@ -255,3 +255,4 @@ mod cmdr_edhrec47;
 mod cmdr_edhrec48;
 mod cmdr_edhrec49;
 mod cmdr_edhrec50;
+mod cmdr_edhrec51;
