@@ -195,3 +195,22 @@ fn quantum_entanglement_blinks() {
         .expect("back");
     assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 0);
 }
+
+/// Halsin makes a token a green 4/4 Bear in addition to its colors.
+#[test]
+fn halsin_bears_a_token() {
+    let mut g = pod(2);
+    let halsin = ready(&mut g, 0, catalog::halsin_emerald_archdruid());
+    let kiora = g.add_card_to_hand(0, catalog::kiora_of_fire_and_ashes());
+    cast(&mut g, kiora, None, None);
+    let dragon = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Dragon")
+        .map(|c| c.id)
+        .expect("Dragon");
+    activate(&mut g, halsin, 0, Some(Target::Permanent(dragon)));
+    let c = g.computed_permanent(dragon).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(c.colors.contains(&Color::Green) && c.colors.contains(&Color::Red));
+}

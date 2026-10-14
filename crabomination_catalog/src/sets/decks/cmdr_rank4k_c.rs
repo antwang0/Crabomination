@@ -145,22 +145,29 @@ pub fn tarox_bladewing() -> CardDefinition {
 // ── Halsin, Emerald Archdruid ────────────────────────────────────────────────
 
 /// Halsin, Emerald Archdruid — {3}{G} legendary 2/4 Elf Druid; choose a
-/// Background. {1}: target token you control becomes a 4/4 Bear creature until
-/// end of turn. (Residual: the "green, in addition to its colors" is not
-/// added.)
+/// Background. {1}: target token you control becomes a green 4/4 Bear creature
+/// in addition to its other colors and types until end of turn.
 pub fn halsin_emerald_archdruid() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::ChooseABackground],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::BecomeCreature {
-                what: target_filtered(R::IsToken.and(R::ControlledByYou)),
-                power: Value::Const(4),
-                toughness: Value::Const(4),
-                creature_types: vec![CreatureType::Bear],
-                keywords: vec![],
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::BecomeCreature {
+                    what: target_filtered(R::IsToken.and(R::ControlledByYou)),
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    creature_types: vec![CreatureType::Bear],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::BecomeColor {
+                    what: Selector::Target(0),
+                    colors: vec![crate::mana::Color::Green],
+                    duration: Duration::EndOfTurn,
+                    additive: true,
+                },
+            ]),
             ..Default::default()
         }],
         ..legend(
