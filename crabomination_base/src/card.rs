@@ -1047,6 +1047,12 @@ pub enum CounterType {
     /// Liege of the Tangle's awakening counters (each marked land is an 8/8
     /// Elemental creature while it has one).
     Awakening,
+    /// Dawn of a New Age's hope counters (one per creature as it enters).
+    Hope,
+    /// Nazar, the Velvet Fang's feeding counters (one per life gain).
+    Feeding,
+    /// Instrument of the Bards' harmony counters (the tutored mana value).
+    Harmony,
 }
 
 /// Every zone a card can occupy.
