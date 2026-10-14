@@ -499,3 +499,54 @@ pub fn hall_of_echoes() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Xira, the Golden Sting — {1}{B}{R}{G} legendary 3/3 Insect Assassin;
+/// flying, haste. Whenever Xira attacks, put an egg counter on another target
+/// creature without one. When that creature dies, if it has an egg counter,
+/// draw a card and create a 1/1 black flying Insect. (Xira; Xira Arien.)
+pub fn xira_the_golden_sting() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    R::Creature
+                        .and(R::OtherThanSource)
+                        .and(R::Not(Box::new(R::WithCounter(CounterType::Egg)))),
+                ),
+                kind: CounterType::Egg,
+                amount: Value::ONE,
+            },
+            Effect::WhenTargetDies {
+                slot: 0,
+                if_had_counter: Some(CounterType::Egg),
+                body: Box::new(Effect::Seq(vec![
+                    draw(1),
+                    mint_token(
+                        TokenDefinition {
+                            name: "Insect".into(),
+                            power: 1,
+                            toughness: 1,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Black],
+                            keywords: vec![Keyword::Flying],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Insect],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        1,
+                    ),
+                ])),
+            },
+        ]))],
+        ..legend(
+            "Xira, the Golden Sting",
+            cost(&[generic(1), b(), r(), g()]),
+            vec![CreatureType::Insect, CreatureType::Assassin],
+            3,
+            3,
+        )
+    }
+}

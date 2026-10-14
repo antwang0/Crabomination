@@ -356,3 +356,37 @@ fn hall_of_echoes_copies_a_legend_without_the_legend_rule() {
     assert_eq!(g.computed_permanent(hall).unwrap().def.name, "The Scarlet Witch");
     assert!(g.battlefield_find(hall).is_some() && g.battlefield_find(witch).is_some());
 }
+
+/// CR 603.7 / 400.7 — Xira's egg watch has no turn window: the egged
+/// creature dying on a later turn still draws a card and makes an Insect.
+#[test]
+fn xira_egg_pays_off_on_a_later_turn() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let xira = ready(&mut g, 0, catalog::xira_the_golden_sting());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    declare(&mut g, vec![(xira, 1)]);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Egg), 1);
+    finish_combat(&mut g);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    let hand = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt the egg");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Insect"));
+}

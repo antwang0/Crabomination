@@ -4545,6 +4545,7 @@ static DECKS: &[Factory] = &[
     super::decks::weather_maker,
     super::decks::khalni_hydra,
     super::decks::hall_of_echoes,
+    super::decks::xira_the_golden_sting,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,
