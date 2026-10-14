@@ -1353,6 +1353,27 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank5k_f (session 01KXJ5zX)
+    super::decks::lu_su_wu_advisor,
+    super::decks::council_of_advisors,
+    super::decks::talas_researcher,
+    super::decks::zhuge_jin_wu_strategist,
+    super::decks::xun_yu_wei_advisor,
+    super::decks::contagious_nim,
+    super::decks::swamp_mosquito,
+    super::decks::relic_putrescence,
+    super::decks::giant_man_gargantuan_genius,
+    super::decks::gigantic_big_bear,
+    super::decks::hulk_brutal_brawler,
+    super::decks::lizard_connorss_curse,
+    super::decks::knight_of_wundagore,
+    super::decks::mirkwood_pathmaker,
+    super::decks::shang_chi_martial_mentor,
+    super::decks::study_the_classics,
+    super::decks::agent_phil_coulson,
+    super::decks::kor_line_slinger,
+    super::decks::friendly_neighborhood,
+    super::decks::sudden_strike,
     // cmdr_rank5k_e (session 01KXJ5zX)
     super::decks::zhao_zilong_tiger_general,
     super::decks::shu_cavalry,
