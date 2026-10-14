@@ -14436,6 +14436,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JEONG_JEONG_COMMANDERS,
             main: decks::JEONG_JEONG_MAIN,
         },
+        // Seat 2331: Danitha, Spear of Agony's EDHREC average deck. `--pod-decks 2331`.
+        PodDeck {
+            name: "Danitha, Spear of Agony (B)",
+            commanders: decks::DANITHA_3_COMMANDERS,
+            main: decks::DANITHA_3_MAIN,
+        },
+        // Seat 2332: Hivis of the Scale's EDHREC average deck. `--pod-decks 2332`.
+        PodDeck {
+            name: "Hivis of the Scale (R)",
+            commanders: decks::HIVIS_OF_THE_SCALE_COMMANDERS,
+            main: decks::HIVIS_OF_THE_SCALE_MAIN,
+        },
+        // Seat 2333: War Machine, Avenging Arsenal's EDHREC average deck. `--pod-decks 2333`.
+        PodDeck {
+            name: "War Machine, Avenging Arsenal (R)",
+            commanders: decks::WAR_MACHINE_COMMANDERS,
+            main: decks::WAR_MACHINE_MAIN,
+        },
+        // Seat 2334: Sun Ce, Young Conquerer's EDHREC average deck. `--pod-decks 2334`.
+        PodDeck {
+            name: "Sun Ce, Young Conquerer (U)",
+            commanders: decks::SUN_CE_COMMANDERS,
+            main: decks::SUN_CE_MAIN,
+        },
+        // Seat 2335: Shuri, Vibranium Technologist's EDHREC average deck. `--pod-decks 2335`.
+        PodDeck {
+            name: "Shuri, Vibranium Technologist (WU)",
+            commanders: decks::SHURI_3_COMMANDERS,
+            main: decks::SHURI_3_MAIN,
+        },
+        // Seat 2336: Titania, Proud Pummeler's EDHREC average deck. `--pod-decks 2336`.
+        PodDeck {
+            name: "Titania, Proud Pummeler (R)",
+            commanders: decks::TITANIA_4_COMMANDERS,
+            main: decks::TITANIA_4_MAIN,
+        },
+        // Seat 2337: Hulkling, Young Avenger's EDHREC average deck. `--pod-decks 2337`.
+        PodDeck {
+            name: "Hulkling, Young Avenger (R)",
+            commanders: decks::HULKLING_COMMANDERS,
+            main: decks::HULKLING_MAIN,
+        },
+        // Seat 2338: Night Nurse, Healer of Heroes's EDHREC average deck. `--pod-decks 2338`.
+        PodDeck {
+            name: "Night Nurse, Healer of Heroes (W)",
+            commanders: decks::NIGHT_NURSE_COMMANDERS,
+            main: decks::NIGHT_NURSE_MAIN,
+        },
+        // Seat 2339: Yargle, Goliath of Otaria's EDHREC average deck. `--pod-decks 2339`.
+        PodDeck {
+            name: "Yargle, Goliath of Otaria (U)",
+            commanders: decks::YARGLE_2_COMMANDERS,
+            main: decks::YARGLE_2_MAIN,
+        },
+        // Seat 2340: General Thunderbolt Ross's EDHREC average deck. `--pod-decks 2340`.
+        PodDeck {
+            name: "General Thunderbolt Ross (W)",
+            commanders: decks::GENERAL_THUNDERBOLT_ROSS_COMMANDERS,
+            main: decks::GENERAL_THUNDERBOLT_ROSS_MAIN,
+        },
+        // Seat 2341: Okoye, Dora Milaje Leader's EDHREC average deck. `--pod-decks 2341`.
+        PodDeck {
+            name: "Okoye, Dora Milaje Leader (W)",
+            commanders: decks::OKOYE_2_COMMANDERS,
+            main: decks::OKOYE_2_MAIN,
+        },
+        // Seat 2342: Will Kenrith's EDHREC average deck. `--pod-decks 2342`.
+        PodDeck {
+            name: "Will Kenrith (U)",
+            commanders: decks::WILL_KENRITH_COMMANDERS,
+            main: decks::WILL_KENRITH_MAIN,
+        },
+        // Seat 2343: Lady Spider, Maybelle Reilly's EDHREC average deck. `--pod-decks 2343`.
+        PodDeck {
+            name: "Lady Spider, Maybelle Reilly (R)",
+            commanders: decks::LADY_SPIDER_COMMANDERS,
+            main: decks::LADY_SPIDER_MAIN,
+        },
+        // Seat 2344: Pia, Determined Rebuilder's EDHREC average deck. `--pod-decks 2344`.
+        PodDeck {
+            name: "Pia, Determined Rebuilder (R)",
+            commanders: decks::PIA_2_COMMANDERS,
+            main: decks::PIA_2_MAIN,
+        },
+        // Seat 2345: Chase Stein, Runaway's EDHREC average deck. `--pod-decks 2345`.
+        PodDeck {
+            name: "Chase Stein, Runaway (R)",
+            commanders: decks::CHASE_STEIN_COMMANDERS,
+            main: decks::CHASE_STEIN_MAIN,
+        },
     ]
 }
 
@@ -18597,6 +18687,21 @@ mod tests {
             ("Peri Brown", &[0x132E]),
             ("Ellyn Harbreeze, Busybody and Shameless Charlatan", &[0x132F]),
             ("Jeong Jeong, the Deserter", &[0x1330]),
+            ("Danitha, Spear of Agony", &[0x1331]),
+            ("Hivis of the Scale", &[0x1332]),
+            ("War Machine, Avenging Arsenal", &[0x1333]),
+            ("Sun Ce, Young Conquerer", &[0x1334]),
+            ("Shuri, Vibranium Technologist", &[0x1335]),
+            ("Titania, Proud Pummeler", &[0x1336]),
+            ("Hulkling, Young Avenger", &[0x1337]),
+            ("Night Nurse, Healer of Heroes", &[0x1338]),
+            ("Yargle, Goliath of Otaria", &[0x1339]),
+            ("General Thunderbolt Ross", &[0x133A]),
+            ("Okoye, Dora Milaje Leader", &[0x133B]),
+            ("Will Kenrith", &[0x133C]),
+            ("Lady Spider, Maybelle Reilly", &[0x133D]),
+            ("Pia, Determined Rebuilder", &[0x133E]),
+            ("Chase Stein, Runaway", &[0x133F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
