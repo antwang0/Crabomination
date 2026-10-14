@@ -64465,3 +64465,31 @@ pub const GO_SHINTAI_OF_BOUNDLESS_VIGOR_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, forest, forest, forest, forest, forest, forest, forest,
 ];
+
+pub const KARN_4_COMMANDERS: &[CardFactory] = &[karn_argent_defender];
+
+/// **Karn, Argent Defender**'s EDHREC average deck, card for card:
+/// 88 nonbasic cards + 11 Wastes = 99.
+/// Karn, Argent Defender (EDHREC, fetched 2026-10-14).
+pub const KARN_4_MAIN: &[CardFactory] = &[
+    basalt_monolith, chimil_the_inner_sun, clock_of_omens, cloud_key, darksteel_forge,
+    darksteel_monolith, defense_grid, everflowing_chalice, expedition_map, forsaken_monument,
+    god_pharaohs_statue, grafdiggers_cage, hedron_archive, lightning_greaves, mana_vault,
+    manifold_key, mind_stone, moonsilver_key, mycosynth_lattice, mystic_forge, sculpting_steel,
+    senseis_divining_top, sol_ring, the_one_ring, thought_vessel, thran_dynamo, torpor_orb,
+    trinisphere, unwinding_clock, vexing_bauble, voltaic_key, ward_of_bones, winter_orb,
+    worn_powerstone, ancient_tomb, buried_ruin, crystal_vein, darksteel_citadel,
+    deserted_temple, eldrazi_temple, fomori_vault, inventors_fair, planar_nexus,
+    reliquary_tower, rogues_passage, scavenger_grounds, shrine_of_the_forsaken_gods,
+    the_mycosynth_gardens, urzas_cave, urzas_mine, urzas_power_plant, urzas_saga, urzas_tower,
+    urzas_workshop, vesuva, war_room, zhalfirin_void, blightsteel_colossus, eater_of_days,
+    foundry_inspector, glaring_fleshraker, jhoiras_familiar, karn_legacy_reforged,
+    krang_utrom_warlord, kuldotha_forgemaster, leveler, liberator_urzas_battlethopter,
+    lodestone_golem, metalworker, palladium_myr, phyrexian_dreadnought, platinum_angel,
+    soulless_jailer, walls_of_ba_sing_se, ultima_origin_of_oblivion, void_winnower,
+    walking_ballista, wandering_archaic, echoes_of_eternity, eldritch_immunity,
+    kozileks_command, null_elemental_blast, warping_wail, karn_the_great_creator,
+    ugin_eye_of_the_storms, ugin_the_ineffable, all_is_dust, selective_obliteration,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+];

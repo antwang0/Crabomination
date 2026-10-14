@@ -14202,6 +14202,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GO_SHINTAI_OF_BOUNDLESS_VIGOR_COMMANDERS,
             main: decks::GO_SHINTAI_OF_BOUNDLESS_VIGOR_MAIN,
         },
+        // Seat 2292: Karn, Argent Defender's EDHREC average deck. `--pod-decks 2292`.
+        PodDeck {
+            name: "Karn, Argent Defender (C)",
+            commanders: decks::KARN_4_COMMANDERS,
+            main: decks::KARN_4_MAIN,
+        },
     ]
 }
 
@@ -18324,6 +18330,7 @@ mod tests {
             ("Go-Shintai of Shared Purpose", &[0x1307]),
             ("Go-Shintai of Ancient Wars", &[0x1308]),
             ("Go-Shintai of Boundless Vigor", &[0x1309]),
+            ("Karn, Argent Defender", &[0x130A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
