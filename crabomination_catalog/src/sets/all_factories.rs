@@ -1353,6 +1353,27 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank5k_a (session 01KXJ5zX)
+    super::decks::inundate,
+    super::decks::luminous_bonds,
+    super::decks::awakened_awareness,
+    super::decks::miasmic_mummy,
+    super::decks::prowling_felidar,
+    super::decks::hedgewitchs_mask,
+    super::decks::zhang_liao_hero_of_hefei,
+    super::decks::the_mountain_kings_return,
+    super::decks::black_tom_cassidy,
+    super::decks::windbrisk_raptor,
+    super::decks::automated_warfare_system,
+    super::decks::runed_servitor,
+    super::decks::winter_soldier_bucky_barnes,
+    super::decks::gandalf_spark_starter,
+    super::decks::shameless_charlatan,
+    super::decks::fugitive_droid,
+    super::decks::patricians_scorn,
+    super::decks::flash_thompson_spider_fan,
+    super::decks::ruric_thar_magecrusher,
+    super::decks::chandra_chill_of_compliance,
     // cmdr_rank4k_j (session 01MsQdht)
     super::decks::hallowed_moonlight,
     super::decks::sigrid_god_favored,
