@@ -8,8 +8,8 @@ use crate::card::{
 };
 use crate::game::types::TurnStep;
 use crate::effect::shortcut::{on_attack, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector};
-use crate::mana::{ManaCost, b, cost, generic, r};
+use crate::effect::{ChainCopyCost, Duration, Effect, PlayerRef, Selector, ZoneDest};
+use crate::mana::{ManaCost, b, cost, generic, r, u};
 
 fn creature(
     name: &'static str,
@@ -137,6 +137,30 @@ pub fn mudslide() -> CardDefinition {
                 }),
             },
         }],
+        ..Default::default()
+    }
+}
+
+// ── Myojin of Seeing Winds ───────────────────────────────────────────────────
+
+/// String of Disappearances — {U} instant. Return target creature to its
+/// owner's hand. Then that creature's controller may pay {U}{U} to copy this
+/// spell and choose a new target for the copy.
+pub fn string_of_disappearances() -> CardDefinition {
+    CardDefinition {
+        name: "String of Disappearances",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                cost: ChainCopyCost::Mana(cost(&[u(), u()])),
+            },
+        ]),
         ..Default::default()
     }
 }

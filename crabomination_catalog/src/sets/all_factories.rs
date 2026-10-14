@@ -1422,6 +1422,7 @@ static DECKS: &[Factory] = &[
     super::decks::gollum_scheming_guide,
     super::decks::poison_blade_mentor,
     super::decks::mudslide,
+    super::decks::string_of_disappearances,
     // cmdr_rank5k_a (session 01KXJ5zX)
     super::decks::inundate,
     super::decks::luminous_bonds,

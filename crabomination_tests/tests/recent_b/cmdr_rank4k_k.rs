@@ -3,7 +3,8 @@
 use crabomination::card::{CardId, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
+use crabomination::mana::Color;
 use crabomination::game::*;
 
 fn pod(n: usize) -> GameState {
@@ -125,4 +126,31 @@ fn mudslide_keeps_an_unpaid_creature_tapped() {
         drain_stack(&mut g);
     }
     assert!(tapped(&g, bear));
+}
+
+/// String of Disappearances: the bounced creature's controller pays {U}{U}
+/// and points the copy back at the caster's creature.
+#[test]
+fn string_of_disappearances_chains_back_at_the_caster() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::string_of_disappearances());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(mine)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "bounced home");
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "the copy bounced mine");
 }
