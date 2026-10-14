@@ -68981,3 +68981,61 @@ pub const THE_IMMORTAL_WEAPONS_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const ELIGETH_COMMANDERS: &[CardFactory] = &[eligeth_crossroads_augur, rebbec_architect_of_ascension];
+
+/// **Eligeth, Crossroads Augur and Rebbec, Architect of Ascension**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 12 Islands + 7 Plains = 98.
+/// Eligeth, Crossroads Augur and Rebbec, Architect of Ascension (EDHREC, fetched
+/// 2026-10-14).
+pub const ELIGETH_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, cryogen_relic, crystal_ball, decanter_of_endless_water,
+    encroaching_mycosynth, gilded_lotus, hedron_archive, hot_dog_cart, mind_stone,
+    mycosynth_lattice, relic_of_legends, seers_lantern, sol_ring, thought_vessel, thran_dynamo,
+    witching_well, azorius_chancery, castle_vantress, command_tower, evolving_wilds,
+    fabled_passage, flooded_strand, hallowed_fountain, mystic_sanctuary, prairie_stream,
+    razortide_bridge, reliquary_tower, sea_of_clouds, study_hall, temple_of_enlightenment,
+    terramorphic_expanse, augury_owl, burnished_hart, dream_eater, dream_trawler,
+    etherium_sculptor, ethersworn_sphinx, foundry_inspector, ironsoul_enforcer,
+    jhoiras_familiar, kor_cartographer, kwain_itinerant_meddler, laboratory_maniac,
+    lady_octopus_inspired_inventor, master_transmuter, memnarch, padeem_consul_of_innovation,
+    sai_master_thopterist, silver_raven, solemn_simulacrum, sphinx_of_foresight,
+    syr_ginger_the_meal_ender, triskaidekaphile, hoofprints_of_the_stag, island_sanctuary,
+    moonlit_meditation, netherese_puzzle_ward, ominous_seas, teferis_ageless_insight,
+    wizard_class, counterspell, disenchant, dovins_veto, generous_gift, negate, opt, pongify,
+    reality_shift, scour_for_scrap, sejiri_shelter, swords_to_plowshares, jace_mirror_mage,
+    foresee, mystic_speculation, preordain, scour_all_possibilities, serum_visions,
+    tamiyos_epiphany,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const LIVIO_COMMANDERS: &[CardFactory] = &[livio_oathsworn_sentinel, rebbec_architect_of_ascension];
+
+/// **Livio, Oathsworn Sentinel and Rebbec, Architect of Ascension**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 29 Plains = 98.
+/// Livio, Oathsworn Sentinel and Rebbec, Architect of Ascension (EDHREC, fetched
+/// 2026-10-14).
+pub const LIVIO_MAIN: &[CardFactory] = &[
+    agathas_soul_cauldron, archaeomancers_map, ashnods_transmogrant, colossus_hammer,
+    costume_closet, darksteel_monolith, kaldra_compleat, lightning_greaves, liquimetal_torque,
+    marble_diamond, mirage_mirror, peter_parkers_camera, sculpting_steel, sol_ring,
+    the_aetherspark, the_endstone, the_eternity_elevator, the_seriema, thran_dynamo,
+    unwinding_clock, wayfarers_bauble, adagia_windswept_bastion, darksteel_citadel,
+    desert_of_the_true, emeria_the_sky_ruin, monumental_henge, secluded_steppe,
+    shrine_of_the_forsaken_gods, war_room, big_mother_mouser, bronze_guardian, burnished_hart,
+    court_street_denizen, danitha_capashen, dawnbringer_cleric, delivery_moogle,
+    emrakul_the_world_anew, fencing_ace, foundry_inspector, iron_giant,
+    iron_spider_stark_upgrade, jhoiras_familiar, kor_cartographer,
+    liberator_urzas_battlethopter, meteor_golem, oswald_fiddlebender, platoon_dispenser,
+    solemn_simulacrum, walls_of_ba_sing_se, trusty_packbeast, venat_heart_of_hydaelyn,
+    virulent_silencer, voyager_quickwelder, echoes_of_eternity, land_tax, monologue_tax,
+    smothering_tithe, smugglers_share, acrobatic_maneuver, crib_swap, crush_contraband,
+    lapse_of_certainty, personify, ugin_the_ineffable, all_is_dust, austere_command,
+    fell_the_mighty, helping_hand, ravnica_at_war,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];

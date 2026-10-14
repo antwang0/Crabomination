@@ -15180,6 +15180,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_IMMORTAL_WEAPONS_COMMANDERS,
             main: decks::THE_IMMORTAL_WEAPONS_MAIN,
         },
+        // Seat 2455: Eligeth, Crossroads Augur and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 2455`.
+        PodDeck {
+            name: "Eligeth, Crossroads Augur and Rebbec, Architect of Ascension (WU)",
+            commanders: decks::ELIGETH_COMMANDERS,
+            main: decks::ELIGETH_MAIN,
+        },
+        // Seat 2456: Livio, Oathsworn Sentinel and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 2456`.
+        PodDeck {
+            name: "Livio, Oathsworn Sentinel and Rebbec, Architect of Ascension (W)",
+            commanders: decks::LIVIO_COMMANDERS,
+            main: decks::LIVIO_MAIN,
+        },
     ]
 }
 
@@ -19465,6 +19477,8 @@ mod tests {
             ("Sally Pride, Lioness Leader", &[0x13AA]),
             ("Radiant, Serra Archangel and Rebbec, Architect of Ascension", &[0x13AB]),
             ("The Immortal Weapons", &[0x13AC]),
+            ("Eligeth, Crossroads Augur and Rebbec, Architect of Ascension", &[0x13AD]),
+            ("Livio, Oathsworn Sentinel and Rebbec, Architect of Ascension", &[0x13AE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
