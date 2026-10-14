@@ -13218,6 +13218,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MJ_COMMANDERS,
             main: decks::MJ_MAIN,
         },
+        // Seat 2128: Headliner Scarlett's EDHREC average deck. `--pod-decks 2128`.
+        PodDeck {
+            name: "Headliner Scarlett (R)",
+            commanders: decks::HEADLINER_SCARLETT_COMMANDERS,
+            main: decks::HEADLINER_SCARLETT_MAIN,
+        },
+        // Seat 2129: Ruric Thar, Biomagus's EDHREC average deck. `--pod-decks 2129`.
+        PodDeck {
+            name: "Ruric Thar, Biomagus (U)",
+            commanders: decks::RURIC_THAR_2_COMMANDERS,
+            main: decks::RURIC_THAR_2_MAIN,
+        },
+        // Seat 2130: Rinoa, Angel Wing's EDHREC average deck. `--pod-decks 2130`.
+        PodDeck {
+            name: "Rinoa, Angel Wing (W)",
+            commanders: decks::RINOA_COMMANDERS,
+            main: decks::RINOA_MAIN,
+        },
+        // Seat 2131: Raphael, Ninja Destroyer's EDHREC average deck. `--pod-decks 2131`.
+        PodDeck {
+            name: "Raphael, Ninja Destroyer (R)",
+            commanders: decks::RAPHAEL_2_COMMANDERS,
+            main: decks::RAPHAEL_2_MAIN,
+        },
     ]
 }
 
@@ -17177,6 +17201,10 @@ mod tests {
             ("Kyoki, Sanity's Eclipse", &[0x1263]),
             ("Silver Surfer, Cosmic Voyager", &[0x1264]),
             ("MJ, Rising Star", &[0x1265]),
+            ("Headliner Scarlett", &[0x1266]),
+            ("Ruric Thar, Biomagus", &[0x1267]),
+            ("Rinoa, Angel Wing", &[0x1268]),
+            ("Raphael, Ninja Destroyer", &[0x1269]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

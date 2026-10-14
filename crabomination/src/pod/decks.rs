@@ -59935,3 +59935,112 @@ pub const MJ_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const HEADLINER_SCARLETT_COMMANDERS: &[CardFactory] = &[headliner_scarlett];
+
+/// **Headliner Scarlett**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Headliner Scarlett (EDHREC, fetched 2026-10-14).
+pub const HEADLINER_SCARLETT_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, fire_diamond, hazorets_monument, heraldic_banner, mind_stone,
+    ruby_medallion, sol_ring, the_fire_crystal, wand_of_wonder, wayfarers_bauble,
+    castle_embereth, myriad_landscape, nykthos_shrine_to_nyx, rogues_passage, spinerock_knoll,
+    valakut_the_molten_pinnacle, war_room, anger, birgi_god_of_storytelling,
+    bonehoard_dracosaur, curse_marred_demon, delina_wild_mage, enduring_courage,
+    etali_primal_storm, flaming_tyrannosaurus, grenzo_havoc_raiser, iraxxa_empress_of_mars,
+    jaxis_the_troublemaker, kami_of_celebration, keeper_of_secrets, laelia_the_blade_reforged,
+    memory_worm, nalfeshnee, neheb_the_eternal, party_thrasher, plargg_and_nassari,
+    professional_face_breaker, pyre_rhymer, runaway_steam_kin, solemn_simulacrum,
+    torbran_thane_of_red_fell, urabrask_heretic_praetor, venser_fervent_forger,
+    wild_magic_sorcerer, charred_foyer_warped_space, fiery_emancipation, identity_echo,
+    outpost_siege, passionate_archaeologist, stolen_strategy, tavern_brawler, abrade, big_score,
+    chaos_warp, delayed_blast_fireball, lightning_bolt, seething_song, thrill_of_possibility,
+    unexpected_windfall, untimely_malfunction, chandra_torch_of_defiance, blasphemous_act,
+    faithless_looting, impending_flux, jeskas_will, light_up_the_stage, mana_geyser,
+    reckless_impulse, vandalblast, wrenns_resolve,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const RURIC_THAR_2_COMMANDERS: &[CardFactory] = &[ruric_thar_biomagus];
+
+/// **Ruric Thar, Biomagus**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Ruric Thar, Biomagus (EDHREC, fetched 2026-10-14).
+pub const RURIC_THAR_2_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, commanders_plate, extraplanar_lens, glamdring_foe_hammer,
+    lightning_greaves, mind_stone, robe_of_the_archmagi, sapphire_medallion, sky_diamond,
+    sol_ring, swiftfoot_boots, thought_vessel, thran_dynamo, wizards_staff, castle_vantress,
+    myriad_landscape, mystic_sanctuary, reliquary_tower, rogues_passage, war_room,
+    archmage_emeritus, archmage_of_runes, crashing_drawbridge, geist_of_saint_thalia,
+    haughty_djinn, lier_disciple_of_the_drowned, roaming_throne, samut_tyrant_of_naktamun,
+    solemn_simulacrum, talrand_sky_summoner, traxos_academy_guardian, triton_wavebreaker,
+    variable_chaser, aqueous_form, crab_umbra, curiosity, imprisoned_in_the_moon, mystic_remora,
+    nerd_rage, propaganda, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm,
+    consider, counterspell, frantic_search, high_tide, magic_damper, negate, octopus_form, opt,
+    pongify, rapid_hybridization, reality_shift, shadow_rift, shore_up, sink_into_stupor,
+    slip_out_the_back, snap, artful_dodge, enter_the_enigma, gitaxian_probe, ponder, preordain,
+    pym_particles, serum_visions, slip_through_space, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const RINOA_COMMANDERS: &[CardFactory] = &[rinoa_angel_wing];
+
+/// **Rinoa, Angel Wing**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Rinoa, Angel Wing (EDHREC, fetched 2026-10-14).
+pub const RINOA_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, lightning_greaves, mind_stone, oketras_monument,
+    pearl_medallion, skullclamp, sol_ring, sword_of_the_animist, the_wind_crystal,
+    throne_of_eldraine, abandoned_air_temple, emeria_the_sky_ruin, high_market, minas_tirith,
+    nykthos_shrine_to_nyx, reliquary_tower, war_room, aerith_gainsborough, ao_the_dawn_sky,
+    archangel_of_thune, archangel_of_tithes, avacyn_angel_of_hope, battle_angels_of_tyr,
+    bounty_agent, cathar_commando, celestine_the_living_saint, enduring_innocence,
+    esper_sentinel, firemane_commando, giada_font_of_hope, inspiring_overseer, jackdaw_savior,
+    karmic_guide, knight_of_the_white_orchid, loran_of_the_third_path, lyra_dawnbringer,
+    momo_friendly_flier, reya_dawnbringer, righteous_valkyrie, selfless_spirit,
+    sephara_skys_blade, serra_ascendant, skyclave_apparition, solemn_simulacrum, soul_warden,
+    spectacular_spider_man, spirited_companion, sun_titan, welcoming_vampire, witch_enchanter,
+    authority_of_the_consuls, cathars_crusade, court_of_grace, flowering_of_the_white_tree,
+    land_tax, tocasias_welcome, true_conviction, akromas_will, flare_of_fortitude,
+    flawless_maneuver, generous_gift, path_to_exile, restoration_magic, stroke_of_midnight,
+    swords_to_plowshares, serra_the_benevolent, austere_command, farewell, fated_clash,
+    sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const RAPHAEL_2_COMMANDERS: &[CardFactory] = &[raphael_ninja_destroyer];
+
+/// **Raphael, Ninja Destroyer**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Raphael, Ninja Destroyer (EDHREC, fetched 2026-10-14).
+pub const RAPHAEL_2_MAIN: &[CardFactory] = &[
+    arcane_signet, blazing_sunsteel, darksteel_plate, dawnsire_sunstar_dreadnought, fiendlash,
+    hammer_of_nazahn, infiltration_lens, manhole_cover, mind_stone, mithril_coat,
+    pariahs_shield, ruby_medallion, sol_ring, swiftfoot_boots, the_fire_crystal,
+    unstable_molecule_suit, fire_nation_palace, nykthos_shrine_to_nyx, plaza_of_heroes,
+    tyrite_sanctum, valakut_the_molten_pinnacle, war_room, anger, brash_taunter,
+    clive_ifrits_dominant, donna_noble, electro_assaulting_battery, hexing_squelcher,
+    ill_tempered_loner, imodane_the_pyrohammer, neheb_the_eternal, pinnacle_monk,
+    raphael_the_nightwatcher, screaming_nemesis, spider_punk, storm_kiln_artist, stuffy_doll,
+    walls_of_ba_sing_se, city_on_fire, cool_but_rude, expedited_inheritance, fiery_emancipation,
+    pain_for_all, pyrohemia, abrade, arcbond, big_score, bolt_bend, chaos_warp, deflecting_swat,
+    lightning_bolt, raphaels_technique, redirect_lightning, return_the_favor, seething_song,
+    the_last_agni_kai, thrill_of_possibility, blasphemous_act, chain_lightning, chain_reaction,
+    crackle_with_power, faithless_looting, gamble, jeskas_will, mana_geyser,
+    shatterskull_smashing, shivan_meteor, star_of_extinction, vandalblast, will_of_the_jeskai,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
