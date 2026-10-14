@@ -14094,6 +14094,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JIWARI_COMMANDERS,
             main: decks::JIWARI_MAIN,
         },
+        // Seat 2274: Ultron, Machine Overlord's EDHREC average deck. `--pod-decks 2274`.
+        PodDeck {
+            name: "Ultron, Machine Overlord (C)",
+            commanders: decks::ULTRON_2_COMMANDERS,
+            main: decks::ULTRON_2_MAIN,
+        },
+        // Seat 2275: Appa, the Vigilant's EDHREC average deck. `--pod-decks 2275`.
+        PodDeck {
+            name: "Appa, the Vigilant (W)",
+            commanders: decks::APPA_3_COMMANDERS,
+            main: decks::APPA_3_MAIN,
+        },
+        // Seat 2276: Winter, Team Player's EDHREC average deck. `--pod-decks 2276`.
+        PodDeck {
+            name: "Winter, Team Player (R)",
+            commanders: decks::WINTER_3_COMMANDERS,
+            main: decks::WINTER_3_MAIN,
+        },
+        // Seat 2277: Hakoda, Selfless Commander's EDHREC average deck. `--pod-decks 2277`.
+        PodDeck {
+            name: "Hakoda, Selfless Commander (W)",
+            commanders: decks::HAKODA_COMMANDERS,
+            main: decks::HAKODA_MAIN,
+        },
+        // Seat 2278: Layla Hassan's EDHREC average deck. `--pod-decks 2278`.
+        PodDeck {
+            name: "Layla Hassan (W)",
+            commanders: decks::LAYLA_HASSAN_COMMANDERS,
+            main: decks::LAYLA_HASSAN_MAIN,
+        },
+        // Seat 2279: The Ninth Doctor's EDHREC average deck. `--pod-decks 2279`.
+        PodDeck {
+            name: "The Ninth Doctor (UR)",
+            commanders: decks::THE_NINTH_DOCTOR_COMMANDERS,
+            main: decks::THE_NINTH_DOCTOR_MAIN,
+        },
+        // Seat 2280: Bilbo, Unexpected Adventurer's EDHREC average deck. `--pod-decks 2280`.
+        PodDeck {
+            name: "Bilbo, Unexpected Adventurer (W)",
+            commanders: decks::BILBO_3_COMMANDERS,
+            main: decks::BILBO_3_MAIN,
+        },
     ]
 }
 
@@ -18199,6 +18241,13 @@ mod tests {
             ("Meriadoc Brandybuck", &[0x12F5]),
             ("Renet, Temporal Apprentice", &[0x12F6]),
             ("Jiwari, the Earth Aflame", &[0x12F7]),
+            ("Ultron, Machine Overlord", &[0x12F8]),
+            ("Appa, the Vigilant", &[0x12F9]),
+            ("Winter, Team Player", &[0x12FA]),
+            ("Hakoda, Selfless Commander", &[0x12FB]),
+            ("Layla Hassan", &[0x12FC]),
+            ("The Ninth Doctor", &[0x12FD]),
+            ("Bilbo, Unexpected Adventurer", &[0x12FE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
