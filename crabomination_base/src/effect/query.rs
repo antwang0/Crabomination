@@ -819,6 +819,7 @@ impl Effect {
             | Effect::TruceThisTurnAndNext
             | Effect::LegendRuleOffThisTurn { .. }
             | Effect::NextLossThisTurnDrawSevenAtOne
+            | Effect::EachCreatureSacrificedUnlessLife { .. }
             | Effect::MayRepeat { .. }
             | Effect::DrainDefendersLandsForManaNextMain
             | Effect::ExileRandomFromHandMayPlayThisTurn { .. }
@@ -3555,6 +3556,7 @@ impl Effect {
                 | Effect::Sacrifice { .. }
                 | Effect::SacrificeHalf { .. }
                 | Effect::SacrificeAllButN { .. }
+                | Effect::EachCreatureSacrificedUnlessLife { .. }
                 | Effect::SacrificeAndRemember { .. }
                 | Effect::ExileFromHand { .. }
                 | Effect::ExileFromHandLinked { .. }
@@ -4603,6 +4605,7 @@ impl Effect {
             | Effect::DiscardHalf { .. }
             | Effect::SacrificeHalf { .. }
             | Effect::SacrificeAllButN { .. }
+            | Effect::EachCreatureSacrificedUnlessLife { .. }
             | Effect::AddPoison { .. } => true,
             // Cross-library searches target the searched player.
             Effect::SearchPickedBy {

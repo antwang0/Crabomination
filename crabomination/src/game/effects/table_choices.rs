@@ -45,6 +45,75 @@ impl GameState {
         self.run_effect(&Effect::Seq(steps), ctx, events)
     }
 
+    /// `Effect::EachCreatureSacrificedUnlessLife` (Killing Wave) — APNAP, each
+    /// player names the creatures they pay X life to keep (CR 119.4: no more
+    /// than their life covers; a bot keeps its costliest while that leaves it
+    /// above X), then the life is paid and the rest are sacrificed together.
+    pub(super) fn each_creature_pay_life_or_sacrifice(
+        &mut self,
+        amount: &Value,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let x = self.evaluate_value(amount, ctx).max(0);
+        let source = ctx.source.unwrap_or(CardId(0));
+        let seats = self.apnap_sort(self.living_seats().collect());
+        let mut cursor = 0usize;
+        let mut plans: Vec<(usize, Vec<CardId>, Vec<CardId>)> = Vec::new();
+        for q in seats {
+            let mut creatures: Vec<(CardId, String, u32)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == q && self.computed_is_creature(c))
+                .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+                .collect();
+            if creatures.is_empty() {
+                continue;
+            }
+            let all: Vec<CardId> = creatures.iter().map(|c| c.0).collect();
+            if x == 0 {
+                plans.push((q, all.clone(), all));
+                continue;
+            }
+            let life = self.effective_life(q);
+            let affordable = (life.max(0) / x) as usize;
+            if affordable == 0 {
+                plans.push((q, Vec::new(), all));
+                continue;
+            }
+            creatures.sort_by_key(|c| (std::cmp::Reverse(c.2), c.0.0));
+            let auto: Vec<CardId> =
+                creatures.iter().take(((life - 1).max(0) / x) as usize).map(|c| c.0).collect();
+            let named = creatures.iter().map(|(id, n, _)| (*id, n.clone())).collect();
+            let Some(keep) = self.ask_seat_cards_logged(
+                &mut cursor,
+                q,
+                format!("Pay {x} life for each creature to keep"),
+                source,
+                named,
+                0,
+                affordable.min(all.len()) as u32,
+                PickValue::Gain,
+                effect,
+                auto,
+            ) else {
+                return Ok(());
+            };
+            plans.push((q, keep, all));
+        }
+        self.clear_answer_log();
+        for (q, keep, _) in &plans {
+            self.pay_life_cost(*q, (x as u32).saturating_mul(keep.len() as u32));
+        }
+        for (q, keep, all) in plans {
+            for id in all.into_iter().filter(|id| !keep.contains(id)) {
+                self.sacrifice_one(id, q, events);
+            }
+        }
+        Ok(())
+    }
+
     /// `Effect::EachOpponentChoosesFromGraveyard` — APNAP, each opponent
     /// names one matching card in their own graveyard (a bot gives up its
     /// least valuable), then all the picks move to `to` together.

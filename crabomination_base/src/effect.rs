@@ -6000,6 +6000,11 @@ pub enum Effect {
     /// sacrifices the rest" (Archfiend of Depravity). Each keeps its best
     /// (the inverse of `Sacrifice`'s weakest-first pick).
     SacrificeAllButN { who: Selector, keep: Value, filter: SelectionRequirement },
+    /// "For each creature, its controller sacrifices it unless they pay
+    /// `amount` life" (Killing Wave): APNAP, each player picks which of
+    /// their creatures to pay for (no more than their life covers), then
+    /// the life is paid and the rest are sacrificed together.
+    EachCreatureSacrificedUnlessLife { amount: Value },
     /// "Each opponent chooses a [filter] card in their graveyard. Put those
     /// cards [to]" (Dredge the Mire) — each chooser gives up its least
     /// valuable match.

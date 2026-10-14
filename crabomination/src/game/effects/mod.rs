@@ -9849,6 +9849,9 @@ impl GameState {
             Effect::SacrificeAllButN { who, keep, filter } => {
                 self.sacrifice_all_but_n(who, keep, filter, ctx, events)
             }
+            Effect::EachCreatureSacrificedUnlessLife { amount } => {
+                self.each_creature_pay_life_or_sacrifice(amount, effect, ctx, events)
+            }
             Effect::ExileSelfForetold => self.exile_self_foretold(ctx, events),
             Effect::ForetellFromHand { reduce } => self.foretell_from_hand(*reduce, ctx, events, effect),
             Effect::ExileFromHandCopyCreature { who } => {
