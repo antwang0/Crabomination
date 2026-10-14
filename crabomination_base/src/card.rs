@@ -389,6 +389,8 @@ pub enum CreatureType {
     Skrull,
     // Forgotten Realms (Gnoll War Band).
     Gnoll,
+    // Star Trek (Captain James T. Kirk's Officer token).
+    Officer,
 }
 
 /// Land subtypes (basic land types + others).
