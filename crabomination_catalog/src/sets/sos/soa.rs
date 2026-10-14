@@ -247,6 +247,7 @@ pub fn awaken_the_woods() -> CardDefinition {
                 toughness: 1,
                 card_types: vec![CardType::Land, CardType::Creature],
                 colors: vec![Color::Green],
+                activated_abilities: vec![crate::sets::tap_add(Color::Green)],
                 subtypes: Subtypes {
                     creature_types: vec![CreatureType::Dryad],
                     land_types: vec![LandType::Forest],
