@@ -12273,7 +12273,7 @@ fn audit_block_restriction_filters_use_leaves_the_block_walker_handles() {
     // The walker's arm list, transcribed. A leaf it grows is a line here.
     const HANDLED: &[&str] = &[
         "Any", "Permanent", "Creature", "Artifact", "Enchantment", "Land", "IsToken", "NotToken",
-        "HasColor", "Colorless", "HasKeyword", "HasToxic", "HasModular", "HasMutate",
+        "HasColor", "Colorless", "Monocolored", "HasKeyword", "HasToxic", "HasModular", "HasMutate",
         "HasCreatureType", "HasArtifactSubtype", "HasSupertype", "ControlledByMonarch", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
         "ToughnessAtLeast", "ToughnessGreaterThanPower", "HasCardType", "IsEnchanted", "And", "Or",
         "Not",

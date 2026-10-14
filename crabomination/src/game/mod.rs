@@ -36476,6 +36476,8 @@ fn blocker_matches_block_filter(
         R::NotToken => !blocker.is_token,
         R::HasColor(c) => computed.colors.contains(c),
         R::Colorless => computed.colors.is_empty(),
+        // Nephilim Epochal — "can't be blocked by monocolored creatures".
+        R::Monocolored => computed.colors.len() == 1,
         R::HasKeyword(k) => computed.keywords().contains(k),
         R::HasToxic => computed.keywords().iter().any(|k| matches!(k, Keyword::Toxic(_))),
         R::HasModular => computed.keywords().iter().any(|k| matches!(k, Keyword::Modular(_))),

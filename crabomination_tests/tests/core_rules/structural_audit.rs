@@ -1435,9 +1435,12 @@ fn every_printed_you_may_is_a_choice() {
     /// `May…` primitives, and the *shapes* that carry the choice without a
     /// name (`up_to`, a zero minimum, an any-number selector), which is the
     /// same list `scripts/audit_dropped_may.py` keeps and for the same reason.
-    const OPTIONAL: [&str; 12] = [
+    const OPTIONAL: [&str; 13] = [
         "MayDo", "MayPay", "MayCast", "MayDoElse", "MayPayOrElse", "Optional", "ChooseMode",
         "AnyNumber", "up_to", "min_targets: 0", "OneOf", "one_of",
+        // CR 614.1a's "you may create … instead" (Flitwing): the replacement
+        // itself is the controller's choice.
+        "TokensMayBecome",
     ];
     /// `(printed phrase, phrasing to exclude, vacuity floor)`, lowercased and
     /// matched against the oracle with reminder text removed.
