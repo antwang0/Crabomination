@@ -12770,6 +12770,12 @@ impl GameState {
         self.permanents_with_abilities_removed_cold()
     }
 
+    /// CR 113.10b — `id` is on the battlefield under a layer-6 "loses all
+    /// abilities"; a word load on a board with no strip source.
+    pub(crate) fn lost_all_abilities(&self, id: CardId) -> bool {
+        self.ability_strip_possible() && self.computed_permanent(id).is_some_and(|c| c.lost_all_abilities)
+    }
+
     /// CR 113.10b — the permanents whose printed triggered abilities are gone
     /// (a layer-6 "loses all abilities"), for a trigger walk to skip. Empty on
     /// every board without a strip source, which the dispatch lane answers
@@ -19210,6 +19216,17 @@ impl GameState {
         use crate::effect::Duration;
         match duration {
             Duration::EndOfTurn | Duration::EndOfCombat => self.grant_keyword_eot(cid, kw),
+            // CR 613.7 — a grant after a "loses all abilities" effect outlives
+            // it, which a keyword baked onto the printed list would not (Hellcat,
+            // Undying Vigilante): go in as a later-timestamped layer-6 effect.
+            Duration::Permanent if self.computed_permanent(cid).is_some_and(|c| c.lost_all_abilities) => self
+                .keyword_layer_effect(
+                    cid,
+                    crate::game::layers::Modification::AddKeyword(kw),
+                    Duration::Permanent,
+                    ctx.controller,
+                    ctx.source.unwrap_or(CardId(0)),
+                ),
             Duration::Permanent => {
                 if let Some(c) = self.battlefield_find_mut(cid)
                     && !c.definition.keywords.contains(&kw)

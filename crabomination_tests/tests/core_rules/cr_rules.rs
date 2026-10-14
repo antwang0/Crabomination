@@ -1805,6 +1805,45 @@ fn cr_613_7e_attach_restamps_equipment_grant() {
     );
 }
 
+/// CR 613.7 — a *permanent* keyword grant resolved after a "loses all
+/// abilities" effect has the later timestamp and survives it; it used to be
+/// baked onto the printed keyword list, which the strip clears (Hellcat).
+#[test]
+fn cr_613_7_permanent_grant_after_a_strip_survives_it() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    for fx in [
+        Effect::LoseAllAbilities { what: Selector::This, duration: Duration::Permanent },
+        Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Haste, duration: Duration::Permanent },
+    ] {
+        g.resolve_effect(&fx, &ctx).unwrap();
+    }
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// CR 113.10b / 603.10a — a creature that has lost all abilities dies with no
+/// printed death trigger to look back at.
+#[test]
+fn cr_113_10b_a_stripped_creature_has_no_death_trigger() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_battlefield(0, catalog::runed_servitor());
+    let ctx = EffectContext::for_ability(id, 0, None);
+    g.resolve_effect(&Effect::LoseAllAbilities { what: Selector::This, duration: Duration::EndOfTurn }, &ctx)
+        .unwrap();
+    let evs = g.resolve_effect(&Effect::Destroy { what: Selector::This }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none());
+    assert!(g.players[0].hand.is_empty(), "Runed Servitor's draw trigger is gone");
+}
+
 // ── CR 514.3 / 514.3a — cleanup priority only when something happens ─────────
 
 /// A quiet cleanup grants no priority: passing out of the end step lands in

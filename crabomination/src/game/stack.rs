@@ -8094,10 +8094,14 @@ impl GameState {
                     // Walk printed Dies triggers + any granted transient
                     // ones (Rabid Attack EOT "this creature gains 'die →
                     // draw a card'" grants ride on `granted_triggers_timed`).
+                    // CR 113.10b — a creature that lost all abilities dies with
+                    // no printed triggers to look back at (Hellcat's return).
+                    let stripped = self.lost_all_abilities(c.id);
                     let triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = c
                         .definition
                         .triggered_abilities
                         .iter()
+                        .filter(|_| !stripped)
                         .chain(self.granted_triggers(c.id))
                         // PermanentLeavesBattlefield ("when this leaves the
                         // battlefield") fires on any departure, including a
@@ -9616,6 +9620,8 @@ impl GameState {
             .find_by_id(id)
             .map(|c| {
                 let is_creature = self.computed_is_creature(c);
+                // CR 113.10b — no printed triggers on one that lost them all.
+                let stripped = self.lost_all_abilities(c.id);
                 // Walk printed SelfSource LTB triggers + any transient
                 // granted ones (Rabid Attack-style "this creature gains
                 // 'when this creature dies, draw a card'" grants ride
@@ -9623,6 +9629,7 @@ impl GameState {
                 let triggers = c.definition
                     .triggered_abilities
                     .iter()
+                    .filter(|_| !stripped)
                     .chain(self.granted_triggers(c.id))
                     // CR 603.10a — the dying creature's own self-fire death
                     // triggers. SelfSource always, plus the self-inclusive
