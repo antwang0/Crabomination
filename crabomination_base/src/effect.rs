@@ -14379,7 +14379,6 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::OpponentSpellsFromGraveyardOrExileCostMore { .. }
         | SE::SpellTaxPerControllerPermanent { .. }
         | SE::SpellsCostMoreExceptOnControllerTurn { .. }
-        | SE::ChosenCardTypeSpellsCostMore { .. }
         | SE::TaxOpponentSpellsTargeting { .. }
         | SE::TaxOpponentSpellsTargetingThis { .. }
         // Arachne's chosen-card-type tax was missing, so the bot's narrowed
