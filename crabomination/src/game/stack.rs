@@ -7762,7 +7762,7 @@ impl GameState {
             // says one of the two is on the board; which, and whose, is read
             // here, only then.
             // Sliver Gravemother scopes it further, to matching permanents.
-            let (legend_rule_off, exempt_controllers, exempt_matching) = if scan.legend_rule_off {
+            let (legend_rule_off, mut exempt_controllers, exempt_matching) = if scan.legend_rule_off {
                 use crate::effect::StaticEffect;
                 let mut global = false;
                 let mut exempt: SmallVec<[usize; 4]> = SmallVec::new();
@@ -7788,6 +7788,11 @@ impl GameState {
             } else {
                 (false, SmallVec::new(), SmallVec::new())
             };
+            for &(seat, turn) in self.legend_rule_off_this_turn.iter() {
+                if turn == self.turn_number && !exempt_controllers.contains(&seat) {
+                    exempt_controllers.push(seat);
+                }
+            }
             let mut out = Vec::new();
             // A group needs two members, so one printed legendary on the
             // board cannot fire the rule — and one is the common sealed

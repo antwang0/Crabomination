@@ -8589,6 +8589,10 @@ pub enum Effect {
     /// (Opal Acrolith's `{0}`, Hidden Stag's land trigger). Indefinite; the
     /// fresh timestamp beats any earlier `BecomeCreatureLosingTypes`.
     SetCardTypesTo { what: Selector, card_types: Vec<crate::card::CardType> },
+    /// `SetCardTypesTo` for `duration` — "until your next turn, he becomes a
+    /// land … (He's not a creature during that time.)" (Hydro-Man, Fluid
+    /// Felon). The layer-4 replacement ends with the duration.
+    SetCardTypesFor { what: Selector, card_types: Vec<crate::card::CardType>, duration: Duration },
     /// "[what] becomes an artifact creature for `duration`" — adds
     /// `CardType::Creature` (layer 4) only, keeping the permanent's printed
     /// power/toughness (correct for Vehicles, which carry P/T even when not a
@@ -10019,6 +10023,9 @@ pub enum Effect {
     /// Arms `GameState::next_entries_copy`; `apply_enters_as_copy` applies it
     /// to each entering creature or planeswalker until the next SBA check.
     NextEntriesEnterAsCopy { of: Selector },
+    /// CR 704.5j — "the legend rule doesn't apply to permanents [who]
+    /// controls this turn" (Hall of Echoes).
+    LegendRuleOffThisTurn { who: PlayerRef },
     BecomeCopyOf {
         what: Selector,
         source: Selector,

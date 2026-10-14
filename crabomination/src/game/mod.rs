@@ -2327,6 +2327,11 @@ pub struct ColdState {
     /// only when the value changes.
     #[serde(skip)]
     pub(crate) last_name_sticker_vowels: u8,
+    /// CR 704.5j — "the legend rule doesn't apply to permanents you control
+    /// this turn" (Hall of Echoes), as (seat, turn number). A stale turn's
+    /// entry is inert; only that effect writes it.
+    #[serde(default)]
+    pub(crate) legend_rule_off_this_turn: Vec<(usize, u32)>,
 }
 
 /// A declined optional extra-target slot (CR 601.2c — "up to N targets"),
@@ -35333,6 +35338,7 @@ fn static_effect_to_effects(
             // SelfCostReducedIf (Gigastorm Titan) — read off the spell.
             | StaticEffect::SelfCostReducedIf { .. }
             | StaticEffect::SelfColoredCostReducedIf { .. }
+            | StaticEffect::SelfColoredCostReducedPer { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty
             | StaticEffect::ReanimateInsteadOfDrawFromEmpty
             // CR 104.3d — consulted at the loss/win sites, no layer effect.

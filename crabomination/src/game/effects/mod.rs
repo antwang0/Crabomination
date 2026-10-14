@@ -18802,6 +18802,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SetCardTypesFor { what, card_types, duration } => {
+                use crate::game::layers::{AffectedPermanents, ContinuousEffect, Layer, Modification};
+                let source = ctx.source.unwrap_or(CardId(0));
+                let duration = self.effect_duration_for(*duration, ctx.controller);
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let timestamp = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::just(cid),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: duration.clone(),
+                        modification: Modification::SetCardTypes(card_types.clone()),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::SetCardTypesTo { what, card_types } => {
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
@@ -42493,6 +42513,17 @@ impl GameState {
                         } else {
                             c.granted_activated_abilities.push((**ability).clone());
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LegendRuleOffThisTurn { who } => {
+                let turn = self.turn_number;
+                for seat in self.resolve_players(who, ctx) {
+                    if !self.legend_rule_off_this_turn.contains(&(seat, turn)) {
+                        self.legend_rule_off_this_turn.retain(|&(_, t)| t == turn);
+                        self.legend_rule_off_this_turn.push((seat, turn));
                     }
                 }
                 Ok(())

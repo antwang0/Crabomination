@@ -2020,11 +2020,22 @@ pub fn colored_cost_reduction_for_spell(
     use crate::effect::StaticEffect;
     let mut out = crate::mana::ManaCost::default();
     for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfColoredCostReducedIf { condition, less } = &sa.effect {
-            let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
-            if state.evaluate_predicate(condition, &ctx) {
-                out.symbols.extend(less.symbols.iter().cloned());
+        match &sa.effect {
+            StaticEffect::SelfColoredCostReducedIf { condition, less } => {
+                let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
+                if state.evaluate_predicate(condition, &ctx) {
+                    out.symbols.extend(less.symbols.iter().cloned());
+                }
             }
+            StaticEffect::SelfColoredCostReducedPer { less, count } => {
+                let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
+                // Never more copies than the spell has pips to take them.
+                let n = state.evaluate_value(count, &ctx).clamp(0, card.definition.cost.symbols.len() as i32);
+                for _ in 0..n {
+                    out.symbols.extend(less.symbols.iter().cloned());
+                }
+            }
+            _ => {}
         }
     }
     for src in &state.battlefield {
@@ -10396,7 +10407,13 @@ impl GameState {
             c.definition
                 .static_abilities
                 .iter()
-                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::SelfColoredCostReducedIf { .. }))
+                .any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::SelfColoredCostReducedIf { .. }
+                            | crate::effect::StaticEffect::SelfColoredCostReducedPer { .. }
+                    )
+                })
         });
 
         // The four name locks below are the same shape as the cost statics

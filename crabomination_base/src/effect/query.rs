@@ -816,6 +816,7 @@ impl Effect {
             | Effect::ExileOtherCreaturesKeepingUpTo { .. }
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext
+            | Effect::LegendRuleOffThisTurn { .. }
             | Effect::MayRepeat { .. }
             | Effect::DrainDefendersLandsForManaNextMain
             | Effect::ExileRandomFromHandMayPlayThisTurn { .. }
@@ -2061,6 +2062,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::SetCardTypesTo { what, .. }
+            | Effect::SetCardTypesFor { what, .. }
             | Effect::AmendCopiableValues { what, .. }
             | Effect::BecomeFoodArtifact { what }
             | Effect::BecomeNamed { what, .. } => sel_has_target(what),
@@ -3002,6 +3004,7 @@ impl Effect {
             Effect::BecomeCreature { what, .. }
             | Effect::BecomeCreatureLosingTypes { what, .. }
             | Effect::SetCardTypesTo { what, .. }
+            | Effect::SetCardTypesFor { what, .. }
             | Effect::AmendCopiableValues { what, .. }
             | Effect::BecomeFoodArtifact { what }
             | Effect::BecomeNamed { what, .. } => sel_filter(what),
@@ -4727,6 +4730,7 @@ impl Effect {
             | Effect::BecomeCreature { .. }
             | Effect::BecomeCreatureLosingTypes { .. }
             | Effect::SetCardTypesTo { .. }
+            | Effect::SetCardTypesFor { .. }
             | Effect::AmendCopiableValues { .. }
             | Effect::BecomeFoodArtifact { .. }
             | Effect::GrantKeywordToMatchingThisTurn { .. }
@@ -5654,6 +5658,7 @@ impl Effect {
                 // Guerrillas, Soul Sculptor, Excavator).
                 | Effect::GrantSacrificedLandTypesLandwalk { what, .. }
                 | Effect::SetCardTypesTo { what, .. }
+            | Effect::SetCardTypesFor { what, .. }
                 | Effect::AmendCopiableValues { what, .. }
                 | Effect::BecomeFoodArtifact { what }
                 | Effect::BecomeNamed { what, .. }

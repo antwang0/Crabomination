@@ -1007,6 +1007,11 @@ pub enum StaticEffect {
     /// this turn" (Even the Score). Folded into
     /// `colored_cost_reduction_for_spell` with the caster as controller.
     SelfColoredCostReducedIf { condition: Predicate, less: crate::mana::ManaCost },
+    /// The per-count sibling — "This spell costs {G} less to cast for each
+    /// green creature you control" (Khalni Hydra): `less` once per `count`,
+    /// read from the caster's side. Colored pips only ever reduce matching
+    /// pips (CR 601.2f).
+    SelfColoredCostReducedPer { less: crate::mana::ManaCost, count: Value },
     /// "This spell costs {1} less to cast for each [amount]" with the count
     /// read off a `Value` from the caster's side (Licia, Sanguine Tribune:
     /// life gained this turn).

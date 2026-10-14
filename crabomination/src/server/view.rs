@@ -3195,7 +3195,9 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::ReplaceYourNextDrawThisTurn { .. } => "Replace your next draw",
         Effect::RevealAnyNumberFromHand { .. } => "Reveal cards from hand",
         Effect::TapOrUntap { .. } => "Tap or untap",
-        Effect::AddCardTypeIndefinitely { .. } | Effect::SetCardTypesTo { .. } => {
+        Effect::AddCardTypeIndefinitely { .. }
+        | Effect::SetCardTypesTo { .. }
+        | Effect::SetCardTypesFor { .. } => {
             "Change card types"
         }
         Effect::DealDamageEqualToPower { .. } => "Deal damage equal to power",
