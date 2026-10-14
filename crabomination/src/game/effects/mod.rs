@@ -23061,6 +23061,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileUncastCreaturesThisTurn => {
+                self.players[ctx.controller].exiles_uncast_creatures_this_turn = true;
+                Ok(())
+            }
+
             Effect::WeldArtifacts { what } => {
                 // Goblin Welder: the target artifact's controller sacrifices
                 // it and returns an artifact card from their graveyard

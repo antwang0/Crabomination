@@ -1014,6 +1014,7 @@ impl Effect {
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::TripleYourSourcesDamageToOpponentsThisTurn
             | Effect::DoubleYourSourcesDamageToOpponentPlayersThisTurn
+            | Effect::ExileUncastCreaturesThisTurn
             | Effect::ReturnSelfTransformedAttached
             | Effect::ReturnSelfAttachedToTarget
             | Effect::ReturnSelfAttachedToTrigger

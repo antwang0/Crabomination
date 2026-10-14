@@ -5201,6 +5201,7 @@ impl GameState {
             pl.double_your_source_damage_this_turn = false;
             pl.triple_your_source_damage_to_opponents_this_turn = false;
             pl.double_your_source_damage_to_opponents_this_turn = false;
+            pl.exiles_uncast_creatures_this_turn = false;
             // Turf Wound's land-play lock is turn-scoped.
             pl.cant_play_lands_this_turn = false;
             if !pl.cant_cast_matching_this_turn.is_empty() {

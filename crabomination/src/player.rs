@@ -879,6 +879,10 @@ pub struct PlayerData {
     /// opponents (players only) this turn. Cleared at cleanup.
     #[serde(default)]
     pub double_your_source_damage_to_opponents_this_turn: bool,
+    /// Hallowed Moonlight — until end of turn a creature that wasn't cast is
+    /// exiled instead of entering, for every player. Cleared at cleanup.
+    #[serde(default)]
+    pub exiles_uncast_creatures_this_turn: bool,
     /// CR 305.1 — "target player can't play lands this turn" (Turf Wound).
     /// Consulted by `can_player_play_land`, reset at the turn boundary.
     #[serde(default)]
@@ -1836,6 +1840,7 @@ impl Player {
             double_your_source_damage_this_turn: false,
             triple_your_source_damage_to_opponents_this_turn: false,
             double_your_source_damage_to_opponents_this_turn: false,
+            exiles_uncast_creatures_this_turn: false,
             committed_crime_this_turn: false,
             investigated_this_turn: false,
             permanent_to_hand_this_turn: false,

@@ -9375,6 +9375,11 @@ pub enum Effect {
     /// Goliath): players only, not their permanents. Sets
     /// `Player.double_your_source_damage_to_opponents_this_turn`.
     DoubleYourSourcesDamageToOpponentPlayersThisTurn,
+    /// CR 614.1a / 111.7 — "Until end of turn, if a creature would enter and
+    /// it wasn't cast, exile it instead" (Hallowed Moonlight): a non-cast
+    /// creature card goes to exile, a creature token is never made. Sets
+    /// `Player.exiles_uncast_creatures_this_turn`.
+    ExileUncastCreaturesThisTurn,
     /// Goblin Welder: target artifact's controller simultaneously sacrifices
     /// it and returns an artifact card from their graveyard to the
     /// battlefield. The graveyard half is auto-picked (highest mana value).

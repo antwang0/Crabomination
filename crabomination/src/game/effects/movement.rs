@@ -3138,7 +3138,7 @@ impl GameState {
                 // than `resolve_spell`) is exiled instead.
                 if (!card.is_token
                     && card.definition.is_creature()
-                    && self.nontoken_creature_etb_exile_active())
+                    && (self.nontoken_creature_etb_exile_active() || self.uncast_creature_entry_exiled()))
                     || Self::exiled_if_enters_uncast_or_free(&card)
                 {
                     // CR 712.4 — a melded permanent that never reaches the

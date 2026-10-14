@@ -9631,6 +9631,12 @@ impl GameState {
         events
     }
 
+    /// Hallowed Moonlight's turn — true while any player's
+    /// `exiles_uncast_creatures_this_turn` holds.
+    pub fn uncast_creature_entry_exiled(&self) -> bool {
+        self.players.iter().any(|p| p.exiles_uncast_creatures_this_turn)
+    }
+
     /// CR 614.x — true if any active `StaticEffect::ExileNontokenCreaturesNotCast`
     /// (Containment Priest) is on the battlefield. Consulted by
     /// `place_card_in_dest` to reroute non-cast nontoken creatures to exile.
@@ -11170,6 +11176,11 @@ impl GameState {
             return id;
         }
         let mut inst = crate::card::CardInstance::new_token(id, def, controller);
+        // Hallowed Moonlight — a token is never cast, so a creature token
+        // is exiled instead and ceases to exist (CR 111.7).
+        if self.uncast_creature_entry_exiled() && inst.definition.is_creature() {
+            return id;
+        }
         // CR 111.2 — a token's owner is the player under whose control it
         // actually entered, so a stolen mint belongs to the thief.
         let ctrl = self.apply_etb_control_replacement(&inst, controller);
