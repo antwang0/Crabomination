@@ -15461,7 +15461,9 @@ fn trace_line(g: &GameState, action: &crate::game::GameAction) -> String {
         && let Some(d) = g.pending_decision.as_ref()
     {
         let ask = format!("{:?}", d.decision);
-        dbg = format!("{dbg} <- {}", &ask[..ask.len().min(160)]);
+        // On a char boundary: a card name can carry "é" (Everett K. Ross,
+        // Hapless Attaché) and a byte cut inside it panics.
+        dbg = format!("{dbg} <- {}", &ask[..ask.floor_char_boundary(160)]);
     }
     let names: Vec<String> = dbg
         .split("CardId(")

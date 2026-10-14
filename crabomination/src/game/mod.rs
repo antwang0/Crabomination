@@ -20865,8 +20865,8 @@ impl GameState {
         let r = format!("{remaining:?}");
         let msg = format!(
             "stranded suspend signal: {} …\n  continuation: {} …",
-            &d[..d.len().min(180)],
-            &r[..r.len().min(180)],
+            &d[..d.floor_char_boundary(180)],
+            &r[..r.floor_char_boundary(180)],
         );
         assert!(mode < 2, "{msg}");
         eprintln!("{msg}");

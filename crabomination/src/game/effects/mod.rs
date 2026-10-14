@@ -2065,7 +2065,7 @@ impl GameState {
             self.scratch.stashed_resolution_answer.is_some() as u8,
             ctx.source_name.unwrap_or("<no source>"),
             self.scratch.resolution_answer_log,
-            &dbg[..dbg.len().min(400)],
+            &dbg[..dbg.floor_char_boundary(400)],
         );
         assert!(mode < 2, "{msg}");
         eprintln!("{msg}");
@@ -2083,7 +2083,7 @@ impl GameState {
             "unclaimed stash {:?} spent after {} / {}",
             self.scratch.stashed_resolution_answer,
             ctx.source_name.unwrap_or("<no source>"),
-            &dbg[..dbg.len().min(200)],
+            &dbg[..dbg.floor_char_boundary(200)],
         );
     }
 
