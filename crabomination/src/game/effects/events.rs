@@ -1161,6 +1161,11 @@ fn event_matches_spec_rest(
         // wants the opposite side, so defer entirely to the `actor_is_opponent`
         // rider below.
         EventScope::FromYourGraveyardAnyPlayer => true,
+        EventScope::FromYourGraveyardSourceDamagedOpponent => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
+                if *fc == source.owner && !state.same_team(*p, source.owner)
+        ),
         EventScope::FromYourGraveyard => {
             spec.actor_is_opponent
                 || event_actor(state, event)
@@ -1775,6 +1780,7 @@ pub(crate) fn emblem_event_matches(
         EventScope::YourCreatureCombatDamagedOpponent => your_creature_combat_damaged_opponent(state, event, controller),
         EventScope::FromYourGraveyard
         | EventScope::FromYourGraveyardAnyPlayer
+        | EventScope::FromYourGraveyardSourceDamagedOpponent
         | EventScope::YourPermanentTargetedByOpponent
         | EventScope::YourCreatureTargeted
         | EventScope::OpponentCreatureTargetedByYou

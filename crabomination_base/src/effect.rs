@@ -4340,6 +4340,12 @@ pub enum EventScope {
     /// ANY damaged player, its controller included ("whenever a source you
     /// control deals 5 or more damage to a player" — Dragonborn Champion).
     YourSourceDamagedAnyPlayer,
+    /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) read
+    /// while the card sits in its owner's graveyard ("whenever a source you
+    /// control deals noncombat damage to an opponent, you may pay {2}; if you
+    /// do, return this card from your graveyard" — Asgardian Inspiration).
+    /// "You" is the graveyard owner.
+    FromYourGraveyardSourceDamagedOpponent,
 }
 
 impl EventScope {
@@ -4347,7 +4353,12 @@ impl EventScope {
     /// (CR 603.3d zone scoping) — the one predicate every graveyard walk and
     /// the battlefield walk's skip read, so they cannot disagree.
     pub fn from_graveyard(&self) -> bool {
-        matches!(self, Self::FromYourGraveyard | Self::FromYourGraveyardAnyPlayer)
+        matches!(
+            self,
+            Self::FromYourGraveyard
+                | Self::FromYourGraveyardAnyPlayer
+                | Self::FromYourGraveyardSourceDamagedOpponent
+        )
     }
 }
 

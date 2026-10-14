@@ -1250,7 +1250,9 @@ impl GameState {
             EventScope::OpponentControl => !self.same_team(controller, active),
             EventScope::AnotherOfYours => false,
             // Walked separately below.
-            EventScope::FromYourGraveyard | EventScope::FromYourGraveyardAnyPlayer => false,
+            EventScope::FromYourGraveyard
+            | EventScope::FromYourGraveyardAnyPlayer
+            | EventScope::FromYourGraveyardSourceDamagedOpponent => false,
             EventScope::YourPermanentTargetedByOpponent
             | EventScope::YourCreatureTargeted
             | EventScope::OpponentCreatureTargetedByYou
