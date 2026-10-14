@@ -3136,6 +3136,49 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-14 (Commander run, `01MsQdht`) — guardrail; 144 EDHREC seats, 141 cards, six primitives
+
+Hot-path touches: `damage_scaling_in_scope`'s presence gate reads one more
+`Player` flag per seat; `extra_cost_for_spell` has one more static arm
+(`ChosenCardTypeSpellsCostMore`); the bot's `ChooseAmount` one more kind;
+`cast_lock` one more bit (`MORE_THAN_YOU`, scanned only off its static);
+`mint_token_with_counters` asks one per-seat flag per token
+(`exiles_uncast_creatures_this_turn`).
+None is in the fixed pool. Release `bot_ladder` at `36f751b74`, toolchain
+1.99, Xeon @ 2.10 GHz, 4 cores.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); peak_rss 35.0 MiB;
+                 games_per_s 258.57 / 249.95 / 265.85 / 277.50 (four runs,
+                 host_calib_ms 71 / 60 / 53 / 50 — the box, not a reading);
+                 release build 14m25s; re-run at c8f644a00 after the Ward of
+                 Bones / Hallowed Moonlight primitives: 196,176 / 27.64 /
+                 613.0 byte-identical, determinism ok, games_per_s 249.80 /
+                 248.37 (host_calib_ms 62 / 57)
+release-fast     covered by every pod commit's `overflow` build (debug
+                 assertions off, overflow checks on)
+pods (overflow)  sweeps 4401-4413 over seats 2141-2293: 1,667 games, all
+                 decided but two CR 104.4a draws, both read and legitimate
+                 (seed 440442 game 7: Descent into Avernus took both
+                 survivors; seed 441342 game 1: Platinum Angel died in the
+                 combat that felled its seat's last opponent)
+suite            nextest --workspace (no client), strict answer log, minus
+                 cr_903_5a_the_official_precon_seats_play_pod_games (over an
+                 hour in debug at 2,293 seats — run under the overflow
+                 profile instead, below): 26,420 run, 26,418 passed, 2 red —
+                 both structural audits on this run's own code (the cost
+                 filter missed ChosenCardTypeSpellsCostMore, so Arachne's tax
+                 never reached a cast; a printed is_creature read), fixed at
+                 c8f644a00 and re-run green
+pod test         cr_903_5a_the_official_precon_seats_play_pod_games under
+                 `--cargo-profile overflow`: one seeded game for every seat
+                 1-2330, PASS in 197.7 s (18 min to build)
+clippy           workspace --all-targets (no client): 0 after four fixes
+                 (needless_update, needless_range_loop, two needless borrows);
+                 47m51s on this box
+```
+
 ### 2026-10-14 (Commander run, `01PxmVAG`) — guardrail; EDHREC ranks 2501-3500, 269 cards, five primitives, one bot brake
 
 Hot-path touches: `begin_turn_resets` stamps `life_at_turn_start` in the
