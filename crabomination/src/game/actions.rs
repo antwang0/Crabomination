@@ -11773,6 +11773,9 @@ impl GameState {
         // by the cast card's types — see `CardDefinition::spell_kind`.
         let mut spell_kind = self.spell_kind_for(p, &card);
         spell_kind.kicked = kicked;
+        // A hop through the hand and a prepared copy aren't cast from it.
+        spell_kind.from_hand = self.casting_hop.is_none()
+            && !self.scratch.pending_prepare_copies.iter().any(|(c, _)| *c == card_id);
         // CR 601.2g — float-spend confirmation. If the caster has pre-existing
         // floating mana that the cost could *either* spend *or* avoid (untapped
         // sources can cover it), ask before auto-spending it instead of silently

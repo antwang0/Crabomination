@@ -921,6 +921,10 @@ pub enum SpendRestriction {
     /// "Spend this mana only to activate power-up abilities" (Quinjet
     /// Technician, CR 702.193). Reads `SpellKind::power_up`.
     PowerUpOnly,
+    /// "This mana can't be spent to cast spells from your hand" (Vhal,
+    /// Candlekeep Researcher). Reads `SpellKind::from_hand`; abilities and
+    /// casts from any other zone may spend it.
+    NotSpellsFromHand,
 }
 
 impl SpendRestriction {
@@ -934,6 +938,7 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOrKicked => "only instants, sorceries and kicked spells",
             SpendRestriction::KickedSpellsOnly => "only kicked spells",
             SpendRestriction::PowerUpOnly => "only power-up abilities",
+            SpendRestriction::NotSpellsFromHand => "not spells cast from hand",
             SpendRestriction::ArtifactOnly => "only artifacts",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
@@ -1045,6 +1050,7 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOrKicked => kind.instant_or_sorcery || kind.kicked,
             SpendRestriction::KickedSpellsOnly => kind.kicked,
             SpendRestriction::PowerUpOnly => kind.power_up,
+            SpendRestriction::NotSpellsFromHand => !kind.from_hand,
             SpendRestriction::ArtifactOnly => kind.artifact,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
@@ -1247,6 +1253,10 @@ pub struct SpellKind {
     /// The payment is a power-up activation (CR 702.193) — Quinjet
     /// Technician's mana may fund it.
     pub power_up: bool,
+    /// A spell cast from its caster's hand — stamped on the hand-cast path
+    /// only (a graveyard or library hop and a prepared copy are not), so an
+    /// unstamped path reads "not from hand".
+    pub from_hand: bool,
     pub activating_ability: bool,
     /// CR 609.4b — the source lets its abilities be paid "as though it were
     /// mana of any color" (Drana and Linvala's and Manascape Refractor's

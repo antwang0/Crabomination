@@ -8169,6 +8169,7 @@ impl CardDefinition {
             activating_ability: false,
             class_level: false,
             power_up: false,
+            from_hand: false,
             any_color: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             kicked: false,

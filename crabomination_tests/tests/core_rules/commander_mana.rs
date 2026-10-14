@@ -671,7 +671,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | MonocoloredSpellOf(_) | OutlawSpellsOrAbilities | AssassinOrFreerunning | SpellsYouDontOwn | SpellOrAbilityCopy
                 | AuraOrEquipmentSpells | KnightOrEquipmentSpells | MountOrVehicleSpells | PilotOrVehicleSpells | CreatureCastCounter
                 | CreatureOfEitherTypeOrItsAbility(..) | CreatureOfTypeOrLegendaryCreature(_)
-                | SpellsOnly | TypeSpellOrItsAbility(_) | KickedSpellsOnly | PowerUpOnly => {}
+                | SpellsOnly | TypeSpellOrItsAbility(_) | KickedSpellsOnly | PowerUpOnly | NotSpellsFromHand => {}
             }
         }
         use SpendRestriction::*;
@@ -681,6 +681,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             InstantSorceryOrKicked,
             KickedSpellsOnly,
             PowerUpOnly,
+            NotSpellsFromHand,
             ArtifactOnly,
             CreatureOfTypeUncounterable(CreatureType::Bear),
             CreatureOfType(CreatureType::Bear),
@@ -748,10 +749,11 @@ fn cr_106_6_every_rider_allows_every_payment() {
         ]
     };
     // A spanning-enough set of payments: a creature spell, a noncreature
-    // spell, and an activated ability of a land.
+    // spell (also cast from hand), and an activated ability of a land.
     let kinds = [
         catalog::grizzly_bears().spell_kind(),
         catalog::sol_ring().spell_kind(),
+        crabomination::mana::SpellKind { from_hand: true, ..catalog::sol_ring().spell_kind() },
         CardDefinition::default().ability_spend_kind(),
         catalog::forest().ability_spend_kind(),
     ];
