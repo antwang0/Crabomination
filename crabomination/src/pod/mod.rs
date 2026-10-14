@@ -12864,6 +12864,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TY_LEE_2_COMMANDERS,
             main: decks::TY_LEE_2_MAIN,
         },
+        // Seat 2069: Casey Jones, Back Alley Brute's EDHREC average deck. `--pod-decks 2069`.
+        PodDeck {
+            name: "Casey Jones, Back Alley Brute (R)",
+            commanders: decks::CASEY_JONES_2_COMMANDERS,
+            main: decks::CASEY_JONES_2_MAIN,
+        },
+        // Seat 2070: Edgar, Moonlit Sovereign's EDHREC average deck. `--pod-decks 2070`.
+        PodDeck {
+            name: "Edgar, Moonlit Sovereign (G)",
+            commanders: decks::EDGAR_5_COMMANDERS,
+            main: decks::EDGAR_5_MAIN,
+        },
+        // Seat 2071: Aphemia, the Cacophony's EDHREC average deck. `--pod-decks 2071`.
+        PodDeck {
+            name: "Aphemia, the Cacophony (B)",
+            commanders: decks::APHEMIA_COMMANDERS,
+            main: decks::APHEMIA_MAIN,
+        },
+        // Seat 2072: Harold and Bob, First Numens's EDHREC average deck. `--pod-decks 2072`.
+        PodDeck {
+            name: "Harold and Bob, First Numens (G)",
+            commanders: decks::HAROLD_AND_BOB_COMMANDERS,
+            main: decks::HAROLD_AND_BOB_MAIN,
+        },
+        // Seat 2073: Cyan, Vengeful Samurai's EDHREC average deck. `--pod-decks 2073`.
+        PodDeck {
+            name: "Cyan, Vengeful Samurai (W)",
+            commanders: decks::CYAN_COMMANDERS,
+            main: decks::CYAN_MAIN,
+        },
+        // Seat 2074: Immortus, Master of Eternity's EDHREC average deck. `--pod-decks 2074`.
+        PodDeck {
+            name: "Immortus, Master of Eternity (U)",
+            commanders: decks::IMMORTUS_COMMANDERS,
+            main: decks::IMMORTUS_MAIN,
+        },
+        // Seat 2075: Kongming, "Sleeping Dragon"'s EDHREC average deck. `--pod-decks 2075`.
+        PodDeck {
+            name: "Kongming, \"Sleeping Dragon\" (W)",
+            commanders: decks::KONGMING_COMMANDERS,
+            main: decks::KONGMING_MAIN,
+        },
+        // Seat 2076: Heidegger, Shinra Executive's EDHREC average deck. `--pod-decks 2076`.
+        PodDeck {
+            name: "Heidegger, Shinra Executive (W)",
+            commanders: decks::HEIDEGGER_COMMANDERS,
+            main: decks::HEIDEGGER_MAIN,
+        },
+        // Seat 2077: Dragonlord Kolaghan's EDHREC average deck. `--pod-decks 2077`.
+        PodDeck {
+            name: "Dragonlord Kolaghan (BR)",
+            commanders: decks::DRAGONLORD_KOLAGHAN_COMMANDERS,
+            main: decks::DRAGONLORD_KOLAGHAN_MAIN,
+        },
+        // Seat 2078: Syr Faren, the Hengehammer's EDHREC average deck. `--pod-decks 2078`.
+        PodDeck {
+            name: "Syr Faren, the Hengehammer (G)",
+            commanders: decks::SYR_FAREN_COMMANDERS,
+            main: decks::SYR_FAREN_MAIN,
+        },
+        // Seat 2079: Wydwen, the Biting Gale's EDHREC average deck. `--pod-decks 2079`.
+        PodDeck {
+            name: "Wydwen, the Biting Gale (UB)",
+            commanders: decks::WYDWEN_COMMANDERS,
+            main: decks::WYDWEN_MAIN,
+        },
+        // Seat 2080: Mister Fantastic, Reed Richards's EDHREC average deck. `--pod-decks 2080`.
+        PodDeck {
+            name: "Mister Fantastic, Reed Richards (U)",
+            commanders: decks::MISTER_FANTASTIC_2_COMMANDERS,
+            main: decks::MISTER_FANTASTIC_2_MAIN,
+        },
+        // Seat 2081: Doc Samson, Super Psychiatrist's EDHREC average deck. `--pod-decks 2081`.
+        PodDeck {
+            name: "Doc Samson, Super Psychiatrist (G)",
+            commanders: decks::DOC_SAMSON_COMMANDERS,
+            main: decks::DOC_SAMSON_MAIN,
+        },
+        // Seat 2082: Savanti Romero, Time's Exile's EDHREC average deck. `--pod-decks 2082`.
+        PodDeck {
+            name: "Savanti Romero, Time's Exile (B)",
+            commanders: decks::SAVANTI_ROMERO_COMMANDERS,
+            main: decks::SAVANTI_ROMERO_MAIN,
+        },
+        // Seat 2083: Black Widow, Deadly Hunter's EDHREC average deck. `--pod-decks 2083`.
+        PodDeck {
+            name: "Black Widow, Deadly Hunter (B)",
+            commanders: decks::BLACK_WIDOW_2_COMMANDERS,
+            main: decks::BLACK_WIDOW_2_MAIN,
+        },
     ]
 }
 
@@ -16764,6 +16854,21 @@ mod tests {
             ("Attuma, Atlantean Warlord", &[0x1228]),
             ("Leatherhead, Swamp Stalker", &[0x1229]),
             ("Ty Lee, Artful Acrobat", &[0x122A]),
+            ("Casey Jones, Back Alley Brute", &[0x122B]),
+            ("Edgar, Moonlit Sovereign", &[0x122C]),
+            ("Aphemia, the Cacophony", &[0x122D]),
+            ("Harold and Bob, First Numens", &[0x122E]),
+            ("Cyan, Vengeful Samurai", &[0x122F]),
+            ("Immortus, Master of Eternity", &[0x1230]),
+            ("Kongming, \"Sleeping Dragon\"", &[0x1231]),
+            ("Heidegger, Shinra Executive", &[0x1232]),
+            ("Dragonlord Kolaghan", &[0x1233]),
+            ("Syr Faren, the Hengehammer", &[0x1234]),
+            ("Wydwen, the Biting Gale", &[0x1235]),
+            ("Mister Fantastic, Reed Richards", &[0x1236]),
+            ("Doc Samson, Super Psychiatrist", &[0x1237]),
+            ("Savanti Romero, Time's Exile", &[0x1238]),
+            ("Black Widow, Deadly Hunter", &[0x1239]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
