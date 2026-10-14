@@ -60099,3 +60099,90 @@ pub const RONA_3_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SEIFER_COMMANDERS: &[CardFactory] = &[seifer_balamb_rival];
+
+/// **Seifer, Balamb Rival**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Mountains + 9 Swamps = 99.
+/// Seifer, Balamb Rival (EDHREC, fetched 2026-10-14).
+pub const SEIFER_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, bloodthirsty_blade, fellwar_stone, lightning_greaves,
+    mind_stone, rakdos_signet, sol_ring, swiftfoot_boots, talisman_of_indulgence,
+    blazemire_verge, blood_crypt, bojuka_bog, command_tower, daily_bugle_building,
+    dragonskull_summit, foreboding_ruins, graven_cairns, haunted_ridge, luxury_suite,
+    rogues_passage, shadowblood_ridge, smoldering_marsh, sulfurous_springs, tainted_peak,
+    agitator_ant, alexios_deimos_of_kosmos, ayaras_oathsworn, barbed_servitor,
+    bothersome_quasit, dalek_squadron, death_kiss, death_tyrant, frenzied_gorespawn,
+    frontier_warmonger, generous_plunderer, gix_yawgmoth_praetor, grenzo_havoc_raiser,
+    j_jonah_jameson, jecht_reluctant_guardian, karazikar_the_eye_tyrant, kardur_doomscourge,
+    komainu_battle_armor, labyrinth_raptor, lightning_security_sergeant, morbid_opportunist,
+    professional_face_breaker, puppet_master_string_puller, shakedown_heavy,
+    sonorous_howlbonder, star_athlete, stormfist_crusader, the_infamous_cruelclaw,
+    vengeful_ancestor, vincent_vengeful_atoner, curse_of_opulence, eye_of_nidhogg,
+    ghoulish_impetus, goblin_war_drums, hot_pursuit, phyrexian_arena, shiny_impetus,
+    the_sound_of_drums, abrade, bedevil, chaos_warp, dark_ritual, rakdos_charm, terminate,
+    untimely_malfunction, withering_torment, blasphemous_act, coronation_of_chaos,
+    disrupt_decorum, fast_forward, feed_the_swarm, nights_whisper, spectacular_showdown,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const HALFDANE_COMMANDERS: &[CardFactory] = &[halfdane];
+
+/// **Halfdane**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 7 Islands + 5 Plains + 6 Swamps = 99.
+/// Halfdane (EDHREC, fetched 2026-10-14).
+pub const HALFDANE_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, dimir_signet, fellwar_stone, helm_of_the_host, orzhov_signet,
+    sol_ring, swiftfoot_boots, talisman_of_dominance, talisman_of_hierarchy,
+    talisman_of_progress, thought_vessel, arcane_sanctum, bojuka_bog, command_tower,
+    drowned_catacomb, exotic_orchard, glacial_fortress, godless_shrine, hallowed_fountain,
+    isolated_chapel, morphic_pool, prairie_stream, raffines_tower, reliquary_tower,
+    rogues_passage, sea_of_clouds, sunken_hollow, vault_of_champions, watery_grave,
+    baleful_strix, body_double, cemetery_puca, clackbridge_troll, clever_impersonator,
+    clone_card, consuming_aberration, cryptoplasm, dimir_doppelganger, esper_sentinel,
+    evil_twin, gigantoplasm, glasspool_mimic, lazav_dimir_mastermind, mocking_doppelganger,
+    phyrexian_metamorph, sakashima_of_a_thousand_faces, sakashima_the_impostor,
+    solemn_simulacrum, spark_double, stunt_double, the_ancient_one, undercover_operative,
+    woolly_razorback, ghostly_prison, mirrormade, mystic_remora, phyrexian_arena, propaganda,
+    reflections_of_littjara, rhystic_study, smothering_tithe, steel_of_the_godhead,
+    an_offer_you_cant_refuse, anguished_unmaking, arcane_denial, brainstorm, counterspell,
+    dovins_veto, generous_gift, mirrorweave, path_to_exile, swords_to_plowshares, void_rend,
+    damn, demonic_tutor, fractured_identity, ponder, reanimate, rite_of_replication,
+    supreme_verdict,
+    // Basics
+    island, island, island, island, island, island, island, plains, plains, plains, plains,
+    plains, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SPIDER_MAN_COMMANDERS: &[CardFactory] = &[spider_man_new_champion];
+
+/// **Spider-Man, New Champion**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Spider-Man, New Champion (EDHREC, fetched 2026-10-14).
+pub const SPIDER_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_of_holding, brasss_tunnel_grinder, currency_converter,
+    daily_bugle_newspaper, hazorets_monument, monument_to_endurance, ruby_medallion, sol_ring,
+    the_fire_crystal, thought_vessel, ash_barrens, fogwells_gym, forgotten_cave,
+    geier_reach_sanitarium, reliquary_tower, war_room, anger, brallin_skyshark_rider,
+    clive_ifrits_dominant, conspiracy_theorist, containment_construct,
+    electro_assaulting_battery, glint_horn_buccaneer, hobgoblin_mantled_marauder,
+    inti_seneschal_of_the_sun, lady_spider_maybelle_reilly, living_laser, magmakin_artillerist,
+    magus_of_the_wheel, marauding_mako, misty_knight_hero_for_hire, naktamun_lorespinner,
+    neheb_dreadhorde_champion, runaway_steam_kin, solphim_mayhem_dominus, spider_punk,
+    surly_badgersaur, torbran_thane_of_red_fell, artists_talent, cool_but_rude,
+    shadow_of_the_goblin, tectonic_reformation, underworld_breach, abrade, big_score,
+    chaos_warp, decaying_time_loop, demand_answers, faithless_salvaging, sos_flashback_instant,
+    laughing_mad, raphaels_technique, thrill_of_possibility, unexpected_windfall,
+    untimely_malfunction, blasphemous_act, burning_inquiry, cathartic_reunion,
+    change_of_fortune, faithless_looting, path_of_the_pyromancer, reforge_the_soul,
+    romantic_rendezvous, seize_the_spoils, snort, steal_the_show, tormenting_voice,
+    will_of_the_jeskai,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];

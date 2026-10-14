@@ -13254,6 +13254,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RONA_3_COMMANDERS,
             main: decks::RONA_3_MAIN,
         },
+        // Seat 2134: Seifer, Balamb Rival's EDHREC average deck. `--pod-decks 2134`.
+        PodDeck {
+            name: "Seifer, Balamb Rival (BR)",
+            commanders: decks::SEIFER_COMMANDERS,
+            main: decks::SEIFER_MAIN,
+        },
+        // Seat 2135: Halfdane's EDHREC average deck. `--pod-decks 2135`.
+        PodDeck {
+            name: "Halfdane (WUB)",
+            commanders: decks::HALFDANE_COMMANDERS,
+            main: decks::HALFDANE_MAIN,
+        },
+        // Seat 2136: Spider-Man, New Champion's EDHREC average deck. `--pod-decks 2136`.
+        PodDeck {
+            name: "Spider-Man, New Champion (R)",
+            commanders: decks::SPIDER_MAN_COMMANDERS,
+            main: decks::SPIDER_MAN_MAIN,
+        },
     ]
 }
 
@@ -17219,6 +17237,9 @@ mod tests {
             ("Raphael, Ninja Destroyer", &[0x1269]),
             ("Melira, Sylvok Outcast", &[0x126A]),
             ("Rona, Disciple of Gix", &[0x126B]),
+            ("Seifer, Balamb Rival", &[0x126C]),
+            ("Halfdane", &[0x126D]),
+            ("Spider-Man, New Champion", &[0x126E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
