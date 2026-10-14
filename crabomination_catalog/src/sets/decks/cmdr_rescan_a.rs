@@ -589,3 +589,63 @@ pub fn stunning_reversal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Faithbound Judge // Sinner's Judgment — {1}{W}{W} 4/4 Spirit Soldier;
+/// defender, flying, vigilance. Upkeep: a judgment counter while it has two
+/// or fewer; with three or more it attacks as though it lacked defender.
+/// Disturb {5}{W}{W}: the back is an Aura Curse enchanting a player that
+/// gains a judgment counter each of your upkeeps and, at three, makes that
+/// player lose the game. (Katilda.)
+pub fn faithbound_judge() -> CardDefinition {
+    let judgments_on_this = Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Judgment };
+    let add_judgment = Effect::AddCounter { what: Selector::This, kind: CounterType::Judgment, amount: Value::ONE };
+    let sinners_judgment = CardDefinition {
+        name: "Sinner's Judgment",
+        card_types: vec![CardType::Enchantment],
+        color_indicator: vec![Color::White],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura, crate::card::EnchantmentSubtype::Curse],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Player) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: your_step(TurnStep::Upkeep),
+            effect: Effect::Seq(vec![
+                add_judgment.clone(),
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(judgments_on_this.clone(), Value::Const(3)),
+                    then: Box::new(Effect::LoseGame { who: PlayerRef::EnchantedPlayer }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![
+            Keyword::Defender,
+            Keyword::Flying,
+            Keyword::Vigilance,
+            Keyword::Disturb(cost(&[generic(5), w(), w()])),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: your_step(TurnStep::Upkeep)
+                .with_filter(Predicate::ValueAtMost(judgments_on_this.clone(), Value::Const(2))),
+            effect: add_judgment,
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature has three or more judgment counters on it, it can attack as though it didn't have defender.",
+            effect: StaticEffect::CanAttackIgnoringDefenderWhile {
+                condition: Predicate::ValueAtLeast(judgments_on_this, Value::Const(3)),
+            },
+        }],
+        back_face: Some(Box::new(sinners_judgment)),
+        ..creature(
+            "Faithbound Judge",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Spirit, CreatureType::Soldier],
+            4,
+            4,
+        )
+    }
+}

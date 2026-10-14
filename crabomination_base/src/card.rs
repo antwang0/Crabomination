@@ -554,6 +554,8 @@ pub enum PlaneswalkerSubtype {
     Dyfed,
     // Sifa Grent (its own EDHREC deck).
     Sifa,
+    // Thomil, the Destroyer (its own EDHREC deck).
+    Thomil,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -1071,6 +1073,10 @@ pub enum CounterType {
     Aegis,
     /// Xira, the Golden Sting's egg counters (its death watch reads them).
     Egg,
+    /// Faithbound Judge // Sinner's Judgment's judgment counters.
+    Judgment,
+    /// Weatherlight Compleated's phyresis counters.
+    Phyresis,
 }
 
 /// Every zone a card can occupy.

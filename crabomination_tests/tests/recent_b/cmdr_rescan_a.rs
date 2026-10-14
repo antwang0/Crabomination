@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -444,4 +445,212 @@ fn marut_refunds_treasure_mana() {
     assert!(g.battlefield_find(marut).is_some());
     let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
     assert_eq!(treasures, 3, "three spent, three made");
+}
+
+/// CR 702.146 — Faithbound Judge disturbed from the graveyard is Sinner's
+/// Judgment on an opponent; the third judgment counter, on its controller's
+/// third upkeep, makes that player lose (CR 800.4a: the pod plays on).
+#[test]
+fn sinners_judgment_counts_down_to_a_loss() {
+    let mut g = pod(3);
+    for seat in 0..3 {
+        for _ in 0..8 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let judge = g.add_card_to_graveyard(0, catalog::faithbound_judge());
+    flood(&mut g);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: judge,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+    })
+    .expect("disturb");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(judge).unwrap().attached_to_player, Some(1));
+    for _ in 0..2 {
+        step_to(&mut g, 0, TurnStep::Draw);
+        step_to(&mut g, 1, TurnStep::Upkeep);
+    }
+    assert!(!g.players[1].eliminated, "two counters");
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert!(g.players[1].eliminated, "the third counter");
+}
+
+// ── decks::cmdr_rescan_b ─────────────────────────────────────────────────────
+
+fn named_count(g: &GameState, seat: usize, name: &str) -> usize {
+    g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == name).count()
+}
+
+fn loyalty(g: &mut GameState, pw: CardId, index: usize, target: Option<Target>) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: pw, ability_index: index, target, x_value: None })
+        .expect("loyalty ability");
+    drain_stack(g);
+}
+
+/// Meatsqueak's Food is once a turn however many creatures die.
+#[test]
+fn meatsqueak_makes_one_food_a_turn() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::meatsqueak_hoard_lord());
+    for _ in 0..2 {
+        let bear = ready(&mut g, 1, catalog::grizzly_bears());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast_with(&mut g, bolt, Some(Target::Permanent(bear)), vec![], None);
+    }
+    assert_eq!(named_count(&g, 0, "Food"), 1);
+}
+
+/// Asari Captain pumps a lone Samurai/Warrior attacker per Samurai/Warrior.
+#[test]
+fn asari_captain_pumps_a_lone_attacker() {
+    let mut g = pod(2);
+    let captain = ready(&mut g, 0, catalog::asari_captain());
+    ready(&mut g, 0, catalog::dragonscale_general());
+    declare(&mut g, vec![(captain, 1)]);
+    assert_eq!(pt(&g, captain).0, 6, "two Samurai/Warriors: +2/+0");
+}
+
+/// Thawing Glaciers fetches a tapped basic and goes back to hand at cleanup.
+#[test]
+fn thawing_glaciers_returns_to_hand_at_cleanup() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::forest());
+    let glaciers = ready(&mut g, 0, catalog::thawing_glaciers());
+    activate(&mut g, glaciers, 0, None);
+    assert_eq!(named_count(&g, 0, "Forest"), 1);
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert!(g.players[0].hand.iter().any(|c| c.id == glaciers));
+}
+
+/// CR 724 — Chief Magistrate crowns you; at your upkeep the monarch copies
+/// each creature token, the fresh Goblin included.
+#[test]
+fn chief_magistrate_copies_tokens_while_monarch() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let chief = g.add_card_to_hand(0, catalog::chief_magistrate_of_mercadia());
+    cast_with(&mut g, chief, None, vec![], None);
+    assert_eq!(g.monarch, Some(0));
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert_eq!(named_count(&g, 0, "Goblin"), 2, "the Goblin and its copy");
+}
+
+/// Lightmine Field hits each attacker for the number of attackers.
+#[test]
+fn lightmine_field_punishes_attackers() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::lightmine_field());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(a, 1), (b, 1)]);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "2 damage each");
+}
+
+/// Unforgiving One returns a creature card up to its modified-creature count.
+#[test]
+fn unforgiving_one_reanimates_by_modified_count() {
+    let mut g = pod(2);
+    let one = ready(&mut g, 0, catalog::unforgiving_one());
+    g.battlefield_find_mut(one).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    g.battlefield_find_mut(elf).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    declare(&mut g, vec![(one, 1)]);
+    assert!(g.battlefield_find(bear).is_some(), "two modified creatures: MV 2 returns");
+}
+
+/// Weatherlight Compleated becomes a creature at four phyresis counters.
+#[test]
+fn weatherlight_compleated_crews_itself_with_phyresis() {
+    use crabomination::card::CardType;
+    let mut g = pod(2);
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let ship = ready(&mut g, 0, catalog::weatherlight_compleated());
+    assert!(!is_type(&g, ship, CardType::Creature));
+    for _ in 0..4 {
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast_with(&mut g, bolt, Some(Target::Permanent(bear)), vec![], None);
+    }
+    assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Phyresis), 4);
+    assert!(is_type(&g, ship, CardType::Creature));
+}
+
+/// Thomil's 0 trades a creature for {B}{B}{B}.
+#[test]
+fn thomil_sacrifices_for_black_mana() {
+    let mut g = pod(2);
+    let thomil = ready(&mut g, 0, catalog::thomil_the_destroyer());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![bear])]));
+    loyalty(&mut g, thomil, 1, None);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.players[0].mana_pool.total() >= 3);
+}
+
+/// CR 701.15 — Balefang hands an opponent a tapped, goaded Baneslayer and
+/// shuts off all life gain.
+#[test]
+fn balefang_gives_a_goaded_baneslayer() {
+    let mut g = pod(3);
+    let fang = g.add_card_to_hand(0, catalog::balefang_the_unslayable());
+    cast_with(&mut g, fang, None, vec![], None);
+    let angel = g.battlefield.iter().find(|c| c.definition.name == "Baneslayer Angel").expect("token");
+    assert_ne!(angel.controller, 0);
+    assert!(angel.tapped);
+    assert!(!angel.goad_holds.is_empty(), "goaded for the game");
+}
+
+/// Kitsune's entry swaps two other creatures controlled by different players.
+#[test]
+fn kitsune_exchanges_two_creatures() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::llanowar_elves());
+    let theirs = ready(&mut g, 1, catalog::serra_angel());
+    let kitsune = g.add_card_to_hand(0, catalog::kitsune_dragons_daughter());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast_with(&mut g, kitsune, None, vec![], None);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
+}
+
+/// Flying Drone loots for free once another flyer entered this turn.
+#[test]
+fn flying_drone_loots_free_after_a_flyer() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    let drone = ready(&mut g, 0, catalog::flying_drone());
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: drone, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).is_err(), "no flyer entered yet");
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    cast_with(&mut g, angel, None, vec![], None);
+    g.players[0].mana_pool.empty();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drone, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("free loot");
+}
+
+/// Taeko grows when another creature you control leaves without dying.
+#[test]
+fn taeko_grows_on_a_bounce() {
+    let mut g = pod(2);
+    let taeko = ready(&mut g, 0, catalog::taeko_the_patient_avalanche());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let evs = g.remove_from_battlefield_to_hand(bear);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, taeko), 1);
 }
