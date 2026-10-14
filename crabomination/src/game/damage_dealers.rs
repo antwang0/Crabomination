@@ -1,8 +1,8 @@
 //! Two per-permanent rule reads. "As long as [this] hasn't dealt damage yet"
 //! (Ratonhnhaké꞉ton): a permanent that asks
-//! (`CardDefinition::tracks_own_damage`) is stamped `has_dealt_damage` as soon
+//! (`CardDefinition::stamps_own_damage`) is stamped `has_dealt_damage` as soon
 //! as a `DamageDealt` event names it, combat or not (combat only for one that
-//! asks `tracks_own_combat_damage` — Ruric Thar, Magecrusher) — read at trigger
+//! asks `SourceHasDealtCombatDamage` — Ruric Thar, Magecrusher) — read at trigger
 //! dispatch, which every damage path reaches. And CR 701.27's "can't
 //! transform" statics (Immerwolf).
 
@@ -19,10 +19,7 @@ impl GameState {
             // Immutable probe first: the mutable find unshares the battlefield.
             if self
                 .battlefield_find(*src)
-                .is_some_and(|c| {
-                    !c.has_dealt_damage
-                        && (c.definition.tracks_own_damage() || *combat && c.definition.tracks_own_combat_damage())
-                })
+                .is_some_and(|c| !c.has_dealt_damage && c.definition.stamps_own_damage(*combat))
                 && let Some(c) = self.battlefield_find_mut(*src)
             {
                 c.has_dealt_damage = true;

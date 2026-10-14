@@ -8000,18 +8000,13 @@ impl CardDefinition {
         self.debug_flags() & debug_flag::DAMAGE_VICTIMS != 0
     }
 
-    /// Whether this card asks if it has dealt damage yet
-    /// (`Predicate::SourceHasDealtDamage`). Gates the write of
-    /// `CardInstance::has_dealt_damage`.
-    pub fn tracks_own_damage(&self) -> bool {
-        self.debug_flags() & debug_flag::OWN_DAMAGE != 0
-    }
-
-    /// Whether this card asks if it has dealt **combat** damage yet
-    /// (`Predicate::SourceHasDealtCombatDamage`): only combat damage then
-    /// stamps `CardInstance::has_dealt_damage`.
-    pub fn tracks_own_combat_damage(&self) -> bool {
-        self.debug_flags() & debug_flag::OWN_COMBAT_DAMAGE != 0
+    /// Whether a `DamageDealt` (combat or not) from this card stamps
+    /// `CardInstance::has_dealt_damage`: any damage for
+    /// `Predicate::SourceHasDealtDamage`, combat only for
+    /// `SourceHasDealtCombatDamage` (Ruric Thar, Magecrusher). One flag read.
+    pub fn stamps_own_damage(&self, combat: bool) -> bool {
+        let f = self.debug_flags();
+        f & debug_flag::OWN_DAMAGE != 0 || combat && f & debug_flag::OWN_COMBAT_DAMAGE != 0
     }
 
     /// Whether combat damage this card deals is remembered **by its name**
@@ -10374,7 +10369,7 @@ pub struct CardData {
     pub dealt_damage_this_turn: bool,
     /// This permanent has dealt damage since it entered (Ratonhnhaké꞉ton's
     /// "hasn't dealt damage yet"). Written only for a card that asks
-    /// (`CardDefinition::tracks_own_damage`). In-memory only.
+    /// (`CardDefinition::stamps_own_damage`). In-memory only.
     pub has_dealt_damage: bool,
     /// CR 120.x — total damage dealt to this permanent this turn (any source,
     /// combat or not). Unlike `damage`, this survives regeneration and damage
