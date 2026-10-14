@@ -4490,6 +4490,9 @@ static DECKS: &[Factory] = &[
     super::decks::titanbones_towering_heart,
     super::decks::trelane_squire_of_gothos,
     super::decks::trusty_packbeast,
+    // cmdr_rank6k_g (session 01PxmVAG)
+    super::decks::island_sanctuary,
+    super::decks::youve_been_caught_stealing,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
