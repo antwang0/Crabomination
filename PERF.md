@@ -3204,6 +3204,10 @@ pods (field)     release pod_sweep seed 24101 over EVERY seat 1-2456 x 4,6 seats
                  104.4a simultaneous losses (Abdel Adrian under Arcbond +
                  Blasphemous Act with the Toralf seat's damage multipliers;
                  Descent into Avernus; Earthquake)
+Vhal round      (`cdbd98019` restricted-float payment, `36abc10b5` power-up
+                 gate, seats 2504-2505): --bench 196,176 / 27.64 / 613.0 /
+                 0 stalls, byte-identical; golden traces unmoved; suite
+                 26,589/26,589; pod seeded table re-blessed (4242 only)
 ```
 
 ### 2026-10-14 (Commander run, `01MsQdht`) — guardrail; 144 EDHREC seats, 141 cards, six primitives
