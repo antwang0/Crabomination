@@ -13128,6 +13128,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VISION_COMMANDERS,
             main: decks::VISION_MAIN,
         },
+        // Seat 2113: Melira, the Living Cure's EDHREC average deck. `--pod-decks 2113`.
+        PodDeck {
+            name: "Melira, the Living Cure (WG)",
+            commanders: decks::MELIRA_COMMANDERS,
+            main: decks::MELIRA_MAIN,
+        },
+        // Seat 2114: Barrin, Master Wizard's EDHREC average deck. `--pod-decks 2114`.
+        PodDeck {
+            name: "Barrin, Master Wizard (U)",
+            commanders: decks::BARRIN_2_COMMANDERS,
+            main: decks::BARRIN_2_MAIN,
+        },
+        // Seat 2115: Lobelia, Defender of Bag End's EDHREC average deck. `--pod-decks 2115`.
+        PodDeck {
+            name: "Lobelia, Defender of Bag End (B)",
+            commanders: decks::LOBELIA_COMMANDERS,
+            main: decks::LOBELIA_MAIN,
+        },
+        // Seat 2116: Mishra, Excavation Prodigy's EDHREC average deck. `--pod-decks 2116`.
+        PodDeck {
+            name: "Mishra, Excavation Prodigy (R)",
+            commanders: decks::MISHRA_4_COMMANDERS,
+            main: decks::MISHRA_4_MAIN,
+        },
+        // Seat 2117: Rhuk, Hexgold Nabber's EDHREC average deck. `--pod-decks 2117`.
+        PodDeck {
+            name: "Rhuk, Hexgold Nabber (R)",
+            commanders: decks::RHUK_COMMANDERS,
+            main: decks::RHUK_MAIN,
+        },
+        // Seat 2118: Koth of the Homestead's EDHREC average deck. `--pod-decks 2118`.
+        PodDeck {
+            name: "Koth of the Homestead (W)",
+            commanders: decks::KOTH_OF_THE_HOMESTEAD_COMMANDERS,
+            main: decks::KOTH_OF_THE_HOMESTEAD_MAIN,
+        },
+        // Seat 2119: Elena, Turk Recruit's EDHREC average deck. `--pod-decks 2119`.
+        PodDeck {
+            name: "Elena, Turk Recruit (W)",
+            commanders: decks::ELENA_COMMANDERS,
+            main: decks::ELENA_MAIN,
+        },
+        // Seat 2120: Barret Wallace's EDHREC average deck. `--pod-decks 2120`.
+        PodDeck {
+            name: "Barret Wallace (R)",
+            commanders: decks::BARRET_WALLACE_COMMANDERS,
+            main: decks::BARRET_WALLACE_MAIN,
+        },
     ]
 }
 
@@ -17072,6 +17120,14 @@ mod tests {
             ("Wiccan, Rising Magician", &[0x1254]),
             ("Devil Dinosaur", &[0x1255]),
             ("Vision, Synthezoid Avenger", &[0x1256]),
+            ("Melira, the Living Cure", &[0x1257]),
+            ("Barrin, Master Wizard", &[0x1258]),
+            ("Lobelia, Defender of Bag End", &[0x1259]),
+            ("Mishra, Excavation Prodigy", &[0x125A]),
+            ("Rhuk, Hexgold Nabber", &[0x125B]),
+            ("Koth of the Homestead", &[0x125C]),
+            ("Elena, Turk Recruit", &[0x125D]),
+            ("Barret Wallace", &[0x125E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
