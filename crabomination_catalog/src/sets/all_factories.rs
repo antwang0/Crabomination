@@ -1383,6 +1383,9 @@ static DECKS: &[Factory] = &[
     super::decks::the_mirari_conjecture,
     super::decks::spider_gwen_free_spirit,
     super::decks::spider_verse,
+    // cmdr_rank4k_k (session 01MsQdht)
+    super::decks::gollum_scheming_guide,
+    super::decks::poison_blade_mentor,
     // cmdr_rank5k_a (session 01KXJ5zX)
     super::decks::inundate,
     super::decks::luminous_bonds,
