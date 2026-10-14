@@ -12546,6 +12546,192 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DENRY_KLIN_COMMANDERS,
             main: decks::DENRY_KLIN_MAIN,
         },
+        // Seat 2016: Ebondeath, Dracolich's EDHREC average deck. `--pod-decks 2016`.
+        PodDeck {
+            name: "Ebondeath, Dracolich (B)",
+            commanders: decks::EBONDEATH_COMMANDERS,
+            main: decks::EBONDEATH_MAIN,
+        },
+        // Seat 2017: Molten Man, Inferno Incarnate's EDHREC average deck. `--pod-decks 2017`.
+        PodDeck {
+            name: "Molten Man, Inferno Incarnate (R)",
+            commanders: decks::MOLTEN_MAN_COMMANDERS,
+            main: decks::MOLTEN_MAN_MAIN,
+        },
+        // Seat 2018: Living Laser's EDHREC average deck. `--pod-decks 2018`.
+        PodDeck {
+            name: "Living Laser (R)",
+            commanders: decks::LIVING_LASER_COMMANDERS,
+            main: decks::LIVING_LASER_MAIN,
+        },
+        // Seat 2019: Stitcher Geralf's EDHREC average deck. `--pod-decks 2019`.
+        PodDeck {
+            name: "Stitcher Geralf (U)",
+            commanders: decks::STITCHER_GERALF_COMMANDERS,
+            main: decks::STITCHER_GERALF_MAIN,
+        },
+        // Seat 2020: Boromir, Gondor's Hope's EDHREC average deck. `--pod-decks 2020`.
+        PodDeck {
+            name: "Boromir, Gondor's Hope (WU)",
+            commanders: decks::BOROMIR_COMMANDERS,
+            main: decks::BOROMIR_MAIN,
+        },
+        // Seat 2021: The Mouth of Sauron's EDHREC average deck. `--pod-decks 2021`.
+        PodDeck {
+            name: "The Mouth of Sauron (UB)",
+            commanders: decks::THE_MOUTH_OF_SAURON_COMMANDERS,
+            main: decks::THE_MOUTH_OF_SAURON_MAIN,
+        },
+        // Seat 2022: Baru, Fist of Krosa's EDHREC average deck. `--pod-decks 2022`.
+        PodDeck {
+            name: "Baru, Fist of Krosa (G)",
+            commanders: decks::BARU_COMMANDERS,
+            main: decks::BARU_MAIN,
+        },
+        // Seat 2023: Nazar, the Velvet Fang's EDHREC average deck. `--pod-decks 2023`.
+        PodDeck {
+            name: "Nazar, the Velvet Fang (B)",
+            commanders: decks::NAZAR_COMMANDERS,
+            main: decks::NAZAR_MAIN,
+        },
+        // Seat 2024: Tsabo Tavoc's EDHREC average deck. `--pod-decks 2024`.
+        PodDeck {
+            name: "Tsabo Tavoc (BR)",
+            commanders: decks::TSABO_TAVOC_COMMANDERS,
+            main: decks::TSABO_TAVOC_MAIN,
+        },
+        // Seat 2025: Boromir, Warden of the Tower's EDHREC average deck. `--pod-decks 2025`.
+        PodDeck {
+            name: "Boromir, Warden of the Tower (W)",
+            commanders: decks::BOROMIR_2_COMMANDERS,
+            main: decks::BOROMIR_2_MAIN,
+        },
+        // Seat 2026: Kolvori, God of Kinship's EDHREC average deck. `--pod-decks 2026`.
+        PodDeck {
+            name: "Kolvori, God of Kinship (G)",
+            commanders: decks::KOLVORI_COMMANDERS,
+            main: decks::KOLVORI_MAIN,
+        },
+        // Seat 2027: Armix, Filigree Thrasher and Keskit, the Flesh Sculptor's EDHREC average deck. `--pod-decks 2027`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Keskit, the Flesh Sculptor (B)",
+            commanders: decks::ARMIX_COMMANDERS,
+            main: decks::ARMIX_MAIN,
+        },
+        // Seat 2028: Spirit of the Night's EDHREC average deck. `--pod-decks 2028`.
+        PodDeck {
+            name: "Spirit of the Night (B)",
+            commanders: decks::SPIRIT_OF_THE_NIGHT_COMMANDERS,
+            main: decks::SPIRIT_OF_THE_NIGHT_MAIN,
+        },
+        // Seat 2029: Volo, Itinerant Scholar and Popular Entertainer's EDHREC average deck. `--pod-decks 2029`.
+        PodDeck {
+            name: "Volo, Itinerant Scholar and Popular Entertainer (UR)",
+            commanders: decks::VOLO_2_COMMANDERS,
+            main: decks::VOLO_2_MAIN,
+        },
+        // Seat 2030: Ertai, Wizard Adept's EDHREC average deck. `--pod-decks 2030`.
+        PodDeck {
+            name: "Ertai, Wizard Adept (U)",
+            commanders: decks::ERTAI_2_COMMANDERS,
+            main: decks::ERTAI_2_MAIN,
+        },
+        // Seat 2031: Kiku, Night's Flower's EDHREC average deck. `--pod-decks 2031`.
+        PodDeck {
+            name: "Kiku, Night's Flower (B)",
+            commanders: decks::KIKU_COMMANDERS,
+            main: decks::KIKU_MAIN,
+        },
+        // Seat 2032: Hajar, Loyal Bodyguard's EDHREC average deck. `--pod-decks 2032`.
+        PodDeck {
+            name: "Hajar, Loyal Bodyguard (RG)",
+            commanders: decks::HAJAR_COMMANDERS,
+            main: decks::HAJAR_MAIN,
+        },
+        // Seat 2033: Jirina, Dauntless General's EDHREC average deck. `--pod-decks 2033`.
+        PodDeck {
+            name: "Jirina, Dauntless General (WB)",
+            commanders: decks::JIRINA_2_COMMANDERS,
+            main: decks::JIRINA_2_MAIN,
+        },
+        // Seat 2034: Gerrard Capashen's EDHREC average deck. `--pod-decks 2034`.
+        PodDeck {
+            name: "Gerrard Capashen (W)",
+            commanders: decks::GERRARD_CAPASHEN_COMMANDERS,
+            main: decks::GERRARD_CAPASHEN_MAIN,
+        },
+        // Seat 2035: Overseer of Vault 76's EDHREC average deck. `--pod-decks 2035`.
+        PodDeck {
+            name: "Overseer of Vault 76 (W)",
+            commanders: decks::OVERSEER_OF_VAULT_76_COMMANDERS,
+            main: decks::OVERSEER_OF_VAULT_76_MAIN,
+        },
+        // Seat 2036: Ka-Zar of the Savage Land's EDHREC average deck. `--pod-decks 2036`.
+        PodDeck {
+            name: "Ka-Zar of the Savage Land (G)",
+            commanders: decks::KA_ZAR_OF_THE_SAVAGE_LAND_COMMANDERS,
+            main: decks::KA_ZAR_OF_THE_SAVAGE_LAND_MAIN,
+        },
+        // Seat 2037: Ob Nixilis, the Ascended's EDHREC average deck. `--pod-decks 2037`.
+        PodDeck {
+            name: "Ob Nixilis, the Ascended (W)",
+            commanders: decks::OB_NIXILIS_4_COMMANDERS,
+            main: decks::OB_NIXILIS_4_MAIN,
+        },
+        // Seat 2038: Elder Owyn Lyons's EDHREC average deck. `--pod-decks 2038`.
+        PodDeck {
+            name: "Elder Owyn Lyons (WU)",
+            commanders: decks::ELDER_OWYN_LYONS_COMMANDERS,
+            main: decks::ELDER_OWYN_LYONS_MAIN,
+        },
+        // Seat 2039: Iron Man, Armored Avenger's EDHREC average deck. `--pod-decks 2039`.
+        PodDeck {
+            name: "Iron Man, Armored Avenger (U)",
+            commanders: decks::IRON_MAN_2_COMMANDERS,
+            main: decks::IRON_MAN_2_MAIN,
+        },
+        // Seat 2040: Leatherhead, Iron Gator's EDHREC average deck. `--pod-decks 2040`.
+        PodDeck {
+            name: "Leatherhead, Iron Gator (G)",
+            commanders: decks::LEATHERHEAD_COMMANDERS,
+            main: decks::LEATHERHEAD_MAIN,
+        },
+        // Seat 2041: Zahid, Djinn of the Lamp's EDHREC average deck. `--pod-decks 2041`.
+        PodDeck {
+            name: "Zahid, Djinn of the Lamp (U)",
+            commanders: decks::ZAHID_COMMANDERS,
+            main: decks::ZAHID_MAIN,
+        },
+        // Seat 2042: Amber Gristle O'Maul and Agent of the Shadow Thieves's EDHREC average deck. `--pod-decks 2042`.
+        PodDeck {
+            name: "Amber Gristle O'Maul and Agent of the Shadow Thieves (BR)",
+            commanders: decks::AMBER_GRISTLE_OMAUL_COMMANDERS,
+            main: decks::AMBER_GRISTLE_OMAUL_MAIN,
+        },
+        // Seat 2043: The Fifth Doctor and Donna Noble's EDHREC average deck. `--pod-decks 2043`.
+        PodDeck {
+            name: "The Fifth Doctor and Donna Noble (WUR)",
+            commanders: decks::THE_FIFTH_DOCTOR_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_MAIN,
+        },
+        // Seat 2044: Typhoid Mary, Fractured's EDHREC average deck. `--pod-decks 2044`.
+        PodDeck {
+            name: "Typhoid Mary, Fractured (BR)",
+            commanders: decks::TYPHOID_MARY_COMMANDERS,
+            main: decks::TYPHOID_MARY_MAIN,
+        },
+        // Seat 2045: The Sackville-Bagginses's EDHREC average deck. `--pod-decks 2045`.
+        PodDeck {
+            name: "The Sackville-Bagginses (B)",
+            commanders: decks::THE_SACKVILLE_BAGGINSES_COMMANDERS,
+            main: decks::THE_SACKVILLE_BAGGINSES_MAIN,
+        },
+        // Seat 2046: Traxos, Academy Guardian's EDHREC average deck. `--pod-decks 2046`.
+        PodDeck {
+            name: "Traxos, Academy Guardian (U)",
+            commanders: decks::TRAXOS_2_COMMANDERS,
+            main: decks::TRAXOS_2_MAIN,
+        },
     ]
 }
 
@@ -16393,6 +16579,37 @@ mod tests {
             ("Hans Eriksson", &[0x11F3]),
             ("The Wandering Rescuer", &[0x11F4]),
             ("Denry Klin, Editor in Chief", &[0x11F5]),
+            ("Ebondeath, Dracolich", &[0x11F6]),
+            ("Molten Man, Inferno Incarnate", &[0x11F7]),
+            ("Living Laser", &[0x11F8]),
+            ("Stitcher Geralf", &[0x11F9]),
+            ("Boromir, Gondor's Hope", &[0x11FA]),
+            ("The Mouth of Sauron", &[0x11FB]),
+            ("Baru, Fist of Krosa", &[0x11FC]),
+            ("Nazar, the Velvet Fang", &[0x11FD]),
+            ("Tsabo Tavoc", &[0x11FE]),
+            ("Boromir, Warden of the Tower", &[0x11FF]),
+            ("Kolvori, God of Kinship", &[0x1200]),
+            ("Armix, Filigree Thrasher and Keskit, the Flesh Sculptor", &[0x1201]),
+            ("Spirit of the Night", &[0x1202]),
+            ("Volo, Itinerant Scholar and Popular Entertainer", &[0x1203]),
+            ("Ertai, Wizard Adept", &[0x1204]),
+            ("Kiku, Night's Flower", &[0x1205]),
+            ("Hajar, Loyal Bodyguard", &[0x1206]),
+            ("Jirina, Dauntless General", &[0x1207]),
+            ("Gerrard Capashen", &[0x1208]),
+            ("Overseer of Vault 76", &[0x1209]),
+            ("Ka-Zar of the Savage Land", &[0x120A]),
+            ("Ob Nixilis, the Ascended", &[0x120B]),
+            ("Elder Owyn Lyons", &[0x120C]),
+            ("Iron Man, Armored Avenger", &[0x120D]),
+            ("Leatherhead, Iron Gator", &[0x120E]),
+            ("Zahid, Djinn of the Lamp", &[0x120F]),
+            ("Amber Gristle O'Maul and Agent of the Shadow Thieves", &[0x1210]),
+            ("The Fifth Doctor and Donna Noble", &[0x1211]),
+            ("Typhoid Mary, Fractured", &[0x1212]),
+            ("The Sackville-Bagginses", &[0x1213]),
+            ("Traxos, Academy Guardian", &[0x1214]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
