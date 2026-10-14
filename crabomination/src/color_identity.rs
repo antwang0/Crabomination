@@ -162,6 +162,9 @@ fn walk(v: &Value, out: &mut ColorSet) {
                     // Ozai). The firebending keyword's own `Firebend` is built
                     // in combat, never serialized: its {R} is reminder text.
                     "Firebend" => out.insert(Color::Red),
+                    // ExtraManaKind::Fixed — "adds an additional {R}" (Gauntlet
+                    // of Might, Wild Growth) is a printed symbol.
+                    "Fixed" => color_of(p, out),
                     // CR 903.4 — the color indicator, and a characteristic-
                     // defining color (the Kobolds' red, Transguild Courier).
                     "color_indicator" | "color_override" => each_color(p, out),
