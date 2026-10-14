@@ -3,7 +3,7 @@
 
 use crabomination::card::{CardId, Keyword};
 use crabomination::catalog;
-use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -85,4 +85,40 @@ fn youve_been_caught_stealing_modes() {
     cast_mode(&mut g, s, 1);
     let treasures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count();
     assert_eq!(treasures, 2);
+}
+
+fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) {
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 5);
+    }
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
+/// CR 122.1 / 610.3 — Livio exiles another creature with an aegis counter
+/// (its controller agreeing), then brings every aegis card back under its
+/// owner's control.
+#[test]
+fn livio_exiles_with_aegis_and_returns() {
+    let mut g = pod(2);
+    let livio = ready(&mut g, 0, catalog::livio_oathsworn_sentinel());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    activate(&mut g, livio, 0, Some(Target::Permanent(bears)));
+    let exiled = g.exile.iter().find(|c| c.definition.name == "Grizzly Bears").expect("exiled");
+    assert_eq!(exiled.counter_count(crabomination::card::CounterType::Aegis), 1);
+    activate(&mut g, livio, 1, None);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0));
+    assert!(g.exile.is_empty());
 }

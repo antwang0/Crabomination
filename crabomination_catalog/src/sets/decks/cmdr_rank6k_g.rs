@@ -2,10 +2,11 @@
 //! 2026-10-14 scan), seventh file. Tests in `tests/recent_b/cmdr_rank6k_g.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, Keyword, LandType, SelectionRequirement as R, StaticAbility,
-    StaticEffect, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword, LandType,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, Value,
 };
-use crate::effect::{Duration, Effect, PlayerRef, Selector};
+use crate::effect::shortcut::target_filtered;
+use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest, ZoneRef};
 use crate::mana::{cost, generic, r, w};
 use std::sync::Arc;
 
@@ -48,6 +49,57 @@ pub fn youve_been_caught_stealing() -> CardDefinition {
                 definition: Arc::new(crabomination_base::tokens::treasure_token()),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Livio, Oathsworn Sentinel — {1}{W} 2/2 legendary Human Knight, partner.
+/// {1}{W}: choose another target creature; its controller may exile it with
+/// an aegis counter on it. {2}{W}, {T}: return all exiled cards with aegis
+/// counters to the battlefield under their owners' control. (Residual: the
+/// return is one card at a time rather than simultaneous, CR 610.3.)
+pub fn livio_oathsworn_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Livio, Oathsworn Sentinel",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Partner],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                effect: Effect::MayDoBy {
+                    who: PlayerRef::ControllerOf(Box::new(target_filtered(R::Creature.and(R::OtherThanSource)))),
+                    description: "Exile your creature with an aegis counter on it (Livio)?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
+                        Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Aegis, amount: Value::ONE },
+                    ])),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), w()]),
+                tap_cost: true,
+                effect: Effect::ForEach {
+                    selector: Selector::EachMatching { zone: ZoneRef::Exile, filter: R::WithCounter(CounterType::Aegis) },
+                    body: Box::new(Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
+                            tapped: false,
+                        },
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
