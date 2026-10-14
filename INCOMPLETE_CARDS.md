@@ -2160,3 +2160,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Jiang Yanggu, Alone | an attack alone on a planeswalker or battle triggers too, not only one on a player | `R::IsAttackingAlone` |
 | 🟡 Impossible Man | the copy takes the copied permanent's name rather than keeping "Impossible Man" | `BecomeCopyOfFor { EndOfTurn }` |
 | 🟡 Stangg, Echo Warrior | copies of the Auras and Equipment attached to Stangg aren't made for Stangg Twin | `CreateTokenAttacking` |
+| 🟡 Yuriko, Blade of the Mighty | the combat lock is Hand to Hand's: a flash permanent can still be cast during combat; the double-strike trigger also fires for an attack alone on a planeswalker or battle | `NoInstantsOrAbilitiesDuringCombat`; `R::IsAttackingAlone` |
+| 🟡 Arachne, Psionic Weaver | the look at an opponent's hand that informs the type choice isn't modelled | `ChooseCardTypeFromForSource` |
+| 🟡 Captain James T. Kirk | with an empty hand, "choose one or more" is an up-to-three pick, so zero modes is offered | `ChooseUpToN { max: 3 }` |
