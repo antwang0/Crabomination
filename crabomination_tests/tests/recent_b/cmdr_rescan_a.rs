@@ -677,3 +677,39 @@ fn you_cannot_pass_needs_a_legendary_combatant() {
     cast_with(&mut g, spell, Some(Target::Permanent(wall)), vec![], None);
     assert!(g.battlefield_find(wall).is_none());
 }
+
+/// CR 614 — Selenia's death curses an opponent: their life loss doubles.
+#[test]
+fn selenias_curse_doubles_the_enchanted_players_loss() {
+    let mut g = pod(2);
+    let selenia = ready(&mut g, 0, catalog::selenia_the_cursed_heart());
+    g.players[0].life = 10;
+    let _ = g.adjust_life(0, 3);
+    assert_eq!(g.players[0].life, 16, "gain doubled");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.battlefield_find_mut(selenia).unwrap().damage = 4;
+    cast_with(&mut g, bolt, Some(Target::Permanent(selenia)), vec![], None);
+    let curse = g.battlefield.iter().find(|c| c.definition.name == "Selenia's Curse").expect("curse token");
+    assert_eq!(curse.attached_to_player, Some(1));
+    let life = g.players[1].life;
+    cast_with(&mut g, bolt2, Some(Target::Player(1)), vec![], None);
+    assert_eq!(g.players[1].life, life - 6);
+}
+
+/// CR 508.1d — under an opponent's Trove of Temptation, a declaration that
+/// attacks only another player is illegal while a creature could go at the
+/// Trove's controller; one attacker aimed there satisfies it.
+#[test]
+fn trove_of_temptation_demands_an_attack_on_its_controller() {
+    let mut g = pod(3);
+    ready(&mut g, 2, catalog::trove_of_temptation());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let at = |id, p| Attack { attacker: id, target: AttackTarget::Player(p) };
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![at(a, 1)])).is_err(), "Trove's controller unattacked");
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![])).is_err(), "an empty attack");
+    g.perform_action(GameAction::DeclareAttackers(vec![at(a, 1), at(b, 2)])).expect("one at the Trove");
+}

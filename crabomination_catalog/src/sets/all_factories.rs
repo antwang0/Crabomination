@@ -4576,6 +4576,8 @@ static DECKS: &[Factory] = &[
     super::decks::captain_marvel_earths_protector,
     super::decks::flying_drone,
     super::decks::you_cannot_pass,
+    super::decks::selenia_the_cursed_heart,
+    super::decks::trove_of_temptation,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

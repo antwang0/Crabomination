@@ -791,3 +791,65 @@ pub fn you_cannot_pass() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Selenia, the Cursed Heart — {4}{W}{B} legendary 2/5 Angel Warrior; flying,
+/// lifelink. If you would gain life, you gain twice that much. When she dies,
+/// create Selenia's Curse — a legendary black Aura Curse token attached to
+/// target opponent: "If enchanted player would lose life, they lose twice
+/// that much life instead."
+pub fn selenia_the_cursed_heart() -> CardDefinition {
+    use crate::effect::PlayerStaticTarget;
+    let curse = TokenDefinition {
+        name: "Selenia's Curse".into(),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        colors: vec![Color::Black],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Curse],
+            ..Default::default()
+        },
+        static_abilities: vec![StaticAbility {
+            description: "If enchanted player would lose life, they lose twice that much life instead.",
+            effect: StaticEffect::LifeLossMultiplier { target: PlayerStaticTarget::EnchantedPlayer, factor: 2 },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If you would gain life, you gain twice that much life instead.",
+            effect: StaticEffect::LifeGainMultiplier { target: PlayerStaticTarget::Controller, factor: 2 },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(curse) },
+            Effect::Attach { what: Selector::LastCreatedToken, to: target_filtered(R::OpponentPlayer) },
+        ]))],
+        ..legend(
+            "Selenia, the Cursed Heart",
+            cost(&[generic(4), w(), b()]),
+            vec![CreatureType::Angel, CreatureType::Warrior],
+            2,
+            5,
+        )
+    }
+}
+
+/// Trove of Temptation — {3}{R} enchantment. Each opponent must attack you or
+/// a planeswalker you control with at least one creature each combat if able.
+/// At the beginning of your end step, create a Treasure token. (Kazuul.)
+pub fn trove_of_temptation() -> CardDefinition {
+    CardDefinition {
+        name: "Trove of Temptation",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Each opponent must attack you or a planeswalker you control with at least one creature each combat if able.",
+            effect: StaticEffect::OpponentsMustAttackYouWithAtLeastOne,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: your_step(TurnStep::End),
+            effect: mint_token(crabomination_base::tokens::treasure_token(), 1),
+        }],
+        ..Default::default()
+    }
+}
