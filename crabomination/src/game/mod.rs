@@ -6151,6 +6151,7 @@ impl GameState {
         for p in &mut self.players {
             p.life = life;
             p.starting_life = life;
+            p.life_at_turn_start = life;
         }
         self.skip_first_draw = self.players.len() <= 2;
 
@@ -7323,6 +7324,7 @@ impl GameState {
         self.archenemy = Some(seat);
         self.players[seat].starting_life = 40;
         self.players[seat].life = 40;
+        self.players[seat].life_at_turn_start = 40;
         self.active_player_idx = seat;
         self.starting_player = seat;
         self.priority.player_with_priority = seat;
@@ -19793,6 +19795,7 @@ impl GameState {
                 let mut pl = crate::player::Player::new(i, old.name.clone());
                 pl.starting_life = old.starting_life;
                 pl.life = old.starting_life;
+                pl.life_at_turn_start = old.starting_life;
                 pl.commanders = old.commanders.clone();
                 pl.commander_identity = old.commander_identity;
                 pl.sideboard = old.sideboard.clone();

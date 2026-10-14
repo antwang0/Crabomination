@@ -5257,6 +5257,7 @@ impl GameState {
         // your opponent's turn too, a full extra turn of "this turn".
         for pl in &mut self.players {
             pl.life_gained_this_turn = 0;
+            pl.life_at_turn_start = pl.life;
             // "For the first time each turn" life-gain gates key on the same
             // turn boundary.
             pl.gained_life_earlier_this_turn = false;

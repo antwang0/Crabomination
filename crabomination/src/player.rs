@@ -543,6 +543,11 @@ pub struct PlayerData {
     /// = "default_starting_life")]` for snapshot back-compat.
     #[serde(default = "default_starting_life")]
     pub starting_life: i32,
+    /// This player's life total as the current turn began (CR 119 — Sengir,
+    /// the Dark Baron's "that player's life total as the turn began"). Set
+    /// by `begin_turn_resets` for every seat.
+    #[serde(default = "default_starting_life")]
+    pub life_at_turn_start: i32,
     /// CR 609.4b — "you may spend mana as though it were mana of any type"
     /// for the rest of this turn (North Star). Cleared at cleanup.
     #[serde(default)]
@@ -1728,6 +1733,7 @@ impl Player {
                 ..Default::default()
             }),
             life: 20,
+            life_at_turn_start: 20,
             starting_life: 20,
             mana_pool: ManaPool::new(),
             kept_mana_this_turn: ManaPool::new(),

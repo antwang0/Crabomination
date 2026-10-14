@@ -2404,6 +2404,9 @@ impl GameState {
                 .iter()
                 .map(|p| p.zuberas_died_this_turn as i32)
                 .sum(),
+            Value::LifeAtTurnStart(p) => {
+                self.resolve_player(p, ctx).map(|p| self.players[p].life_at_turn_start).unwrap_or(0)
+            }
             Value::LowestLifeTotal => self
                 .players
                 .iter()

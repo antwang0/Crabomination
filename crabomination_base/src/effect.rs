@@ -784,6 +784,10 @@ pub enum Value {
     /// in Kind: "each player's life total becomes the lowest life total
     /// among all players").
     LowestLifeTotal,
+    /// `who`'s life total as the current turn began (`Player.life_at_turn_start`)
+    /// — Sengir, the Dark Baron's "that player's life total as the turn
+    /// began".
+    LifeAtTurnStart(PlayerRef),
     /// The lowest life total among the controller's opponents still in the
     /// game; 0 with none. Breena's "more life than another of your opponents".
     LowestOpponentLife,
