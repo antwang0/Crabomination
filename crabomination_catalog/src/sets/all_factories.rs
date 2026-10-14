@@ -1353,6 +1353,13 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank4k_h (session 01MsQdht)
+    super::decks::arachne_psionic_weaver,
+    super::decks::blood_cultist,
+    super::decks::captain_marvel_shooting_star,
+    super::decks::celebrate_the_mountain_king,
+    super::decks::gideon_the_oathless,
+    super::decks::the_arkenstone,
     // cmdr_rank4k_g (session 01MsQdht)
     super::decks::aang_air_nomad,
     super::decks::aim_synthoids,
