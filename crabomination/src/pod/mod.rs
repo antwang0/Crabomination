@@ -15456,6 +15456,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ROSE_NOBLE_COMMANDERS,
             main: decks::ROSE_NOBLE_MAIN,
         },
+        // Seat 2501: Dromoka, the Eternal's EDHREC average deck. `--pod-decks 2501`.
+        PodDeck {
+            name: "Dromoka, the Eternal (WG)",
+            commanders: decks::DROMOKA_COMMANDERS,
+            main: decks::DROMOKA_MAIN,
+        },
+        // Seat 2502: Ormos, Archive Keeper's EDHREC average deck. `--pod-decks 2502`.
+        PodDeck {
+            name: "Ormos, Archive Keeper (U)",
+            commanders: decks::ORMOS_COMMANDERS,
+            main: decks::ORMOS_MAIN,
+        },
+        // Seat 2503: Baird, Steward of Argive's EDHREC average deck. `--pod-decks 2503`.
+        PodDeck {
+            name: "Baird, Steward of Argive (W)",
+            commanders: decks::BAIRD_2_COMMANDERS,
+            main: decks::BAIRD_2_MAIN,
+        },
     ]
 }
 
@@ -19789,6 +19807,9 @@ mod tests {
             ("Kazuul, Tyrant of the Cliffs", &[0x13D8]),
             ("Selenia, the Cursed Heart", &[0x13D9]),
             ("Rose Noble", &[0x13DA]),
+            ("Dromoka, the Eternal", &[0x13DB]),
+            ("Ormos, Archive Keeper", &[0x13DC]),
+            ("Baird, Steward of Argive", &[0x13DD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

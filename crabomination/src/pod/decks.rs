@@ -70256,3 +70256,85 @@ pub const ROSE_NOBLE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island,
 ];
+
+pub const DROMOKA_COMMANDERS: &[CardFactory] = &[dromoka_the_eternal];
+
+/// **Dromoka, the Eternal**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Forests + 9 Plains = 99.
+/// Dromoka, the Eternal (EDHREC, fetched 2026-10-14).
+pub const DROMOKA_MAIN: &[CardFactory] = &[
+    arcane_signet, dragons_hoard, dragonstorm_globe, herd_heirloom, jade_orb_of_dragonkind,
+    ozolith_the_shattered_spire, sol_ring, the_earth_crystal, bountiful_promenade, brushland,
+    canopy_vista, command_tower, fortified_village, gavony_township, haven_of_the_spirit_dragon,
+    hushwood_verge, maelstrom_of_the_spirit_dragon, mosswort_bridge, overgrown_farmland,
+    path_of_ancestry, selesnya_sanctuary, sunpetal_grove, temple_garden, ambitious_dragonborn,
+    ancient_bronze_dragon, ancient_gold_dragon, ao_the_dawn_sky, bloomvine_regent,
+    broodcaller_scourge, canopy_gargantuan, crystal_dragon, draconic_muralists,
+    dragonlord_dromoka, earthquake_dragon, enduring_scalelord, foe_razer_regent,
+    guardian_scalelord, icingdeath_frost_tyrant, jugan_the_rising_star, kami_of_whispered_hopes,
+    kura_the_boundless_sky, old_gnawbone, protector_of_the_wastes, scaled_nurturer,
+    scalelord_reckoner, skanos_dragonheart, steel_hellkite, sunscorch_regent, timeless_dragon,
+    wardscale_dragon, branching_evolution, citadel_siege, encroaching_dragonstorm,
+    frontier_siege, garruks_uprising, hardened_scales, terrasymbiosis, thickest_in_the_thicket,
+    up_the_beanstalk, akromas_will, beast_within, dromokas_command, generous_gift,
+    heroic_intervention, inspiring_call, path_to_exile, return_of_the_wildspeaker,
+    stroke_of_midnight, swords_to_plowshares, cultivate, damning_verdict, farseek, harmonize,
+    kodamas_reach, natures_lore, rampant_growth, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ORMOS_COMMANDERS: &[CardFactory] = &[ormos_archive_keeper];
+
+/// **Ormos, Archive Keeper**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Ormos, Archive Keeper (EDHREC, fetched 2026-10-14).
+pub const ORMOS_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, decanter_of_endless_water, folio_of_fancies,
+    lightning_greaves, midnight_clock, mind_stone, sapphire_medallion, sky_diamond, sol_ring,
+    swiftfoot_boots, the_magic_mirror, thought_vessel, thran_dynamo, castle_vantress,
+    lonely_sandbar, myriad_landscape, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, rogues_passage, temple_of_the_false_god,
+    alandra_sky_dreamer, arcanis_the_omnipotent, atemsis_all_seeing, body_of_knowledge,
+    chasm_skulker, consecrated_sphinx, defiler_of_dreams, faerie_mastermind, forgotten_creation,
+    jaces_archivist, laboratory_maniac, leveler, living_conundrum, nezahal_primal_tide,
+    oneirophage, psychosis_crawler, solemn_simulacrum, triskaidekaphile, mystic_remora,
+    ominous_seas, profts_eidetic_memory, propaganda, rhystic_study, teferis_ageless_insight,
+    thought_reflection, wizard_class, aetherize, an_offer_you_cant_refuse, arcane_denial,
+    brainstorm, counterspell, flow_of_knowledge, frantic_search, high_tide, negate, opt,
+    pongify, pull_from_tomorrow, rapid_hybridization, reality_shift, tolarian_winds, unwind,
+    jace_wielder_of_mysteries, enter_the_infinite, finale_of_revelation, ponder, preordain,
+    sea_gate_restoration, treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];
+
+pub const BAIRD_2_COMMANDERS: &[CardFactory] = &[baird_steward_of_argive];
+
+/// **Baird, Steward of Argive**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Baird, Steward of Argive (EDHREC, fetched 2026-10-14).
+pub const BAIRD_2_MAIN: &[CardFactory] = &[
+    arcane_signet, crawlspace, god_pharaohs_statue, marble_diamond, mind_stone, norns_annex,
+    oketras_monument, pearl_medallion, sol_ring, swiftfoot_boots, castle_ardenvale,
+    emeria_the_sky_ruin, myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower,
+    archangel_of_tithes, archon_of_absolution, avacyn_angel_of_hope, aven_mindcensor,
+    blazing_archon, cathar_commando, crystal_barricade, daxos_blessed_by_the_sun,
+    drannith_magistrate, elesh_norn_grand_cenobite, esper_sentinel, grand_abolisher,
+    imposing_sovereign, keeper_of_the_accord, knight_of_the_white_orchid, leonin_arbiter,
+    mangara_the_diplomat, mentor_of_the_meek, soul_warden, spelltithe_enforcer, sun_titan,
+    suture_priest, thalia_guardian_of_thraben, thalia_heretic_cathar, thalia_the_survivor,
+    tithe_taker, windborn_muse, ashes_of_the_abhorrent, aura_of_silence,
+    authority_of_the_consuls, blind_obedience, court_of_grace, ghostly_prison, land_tax,
+    monologue_tax, paladin_class, smothering_tithe, sphere_of_safety, dawn_charm, disenchant,
+    enlightened_tutor, generous_gift, mana_tithe, path_to_exile, swords_to_plowshares,
+    teferis_protection, unbreakable_formation, elspeth_suns_champion, the_wanderer,
+    approach_of_the_second_sun, austere_command, farewell, martial_coup, mass_calcify,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
