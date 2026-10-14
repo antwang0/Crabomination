@@ -35297,6 +35297,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerCantWinGame
             // CR 615 — read by the combat-damage-to-player path (Thunderstaff).
             | StaticEffect::ReduceCombatDamageToControllerWhileUntapped(_)
+            | StaticEffect::AbsorbUnblockedCombatDamageWhileUntapped
             // Consulted in `apply_prevention_shields` (Sphere of Purity).
             | StaticEffect::ReduceDamageToControllerFromSource { .. }
             // CR 702.16 — consulted there and at the player-target gate.

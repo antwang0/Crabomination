@@ -1063,6 +1063,11 @@ pub enum StaticEffect {
     /// damage to you, prevent N of that damage" (Thunderstaff). Shaves N off
     /// each damaging creature's combat damage to the source's controller.
     ReduceCombatDamageToControllerWhileUntapped(u32),
+    /// CR 614.9 — "As long as this creature is untapped, all combat damage
+    /// that would be dealt to you by unblocked creatures is dealt to this
+    /// creature instead" (Weathered Bodyguards, Veteran Bodyguard). Read by
+    /// the combat-damage-to-player path beside Turn the Tables' redirect.
+    AbsorbUnblockedCombatDamageWhileUntapped,
     /// CR 615.10 — "If a [filter] source would deal damage to you, prevent
     /// `amount` of that damage" (Sphere of Purity). Applies separately to each
     /// damage event, combat or not, and only to damage aimed at the controller.

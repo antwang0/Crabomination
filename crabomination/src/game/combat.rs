@@ -5969,6 +5969,23 @@ impl GameState {
             .sum()
     }
 
+    /// CR 614.9 — the untapped creature `p` controls that absorbs an unblocked
+    /// attacker's combat damage to them (Weathered Bodyguards), if any.
+    fn unblocked_combat_damage_absorber(&self, p: usize, attacker: CardId) -> Option<CardId> {
+        if self.attacker_is_blocked(attacker) {
+            return None;
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == p && !c.tapped && !c.face_down)
+            .find(|c| {
+                c.definition.static_abilities.iter().any(|s| {
+                    matches!(s.effect, crate::effect::StaticEffect::AbsorbUnblockedCombatDamageWhileUntapped)
+                })
+            })
+            .map(|c| c.id)
+    }
+
     /// The combat-damage-becomes-mill replacements' shared half: `p` mills
     /// `amount` (Szadek, Undead Alchemist).
     fn mill_instead_of_combat_damage(&mut self, p: usize, amount: u32, events: &mut Vec<GameEvent>) {
@@ -6075,6 +6092,7 @@ impl GameState {
                     .or_else(|| {
                         self.damage_redirect_target(crate::game::effects::EntityRef::Player(p))
                     })
+                    .or_else(|| self.unblocked_combat_damage_absorber(p, atk.id))
                 {
                     self.note_excess_damage(redirect, amount, atk.has_deathtouch, Some(atk.id));
                     if let Some(c) = self.battlefield_find_mut(redirect) {
