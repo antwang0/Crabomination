@@ -15474,6 +15474,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BAIRD_2_COMMANDERS,
             main: decks::BAIRD_2_MAIN,
         },
+        // Seat 2504: Vhal, Candlekeep Researcher's EDHREC average deck. `--pod-decks 2504`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher (U)",
+            commanders: decks::VHAL_COMMANDERS,
+            main: decks::VHAL_MAIN,
+        },
+        // Seat 2505: Vhal, Candlekeep Researcher and Master Chef's EDHREC average deck. `--pod-decks 2505`.
+        PodDeck {
+            name: "Vhal, Candlekeep Researcher and Master Chef (UG)",
+            commanders: decks::VHAL_2_COMMANDERS,
+            main: decks::VHAL_2_MAIN,
+        },
     ]
 }
 
@@ -19810,6 +19822,8 @@ mod tests {
             ("Dromoka, the Eternal", &[0x13DB]),
             ("Ormos, Archive Keeper", &[0x13DC]),
             ("Baird, Steward of Argive", &[0x13DD]),
+            ("Vhal, Candlekeep Researcher", &[0x13DE]),
+            ("Vhal, Candlekeep Researcher and Master Chef", &[0x13DF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

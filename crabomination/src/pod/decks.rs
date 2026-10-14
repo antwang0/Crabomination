@@ -70338,3 +70338,58 @@ pub const BAIRD_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const VHAL_COMMANDERS: &[CardFactory] = &[vhal_candlekeep_researcher];
+
+/// **Vhal, Candlekeep Researcher**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Vhal, Candlekeep Researcher (EDHREC, fetched 2026-10-14).
+pub const VHAL_MAIN: &[CardFactory] = &[
+    arcane_signet, c_a_m_p, cathars_shield, energy_refractor, magewrights_stone, midnight_clock,
+    ring_of_evos_isle, senseis_divining_top, slagwurm_armor, sol_ring, spidersilk_net,
+    staff_of_domination, sting_the_glinting_dagger, swiftfoot_boots, sword_of_the_paruns,
+    thousand_year_elixir, umbral_mantle, urn_of_godfire, vanguards_shield, academy_ruins,
+    halimar_depths, lonely_sandbar, myriad_landscape, mystic_sanctuary, reliquary_tower,
+    rogues_passage, talon_gates_of_madara, aphetto_alchemist, cogwork_assembler,
+    emry_lurker_of_the_loch, etherium_sculptor, forensic_gadgeteer, hydroelectric_specimen,
+    ioreth_of_the_healing_house, junk_diver, laboratory_maniac, loyal_inventor, memnarch,
+    prismite, prophet_of_distortion, silver_myr, spectral_sailor, stonework_packbeast,
+    trinket_mage, trophy_mage, vizier_of_tumbling_sands, voltaic_construct, crab_umbra,
+    freed_from_the_real, pemmins_aura, rhystic_study, thassas_ire, wizard_class,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, cerulean_wisps, counterspell,
+    frantic_search, high_tide, negate, pongify, rapid_hybridization, resculpt, shore_up,
+    slip_out_the_back, spell_pierce, triton_tactics, fabricate, flow_state, ponder, preordain,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const VHAL_2_COMMANDERS: &[CardFactory] = &[vhal_candlekeep_researcher, master_chef];
+
+/// **Vhal, Candlekeep Researcher and Master Chef**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 13 Forests + 11 Islands = 98.
+/// Vhal, Candlekeep Researcher and Master Chef (EDHREC, fetched 2026-10-14).
+pub const VHAL_2_MAIN: &[CardFactory] = &[
+    arcade_cabinet, arcane_signet, energy_refractor, patriars_seal, simic_signet, sol_ring,
+    staff_of_domination, swiftfoot_boots, talisman_of_curiosity, thousand_year_elixir,
+    umbral_mantle, balamb_garden_seed_academy, blighted_woodland, cascading_cataracts,
+    command_tower, flooded_grove, hinterland_harbor, myriad_landscape, overflowing_basin,
+    rogues_passage, simic_growth_chamber, temple_of_mystery, vineglimmer_snarl, yavimaya_coast,
+    biomancers_familiar, birds_of_paradise, cankerbloom, colossal_skyturtle,
+    doc_samson_super_psychiatrist, drix_fatemaker, elusive_otter, evolution_witness,
+    fathom_mage, formidable_speaker, ignis_scientia, illithid_harvester, incubation_druid,
+    kami_of_whispered_hopes, kinnan_bonder_prodigy, kioras_follower, llanowar_elves,
+    magus_of_the_candelabra, plaxcaster_frogling, prophet_of_distortion,
+    renata_called_to_the_hunt, shang_chi_martial_mentor, skyserpent_seeker, sword_coast_serpent,
+    the_reality_chip, thrasios_triton_hero, vigean_graftmage, walking_ballista,
+    bred_for_the_hunt, elven_chorus, hardened_scales, high_score, wild_growth,
+    an_offer_you_cant_refuse, beast_within, counterspell, experimental_augury, growth_spiral,
+    heroic_intervention, inspiring_call, pongify, rapid_hybridization, return_to_nature,
+    bridgeworks_battle, expand_the_sphere, growth_curve, incubation_incongruity, rampant_growth,
+    thirsting_roots, unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
