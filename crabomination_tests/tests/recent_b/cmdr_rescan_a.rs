@@ -654,3 +654,26 @@ fn taeko_grows_on_a_bounce() {
     drain_stack(&mut g);
     assert_eq!(plus(&g, taeko), 1);
 }
+
+/// You Cannot Pass! only hits a creature in a block with a legend this turn.
+#[test]
+fn you_cannot_pass_needs_a_legendary_combatant() {
+    let mut g = pod(2);
+    let witch = ready(&mut g, 0, catalog::the_scarlet_witch());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wall = ready(&mut g, 1, catalog::serra_angel());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    declare(&mut g, vec![(witch, 1), (bear, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, witch), (elf, bear)])).expect("blocks");
+    drain_stack(&mut g);
+    let spell = g.add_card_to_hand(0, catalog::you_cannot_pass());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    let not_legend = g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(elf)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(not_legend.is_err(), "the Elf blocked a non-legend");
+    cast_with(&mut g, spell, Some(Target::Permanent(wall)), vec![], None);
+    assert!(g.battlefield_find(wall).is_none());
+}

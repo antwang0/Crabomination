@@ -775,3 +775,19 @@ pub fn flying_drone() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// You Cannot Pass! — {W} instant. Destroy target creature that blocked or
+/// was blocked by a legendary creature this turn. (Senu.)
+pub fn you_cannot_pass() -> CardDefinition {
+    CardDefinition {
+        name: "You Cannot Pass!",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::BlockedOrWasBlockedByThisTurn(Box::new(
+                R::Creature.and(R::HasSupertype(Supertype::Legendary)),
+            )))),
+        },
+        ..Default::default()
+    }
+}
