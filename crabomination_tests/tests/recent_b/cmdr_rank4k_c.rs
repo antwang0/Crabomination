@@ -212,5 +212,5 @@ fn halsin_bears_a_token() {
     activate(&mut g, halsin, 0, Some(Target::Permanent(dragon)));
     let c = g.computed_permanent(dragon).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4));
-    assert!(c.colors.contains(&Color::Green) && c.colors.contains(&Color::Red));
+    assert!(c.colors.contains(Color::Green) && c.colors.contains(Color::Red));
 }
