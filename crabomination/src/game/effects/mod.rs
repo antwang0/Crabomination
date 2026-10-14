@@ -15247,6 +15247,44 @@ impl GameState {
                 )
             }
 
+            Effect::ChooseNumberEachPlayerSacrifices { max, filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let decision = Decision::ChooseAmount {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Choose a number; each player sacrifices that many".to_string(),
+                    kind: AmountKind::EachSacrificesCount,
+                    max: *max,
+                };
+                let n = match take_opt_scratch!(self.stashed_resolution_answer) {
+                    Some(DecisionAnswer::Amount(n)) => n.min(*max),
+                    Some(_) => 0,
+                    None if self.seat_suspends(ctx.controller) => {
+                        self.suspend_signal = Some(Box::new((
+                            decision,
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::AmountAnswerPending { max: *max }),
+                            effect.clone(),
+                        )));
+                        return Ok(());
+                    }
+                    None => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(n) => n.min(*max),
+                        _ => 0,
+                    },
+                };
+                if n == 0 {
+                    return Ok(());
+                }
+                self.run_effect(
+                    &Effect::Sacrifice {
+                        who: crate::effect::Selector::Player(crate::effect::PlayerRef::EachPlayer),
+                        count: crate::effect::Value::Const(n as i32),
+                        filter: filter.clone(),
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
             Effect::Regenerate { what } => {
                 // CR 701.15 — add one regeneration shield per resolved
                 // permanent. The shield is consumed by the next destruction
@@ -23018,6 +23056,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoubleYourSourcesDamageToOpponentPlayersThisTurn => {
+                self.players[ctx.controller].double_your_source_damage_to_opponents_this_turn = true;
+                Ok(())
+            }
+
             Effect::WeldArtifacts { what } => {
                 // Goblin Welder: the target artifact's controller sacrifices
                 // it and returns an artifact card from their graveyard
@@ -26650,6 +26693,10 @@ impl GameState {
             }
             Effect::AddCounterOfEachKindOn { what } => {
                 self.add_counter_of_each_kind_on(what, ctx, events);
+                Ok(())
+            }
+            Effect::AddOrRemoveCounterOfEachKindOn { what } => {
+                self.add_or_remove_counter_of_each_kind_on(what, ctx, events);
                 Ok(())
             }
             Effect::AddMissingCounterKindFromYours { what } => {

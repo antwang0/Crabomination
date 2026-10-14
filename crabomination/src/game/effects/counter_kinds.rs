@@ -158,6 +158,37 @@ impl GameState {
         }
     }
 
+    /// `Effect::AddOrRemoveCounterOfEachKindOn` — per kind, one more on a
+    /// permanent its controller's side wants it on, one fewer otherwise.
+    pub(super) fn add_or_remove_counter_of_each_kind_on(
+        &mut self,
+        what: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        for id in self.permanents_of(what, ctx) {
+            let Some(owner_side) = self.battlefield_find(id).map(|c| self.same_team(c.controller, ctx.controller))
+            else {
+                continue;
+            };
+            for kind in self.counter_kinds_on(id) {
+                if owner_side != kind.is_harmful() {
+                    self.put_counter_kind(id, &kind, 1, ctx, events);
+                    continue;
+                }
+                let mut c = ctx.clone();
+                c.targets = vec![Target::Permanent(id)];
+                let effect = match kind {
+                    CounterKind::Plain(k) => Effect::RemoveCounter { what: Selector::Target(0), kind: k, amount: Value::ONE },
+                    CounterKind::Keyword(k) => {
+                        Effect::RemoveKeywordCounter { what: Selector::Target(0), keyword: k, amount: Value::ONE }
+                    }
+                };
+                let _ = self.run_effect(&effect, &c, events);
+            }
+        }
+    }
+
     /// `Effect::AddMissingCounterKindFromYours`.
     pub(super) fn add_missing_counter_kind_from_yours(&mut self, what: &Selector, ctx: &EffectContext, events: &mut Vec<GameEvent>) {
         let Some(id) = self.permanents_of(what, ctx).into_iter().next() else { return };

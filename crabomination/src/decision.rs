@@ -132,6 +132,9 @@ pub enum AmountKind {
     /// "Choose a number; destroy all creatures with power N or greater" —
     /// the cutoff that kills the most of theirs and the least of ours.
     DestroyPowerCutoff,
+    /// "Choose a number; each player sacrifices that many" (By Invitation
+    /// Only) — the count that costs the opponents most and the chooser least.
+    EachSacrificesCount,
     /// "Pay any amount; deal that much damage to each other creature"
     /// (Territorial Aetherkite) — `max` sweeps the chooser's own board too,
     /// so the amount that kills the most of theirs and the least of ours.

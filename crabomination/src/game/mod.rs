@@ -10185,7 +10185,10 @@ impl GameState {
             || !self.staggered_damage_players.is_empty()
             || self.damage_becomes_this_turn.is_some()
             || self.players.iter().any(|p| p.double_your_source_damage_this_turn)
-            || self.players.iter().any(|p| p.triple_your_source_damage_to_opponents_this_turn)
+            || self.players.iter().any(|p| {
+                p.triple_your_source_damage_to_opponents_this_turn
+                    || p.double_your_source_damage_to_opponents_this_turn
+            })
             // The board half is a whole-battlefield walk over a
             // definition-only predicate, asked once per damage event
             // (21,154 a `cube` run at ~360 Ir); the zone memoizes it.
@@ -10484,6 +10487,15 @@ impl GameState {
             && affected.is_some_and(|p| !self.same_team(*src_ctrl, p))
         {
             mul = mul.saturating_mul(3);
+        }
+        // Goblin Goliath — ×2 to the source controller's opponents, players
+        // only.
+        if let Some((src_ctrl, _)) = &source_info
+            && self.players[*src_ctrl].double_your_source_damage_to_opponents_this_turn
+            && let EntityRef::Player(p) = ent
+            && !self.same_team(*src_ctrl, p)
+        {
+            d += 1;
         }
         // Neriv, Heart of the Storm — a creature you control that entered this
         // turn deals double damage (combat and noncombat alike).

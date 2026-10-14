@@ -875,6 +875,10 @@ pub struct PlayerData {
     /// opponents and opponents' permanents this turn. Cleared at cleanup.
     #[serde(default)]
     pub triple_your_source_damage_to_opponents_this_turn: bool,
+    /// Goblin Goliath — this player's sources deal double damage to their
+    /// opponents (players only) this turn. Cleared at cleanup.
+    #[serde(default)]
+    pub double_your_source_damage_to_opponents_this_turn: bool,
     /// CR 305.1 — "target player can't play lands this turn" (Turf Wound).
     /// Consulted by `can_player_play_land`, reset at the turn boundary.
     #[serde(default)]
@@ -1831,6 +1835,7 @@ impl Player {
             attacked_by_assassins_of: 0,
             double_your_source_damage_this_turn: false,
             triple_your_source_damage_to_opponents_this_turn: false,
+            double_your_source_damage_to_opponents_this_turn: false,
             committed_crime_this_turn: false,
             investigated_this_turn: false,
             permanent_to_hand_this_turn: false,

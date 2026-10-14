@@ -1013,6 +1013,7 @@ impl Effect {
             | Effect::Venture
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::TripleYourSourcesDamageToOpponentsThisTurn
+            | Effect::DoubleYourSourcesDamageToOpponentPlayersThisTurn
             | Effect::ReturnSelfTransformedAttached
             | Effect::ReturnSelfAttachedToTarget
             | Effect::ReturnSelfAttachedToTrigger
@@ -1109,6 +1110,7 @@ impl Effect {
             // "Choose a number; destroy all creatures with power ≥ it" — the
             // number is picked at resolution; the wipe is untargeted.
             Effect::ChooseNumberDestroyByPower { .. } => false,
+            Effect::ChooseNumberEachPlayerSacrifices { .. } => false,
             // "As this enters, choose a permanent" — chosen at resolution.
             Effect::ChoosePermanentForSource { .. } => false,
             // CR 603.7 — a reflexive payoff is opaque to cast-time target
@@ -2160,6 +2162,7 @@ impl Effect {
             | Effect::AddCounterOfPresentKind { what } => sel_has_target(what),
             Effect::AddCounterOfEachKindAmong { onto: what, .. }
             | Effect::AddCounterOfEachKindOn { what }
+            | Effect::AddOrRemoveCounterOfEachKindOn { what }
             | Effect::AddMissingCounterKindFromYours { what }
             | Effect::ExileSameNameInvestigate { what } => sel_has_target(what),
             Effect::CopyCountersOnto { from, to } => sel_has_target(from) || sel_has_target(to),
@@ -2967,6 +2970,7 @@ impl Effect {
             | Effect::AddCounterOfPresentKind { what }
             | Effect::AddCounterOfEachKindAmong { onto: what, .. }
             | Effect::AddCounterOfEachKindOn { what }
+            | Effect::AddOrRemoveCounterOfEachKindOn { what }
             | Effect::AddMissingCounterKindFromYours { what }
             | Effect::ExileSameNameInvestigate { what }
             | Effect::AddKeywordCounter { what, .. }
@@ -5743,6 +5747,7 @@ impl Effect {
                 | Effect::AddCounterOfPresentKind { what }
                 | Effect::AddCounterOfEachKindAmong { onto: what, .. }
                 | Effect::AddCounterOfEachKindOn { what }
+                | Effect::AddOrRemoveCounterOfEachKindOn { what }
                 | Effect::AddMissingCounterKindFromYours { what }
                 | Effect::ExileSameNameInvestigate { what }
                 | Effect::BecomeChosenColor { what, .. }

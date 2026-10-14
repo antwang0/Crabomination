@@ -3831,6 +3831,7 @@ fn decide_pending_policy_inner(
             use crate::decision::AmountKind;
             let amount = match kind {
                 AmountKind::DestroyPowerCutoff => best_destroy_power_cutoff(state, seat, *max, w),
+                AmountKind::EachSacrificesCount => best_each_sacrifices_count(state, seat, *max, w),
                 AmountKind::SweepDamage => best_sweep_damage(state, seat, *source, *max, w),
                 AmountKind::Life => {
                     // Life payments: keep a buffer, never sink deep.
@@ -19224,6 +19225,37 @@ fn best_destroy_power_cutoff(state: &GameState, seat: usize, max: u32, w: &EvalW
     best.1
 }
 
+/// "Each player sacrifices N creatures" for N in `0..=max`: each seat gives up
+/// its N least valuable creatures; the N that costs the living opponents most
+/// against what it costs us, the smallest on a tie.
+fn best_each_sacrifices_count(state: &GameState, seat: usize, max: u32, w: &EvalWeights) -> u32 {
+    let mut boards: Vec<(bool, Vec<i32>)> = Vec::new();
+    for p in state.living_seats() {
+        let mut vals: Vec<i32> = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && state.computed_is_creature(c))
+            .map(|c| permanent_value(state, c.id, w))
+            .collect();
+        vals.sort_unstable();
+        boards.push((p == seat, vals));
+    }
+    let mut best = (0i32, 0u32);
+    for n in 1..=max {
+        let score: i32 = boards
+            .iter()
+            .map(|(mine, vals)| {
+                let lost: i32 = vals.iter().take(n as usize).sum();
+                if *mine { -lost } else { lost }
+            })
+            .sum();
+        if score > best.0 {
+            best = (score, n);
+        }
+    }
+    best.1
+}
+
 /// "Deal N damage to each other creature" for N in `0..=max`: the N whose
 /// kills (marked damage counted, indestructible spared) weigh most for us —
 /// theirs minus ours — and the smallest such N, since what's left unpaid
@@ -27824,6 +27856,27 @@ mod tests {
         let d = Decision::ChooseAmount { source: kite, prompt: String::new(), max: 4, kind: AmountKind::SweepDamage };
         let w = EvalWeights::default();
         assert_eq!(decide_pending_policy(&g, 0, &w, &d, false), DecisionAnswer::Amount(1));
+    }
+
+    /// By Invitation Only's "each player sacrifices N" is `EachSacrificesCount`:
+    /// with one Bears against an opponent's three Elves, N = 3 strips their
+    /// board for our one creature, and N past their count gains nothing.
+    #[test]
+    fn bot_each_sacrifices_count_strips_the_wider_board() {
+        use crate::decision::{AmountKind, Decision, DecisionAnswer};
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..3 {
+            g.add_card_to_battlefield(1, catalog::llanowar_elves());
+        }
+        let d = Decision::ChooseAmount {
+            source: crate::card::CardId(0),
+            prompt: String::new(),
+            max: 13,
+            kind: AmountKind::EachSacrificesCount,
+        };
+        let w = EvalWeights::default();
+        assert_eq!(decide_pending_policy(&g, 0, &w, &d, false), DecisionAnswer::Amount(3));
     }
 
     /// Pure temp-pump instants are combat tricks; burn and creatures are not.

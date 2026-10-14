@@ -6116,6 +6116,11 @@ pub enum Effect {
     /// "For each kind of counter on target permanent or player, give that
     /// permanent or player another counter of that kind" (Skyship Plunderer).
     AddCounterOfEachKindOn { what: Selector },
+    /// "For each kind of counter on target permanent, put another counter of
+    /// that kind on it or remove one from it" (Dramatist's Puppet, CR 122.1).
+    /// The controller's pick per kind: more of a helpful kind on its own side,
+    /// less of it on an opponent's (a harmful kind the other way round).
+    AddOrRemoveCounterOfEachKindOn { what: Selector },
     /// "Choose a counter on a permanent you control. Put a counter of that
     /// kind on [`what`] if it doesn't have a counter of that kind" (Aven
     /// Courier). The kind is picked as it resolves: a keyword counter, then
@@ -7648,6 +7653,10 @@ pub enum Effect {
     /// number at resolution (`Decision::ChooseAmount`); a bot/AutoDecider picks
     /// 0 (destroy everything). Expel the Interlopers.
     ChooseNumberDestroyByPower { max: u32 },
+    /// "Choose a number between 0 and `max`. Each player sacrifices that many
+    /// [`filter`] of their choice" (By Invitation Only, CR 701.21). The
+    /// controller picks at resolution (`AmountKind::EachSacrificesCount`).
+    ChooseNumberEachPlayerSacrifices { max: u32, filter: crate::card::SelectionRequirement },
     /// CR 701.15 — add a regeneration shield to each resolved permanent.
     /// The shield is a one-shot replacement that fires the next time the
     /// permanent would be destroyed this turn (tap + remove from combat +
@@ -9361,6 +9370,11 @@ pub enum Effect {
     /// damage instead" (Isengard Unleashed). Sets
     /// `Player.triple_your_source_damage_to_opponents_this_turn`.
     TripleYourSourcesDamageToOpponentsThisTurn,
+    /// CR 614.1a — "If a source you control would deal damage to an opponent
+    /// this turn, it deals double that damage to that player instead" (Goblin
+    /// Goliath): players only, not their permanents. Sets
+    /// `Player.double_your_source_damage_to_opponents_this_turn`.
+    DoubleYourSourcesDamageToOpponentPlayersThisTurn,
     /// Goblin Welder: target artifact's controller simultaneously sacrifices
     /// it and returns an artifact card from their graveyard to the
     /// battlefield. The graveyard half is auto-picked (highest mana value).
