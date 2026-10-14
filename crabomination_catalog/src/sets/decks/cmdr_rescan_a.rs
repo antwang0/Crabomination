@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{add_colorless, add_mana, draw, lose_life, mint_token, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -392,6 +392,107 @@ pub fn weather_maker() -> CardDefinition {
                 tap_cost: true,
                 remove_counter_cost: Some((CounterType::Charge, 3)),
                 effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Hydro-Man, Fluid Felon — {U}{U} legendary 2/2 Elemental Villain. Whenever
+/// you cast a blue spell, if he's a creature, +1/+1 until end of turn. At the
+/// beginning of your end step, untap him; until your next turn he becomes a
+/// land with "{T}: Add {U}" and isn't a creature. (The Blue Spirit,
+/// Hydro-Man, Blue Marvel.) The granted mana ability is printed here, live
+/// only while he is a land.
+pub fn hydro_man_fluid_felon() -> CardDefinition {
+    let this_is = |filter| Predicate::EntityMatches { what: Selector::This, filter };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: add_mana(vec![Color::Blue]),
+            condition: Some(this_is(R::Land)),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::All(vec![
+                        Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: R::HasColor(Color::Blue),
+                        },
+                        this_is(R::Creature),
+                    ]),
+                ),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: your_step(TurnStep::End),
+                effect: Effect::Seq(vec![
+                    Effect::Untap { what: Selector::This, up_to: None },
+                    Effect::SetCardTypesFor {
+                        what: Selector::This,
+                        card_types: vec![CardType::Land],
+                        duration: Duration::UntilNextTurn,
+                    },
+                ]),
+            },
+        ],
+        ..legend(
+            "Hydro-Man, Fluid Felon",
+            cost(&[u(), u()]),
+            vec![CreatureType::Elemental, CreatureType::Villain],
+            2,
+            2,
+        )
+    }
+}
+
+/// Khalni Hydra — {G}{G}{G}{G}{G}{G}{G}{G} 8/8 Hydra; trample. Costs {G}
+/// less for each green creature you control. (Renata, Nylea.)
+pub fn khalni_hydra() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {G} less to cast for each green creature you control.",
+            effect: StaticEffect::SelfColoredCostReducedPer {
+                less: cost(&[g()]),
+                count: Value::count(Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::HasColor(Color::Green)),
+                )),
+            },
+        }],
+        ..creature("Khalni Hydra", cost(&[g(), g(), g(), g(), g(), g(), g(), g()]), vec![CreatureType::Hydra], 8, 8)
+    }
+}
+
+/// Hall of Echoes — land. {T}: Add {C}. {5}: it becomes a copy of target
+/// creature you control until end of turn, and the legend rule doesn't apply
+/// to permanents you control this turn. (Shisato, Kei Takahashi, Machine
+/// Man.)
+pub fn hall_of_echoes() -> CardDefinition {
+    CardDefinition {
+        name: "Hall of Echoes",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCopyOfFor {
+                        what: Selector::This,
+                        source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                        duration: Duration::EndOfTurn,
+                        non_legendary: false,
+                    },
+                    Effect::LegendRuleOffThisTurn { who: PlayerRef::You },
+                ]),
                 ..Default::default()
             },
         ],

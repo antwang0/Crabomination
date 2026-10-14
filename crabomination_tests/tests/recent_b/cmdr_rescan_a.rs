@@ -245,3 +245,114 @@ fn weather_maker_charges_on_landfall() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(wm).unwrap().counter_count(CounterType::Charge), 1);
 }
+
+fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) {
+    flood(g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
+fn step_to(g: &mut GameState, seat: usize, step: TurnStep) {
+    while g.active_player_idx != seat || g.step != step {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    }
+}
+
+fn is_type(g: &GameState, id: CardId, t: crabomination::card::CardType) -> bool {
+    g.computed_permanent(id).unwrap().card_types().contains(&t)
+}
+
+/// CR 205.1a / 611.2b — Hydro-Man's end-step trigger untaps him and makes him
+/// a land that isn't a creature until his controller's next turn, when he is
+/// a creature again.
+#[test]
+fn hydro_man_is_a_land_until_your_next_turn() {
+    use crabomination::card::CardType;
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let hydro = ready(&mut g, 0, catalog::hydro_man_fluid_felon());
+    g.battlefield_find_mut(hydro).unwrap().tapped = true;
+    step_to(&mut g, 0, TurnStep::End);
+    assert!(!g.battlefield_find(hydro).unwrap().tapped, "untapped");
+    assert!(is_type(&g, hydro, CardType::Land));
+    assert!(!is_type(&g, hydro, CardType::Creature));
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert!(is_type(&g, hydro, CardType::Land), "still a land on the opponent's turn");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hydro,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for {U}");
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert!(is_type(&g, hydro, CardType::Creature));
+    assert!(!is_type(&g, hydro, CardType::Land));
+}
+
+/// Hydro-Man's mana ability is dead while he is a creature.
+#[test]
+fn hydro_man_cannot_tap_for_mana_as_a_creature() {
+    let mut g = pod(2);
+    let hydro = ready(&mut g, 0, catalog::hydro_man_fluid_felon());
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: hydro,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(r.is_err());
+}
+
+/// CR 601.2f — Khalni Hydra's {G} reduction scales with green creatures:
+/// three of them leave {G}{G}{G}{G}{G} to pay.
+#[test]
+fn khalni_hydra_costs_g_less_per_green_creature() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::llanowar_elves());
+    }
+    ready(&mut g, 0, catalog::serra_angel());
+    let hydra = g.add_card_to_hand(0, catalog::khalni_hydra());
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hydra,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("GGGGG pays with three green creatures out");
+}
+
+/// CR 704.5j — Hall of Echoes copying your legendary creature keeps both:
+/// the legend rule is off for your permanents this turn.
+#[test]
+fn hall_of_echoes_copies_a_legend_without_the_legend_rule() {
+    let mut g = pod(2);
+    let hall = ready(&mut g, 0, catalog::hall_of_echoes());
+    let witch = ready(&mut g, 0, catalog::the_scarlet_witch());
+    activate(&mut g, hall, 1, Some(Target::Permanent(witch)));
+    assert_eq!(g.computed_permanent(hall).unwrap().def.name, "The Scarlet Witch");
+    assert!(g.battlefield_find(hall).is_some() && g.battlefield_find(witch).is_some());
+}
