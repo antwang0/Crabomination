@@ -3846,6 +3846,11 @@ pub enum SelectionRequirement {
     /// Mana value equals the number chosen earlier in this resolution
     /// (`Effect::PlayerChoosesNumber` — Void's hand half).
     ManaValueEqualsChosenNumber,
+    /// Mana value equals that of at least one battlefield permanent matching
+    /// the inner filter, read from the evaluating controller's side — Rebbec,
+    /// Architect of Ascension's "protection from each mana value among
+    /// artifacts you control" (CR 702.16b).
+    ManaValueEqualsOneAmong(Box<SelectionRequirement>),
     /// A land whose activated abilities include at least one that isn't a mana
     /// ability (CR 605.1a) — Tsabo's Web's untap lock.
     HasNonManaActivatedAbility,

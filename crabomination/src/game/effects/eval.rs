@@ -217,6 +217,20 @@ impl GameState {
             .map_or((card.definition.power, card.definition.toughness), |cp| cp.base_pt())
     }
 
+    /// `R::ManaValueEqualsOneAmong` — `mv` is the mana value of some
+    /// battlefield permanent matching `filter` from `controller`'s side.
+    fn mana_value_matches_one_among(
+        &self,
+        mv: u32,
+        filter: &crate::card::SelectionRequirement,
+        controller: usize,
+    ) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.definition.cost.cmc() == mv
+                && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), controller, None)
+        })
+    }
+
     /// Every counter (keyword counters included, CR 122.1) on the
     /// permanents `seat` controls.
     pub(crate) fn counters_among_permanents_of(&self, seat: usize) -> u32 {
@@ -6648,6 +6662,9 @@ impl GameState {
                     R::ManaValueEqualsChosenNumber => {
                         card.definition.cost.cmc() == self.chosen_number_this_resolution
                     }
+                    R::ManaValueEqualsOneAmong(f) => {
+                        self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller)
+                    }
                     R::HasNonManaActivatedAbility => card
                         .definition
                         .activated_abilities
@@ -7655,6 +7672,9 @@ impl GameState {
             }
             R::ManaValueEqualsChosenNumber => {
                 card.definition.cost.cmc() == self.chosen_number_this_resolution
+            }
+            R::ManaValueEqualsOneAmong(f) => {
+                self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller)
             }
             R::HasNonManaActivatedAbility => card
                 .definition
