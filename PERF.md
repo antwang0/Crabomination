@@ -3136,6 +3136,36 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-14 (Commander run, `01KXJ5zX`) — guardrail; 63 EDHREC seats, 84 cards, three primitives, two layer fixes
+
+Hot-path touches: `grant_keyword_for`'s `Permanent` arm asks
+`computed_permanent(..).lost_all_abilities` first; the two death funnels ask
+`GameState::lost_all_abilities` once per dying permanent — both behind
+`ability_strip_possible()`, a word load on a board with no strip source; the
+attack-declaration watcher clones a `DelayedTrigger::target` it already held.
+None is in the fixed pool. Release `bot_ladder` at `e38bed744`, toolchain
+1.99, Xeon @ 2.80 GHz, 4 cores.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); --threads 1 identical;
+                 peak_rss 35.1 / 35.4 MiB; games_per_s 239.3 / 211.05
+                 (host_calib_ms 73 / 87 — the box: 01MsQdht read 249-277 at
+                 50-71); release build 17m17s
+suite            nextest --workspace (no client) minus the long pole: 26,458
+                 run, 26,455 passed, 3 red — the target walkers on this run's
+                 Prophesied End (slot declared inside an If predicate), fixed
+                 at e38bed744 and re-run green
+clippy           workspace --all-targets (no client): 0
+pod test         cr_903_5a_the_official_precon_seats_play_pod_games under
+                 `--cargo-profile overflow`: one seeded game for every seat
+                 1-2365, PASS in 206.1 s (24 min to build)
+pods (release)   pod_sweep seed 23601 over seats 2294-2359 x 4,6,8 seats x 20:
+                 740 games, 0 panics, 1 undecided — a board cap at turn 46
+                 (seed 2360164 game 7: Hapatra at 114 life vs Katara's
+                 Myrel token swarm, two token decks building wide; 0.14 %)
+```
+
 ### 2026-10-14 (Commander run, `01MsQdht`) — guardrail; 144 EDHREC seats, 141 cards, six primitives
 
 Hot-path touches: `damage_scaling_in_scope`'s presence gate reads one more
