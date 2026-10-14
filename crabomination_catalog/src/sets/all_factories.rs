@@ -3909,6 +3909,13 @@ static DECKS: &[Factory] = &[
     super::decks::super_intelligence,
     super::decks::wilderland_scrounger,
     super::decks::wriggling_grub,
+    // cmdr_rank2k_m (session 01CwrNTA)
+    super::decks::hans_eriksson,
+    super::decks::keensight_mentor,
+    super::decks::knight_errant_of_eos,
+    super::decks::mwonvuli_beast_tracker,
+    super::decks::treacherous_urge,
+    super::decks::zephyr_singer,
     // cmdr_rank2k_l (session 01CwrNTA)
     super::decks::arachnus_spinner,
     super::decks::gandalf_party_guest,
