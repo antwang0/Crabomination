@@ -13056,6 +13056,78 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TIGRA_COMMANDERS,
             main: decks::TIGRA_MAIN,
         },
+        // Seat 2101: Denethor, Ruling Steward's EDHREC average deck. `--pod-decks 2101`.
+        PodDeck {
+            name: "Denethor, Ruling Steward (WB)",
+            commanders: decks::DENETHOR_COMMANDERS,
+            main: decks::DENETHOR_MAIN,
+        },
+        // Seat 2102: Lulu, Loyal Hollyphant and Cultist of the Absolute's EDHREC average deck. `--pod-decks 2102`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Cultist of the Absolute (WB)",
+            commanders: decks::LULU_2_COMMANDERS,
+            main: decks::LULU_2_MAIN,
+        },
+        // Seat 2103: Astrid Peth's EDHREC average deck. `--pod-decks 2103`.
+        PodDeck {
+            name: "Astrid Peth (W)",
+            commanders: decks::ASTRID_PETH_COMMANDERS,
+            main: decks::ASTRID_PETH_MAIN,
+        },
+        // Seat 2104: Lulu, Loyal Hollyphant and Guild Artisan's EDHREC average deck. `--pod-decks 2104`.
+        PodDeck {
+            name: "Lulu, Loyal Hollyphant and Guild Artisan (WR)",
+            commanders: decks::LULU_3_COMMANDERS,
+            main: decks::LULU_3_MAIN,
+        },
+        // Seat 2105: Starke of Rath's EDHREC average deck. `--pod-decks 2105`.
+        PodDeck {
+            name: "Starke of Rath (R)",
+            commanders: decks::STARKE_OF_RATH_COMMANDERS,
+            main: decks::STARKE_OF_RATH_MAIN,
+        },
+        // Seat 2106: Skyfire Kirin's EDHREC average deck. `--pod-decks 2106`.
+        PodDeck {
+            name: "Skyfire Kirin (R)",
+            commanders: decks::SKYFIRE_KIRIN_COMMANDERS,
+            main: decks::SKYFIRE_KIRIN_MAIN,
+        },
+        // Seat 2107: Nyla, Shirshu Sleuth's EDHREC average deck. `--pod-decks 2107`.
+        PodDeck {
+            name: "Nyla, Shirshu Sleuth (B)",
+            commanders: decks::NYLA_COMMANDERS,
+            main: decks::NYLA_MAIN,
+        },
+        // Seat 2108: Ian the Reckless's EDHREC average deck. `--pod-decks 2108`.
+        PodDeck {
+            name: "Ian the Reckless (R)",
+            commanders: decks::IAN_THE_RECKLESS_COMMANDERS,
+            main: decks::IAN_THE_RECKLESS_MAIN,
+        },
+        // Seat 2109: Doctor Strange, Surgeon's EDHREC average deck. `--pod-decks 2109`.
+        PodDeck {
+            name: "Doctor Strange, Surgeon (W)",
+            commanders: decks::DOCTOR_STRANGE_COMMANDERS,
+            main: decks::DOCTOR_STRANGE_MAIN,
+        },
+        // Seat 2110: Wiccan, Rising Magician's EDHREC average deck. `--pod-decks 2110`.
+        PodDeck {
+            name: "Wiccan, Rising Magician (U)",
+            commanders: decks::WICCAN_COMMANDERS,
+            main: decks::WICCAN_MAIN,
+        },
+        // Seat 2111: Devil Dinosaur's EDHREC average deck. `--pod-decks 2111`.
+        PodDeck {
+            name: "Devil Dinosaur (G)",
+            commanders: decks::DEVIL_DINOSAUR_COMMANDERS,
+            main: decks::DEVIL_DINOSAUR_MAIN,
+        },
+        // Seat 2112: Vision, Synthezoid Avenger's EDHREC average deck. `--pod-decks 2112`.
+        PodDeck {
+            name: "Vision, Synthezoid Avenger (C)",
+            commanders: decks::VISION_COMMANDERS,
+            main: decks::VISION_MAIN,
+        },
     ]
 }
 
@@ -16988,6 +17060,18 @@ mod tests {
             ("Karvanista, Loyal Lupari", &[0x1248]),
             ("Jeska, Warrior Adept", &[0x1249]),
             ("Tigra, Feline Fury", &[0x124A]),
+            ("Denethor, Ruling Steward", &[0x124B]),
+            ("Lulu, Loyal Hollyphant and Cultist of the Absolute", &[0x124C]),
+            ("Astrid Peth", &[0x124D]),
+            ("Lulu, Loyal Hollyphant and Guild Artisan", &[0x124E]),
+            ("Starke of Rath", &[0x124F]),
+            ("Skyfire Kirin", &[0x1250]),
+            ("Nyla, Shirshu Sleuth", &[0x1251]),
+            ("Ian the Reckless", &[0x1252]),
+            ("Doctor Strange, Surgeon", &[0x1253]),
+            ("Wiccan, Rising Magician", &[0x1254]),
+            ("Devil Dinosaur", &[0x1255]),
+            ("Vision, Synthezoid Avenger", &[0x1256]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
