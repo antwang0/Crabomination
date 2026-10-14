@@ -1374,6 +1374,7 @@ static DECKS: &[Factory] = &[
     super::decks::flash_thompson_spider_fan,
     super::decks::ruric_thar_magecrusher,
     super::decks::chandra_chill_of_compliance,
+    super::decks::jaya_fiery_negotiator,
     // cmdr_rank4k_j (session 01MsQdht)
     super::decks::hallowed_moonlight,
     super::decks::sigrid_god_favored,

@@ -8,7 +8,8 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::{etb, landfall, on_attack, on_dies, target_filtered};
-use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, Selector, ZoneDest};
+use crate::card::MayPlayDuration;
+use crate::effect::{DelayedTriggerKind, Effect, ManaPayload, PlayerRef, Predicate, Selector, ZoneDest};
 use crate::mana::{Color, ManaCost, SpendRestriction, b, cost, g, generic, r, u, w, x};
 use std::sync::Arc;
 
@@ -456,7 +457,7 @@ pub fn ruric_thar_magecrusher() -> CardDefinition {
     }
 }
 
-/// Chandra, Chill of Compliance — {1}{U}{U} planeswalker, loyalty 4. +1:
+/// Chandra, Chill of Compliance — {1}{U}{U} planeswalker, loyalty 3. +1:
 /// surveil 1, a noncreature nonland card it binned goes to your hand. +1: add
 /// {U} for noncreature spells. −X: tap an artifact or creature and put X stun
 /// counters on it. −6: an emblem drawing a card per spell you cast.
@@ -467,7 +468,7 @@ pub fn chandra_chill_of_compliance() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
         subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Chandra], ..Default::default() },
-        base_loyalty: 4,
+        base_loyalty: 3,
         loyalty_abilities: vec![
             // The surveilled card is the top one, so it is bound first and
             // read where the surveil left it (Enlightened Confidant's shape).
@@ -520,6 +521,66 @@ pub fn chandra_chill_of_compliance() -> CardDefinition {
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
                         effect: draw(1),
+                    }],
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Jaya, Fiery Negotiator — {2}{R}{R} planeswalker, loyalty 4. +1: a 1/1 red
+/// Monk with prowess. −1: exile the top two, play one this turn. −2: whenever
+/// you attack this turn, Jaya deals damage equal to the attackers to target
+/// creature an opponent controls. −8: an emblem copying red instants and
+/// sorceries twice.
+pub fn jaya_fiery_negotiator() -> CardDefinition {
+    let monk = TokenDefinition {
+        name: "Monk".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Monk], ..Default::default() },
+        keywords: vec![Keyword::Prowess],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Jaya, Fiery Negotiator",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Jaya], ..Default::default() },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            la(1, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(monk) }),
+            la(-1, crate::sets::impulse_choose_one(2, MayPlayDuration::EndOfThisTurn)),
+            la(
+                -2,
+                Effect::DelayUntilWithCapture {
+                    kind: DelayedTriggerKind::EachAttackThisTurn,
+                    capture: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::Target(0),
+                        amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                            R::Creature.and(R::IsAttacking).and(R::ControlledByYou),
+                        ))),
+                    }),
+                },
+            ),
+            la(
+                -8,
+                Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Jaya, Fiery Negotiator".into(),
+                    statics: vec![],
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                            Predicate::CastSpellMatches(
+                                R::HasColor(Color::Red).and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                            ),
+                        ),
+                        effect: Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count: Value::Const(2) },
                     }],
                 },
             ),

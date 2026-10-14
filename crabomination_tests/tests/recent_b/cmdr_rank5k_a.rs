@@ -291,3 +291,56 @@ fn shameless_charlatan_lets_the_commander_copy() {
     assert_eq!(g.battlefield_find(cmdr).unwrap().definition.name, "Wind Drake");
     assert!(keywords(&g, cmdr).contains(&Keyword::Flying));
 }
+
+/// CR 603.7c / 603.7b — Jaya, Fiery Negotiator's −2 is a delayed trigger that
+/// fires on every attack this turn (`DelayedTriggerKind::EachAttackThisTurn`),
+/// dealing the attacker count to the creature chosen at activation, and is
+/// still watching after it fires.
+#[test]
+fn jaya_fiery_negotiator_burns_the_chosen_creature_per_attack() {
+    let mut g = pod(3);
+    let jaya = ready(&mut g, 0, catalog::jaya_fiery_negotiator());
+    let angel = ready(&mut g, 2, catalog::serra_angel());
+    let bystander = ready(&mut g, 1, catalog::serra_angel());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    act(
+        &mut g,
+        GameAction::ActivateLoyaltyAbility {
+            card_id: jaya,
+            ability_index: 2,
+            target: Some(Target::Permanent(angel)),
+            x_value: None,
+        },
+    );
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(angel).unwrap().damage, 2, "two attackers");
+    assert_eq!(g.battlefield_find(bystander).unwrap().damage, 0);
+    assert!(
+        g.delayed_triggers.iter().any(|dt| dt.source == jaya),
+        "\"whenever you attack this turn\" outlives its first firing"
+    );
+}
+
+/// CR 608.2d — Jaya's −1 (`sets::impulse_choose_one`): both cards are exiled,
+/// one is chosen on resolution, and only that one may be played.
+#[test]
+fn jaya_fiery_negotiator_impulse_grants_one_of_two() {
+    let mut g = pod(2);
+    let jaya = ready(&mut g, 0, catalog::jaya_fiery_negotiator());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::serra_angel());
+    act(
+        &mut g,
+        GameAction::ActivateLoyaltyAbility { card_id: jaya, ability_index: 1, target: None, x_value: None },
+    );
+    assert_eq!(g.exile.len(), 2);
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 1);
+}
