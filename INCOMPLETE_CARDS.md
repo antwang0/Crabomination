@@ -2178,6 +2178,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
 | 🟡 Livio, Oathsworn Sentinel | the aegis return moves the cards one at a time rather than simultaneously (CR 610.3); the auto decider always declines the "may exile" | `MayDoBy` + `ForEach` over aegis cards |
 | 🟡 Mikey & Mona, Mutant Sitters | "each mode must target a different player" is not enforced | `ChooseN` over two `TargetPlayerThen` + `AsPlayer` modes |
+| 🟡 Ego Erasure | "and lose all creature types until end of turn" is not modelled (only the -2/-0) | `TargetPlayerThen` + `AsPlayer` pump |
 | 🟡 Hydro-Man, Fluid Felon | the "{T}: Add {U}" he gains as a land is printed on the card, live only while he is a land, so he "has" a mana ability as a creature too (ability counts, Humility) | `ActivatedAbility::condition` (`This` is a Land) |
 | 🟡 Balefang the Unslayable | the Baneslayer Angel token's printed {3}{W}{W} isn't modelled: it reads mana value 0 (`TokenDefinition` has no cost) | `CreateToken` |
 | 🟡 Flying Drone | "costs {1}{U} less to activate if …" is two abilities: the full-price loot gated off the condition and a free one gated on it | two `ActivatedAbility::condition` arms |

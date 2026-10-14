@@ -4504,6 +4504,10 @@ static DECKS: &[Factory] = &[
     super::decks::m_o_d_o_k_evil_intellect,
     super::decks::moment_of_defiance,
     super::decks::multiply_by_zero,
+    // cmdr_rank6k_k (session 01PxmVAG)
+    super::decks::ego_erasure,
+    super::decks::littjara_kinseekers,
+    super::decks::turtleshell_changeling,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
