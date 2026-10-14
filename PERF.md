@@ -3168,6 +3168,32 @@ pods (release)   pod_sweep seed 23601 over seats 2294-2359 x 4,6,8 seats x 20:
 
 ### 2026-10-14 (Commander run, `01MsQdht`) — guardrail; 144 EDHREC seats, 141 cards, six primitives
 
+**Second leg (seats 2346-2348, 2360-2365; `cmdr_rank4k_k`'s 12 cards, four
+primitives).** Hot-path touches: a mana ability from a snow source now tags
+its mana snow (`ManaPool::mark_from_snow`, one supertype read per activation
+off a definition the walk already holds); the cast payment reads the pool's
+snow delta and the `TapPermanents` arm stores one `Option<CardId>`
+(`cost_tapped_for_cast`); one more `EventScope` arm in the graveyard event
+walk. The fixed pool holds no snow source. Release `bot_ladder` at
+`f6e19da3e`.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); games_per_s 273.73 /
+                 262.52; release build 13m45s
+release-fast     `cargo check --profile release-fast --bin bot_ladder` clean
+clippy           0 over the workspace (all targets)
+suite            26,468 run, 26,464 passed, 4 red — the other session's
+                 Prophesied End target slot (three audits) and Staff of
+                 Titania's identity after this leg's Forest Dryad mana
+                 ability; both fixed upstream (`e38bed744`, `9148c7908`),
+                 the four re-run green at `adf436766`
+pod test         cr_903_5a_the_official_precon_seats_play_pod_games under
+                 `--cargo-profile overflow`: PASS, 204.3 s
+pods (overflow)  sweeps 4414-4415 over seats 2346-2348 and 2360-2364: 70
+                 games, 0 bad
+```
+
 Hot-path touches: `damage_scaling_in_scope`'s presence gate reads one more
 `Player` flag per seat; `extra_cost_for_spell` has one more static arm
 (`ChosenCardTypeSpellsCostMore`); the bot's `ChooseAmount` one more kind;
