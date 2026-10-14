@@ -607,9 +607,9 @@ fn temporary_truce_and_green_goblin() {
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     let before: Vec<usize> = (0..3).map(|s| g.players[s].graveyard.len()).collect();
     fire(&mut g, TurnStep::BeginCombat);
-    for seat in 1..3 {
-        if !g.players[seat].hand.is_empty() || before[seat] != g.players[seat].graveyard.len() {
-            assert_eq!(g.players[seat].graveyard.len(), before[seat] + 1, "seat {seat} discards");
+    for (seat, &was) in before.iter().enumerate().skip(1) {
+        if !g.players[seat].hand.is_empty() || was != g.players[seat].graveyard.len() {
+            assert_eq!(g.players[seat].graveyard.len(), was + 1, "seat {seat} discards");
         }
     }
 }

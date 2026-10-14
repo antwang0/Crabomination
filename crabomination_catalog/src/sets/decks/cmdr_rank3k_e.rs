@@ -575,7 +575,6 @@ pub fn dyfed_the_guiding_hand() -> CardDefinition {
                         effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
                     }),
                 },
-                ..Default::default()
             },
             LoyaltyAbility {
                 loyalty_cost: -6,
