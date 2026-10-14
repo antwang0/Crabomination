@@ -152,8 +152,24 @@ the handoff.
   Knight-Errant of Eos (MV ≤ convokers), Torrent of Souls (two slots behind spent-colour gates),
   Glorious Sunrise (a land gains a mana ability until end of turn), Khalni Hydra (coloured cost
   reduction per creature), Horn of the Mark ("two or more attack *a* player"), Raff (tap exactly
-  two), Bard's Company (recruit's nonland check). ⚠ The long-pole pod test took 4,109 s under load
-  at 1,515 seats.
+  two). ⚠ The long-pole pod test took 4,109 s under load at 1,515 seats.
+- **Seats 1728-1764** (`cmdr_rank2k_g`..`k`, 56 cards): the three-card gaps of ranks 1501-2000,
+  then one- and two-card gaps across the whole top 2000 (Bard's Company's recruit needed only
+  `DiscardedNonlandThisEffect`). **New primitives:** `StaticEffect::YourISSpellsHaveSplitSecond`
+  (Samut), `AdditionalCastCost::TapOrPay` (Disruption Protocol),
+  `StaticEffect::OpponentsCreaturesCantHavePlusOneCounters` (Blightbeetle, read at the top of
+  `scaled_counter_count`), `CounterType::Awakening` (Liege of the Tangle).
+- **FIXED (CR 903.3 / 604.3):** `is_legal_commander` rejected Grist, the Hunger Tide — a planeswalker
+  that is a creature everywhere but the battlefield, so in the command zone. `creature_off_battlefield`
+  now counts.
+- **FIXED (pod invariant, 6-seat seed 17384):** `ChooseCreatureTypeThen` stamped its pick on a source
+  that had died with the trigger pending (Pol Jamaar), leaving battlefield state on the graveyard
+  card. Only a battlefield/stack source is stamped; the body reads `chosen_creature_type_scratch`.
+- **FIXED:** Mana Breach's "that player returns a land they control" bounced *every* land the
+  caster controlled (a `ControlledBy` move); it is one land of their choice now
+  (`OpponentChoosesPermanentThen`, `theirs`).
+- **OPEN (bot):** an ETB `OptionalTargets` trigger (Kraul Harpooner, Winter Eladrin) can be declined
+  by the auto-targeter even with a good target; the card tests resolve the trigger directly.
 
 ## FIXED/OPEN 2026-10-13 (Commander run, `019gJJoX`) — six EDHREC seats from the unclaimed primitive gaps
 
