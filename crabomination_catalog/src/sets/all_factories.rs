@@ -1353,6 +1353,15 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank4k_c (session 01MsQdht)
+    super::decks::behold_the_unspeakable,
+    super::decks::does_machines,
+    super::decks::eye_of_jace,
+    super::decks::halsin_emerald_archdruid,
+    super::decks::quantum_entanglement,
+    super::decks::spore_cloud,
+    super::decks::tarox_bladewing,
+    super::decks::yargle_goliath_of_otaria,
     // cmdr_rank4k_b (session 01MsQdht)
     super::decks::ashnod_flesh_mechanist,
     super::decks::banishing_knack,
