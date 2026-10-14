@@ -4048,6 +4048,17 @@ static DECKS: &[Factory] = &[
     super::decks::reckless_crew,
     super::decks::roads_go_ever_ever_on,
     super::decks::the_darkhold,
+    // cmdr_rank3k_i (session 01PxmVAG)
+    super::decks::amazing_alliance,
+    super::decks::compelling_deterrence,
+    super::decks::invoke_the_ancients,
+    super::decks::myojin_of_grim_betrayal,
+    super::decks::patchwork_crawler,
+    super::decks::permeating_mass,
+    super::decks::silver_surfer_cosmic_voyager,
+    super::decks::spaceshift,
+    super::decks::spider_man_peter_parker,
+    super::decks::urborg_scavengers,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
