@@ -1353,6 +1353,19 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank4k_g (session 01MsQdht)
+    super::decks::aang_air_nomad,
+    super::decks::aim_synthoids,
+    super::decks::bilbo_unexpected_adventurer,
+    super::decks::dain_lord_of_the_iron_hills,
+    super::decks::goblin_wizardry,
+    super::decks::katara_heroic_healer,
+    super::decks::kumenas_awakening,
+    super::decks::quakebringer,
+    super::decks::ultron_drone,
+    super::decks::what_must_be_done,
+    super::decks::winter_team_player,
+    super::decks::yuriko_blade_of_the_mighty,
     // cmdr_rank4k_e (session 01MsQdht)
     super::decks::appa_aangs_companion,
     super::decks::brimstone_dragon,
