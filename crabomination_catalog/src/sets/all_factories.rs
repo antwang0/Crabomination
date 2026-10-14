@@ -4098,6 +4098,9 @@ static DECKS: &[Factory] = &[
     super::decks::hot_dog_cart,
     super::decks::stardew_valley,
     super::decks::theorists_sanctum,
+    // cmdr_rank3k_q (session 01PxmVAG)
+    super::decks::morningtides_light,
+    super::decks::rescue_girl_first_responder,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
