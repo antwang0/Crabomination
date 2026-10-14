@@ -13868,6 +13868,10 @@ pub enum DelayedTriggerKind {
     /// on that card's `SpellCast` by the registering player; lapses at cleanup
     /// or when the card leaves its zone some other way (CR 400.7).
     WhenYouCastTargetThisTurn,
+    /// "Whenever you attack this turn, …" (Jaya, Fiery Negotiator's −2): fires
+    /// on each of the controller's attack declarations, not once, with the
+    /// captured object still the body's `Target(0)`; lapses at cleanup.
+    EachAttackThisTurn,
 }
 
 /// Opening-hand ("if this is in your opening hand, you may ...") effect.

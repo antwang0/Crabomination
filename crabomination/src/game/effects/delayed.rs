@@ -34,6 +34,8 @@ pub(crate) fn delayed_kind_from_effect(
         DelayedTriggerKind::NextEndStep => DelayedKind::NextEndStep,
         DelayedTriggerKind::OpponentPermanentDamagesYouThisTurn => DelayedKind::OpponentPermanentDamagesYouThisTurn,
         DelayedTriggerKind::NextCleanupStep => DelayedKind::NextCleanupStep,
+        // The one-shot attack watcher, kept past its firing (`delayed_fires_once`).
+        DelayedTriggerKind::EachAttackThisTurn => DelayedKind::YourNextAttackThisTurn,
         DelayedTriggerKind::YourNextMainPhase => DelayedKind::YourNextMainPhase,
         DelayedTriggerKind::YourNextMainPhaseAny | DelayedTriggerKind::NextMainPhaseThisTurn => {
             DelayedKind::YourNextMainPhaseAny
@@ -64,4 +66,10 @@ pub(crate) fn delayed_kind_from_effect(
 pub(crate) fn delayed_expiry(k: DelayedTriggerKind, turn: u32) -> Option<u32> {
     matches!(k, DelayedTriggerKind::NextMainPhaseThisTurn | DelayedTriggerKind::WhenYouCastTargetThisTurn)
         .then_some(turn)
+}
+
+/// Whether a delayed kind is consumed by its first firing; "whenever … this
+/// turn" kinds repeat until cleanup sweeps them.
+pub(crate) fn delayed_fires_once(k: DelayedTriggerKind) -> bool {
+    !matches!(k, DelayedTriggerKind::EachAttackThisTurn)
 }

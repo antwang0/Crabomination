@@ -24709,7 +24709,9 @@ impl GameState {
                 }
             }
             // "When you next attack this turn, …" (CR 603.7e, All-Out Assault):
-            // one-shot, the attacking player's own, consumed by this batch.
+            // one-shot, the attacking player's own, consumed by this batch —
+            // or kept, with its captured target, for "whenever you attack
+            // this turn" (Jaya, Fiery Negotiator).
             // After the attackers are tapped, so an "untap each creature you
             // control" body reaches them.
             let attacking_player =
@@ -24723,7 +24725,7 @@ impl GameState {
                     std::mem::take(&mut self.delayed_triggers).into_iter().partition(next_attack);
                 self.delayed_triggers = rest;
                 for dt in fired {
-                    self.push_stack(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).build());
+                    self.push_stack(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).target(dt.target.clone()).build());
                     if !dt.fires_once {
                         self.delayed_triggers.push(dt);
                     }

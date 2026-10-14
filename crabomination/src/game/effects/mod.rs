@@ -35022,7 +35022,7 @@ impl GameState {
                     // delayed body's `LastCreatedToken` still finds it.
                     bound_token: self.last_created_token,
                     bound_subject: None,
-                    fires_once: true,
+                    fires_once: delayed::delayed_fires_once(*kind),
                     expires_after_turn: delayed::delayed_expiry(*kind, self.turn_number),
                 });
                 Ok(())
@@ -35083,7 +35083,7 @@ impl GameState {
                     target,
                     bound_token: self.last_created_token,
                     bound_subject: None,
-                    fires_once: true,
+                    fires_once: delayed::delayed_fires_once(*kind),
                     expires_after_turn: delayed::delayed_expiry(*kind, self.turn_number),
                 });
                 Ok(())
