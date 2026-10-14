@@ -67659,3 +67659,136 @@ pub const ZHAO_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const LU_SU_COMMANDERS: &[CardFactory] = &[lu_su_wu_advisor];
+
+/// **Lu Su, Wu Advisor**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Lu Su, Wu Advisor (EDHREC, fetched 2026-10-14).
+pub const LU_SU_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, fellwar_stone, hedron_archive, isochron_scepter,
+    mind_stone, sapphire_medallion, sky_diamond, sol_ring, the_endstone, thought_vessel,
+    thousand_year_elixir, thran_dynamo, wayfarers_bauble, minamo_school_at_waters_edge,
+    mystic_sanctuary, nykthos_shrine_to_nyx, reliquary_tower, aphetto_alchemist,
+    arcanis_the_omnipotent, body_of_knowledge, burnished_hart, consecrated_sphinx,
+    council_of_advisors, faerie_mastermind, ioreth_of_the_healing_house, laboratory_maniac,
+    mulldrifter, phyrexian_metamorph, pollywog_prodigy, psychosis_crawler, quistis_trepe,
+    silver_myr, solemn_simulacrum, spellskite, talas_researcher, thassas_oracle,
+    triskaidekaphile, unctus_grand_metatect, vizier_of_tumbling_sands, zhuge_jin_wu_strategist,
+    mind_over_matter, omniscience, psychic_corrosion, rhystic_study, teferis_ageless_insight,
+    wizard_class, an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell, dispel,
+    dramatic_reversal, frantic_search, high_tide, mana_drain, negate, pongify, turnabout,
+    jace_wielder_of_mysteries, borrowing_100_000_arrows, capture_of_jingzhou, gitaxian_probe,
+    minds_desire, ponder, time_warp, treasure_cruise, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
+
+pub const MISTER_HYDE_COMMANDERS: &[CardFactory] = &[mister_hyde_monster_within];
+
+/// **Mister Hyde, Monster Within**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Forests = 99.
+/// Mister Hyde, Monster Within (EDHREC, fetched 2026-10-14).
+pub const MISTER_HYDE_MAIN: &[CardFactory] = &[
+    emerald_medallion, herd_heirloom, sol_ring, swiftfoot_boots, the_earth_crystal, the_ozolith,
+    karns_bastion, mosswort_bridge, reliquary_tower, rogues_passage, tyrite_sanctum, war_room,
+    bighorner_rancher, birds_of_paradise, bristly_bill_spine_sower, disciple_of_freyalise,
+    doc_samson_super_psychiatrist, duskshell_crawler, elvish_mystic, evolution_sage,
+    evolution_witness, forgotten_ancient, gamma_grotesque, kami_of_whispered_hopes,
+    knight_of_wundagore, kodama_of_the_west_tree, llanowar_elves, managorger_hydra,
+    michelangelo_weirdness_to_11, mirkwood_pathmaker, ouroboroid, reclamation_sage,
+    scavenging_ooze, selvala_heart_of_the_wilds, shang_chi_martial_mentor, summon_bahamut,
+    summon_fenrir, vigor, warden_of_the_grove, wildwood_scourge, beorns_hospitality,
+    colossal_majesty, court_of_garenbrig, hardened_scales, high_score, innkeepers_talent,
+    level_up, stocking_the_pantry, terrasymbiosis, utopia_sprawl, beast_within,
+    biosynthic_burst, gaeas_gift, gift_of_the_viper, inspiring_call, invigorating_surge,
+    origin_of_metalbending, silkguard, snakeskin_veil, strength_of_will, bala_ged_recovery,
+    cultivate, harmonize, kodamas_reach, natures_lore, rishkars_expertise, study_the_classics,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const GIANT_MAN_COMMANDERS: &[CardFactory] = &[giant_man_gargantuan_genius];
+
+/// **Giant-Man, Gargantuan Genius**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Forests = 99.
+/// Giant-Man, Gargantuan Genius (EDHREC, fetched 2026-10-14).
+pub const GIANT_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, lifecrafters_bestiary, sol_ring, summoning_materia,
+    the_great_henge, lair_of_the_hydra, mosswort_bridge, myriad_landscape, reliquary_tower,
+    rogues_passage, annoyed_altisaur, apex_devastator, bugenhagen_wise_elder, challenger_troll,
+    craterhoof_behemoth, elder_gargaroth, elvish_mystic, fanatic_of_rhonas, fyndhorn_elves,
+    garruks_packleader, ghalta_the_unstoppable, ghalta_primal_hunger, ghalta_stampede_tyrant,
+    gigantic_big_bear, goliath_mass_manipulator, goreclaw_terror_of_qal_sisma,
+    hulk_brutal_brawler, hulking_raptor, ilysian_caryatid, lizard_connorss_curse,
+    llanowar_elves, mbaku_jabari_chieftain, ohran_frostfang, outcaster_trailblazer,
+    questing_beast, railway_brawler, rampaging_baloths, scrapshooter,
+    selvala_heart_of_the_wilds, silverback_elder, surrak_and_goreclaw, surrak_elusive_hunter,
+    surrak_the_hunt_caller, the_earth_king, topiary_stomper, vaultborn_tyrant, fight_rigging,
+    garruks_uprising, guardian_project, hunters_talent, unnatural_growth, wild_growth,
+    broken_wings, giant_growth, heroic_intervention, lifestreams_blessing, ram_through,
+    return_of_the_wildspeaker, snakeskin_veil, bridgeworks_battle, cultivate, genesis_wave,
+    overrun, overwhelming_stampede, rampant_growth, shamanic_revelation, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const XUN_YU_COMMANDERS: &[CardFactory] = &[xun_yu_wei_advisor];
+
+/// **Xun Yu, Wei Advisor**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Swamps = 99.
+/// Xun Yu, Wei Advisor (EDHREC, fetched 2026-10-14).
+pub const XUN_YU_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, bontus_monument, caged_sun, charcoal_diamond,
+    contagion_clasp, fireshrieker, jet_medallion, mind_stone, nightmare_lash, sol_ring,
+    staff_of_compleation, swiftfoot_boots, the_darkness_crystal, bojuka_bog, cabal_coffers,
+    cabal_stronghold, myriad_landscape, nykthos_shrine_to_nyx, phyrexian_tower, rogues_passage,
+    urborg_tomb_of_yawgmoth, witchs_cottage, blackcleave_goblin, blightbelly_rat,
+    contagious_nim, core_prowler, corpse_cur, crypt_ghast, flensermite, flesh_eater_imp,
+    gray_merchant_of_asphodel, hand_of_the_praetors, ichor_rats, ichorclaw_myr, necropede,
+    pestilent_syphoner, phyrexian_digester, phyrexian_juggernaut, phyrexian_vatmother,
+    plague_myr, plague_stinger, reaper_of_sheoldred, septic_rats, sheoldreds_headcleaver,
+    sinkhole_surveyor, swamp_mosquito, black_market_connections, exquisite_blood,
+    kayas_ghostform, necropotence, phyrexian_arena, phyrexian_reclamation, relic_putrescence,
+    cabal_ritual, consuming_corruption, dark_ritual, deadly_dispute, defile, grim_affliction,
+    howl_from_beyond, vampiric_tutor, village_rites, vraskas_fall, caress_of_phyrexia,
+    demonic_tutor, drown_in_ichor, feed_the_swarm, infectious_inquiry, nights_whisper,
+    read_the_bones, reanimate, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const AMAZING_SPIDER_GIRL_COMMANDERS: &[CardFactory] = &[amazing_spider_girl];
+
+/// **Amazing Spider-Girl**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Amazing Spider-Girl (EDHREC, fetched 2026-10-14).
+pub const AMAZING_SPIDER_GIRL_MAIN: &[CardFactory] = &[
+    aettir_and_priwen, arcane_signet, blackblade_reforged, caduceus_staff_of_hermes,
+    champions_helm, commanders_plate, fellwar_stone, genji_glove, gilded_lotus,
+    lightning_greaves, mind_stone, pearl_medallion, skullclamp, sol_ring, springleaf_drum,
+    swiftfoot_boots, the_one_ring, command_tower, emeria_the_sky_ruin, minas_tirith,
+    myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, the_mycosynth_gardens, war_room,
+    agent_phil_coulson, arachne_psionic_weaver, aunt_may, crashing_drawbridge, danitha_capashen,
+    deep_gnome_terramancer, giver_of_runes, gold_myr, healers_hawk, hedron_crawler,
+    helpful_hunter, joined_researchers, knight_of_the_white_orchid, kor_line_slinger,
+    loran_of_the_third_path, mother_of_runes, ornithopter_of_paradise, palace_jailer,
+    puresteel_paladin, scholar_of_new_horizons, selfless_spirit, solemn_simulacrum, soul_warden,
+    soulmender, spider_uk, stoneforge_mystic, weathered_wayfarer, authority_of_the_consuls,
+    darksteel_mutation, friendly_neighborhood, ghostly_prison, gift_of_immortality, land_tax,
+    trouble_in_pairs, flawless_maneuver, generous_gift, path_to_exile, reprieve,
+    stroke_of_midnight, sudden_strike, swords_to_plowshares, valorous_stance, austere_command,
+    collective_effort, cut_a_deal, divine_reckoning, sunfall,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];

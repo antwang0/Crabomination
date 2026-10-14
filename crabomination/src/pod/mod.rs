@@ -14892,6 +14892,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ZHAO_2_COMMANDERS,
             main: decks::ZHAO_2_MAIN,
         },
+        // Seat 2407: Lu Su, Wu Advisor's EDHREC average deck. `--pod-decks 2407`.
+        PodDeck {
+            name: "Lu Su, Wu Advisor (U)",
+            commanders: decks::LU_SU_COMMANDERS,
+            main: decks::LU_SU_MAIN,
+        },
+        // Seat 2408: Mister Hyde, Monster Within's EDHREC average deck. `--pod-decks 2408`.
+        PodDeck {
+            name: "Mister Hyde, Monster Within (G)",
+            commanders: decks::MISTER_HYDE_COMMANDERS,
+            main: decks::MISTER_HYDE_MAIN,
+        },
+        // Seat 2409: Giant-Man, Gargantuan Genius's EDHREC average deck. `--pod-decks 2409`.
+        PodDeck {
+            name: "Giant-Man, Gargantuan Genius (G)",
+            commanders: decks::GIANT_MAN_COMMANDERS,
+            main: decks::GIANT_MAN_MAIN,
+        },
+        // Seat 2410: Xun Yu, Wei Advisor's EDHREC average deck. `--pod-decks 2410`.
+        PodDeck {
+            name: "Xun Yu, Wei Advisor (B)",
+            commanders: decks::XUN_YU_COMMANDERS,
+            main: decks::XUN_YU_MAIN,
+        },
+        // Seat 2411: Amazing Spider-Girl's EDHREC average deck. `--pod-decks 2411`.
+        PodDeck {
+            name: "Amazing Spider-Girl (W)",
+            commanders: decks::AMAZING_SPIDER_GIRL_COMMANDERS,
+            main: decks::AMAZING_SPIDER_GIRL_MAIN,
+        },
     ]
 }
 
@@ -19129,6 +19159,11 @@ mod tests {
             ("Éomer of the Riddermark", &[0x137A]),
             ("Mockingbird, Ace Agent", &[0x137B]),
             ("Zhao, the Seething Flame", &[0x137C]),
+            ("Lu Su, Wu Advisor", &[0x137D]),
+            ("Mister Hyde, Monster Within", &[0x137E]),
+            ("Giant-Man, Gargantuan Genius", &[0x137F]),
+            ("Xun Yu, Wei Advisor", &[0x1380]),
+            ("Amazing Spider-Girl", &[0x1381]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
