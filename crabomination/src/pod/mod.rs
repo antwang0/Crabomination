@@ -14952,6 +14952,126 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARCADES_SABBOTH_COMMANDERS,
             main: decks::ARCADES_SABBOTH_MAIN,
         },
+        // Seat 2417: Namor the Sub-Mariner's EDHREC average deck. `--pod-decks 2417`.
+        PodDeck {
+            name: "Namor the Sub-Mariner (U)",
+            commanders: decks::NAMOR_THE_SUB_MARINER_COMMANDERS,
+            main: decks::NAMOR_THE_SUB_MARINER_MAIN,
+        },
+        // Seat 2418: Hidetsugu and Kairi's EDHREC average deck. `--pod-decks 2418`.
+        PodDeck {
+            name: "Hidetsugu and Kairi (UB)",
+            commanders: decks::HIDETSUGU_AND_KAIRI_COMMANDERS,
+            main: decks::HIDETSUGU_AND_KAIRI_MAIN,
+        },
+        // Seat 2419: Suki, Kyoshi Warrior's EDHREC average deck. `--pod-decks 2419`.
+        PodDeck {
+            name: "Suki, Kyoshi Warrior (WG)",
+            commanders: decks::SUKI_COMMANDERS,
+            main: decks::SUKI_MAIN,
+        },
+        // Seat 2420: Estinien Varlineau's EDHREC average deck. `--pod-decks 2420`.
+        PodDeck {
+            name: "Estinien Varlineau (WB)",
+            commanders: decks::ESTINIEN_VARLINEAU_COMMANDERS,
+            main: decks::ESTINIEN_VARLINEAU_MAIN,
+        },
+        // Seat 2421: Kiki-Jiki, Mirror Breaker's EDHREC average deck. `--pod-decks 2421`.
+        PodDeck {
+            name: "Kiki-Jiki, Mirror Breaker (R)",
+            commanders: decks::KIKI_JIKI_COMMANDERS,
+            main: decks::KIKI_JIKI_MAIN,
+        },
+        // Seat 2422: Gogo, Mysterious Mime's EDHREC average deck. `--pod-decks 2422`.
+        PodDeck {
+            name: "Gogo, Mysterious Mime (R)",
+            commanders: decks::GOGO_2_COMMANDERS,
+            main: decks::GOGO_2_MAIN,
+        },
+        // Seat 2423: Sauron, Dino Devotee's EDHREC average deck. `--pod-decks 2423`.
+        PodDeck {
+            name: "Sauron, Dino Devotee (G)",
+            commanders: decks::SAURON_3_COMMANDERS,
+            main: decks::SAURON_3_MAIN,
+        },
+        // Seat 2424: The Lord of the Eagles's EDHREC average deck. `--pod-decks 2424`.
+        PodDeck {
+            name: "The Lord of the Eagles (U)",
+            commanders: decks::THE_LORD_OF_THE_EAGLES_COMMANDERS,
+            main: decks::THE_LORD_OF_THE_EAGLES_MAIN,
+        },
+        // Seat 2425: Nico Minoru, Runaway's EDHREC average deck. `--pod-decks 2425`.
+        PodDeck {
+            name: "Nico Minoru, Runaway (R)",
+            commanders: decks::NICO_MINORU_COMMANDERS,
+            main: decks::NICO_MINORU_MAIN,
+        },
+        // Seat 2426: Spider-Man, Peter Parker's EDHREC average deck. `--pod-decks 2426`.
+        PodDeck {
+            name: "Spider-Man, Peter Parker (W)",
+            commanders: decks::SPIDER_MAN_2_COMMANDERS,
+            main: decks::SPIDER_MAN_2_MAIN,
+        },
+        // Seat 2427: The Dalek Emperor's EDHREC average deck. `--pod-decks 2427`.
+        PodDeck {
+            name: "The Dalek Emperor (BR)",
+            commanders: decks::THE_DALEK_EMPEROR_COMMANDERS,
+            main: decks::THE_DALEK_EMPEROR_MAIN,
+        },
+        // Seat 2428: Krang, Master Mind's EDHREC average deck. `--pod-decks 2428`.
+        PodDeck {
+            name: "Krang, Master Mind (U)",
+            commanders: decks::KRANG_3_COMMANDERS,
+            main: decks::KRANG_3_MAIN,
+        },
+        // Seat 2429: Théoden, King of Rohan's EDHREC average deck. `--pod-decks 2429`.
+        PodDeck {
+            name: "Théoden, King of Rohan (WR)",
+            commanders: decks::THEODEN_COMMANDERS,
+            main: decks::THEODEN_MAIN,
+        },
+        // Seat 2430: Aunt May's EDHREC average deck. `--pod-decks 2430`.
+        PodDeck {
+            name: "Aunt May (W)",
+            commanders: decks::AUNT_MAY_COMMANDERS,
+            main: decks::AUNT_MAY_MAIN,
+        },
+        // Seat 2431: Éomer, King of Rohan's EDHREC average deck. `--pod-decks 2431`.
+        PodDeck {
+            name: "Éomer, King of Rohan (WR)",
+            commanders: decks::EOMER_2_COMMANDERS,
+            main: decks::EOMER_2_MAIN,
+        },
+        // Seat 2432: Gwaihir the Windlord's EDHREC average deck. `--pod-decks 2432`.
+        PodDeck {
+            name: "Gwaihir the Windlord (WU)",
+            commanders: decks::GWAIHIR_THE_WINDLORD_COMMANDERS,
+            main: decks::GWAIHIR_THE_WINDLORD_MAIN,
+        },
+        // Seat 2433: June, Bounty Hunter's EDHREC average deck. `--pod-decks 2433`.
+        PodDeck {
+            name: "June, Bounty Hunter (B)",
+            commanders: decks::JUNE_COMMANDERS,
+            main: decks::JUNE_MAIN,
+        },
+        // Seat 2434: Tersa Lightshatter's EDHREC average deck. `--pod-decks 2434`.
+        PodDeck {
+            name: "Tersa Lightshatter (R)",
+            commanders: decks::TERSA_LIGHTSHATTER_COMMANDERS,
+            main: decks::TERSA_LIGHTSHATTER_MAIN,
+        },
+        // Seat 2435: Norika Yamazaki, the Poet's EDHREC average deck. `--pod-decks 2435`.
+        PodDeck {
+            name: "Norika Yamazaki, the Poet (W)",
+            commanders: decks::NORIKA_YAMAZAKI_COMMANDERS,
+            main: decks::NORIKA_YAMAZAKI_MAIN,
+        },
+        // Seat 2436: Palladia-Mors, the Ruiner's EDHREC average deck. `--pod-decks 2436`.
+        PodDeck {
+            name: "Palladia-Mors, the Ruiner (WRG)",
+            commanders: decks::PALLADIA_MORS_2_COMMANDERS,
+            main: decks::PALLADIA_MORS_2_MAIN,
+        },
     ]
 }
 
@@ -19199,6 +19319,26 @@ mod tests {
             ("Siani, Eye of the Storm", &[0x1384]),
             ("Black Widow, Super Spy", &[0x1385]),
             ("Arcades Sabboth", &[0x1386]),
+            ("Namor the Sub-Mariner", &[0x1387]),
+            ("Hidetsugu and Kairi", &[0x1388]),
+            ("Suki, Kyoshi Warrior", &[0x1389]),
+            ("Estinien Varlineau", &[0x138A]),
+            ("Kiki-Jiki, Mirror Breaker", &[0x138B]),
+            ("Gogo, Mysterious Mime", &[0x138C]),
+            ("Sauron, Dino Devotee", &[0x138D]),
+            ("The Lord of the Eagles", &[0x138E]),
+            ("Nico Minoru, Runaway", &[0x138F]),
+            ("Spider-Man, Peter Parker", &[0x1390]),
+            ("The Dalek Emperor", &[0x1391]),
+            ("Krang, Master Mind", &[0x1392]),
+            ("Théoden, King of Rohan", &[0x1393]),
+            ("Aunt May", &[0x1394]),
+            ("Éomer, King of Rohan", &[0x1395]),
+            ("Gwaihir the Windlord", &[0x1396]),
+            ("June, Bounty Hunter", &[0x1397]),
+            ("Tersa Lightshatter", &[0x1398]),
+            ("Norika Yamazaki, the Poet", &[0x1399]),
+            ("Palladia-Mors, the Ruiner", &[0x139A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
