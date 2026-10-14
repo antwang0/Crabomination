@@ -11094,12 +11094,6 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DARIGAAZ_COMMANDERS,
             main: decks::DARIGAAZ_MAIN,
         },
-        // Seat 1774: Maraxus of Keld's EDHREC average deck. `--pod-decks 1774`.
-        PodDeck {
-            name: "Maraxus of Keld (R)",
-            commanders: decks::MARAXUS_OF_KELD_COMMANDERS,
-            main: decks::MARAXUS_OF_KELD_MAIN,
-        },
     ]
 }
 

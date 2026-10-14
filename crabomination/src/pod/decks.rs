@@ -50146,31 +50146,3 @@ pub const DARIGAAZ_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
     mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
-
-pub const MARAXUS_OF_KELD_COMMANDERS: &[CardFactory] = &[maraxus_of_keld];
-
-/// **Maraxus of Keld**'s EDHREC average deck, card for card:
-/// 71 nonbasic cards + 28 Mountains = 99.
-/// Maraxus of Keld (EDHREC, fetched 2026-10-14).
-pub const MARAXUS_OF_KELD_MAIN: &[CardFactory] = &[
-    arcane_signet, beamtown_beatstick, blackblade_reforged, commanders_plate, diamond_pick_axe,
-    fire_diamond, goldvein_pick, haunted_cloak, lightning_greaves, loxodon_warhammer,
-    mind_stone, mithril_coat, ruby_medallion, shadowspear, sol_ring, swiftfoot_boots,
-    sword_of_vengeance, sword_of_the_animist, tenza_godos_maul, the_reaver_cleaver,
-    trailblazers_boots, wayfarers_bauble, dwarven_mine, kher_keep, mines_of_moria,
-    myriad_landscape, rogues_passage, treasure_vault, war_room, academy_manufactor,
-    ancient_copper_dragon, archetype_of_aggression, burnished_hart, captain_lannery_storm,
-    generous_plunderer, goldspan_dragon, hellkite_tyrant, hoarding_ogre,
-    kazuul_tyrant_of_the_cliffs, kediss_emberclaw_familiar, krenko_mob_boss,
-    krenko_tin_street_kingpin, lizard_blades, loyal_apprentice, professional_face_breaker,
-    solemn_simulacrum, toggo_goblin_weaponsmith, treasure_nabber, xorn, burning_anger,
-    curse_of_opulence, descent_into_avernus, sticky_fingers, there_and_back_again, abrade,
-    big_score, chaos_warp, fling, kazuuls_fury, souls_fire, temur_battle_rage,
-    unexpected_windfall, blasphemous_act, brasss_bounty, chandras_ignition, faithless_looting,
-    gravitic_punch, mana_geyser, pirates_pillage, seize_the_spoils, vandalblast,
-    // Basics
-    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
-    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
-    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
-    mountain,
-];
