@@ -30654,7 +30654,11 @@ impl GameState {
                 }
                 // Concretize X-dependent filters against the paid X (Vivien's
                 // Arkbow — "creature card with mana value X or less").
-                let filter = filter.resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
+                // … and source-power gates (Ayesha Tanaka, Armorer's "mana value
+                // less than or equal to Ayesha's power"), as `Search` does.
+                let power = ctx.source.and_then(|s| self.source_power_lki(s)).unwrap_or(0);
+                let filter =
+                    filter.resolve_source_power(power).resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
                 let mut picks: Vec<crate::card::CardId> = looked
                     .iter()
                     .copied()
