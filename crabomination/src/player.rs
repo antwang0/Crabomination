@@ -1016,6 +1016,12 @@ pub struct PlayerData {
     /// (Morningtide's Light). Cleared as this player's turn begins.
     #[serde(default)]
     pub all_damage_prevented_until_next_turn: bool,
+    /// "Until your next turn, you can't be attacked except by creatures with
+    /// flying and/or islandwalk" (Island Sanctuary): only attackers matching
+    /// the filter may attack this player. Cleared as this player's turn
+    /// begins (`game::draw_skip_shield`).
+    #[serde(default)]
+    pub attackable_only_by_until_next_turn: Option<Box<crate::card::SelectionRequirement>>,
     /// Non-mana activated abilities this player activated this turn — the
     /// Commander bot's activation-loop brake (`server::activation_cap`).
     /// Reset for every seat as each turn begins.
@@ -1871,6 +1877,7 @@ impl Player {
             protected_from_everything: false,
             all_damage_prevented_this_turn: false,
             all_damage_prevented_until_next_turn: false,
+            attackable_only_by_until_next_turn: None,
             nonmana_activations_this_turn: 0,
             protection_colors_eot: crate::mana::ColorSet::empty(),
             protected_from_seats_eot: 0,

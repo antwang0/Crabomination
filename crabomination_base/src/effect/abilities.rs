@@ -4100,6 +4100,12 @@ pub enum StaticEffect {
     /// instead. If you do, you gain N life" (Fasting). Optional twin of
     /// `ControllerSkipsDrawStep`, asked at the draw step's turn-based action.
     ControllerMaySkipDrawStepForLife { life: u32 },
+    /// CR 614.1a / 508.1 — "If you would draw a card during your draw step,
+    /// instead you may skip that draw. If you do, until your next turn, you
+    /// can't be attacked except by creatures matching `attackers`" (Island
+    /// Sanctuary). Asked per turn-based draw (`game::draw_skip_shield`); the
+    /// shield lives on `Player.attackable_only_by_until_next_turn`.
+    ControllerMaySkipDrawStepDrawForAttackShield { attackers: SelectionRequirement },
     /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
     ControllerCantPlayLands,
     /// Mistform Warchief — "Creature spells you cast that share a creature

@@ -159,7 +159,9 @@ pub(crate) fn trim_life_taxed_attacks(state: &GameState, seat: usize, mut attack
 /// leaves that seat alone.
 fn cant_be_spilled_at(state: &GameState, d: usize) -> bool {
     use crate::effect::StaticEffect;
-    state.battlefield.iter().any(|c| {
+    // Island Sanctuary's shield is the same shape: only some attackers may go.
+    state.players[d].attackable_only_by_until_next_turn.is_some()
+        || state.battlefield.iter().any(|c| {
         c.controller == d
             && c.definition
                 .static_abilities

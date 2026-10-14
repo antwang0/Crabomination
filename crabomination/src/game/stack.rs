@@ -870,6 +870,11 @@ impl GameState {
                     // draws, in seat order. A singleton team is just the
                     // active player.
                     for p in self.active_team_members() {
+                        // CR 614.1a — Island Sanctuary replaces this draw with
+                        // nothing plus an attack shield.
+                        if self.offer_draw_skip_shield(p) {
+                            continue;
+                        }
                         // CR 504.1 — the turn-based draw-step draw is exempt from
                         // Notion Thief's redirect ("except the first one they draw").
                         self.in_turn_based_draw = true;
@@ -4996,6 +5001,9 @@ impl GameState {
         self.players[p].protected_from_everything = false;
         if self.players[p].all_damage_prevented_until_next_turn {
             self.players[p].all_damage_prevented_until_next_turn = false;
+        }
+        if self.players[p].attackable_only_by_until_next_turn.is_some() {
+            self.players[p].attackable_only_by_until_next_turn = None;
         }
         if self.players[p].protected_from_seats_until_next_turn != 0 {
             self.players[p].protected_from_seats_until_next_turn = 0;

@@ -156,6 +156,7 @@ mod casualty_copy;
 mod prevent_attacking;
 mod loss_exile;
 mod mystic_barrier;
+mod draw_skip_shield;
 mod loyalty_copy;
 mod gate_mana;
 mod eldrazi;
@@ -34526,6 +34527,7 @@ fn static_effect_to_effects(
             | StaticEffect::NoPlayerCanPlayLands
             | StaticEffect::ControllerSkipsDrawStep
             | StaticEffect::ControllerMaySkipDrawStepForLife { .. }
+            | StaticEffect::ControllerMaySkipDrawStepDrawForAttackShield { .. }
             | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::OpponentsWithMoreCantPlayThatType

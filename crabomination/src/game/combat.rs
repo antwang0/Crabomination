@@ -1888,6 +1888,12 @@ impl GameState {
                 }
             };
             let Some(d) = defender else { continue };
+            // CR 508.1 — Island Sanctuary's shield bars attacks on the player.
+            if matches!(atk.target, crate::game::types::AttackTarget::Player(_))
+                && self.attacker_barred_by_shield(atk.attacker, d)
+            {
+                return Err(attack_reject(line!(), GameError::CannotAttack(atk.attacker)));
+            }
             // CR 508.1 — Arboria: a player who did nothing on their own last
             // turn can't be attacked at all.
             if !self.acted_on_their_last_turn(d)
