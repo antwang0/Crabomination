@@ -6447,10 +6447,11 @@ impl GameState {
                     .collect();
                 let n = owned.len();
                 for cid in owned {
+                    let stripped = self.lost_all_abilities(cid);
                     if let Some(mut card) = self.battlefield.take_by_id(cid) {
                         self.remove_effects_from_source(cid);
                         self.remove_from_combat(cid);
-                        self.note_left_without_dying(&card, events);
+                        self.note_left_without_dying(&card, stripped, events);
                         self.on_left_battlefield(cid, events);
                         if card.is_token {
                             continue; // tokens cease to exist (CR 111.7)
@@ -19374,13 +19375,14 @@ impl GameState {
                 // then stash them inside the new melded object.
                 let mut parts = Vec::new();
                 for id in [source, partner_id] {
+                    let stripped = self.lost_all_abilities(id);
                     let Some(mut card) = self.battlefield.take_by_id(id) else {
                         continue;
                     };
                     self.remove_effects_from_source(id);
                     self.remove_from_combat(id);
                     events.push(GameEvent::PermanentExiled { card_id: id });
-                    self.note_left_without_dying(&card, events);
+                    self.note_left_without_dying(&card, stripped, events);
                     self.on_left_battlefield(id, events);
                     // CR 400.7 — exiled, each half is a new object: a tapped
                     // Gisela came back out of a bounced Brisela tapped.
@@ -22803,7 +22805,8 @@ impl GameState {
                         self.battlefield.iter().filter(|c| c.owner == p && c.is_token).cloned().collect();
                     for t in &tokens {
                         self.remove_permanent_from_combat(t.id);
-                        self.note_left_without_dying(t, events);
+                        let stripped = self.lost_all_abilities(t.id);
+                        self.note_left_without_dying(t, stripped, events);
                     }
                     self.battlefield.retain(|c| c.owner != p || !c.is_token);
                     for t in &tokens {

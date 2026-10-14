@@ -1844,6 +1844,30 @@ fn cr_113_10b_a_stripped_creature_has_no_death_trigger() {
     assert!(g.players[0].hand.is_empty(), "Runed Servitor's draw trigger is gone");
 }
 
+/// CR 113.10b / 603.10a — a bounced permanent's "when this leaves the
+/// battlefield" looks back at it as it last existed: stripped of its
+/// abilities, it has none (Splinter, Aging Champion's draw).
+#[test]
+fn cr_113_10b_a_stripped_permanent_has_no_leave_trigger() {
+    use crabomination::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
+    use crabomination::game::effects::EffectContext;
+    let bounce = Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) };
+    for stripped in [false, true] {
+        let mut g = two_player_game();
+        g.add_card_to_library(0, catalog::island());
+        let id = g.add_card_to_battlefield(0, catalog::splinter_aging_champion());
+        let ctx = EffectContext::for_ability(id, 0, None);
+        if stripped {
+            g.resolve_effect(&Effect::LoseAllAbilities { what: Selector::This, duration: Duration::EndOfTurn }, &ctx)
+                .unwrap();
+        }
+        let evs = g.resolve_effect(&bounce, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), if stripped { 1 } else { 2 }, "stripped: {stripped}");
+    }
+}
+
 // ── CR 514.3 / 514.3a — cleanup priority only when something happens ─────────
 
 /// A quiet cleanup grants no priority: passing out of the end step lands in

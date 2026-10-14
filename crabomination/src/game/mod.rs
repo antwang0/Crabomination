@@ -18376,6 +18376,11 @@ impl GameState {
     /// play.
     pub(crate) fn lki_clone(&self, c: &CardInstance) -> CardInstance {
         let mut snap = c.clone();
+        // CR 113.10b / 603.10a — a stripped permanent looks back with no
+        // printed triggers.
+        if self.lost_all_abilities(c.id) {
+            snap.definition_make_mut().triggered_abilities.clear();
+        }
         // The doc's "only pays the layer cost when a grant is present" was a
         // claim, not code, until the presence gate existed: the read below is
         // a whole gather, taken once per dying permanent. `computed` can only

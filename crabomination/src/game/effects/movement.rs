@@ -2582,6 +2582,7 @@ impl GameState {
         }
         // Try battlefield first.
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == cid) {
+            let stripped = self.lost_all_abilities(cid);
             let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(cid);
             self.collect_leaver_counters(&card);
@@ -2630,7 +2631,7 @@ impl GameState {
             let leaver = (card.definition.is_creature() && !matches!(resolved_dest, ZoneDest::Graveyard))
                 .then_some((card.id, card.controller));
             if !matches!(resolved_dest, ZoneDest::Graveyard | ZoneDest::Battlefield { .. }) {
-                self.note_left_without_dying(&card, events);
+                self.note_left_without_dying(&card, stripped, events);
             }
             // EOE Void — any nonland permanent leaving the battlefield (bounce,
             // sacrifice, exile, …) latches the turn-wide flag.
@@ -3386,12 +3387,20 @@ impl GameState {
     /// dispatch — the death path collects that trigger before removal
     /// instead) and reports the leave to every other listener. Every
     /// non-graveyard exit calls this beside `on_left_battlefield`.
+    /// `stripped` is [`GameState::lost_all_abilities`] read before the card
+    /// left: a stripped leaver's snapshot carries no printed triggers (CR
+    /// 113.10b), so its own "when this leaves" doesn't fire.
     pub(crate) fn note_left_without_dying(
         &mut self,
         card: &crate::card::CardInstance,
+        stripped: bool,
         events: &mut Vec<GameEvent>,
     ) {
-        self.died_card_snapshots.insert(card.id, card.clone());
+        let mut snap = card.clone();
+        if stripped {
+            snap.definition_make_mut().triggered_abilities.clear();
+        }
+        self.died_card_snapshots.insert(card.id, snap);
         events.push(GameEvent::PermanentLeftBattlefield {
             card_id: card.id,
             controller: card.controller,

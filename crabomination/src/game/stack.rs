@@ -6279,7 +6279,8 @@ impl GameState {
         let leavers: Vec<crate::card::CardInstance> =
             self.battlefield.iter().filter(|c| c.owner == p).cloned().collect();
         for c in &leavers {
-            self.note_left_without_dying(c, events);
+            let stripped = self.lost_all_abilities(c.id);
+            self.note_left_without_dying(c, stripped, events);
         }
         self.battlefield.retain(|c| c.owner != p);
         // The departed seat's phased-out permanents first (CR 702.26a — still
@@ -9259,6 +9260,7 @@ impl GameState {
     /// emitting the leave-the-battlefield events. Used by cost lines that bounce
     /// the source (`ActivatedAbility::bounce_self_cost` — Magosi).
     pub fn remove_from_battlefield_to_hand(&mut self, id: CardId) -> Vec<GameEvent> {
+        let stripped = self.lost_all_abilities(id);
         let mut events = Vec::new();
         // A creature leaving, read before it goes (CR 608.2h last-known
         // information): an animated land counts (Tale of Momo).
@@ -9289,7 +9291,7 @@ impl GameState {
             self.nonland_permanent_left_bf_this_turn = true;
         }
         let leaver = card.definition.is_creature().then_some((card.id, card.controller));
-        self.note_left_without_dying(&card, &mut events);
+        self.note_left_without_dying(&card, stripped, &mut events);
         // CR 903.9b — a commander bounced this way may go to the command zone
         // instead (the replacement runs in `resolve_zone_change`); the placer
         // also splits a melded or mutated pile (CR 712.8g / 721.3).
@@ -9309,6 +9311,7 @@ impl GameState {
     }
 
     pub fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
+        let stripped = self.lost_all_abilities(id);
         // A creature leaving, read before it goes (CR 608.2h last-known
         // information): an animated land counts (Tale of Momo).
         let was_creature = self.battlefield.find_by_id(id).is_some_and(|c| self.computed_is_creature(c));
@@ -9344,7 +9347,7 @@ impl GameState {
             let leaver =
                 (card.definition.is_creature()).then_some((card.id, card.controller));
             let mut events = Vec::new();
-            self.note_left_without_dying(&card, &mut events);
+            self.note_left_without_dying(&card, stripped, &mut events);
             // Record for `Selector::ExiledThisResolution` ("that many basic
             // lands", "if you exiled a land card this way"). The library and
             // graveyard exits record it in `place_card_in_dest` /
