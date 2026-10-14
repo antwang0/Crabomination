@@ -10227,6 +10227,10 @@ pub struct CardData {
     /// `Value::DesertManaSpentToCastSource` (Cataclysmic Prospecting). Not
     /// serialized.
     pub cast_desert_mana: u8,
+    /// Mana from snow sources spent to cast this spell, capped at 255. Read
+    /// by `Value::SnowManaSpentToCastSource` (Blessing of Frost). Not
+    /// serialized.
+    pub cast_snow_mana: u8,
     /// Mana from creatures spent to cast this spell, capped at 255. Read by
     /// `Value::CreatureManaSpentToCastTriggerSource` (Inga and Esika). Not
     /// serialized.
@@ -11265,6 +11269,7 @@ impl CardInstance {
             cast_with_marked_mana: false,
             cast_artifact_mana: 0,
             cast_desert_mana: 0,
+            cast_snow_mana: 0,
             cast_creature_mana: 0,
             put_onto_battlefield_by: None,
             cast_via_mayhem: false,

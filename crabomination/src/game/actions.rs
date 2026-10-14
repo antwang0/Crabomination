@@ -4013,6 +4013,11 @@ impl crate::game::GameState {
         if spent > 0 {
             self.players[p].cast_paid_desert_mana = spent;
         }
+        // Blessing of Frost — how much snow mana this payment spent.
+        let spent = receipt.pool_before.snow_amount().saturating_sub(self.players[p].mana_pool.snow_amount());
+        if spent > 0 {
+            self.players[p].cast_paid_snow_mana = spent;
+        }
         // Generator Servant — mana spent on a creature spell grants it haste.
         let dragon = kind.changeling || kind.creature_types.contains(&crate::card::CreatureType::Dragon);
         if kind.creature
@@ -13261,6 +13266,9 @@ impl GameState {
         if self.players[p].cast_paid_desert_mana > 0 {
             card.cast_desert_mana = std::mem::take(&mut self.players[p].cast_paid_desert_mana).min(255) as u8;
         }
+        if self.players[p].cast_paid_snow_mana > 0 {
+            card.cast_snow_mana = std::mem::take(&mut self.players[p].cast_paid_snow_mana).min(255) as u8;
+        }
         if self.players[p].cast_paid_creature_mana > 0 {
             card.cast_creature_mana = std::mem::take(&mut self.players[p].cast_paid_creature_mana).min(255) as u8;
         }
@@ -21178,6 +21186,14 @@ impl GameState {
         let desert_before = source
             .filter(|c| self.permanent_has_land_type(c, crate::card::LandType::Desert))
             .map(|_| self.players[p].mana_pool.total());
+        // CR 106.3 / 107.4h — mana from a snow source is snow mana (Blessing
+        // of Frost's "{S} spent", the {S} pip).
+        let snow_before = source
+            .filter(|c| {
+                self.computed_permanent(c.id)
+                    .map_or(c.definition.is_snow(), |cp| cp.supertypes().contains(&crate::card::Supertype::Snow))
+            })
+            .map(|_| self.players[p].mana_pool.total());
         // Tezzeret, Betrayer of Flesh's "first artifact ability each turn".
         let first_artifact_ability = !self.players[p].artifact_ability_activated_this_turn
             && source.is_some_and(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Artifact));
@@ -21243,6 +21259,13 @@ impl GameState {
             let d = pool.total().saturating_sub(total);
             if d > 0 {
                 pool.mark_from_desert(d);
+            }
+        }
+        if let Some(total) = snow_before {
+            let pool = &mut self.players[p].mana_pool;
+            let d = pool.total().saturating_sub(total);
+            if d > 0 {
+                pool.mark_from_snow(d);
             }
         }
         out

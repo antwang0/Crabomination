@@ -1574,6 +1574,12 @@ impl ManaPool {
         self.clamp_creature();
     }
 
+    /// Tag `amount` mana just added as snow (CR 106.3 — produced by a snow
+    /// source), clamped to the pool like every provenance counter.
+    pub fn mark_from_snow(&mut self, amount: u32) {
+        self.snow = (self.snow + amount).min(self.total());
+    }
+
     /// Desert-produced mana floating (see the field).
     pub fn desert_amount(&self) -> u32 {
         self.desert

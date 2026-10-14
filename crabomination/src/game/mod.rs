@@ -4671,6 +4671,8 @@ pub(crate) struct ResolvingSpell {
     /// `CardData::cast_desert_mana` — the card itself is out of every zone
     /// while it resolves.
     pub cast_desert_mana: u8,
+    /// `CardData::cast_snow_mana`, for the same reason.
+    pub cast_snow_mana: u8,
     /// CR 707.10 — the decisions a copy of it inherits (`spell_copy`).
     pub cast_choices: crate::game::spell_copy::CastChoices,
 }

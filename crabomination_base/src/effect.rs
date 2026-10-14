@@ -1434,6 +1434,11 @@ pub enum Value {
     /// Mana from Deserts spent to cast the source spell (Cataclysmic
     /// Prospecting): the `CardData::cast_desert_mana` stamp.
     DesertManaSpentToCastSource,
+    /// Mana from snow sources spent to cast the source spell — "the amount of
+    /// {S} spent to cast this spell" (Blessing of Frost): the
+    /// `CardData::cast_snow_mana` stamp, read off the pool's snow provenance
+    /// (conservative, like the pool's own clamp).
+    SnowManaSpentToCastSource,
     /// "Each creature `who` controlled that dealt combat damage to a player
     /// this turn" (Excess): the distinct creatures in the other players'
     /// combat-damage lists, gone ones included — on the battlefield read by
