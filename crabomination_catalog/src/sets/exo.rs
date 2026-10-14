@@ -793,12 +793,13 @@ pub fn mana_breach() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
-            effect: Effect::Move {
-                what: Selector::ControlledBy {
-                    who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
-                    filter: R::Land,
-                },
-                to: ZoneDest::Hand(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+            // "That player returns A land they control" — one land, their
+            // pick (it used to bounce every land they controlled).
+            effect: Effect::OpponentChoosesPermanentThen {
+                filter: R::Land,
+                body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
+                chooser: Some(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                theirs: true,
             },
         }],
         ..enchantment("Mana Breach", cost(&[generic(2), u()]))

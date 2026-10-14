@@ -367,12 +367,14 @@ fn convalescence_waits_until_youre_low() {
     assert_eq!(g.players[0].life, 9);
 }
 
-/// Mana Breach bounces a land from whoever cast the spell.
+/// Mana Breach bounces one land — not every land — from whoever cast the
+/// spell.
 #[test]
 fn mana_breach_bounces_the_casters_land() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::mana_breach());
     let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let island = g.add_card_to_battlefield(1, catalog::island());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.active_player_idx = 1;
     g.step = TurnStep::PreCombatMain;
@@ -387,7 +389,8 @@ fn mana_breach_bounces_the_casters_land() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    assert!(g.players[1].hand.iter().any(|c| c.id == forest), "the caster paid the land");
+    let back = [forest, island].iter().filter(|id| g.players[1].hand.iter().any(|c| c.id == **id)).count();
+    assert_eq!(back, 1, "the caster paid exactly one land");
 }
 
 /// Death's Duet pulls two creature cards back at once.
