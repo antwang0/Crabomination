@@ -15450,6 +15450,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SELENIA_COMMANDERS,
             main: decks::SELENIA_MAIN,
         },
+        // Seat 2500: Rose Noble's EDHREC average deck. `--pod-decks 2500`.
+        PodDeck {
+            name: "Rose Noble (U)",
+            commanders: decks::ROSE_NOBLE_COMMANDERS,
+            main: decks::ROSE_NOBLE_MAIN,
+        },
     ]
 }
 
@@ -19782,6 +19788,7 @@ mod tests {
             ("Senu, Keen-Eyed Protector", &[0x13D7]),
             ("Kazuul, Tyrant of the Cliffs", &[0x13D8]),
             ("Selenia, the Cursed Heart", &[0x13D9]),
+            ("Rose Noble", &[0x13DA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

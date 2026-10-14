@@ -70228,3 +70228,31 @@ pub const SELENIA_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const ROSE_NOBLE_COMMANDERS: &[CardFactory] = &[rose_noble];
+
+/// **Rose Noble**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Islands = 99.
+/// Rose Noble (EDHREC, fetched 2026-10-14).
+pub const ROSE_NOBLE_MAIN: &[CardFactory] = &[
+    arcane_signet, firdoch_core, maskwood_nexus, mind_stone, sapphire_medallion, sky_diamond,
+    thought_vessel, thrumming_hivepool, wayfarers_bauble, castle_vantress, coral_atoll,
+    mystic_sanctuary, reliquary_tower, trenzalore_clocktower, war_room,
+    adric_mathematical_genius, amoeboid_changeling, barkform_harvester, bloodline_pretender,
+    body_of_knowledge, chasm_skulker, detective_of_the_month, ethereal_investigator,
+    homunculus_horde, irma_part_time_mutant, k_9_mark_i, laboratory_maniac, littjara_kinseekers,
+    martha_jones, mothdust_changeling, nyssa_of_traken, psychosis_crawler,
+    sakashima_of_a_thousand_faces, shapesharer, spark_double, three_tree_mascot,
+    toothy_imaginary_friend, triskaidekaphile, turtleshell_changeling, twenty_toed_toad,
+    universal_automaton, an_unearthly_child, arcane_adaptation, leyline_of_transformation,
+    ominous_seas, profts_eidetic_memory, teferis_ageless_insight, wizard_class,
+    an_offer_you_cant_refuse, arcane_denial, blue_suns_zenith, brainstorm, commanders_insight,
+    counterspell, cyber_conversion, disallow, ego_erasure, flow_of_knowledge,
+    pull_from_tomorrow, reality_shift, wings_of_velis_vel, jace_arcane_strategist,
+    jace_architect_of_thought, teferi_temporal_pilgrim, finale_of_revelation,
+    irenicuss_vile_duplication, lorien_revealed, treasure_cruise, wash_out,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
