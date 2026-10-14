@@ -12954,6 +12954,108 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLACK_WIDOW_2_COMMANDERS,
             main: decks::BLACK_WIDOW_2_MAIN,
         },
+        // Seat 2084: Szadek, Lord of Secrets's EDHREC average deck. `--pod-decks 2084`.
+        PodDeck {
+            name: "Szadek, Lord of Secrets (UB)",
+            commanders: decks::SZADEK_COMMANDERS,
+            main: decks::SZADEK_MAIN,
+        },
+        // Seat 2085: Lim-Dûl the Necromancer's EDHREC average deck. `--pod-decks 2085`.
+        PodDeck {
+            name: "Lim-Dûl the Necromancer (B)",
+            commanders: decks::LIM_DUL_THE_NECROMANCER_COMMANDERS,
+            main: decks::LIM_DUL_THE_NECROMANCER_MAIN,
+        },
+        // Seat 2086: Uvilda, Dean of Perfection's EDHREC average deck. `--pod-decks 2086`.
+        PodDeck {
+            name: "Uvilda, Dean of Perfection (UR)",
+            commanders: decks::UVILDA_COMMANDERS,
+            main: decks::UVILDA_MAIN,
+        },
+        // Seat 2087: Blitzwing, Cruel Tormentor's EDHREC average deck. `--pod-decks 2087`.
+        PodDeck {
+            name: "Blitzwing, Cruel Tormentor (B)",
+            commanders: decks::BLITZWING_COMMANDERS,
+            main: decks::BLITZWING_MAIN,
+        },
+        // Seat 2088: Casey Jones, Asphalt Hooligan's EDHREC average deck. `--pod-decks 2088`.
+        PodDeck {
+            name: "Casey Jones, Asphalt Hooligan (R)",
+            commanders: decks::CASEY_JONES_3_COMMANDERS,
+            main: decks::CASEY_JONES_3_MAIN,
+        },
+        // Seat 2089: April O'Neil, Human Element's EDHREC average deck. `--pod-decks 2089`.
+        PodDeck {
+            name: "April O'Neil, Human Element (U)",
+            commanders: decks::APRIL_ONEIL_COMMANDERS,
+            main: decks::APRIL_ONEIL_MAIN,
+        },
+        // Seat 2090: Mizzix, Replica Rider's EDHREC average deck. `--pod-decks 2090`.
+        PodDeck {
+            name: "Mizzix, Replica Rider (UR)",
+            commanders: decks::MIZZIX_2_COMMANDERS,
+            main: decks::MIZZIX_2_MAIN,
+        },
+        // Seat 2091: Ran and Shaw's EDHREC average deck. `--pod-decks 2091`.
+        PodDeck {
+            name: "Ran and Shaw (R)",
+            commanders: decks::RAN_AND_SHAW_COMMANDERS,
+            main: decks::RAN_AND_SHAW_MAIN,
+        },
+        // Seat 2092: Osgood, Operation Double's EDHREC average deck. `--pod-decks 2092`.
+        PodDeck {
+            name: "Osgood, Operation Double (U)",
+            commanders: decks::OSGOOD_COMMANDERS,
+            main: decks::OSGOOD_MAIN,
+        },
+        // Seat 2093: Momo, Playful Pet's EDHREC average deck. `--pod-decks 2093`.
+        PodDeck {
+            name: "Momo, Playful Pet (W)",
+            commanders: decks::MOMO_2_COMMANDERS,
+            main: decks::MOMO_2_MAIN,
+        },
+        // Seat 2094: Tomik, Distinguished Advokist's EDHREC average deck. `--pod-decks 2094`.
+        PodDeck {
+            name: "Tomik, Distinguished Advokist (W)",
+            commanders: decks::TOMIK_COMMANDERS,
+            main: decks::TOMIK_MAIN,
+        },
+        // Seat 2095: Iron Man, Tony Stark's EDHREC average deck. `--pod-decks 2095`.
+        PodDeck {
+            name: "Iron Man, Tony Stark (R)",
+            commanders: decks::IRON_MAN_3_COMMANDERS,
+            main: decks::IRON_MAN_3_MAIN,
+        },
+        // Seat 2096: Thor, Guardian of Midgard's EDHREC average deck. `--pod-decks 2096`.
+        PodDeck {
+            name: "Thor, Guardian of Midgard (R)",
+            commanders: decks::THOR_COMMANDERS,
+            main: decks::THOR_MAIN,
+        },
+        // Seat 2097: Uncle Iroh's EDHREC average deck. `--pod-decks 2097`.
+        PodDeck {
+            name: "Uncle Iroh (RG)",
+            commanders: decks::UNCLE_IROH_COMMANDERS,
+            main: decks::UNCLE_IROH_MAIN,
+        },
+        // Seat 2098: Karvanista, Loyal Lupari's EDHREC average deck. `--pod-decks 2098`.
+        PodDeck {
+            name: "Karvanista, Loyal Lupari (G)",
+            commanders: decks::KARVANISTA_COMMANDERS,
+            main: decks::KARVANISTA_MAIN,
+        },
+        // Seat 2099: Jeska, Warrior Adept's EDHREC average deck. `--pod-decks 2099`.
+        PodDeck {
+            name: "Jeska, Warrior Adept (R)",
+            commanders: decks::JESKA_COMMANDERS,
+            main: decks::JESKA_MAIN,
+        },
+        // Seat 2100: Tigra, Feline Fury's EDHREC average deck. `--pod-decks 2100`.
+        PodDeck {
+            name: "Tigra, Feline Fury (G)",
+            commanders: decks::TIGRA_COMMANDERS,
+            main: decks::TIGRA_MAIN,
+        },
     ]
 }
 
@@ -16869,6 +16971,23 @@ mod tests {
             ("Doc Samson, Super Psychiatrist", &[0x1237]),
             ("Savanti Romero, Time's Exile", &[0x1238]),
             ("Black Widow, Deadly Hunter", &[0x1239]),
+            ("Szadek, Lord of Secrets", &[0x123A]),
+            ("Lim-Dûl the Necromancer", &[0x123B]),
+            ("Uvilda, Dean of Perfection", &[0x123C]),
+            ("Blitzwing, Cruel Tormentor", &[0x123D]),
+            ("Casey Jones, Asphalt Hooligan", &[0x123E]),
+            ("April O'Neil, Human Element", &[0x123F]),
+            ("Mizzix, Replica Rider", &[0x1240]),
+            ("Ran and Shaw", &[0x1241]),
+            ("Osgood, Operation Double", &[0x1242]),
+            ("Momo, Playful Pet", &[0x1243]),
+            ("Tomik, Distinguished Advokist", &[0x1244]),
+            ("Iron Man, Tony Stark", &[0x1245]),
+            ("Thor, Guardian of Midgard", &[0x1246]),
+            ("Uncle Iroh", &[0x1247]),
+            ("Karvanista, Loyal Lupari", &[0x1248]),
+            ("Jeska, Warrior Adept", &[0x1249]),
+            ("Tigra, Feline Fury", &[0x124A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
