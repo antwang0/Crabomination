@@ -13824,6 +13824,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GALLIA_COMMANDERS,
             main: decks::GALLIA_MAIN,
         },
+        // Seat 2229: The Unspeakable's EDHREC average deck. `--pod-decks 2229`.
+        PodDeck {
+            name: "The Unspeakable (U)",
+            commanders: decks::THE_UNSPEAKABLE_COMMANDERS,
+            main: decks::THE_UNSPEAKABLE_MAIN,
+        },
+        // Seat 2230: M'Baku, Jabari Chieftain's EDHREC average deck. `--pod-decks 2230`.
+        PodDeck {
+            name: "M'Baku, Jabari Chieftain (G)",
+            commanders: decks::MBAKU_COMMANDERS,
+            main: decks::MBAKU_MAIN,
+        },
+        // Seat 2231: Jedit Ojanen's EDHREC average deck. `--pod-decks 2231`.
+        PodDeck {
+            name: "Jedit Ojanen (WU)",
+            commanders: decks::JEDIT_OJANEN_2_COMMANDERS,
+            main: decks::JEDIT_OJANEN_2_MAIN,
+        },
+        // Seat 2232: Desdemona, Freedom's Edge's EDHREC average deck. `--pod-decks 2232`.
+        PodDeck {
+            name: "Desdemona, Freedom's Edge (WR)",
+            commanders: decks::DESDEMONA_COMMANDERS,
+            main: decks::DESDEMONA_MAIN,
+        },
+        // Seat 2233: Halsin, Emerald Archdruid and Clan Crafter's EDHREC average deck. `--pod-decks 2233`.
+        PodDeck {
+            name: "Halsin, Emerald Archdruid and Clan Crafter (UG)",
+            commanders: decks::HALSIN_COMMANDERS,
+            main: decks::HALSIN_MAIN,
+        },
+        // Seat 2234: Dragon Man, Reformed Robot's EDHREC average deck. `--pod-decks 2234`.
+        PodDeck {
+            name: "Dragon Man, Reformed Robot (WU)",
+            commanders: decks::DRAGON_MAN_COMMANDERS,
+            main: decks::DRAGON_MAN_MAIN,
+        },
+        // Seat 2235: General Leo Cristophe's EDHREC average deck. `--pod-decks 2235`.
+        PodDeck {
+            name: "General Leo Cristophe (W)",
+            commanders: decks::GENERAL_LEO_CRISTOPHE_COMMANDERS,
+            main: decks::GENERAL_LEO_CRISTOPHE_MAIN,
+        },
+        // Seat 2236: Tarox Bladewing's EDHREC average deck. `--pod-decks 2236`.
+        PodDeck {
+            name: "Tarox Bladewing (R)",
+            commanders: decks::TAROX_BLADEWING_COMMANDERS,
+            main: decks::TAROX_BLADEWING_MAIN,
+        },
     ]
 }
 
@@ -17884,6 +17932,14 @@ mod tests {
             ("The Eighth Doctor and Jamie McCrimmon", &[0x12C8]),
             ("The Fabulous Frog-Man", &[0x12C9]),
             ("Gallia, the Merrymaker", &[0x12CA]),
+            ("The Unspeakable", &[0x12CB]),
+            ("M'Baku, Jabari Chieftain", &[0x12CC]),
+            ("Jedit Ojanen", &[0x12CD]),
+            ("Desdemona, Freedom's Edge", &[0x12CE]),
+            ("Halsin, Emerald Archdruid and Clan Crafter", &[0x12CF]),
+            ("Dragon Man, Reformed Robot", &[0x12D0]),
+            ("General Leo Cristophe", &[0x12D1]),
+            ("Tarox Bladewing", &[0x12D2]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
