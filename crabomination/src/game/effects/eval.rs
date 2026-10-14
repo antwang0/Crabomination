@@ -7875,6 +7875,19 @@ impl GameState {
             R::WasBlockedThisTurn => {
                 self.blocks_declared_this_turn.iter().any(|(_, a)| *a == card.id)
             }
+            R::BlockedOrWasBlockedByThisTurn(f) => self.blocks_declared_this_turn.iter().any(|&(blocker, attacker)| {
+                let other = if blocker == card.id {
+                    attacker
+                } else if attacker == card.id {
+                    blocker
+                } else {
+                    return false;
+                };
+                // The partner may have died in the combat: its death snapshot.
+                self.battlefield_find(other)
+                    .or_else(|| self.died_card_snapshots.get(&other))
+                    .is_some_and(|o| self.evaluate_requirement_on_card_walk(f, o, o.controller))
+            }),
             // CR 701.60 — the suspected flag lives on the instance.
             R::IsSuspected => card.suspected,
             R::IsGoaded => self.is_goaded(card),

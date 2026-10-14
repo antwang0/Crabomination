@@ -3437,6 +3437,10 @@ pub enum SelectionRequirement {
     /// which is where every "whenever this becomes blocked … at end of combat"
     /// body needs it (Tolarian Entrancer, Infernal Medusa).
     BlockedSourceThisTurn,
+    /// "that blocked or was blocked by a [filter] this turn" (You Cannot
+    /// Pass!): a block pair in this turn's log with the candidate on one
+    /// side and a permanent matching the inner filter on the other.
+    BlockedOrWasBlockedByThisTurn(Box<SelectionRequirement>),
     /// True when the candidate is blocking, or is blocked by, the ability's
     /// source — the symmetric combat-partner filter (Sisters of Stone Death's
     /// "creature blocking or blocked by this creature").
