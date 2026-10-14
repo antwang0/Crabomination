@@ -780883,5 +780883,887 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=909564&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/155684?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "White Tiger, Ava Ayala": {
+    "object": "card",
+    "id": "c1589e2e-32a8-48b8-93eb-a9af344e7084",
+    "oracle_id": "e2084d73-5a4c-4b17-942a-93c1a1f7ac2a",
+    "multiverse_ids": [],
+    "resource_id": "8F2E49F4337AC5E928F3C45E2146D77BB324F678FC9D9859D7E3EC5CA535D5E0",
+    "mtgo_id": 152579,
+    "arena_id": 105091,
+    "tcgplayer_id": 697065,
+    "cardmarket_id": 891591,
+    "name": "White Tiger, Ava Ayala",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/c1589e2e-32a8-48b8-93eb-a9af344e7084",
+    "scryfall_uri": "https://scryfall.com/card/msh/196/white-tiger-ava-ayala?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:35:08Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.jpg?1783902908",
+      "normal": "https://cards.scryfall.io/normal/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.jpg?1783902908",
+      "large": "https://cards.scryfall.io/large/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.jpg?1783902908",
+      "png": "https://cards.scryfall.io/png/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.png?1783902908",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.jpg?1783902908",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.jpg?1783902908",
+      "thumb": "https://cards.scryfall.io/thumb/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.webp?1783902908",
+      "grid": "https://cards.scryfall.io/grid/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.webp?1783902908",
+      "display": "https://cards.scryfall.io/display/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.webp?1783902908",
+      "art": "https://cards.scryfall.io/art/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.webp?1783902908",
+      "crop": "https://cards.scryfall.io/crop/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.webp?1783902908",
+      "jpeg": "https://cards.scryfall.io/normal/front/c/1/c1589e2e-32a8-48b8-93eb-a9af344e7084.jpg?1783902908"
+    },
+    "mana_cost": "{1}{G}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Human Hero",
+    "oracle_text": "Power-up — {5}{G}: Put a +1/+1 counter on White Tiger and create The Tiger God, a legendary 4/4 green Cat God creature token with \"The Tiger God can't be blocked by more than one creature.\" (Activate each power-up ability only once. Reduce the cost by her mana cost if she entered this turn.)",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Power-up"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "4d1ca2ed-c987-4f92-ad7b-991d7a64d145",
+        "component": "token",
+        "name": "The Tiger God",
+        "type_line": "Token Legendary Creature — Cat God",
+        "uri": "https://api.scryfall.com/cards/4d1ca2ed-c987-4f92-ad7b-991d7a64d145"
+      },
+      {
+        "object": "related_card",
+        "id": "c1589e2e-32a8-48b8-93eb-a9af344e7084",
+        "component": "combo_piece",
+        "name": "White Tiger, Ava Ayala",
+        "type_line": "Legendary Creature — Human Hero",
+        "uri": "https://api.scryfall.com/cards/c1589e2e-32a8-48b8-93eb-a9af344e7084"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "ba9bf625-681c-4a4e-ab48-399b2fecac6b",
+    "set": "msh",
+    "set_name": "Marvel Super Heroes",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/ba9bf625-681c-4a4e-ab48-399b2fecac6b",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsh&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msh?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/c1589e2e-32a8-48b8-93eb-a9af344e7084/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ae2084d73-5a4c-4b17-942a-93c1a1f7ac2a&unique=prints",
+    "collector_number": "196",
+    "digital": false,
+    "rarity": "uncommon",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Jennifer Hrabota Lesser",
+    "artist_ids": [
+      "d1b59c9c-4df8-4764-9910-66f5a3229ec7"
+    ],
+    "illustration_id": "cc959d28-492e-4a0f-b476-e5cde80a392b",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 23160,
+    "preview": {
+      "source": "Gemini Twins",
+      "source_uri": "https://www.instagram.com/gemini.twins.magic/p/DZN27j0ksNo/",
+      "previewed_at": "2026-06-05"
+    },
+    "prices": {
+      "usd": "0.15",
+      "usd_foil": "0.25",
+      "usd_etched": null,
+      "eur": "0.07",
+      "eur_foil": "0.10",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DWhite%2BTiger%252C%2BAva%2BAyala",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DWhite%2BTiger%252C%2BAva%2BAyala",
+      "edhrec": "https://edhrec.com/route/?cc=White+Tiger%2C+Ava+Ayala"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697065%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891591&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/152579?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Ant-Man, Scott Lang": {
+    "object": "card",
+    "id": "2c468103-dc1c-4798-bd13-8661ff53f7c4",
+    "oracle_id": "1e4cf4a4-50a4-4856-bf7e-20899e8affd1",
+    "multiverse_ids": [],
+    "resource_id": "448535AEA795962440B9FE3190B32E1F81FDB11F2B2BA751ADD3D2FF92AD7B31",
+    "mtgo_id": 151051,
+    "tcgplayer_id": 697168,
+    "cardmarket_id": 892346,
+    "name": "Ant-Man, Scott Lang",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/2c468103-dc1c-4798-bd13-8661ff53f7c4",
+    "scryfall_uri": "https://scryfall.com/card/msc/834/ant-man-scott-lang?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:36:39Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.jpg?1783902999",
+      "normal": "https://cards.scryfall.io/normal/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.jpg?1783902999",
+      "large": "https://cards.scryfall.io/large/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.jpg?1783902999",
+      "png": "https://cards.scryfall.io/png/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.png?1783902999",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.jpg?1783902999",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.jpg?1783902999",
+      "thumb": "https://cards.scryfall.io/thumb/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.webp?1783902999",
+      "grid": "https://cards.scryfall.io/grid/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.webp?1783902999",
+      "display": "https://cards.scryfall.io/display/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.webp?1783902999",
+      "art": "https://cards.scryfall.io/art/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.webp?1783902999",
+      "crop": "https://cards.scryfall.io/crop/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.webp?1783902999",
+      "jpeg": "https://cards.scryfall.io/normal/front/2/c/2c468103-dc1c-4798-bd13-8661ff53f7c4.jpg?1783902999"
+    },
+    "mana_cost": "{1}{W}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Human Hero",
+    "oracle_text": "{4}: Put a +1/+1 counter on Ant-Man.",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": false,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/2c468103-dc1c-4798-bd13-8661ff53f7c4/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A1e4cf4a4-50a4-4856-bf7e-20899e8affd1&unique=prints",
+    "collector_number": "834",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"Most times, they don't look down until it's too late.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Michael MacRae",
+    "artist_ids": [
+      "4704d907-4fb1-402c-858f-bacf989fa156"
+    ],
+    "illustration_id": "e8257649-8b66-4964-af47-217b788ddcc9",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 28934,
+    "prices": {
+      "usd": "0.20",
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": "0.32",
+      "eur_foil": null,
+      "tix": "0.20"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DAnt-Man%252C%2BScott%2BLang",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DAnt-Man%252C%2BScott%2BLang",
+      "edhrec": "https://edhrec.com/route/?cc=Ant-Man%2C+Scott+Lang"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697168%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892346&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151051?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Fixer, Techno Terror": {
+    "object": "card",
+    "id": "3f888843-4bdb-438d-8fb9-968edb2713ac",
+    "oracle_id": "a47b71df-9357-4118-90c0-f86fca6d362b",
+    "multiverse_ids": [],
+    "resource_id": "AD99A96DC26FB86388FDB4004A80EC9189CE2F2CF756A96F835C946B13A68BCC",
+    "mtgo_id": 151761,
+    "arena_id": 105666,
+    "tcgplayer_id": 697256,
+    "cardmarket_id": 892036,
+    "name": "Fixer, Techno Terror",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/3f888843-4bdb-438d-8fb9-968edb2713ac",
+    "scryfall_uri": "https://scryfall.com/card/msc/656/fixer-techno-terror?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:42Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.jpg?1783903062",
+      "normal": "https://cards.scryfall.io/normal/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.jpg?1783903062",
+      "large": "https://cards.scryfall.io/large/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.jpg?1783903062",
+      "png": "https://cards.scryfall.io/png/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.png?1783903062",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.jpg?1783903062",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.jpg?1783903062",
+      "thumb": "https://cards.scryfall.io/thumb/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.webp?1783903062",
+      "grid": "https://cards.scryfall.io/grid/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.webp?1783903062",
+      "display": "https://cards.scryfall.io/display/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.webp?1783903062",
+      "art": "https://cards.scryfall.io/art/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.webp?1783903062",
+      "crop": "https://cards.scryfall.io/crop/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.webp?1783903062",
+      "jpeg": "https://cards.scryfall.io/normal/front/3/f/3f888843-4bdb-438d-8fb9-968edb2713ac.jpg?1783903062"
+    },
+    "mana_cost": "{1}{B}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Human Artificer Villain",
+    "oracle_text": "{T}, Pay 2 life: Draw a card. Activate only if an artifact entered the battlefield under your control this turn.",
+    "power": "2",
+    "toughness": "1",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/3f888843-4bdb-438d-8fb9-968edb2713ac/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Aa47b71df-9357-4118-90c0-f86fca6d362b&unique=prints",
+    "collector_number": "656",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "\"You've got a problem? I'm The Fixer. I fix things. It's what I do.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Filipe Pagliuso",
+    "artist_ids": [
+      "64c537b4-a864-4051-9a24-fbdd22cb40b4"
+    ],
+    "illustration_id": "ef47a127-9e09-4304-b70a-570c6392bc99",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 25830,
+    "prices": {
+      "usd": "0.22",
+      "usd_foil": "0.39",
+      "usd_etched": null,
+      "eur": "0.20",
+      "eur_foil": "0.20",
+      "tix": "0.25"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DFixer%252C%2BTechno%2BTerror",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DFixer%252C%2BTechno%2BTerror",
+      "edhrec": "https://edhrec.com/route/?cc=Fixer%2C+Techno+Terror"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697256%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892036&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151761?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Goliath, Mass Manipulator": {
+    "object": "card",
+    "id": "78216454-a0d5-4b4d-bd72-b96c742202b4",
+    "oracle_id": "d06d7065-27e5-4119-a226-6f6d990d72c7",
+    "multiverse_ids": [],
+    "resource_id": "E0962B0E13B4933751CC37D86C600670B8DADF101E59E7C7E24CC9ADE73AE515",
+    "mtgo_id": 152101,
+    "arena_id": 105776,
+    "tcgplayer_id": 697401,
+    "cardmarket_id": 892199,
+    "name": "Goliath, Mass Manipulator",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/78216454-a0d5-4b4d-bd72-b96c742202b4",
+    "scryfall_uri": "https://scryfall.com/card/msc/766/goliath-mass-manipulator?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:03Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.jpg?1783903023",
+      "normal": "https://cards.scryfall.io/normal/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.jpg?1783903023",
+      "large": "https://cards.scryfall.io/large/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.jpg?1783903023",
+      "png": "https://cards.scryfall.io/png/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.png?1783903023",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.jpg?1783903023",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.jpg?1783903023",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.webp?1783903023",
+      "grid": "https://cards.scryfall.io/grid/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.webp?1783903023",
+      "display": "https://cards.scryfall.io/display/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.webp?1783903023",
+      "art": "https://cards.scryfall.io/art/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.webp?1783903023",
+      "crop": "https://cards.scryfall.io/crop/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.webp?1783903023",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/8/78216454-a0d5-4b4d-bd72-b96c742202b4.jpg?1783903023"
+    },
+    "mana_cost": "{1}{G}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Human Scientist Hero",
+    "oracle_text": "Reach (This creature can block creatures with flying.)\nPower-up — {4}{G}: Put two +1/+1 counters on Goliath. Then draw a card for each creature you control with power 4 or greater. (Activate each power-up ability only once. Reduce the cost by his mana cost if he entered this turn.)",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Power-up",
+      "Reach"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/78216454-a0d5-4b4d-bd72-b96c742202b4/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ad06d7065-27e5-4119-a226-6f6d990d72c7&unique=prints",
+    "collector_number": "766",
+    "digital": false,
+    "rarity": "uncommon",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Björn Barends",
+    "artist_ids": [
+      "83e93c11-f395-402e-b534-45a70c276de3"
+    ],
+    "illustration_id": "134ce73b-e3c6-47cb-ade4-5fb48d3c2013",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 22853,
+    "prices": {
+      "usd": "0.22",
+      "usd_foil": "0.41",
+      "usd_etched": null,
+      "eur": "0.20",
+      "eur_foil": "0.77",
+      "tix": "0.02"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DGoliath%252C%2BMass%2BManipulator",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DGoliath%252C%2BMass%2BManipulator",
+      "edhrec": "https://edhrec.com/route/?cc=Goliath%2C+Mass+Manipulator"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697401%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892199&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/152101?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Jack of Hearts, Volatile Hero": {
+    "object": "card",
+    "id": "7882b42b-d88f-48fe-9b30-cfb338accadb",
+    "oracle_id": "25b30117-03ef-49a5-8743-2d1c167d4bc3",
+    "multiverse_ids": [],
+    "resource_id": "EE4AD0C2CC375B016D75A6046BE4B4C8504E0CDABF8110D6063BF282180EFA10",
+    "mtgo_id": 151835,
+    "arena_id": 105703,
+    "tcgplayer_id": 697318,
+    "cardmarket_id": 892132,
+    "name": "Jack of Hearts, Volatile Hero",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/7882b42b-d88f-48fe-9b30-cfb338accadb",
+    "scryfall_uri": "https://scryfall.com/card/msc/693/jack-of-hearts-volatile-hero?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:27Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.jpg?1783903047",
+      "normal": "https://cards.scryfall.io/normal/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.jpg?1783903047",
+      "large": "https://cards.scryfall.io/large/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.jpg?1783903047",
+      "png": "https://cards.scryfall.io/png/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.png?1783903047",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.jpg?1783903047",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.jpg?1783903047",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.webp?1783903047",
+      "grid": "https://cards.scryfall.io/grid/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.webp?1783903047",
+      "display": "https://cards.scryfall.io/display/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.webp?1783903047",
+      "art": "https://cards.scryfall.io/art/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.webp?1783903047",
+      "crop": "https://cards.scryfall.io/crop/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.webp?1783903047",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/8/7882b42b-d88f-48fe-9b30-cfb338accadb.jpg?1783903047"
+    },
+    "mana_cost": "{1}{R}{R}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Alien Human Hero",
+    "oracle_text": "Flying, haste\nWhen Jack of Hearts dies, he deals damage equal to his power to each creature.\nPower-up — {4}{R}{R}: Discard your hand, then draw three cards. Put two +1/+1 counters on Jack of Hearts. (Activate each power-up ability only once. Reduce the cost by his mana cost if he entered this turn.)",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "keywords": [
+      "Flying",
+      "Power-up",
+      "Haste"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/7882b42b-d88f-48fe-9b30-cfb338accadb/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A25b30117-03ef-49a5-8743-2d1c167d4bc3&unique=prints",
+    "collector_number": "693",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Gaboleps",
+    "artist_ids": [
+      "0c37cdfe-5651-4ae6-a3c8-e7153509f970"
+    ],
+    "illustration_id": "d1ef5848-fea0-4e98-bd15-fdb99b8ae501",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 25601,
+    "prices": {
+      "usd": "0.24",
+      "usd_foil": "0.37",
+      "usd_etched": null,
+      "eur": "0.20",
+      "eur_foil": "0.37",
+      "tix": "1.35"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DJack%2Bof%2BHearts%252C%2BVolatile%2BHero",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DJack%2Bof%2BHearts%252C%2BVolatile%2BHero",
+      "edhrec": "https://edhrec.com/route/?cc=Jack+of+Hearts%2C+Volatile+Hero"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697318%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892132&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151835?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Namora, the Sea Queen": {
+    "object": "card",
+    "id": "e9a469c4-2cbd-47d4-af42-6bfce60a5f0e",
+    "oracle_id": "d0cd3edd-d908-47c5-bff1-2089c22ab41c",
+    "multiverse_ids": [],
+    "resource_id": "D1EDDAD59D05331428DEA5A4CEFE7B0F4E5B566CF14974964DE5B0E1147E6B5F",
+    "mtgo_id": 151713,
+    "arena_id": 105642,
+    "tcgplayer_id": 697208,
+    "cardmarket_id": 891971,
+    "name": "Namora, the Sea Queen",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e",
+    "scryfall_uri": "https://scryfall.com/card/msc/632/namora-the-sea-queen?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:50Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.jpg?1783903070",
+      "normal": "https://cards.scryfall.io/normal/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.jpg?1783903070",
+      "large": "https://cards.scryfall.io/large/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.jpg?1783903070",
+      "png": "https://cards.scryfall.io/png/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.png?1783903070",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.jpg?1783903070",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.jpg?1783903070",
+      "thumb": "https://cards.scryfall.io/thumb/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.webp?1783903070",
+      "grid": "https://cards.scryfall.io/grid/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.webp?1783903070",
+      "display": "https://cards.scryfall.io/display/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.webp?1783903070",
+      "art": "https://cards.scryfall.io/art/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.webp?1783903070",
+      "crop": "https://cards.scryfall.io/crop/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.webp?1783903070",
+      "jpeg": "https://cards.scryfall.io/normal/front/e/9/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e.jpg?1783903070"
+    },
+    "mana_cost": "{2}{U}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Mutant Merfolk Hero",
+    "oracle_text": "Flying\nPower-up — {5}{U}: Put a +1/+1 counter on Namora. Create two 1/1 blue Merfolk creature tokens. (Activate each power-up ability only once. Reduce the cost by her mana cost if she entered this turn.)",
+    "power": "2",
+    "toughness": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Flying",
+      "Power-up"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "7f7a4f95-f12b-4c28-a6f7-f3c64364abba",
+        "component": "token",
+        "name": "Merfolk",
+        "type_line": "Token Creature — Merfolk",
+        "uri": "https://api.scryfall.com/cards/7f7a4f95-f12b-4c28-a6f7-f3c64364abba"
+      },
+      {
+        "object": "related_card",
+        "id": "e9a469c4-2cbd-47d4-af42-6bfce60a5f0e",
+        "component": "combo_piece",
+        "name": "Namora, the Sea Queen",
+        "type_line": "Legendary Creature — Mutant Merfolk Hero",
+        "uri": "https://api.scryfall.com/cards/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/e9a469c4-2cbd-47d4-af42-6bfce60a5f0e/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ad0cd3edd-d908-47c5-bff1-2089c22ab41c&unique=prints",
+    "collector_number": "632",
+    "digital": false,
+    "rarity": "uncommon",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Mateus Manhanini",
+    "artist_ids": [
+      "d194fa7a-4c05-44b1-af60-d474a72f7076"
+    ],
+    "illustration_id": "0e55a217-00b0-469c-a454-cdb62dfeed8d",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 24999,
+    "prices": {
+      "usd": "0.30",
+      "usd_foil": "0.92",
+      "usd_etched": null,
+      "eur": "0.14",
+      "eur_foil": "0.33",
+      "tix": "0.22"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DNamora%252C%2Bthe%2BSea%2BQueen",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DNamora%252C%2Bthe%2BSea%2BQueen",
+      "edhrec": "https://edhrec.com/route/?cc=Namora%2C+the+Sea+Queen"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697208%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891971&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151713?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

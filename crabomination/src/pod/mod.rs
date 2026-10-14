@@ -14724,6 +14724,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TEYO_COMMANDERS,
             main: decks::TEYO_MAIN,
         },
+        // Seat 2379: White Tiger, Ava Ayala's EDHREC average deck. `--pod-decks 2379`.
+        PodDeck {
+            name: "White Tiger, Ava Ayala (G)",
+            commanders: decks::WHITE_TIGER_COMMANDERS,
+            main: decks::WHITE_TIGER_MAIN,
+        },
+        // Seat 2380: Ant-Man, Scott Lang's EDHREC average deck. `--pod-decks 2380`.
+        PodDeck {
+            name: "Ant-Man, Scott Lang (W)",
+            commanders: decks::ANT_MAN_COMMANDERS,
+            main: decks::ANT_MAN_MAIN,
+        },
+        // Seat 2381: Fixer, Techno Terror's EDHREC average deck. `--pod-decks 2381`.
+        PodDeck {
+            name: "Fixer, Techno Terror (B)",
+            commanders: decks::FIXER_COMMANDERS,
+            main: decks::FIXER_MAIN,
+        },
+        // Seat 2382: Goliath, Mass Manipulator's EDHREC average deck. `--pod-decks 2382`.
+        PodDeck {
+            name: "Goliath, Mass Manipulator (G)",
+            commanders: decks::GOLIATH_COMMANDERS,
+            main: decks::GOLIATH_MAIN,
+        },
+        // Seat 2383: White Widow, Free Agent's EDHREC average deck. `--pod-decks 2383`.
+        PodDeck {
+            name: "White Widow, Free Agent (W)",
+            commanders: decks::WHITE_WIDOW_2_COMMANDERS,
+            main: decks::WHITE_WIDOW_2_MAIN,
+        },
+        // Seat 2384: Rescue, Pepper Potts's EDHREC average deck. `--pod-decks 2384`.
+        PodDeck {
+            name: "Rescue, Pepper Potts (U)",
+            commanders: decks::RESCUE_COMMANDERS,
+            main: decks::RESCUE_MAIN,
+        },
+        // Seat 2385: Jack of Hearts, Volatile Hero's EDHREC average deck. `--pod-decks 2385`.
+        PodDeck {
+            name: "Jack of Hearts, Volatile Hero (R)",
+            commanders: decks::JACK_OF_HEARTS_COMMANDERS,
+            main: decks::JACK_OF_HEARTS_MAIN,
+        },
+        // Seat 2386: Namora, the Sea Queen's EDHREC average deck. `--pod-decks 2386`.
+        PodDeck {
+            name: "Namora, the Sea Queen (U)",
+            commanders: decks::NAMORA_COMMANDERS,
+            main: decks::NAMORA_MAIN,
+        },
     ]
 }
 
@@ -18933,6 +18981,14 @@ mod tests {
             ("Bebop, Skull & Crossbones", &[0x135E]),
             ("Jocasta, Automaton Avenger", &[0x135F]),
             ("Teyo, Lightshield Expert", &[0x1360]),
+            ("White Tiger, Ava Ayala", &[0x1361]),
+            ("Ant-Man, Scott Lang", &[0x1362]),
+            ("Fixer, Techno Terror", &[0x1363]),
+            ("Goliath, Mass Manipulator", &[0x1364]),
+            ("White Widow, Free Agent", &[0x1365]),
+            ("Rescue, Pepper Potts", &[0x1366]),
+            ("Jack of Hearts, Volatile Hero", &[0x1367]),
+            ("Namora, the Sea Queen", &[0x1368]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
