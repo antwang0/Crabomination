@@ -2151,3 +2151,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Invoke the Ancients | each Spirit's keyword-counter pick is "up to one", so a seat may leave one without a counter | `ChooseUpToN { max: 1 }` per token |
 | 🟡 Rinoa, Angel Wing | the once-a-turn cap is spent by the first attacking creature's death even when you decline the return | `EventSpec::once_per_turn` |
 | 🟡 Rona, Disciple of Gix | a land card exiled with Rona can be played too (the grant is "may play", not "may cast spells") | `GrantMayPlay { WhileSourceOnBattlefield }` |
+| 🟡 Seifer, Balamb Rival | the double-block deathtouch rider watches only your own attackers, not every creature attacking one of your opponents | `BecomesBlockedByNOrMore(2)` / `YourControl` |
+| 🟡 Nivea, Beloved Battlemage | the Akroma token has no mana cost, so its mana value is 0 rather than 8 | `TokenDefinition` carries no cost |

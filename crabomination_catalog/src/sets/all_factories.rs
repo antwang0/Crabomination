@@ -4074,6 +4074,11 @@ static DECKS: &[Factory] = &[
     super::decks::the_antiquities_war,
     super::decks::vivien_on_the_hunt,
     super::decks::witherscale_wurm,
+    // cmdr_rank3k_m (session 01PxmVAG)
+    super::decks::nivea_beloved_battlemage,
+    super::decks::seifer_balamb_rival,
+    super::decks::sifa_grent,
+    super::decks::warriors_resolve,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
