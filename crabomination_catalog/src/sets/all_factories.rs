@@ -4059,6 +4059,11 @@ static DECKS: &[Factory] = &[
     super::decks::spaceshift,
     super::decks::spider_man_peter_parker,
     super::decks::urborg_scavengers,
+    // cmdr_rank3k_j (session 01PxmVAG)
+    super::decks::identity_echo,
+    super::decks::pyre_rhymer,
+    super::decks::ruric_thar_biomagus,
+    super::decks::variable_chaser,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
