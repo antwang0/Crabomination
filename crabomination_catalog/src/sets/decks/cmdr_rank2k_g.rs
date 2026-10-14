@@ -541,7 +541,6 @@ pub fn the_lonely_mountain() -> CardDefinition {
     let equipment = || yours(R::HasArtifactSubtype(ArtifactSubtype::Equipment));
     CardDefinition {
         name: "The Lonely Mountain",
-        supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
         subtypes: Subtypes { land_types: vec![LandType::Mountain], ..Default::default() },
         static_abilities: vec![static_ab(

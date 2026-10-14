@@ -7,7 +7,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{ActivatedAbility, Effect, PlayerRef, ZoneDest};
+use crate::effect::{ActivatedAbility, Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, u, w, ManaCost};
 
@@ -39,10 +39,18 @@ pub fn arachnus_spinner() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_others_cost: Some((R::Creature.and(R::HasCreatureType(CreatureType::Spider)), 1)),
             effect: Effect::Seq(vec![
+                // Names the target creature (a +0/+0 pump); the attach below
+                // reads it as `Target(0)`.
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::ZERO,
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
                 Effect::PutOntoBattlefieldAttached {
                     zones: vec![Zone::Graveyard, Zone::Library],
                     filter: R::HasName("Arachnus Web".into()),
-                    host: Some(target_filtered(R::Creature)),
+                    host: Some(Selector::Target(0)),
                     max: Some(Value::ONE),
                     creatures_only: true,
                     equipment_unattached: false,
