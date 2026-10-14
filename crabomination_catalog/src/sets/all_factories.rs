@@ -4092,6 +4092,12 @@ static DECKS: &[Factory] = &[
     super::decks::rimefire_torque,
     super::decks::sengir_the_dark_baron,
     super::decks::wandas_vision,
+    // cmdr_rank3k_p (session 01PxmVAG)
+    super::decks::ellie_brick_master,
+    super::decks::ellie_vengeful_hunter,
+    super::decks::hot_dog_cart,
+    super::decks::stardew_valley,
+    super::decks::theorists_sanctum,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
