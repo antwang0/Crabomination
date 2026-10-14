@@ -14526,6 +14526,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CHASE_STEIN_COMMANDERS,
             main: decks::CHASE_STEIN_MAIN,
         },
+        // Seat 2346: Franklin Richards, Ascendant's EDHREC average deck. `--pod-decks 2346`.
+        PodDeck {
+            name: "Franklin Richards, Ascendant (R)",
+            commanders: decks::FRANKLIN_RICHARDS_COMMANDERS,
+            main: decks::FRANKLIN_RICHARDS_MAIN,
+        },
+        // Seat 2347: Interceptor, Shadow's Hound's EDHREC average deck. `--pod-decks 2347`.
+        PodDeck {
+            name: "Interceptor, Shadow's Hound (B)",
+            commanders: decks::INTERCEPTOR_COMMANDERS,
+            main: decks::INTERCEPTOR_MAIN,
+        },
+        // Seat 2348: Witch-king, Bringer of Ruin's EDHREC average deck. `--pod-decks 2348`.
+        PodDeck {
+            name: "Witch-king, Bringer of Ruin (B)",
+            commanders: decks::WITCH_KING_COMMANDERS,
+            main: decks::WITCH_KING_MAIN,
+        },
     ]
 }
 
@@ -18702,6 +18720,9 @@ mod tests {
             ("Lady Spider, Maybelle Reilly", &[0x133D]),
             ("Pia, Determined Rebuilder", &[0x133E]),
             ("Chase Stein, Runaway", &[0x133F]),
+            ("Franklin Richards, Ascendant", &[0x1340]),
+            ("Interceptor, Shadow's Hound", &[0x1341]),
+            ("Witch-king, Bringer of Ruin", &[0x1342]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

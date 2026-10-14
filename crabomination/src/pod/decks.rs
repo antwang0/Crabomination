@@ -65976,3 +65976,86 @@ pub const CHASE_STEIN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const FRANKLIN_RICHARDS_COMMANDERS: &[CardFactory] = &[franklin_richards_ascendant];
+
+/// **Franklin Richards, Ascendant**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Franklin Richards, Ascendant (EDHREC, fetched 2026-10-14).
+pub const FRANKLIN_RICHARDS_MAIN: &[CardFactory] = &[
+    arcane_signet, caged_sun, chimil_the_inner_sun, cursed_mirror, fire_diamond, gilded_lotus,
+    helm_of_the_host, lightning_greaves, mind_stone, ruby_medallion, sol_ring,
+    strionic_resonator, the_fire_crystal, thought_vessel, thran_dynamo, throne_of_eldraine,
+    ancient_tomb, arena_of_glory, myriad_landscape, nykthos_shrine_to_nyx, spinerock_knoll,
+    valakut_the_molten_pinnacle, war_room, blazing_firesinger, bloodthirster,
+    curator_of_suns_creation, etali_primal_storm, goldspan_dragon, hulkling_young_avenger,
+    karlach_fury_of_avernus, keeper_of_secrets, moraug_fury_of_akoum, nalfeshnee,
+    nico_minoru_runaway, port_razer, raphael_tag_team_tough, rionya_fire_dancer, roaming_throne,
+    solemn_simulacrum, trumpeting_carnosaur, wild_magic_sorcerer, grim_reapers_sprint,
+    passionate_archaeologist, spider_verse, sunbirds_invocation, triple_triad, wandas_vision,
+    big_score, chaos_warp, deflecting_swat, delayed_blast_fireball, pyretic_ritual,
+    return_the_favor, savage_beating, seething_song, unexpected_windfall,
+    chandra_torch_of_defiance, blasphemous_act, full_throttle, fury_of_the_horde,
+    improvisation_capstone, into_the_time_vortex, jeskas_will, mana_geyser, overpowering_attack,
+    relentless_assault, rousing_refrain, seize_the_day, seize_the_spoils, vandalblast,
+    world_at_war,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const INTERCEPTOR_COMMANDERS: &[CardFactory] = &[interceptor_shadows_hound];
+
+/// **Interceptor, Shadow's Hound**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Swamps = 99.
+/// Interceptor, Shadow's Hound (EDHREC, fetched 2026-10-14).
+pub const INTERCEPTOR_MAIN: &[CardFactory] = &[
+    adrestia, arcane_signet, bontus_monument, charcoal_diamond, hidden_blade, jet_medallion,
+    lightning_greaves, mind_stone, sol_ring, the_darkness_crystal, wayfarers_bauble, bojuka_bog,
+    cabal_coffers, midgar_city_of_mako, myriad_landscape, phyrexian_tower, rogues_passage,
+    spymasters_vault, susur_secundi_void_altar, urborg_tomb_of_yawgmoth, war_room,
+    assassin_initiate, ayara_first_of_locthwain, black_widow_deadly_hunter,
+    braids_arisen_nightmare, desmond_miles, drana_liberator_of_malakir, erebos_bleak_hearted,
+    fang_fearless_lcie, gollum_scheming_guide, illuminor_szeras, iridescent_vinelasher,
+    jacob_frye, mari_the_killing_quill, massacre_girl, massacre_girl_known_killer,
+    merciless_harlequin, pitiless_plunderer, poison_blade_mentor, reno_and_rude,
+    roshan_hidden_magister, royal_assassin, shadow_mysterious_assassin,
+    shadowheart_dark_justiciar, syr_konrad_the_grim, tormod_the_desecrator, unstoppable_slasher,
+    vincent_valentine, virtus_the_veiled, white_widow_yelena_belova, yahenni_undying_partisan,
+    black_market_connections, cover_of_darkness, discreet_retreat, tevals_judgment,
+    the_revelations_of_ezio, corrupted_conviction, dark_ritual, deadly_dispute,
+    go_for_the_throat, malakir_rebirth, murder, nasty_end, overkill, village_rites,
+    withering_torment, back_in_town, feed_the_swarm, nights_whisper, reanimate,
+    restart_sequence, sign_in_blood, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const WITCH_KING_COMMANDERS: &[CardFactory] = &[witch_king_bringer_of_ruin];
+
+/// **Witch-king, Bringer of Ruin**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Swamps = 99.
+/// Witch-king, Bringer of Ruin (EDHREC, fetched 2026-10-14).
+pub const WITCH_KING_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, charcoal_diamond, inherited_envelope, jet_medallion,
+    mind_stone, mithril_coat, nazgul_battle_mace, sol_ring, swiftfoot_boots, wayfarers_bauble,
+    barad_dur, bojuka_bog, cabal_coffers, cabal_stronghold, myriad_landscape, the_black_gate,
+    war_room, archon_of_cruelty, blood_artist, crypt_ghast, dread_presence,
+    gollum_patient_plotter, gollum_scheming_guide, gray_merchant_of_asphodel,
+    magus_of_the_coffers, massacre_wurm, merciless_executioner, morbid_opportunist, nazgul,
+    nazgul, nazgul, nazgul, nazgul, nazgul, nazgul, ophiomancer, plaguecrafter, ringwraiths,
+    sauron_the_necromancer, solemn_simulacrum, voracious_fell_beast, witch_king_of_angmar,
+    yahenni_undying_partisan, black_market, call_of_the_ring, march_from_the_black_gate,
+    one_ring_to_rule_them_all, phyrexian_arena, phyrexian_reclamation, revenge_of_ravens,
+    dark_ritual, darkness, deadly_rollick, go_for_the_throat, infernal_grasp, murder,
+    sheoldreds_edict, soul_shatter, vonas_hunger, claim_the_precious, damnation, echoing_return,
+    feed_the_swarm, nights_whisper, read_the_bones, reanimate, sams_desperate_rescue,
+    sign_in_blood, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
