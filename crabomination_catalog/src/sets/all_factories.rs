@@ -4500,6 +4500,10 @@ static DECKS: &[Factory] = &[
     super::decks::utrom_monitor,
     // cmdr_rank6k_i (session 01PxmVAG)
     super::decks::mikey_mona_mutant_sitters,
+    // cmdr_rank6k_j (session 01PxmVAG)
+    super::decks::m_o_d_o_k_evil_intellect,
+    super::decks::moment_of_defiance,
+    super::decks::multiply_by_zero,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,

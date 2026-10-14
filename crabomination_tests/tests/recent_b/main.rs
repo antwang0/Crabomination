@@ -300,6 +300,7 @@ mod cmdr_rank6k_f;
 mod cmdr_rank6k_g;
 mod cmdr_rank6k_h;
 mod cmdr_rank6k_i;
+mod cmdr_rank6k_j;
 mod cmdr_rank4k_d;
 mod cmdr_rank4k_e;
 mod cmdr_rank4k_g;
