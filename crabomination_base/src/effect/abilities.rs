@@ -1042,6 +1042,10 @@ pub enum StaticEffect {
     /// (Defense Grid). A generic-mana tax folded into `extra_cost_for_spell`,
     /// skipped when the caster is the active player.
     SpellsCostMoreExceptOnControllerTurn { amount: u32 },
+    /// CR 601.2f — "Spells of the chosen type cost {amount} more to cast"
+    /// (Arachne, Psionic Weaver): every player's spells sharing a card type
+    /// with the source's `chosen_card_type`.
+    ChosenCardTypeSpellsCostMore { amount: u32 },
     /// CR 104.3c override — "If you would draw a card while your library has
     /// no cards in it, you win the game instead" (Laboratory Maniac, Jace,
     /// Wielder of Mysteries, Thassa's Oracle's gate). Consulted by

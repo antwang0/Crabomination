@@ -35270,6 +35270,7 @@ fn static_effect_to_effects(
             | StaticEffect::OneNonartifactSpellPerTurn
             | StaticEffect::OneNonPhyrexianSpellPerTurn
             | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }
+            | StaticEffect::ChosenCardTypeSpellsCostMore { .. }
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::PreventAllDamageToController
             // Crumbling Sanctuary — a CR 614.1b replacement read at the

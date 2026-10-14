@@ -1903,6 +1903,14 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 {
                     tax += amount;
                 }
+                StaticEffect::ChosenCardTypeSpellsCostMore { amount }
+                    if src
+                        .chosen_card_type
+                        .as_ref()
+                        .is_some_and(|t| card.definition.card_types.contains(t)) =>
+                {
+                    tax += amount;
+                }
                 // Jubilant Skybonder: opponents' spells targeting a qualifying
                 // permanent the source controls cost {amount} more.
                 StaticEffect::TaxOpponentSpellsTargeting { target_filter, amount }
