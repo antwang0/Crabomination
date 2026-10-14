@@ -3181,6 +3181,13 @@ pods (release)   pod_sweep seed 24001 over seats 2294-2411 x 4,6,8 x 20: 1,300
                  2400204 game 0: Grothama's leave-draw decked both at turn
                  119). Tracing the second found a CRAB_POD_TRACE panic, a byte
                  cut inside "é", fixed at e6a7078d4 with three sibling cuts
+pod test         re-run under `--cargo-profile overflow` at 2f85e7faa: every
+                 seat 1-2456, PASS in 230.0 s (26 min to build)
+pods (field)     release pod_sweep seed 24101 over EVERY seat 1-2456 x 4,6 seats x 2:
+                 1,028 blocks, 2,056 games, 0 panics, 3 undecided — all CR
+                 104.4a simultaneous losses (Abdel Adrian under Arcbond +
+                 Blasphemous Act with the Toralf seat's damage multipliers;
+                 Descent into Avernus; Earthquake)
 ```
 
 ### 2026-10-14 (Commander run, `01MsQdht`) — guardrail; 144 EDHREC seats, 141 cards, six primitives
