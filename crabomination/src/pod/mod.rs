@@ -14640,6 +14640,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WICCAN_2_COMMANDERS,
             main: decks::WICCAN_2_MAIN,
         },
+        // Seat 2365: Donnie & April, Adorkable Duo's EDHREC average deck. `--pod-decks 2365`.
+        PodDeck {
+            name: "Donnie & April, Adorkable Duo (U)",
+            commanders: decks::DONNIE_APRIL_COMMANDERS,
+            main: decks::DONNIE_APRIL_MAIN,
+        },
     ]
 }
 
@@ -18835,6 +18841,7 @@ mod tests {
             ("Kodama of the North Tree", &[0x1350]),
             ("The Duke, Rebel Sentry", &[0x1351]),
             ("Wiccan, Young Avenger", &[0x1352]),
+            ("Donnie & April, Adorkable Duo", &[0x1353]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

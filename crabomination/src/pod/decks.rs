@@ -66502,3 +66502,29 @@ pub const WICCAN_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const DONNIE_APRIL_COMMANDERS: &[CardFactory] = &[donnie_and_april_adorkable_duo];
+
+/// **Donnie & April, Adorkable Duo**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Donnie & April, Adorkable Duo (EDHREC, fetched 2026-10-14).
+pub const DONNIE_APRIL_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, conjurers_closet, fellwar_stone, lotus_petal, mind_stone,
+    mindsplice_apparatus, panharmonicon, sapphire_medallion, sky_diamond, sol_ring,
+    the_water_crystal, thought_vessel, wayfarers_bauble, academy_ruins, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower, war_room,
+    aether_channeler, archaeomancer, archmage_emeritus, cloud_of_faeries, deadeye_navigator,
+    displacer_kitten, dour_port_mage, eluge_the_shoreless_sea, peregrine_drake,
+    phyrexian_metamorph, solemn_simulacrum, spellseeker, starfield_vocalist,
+    thassa_deep_dwelling, troop_of_ponies, venser_shaper_savant, yshtola_rhul, candlekeep_sage,
+    rhystic_study, teferis_ageless_insight, virtue_of_knowledge, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, blur, counterspell, displace, essence_flux,
+    frantic_search, ghostly_flicker, hide_on_the_ceiling, high_tide, illusionists_stratagem,
+    muddle_the_mixture, mystical_tutor, planar_incision, pongify, rapid_hybridization,
+    sink_into_stupor, sirens_ruse, snap, teferis_time_twist, fabricate, merchant_scroll,
+    sea_gate_restoration, solve_the_equation, splash_portal, step_through, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
