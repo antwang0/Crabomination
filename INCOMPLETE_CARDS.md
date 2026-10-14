@@ -2163,3 +2163,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Arachne, Psionic Weaver | the look at an opponent's hand that informs the type choice isn't modelled | `ChooseCardTypeFromForSource` |
 | 🟡 Captain James T. Kirk | with an empty hand, "choose one or more" is an up-to-three pick, so zero modes is offered | `ChooseUpToN { max: 3 }` |
 | 🟡 Spider-Verse | "do this only once each turn" is a once-per-turn trigger, so a declined copy still spends the turn's use | `EventSpec::once_per_turn` |
+| 🟡 Casting of Bones | "discard one of them" is a plain discard of one: the pick isn't limited to the three cards drawn | `Draw` + `Discard` |
+| 🟡 Castle Doom | the any-color mana also pays for abilities of artifacts, not only artifact spells | `SpendRestriction::ArtifactOnly` |

@@ -867,6 +867,9 @@ pub use cmdr_rank5k_a::*;
 #[path = "../../../src/sets/decks/cmdr_rank5k_b.rs"]
 mod cmdr_rank5k_b;
 pub use cmdr_rank5k_b::*;
+#[path = "../../../src/sets/decks/cmdr_rank5k_c.rs"]
+mod cmdr_rank5k_c;
+pub use cmdr_rank5k_c::*;
 #[path = "../../../src/sets/decks/cmdr_rank3k_a.rs"]
 mod cmdr_rank3k_a;
 pub use cmdr_rank3k_a::*;
