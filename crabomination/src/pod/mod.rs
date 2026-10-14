@@ -11064,6 +11064,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CELESTIAL_KIRIN_COMMANDERS,
             main: decks::CELESTIAL_KIRIN_MAIN,
         },
+        // Seat 1769: Gandalf, Party Guest's EDHREC average deck. `--pod-decks 1769`.
+        PodDeck {
+            name: "Gandalf, Party Guest (WUR)",
+            commanders: decks::GANDALF_4_COMMANDERS,
+            main: decks::GANDALF_4_MAIN,
+        },
+        // Seat 1770: Ishkanah, Grafwidow's EDHREC average deck. `--pod-decks 1770`.
+        PodDeck {
+            name: "Ishkanah, Grafwidow (BG)",
+            commanders: decks::ISHKANAH_COMMANDERS,
+            main: decks::ISHKANAH_MAIN,
+        },
     ]
 }
 
@@ -14663,6 +14675,8 @@ mod tests {
             ("Fumiko the Lowblood", &[0x10FB]),
             ("Kataki, War's Wage", &[0x10FC]),
             ("Celestial Kirin", &[0x10FD]),
+            ("Gandalf, Party Guest", &[0x10FE]),
+            ("Ishkanah, Grafwidow", &[0x10FF]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

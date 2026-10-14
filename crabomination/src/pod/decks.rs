@@ -50005,3 +50005,61 @@ pub const CELESTIAL_KIRIN_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains,
 ];
+
+pub const GANDALF_4_COMMANDERS: &[CardFactory] = &[gandalf_party_guest];
+
+/// **Gandalf, Party Guest**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 7 Islands + 4 Mountains + 3 Plains = 99.
+/// Gandalf, Party Guest (EDHREC, fetched 2026-10-14).
+pub const GANDALF_4_MAIN: &[CardFactory] = &[
+    arcane_signet, glamdring_foe_hammer, resonating_lute, sol_ring, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, wizards_staff, adarkar_wastes,
+    battlefield_forge, clifftop_retreat, command_tower, exotic_orchard, glacial_fortress,
+    hallowed_fountain, mystic_monastery, path_of_ancestry, raugrin_triome, reliquary_tower,
+    sacred_foundry, sea_of_clouds, shivan_reef, spectator_seating, steam_vents,
+    stormcarved_coast, sulfur_falls, sundown_pass, training_center, adeliz_the_cinder_wind,
+    alania_divergent_storm, alisaie_leveilleur, alphinaud_leveilleur, azami_lady_of_scrolls,
+    balmor_battlemage_captain, baral_chief_of_compliance, gale_waterdeep_prodigy,
+    gandalf_the_grey, gandalf_friend_of_the_shire, gandalf_goblins_bane, gogo_master_of_mimicry,
+    harmonic_prodigy, jori_en_ruin_diver, kaza_roil_chaser, kitsa_otterball_elite,
+    krile_baldesion, kykar_winds_fury, talrand_sky_summoner, the_emperor_of_palamecia,
+    venat_heart_of_hydaelyn, veyran_voice_of_duality, vivi_ornitier, rhystic_study,
+    thousand_year_storm, whirlwind_of_thought, akromas_will, an_offer_you_cant_refuse,
+    arcane_denial, big_score, brainstorm, chaos_warp, counterspell, dovins_veto, flame_of_anor,
+    frantic_search, harmonized_crescendo, mana_sculpt, olorins_searing_light, path_to_exile,
+    swords_to_plowshares, wizards_retort, aminatous_augury, call_forth_the_tempest,
+    full_throttle, improvisation_capstone, inspired_ultimatum, insurrection, mnemonic_deluge,
+    multiversal_incursion, raise_the_palisade, sea_gate_restoration, step_through, stock_up,
+    surge_to_victory, taunt_from_the_rampart, urzas_ruinous_blast,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, plains, plains, plains,
+];
+
+pub const ISHKANAH_COMMANDERS: &[CardFactory] = &[ishkanah_grafwidow];
+
+/// **Ishkanah, Grafwidow**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 12 Forests + 7 Swamps = 99.
+/// Ishkanah, Grafwidow (EDHREC, fetched 2026-10-14).
+pub const ISHKANAH_MAIN: &[CardFactory] = &[
+    arcane_signet, cauldron_of_essence, conjurers_closet, golgari_signet, sol_ring,
+    talisman_of_resilience, vanquishers_banner, bojuka_bog, command_tower, deathcap_glade,
+    evolving_wilds, golgari_rot_farm, llanowar_wastes, overgrown_tomb, path_of_ancestry,
+    swarmyard, tainted_wood, temple_of_malady, terramorphic_expanse, twilight_mire,
+    underground_mortuary, undergrowth_stadium, woodland_cemetery, arachnus_spinner,
+    arasta_of_the_endless_web, brood_weaver, broodspinner, chainweb_aracnir, deadly_recluse,
+    doom_weaver, drider, graverobber_spider, hatchery_spider, mirkwood_spider, nyx_weaver,
+    obelisk_spider, penumbra_spider, rotwidow_pack, sakura_tribe_elder,
+    shelob_child_of_ungoliant, shelob_dread_weaver, silklash_spider, skyfisher_spider,
+    spinner_of_souls, sporeweb_weaver, stingerfling_spider, sweet_gum_recluse, the_swarmweaver,
+    twin_silk_spider, twitching_doll, watcher_in_the_web, arachnus_web, assault_formation,
+    cryptolith_rite, curse_of_clinging_webs, deadbridge_chant, moldervine_reclamation,
+    parallel_lives, arachnogenesis, assassins_trophy, beast_within, golgari_charm,
+    grapple_with_the_past, grisly_salvage, harrow, heroic_intervention, putrefy, second_harvest,
+    lolth_spider_queen, cultivate, harmonize, kindred_dominance, kodamas_reach, natures_lore,
+    rampant_growth, shamanic_revelation, spider_spawning, swarmyard_massacre,
+    traverse_the_ulvenwald, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
