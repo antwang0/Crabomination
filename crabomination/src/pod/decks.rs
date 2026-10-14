@@ -69446,3 +69446,30 @@ pub const MORINFEN_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const MIKEY_MONA_COMMANDERS: &[CardFactory] = &[mikey_mona_mutant_sitters];
+
+/// **Mikey & Mona, Mutant Sitters**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Forests = 99.
+/// Mikey & Mona, Mutant Sitters (EDHREC, fetched 2026-10-14).
+pub const MIKEY_MONA_MAIN: &[CardFactory] = &[
+    arcane_signet, bitterthorn_nissas_animus, crucible_of_worlds, emerald_medallion,
+    ozolith_the_shattered_spire, sol_ring, spectral_searchlight, evolving_wilds, fabled_passage,
+    mosswort_bridge, terramorphic_expanse, ancient_bronze_dragon, ancient_greenwarden,
+    avabruck_caretaker, azusa_lost_but_seeking, beast_whisperer, champion_of_lambholt,
+    earth_kingdom_general, elvish_mystic, evolution_sage, forgotten_ancient, genesis_hydra,
+    goldvein_hydra, heartwood_storyteller, hunted_troll, ivy_lane_denizen, kalonian_hydra,
+    keeper_of_progenitus, llanowar_elves, managorger_hydra, mossborn_hydra, oran_rief_ooze,
+    ramunap_excavator, rishkar_peema_renegade, scute_swarm, seedborn_muse,
+    surrak_elusive_hunter, territorial_scythecat, toski_bearer_of_secrets, vastwood_hydra,
+    vigor, awakening, branching_evolution, doubling_season, fight_rigging, garruks_uprising,
+    guardian_project, hydras_growth, revelation, roaring_earth, wild_growth, defend_the_hearth,
+    fog, heroic_intervention, krosan_grip, origin_of_metalbending, ram_through,
+    return_of_the_wildspeaker, snakeskin_veil, cultivate, disorienting_choice,
+    environmental_sciences, gaeas_blessing, harmonize, knockout_maneuver, rampant_growth,
+    tempt_with_discovery,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];

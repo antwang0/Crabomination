@@ -15282,6 +15282,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MORINFEN_COMMANDERS,
             main: decks::MORINFEN_MAIN,
         },
+        // Seat 2472: Mikey & Mona, Mutant Sitters's EDHREC average deck. `--pod-decks 2472`.
+        PodDeck {
+            name: "Mikey & Mona, Mutant Sitters (G)",
+            commanders: decks::MIKEY_MONA_COMMANDERS,
+            main: decks::MIKEY_MONA_MAIN,
+        },
     ]
 }
 
@@ -19586,6 +19592,7 @@ mod tests {
             ("Mastermind Plum", &[0x13BB]),
             ("The Last Ride", &[0x13BC]),
             ("Morinfen", &[0x13BD]),
+            ("Mikey & Mona, Mutant Sitters", &[0x13BE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
