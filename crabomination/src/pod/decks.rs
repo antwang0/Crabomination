@@ -67792,3 +67792,31 @@ pub const AMAZING_SPIDER_GIRL_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const TETSUKO_UMEZAWA_2_COMMANDERS: &[CardFactory] = &[tetsuko_umezawa_pursuer];
+
+/// **Tetsuko Umezawa, Pursuer**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Tetsuko Umezawa, Pursuer (EDHREC, fetched 2026-10-14).
+pub const TETSUKO_UMEZAWA_2_MAIN: &[CardFactory] = &[
+    acorn_catapult, arcane_signet, beamtown_beatstick, fellwar_stone, fire_diamond,
+    genesis_chamber, mind_stone, mjolnir_hammer_of_thor, ruby_medallion, shadowspear, sol_ring,
+    swiftfoot_boots, the_reaver_cleaver, arena_of_glory, fire_nation_palace, forbidden_orchard,
+    nykthos_shrine_to_nyx, spinerock_knoll, valakut_the_molten_pinnacle, war_room, akroan_horse,
+    baeloth_barrityl_entertainer, ellie_brick_master, goblin_cadets, goblin_spymaster,
+    humble_defector, kediss_emberclaw_familiar, kharn_the_betrayer, life_of_the_party,
+    master_of_barbs, professional_face_breaker, relic_robber, thor_asgards_avenger,
+    tomik_izzet_sparkmage, torbran_thane_of_red_fell, varchilds_war_riders,
+    varchild_betrayer_of_kjeldor, vengeful_ancestor, curse_of_opulence, descent_into_avernus,
+    mechanized_warfare, rite_of_the_raging_storm, spiked_corridor_torture_pit, sticky_fingers,
+    abrade, academic_dispute, big_score, bulk_up, chaos_warp, crimson_wisps, expedite,
+    great_train_heist, lightning_bolt, monstrous_rage, reroute, return_the_favor, sazacaps_brew,
+    thrill_of_possibility, tibalts_trickery, unexpected_windfall, blasphemous_act,
+    crash_through, faithless_looting, impolite_entrance, mogg_infestation, overmaster,
+    renegade_tactics, rile, sundering_eruption, tempt_with_vengeance, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

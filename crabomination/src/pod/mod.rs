@@ -14922,6 +14922,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AMAZING_SPIDER_GIRL_COMMANDERS,
             main: decks::AMAZING_SPIDER_GIRL_MAIN,
         },
+        // Seat 2412: Tetsuko Umezawa, Pursuer's EDHREC average deck. `--pod-decks 2412`.
+        PodDeck {
+            name: "Tetsuko Umezawa, Pursuer (R)",
+            commanders: decks::TETSUKO_UMEZAWA_2_COMMANDERS,
+            main: decks::TETSUKO_UMEZAWA_2_MAIN,
+        },
     ]
 }
 
@@ -19164,6 +19170,7 @@ mod tests {
             ("Giant-Man, Gargantuan Genius", &[0x137F]),
             ("Xun Yu, Wei Advisor", &[0x1380]),
             ("Amazing Spider-Girl", &[0x1381]),
+            ("Tetsuko Umezawa, Pursuer", &[0x1382]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
