@@ -12522,6 +12522,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KID_LOKI_COMMANDERS,
             main: decks::KID_LOKI_MAIN,
         },
+        // Seat 2012: Garland, Royal Kidnapper's EDHREC average deck. `--pod-decks 2012`.
+        PodDeck {
+            name: "Garland, Royal Kidnapper (UB)",
+            commanders: decks::GARLAND_2_COMMANDERS,
+            main: decks::GARLAND_2_MAIN,
+        },
+        // Seat 2013: Hans Eriksson's EDHREC average deck. `--pod-decks 2013`.
+        PodDeck {
+            name: "Hans Eriksson (RG)",
+            commanders: decks::HANS_ERIKSSON_COMMANDERS,
+            main: decks::HANS_ERIKSSON_MAIN,
+        },
+        // Seat 2014: The Wandering Rescuer's EDHREC average deck. `--pod-decks 2014`.
+        PodDeck {
+            name: "The Wandering Rescuer (W)",
+            commanders: decks::THE_WANDERING_RESCUER_COMMANDERS,
+            main: decks::THE_WANDERING_RESCUER_MAIN,
+        },
+        // Seat 2015: Denry Klin, Editor in Chief's EDHREC average deck. `--pod-decks 2015`.
+        PodDeck {
+            name: "Denry Klin, Editor in Chief (WU)",
+            commanders: decks::DENRY_KLIN_COMMANDERS,
+            main: decks::DENRY_KLIN_MAIN,
+        },
     ]
 }
 
@@ -16365,6 +16389,10 @@ mod tests {
             ("Elanor Gardner", &[0x11EF]),
             ("Lady Zhurong, Warrior Queen", &[0x11F0]),
             ("Kid Loki", &[0x11F1]),
+            ("Garland, Royal Kidnapper", &[0x11F2]),
+            ("Hans Eriksson", &[0x11F3]),
+            ("The Wandering Rescuer", &[0x11F4]),
+            ("Denry Klin, Editor in Chief", &[0x11F5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

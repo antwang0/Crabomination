@@ -56712,3 +56712,115 @@ pub const KID_LOKI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const GARLAND_2_COMMANDERS: &[CardFactory] = &[garland_royal_kidnapper];
+
+/// **Garland, Royal Kidnapper**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Islands + 10 Swamps = 99.
+/// Garland, Royal Kidnapper (EDHREC, fetched 2026-10-14).
+pub const GARLAND_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chaos_shrines_black_crystal, conjurers_closet, dimir_signet, fellwar_stone,
+    mind_stone, sapphire_medallion, sol_ring, staff_of_eden_vaults_key, talisman_of_dominance,
+    the_darkness_crystal, thought_vessel, bojuka_bog, choked_estuary, command_tower,
+    darkwater_catacombs, dimir_aqueduct, drowned_catacomb, exotic_orchard, gloomlake_verge,
+    morphic_pool, shipwreck_marsh, sunken_hollow, sunken_ruins, tainted_isle, underground_river,
+    watery_grave, agent_of_treachery, baleful_strix, brainstealer_dragon, dauthi_voidwalker,
+    faerie_mastermind, fallen_shinobi, gonti_lord_of_luxury, gonti_night_minister,
+    hostage_taker, mind_flayer, nephalia_smuggler, notion_thief, sepulchral_primordial,
+    silent_hallcreeper, solemn_simulacrum, taskmaster_mercenary_mimic, thassa_deep_dwelling,
+    thief_of_sanity, thieving_amalgam, tinybones_the_pickpocket, volatile_stormdrake,
+    animate_dead, changing_loyalty, court_of_locthwain, court_of_vantress, cunning_rhetoric,
+    fealty_to_the_realm, kang_dynasty, minions_return, propaganda, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, counterspell, dark_ritual, domineering_will,
+    essence_flux, ghostly_flicker, negate, siphon_insight, treacherous_urge, withering_torment,
+    blasphemous_edict, blue_suns_twilight, bribery, come_back_wrong, dream_harvest,
+    feed_the_swarm, reanimate, rise_of_the_dark_realms, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const HANS_ERIKSSON_COMMANDERS: &[CardFactory] = &[hans_eriksson];
+
+/// **Hans Eriksson**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 13 Forests + 9 Mountains = 99.
+/// Hans Eriksson (EDHREC, fetched 2026-10-14).
+pub const HANS_ERIKSSON_MAIN: &[CardFactory] = &[
+    arcane_signet, darksteel_plate, doors_of_durin, magebane_armor, mithril_coat, scroll_rack,
+    senseis_divining_top, sol_ring, swiftfoot_boots, cinder_glade, command_tower, game_trail,
+    gruul_turf, karplusan_forest, kessig_wolf_run, mosswort_bridge, rockfall_vale,
+    rogues_passage, rootbound_crag, spire_garden, stomping_ground, temple_of_abandon,
+    wooded_foothills, anara_wolvid_familiar, ancient_adamantoise, anzrag_the_quake_mole,
+    apex_altisaur, arni_metalbrow, augur_of_autumn, brutalizer_exarch, etali_primal_conqueror,
+    etali_primal_storm, ghalta_primal_hunger, ghalta_stampede_tyrant, giant_adephage,
+    goblin_anarchomancer, hua_tuo_honored_physician, ilharg_the_raze_boar,
+    kodama_of_the_east_tree, kogla_and_yidaro, kogla_the_titan_ape, moraug_fury_of_akoum,
+    mwonvuli_beast_tracker, neyith_of_the_dire_hunt, port_razer, radha_heart_of_keld,
+    ranging_raptors, sakura_tribe_elder, soul_of_the_harvest, stonehoof_chieftain, terastodon,
+    terror_of_the_peaks, titan_of_industry, vigor, worldspine_wurm, wulfgar_of_icewind_dale,
+    familys_favor, garruks_uprising, mirris_guile, regeneration, rhythm_of_the_wild,
+    sylvan_library, warstorm_surge, beast_within, chaos_warp, heroic_intervention, reclaim,
+    tamiyos_safekeeping, withstand_death, worldly_tutor, blasphemous_act, cultivate, farseek,
+    kodamas_reach, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const THE_WANDERING_RESCUER_COMMANDERS: &[CardFactory] = &[the_wandering_rescuer];
+
+/// **The Wandering Rescuer**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// The Wandering Rescuer (EDHREC, fetched 2026-10-14).
+pub const THE_WANDERING_RESCUER_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, celestial_armor, halo_fountain, horn_of_gondor,
+    mind_stone, oketras_monument, pearl_medallion, skullclamp, sol_ring, swiftfoot_boots,
+    throne_of_eldraine, throne_of_the_god_pharaoh, wand_of_the_worldsoul, castle_ardenvale,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, minas_tirith, myriad_landscape,
+    nykthos_shrine_to_nyx, rogues_passage, war_room, adeline_resplendent_cathar,
+    adept_watershaper, bastion_protector, bennie_bracks_zoologist, cathar_commando,
+    coppercoat_vanguard, enduring_innocence, esper_sentinel, giver_of_runes, guide_of_souls,
+    jacked_rabbit, keeper_of_the_accord, knight_of_the_white_orchid, knight_errant_of_eos,
+    loran_of_the_third_path, mangara_the_diplomat, masako_the_humorless, mentor_of_the_meek,
+    moonshaker_cavalry, mother_of_runes, myrel_shield_of_argive, odric_lunarch_marshal,
+    reluctant_role_model, toby_beastie_befriender, welcoming_vampire, witch_enchanter,
+    caretakers_talent, dazzling_theater_prop_room, flowering_of_the_white_tree, land_tax,
+    smothering_tithe, trouble_in_pairs, we_ride_at_dawn, akromas_will, clever_concealment,
+    cut_short, flare_of_fortitude, flawless_maneuver, generous_gift, path_to_exile,
+    stroke_of_midnight, swords_to_plowshares, teferis_protection, the_eternal_wanderer,
+    the_wandering_emperor, austere_command, collective_effort, everything_comes_to_dust,
+    farewell, split_up,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];
+
+pub const DENRY_KLIN_COMMANDERS: &[CardFactory] = &[denry_klin_editor_in_chief];
+
+/// **Denry Klin, Editor in Chief**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Islands + 11 Plains = 99.
+/// Denry Klin, Editor in Chief (EDHREC, fetched 2026-10-14).
+pub const DENRY_KLIN_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, everflowing_chalice, fellwar_stone, panharmonicon, sol_ring,
+    swiftfoot_boots, talisman_of_progress, that_which_was_taken, the_ozolith, adarkar_wastes,
+    animal_sanctuary, azorius_chancery, command_tower, deserted_beach, diamond_city,
+    glacial_fortress, hallowed_fountain, karns_bastion, nesting_grounds, opal_palace, port_town,
+    prairie_stream, sea_of_clouds, skycloud_expanse, tyrite_sanctum, abzan_falconer,
+    aven_courier, avenging_huntbonder, avian_oddity, crystalline_giant, danny_pink,
+    deepglow_skate, dreamtide_whale, eagle_of_deliverance, gilraen_dunedain_protector,
+    glen_elendra_archmage, goldberry_river_daughter, grateful_apparition,
+    herald_of_secret_streams, hopeful_initiate, keensight_mentor, laezel_vlaakiths_champion,
+    luminarch_aspirant, metastatic_evangel, metropolis_angel, mikaeus_the_lunarch,
+    patrolling_peacemaker, proud_pack_rhino, reluctant_role_model, scavenged_brawler,
+    scholar_of_new_horizons, splendor_mare, thrummingbird, towashi_guide_bot, wingspan_mentor,
+    zephyr_singer, inexorable_tide, kindred_boon, noble_heritage, resourceful_defense,
+    together_forever, boon_of_safety, contractual_safeguard, counterspell, experimental_augury,
+    generous_gift, path_to_exile, protection_magic, ripples_of_potential, slip_out_the_back,
+    storm_of_forms, swords_to_plowshares, elspeth_resplendent, contentious_plan,
+    damning_verdict, requisition_raid, tezzerets_gambit, wave_goodbye,
+    // Basics
+    island, island, island, island, island, island, island, island, island, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
