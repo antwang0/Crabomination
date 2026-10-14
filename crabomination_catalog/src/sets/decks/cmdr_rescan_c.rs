@@ -504,3 +504,53 @@ pub fn kuroki_thief_of_talents() -> CardDefinition {
         ..legend("Kuroki, Thief of Talents", cost(&[generic(4), b()]), vec![CreatureType::Spirit], 4, 4)
     }
 }
+
+fn exile_top_playable(duration: crate::card::MayPlayDuration) -> Effect {
+    Effect::ExileTopAndGrantMayPlay {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        duration,
+        pay_any_color: false,
+        max_mana_value: None,
+        pay_own_cost: true,
+        uncast_penalty: None,
+    }
+}
+
+/// Pick Up the Pace — {1}{R} enchantment. Whenever a creature you control
+/// that entered this turn attacks, exile the top card of your library; you
+/// may play cards exiled with this as long as you attacked this turn.
+/// (Samut, Hazoret's Champion.)
+pub fn pick_up_the_pace() -> CardDefinition {
+    CardDefinition {
+        name: "Pick Up the Pace",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::EnteredThisTurn,
+            }),
+            effect: exile_top_playable(crate::card::MayPlayDuration::TurnsHolderAttacks { holder: 0 }),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Boros Strike-Captain — {1}{R/W}{R/W} 3/3 Minotaur Soldier. Battalion —
+/// exile the top card of your library; during any turn you attacked with
+/// three or more creatures, you may play that card. (Razia.)
+pub fn boros_strike_captain() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::battalion(exile_top_playable(
+            crate::card::MayPlayDuration::TurnsHolderAttacksWithThreeOrMore { holder: 0 },
+        ))],
+        ..creature(
+            "Boros Strike-Captain",
+            cost(&[generic(1), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
+            vec![CreatureType::Minotaur, CreatureType::Soldier],
+            3,
+            3,
+        )
+    }
+}

@@ -906,3 +906,38 @@ fn nephilim_cant_be_blocked_by_monocolored() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![(bear, epochal)])).is_err());
     g.perform_action(GameAction::DeclareBlockers(vec![(golem, epochal)])).expect("colorless blocker");
 }
+
+/// Boros Strike-Captain's card is playable on a turn you attacked with three
+/// or more — the battalion turn, and again on a later such turn, but not a
+/// turn you attacked with fewer.
+#[test]
+fn boros_strike_captain_card_wakes_on_three_attacker_turns() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..6 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let captain = ready(&mut g, 0, catalog::boros_strike_captain());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(captain, 1), (a, 1), (b, 1)]);
+    let first = g.exile.iter().find(|c| c.owner == 0).map(|c| c.id).expect("exiled");
+    let live = |g: &GameState| {
+        g.exile.iter().find(|c| c.id == first).and_then(|c| c.may_play_until).is_some_and(|p| p.player == 0)
+    };
+    assert!(live(&g), "playable on the battalion turn");
+    finish_combat(&mut g);
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert!(!live(&g), "parked between turns");
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    for id in [captain, a, b] {
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+    }
+    declare(&mut g, vec![(a, 1)]);
+    assert!(!live(&g), "one attacker isn't three");
+    g.battlefield_find_mut(a).unwrap().tapped = false;
+    g.attacking.clear();
+    declare(&mut g, vec![(captain, 1), (a, 1), (b, 1)]);
+    assert!(live(&g), "woken by a later three-attacker turn");
+}
