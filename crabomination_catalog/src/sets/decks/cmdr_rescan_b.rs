@@ -907,3 +907,15 @@ pub fn ormos_archive_keeper() -> CardDefinition {
         ..legend("Ormos, Archive Keeper", cost(&[generic(4), u(), u()]), vec![CreatureType::Sphinx], 5, 5)
     }
 }
+
+/// Killing Wave — {X}{B} sorcery. For each creature, its controller
+/// sacrifices it unless they pay X life. (Mai, Scornful Striker.)
+pub fn killing_wave() -> CardDefinition {
+    CardDefinition {
+        name: "Killing Wave",
+        cost: cost(&[crate::mana::x(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::EachCreatureSacrificedUnlessLife { amount: Value::XFromCost },
+        ..Default::default()
+    }
+}

@@ -783,3 +783,28 @@ fn ormos_replaces_empty_draws_and_discards_distinct_names() {
     g.add_card_to_hand(0, catalog::lightning_bolt());
     g.perform_action(act).expect("Island, Forest, Bolt");
 }
+
+/// CR 119.4 — Killing Wave for X=3: a player at 4 life keeps one creature
+/// (paying 3) and loses the other; nobody can pay past their life.
+#[test]
+fn killing_wave_pay_or_sacrifice() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::serra_angel());
+    let a = ready(&mut g, 1, catalog::serra_angel());
+    let b = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[1].life = 4;
+    g.players[0].life = 2;
+    let wave = g.add_card_to_hand(0, catalog::killing_wave());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wave, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "2 life can't pay 3");
+    assert_eq!(g.players[0].life, 2);
+    assert_eq!(g.players[1].life, 1, "paid for one");
+    assert_eq!([a, b].iter().filter(|id| g.battlefield_find(**id).is_some()).count(), 1);
+    assert!(g.battlefield_find(a).is_some(), "kept the costlier Angel");
+}

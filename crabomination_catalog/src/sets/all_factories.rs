@@ -4590,6 +4590,7 @@ static DECKS: &[Factory] = &[
     super::decks::wardscale_dragon,
     super::decks::ashes_of_the_abhorrent,
     super::decks::ormos_archive_keeper,
+    super::decks::killing_wave,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,
