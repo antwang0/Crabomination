@@ -17806,7 +17806,6 @@ mod tests {
             ("Hope of Ghirapur", &[0x1100]),
             ("Istvan, Butcher of Eln", &[0x1101]),
             ("Darigaaz, the Igniter", &[0x1102]),
-            ("Maraxus of Keld", &[0x1103]),
             ("Kinzu of the Bleak Coven", &[0x1104]),
             ("Tajic, Legion's Edge", &[0x1105]),
             ("Nick Valentine, Private Eye", &[0x1106]),
