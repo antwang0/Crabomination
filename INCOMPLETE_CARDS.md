@@ -2162,3 +2162,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Stangg, Echo Warrior | copies of the Auras and Equipment attached to Stangg aren't made for Stangg Twin | `CreateTokenAttacking` |
 | 🟡 Arachne, Psionic Weaver | the look at an opponent's hand that informs the type choice isn't modelled | `ChooseCardTypeFromForSource` |
 | 🟡 Captain James T. Kirk | with an empty hand, "choose one or more" is an up-to-three pick, so zero modes is offered | `ChooseUpToN { max: 3 }` |
+| 🟡 Spider-Verse | "do this only once each turn" is a once-per-turn trigger, so a declined copy still spends the turn's use | `EventSpec::once_per_turn` |
