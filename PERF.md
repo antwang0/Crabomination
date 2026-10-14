@@ -3136,6 +3136,32 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-14 (Commander run, `01CwrNTA`, second half) — guardrail; 47 EDHREC seats, 56 cards, four primitives, five fixes
+
+Hot-path touches: `scaled_counter_count` walks the battlefield once more
+per +1/+1 placement on a creature (Blightbeetle's lock);
+`stack_has_split_second` asks one more controller static per spell on the
+stack; `ChooseCreatureTypeThen` checks the battlefield/stack before
+stamping. None is in the fixed pool's path often enough to move a digest.
+Release `bot_ladder` at `9859b0527`, toolchain 1.99, Xeon @ 2.10 GHz.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); peak_rss 34.3 MiB;
+                 games_per_s 404.15; release build 12m17s
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean at 374d0c2e7
+golden traces    unchanged (core_rules::golden_trace, pod digests)
+suite            nextest --workspace (no client), strict answer log, at
+                 d5f86ce73: 26,137 run, 26,133 passed, 5 skipped; the 4 red
+                 (two type-line audits on The Lonely Mountain, two target
+                 walkers on Arachnus Spinner) fixed and re-run green
+clippy           workspace --all-targets (no client) at d5f86ce73: 0
+pods (debug)     seats 1728-1770, 2012-2015: 4- and 6-seat pods, ~260 games,
+                 all decided; one invariant panic (Pol Jamaar, seed 17384)
+                 fixed and replayed green
+```
+
 ### 2026-10-13 (Commander run, `01VkPyqk`) — guardrail; 15 EDHREC seats, 39 cards, six primitives, three fixes
 
 Hot-path touches: a loyalty activation pushes one more event
