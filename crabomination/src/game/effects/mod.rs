@@ -35214,6 +35214,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WhenTargetDies { body, slot, if_had_counter } => {
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned()
+                    && let Some((controller, ts)) =
+                        self.battlefield_find(cid).map(|c| (c.controller, c.battlefield_timestamp))
+                {
+                    let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: crate::game::types::DelayedKind::WhenObjectDies(cid, ts, *if_had_counter),
+                        effect: (**body).clone(),
+                        target: Some(crate::game::Target::Player(controller)),
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::WhenTargetDiesThisTurn { body, slot, filter: _ } => {
                 // Watch the targeted creature's death; capture its controller
                 // as the body's Target(0) so it survives the creature leaving

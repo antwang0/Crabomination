@@ -12061,6 +12061,13 @@ pub enum Effect {
         filter: Option<SelectionRequirement>,
     },
 
+    /// "When that creature dies, [body]" with no "this turn" — the
+    /// untimed `WhenTargetDiesThisTurn` (Xira, the Golden Sting's egg). The
+    /// watch outlives cleanup; the dead creature is the body's trigger source.
+    /// `if_had_counter`: "if it has a [kind] counter on it", read off the
+    /// death's last-known counters as it triggers.
+    WhenTargetDies { body: Box<Effect>, slot: usize, if_had_counter: Option<crate::card::CounterType> },
+
     /// "Whenever a creature you control enters this turn, [body]." Registers
     /// a turn-scoped delayed trigger (CR 603.4) that fires once per creature
     /// the controller controls that enters for the rest of the turn; the

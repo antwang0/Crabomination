@@ -1069,6 +1069,8 @@ pub enum CounterType {
     /// Livio, Oathsworn Sentinel's aegis counters (on the cards it exiles,
     /// which its second ability returns).
     Aegis,
+    /// Xira, the Golden Sting's egg counters (its death watch reads them).
+    Egg,
 }
 
 /// Every zone a card can occupy.

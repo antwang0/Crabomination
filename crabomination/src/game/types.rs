@@ -1320,6 +1320,13 @@ pub enum DelayedKind {
     /// "… when that token dies" with no turn window (Tatsumasa, the Dragon's
     /// Fang). Same shape as `WhenCardDies` but survives cleanup.
     WhenTokenDies(crate::card::CardId),
+    /// "When that creature dies" with no turn window, for a card that can
+    /// change zones (Xira, the Golden Sting): the watched object is the card
+    /// at that battlefield timestamp (CR 400.7), so the same card back on
+    /// the battlefield is a new object the watch ignores. Dropped once that
+    /// object is gone. With a counter kind it fires only if the object died
+    /// with one on it ("if it has an egg counter on it", CR 603.4).
+    WhenObjectDies(crate::card::CardId, u64, Option<crate::card::CounterType>),
     /// "Whenever a creature you control enters this turn, …" (CR 603.4).
     /// Fires once per creature controlled by `DelayedTrigger.controller`
     /// that enters for the rest of the turn; the entering creature is the

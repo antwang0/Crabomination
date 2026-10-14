@@ -24672,6 +24672,15 @@ impl GameState {
                     DelayedKind::WhenCardDies(cid)
                     | DelayedKind::WhenTokenDies(cid)
                     | DelayedKind::WhenHauntedCreatureDies(cid) => Some(cid),
+                    // CR 603.4 — the "if it had a [kind] counter" half is
+                    // checked against the death's last-known counters here,
+                    // while they still exist.
+                    DelayedKind::WhenObjectDies(cid, ts, had) => self
+                        .died_card_snapshots
+                        .get(&cid)
+                        .filter(|c| c.battlefield_timestamp == ts)
+                        .filter(|c| had.is_none_or(|k| c.counter_count(k) > 0))
+                        .map(|_| cid),
                     _ => None,
                 };
                 if let Some(cid) = watched_id

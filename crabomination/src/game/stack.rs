@@ -5699,6 +5699,16 @@ impl GameState {
         // watcher carrying an explicit `expires_after_turn` runs on its own
         // clock instead ("until the end of your next turn").
         let turn = self.turn_number;
+        // CR 400.7 — an untimed object watch whose object has left the
+        // battlefield (without dying, or by a death it already answered)
+        // watches nothing any more.
+        let bf = &self.battlefield;
+        self.delayed_triggers.retain(|dt| match dt.kind {
+            crate::game::types::DelayedKind::WhenObjectDies(cid, ts, _) => {
+                bf.find_by_id(cid).is_some_and(|c| c.battlefield_timestamp == ts)
+            }
+            _ => true,
+        });
         self.delayed_triggers.retain(|dt| match dt.expires_after_turn {
             Some(last) => turn < last,
             None => true,
