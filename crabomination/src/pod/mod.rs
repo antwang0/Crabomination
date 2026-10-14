@@ -15438,6 +15438,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SENU_COMMANDERS,
             main: decks::SENU_MAIN,
         },
+        // Seat 2498: Kazuul, Tyrant of the Cliffs's EDHREC average deck. `--pod-decks 2498`.
+        PodDeck {
+            name: "Kazuul, Tyrant of the Cliffs (R)",
+            commanders: decks::KAZUUL_COMMANDERS,
+            main: decks::KAZUUL_MAIN,
+        },
+        // Seat 2499: Selenia, the Cursed Heart's EDHREC average deck. `--pod-decks 2499`.
+        PodDeck {
+            name: "Selenia, the Cursed Heart (WB)",
+            commanders: decks::SELENIA_COMMANDERS,
+            main: decks::SELENIA_MAIN,
+        },
     ]
 }
 
@@ -19768,6 +19780,8 @@ mod tests {
             ("Vulture, Feathered Fiend", &[0x13D5]),
             ("Captain Marvel, Shooting Star", &[0x13D6]),
             ("Senu, Keen-Eyed Protector", &[0x13D7]),
+            ("Kazuul, Tyrant of the Cliffs", &[0x13D8]),
+            ("Selenia, the Cursed Heart", &[0x13D9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

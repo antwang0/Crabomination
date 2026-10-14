@@ -70171,3 +70171,60 @@ pub const SENU_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const KAZUUL_COMMANDERS: &[CardFactory] = &[kazuul_tyrant_of_the_cliffs];
+
+/// **Kazuul, Tyrant of the Cliffs**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Kazuul, Tyrant of the Cliffs (EDHREC, fetched 2026-10-14).
+pub const KAZUUL_MAIN: &[CardFactory] = &[
+    angels_trumpet, arcane_signet, coveted_jewel, cursed_mirror, endless_atlas, fire_diamond,
+    hazorets_monument, heraldic_banner, lightning_greaves, mind_stone, ruby_medallion, sol_ring,
+    swiftfoot_boots, wayfarers_bauble, castle_embereth, forgotten_cave, maze_of_ith,
+    myriad_landscape, valakut_the_molten_pinnacle, war_room, aether_membrane, agitator_ant,
+    archetype_of_aggression, avatar_of_slaughter, bloodmark_mentor, brash_taunter,
+    emberwilde_captain, fumiko_the_lowblood, geode_rager, goblin_diplomats, goblin_spymaster,
+    grenzo_havoc_raiser, humble_defector, ogre_battledriver, rose_room_treasurer,
+    skyline_despot, slumbering_dragon, solemn_simulacrum, stuffy_doll,
+    torbran_thane_of_red_fell, vengeful_ancestor, warmonger_hellkite, court_of_embereth,
+    court_of_ire, curse_of_opulence, curse_of_the_nightly_hunt, grand_melee, impact_tremors,
+    rite_of_the_raging_storm, trove_of_temptation, wars_toll, warstorm_surge, abrade, big_score,
+    bolt_bend, chaos_warp, kazuuls_fury, lightning_bolt, seething_song, thrill_of_possibility,
+    chandra_torch_of_defiance, koth_of_the_hammer, koth_fire_of_resistance, blasphemous_act,
+    chain_reaction, disrupt_decorum, faithless_looting, insurrection, jeskas_will, mana_geyser,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const SELENIA_COMMANDERS: &[CardFactory] = &[selenia_the_cursed_heart];
+
+/// **Selenia, the Cursed Heart**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Plains + 11 Swamps = 99.
+/// Selenia, the Cursed Heart (EDHREC, fetched 2026-10-14).
+pub const SELENIA_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, alhammarrets_archive, arcane_signet, ashnods_altar, bolass_citadel,
+    orzhov_signet, sol_ring, talisman_of_hierarchy, the_soul_stone, the_wind_crystal,
+    well_of_lost_dreams, bleachbone_verge, bojuka_bog, caves_of_koilos, command_tower,
+    fetid_heath, godless_shrine, isolated_chapel, marsh_flats, orzhov_basilica, phyrexian_tower,
+    reliquary_tower, shattered_sanctum, tainted_field, urborg_tomb_of_yawgmoth,
+    vault_of_champions, vault_of_the_archangel, archangel_of_thune, avacyn_angel_of_horror,
+    blood_artist, bloodletter_of_aclazotz, bloodthirsty_conqueror, cruel_celebrant,
+    elas_il_kor_sadistic_pilgrim, enduring_tenacity, exemplar_of_light, haliya_guided_by_light,
+    kambal_consul_of_allocation, liesa_forgotten_archangel, lotho_corrupt_shirriff,
+    marauding_blight_priest, niv_mizzet_ghost_counsel, resplendent_angel, rhox_faithmender,
+    rodolf_duskbringer, serra_ascendant, sheoldred_the_apocalypse, soul_warden, souls_attendant,
+    suture_priest, teysa_karlov, vito_thorn_of_the_dusk_rose, authority_of_the_consuls,
+    black_market_connections, blind_obedience, cleric_class, exquisite_blood,
+    gift_of_immortality, kayas_ghostform, phyrexian_arena, sanguine_bond, smothering_tithe,
+    anguished_unmaking, beacon_of_immortality, dark_ritual, deadly_dispute, inkshield,
+    malakir_rebirth, not_dead_after_all, path_to_exile, swords_to_plowshares, undying_malice,
+    damn, debt_to_the_deathless, exsanguinate, nights_whisper, reanimate, sign_in_blood,
+    toxic_deluge,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
