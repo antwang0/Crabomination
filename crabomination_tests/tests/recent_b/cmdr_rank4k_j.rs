@@ -156,3 +156,18 @@ fn sigrid_holds_an_attacker() {
     assert!(g.battlefield_find(att).is_none());
     assert!(g.exile.iter().any(|c| c.id == att));
 }
+
+/// CR 104.2a / 104.3d — the last seat standing wins at negative life while
+/// its Platinum Angel keeps it in the game (pod sweep 441342, game 1).
+#[test]
+fn platinum_angel_seat_wins_as_last_standing() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::platinum_angel());
+    g.players[0].life = -6;
+    g.players[2].life = -3;
+    g.check_state_based_actions();
+    assert!(g.game_over.is_none());
+    g.players[1].life = -17;
+    g.check_state_based_actions();
+    assert_eq!(g.game_over, Some(Some(0)));
+}
