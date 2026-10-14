@@ -20429,10 +20429,14 @@ mod tests {
         // action settles — `commander_redirect_offers` — and the answer is
         // an action; bisected to that commit alone): 0xC0FFEE 2486→2490
         // actions, same winner and turns; 43 and 4242 unmoved.
+        // Re-blessed 2026-10-14 (CR 106.6: restricted floating mana that
+        // covers a cost is spent before the auto-tapper taps a source —
+        // `cdbd98019`; bisected to that hunk alone): 0xC0FFEE and 43 unmoved;
+        // 4242 seat 3 → seat 0, 58→82 turns, 2771→4050 actions.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2490),
             (43, Some(0), 74, 3800),
-            (4242, Some(3), 58, 2771),
+            (4242, Some(0), 82, 4050),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
