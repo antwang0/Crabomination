@@ -2168,3 +2168,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Castle Doom | the any-color mana also pays for abilities of artifacts, not only artifact spells | `SpendRestriction::ArtifactOnly` |
 | 🟡 Ms. Marvel, Kamala Khan | "base power equal to the cards in your hand" is set as the trigger resolves, not tracked as the hand changes | `SetBasePT { EndOfTurn }` |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
+| 🟡 Garruk's Harbinger | combat damage to a planeswalker doesn't trigger the dig, only damage to a player | `DealsCombatDamageToPlayer` |
