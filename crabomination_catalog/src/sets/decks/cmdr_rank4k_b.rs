@@ -505,7 +505,7 @@ pub fn captain_james_t_kirk() -> CardDefinition {
 
 // ── Greensleeves ─────────────────────────────────────────────────────────────
 
-/// Greensleeves — {4}{G}{G} legendary planeswalker, loyalty 4; can be your
+/// Greensleeves — {4}{G}{G} legendary planeswalker, loyalty 5; can be your
 /// commander. +2: a Giant Badger token ({1}{G}{G} 2/2 that gets +2/+2 when it
 /// blocks). −3: mill three, put the permanent cards among them into your hand.
 /// −8: creatures you control have base 8/8 and trample until end of turn.
@@ -536,7 +536,7 @@ pub fn greensleeves() -> CardDefinition {
         cost: cost(&[generic(4), g(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
-        base_loyalty: 4,
+        base_loyalty: 5,
         can_be_commander: true,
         loyalty_abilities: vec![
             LoyaltyAbility {
