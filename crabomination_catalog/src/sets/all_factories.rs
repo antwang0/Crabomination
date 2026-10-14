@@ -4069,6 +4069,11 @@ static DECKS: &[Factory] = &[
     super::decks::raphael_ninja_destroyer,
     super::decks::raphaels_technique,
     super::decks::rinoa_angel_wing,
+    // cmdr_rank3k_l (session 01PxmVAG)
+    super::decks::rona_disciple_of_gix,
+    super::decks::the_antiquities_war,
+    super::decks::vivien_on_the_hunt,
+    super::decks::witherscale_wurm,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
