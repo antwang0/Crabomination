@@ -130,6 +130,8 @@ the handoff.
 - **FIXED (`f8c7dc177`) CR 613.7:** `Duration::Permanent` keyword grants are baked onto the printed list, so an earlier `RemoveAllAbilities` cleared them; on a stripped permanent the grant is now a timestamped layer-6 effect. **OPEN:** the same bake applies to `GrantTriggeredAbility { Permanent }` and the type/subtype bakes beside it (`effects/mod.rs`, `bake_grant()` callers) — a strip that lands *before* them wipes them too.
 - **FIXED (`9148c7908`) CR 903.4:** a land token's intrinsic `{T}: Add` (the Forest Dryad tokens, given one in `229786480`) counted toward the making card's identity — Staff of Titania read green.
 - **FIXED (`6bd38751d`):** "exile the top two, choose one of them, you may play it" granted both cards on Tectonic Giant, Riverwheel Sweep and Mishra's Research Desk; `sets::impulse_choose_one` is exact.
+- **FIXED (`cdbd98019`) CR 106.6:** the bot payment path's auto-tapper counts only unrestricted pool mana, so restricted floating mana that already covered a cost had it tap sources anyway — for Urn of Godfire's `{2}: Add one mana of any color` (no {T}) it re-entered the activating ability and failed with mana to spare. Restricted float that covers the cost is now spent first.
+- **FIXED (`36abc10b5`, bot):** the coloured-pip sink gate read a power-up's printed pips; the turn its source entered, CR 702.193b removes the source's mana cost pips and all (Shang-Chi's {5}{G}{G} is {2}).
 
 ## FIXED/OPEN 2026-10-13 (Commander run, `01CwrNTA`) — EDHREC ranks 1501-2000
 
