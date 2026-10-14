@@ -2169,3 +2169,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Ms. Marvel, Kamala Khan | "base power equal to the cards in your hand" is set as the trigger resolves, not tracked as the hand changes | `SetBasePT { EndOfTurn }` |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
 | 🟡 Garruk's Harbinger | combat damage to a planeswalker doesn't trigger the dig, only damage to a player | `DealsCombatDamageToPlayer` |
+| 🟡 Doctor Jane Foster | with life gained this turn the returned card passes through your hand before the battlefield | `Move` to hand, then `LastMoved` to battlefield |
+| 🟡 Beorn's Hospitality | the Bear's power and toughness are fixed as the ability resolves rather than tracking your lands | `BecomeCreature { Permanent }` |
