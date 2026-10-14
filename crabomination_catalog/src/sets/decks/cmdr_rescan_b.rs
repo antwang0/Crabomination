@@ -853,3 +853,57 @@ pub fn trove_of_temptation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wardscale Dragon — {4}{W}{W} 4/4 Dragon; flying. As long as it is
+/// attacking, defending player can't cast spells. (Dromoka, the Eternal.)
+pub fn wardscale_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is attacking, defending player can't cast spells.",
+            effect: StaticEffect::DefendingPlayerCantCastWhileAttacking,
+        }],
+        ..creature("Wardscale Dragon", cost(&[generic(4), w(), w()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Ashes of the Abhorrent — {1}{W} enchantment. Players can't cast spells
+/// from graveyards or activate abilities of cards in graveyards. Whenever a
+/// creature dies, you gain 1 life. (Baird.)
+pub fn ashes_of_the_abhorrent() -> CardDefinition {
+    CardDefinition {
+        name: "Ashes of the Abhorrent",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Players can't cast spells from graveyards or activate abilities of cards in graveyards.",
+            effect: StaticEffect::GraveyardCastAndActivationLock,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ormos, Archive Keeper — {4}{U}{U} legendary 5/5 Sphinx; flying. If you
+/// would draw from an empty library, instead put five +1/+1 counters on
+/// Ormos. {1}{U}{U}, discard three cards with different names: draw five.
+pub fn ormos_archive_keeper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card while your library has no cards in it, instead put five +1/+1 counters on Ormos.",
+            effect: StaticEffect::CountersInsteadOfDrawFromEmpty { kind: CounterType::PlusOnePlusOne, amount: 5 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u(), u()]),
+            discard_cost: Some((R::Any, 3)),
+            discard_cost_distinct_names: true,
+            effect: draw(5),
+            ..Default::default()
+        }],
+        ..legend("Ormos, Archive Keeper", cost(&[generic(4), u(), u()]), vec![CreatureType::Sphinx], 5, 5)
+    }
+}

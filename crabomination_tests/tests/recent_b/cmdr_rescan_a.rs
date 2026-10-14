@@ -713,3 +713,73 @@ fn trove_of_temptation_demands_an_attack_on_its_controller() {
     assert!(g.perform_action(GameAction::DeclareAttackers(vec![])).is_err(), "an empty attack");
     g.perform_action(GameAction::DeclareAttackers(vec![at(a, 1), at(b, 2)])).expect("one at the Trove");
 }
+
+/// CR 506.2 — Wardscale Dragon silences only the player it attacks.
+#[test]
+fn wardscale_dragon_silences_its_defender() {
+    let mut g = pod(3);
+    let dragon = ready(&mut g, 0, catalog::wardscale_dragon());
+    declare(&mut g, vec![(dragon, 1)]);
+    for seat in [1, 2] {
+        g.players[seat].mana_pool.add(Color::Red, 1);
+    }
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(2, catalog::lightning_bolt());
+    let cast = |g: &mut GameState, seat: usize, id: CardId| {
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    assert!(cast(&mut g, 1, bolt1).is_err(), "the defending player");
+    assert!(cast(&mut g, 2, bolt2).is_ok(), "a bystander");
+}
+
+/// Ashes of the Abhorrent stops a flashback cast and a graveyard activation.
+#[test]
+fn ashes_of_the_abhorrent_locks_graveyards() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::ashes_of_the_abhorrent());
+    let spell = g.add_card_to_graveyard(0, catalog::think_twice());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sage = g.add_card_to_graveyard(0, catalog::sage_of_the_fang());
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: sage, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).is_err(), "a graveyard activation");
+    let life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(bear)), vec![], None);
+    assert_eq!(g.players[1].life, life + 1);
+}
+
+/// CR 614 — Ormos turns a draw from an empty library into five counters (no
+/// CR 104.3c loss), and its discard wants three different names.
+#[test]
+fn ormos_replaces_empty_draws_and_discards_distinct_names() {
+    let mut g = pod(2);
+    let ormos = ready(&mut g, 0, catalog::ormos_archive_keeper());
+    let mut evs = Vec::new();
+    let _ = g.draw_one_or_deck(0, &mut evs);
+    let _ = g.check_state_based_actions();
+    assert!(!g.players[0].eliminated);
+    assert_eq!(plus(&g, ormos), 5);
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    let act = GameAction::ActivateAbility {
+        card_id: ormos, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    };
+    assert!(g.perform_action(act.clone()).is_err(), "three Islands share a name");
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.perform_action(act).expect("Island, Forest, Bolt");
+}
