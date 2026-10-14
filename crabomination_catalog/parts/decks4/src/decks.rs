@@ -897,6 +897,9 @@ pub use cmdr_rescan_a::*;
 #[path = "../../../src/sets/decks/cmdr_rescan_b.rs"]
 mod cmdr_rescan_b;
 pub use cmdr_rescan_b::*;
+#[path = "../../../src/sets/decks/cmdr_rescan_c.rs"]
+mod cmdr_rescan_c;
+pub use cmdr_rescan_c::*;
 #[path = "../../../src/sets/decks/cmdr_rank6k_e.rs"]
 mod cmdr_rank6k_e;
 pub use cmdr_rank6k_e::*;

@@ -808,3 +808,101 @@ fn killing_wave_pay_or_sacrifice() {
     assert_eq!([a, b].iter().filter(|id| g.battlefield_find(**id).is_some()).count(), 1);
     assert!(g.battlefield_find(a).is_some(), "kept the costlier Angel");
 }
+
+// ── decks::cmdr_rescan_c ─────────────────────────────────────────────────────
+
+/// Torrent of Souls paid with {B} returns the graveyard creature and, with
+/// no {R} spent, pumps nobody.
+#[test]
+fn torrent_of_souls_reads_the_mana_spent() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let elf = ready(&mut g, 0, catalog::llanowar_elves());
+    let spell = g.add_card_to_hand(0, catalog::torrent_of_souls());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast with {B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "{{B}} spent: the Bears return");
+    assert_eq!(pt(&g, elf), (1, 1), "no {{R}}: no pump");
+}
+
+/// Doom Foretold: a player with nothing to sacrifice feeds its controller,
+/// and the enchantment goes.
+#[test]
+fn doom_foretold_pays_out_when_a_player_cannot_sacrifice() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let doom = ready(&mut g, 0, catalog::doom_foretold());
+    let life = g.players[1].life;
+    step_to(&mut g, 1, TurnStep::Draw);
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.battlefield_find(doom).is_none(), "sacrificed");
+    assert_eq!(named_count(&g, 0, "Knight"), 1);
+}
+
+/// The Meep's sacrifice sets the team's base power and toughness to its MV.
+#[test]
+fn the_meep_sets_base_pt_to_the_sacrificed_mana_value() {
+    let mut g = pod(2);
+    let meep = ready(&mut g, 0, catalog::the_meep());
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![angel])]));
+    declare(&mut g, vec![(meep, 1)]);
+    assert!(g.battlefield_find(angel).is_none());
+    assert_eq!(pt(&g, meep), (5, 5));
+}
+
+/// Nephilim Epochal: +1/+1 per other Nephilim, and monocolored creatures
+/// can't block them.
+#[test]
+fn nephilim_epochal_pumps_other_nephilim() {
+    let mut g = pod(2);
+    let epochal = ready(&mut g, 0, catalog::nephilim_epochal());
+    ready(&mut g, 0, catalog::nephilim_epochal());
+    assert_eq!(pt(&g, epochal), (6, 6), "each Epochal's static counts the other");
+    assert!(g.permanent_has_keyword(epochal, &Keyword::CantBeBlockedBy(Box::new(crabomination::card::SelectionRequirement::Monocolored))));
+}
+
+/// Getaway Barrel dying puts a creature from the top thirteen onto the
+/// battlefield.
+#[test]
+fn getaway_barrel_finds_a_creature() {
+    let mut g = pod(2);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let barrel = ready(&mut g, 0, catalog::getaway_barrel());
+    let mut evs = Vec::new();
+    g.sacrifice_one(barrel, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// CR 509.1b — Nephilim Epochal's evasion: a monocolored creature can't
+/// block a Nephilim; a colorless one can.
+#[test]
+fn nephilim_cant_be_blocked_by_monocolored() {
+    let mut g = pod(2);
+    let epochal = ready(&mut g, 0, catalog::nephilim_epochal());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let golem = ready(&mut g, 1, catalog::marut());
+    declare(&mut g, vec![(epochal, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(bear, epochal)])).is_err());
+    g.perform_action(GameAction::DeclareBlockers(vec![(golem, epochal)])).expect("colorless blocker");
+}
