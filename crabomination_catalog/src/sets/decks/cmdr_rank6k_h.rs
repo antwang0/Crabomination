@@ -2,13 +2,11 @@
 //! 2026-10-14 scan), eighth file. Tests in `tests/recent_b/cmdr_rank6k_h.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
-    LandType, Predicate, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
-    Supertype, TriggeredAbility, Value,
+    CardDefinition, CardType, CreatureType, Keyword, LandType, SelectionRequirement as R,
+    StaticAbility, StaticEffect, Subtypes,
 };
-use crate::effect::{Duration, Effect, ExtraManaKind, Selector};
-use crate::game::types::TurnStep;
-use crate::mana::{Color, cost, g, generic, u};
+use crate::effect::ExtraManaKind;
+use crate::mana::{cost, g, generic, u};
 
 /// Utrom Monitor — {4}{U} 3/3 Utrom Scientist artifact creature, affinity for
 /// artifacts, flying.
@@ -53,53 +51,6 @@ pub fn keeper_of_progenitus() -> CardDefinition {
                 while_monarch: false,
             },
         }],
-        ..Default::default()
-    }
-}
-
-/// Hydro-Man, Fluid Felon — {U}{U} 2/2 legendary Elemental Villain. Whenever
-/// you cast a blue spell, if he's a creature, +1/+1 until end of turn. At
-/// your end step, untap him; until your next turn he becomes a land with
-/// "{T}: Add {U}". (Residual: he becomes a basic Island — the type change
-/// adds the Island subtype and basic supertype and drops his name's
-/// legendary supertype and abilities rather than only the creature type.)
-pub fn hydro_man_fluid_felon() -> CardDefinition {
-    CardDefinition {
-        name: "Hydro-Man, Fluid Felon",
-        cost: cost(&[u(), u()]),
-        supertypes: vec![Supertype::Legendary],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental, CreatureType::Villain],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasColor(Color::Blue) },
-                    Predicate::SourceIsCreature,
-                ])),
-                effect: Effect::PumpPT {
-                    what: Selector::This,
-                    power: Value::ONE,
-                    toughness: Value::ONE,
-                    duration: Duration::EndOfTurn,
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
-                effect: Effect::Seq(vec![
-                    Effect::Untap { what: Selector::This, up_to: None },
-                    Effect::BecomeBasicLand {
-                        what: Selector::This,
-                        land_type: LandType::Island,
-                        duration: Duration::UntilNextTurn,
-                    },
-                ]),
-            },
-        ],
         ..Default::default()
     }
 }

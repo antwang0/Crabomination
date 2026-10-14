@@ -1,7 +1,7 @@
 //! Commander: two-card gaps of EDHREC ranks 5501-6500
 //! (`decks::cmdr_rank6k_h`).
 
-use crabomination::card::{CardId, CardType};
+use crabomination::card::CardId;
 use crabomination::catalog;
 use crabomination::game::types::{GameAction, TurnStep};
 use crabomination::game::*;
@@ -62,22 +62,4 @@ fn keeper_of_progenitus_doubles_forests_not_islands() {
     assert_eq!(g.players[1].mana_pool.amount(Color::Green), 2);
     tap_for_mana(&mut g, island);
     assert_eq!(g.players[1].mana_pool.amount(Color::Blue), 1);
-}
-
-/// CR 513.1 / 611.2a — Hydro-Man untaps at your end step and is a land, not a
-/// creature, until your next turn.
-#[test]
-fn hydro_man_becomes_a_land_at_end_step() {
-    let mut g = pod(2);
-    let hm = ready(&mut g, 0, catalog::hydro_man_fluid_felon());
-    g.battlefield_find_mut(hm).unwrap().tapped = true;
-    g.step = TurnStep::PostCombatMain;
-    let evs = g.advance_step(Vec::new()).unwrap();
-    g.dispatch_triggers_for_events(&evs);
-    drain_stack(&mut g);
-    let c = g.battlefield_find(hm).unwrap();
-    assert!(!c.tapped, "untapped");
-    let cp = g.computed_permanent(hm).unwrap();
-    assert!(cp.card_types().contains(&CardType::Land));
-    assert!(!cp.card_types().contains(&CardType::Creature));
 }
