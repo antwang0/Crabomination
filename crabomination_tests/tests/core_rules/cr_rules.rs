@@ -13524,3 +13524,29 @@ fn a_parked_may_do_by_body_resumes_as_its_player() {
     assert_eq!(g.players[0].hand.len(), hand0, "the caster drew nothing");
     assert_eq!(g.players[1].mana_pool.total(), 0, "and paid for it");
 }
+
+/// CR 106.6 / 605.3a — restricted floating mana that may pay a mana
+/// ability's cost pays it. The auto-tapper counted only unrestricted mana,
+/// so with three artifact-only {C} floating it went looking for sources and
+/// found Urn of Godfire's own untapped "{2}: Add one mana of any color",
+/// re-entered it, and the activation failed with mana to spare.
+#[test]
+fn cr_106_6_restricted_float_pays_a_mana_abilitys_cost() {
+    use crabomination::mana::SpendRestriction;
+    for r in [SpendRestriction::ArtifactOnly, SpendRestriction::AbilitiesOnly] {
+        let mut g = two_player_game();
+        let urn = g.add_card_to_battlefield(0, catalog::urn_of_godfire());
+        g.players[0].mana_pool.add_restricted_colorless(3, r);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: urn,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .unwrap_or_else(|e| panic!("{r:?} mana pays Urn's {{2}}: {e:?}"));
+        assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "{r:?}: {{2}} spent, {{1}} left");
+        assert_eq!(g.players[0].mana_pool.total(), 1, "{r:?}: plus the one mana Urn made");
+    }
+}

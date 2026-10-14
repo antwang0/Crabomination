@@ -18240,6 +18240,22 @@ impl GameState {
             };
         }
 
+        // CR 106.6 — the auto-tapper counts only unrestricted floating mana,
+        // so restricted mana that already covers the cost (Power Depot's
+        // artifact-only, an abilities-only float) had it tap sources anyway —
+        // down to the activating source itself, re-entering its own ability
+        // and failing the activation. Spend the pool first.
+        if self.players[payer].mana_pool.restricted_total() > 0
+            && self.players[payer].mana_pool.clone().pay_for_spell(cost, kind).is_ok()
+        {
+            let pool_before = self.players[payer].mana_pool.clone();
+            let side_effects = self.players[payer]
+                .mana_pool
+                .pay_for_spell(cost, kind)
+                .map_err(GameError::Mana)?;
+            crate::game::pay_census::record(line!(), cost, None);
+            return Ok(PaymentReceipt { auto_events: vec![], side_effects, pool_before });
+        }
         let auto_events = self.auto_tap_for_cost_filtered(
             payer,
             cost,
