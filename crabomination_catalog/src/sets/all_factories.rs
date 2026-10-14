@@ -4497,6 +4497,8 @@ static DECKS: &[Factory] = &[
     super::decks::hydro_man_fluid_felon,
     super::decks::keeper_of_progenitus,
     super::decks::utrom_monitor,
+    // cmdr_rank6k_i (session 01PxmVAG)
+    super::decks::mikey_mona_mutant_sitters,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
