@@ -781766,6 +781766,7 @@
       "cardhoarder": "https://www.cardhoarder.com/cards/151713?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
   },
+<<<<<<< Updated upstream
   "Bofur, Reliable Guardian": {
     "object": "card",
     "id": "6b8e6435-7de4-41d5-bc7d-8e24c11897d0",
@@ -781803,6 +781804,47 @@
     "type_line": "Legendary Creature — Dwarf Scout // Instant — Adventure",
     "power": "1",
     "toughness": "1",
+=======
+  "Doctor Jane Foster": {
+    "object": "card",
+    "id": "cde387cc-d31b-4728-b49e-09eef49698fd",
+    "oracle_id": "b1c8fddb-d686-4b4a-8aff-d79ea747801c",
+    "multiverse_ids": [],
+    "resource_id": "9A1120B6AA0E51C5A42CA464F9F75E5C2FB72C325C960C36F059D3A4E75CA73E",
+    "mtgo_id": 152083,
+    "arena_id": 105767,
+    "tcgplayer_id": 697151,
+    "cardmarket_id": 891938,
+    "name": "Doctor Jane Foster",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/cde387cc-d31b-4728-b49e-09eef49698fd",
+    "scryfall_uri": "https://scryfall.com/card/msc/757/doctor-jane-foster?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-04T11:21:05Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.jpg?1785842465",
+      "normal": "https://cards.scryfall.io/normal/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.jpg?1785842465",
+      "large": "https://cards.scryfall.io/large/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.jpg?1785842465",
+      "png": "https://cards.scryfall.io/png/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.png?1785842465",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.jpg?1785842465",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.jpg?1785842465",
+      "thumb": "https://cards.scryfall.io/thumb/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.webp?1785842465",
+      "grid": "https://cards.scryfall.io/grid/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.webp?1785842465",
+      "display": "https://cards.scryfall.io/display/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.webp?1785842465",
+      "art": "https://cards.scryfall.io/art/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.webp?1785842465",
+      "crop": "https://cards.scryfall.io/crop/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.webp?1785842465",
+      "jpeg": "https://cards.scryfall.io/normal/front/c/d/cde387cc-d31b-4728-b49e-09eef49698fd.jpg?1785842465"
+    },
+    "mana_cost": "{3}{W}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Doctor",
+    "oracle_text": "Vigilance (Attacking doesn't cause this creature to tap.)\nWhen Doctor Jane Foster enters, return target creature card with mana value 3 or less from your graveyard to your hand. If you gained life this turn, return that card to the battlefield instead.",
+    "power": "2",
+    "toughness": "3",
+>>>>>>> Stashed changes
     "colors": [
       "W"
     ],
@@ -781810,6 +781852,7 @@
       "W"
     ],
     "keywords": [
+<<<<<<< Updated upstream
       "Lifelink"
     ],
     "card_faces": [
@@ -781851,6 +781894,165 @@
       "commander": "legal",
       "oathbreaker": "legal",
       "standardbrawl": "legal",
+=======
+      "Vigilance"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/cde387cc-d31b-4728-b49e-09eef49698fd/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ab1c8fddb-d686-4b4a-8aff-d79ea747801c&unique=prints",
+    "collector_number": "757",
+    "digital": false,
+    "rarity": "uncommon",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Gintas Galvanauskas",
+    "artist_ids": [
+      "14072144-bba7-4730-8f99-f75bcd4b24a2"
+    ],
+    "illustration_id": "5a8f0e5a-a704-48ae-8fad-2446a370c757",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 25948,
+    "prices": {
+      "usd": "0.23",
+      "usd_foil": "0.38",
+      "usd_etched": null,
+      "eur": "0.16",
+      "eur_foil": "0.31",
+      "tix": "0.02"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DDoctor%2BJane%2BFoster",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DDoctor%2BJane%2BFoster",
+      "edhrec": "https://edhrec.com/route/?cc=Doctor+Jane+Foster"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697151%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891938&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/152083?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Darwin, Adaptive Mutant": {
+    "object": "card",
+    "id": "95ccd8dd-9759-49d7-9380-3811912ce4d6",
+    "oracle_id": "4061572b-b7ff-4d06-9f71-9e66e064593d",
+    "multiverse_ids": [],
+    "resource_id": "B97FAEC9B51CFEB8114220A04A9A57C472E052B2368A07ED50FA9D84CC427CF7",
+    "mtgo_id": 151885,
+    "arena_id": 105728,
+    "tcgplayer_id": 697382,
+    "cardmarket_id": 892180,
+    "name": "Darwin, Adaptive Mutant",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/95ccd8dd-9759-49d7-9380-3811912ce4d6",
+    "scryfall_uri": "https://scryfall.com/card/msc/718/darwin-adaptive-mutant?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:20Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.jpg?1783903040",
+      "normal": "https://cards.scryfall.io/normal/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.jpg?1783903040",
+      "large": "https://cards.scryfall.io/large/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.jpg?1783903040",
+      "png": "https://cards.scryfall.io/png/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.png?1783903040",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.jpg?1783903040",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.jpg?1783903040",
+      "thumb": "https://cards.scryfall.io/thumb/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.webp?1783903040",
+      "grid": "https://cards.scryfall.io/grid/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.webp?1783903040",
+      "display": "https://cards.scryfall.io/display/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.webp?1783903040",
+      "art": "https://cards.scryfall.io/art/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.webp?1783903040",
+      "crop": "https://cards.scryfall.io/crop/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.webp?1783903040",
+      "jpeg": "https://cards.scryfall.io/normal/front/9/5/95ccd8dd-9759-49d7-9380-3811912ce4d6.jpg?1783903040"
+    },
+    "mana_cost": "{1}{G}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Mutant Hero",
+    "oracle_text": "Evolve (Whenever a creature you control enters, if that creature has greater power or toughness than this creature, put a +1/+1 counter on this creature.)\nRemove two +1/+1 counters from Darwin: He gains indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy him.)",
+    "power": "2",
+    "toughness": "1",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Evolve"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+>>>>>>> Stashed changes
       "brawl": "legal",
       "competitivebrawl": "legal",
       "alchemy": "not_legal",
@@ -781878,6 +782080,7 @@
     "promo": false,
     "reprint": false,
     "variation": false,
+<<<<<<< Updated upstream
     "set_id": "59218c23-cb7a-4fde-9cff-3f2f71af1308",
     "set": "hob",
     "set_name": "The Hobbit",
@@ -781897,6 +782100,26 @@
       "aa7e89ed-d294-4633-9057-ce04dacfcfa4"
     ],
     "illustration_id": "1279af13-0542-4b22-9a22-7b5f8e37c191",
+=======
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/95ccd8dd-9759-49d7-9380-3811912ce4d6/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A4061572b-b7ff-4d06-9f71-9e66e064593d&unique=prints",
+    "collector_number": "718",
+    "digital": false,
+    "rarity": "uncommon",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Ryan Pancoast",
+    "artist_ids": [
+      "89cc9475-dda2-4d13-bf88-54b92867a25c"
+    ],
+    "illustration_id": "f0d69d35-a2dc-4a86-b22e-2256470e2fe9",
+>>>>>>> Stashed changes
     "border_color": "black",
     "frame": "2015",
     "frame_effects": [
@@ -781909,6 +782132,7 @@
     "promo_types": [
       "universesbeyond"
     ],
+<<<<<<< Updated upstream
     "edhrec_rank": 8801,
     "penny_rank": 1178,
     "prices": {
@@ -781928,6 +782152,166 @@
       "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709450%3Fpage%3D1",
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=900587&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/153924?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+=======
+    "edhrec_rank": 25641,
+    "prices": {
+      "usd": "0.31",
+      "usd_foil": "0.62",
+      "usd_etched": null,
+      "eur": "0.21",
+      "eur_foil": "0.42",
+      "tix": "0.10"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DDarwin%252C%2BAdaptive%2BMutant",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DDarwin%252C%2BAdaptive%2BMutant",
+      "edhrec": "https://edhrec.com/route/?cc=Darwin%2C+Adaptive+Mutant"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697382%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892180&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151885?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Hawkeye, Clint Barton": {
+    "object": "card",
+    "id": "7bdf5aed-0164-4b5c-9d4f-0c424c313235",
+    "oracle_id": "c9efec35-823f-4c78-be36-d1a57d8b6f44",
+    "multiverse_ids": [],
+    "resource_id": "0A361EF9C33D12D9E2B9F3ADE997C262BB39F56669E032008B649BA1FD53F899",
+    "mtgo_id": 151061,
+    "arena_id": 105535,
+    "tcgplayer_id": 697111,
+    "cardmarket_id": 892253,
+    "name": "Hawkeye, Clint Barton",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/7bdf5aed-0164-4b5c-9d4f-0c424c313235",
+    "scryfall_uri": "https://scryfall.com/card/msc/518/hawkeye-clint-barton?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:38:25Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.jpg?1783903105",
+      "normal": "https://cards.scryfall.io/normal/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.jpg?1783903105",
+      "large": "https://cards.scryfall.io/large/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.jpg?1783903105",
+      "png": "https://cards.scryfall.io/png/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.png?1783903105",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.jpg?1783903105",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.jpg?1783903105",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.webp?1783903105",
+      "grid": "https://cards.scryfall.io/grid/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.webp?1783903105",
+      "display": "https://cards.scryfall.io/display/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.webp?1783903105",
+      "art": "https://cards.scryfall.io/art/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.webp?1783903105",
+      "crop": "https://cards.scryfall.io/crop/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.webp?1783903105",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/b/7bdf5aed-0164-4b5c-9d4f-0c424c313235.jpg?1783903105"
+    },
+    "mana_cost": "{3}{W}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Archer Hero",
+    "oracle_text": "Vigilance (Attacking doesn't cause this creature to tap.)",
+    "power": "3",
+    "toughness": "5",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [
+      "Vigilance"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": false,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/7bdf5aed-0164-4b5c-9d4f-0c424c313235/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ac9efec35-823f-4c78-be36-d1a57d8b6f44&unique=prints",
+    "collector_number": "518",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "\"What can you do with arrows? A whole lot.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Taurin Clarke",
+    "artist_ids": [
+      "2926b954-0985-4306-9fca-3b48e32fad64"
+    ],
+    "illustration_id": "20b05146-496e-4cdf-87a2-a261a707f04e",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 29988,
+    "prices": {
+      "usd": "0.23",
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": "0.22",
+      "eur_foil": null,
+      "tix": "0.07"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DHawkeye%252C%2BClint%2BBarton",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DHawkeye%252C%2BClint%2BBarton",
+      "edhrec": "https://edhrec.com/route/?cc=Hawkeye%2C+Clint+Barton"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697111%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892253&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151061?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+>>>>>>> Stashed changes
     }
   }
 }
