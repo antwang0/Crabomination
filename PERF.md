@@ -3194,6 +3194,15 @@ per action. Release `bot_ladder`, toolchain 1.99, Xeon @ 2.10 GHz.
                  decisions_per_s 175.9k-193.4k across builds (noisy box)
 golden traces    unchanged (core_rules::golden_trace, pod digests)
 clippy           workspace --all-targets (no client): 0 after two fixes
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean
+suite            nextest --workspace (no client), strict answer log: 26,368
+                 run, 26,366 passed, 5 skipped; the 2 red fixed — Greensleeves'
+                 printed loyalty (cmdr_rank4k_b), and the long pole's stale
+                 Maraxus of Keld seed row; the long pole then caught
+                 static_affects_spell_cost missing Arachne's
+                 ChosenCardTypeSpellsCostMore (fixed), and re-ran green alone
+                 in 5,135 s debug (every seat, one seed each)
 pods (release)   final smoke: 118 pods / 464 games over seats 1774-2011,
                  2016-2143, 2189-2194, 2236-2241 (4- and 6-seat), all decided,
                  0 panics, stall rate 0 %; per-batch sweeps of every new seat
