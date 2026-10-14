@@ -1055,6 +1055,9 @@ pub enum CounterType {
     Feeding,
     /// Instrument of the Bards' harmony counters (the tutored mana value).
     Harmony,
+    /// Sauron, Dino Devotee's saurian counters (a green 5/5 Dinosaur while
+    /// it has one).
+    Saurian,
 }
 
 /// Every zone a card can occupy.
