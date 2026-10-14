@@ -12732,6 +12732,138 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TRAXOS_2_COMMANDERS,
             main: decks::TRAXOS_2_MAIN,
         },
+        // Seat 2047: Paladin Elizabeth Taggerdy's EDHREC average deck. `--pod-decks 2047`.
+        PodDeck {
+            name: "Paladin Elizabeth Taggerdy (WR)",
+            commanders: decks::PALADIN_ELIZABETH_TAGGERDY_COMMANDERS,
+            main: decks::PALADIN_ELIZABETH_TAGGERDY_MAIN,
+        },
+        // Seat 2048: Tolsimir Wolfblood's EDHREC average deck. `--pod-decks 2048`.
+        PodDeck {
+            name: "Tolsimir Wolfblood (WG)",
+            commanders: decks::TOLSIMIR_WOLFBLOOD_COMMANDERS,
+            main: decks::TOLSIMIR_WOLFBLOOD_MAIN,
+        },
+        // Seat 2049: Sokka, Swordmaster's EDHREC average deck. `--pod-decks 2049`.
+        PodDeck {
+            name: "Sokka, Swordmaster (W)",
+            commanders: decks::SOKKA_3_COMMANDERS,
+            main: decks::SOKKA_3_MAIN,
+        },
+        // Seat 2050: Harald, King of Skemfar's EDHREC average deck. `--pod-decks 2050`.
+        PodDeck {
+            name: "Harald, King of Skemfar (BG)",
+            commanders: decks::HARALD_COMMANDERS,
+            main: decks::HARALD_MAIN,
+        },
+        // Seat 2051: Kolaghan, the Storm's Fury's EDHREC average deck. `--pod-decks 2051`.
+        PodDeck {
+            name: "Kolaghan, the Storm's Fury (BR)",
+            commanders: decks::KOLAGHAN_COMMANDERS,
+            main: decks::KOLAGHAN_MAIN,
+        },
+        // Seat 2052: Avalanche of Sector 7's EDHREC average deck. `--pod-decks 2052`.
+        PodDeck {
+            name: "Avalanche of Sector 7 (R)",
+            commanders: decks::AVALANCHE_OF_SECTOR_7_COMMANDERS,
+            main: decks::AVALANCHE_OF_SECTOR_7_MAIN,
+        },
+        // Seat 2053: Hobgoblin, Mantled Marauder's EDHREC average deck. `--pod-decks 2053`.
+        PodDeck {
+            name: "Hobgoblin, Mantled Marauder (R)",
+            commanders: decks::HOBGOBLIN_COMMANDERS,
+            main: decks::HOBGOBLIN_MAIN,
+        },
+        // Seat 2054: Anthousa, Setessan Hero's EDHREC average deck. `--pod-decks 2054`.
+        PodDeck {
+            name: "Anthousa, Setessan Hero (G)",
+            commanders: decks::ANTHOUSA_COMMANDERS,
+            main: decks::ANTHOUSA_MAIN,
+        },
+        // Seat 2055: Cao Cao, Lord of Wei's EDHREC average deck. `--pod-decks 2055`.
+        PodDeck {
+            name: "Cao Cao, Lord of Wei (B)",
+            commanders: decks::CAO_CAO_COMMANDERS,
+            main: decks::CAO_CAO_MAIN,
+        },
+        // Seat 2056: Old Flitterfang's EDHREC average deck. `--pod-decks 2056`.
+        PodDeck {
+            name: "Old Flitterfang (B)",
+            commanders: decks::OLD_FLITTERFANG_COMMANDERS,
+            main: decks::OLD_FLITTERFANG_MAIN,
+        },
+        // Seat 2057: Haru, Hidden Talent's EDHREC average deck. `--pod-decks 2057`.
+        PodDeck {
+            name: "Haru, Hidden Talent (G)",
+            commanders: decks::HARU_COMMANDERS,
+            main: decks::HARU_MAIN,
+        },
+        // Seat 2058: Cloudhoof Kirin's EDHREC average deck. `--pod-decks 2058`.
+        PodDeck {
+            name: "Cloudhoof Kirin (U)",
+            commanders: decks::CLOUDHOOF_KIRIN_COMMANDERS,
+            main: decks::CLOUDHOOF_KIRIN_MAIN,
+        },
+        // Seat 2059: Icingdeath, Frost Tyrant's EDHREC average deck. `--pod-decks 2059`.
+        PodDeck {
+            name: "Icingdeath, Frost Tyrant (W)",
+            commanders: decks::ICINGDEATH_COMMANDERS,
+            main: decks::ICINGDEATH_MAIN,
+        },
+        // Seat 2060: Tetzimoc, Primal Death's EDHREC average deck. `--pod-decks 2060`.
+        PodDeck {
+            name: "Tetzimoc, Primal Death (B)",
+            commanders: decks::TETZIMOC_COMMANDERS,
+            main: decks::TETZIMOC_MAIN,
+        },
+        // Seat 2061: The Lion-Turtle's EDHREC average deck. `--pod-decks 2061`.
+        PodDeck {
+            name: "The Lion-Turtle (UG)",
+            commanders: decks::THE_LION_TURTLE_COMMANDERS,
+            main: decks::THE_LION_TURTLE_MAIN,
+        },
+        // Seat 2062: Zuko, Exiled Prince's EDHREC average deck. `--pod-decks 2062`.
+        PodDeck {
+            name: "Zuko, Exiled Prince (R)",
+            commanders: decks::ZUKO_3_COMMANDERS,
+            main: decks::ZUKO_3_MAIN,
+        },
+        // Seat 2063: Strider, Ranger of the North's EDHREC average deck. `--pod-decks 2063`.
+        PodDeck {
+            name: "Strider, Ranger of the North (RG)",
+            commanders: decks::STRIDER_COMMANDERS,
+            main: decks::STRIDER_MAIN,
+        },
+        // Seat 2064: Purraj of Urborg's EDHREC average deck. `--pod-decks 2064`.
+        PodDeck {
+            name: "Purraj of Urborg (B)",
+            commanders: decks::PURRAJ_OF_URBORG_COMMANDERS,
+            main: decks::PURRAJ_OF_URBORG_MAIN,
+        },
+        // Seat 2065: Agrus Kos, Wojek Veteran's EDHREC average deck. `--pod-decks 2065`.
+        PodDeck {
+            name: "Agrus Kos, Wojek Veteran (WR)",
+            commanders: decks::AGRUS_KOS_3_COMMANDERS,
+            main: decks::AGRUS_KOS_3_MAIN,
+        },
+        // Seat 2066: Attuma, Atlantean Warlord's EDHREC average deck. `--pod-decks 2066`.
+        PodDeck {
+            name: "Attuma, Atlantean Warlord (U)",
+            commanders: decks::ATTUMA_COMMANDERS,
+            main: decks::ATTUMA_MAIN,
+        },
+        // Seat 2067: Leatherhead, Swamp Stalker's EDHREC average deck. `--pod-decks 2067`.
+        PodDeck {
+            name: "Leatherhead, Swamp Stalker (G)",
+            commanders: decks::LEATHERHEAD_2_COMMANDERS,
+            main: decks::LEATHERHEAD_2_MAIN,
+        },
+        // Seat 2068: Ty Lee, Artful Acrobat's EDHREC average deck. `--pod-decks 2068`.
+        PodDeck {
+            name: "Ty Lee, Artful Acrobat (R)",
+            commanders: decks::TY_LEE_2_COMMANDERS,
+            main: decks::TY_LEE_2_MAIN,
+        },
     ]
 }
 
@@ -16610,6 +16742,28 @@ mod tests {
             ("Typhoid Mary, Fractured", &[0x1212]),
             ("The Sackville-Bagginses", &[0x1213]),
             ("Traxos, Academy Guardian", &[0x1214]),
+            ("Paladin Elizabeth Taggerdy", &[0x1215]),
+            ("Tolsimir Wolfblood", &[0x1216]),
+            ("Sokka, Swordmaster", &[0x1217]),
+            ("Harald, King of Skemfar", &[0x1218]),
+            ("Kolaghan, the Storm's Fury", &[0x1219]),
+            ("Avalanche of Sector 7", &[0x121A]),
+            ("Hobgoblin, Mantled Marauder", &[0x121B]),
+            ("Anthousa, Setessan Hero", &[0x121C]),
+            ("Cao Cao, Lord of Wei", &[0x121D]),
+            ("Old Flitterfang", &[0x121E]),
+            ("Haru, Hidden Talent", &[0x121F]),
+            ("Cloudhoof Kirin", &[0x1220]),
+            ("Icingdeath, Frost Tyrant", &[0x1221]),
+            ("Tetzimoc, Primal Death", &[0x1222]),
+            ("The Lion-Turtle", &[0x1223]),
+            ("Zuko, Exiled Prince", &[0x1224]),
+            ("Strider, Ranger of the North", &[0x1225]),
+            ("Purraj of Urborg", &[0x1226]),
+            ("Agrus Kos, Wojek Veteran", &[0x1227]),
+            ("Attuma, Atlantean Warlord", &[0x1228]),
+            ("Leatherhead, Swamp Stalker", &[0x1229]),
+            ("Ty Lee, Artful Acrobat", &[0x122A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
