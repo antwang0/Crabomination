@@ -60186,3 +60186,114 @@ pub const SPIDER_MAN_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const LADY_LOKI_COMMANDERS: &[CardFactory] = &[lady_loki_agent_of_chaos];
+
+/// **Lady Loki, Agent of Chaos**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Lady Loki, Agent of Chaos (EDHREC, fetched 2026-10-14).
+pub const LADY_LOKI_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, lightning_greaves, mind_stone, portal_to_phyrexia,
+    ruby_medallion, scroll_rack, senseis_divining_top, sol_ring, swiftfoot_boots,
+    tablet_of_discovery, command_beacon, myriad_landscape, nykthos_shrine_to_nyx,
+    spinerock_knoll, valakut_the_molten_pinnacle, war_room, angraths_marauders,
+    blazing_firesinger, blightsteel_colossus, electro_assaulting_battery,
+    emrakul_the_promised_end, emrakul_the_world_anew, etali_primal_storm, flaming_tyrannosaurus,
+    hexing_squelcher, kozilek_butcher_of_truth, kozilek_the_great_distortion, loki_laufeyson,
+    storm_kiln_artist, the_dawning_archaic, ulamog_the_ceaseless_hunger, ulamog_the_defiler,
+    ulamog_the_infinite_gyre, wild_magic_sorcerer, city_on_fire, fiery_emancipation,
+    passionate_archaeologist, wandas_vision, abrade, big_score, chaos_warp, crimson_wisps,
+    deflecting_swat, demand_answers, expedite, sos_flashback_instant, gut_shot, lightning_bolt,
+    pyretic_ritual, seething_song, shock, thrill_of_possibility, tibalts_trickery,
+    unexpected_windfall, blasphemous_act, brasss_bounty, call_forth_the_tempest,
+    dance_with_calamity, faithless_looting, hit_the_mother_lode, improvisation_capstone,
+    jeskas_will, mana_geyser, rise_of_the_eldrazi, soulfire_eruption, strike_it_rich,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const KENTARO_COMMANDERS: &[CardFactory] = &[kentaro_the_smiling_cat];
+
+/// **Kentaro, the Smiling Cat**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 23 Plains = 99.
+/// Kentaro, the Smiling Cat (EDHREC, fetched 2026-10-14).
+pub const KENTARO_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, altar_of_the_brood, arcane_signet, cloud_key, cloudstone_curio,
+    gathering_stone, helm_of_awakening, heralds_horn, maskwood_nexus, mind_stone,
+    oathkeeper_takenos_daisho, oketras_monument, pearl_medallion, semblance_anvil, sol_ring,
+    the_immortal_sun, thran_dynamo, urzas_incubator, vanquishers_banner, buried_ruin,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, inventors_fair, minas_tirith,
+    myriad_landscape, nykthos_shrine_to_nyx, path_of_ancestry, rogues_passage, war_room,
+    alabaster_host_intercessor, araba_mothrider, auron_venerated_guardian, bloodline_pretender,
+    devoted_retainer, eiganjo_exemplar, esper_sentinel, hand_of_honor, imperial_subduer,
+    indebted_samurai, inner_chamber_guard, ironsoul_enforcer, kitsune_blademaster,
+    kondas_hatamoto, konda_lord_of_eiganjo, mentor_of_the_meek, mirror_entity,
+    mothrider_samurai, nagao_bound_by_honor, norika_yamazaki_the_poet, opal_eye_kondas_yojimbo,
+    samurai_of_the_pale_curtain, selfless_samurai, sensei_golden_tail, summon_yojimbo,
+    sunblade_samurai, takeno_samurai_general, the_wandering_rescuer, cathars_crusade, folk_hero,
+    land_tax, smothering_tithe, trouble_in_pairs, call_to_glory, crib_swap, enlightened_tutor,
+    generous_gift, mana_tithe, path_to_exile, reprieve, swords_to_plowshares,
+    teferis_protection, the_eternal_wanderer, austere_command, dusk_dawn, mass_calcify,
+    vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const JADZI_2_COMMANDERS: &[CardFactory] = &[jadzi_steward_of_fate];
+
+/// **Jadzi, Steward of Fate**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Jadzi, Steward of Fate (EDHREC, fetched 2026-10-14).
+pub const JADZI_2_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, brass_infiniscope, caged_sun, conjurers_closet,
+    elementalists_palette, everflowing_chalice, mind_stone, mindsplice_apparatus, primal_amulet,
+    rimefire_torque, sapphire_medallion, sol_ring, the_eternity_elevator, thought_vessel,
+    thran_dynamo, karns_bastion, myriad_landscape, mystic_sanctuary, reliquary_tower,
+    riptide_laboratory, skycoach_waypoint, terrain_generator, archaeomancer, archmage_emeritus,
+    archmage_of_runes, curiosity_crafter, deadeye_navigator, deekah_fractal_theorist,
+    displacer_kitten, dour_port_mage, dreamtide_whale, eluge_the_shoreless_sea, flux_channeler,
+    herald_of_secret_streams, owlin_spiralmancer, skycoach_conductor, solemn_simulacrum,
+    thassa_deep_dwelling, thunderclap_drake, wonder, inexorable_tide, propaganda,
+    swarm_intelligence, aetherize, arcane_denial, blur, counterspell, displace, essence_flux,
+    fractal_anomaly, frantic_search, ghostly_flicker, high_tide, mana_sculpt, perplexing_test,
+    planar_incision, pongify, rapid_hybridization, ripples_of_potential, sirens_ruse,
+    teferis_time_twist, expansion_algorithm, mathemagics, preordain, splash_portal,
+    tezzerets_gambit, wave_goodbye,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];
+
+pub const VISARA_THE_DREADFUL_COMMANDERS: &[CardFactory] = &[visara_the_dreadful];
+
+/// **Visara the Dreadful**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Visara the Dreadful (EDHREC, fetched 2026-10-14).
+pub const VISARA_THE_DREADFUL_MAIN: &[CardFactory] = &[
+    arcane_signet, charcoal_diamond, jet_medallion, lightning_greaves, magewrights_stone,
+    mind_stone, patriars_seal, sol_ring, sting_the_glinting_dagger, swiftfoot_boots,
+    thornbite_staff, thousand_year_elixir, bojuka_bog, cabal_coffers, cabal_stronghold,
+    myriad_landscape, nykthos_shrine_to_nyx, phyrexian_tower, urborg_tomb_of_yawgmoth,
+    avatar_of_woe, blood_artist, crypt_ghast, dread_presence, fleshbag_marauder,
+    gray_merchant_of_asphodel, harvester_of_souls, leaden_myr, magus_of_the_coffers,
+    massacre_wurm, morbid_opportunist, nekrataal, nirkana_revenant, noxious_gearhulk,
+    overseer_of_the_damned, phage_the_untouchable, ravenous_chupacabra, royal_assassin,
+    sangromancer, sengir_the_dark_baron, sheoldred_whispering_one, solemn_simulacrum,
+    syr_konrad_the_grim, vampire_nighthawk, animate_dead, black_market,
+    black_market_connections, no_mercy, phyrexian_arena, the_meathook_massacre, dark_ritual,
+    defile, doom_blade, go_for_the_throat, snuff_out, tragic_slip, vampiric_tutor,
+    withering_torment, liliana_of_the_dark_realms, demonic_tutor, diabolic_tutor, exsanguinate,
+    feed_the_swarm, mutilate, nights_whisper, reanimate, rise_of_the_dark_realms, sign_in_blood,
+    syphon_mind, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];

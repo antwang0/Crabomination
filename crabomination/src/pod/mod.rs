@@ -13272,6 +13272,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SPIDER_MAN_COMMANDERS,
             main: decks::SPIDER_MAN_MAIN,
         },
+        // Seat 2137: Lady Loki, Agent of Chaos's EDHREC average deck. `--pod-decks 2137`.
+        PodDeck {
+            name: "Lady Loki, Agent of Chaos (R)",
+            commanders: decks::LADY_LOKI_COMMANDERS,
+            main: decks::LADY_LOKI_MAIN,
+        },
+        // Seat 2138: Kentaro, the Smiling Cat's EDHREC average deck. `--pod-decks 2138`.
+        PodDeck {
+            name: "Kentaro, the Smiling Cat (W)",
+            commanders: decks::KENTARO_COMMANDERS,
+            main: decks::KENTARO_MAIN,
+        },
+        // Seat 2139: Jadzi, Steward of Fate's EDHREC average deck. `--pod-decks 2139`.
+        PodDeck {
+            name: "Jadzi, Steward of Fate (U)",
+            commanders: decks::JADZI_2_COMMANDERS,
+            main: decks::JADZI_2_MAIN,
+        },
+        // Seat 2140: Visara the Dreadful's EDHREC average deck. `--pod-decks 2140`.
+        PodDeck {
+            name: "Visara the Dreadful (B)",
+            commanders: decks::VISARA_THE_DREADFUL_COMMANDERS,
+            main: decks::VISARA_THE_DREADFUL_MAIN,
+        },
     ]
 }
 
@@ -17240,6 +17264,10 @@ mod tests {
             ("Seifer, Balamb Rival", &[0x126C]),
             ("Halfdane", &[0x126D]),
             ("Spider-Man, New Champion", &[0x126E]),
+            ("Lady Loki, Agent of Chaos", &[0x126F]),
+            ("Kentaro, the Smiling Cat", &[0x1270]),
+            ("Jadzi, Steward of Fate", &[0x1271]),
+            ("Visara the Dreadful", &[0x1272]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
