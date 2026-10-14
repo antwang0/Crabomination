@@ -4478,6 +4478,10 @@ static DECKS: &[Factory] = &[
     super::decks::eligeth_crossroads_augur,
     super::decks::petty_larceny,
     super::decks::siani_eye_of_the_storm,
+    // cmdr_rank6k_e (session 01PxmVAG)
+    super::decks::mask_of_the_jadecrafter,
+    super::decks::rebbec_architect_of_ascension,
+    super::decks::the_prismatic_piper,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,

@@ -2174,3 +2174,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Knight of Wundagore | "whenever you put a +1/+1 counter on another creature" reads as a counter landing on another creature you control, whoever put it | `CounterAdded` / `YourControl` |
 | 🟡 Black Widow, Super Spy | the +1/+1 counter and the cast aren't exclusive: the counter is offered and the exiled card stays castable either way | `ExileTopUntilNonlandMayPlay` + `MayDo` |
 | 🟡 Petty Larceny | the two cards are exiled face up rather than face down | `ExileTopAndGrantMayPlay { WhileExiled }` |
+| 🟡 The Prismatic Piper | the "choose a color before the game begins; it is the chosen color" commander clause is not modelled — the Piper stays colorless | plain partner creature |
