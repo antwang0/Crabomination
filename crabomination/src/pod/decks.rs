@@ -70811,3 +70811,61 @@ pub const TUKNIR_DEATHLOCK_MAIN: &[CardFactory] = &[
     forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const SAMUT_5_COMMANDERS: &[CardFactory] = &[samut_hazorets_champion];
+
+/// **Samut, Hazoret's Champion**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Samut, Hazoret's Champion (EDHREC, fetched 2026-10-14).
+pub const SAMUT_5_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, dolmen_gate, hazorets_monument, horn_of_the_mark,
+    ruby_medallion, sol_ring, the_fire_crystal, throne_of_eldraine, castle_embereth,
+    nykthos_shrine_to_nyx, rogues_passage, spinerock_knoll, valakut_the_molten_pinnacle,
+    war_room, ancient_copper_dragon, archetype_of_aggression, balefire_dragon, balor,
+    bloodthirster, breeches_eager_pillager, combat_celebrant, delina_wild_mage,
+    desert_were_worm, dragonhawk_fates_tempest, drakuseth_maw_of_flames, etali_primal_storm,
+    goldlust_triad, goldspan_dragon, grenzo_havoc_raiser, hellkite_tyrant, hexing_squelcher,
+    ilharg_the_raze_boar, karlach_fury_of_avernus, krenko_tin_street_kingpin,
+    laelia_the_blade_reforged, neheb_dreadhorde_champion, neheb_the_eternal, port_razer,
+    professional_face_breaker, ragavan_nimble_pilferer, scourge_of_the_throne,
+    smaug_the_magnificent, star_athlete, tectonic_giant, terror_of_the_peaks,
+    torbran_thane_of_red_fell, twinflame_tyrant, aggravated_assault, ajanis_anguish,
+    curse_of_opulence, fable_of_the_mirror_breaker, pick_up_the_pace, abrade, big_score,
+    chaos_warp, deflecting_swat, lightning_bolt, redirect_lightning, return_the_favor,
+    unexpected_windfall, untimely_malfunction, blasphemous_act, faithless_looting, jeskas_will,
+    mana_geyser, seize_the_spoils, sundering_eruption, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const RAZIA_COMMANDERS: &[CardFactory] = &[razia_boros_archangel];
+
+/// **Razia, Boros Archangel**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Mountains + 11 Plains = 99.
+/// Razia, Boros Archangel (EDHREC, fetched 2026-10-14).
+pub const RAZIA_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_cluestone, boros_keyrune, boros_locket, boros_signet, mind_stone,
+    pariahs_shield, sol_ring, sunforger, talisman_of_conviction, wayfarers_bauble,
+    battlefield_forge, boros_garrison, boros_guildgate, clifftop_retreat, command_tower,
+    furycalm_snarl, needleverge_pathway, rugged_prairie, sacred_foundry, slayers_stronghold,
+    spectator_seating, sundown_pass, sunhome_fortress_of_the_legion, temple_of_triumph,
+    agrus_kos_wojek_veteran, aurelia_exemplar_of_justice, aurelia_the_law_above,
+    aurelia_the_warleader, black_panther_most_dangerous, boros_battleshaper, boros_guildmage,
+    boros_reckoner, boros_strike_captain, brash_taunter, esper_sentinel, firemane_angel,
+    firemane_avenger, firemane_commando, frontline_medic, general_ferrous_rokiric,
+    gisela_blade_of_goldnight, mogg_maniac, phyrexian_vindicator, skyknight_vanguard,
+    solemn_simulacrum, spitemare, stuffy_doll, tajic_blade_of_the_legion, tajic_legions_edge,
+    truefire_captain, wojek_investigator, assemble_the_legion, gleam_of_battle,
+    legions_initiative, pariah, smothering_tithe, warleaders_call, boros_charm,
+    boros_fury_shield, chaos_warp, comeuppance, deflecting_palm, generous_gift, justice_strike,
+    legion_leadership, lightning_helix, master_warcraft, path_to_exile, swords_to_plowshares,
+    wear_tear, elspeth_storm_slayer, austere_command, blasphemous_act, brightflame,
+    deafening_clarion, razias_purification, solar_blaze,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];

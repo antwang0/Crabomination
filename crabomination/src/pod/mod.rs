@@ -15576,6 +15576,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TUKNIR_DEATHLOCK_COMMANDERS,
             main: decks::TUKNIR_DEATHLOCK_MAIN,
         },
+        // Seat 2521: Samut, Hazoret's Champion's EDHREC average deck. `--pod-decks 2521`.
+        PodDeck {
+            name: "Samut, Hazoret's Champion (R)",
+            commanders: decks::SAMUT_5_COMMANDERS,
+            main: decks::SAMUT_5_MAIN,
+        },
+        // Seat 2522: Razia, Boros Archangel's EDHREC average deck. `--pod-decks 2522`.
+        PodDeck {
+            name: "Razia, Boros Archangel (WR)",
+            commanders: decks::RAZIA_COMMANDERS,
+            main: decks::RAZIA_MAIN,
+        },
     ]
 }
 
@@ -19929,6 +19941,8 @@ mod tests {
             ("Flitwing, Lyev Detective", &[0x13EC]),
             ("Venser, Visionary Traveler", &[0x13ED]),
             ("Tuknir Deathlock", &[0x13EE]),
+            ("Samut, Hazoret's Champion", &[0x13EF]),
+            ("Razia, Boros Archangel", &[0x13F0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
