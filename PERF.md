@@ -3279,6 +3279,40 @@ clippy           workspace --all-targets (no client): 0 after four fixes
                  47m51s on this box
 ```
 
+### 2026-10-14 (Commander run, `01PxmVAG`, second firing) — guardrail; EDHREC ranks 5501-6500, 67 cards, five primitives
+
+Hot-path touches: the turn-based draw asks `offer_draw_skip_shield` once per
+drawing seat (a battlefield walk for one static that no `--bench` deck
+carries); `declare_attackers` reads one `Option` per player-targeted attack
+(`attackable_only_by_until_next_turn`); `begin_turn_resets` clears it under
+an `is_some` guard; `Effect::Scry` asks for `ScryBecomesDraw` before
+scrying. Release `bot_ladder`, toolchain 1.99, Xeon @ 2.10 GHz.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 after every engine commit (three release builds)
+golden traces    unchanged (core_rules::golden_trace, pod digests)
+clippy           workspace --all-targets (no client): 0
+release-fast     cargo check --profile release-fast -p crabomination --bin
+                 bot_ladder clean
+suite            nextest --workspace (no client) minus the long pole: 26,562
+                 run, 26,558 passed, 6 skipped; the 4 red fixed — Livio's
+                 registration and the shield's plain sum (fixed concurrently
+                 by `01BeJu7Q`, 8ed56828d), and pack_printed's pip
+                 debug_assert on Khalni Hydra's eight {G} (the value was
+                 already clamped; assert dropped, test mirrors the clamp)
+pods (release)   final smoke: 56 pods / 320 games over seats 2366-2386,
+                 2396-2400, 2413-2416, 2453-2456, 2465-2472 (4- and 6-seat,
+                 four seeds): 319 decided, 1 CR 104.4a draw, 0 panics, stall
+                 rate 0 %; per-batch sweeps of every new seat (4- and 6-seat,
+                 three seeds) all decided; after batches j-k a rebuilt binary
+                 swept 2495-2500 (6 pods / 48 games, all decided) and
+                 re-read the bench byte-identical
+long pole        cr_903_5a_the_official_precon_seats_play_pod_games alone,
+                 debug, one seeded game for every seat through 2497: PASS in
+                 5,580 s
+```
+
 ### 2026-10-14 (Commander run, `01PxmVAG`) — guardrail; EDHREC ranks 2501-3500, 269 cards, five primitives, one bot brake
 
 Hot-path touches: `begin_turn_resets` stamps `life_at_turn_start` in the
