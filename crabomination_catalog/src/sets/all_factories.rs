@@ -4040,6 +4040,14 @@ static DECKS: &[Factory] = &[
     super::decks::stir_up_trouble,
     super::decks::technodrome,
     super::decks::wiccan_rising_magician,
+    // cmdr_rank3k_h (session 01PxmVAG)
+    super::decks::ajani_sleeper_agent,
+    super::decks::magus_of_the_unseen,
+    super::decks::mishras_research_desk,
+    super::decks::no_one_left_behind,
+    super::decks::reckless_crew,
+    super::decks::roads_go_ever_ever_on,
+    super::decks::the_darkhold,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
