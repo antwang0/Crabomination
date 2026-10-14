@@ -126,8 +126,9 @@ the handoff.
 
 ## FIXED/OPEN 2026-10-14 (Commander run, `01KXJ5zX`) — EDHREC ranks 4501-5500
 
-- **FIXED (`f8c7dc177`) CR 113.10b:** the destroy/sacrifice funnel (`remove_to_graveyard_with_triggers`) and the SBA lethal-damage funnel read the dying creature's *printed* triggers even when a layer-6 strip had removed them — a stripped Hellcat returned on every death. Both now skip them under `GameState::lost_all_abilities`. **OPEN:** the bounce/exile "leaves the battlefield" LKI walk (`mod.rs`, `lki_self_left`, the `snap.definition.triggered_abilities` chain) still fires a stripped permanent's printed LTB trigger — the snapshot records no strip; stamp it at the exit.
+- **FIXED (`f8c7dc177`) CR 113.10b:** the destroy/sacrifice funnel (`remove_to_graveyard_with_triggers`) and the SBA lethal-damage funnel read the dying creature's *printed* triggers even when a layer-6 strip had removed them — a stripped Hellcat returned on every death. Both now skip them under `GameState::lost_all_abilities`. **FIXED (`adf436766`):** the bounce/exile exit snapshot (`note_left_without_dying`, `lki_clone`) now drops a stripped permanent's printed triggers, read before it leaves.
 - **FIXED (`f8c7dc177`) CR 613.7:** `Duration::Permanent` keyword grants are baked onto the printed list, so an earlier `RemoveAllAbilities` cleared them; on a stripped permanent the grant is now a timestamped layer-6 effect. **OPEN:** the same bake applies to `GrantTriggeredAbility { Permanent }` and the type/subtype bakes beside it (`effects/mod.rs`, `bake_grant()` callers) — a strip that lands *before* them wipes them too.
+- **FIXED (`9148c7908`) CR 903.4:** a land token's intrinsic `{T}: Add` (the Forest Dryad tokens, given one in `229786480`) counted toward the making card's identity — Staff of Titania read green.
 - **FIXED (`6bd38751d`):** "exile the top two, choose one of them, you may play it" granted both cards on Tectonic Giant, Riverwheel Sweep and Mishra's Research Desk; `sets::impulse_choose_one` is exact.
 
 ## FIXED/OPEN 2026-10-13 (Commander run, `01CwrNTA`) — EDHREC ranks 1501-2000

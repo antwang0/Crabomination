@@ -3164,6 +3164,23 @@ pods (release)   pod_sweep seed 23601 over seats 2294-2359 x 4,6,8 seats x 20:
                  740 games, 0 panics, 1 undecided — a board cap at turn 46
                  (seed 2360164 game 7: Hapatra at 114 life vs Katara's
                  Myrel token swarm, two token decks building wide; 0.14 %)
+second round  after seats 2387-2411, PowerUpOnly, the exit-snapshot strip and
+                 the identity fixes: clippy 0; suite 26,517 / 26,517; --bench
+                 196,176 / 27.64 / 613.0 byte-identical at efdd3c0c2,
+                 determinism ok, --threads 1 identical, games_per_s 225.34 /
+                 234.68 (host_calib_ms 54 / 49); same-box callgrind A/B of this
+                 run's hot-path engine edits (base = tip with the death-funnel
+                 and exit-snapshot strip checks, the strip-aware grant, the
+                 attack-watcher target clone and the combat damage stamp
+                 reverted; profiling-fast, --games 6 --threads 1 --seed 1):
+                 fixed 991,795,560 -> 992,424,222 Ir (+0.063 %), cube
+                 1,550,260,355 -> 1,552,187,766 Ir (+0.124 %)
+pods (release)   pod_sweep seed 24001 over seats 2294-2411 x 4,6,8 x 20: 1,300
+                 games, 0 game-logic panics, 2 undecided — both CR 104.4a draws
+                 (2400160 game 6: Descent into Avernus took both survivors;
+                 2400204 game 0: Grothama's leave-draw decked both at turn
+                 119). Tracing the second found a CRAB_POD_TRACE panic, a byte
+                 cut inside "é", fixed at e6a7078d4 with three sibling cuts
 ```
 
 ### 2026-10-14 (Commander run, `01MsQdht`) — guardrail; 144 EDHREC seats, 141 cards, six primitives
