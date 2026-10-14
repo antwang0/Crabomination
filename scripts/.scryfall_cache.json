@@ -790823,5 +790823,145 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892149&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/151863?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Blue Marvel, Adam Brashear": {
+    "object": "card",
+    "id": "de5c8482-462a-49ee-ae4d-1e0e8e0a4b97",
+    "oracle_id": "16f9368a-5da5-4397-a127-c96cdd115b7b",
+    "multiverse_ids": [],
+    "resource_id": "FA13D0901AE06EAE9F7BA79CD2F102F7CFEF2F573373845C27F1C6B5596B3F71",
+    "mtgo_id": 151085,
+    "arena_id": 105547,
+    "tcgplayer_id": 697189,
+    "cardmarket_id": 891954,
+    "name": "Blue Marvel, Adam Brashear",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97",
+    "scryfall_uri": "https://scryfall.com/card/msc/530/blue-marvel-adam-brashear?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:38:24Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.jpg?1783903104",
+      "normal": "https://cards.scryfall.io/normal/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.jpg?1783903104",
+      "large": "https://cards.scryfall.io/large/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.jpg?1783903104",
+      "png": "https://cards.scryfall.io/png/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.png?1783903104",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.jpg?1783903104",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.jpg?1783903104",
+      "thumb": "https://cards.scryfall.io/thumb/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.webp?1783903104",
+      "grid": "https://cards.scryfall.io/grid/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.webp?1783903104",
+      "display": "https://cards.scryfall.io/display/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.webp?1783903104",
+      "art": "https://cards.scryfall.io/art/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.webp?1783903104",
+      "crop": "https://cards.scryfall.io/crop/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.webp?1783903104",
+      "jpeg": "https://cards.scryfall.io/normal/front/d/e/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97.jpg?1783903104"
+    },
+    "mana_cost": "{3}{U}{U}",
+    "cmc": 5.0,
+    "type_line": "Legendary Creature — Human Scientist Hero",
+    "oracle_text": "Flying (This creature can't be blocked except by creatures with flying or reach.)\nWard {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)\nWhenever you draw your second card each turn, put a +1/+1 counter on Blue Marvel.",
+    "power": "3",
+    "toughness": "5",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Flying",
+      "Ward"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": false,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/de5c8482-462a-49ee-ae4d-1e0e8e0a4b97/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A16f9368a-5da5-4397-a127-c96cdd115b7b&unique=prints",
+    "collector_number": "530",
+    "digital": false,
+    "rarity": "uncommon",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Mateus Manhanini",
+    "artist_ids": [
+      "d194fa7a-4c05-44b1-af60-d474a72f7076"
+    ],
+    "illustration_id": "5270761d-7598-43e8-b743-b657f5a1b35f",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 24395,
+    "prices": {
+      "usd": "0.23",
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": "0.18",
+      "eur_foil": null,
+      "tix": "0.18"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DBlue%2BMarvel%252C%2BAdam%2BBrashear",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DBlue%2BMarvel%252C%2BAdam%2BBrashear",
+      "edhrec": "https://edhrec.com/route/?cc=Blue+Marvel%2C+Adam+Brashear"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697189%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891954&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151085?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

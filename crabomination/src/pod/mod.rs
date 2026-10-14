@@ -15192,6 +15192,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIVIO_COMMANDERS,
             main: decks::LIVIO_MAIN,
         },
+        // Seat 2457: The Blue Spirit's EDHREC average deck. `--pod-decks 2457`.
+        PodDeck {
+            name: "The Blue Spirit (U)",
+            commanders: decks::THE_BLUE_SPIRIT_COMMANDERS,
+            main: decks::THE_BLUE_SPIRIT_MAIN,
+        },
+        // Seat 2458: Hydro-Man, Fluid Felon's EDHREC average deck. `--pod-decks 2458`.
+        PodDeck {
+            name: "Hydro-Man, Fluid Felon (U)",
+            commanders: decks::HYDRO_MAN_COMMANDERS,
+            main: decks::HYDRO_MAN_MAIN,
+        },
+        // Seat 2459: Blue Marvel, Adam Brashear's EDHREC average deck. `--pod-decks 2459`.
+        PodDeck {
+            name: "Blue Marvel, Adam Brashear (U)",
+            commanders: decks::BLUE_MARVEL_COMMANDERS,
+            main: decks::BLUE_MARVEL_MAIN,
+        },
+        // Seat 2460: Renata, Called to the Hunt's EDHREC average deck. `--pod-decks 2460`.
+        PodDeck {
+            name: "Renata, Called to the Hunt (G)",
+            commanders: decks::RENATA_COMMANDERS,
+            main: decks::RENATA_MAIN,
+        },
+        // Seat 2461: Nylea, God of the Hunt's EDHREC average deck. `--pod-decks 2461`.
+        PodDeck {
+            name: "Nylea, God of the Hunt (G)",
+            commanders: decks::NYLEA_2_COMMANDERS,
+            main: decks::NYLEA_2_MAIN,
+        },
+        // Seat 2462: Shisato, Whispering Hunter's EDHREC average deck. `--pod-decks 2462`.
+        PodDeck {
+            name: "Shisato, Whispering Hunter (G)",
+            commanders: decks::SHISATO_COMMANDERS,
+            main: decks::SHISATO_MAIN,
+        },
+        // Seat 2463: Kei Takahashi's EDHREC average deck. `--pod-decks 2463`.
+        PodDeck {
+            name: "Kei Takahashi (WG)",
+            commanders: decks::KEI_TAKAHASHI_COMMANDERS,
+            main: decks::KEI_TAKAHASHI_MAIN,
+        },
+        // Seat 2464: Machine Man, Model X-51's EDHREC average deck. `--pod-decks 2464`.
+        PodDeck {
+            name: "Machine Man, Model X-51 (C)",
+            commanders: decks::MACHINE_MAN_COMMANDERS,
+            main: decks::MACHINE_MAN_MAIN,
+        },
     ]
 }
 
@@ -19479,6 +19527,14 @@ mod tests {
             ("The Immortal Weapons", &[0x13AC]),
             ("Eligeth, Crossroads Augur and Rebbec, Architect of Ascension", &[0x13AD]),
             ("Livio, Oathsworn Sentinel and Rebbec, Architect of Ascension", &[0x13AE]),
+            ("The Blue Spirit", &[0x13AF]),
+            ("Hydro-Man, Fluid Felon", &[0x13B0]),
+            ("Blue Marvel, Adam Brashear", &[0x13B1]),
+            ("Renata, Called to the Hunt", &[0x13B2]),
+            ("Nylea, God of the Hunt", &[0x13B3]),
+            ("Shisato, Whispering Hunter", &[0x13B4]),
+            ("Kei Takahashi", &[0x13B5]),
+            ("Machine Man, Model X-51", &[0x13B6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
