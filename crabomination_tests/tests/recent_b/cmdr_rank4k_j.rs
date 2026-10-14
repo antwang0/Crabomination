@@ -106,3 +106,53 @@ fn ward_of_bones_binds_the_opponent_ahead() {
         "behind on artifacts (the Ward is one), an artifact spell is free to cast"
     );
 }
+
+/// CR 614.1a / 111.7 — Hallowed Moonlight: a creature entering without being
+/// cast is exiled, and a creature token is never made; a cast creature
+/// enters as usual.
+#[test]
+fn hallowed_moonlight_exiles_the_uncast() {
+    let mut g = pod(2);
+    let hm = g.add_card_to_hand(0, catalog::hallowed_moonlight());
+    g.add_card_to_library(0, catalog::island());
+    cast(&mut g, hm, None, None);
+    let kiora = g.add_card_to_hand(0, catalog::kiora_of_fire_and_ashes());
+    cast(&mut g, kiora, None, None);
+    assert!(g.battlefield_find(kiora).is_some(), "cast, so it enters");
+    assert_eq!(named(&g, 0, "Dragon"), 0, "the token is never made");
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &crabomination::effect::Effect::Move {
+            what: crabomination::effect::Selector::ExactObjects(vec![bear]),
+            to: crabomination::effect::ZoneDest::Battlefield {
+                controller: crabomination::effect::PlayerRef::You,
+                tapped: false,
+            },
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.exile.iter().any(|c| c.id == bear), "reanimated, so exiled");
+}
+
+/// Sigrid flashes in and holds an attacker until she leaves.
+#[test]
+fn sigrid_holds_an_attacker() {
+    let mut g = pod(2);
+    let att = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::types::Attack {
+        attacker: att,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    let s = g.add_card_to_hand(0, catalog::sigrid_god_favored());
+    cast(&mut g, s, None, None);
+    assert!(g.battlefield_find(att).is_none());
+    assert!(g.exile.iter().any(|c| c.id == att));
+}

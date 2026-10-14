@@ -1354,6 +1354,8 @@ static CURSES: &[Factory] = &[
 ];
 static DECKS: &[Factory] = &[
     // cmdr_rank4k_j (session 01MsQdht)
+    super::decks::hallowed_moonlight,
+    super::decks::sigrid_god_favored,
     super::decks::karn_argent_defender,
     super::decks::ward_of_bones,
     // cmdr_rank4k_i (session 01MsQdht)
