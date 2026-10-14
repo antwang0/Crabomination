@@ -3,15 +3,17 @@
 
 use crate::card::{
     AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
-    EventScope, EventSpec, Keyword,
-    MayPlayDuration,
-    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TriggeredAbility, Value,
+    EventScope, EventSpec, Keyword, LandType, MayPlayDuration, SelectionRequirement as R,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    Zone,
+};
+use crate::effect::shortcut::{etb, on_attack, target_filtered};
+use crate::effect::{
+    ChainCopyCost, Duration, Effect, ExtraManaKind, PlayerRef, Selector, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::effect::shortcut::{on_attack, target_filtered};
-use crate::effect::{ChainCopyCost, Duration, Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use std::sync::Arc;
 
 fn creature(
     name: &'static str,
@@ -260,5 +262,102 @@ pub fn swallow_whole() -> CardDefinition {
             },
         ]),
         ..Default::default()
+    }
+}
+
+// ── Autumn Willow, Harmony ───────────────────────────────────────────────────
+
+/// Autumn Willow, Harmony — {3}{G}{G} legendary 3/3 hexproof Avatar. ETB:
+/// create a 1/1 green Forest Dryad land creature token. Whenever you tap a
+/// land creature for mana, add an additional {G}.
+pub fn autumn_willow_harmony() -> CardDefinition {
+    let dryad = TokenDefinition {
+        name: "Forest Dryad".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Land, CardType::Creature],
+        colors: vec![Color::Green],
+        activated_abilities: vec![crate::sets::tap_add(Color::Green)],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            land_types: vec![LandType::Forest],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: Arc::new(dryad),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Whenever you tap a land creature for mana, add an additional {G}.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: R::Creature.and(R::Land).and(R::ControlledByYou),
+                extra: ExtraManaKind::Fixed(Color::Green),
+                while_monarch: false,
+            },
+        }],
+        supertypes: vec![Supertype::Legendary],
+        ..creature(
+            "Autumn Willow, Harmony",
+            cost(&[generic(3), g(), g()]),
+            vec![CreatureType::Avatar],
+            3,
+            3,
+        )
+    }
+}
+
+// ── Donnie & April, Adorkable Duo ────────────────────────────────────────────
+
+/// Donnie & April, Adorkable Duo — {4}{U} legendary 3/3 Mutant Ninja Human
+/// Turtle. ETB, choose one or both (each mode targets a different player):
+/// target player draws two cards; target player returns an artifact,
+/// instant, or sorcery card from their graveyard to their hand. (Residual:
+/// the "different player" constraint isn't enforced.)
+pub fn donnie_and_april_adorkable_duo() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::Draw {
+                    who: target_filtered(R::Player),
+                    amount: Value::Const(2),
+                },
+                Effect::ForEach {
+                    selector: target_filtered(R::Player),
+                    body: Box::new(Effect::Move {
+                        what: Selector::Take {
+                            inner: Box::new(Selector::CardsInZone {
+                                who: PlayerRef::Triggerer,
+                                zone: Zone::Graveyard,
+                                filter: R::HasCardType(CardType::Artifact)
+                                    .or(R::HasCardType(CardType::Instant))
+                                    .or(R::HasCardType(CardType::Sorcery)),
+                            }),
+                            count: Box::new(Value::ONE),
+                        },
+                        to: ZoneDest::Hand(PlayerRef::Triggerer),
+                    }),
+                },
+            ],
+        })],
+        supertypes: vec![Supertype::Legendary],
+        ..creature(
+            "Donnie & April, Adorkable Duo",
+            cost(&[generic(4), u()]),
+            vec![
+                CreatureType::Mutant,
+                CreatureType::Ninja,
+                CreatureType::Human,
+                CreatureType::Turtle,
+            ],
+            3,
+            3,
+        )
     }
 }

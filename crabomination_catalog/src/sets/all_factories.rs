@@ -1426,6 +1426,8 @@ static DECKS: &[Factory] = &[
     super::decks::asgardian_inspiration,
     super::decks::blessing_of_frost,
     super::decks::swallow_whole,
+    super::decks::autumn_willow_harmony,
+    super::decks::donnie_and_april_adorkable_duo,
     // cmdr_rank5k_a (session 01KXJ5zX)
     super::decks::inundate,
     super::decks::luminous_bonds,

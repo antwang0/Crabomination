@@ -263,3 +263,76 @@ fn swallow_whole_needs_a_creature_to_tap() {
     });
     assert!(r.is_err());
 }
+
+/// Autumn Willow mints a Forest Dryad; tapping that land creature for mana
+/// adds an extra {G}, a plain Forest doesn't.
+#[test]
+fn autumn_willow_doubles_land_creature_mana() {
+    let mut g = pod(2);
+    let willow = g.add_card_to_hand(0, catalog::autumn_willow_harmony());
+    cast_flooded(&mut g, willow);
+    let dryad = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.controller == 0)
+        .map(|c| c.id)
+        .expect("Forest Dryad");
+    g.clear_sickness(dryad);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dryad,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap the dryad");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "{{G}} plus the extra {{G}}");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap the forest");
+    assert_eq!(g.players[0].mana_pool.total(), 3, "a plain Forest adds one");
+}
+
+/// Donnie & April: both modes — the caster draws two and the opponent gets
+/// a sorcery back.
+#[test]
+fn donnie_and_april_draws_and_regrows() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_graveyard(1, catalog::shock());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Player(0)),
+        DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    let duo = g.add_card_to_hand(0, catalog::donnie_and_april_adorkable_duo());
+    cast_flooded(&mut g, duo);
+    assert_eq!(g.players[0].hand.len(), hand + 2);
+    assert_eq!(g.players[1].hand.len(), 1, "the Shock came back");
+}
+
+fn cast_flooded(g: &mut GameState, id: CardId) {
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(g);
+    g.players[0].mana_pool = Default::default();
+}
