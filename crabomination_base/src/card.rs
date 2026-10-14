@@ -1295,6 +1295,14 @@ pub enum MayPlayDuration {
     /// sibling: dormant between turns, re-armed when `holder` declares a
     /// commander (any player's, CR 903.3) as an attacker.
     TurnsHolderAttacksWithACommander { holder: usize },
+    /// "You may play cards exiled with this as long as you attacked this
+    /// turn" (Pick Up the Pace): dormant between turns, re-armed as `holder`
+    /// declares any attacker.
+    TurnsHolderAttacks { holder: usize },
+    /// "During any turn you attacked with three or more creatures, you may
+    /// play that card" (Boros Strike-Captain's battalion): re-armed as
+    /// `holder` declares three or more attackers at once.
+    TurnsHolderAttacksWithThreeOrMore { holder: usize },
     /// "During your turn, if an opponent lost life this turn, you may play
     /// cards exiled with this" (Theater of Horrors). Parked at
     /// [`MAY_PLAY_DORMANT`] by the turn sweep, re-armed for `holder` when an
@@ -1362,6 +1370,8 @@ impl MayPlayDuration {
             Self::TurnsHolderAttacksWithACommander { .. } => {
                 Self::TurnsHolderAttacksWithACommander { holder: seat }
             }
+            Self::TurnsHolderAttacks { .. } => Self::TurnsHolderAttacks { holder: seat },
+            Self::TurnsHolderAttacksWithThreeOrMore { .. } => Self::TurnsHolderAttacksWithThreeOrMore { holder: seat },
             Self::HolderTurnsAfterOpponentLostLife { source, .. } => {
                 Self::HolderTurnsAfterOpponentLostLife { holder: seat, source }
             }

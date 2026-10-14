@@ -2232,6 +2232,15 @@ impl GameState {
         if !had_to.is_empty() {
             self.had_to_attack.extend(had_to.iter().copied().filter(|id| attacks.iter().any(|a| a.attacker == *id)));
         }
+        // Pick Up the Pace's "as long as you attacked this turn" and Boros
+        // Strike-Captain's "attacked with three or more creatures" grants wake
+        // for this seat (CR 508.1: declared attackers).
+        if !attacks.is_empty() {
+            self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacks { holder: p }, p);
+            if attacks.len() >= 3 {
+                self.wake_may_play(crate::card::MayPlayDuration::TurnsHolderAttacksWithThreeOrMore { holder: p }, p);
+            }
+        }
         for (atk, (static_granted, equip_granted)) in attacks.into_iter().zip(attacker_grants) {
             let id = atk.attacker;
             // Validated above — commit only. Filter by *controller*, not

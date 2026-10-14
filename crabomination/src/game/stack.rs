@@ -5960,6 +5960,8 @@ impl GameState {
                     crate::card::MayPlayDuration::EndOfThisStep => true,
                     crate::card::MayPlayDuration::TurnsHolderAttacksWithAToken { .. }
                     | crate::card::MayPlayDuration::TurnsHolderAttacksWithACommander { .. }
+                    | crate::card::MayPlayDuration::TurnsHolderAttacks { .. }
+                    | crate::card::MayPlayDuration::TurnsHolderAttacksWithThreeOrMore { .. }
                     | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
                     | crate::card::MayPlayDuration::HolderTurnsAfterNontokenSacrifice { .. }
                     | crate::card::MayPlayDuration::TurnsLoreCounterPutOnSource { .. } => {
