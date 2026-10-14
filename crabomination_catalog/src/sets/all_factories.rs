@@ -1353,6 +1353,26 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank4k_i (session 01MsQdht)
+    super::decks::an_unexpected_party,
+    super::decks::arwens_gift,
+    super::decks::dwarven_shortsword,
+    super::decks::eagle_of_the_great_shelf,
+    super::decks::fili_the_pathfinder,
+    super::decks::go_shintai_of_ancient_wars,
+    super::decks::go_shintai_of_boundless_vigor,
+    super::decks::go_shintai_of_shared_purpose,
+    super::decks::hapatra_the_desert_frost,
+    super::decks::iron_hills_blacksmith,
+    super::decks::lake_town_toymaker,
+    super::decks::ori_plate_stacker,
+    super::decks::referee_squad,
+    super::decks::sanctum_of_fruitful_harvest,
+    super::decks::sanctum_of_shattered_heights,
+    super::decks::sanctum_of_tranquil_light,
+    super::decks::seasoned_cryomancer,
+    super::decks::shrine_steward,
+    super::decks::the_blue_spirit,
     // cmdr_rank4k_h (session 01MsQdht)
     super::decks::arachne_psionic_weaver,
     super::decks::blood_cultist,
