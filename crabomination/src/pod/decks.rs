@@ -61758,3 +61758,31 @@ pub const ESIOR_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const RHYS_COMMANDERS: &[CardFactory] = &[rhys_the_evermore];
+
+/// **Rhys, the Evermore**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Rhys, the Evermore (EDHREC, fetched 2026-10-14).
+pub const RHYS_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, ashnods_altar, blasting_station, cauldron_of_souls,
+    conjurers_closet, panharmonicon, pearl_medallion, phyrexian_altar, skullclamp, sol_ring,
+    abandoned_air_temple, eiganjo_seat_of_the_empire, emeria_the_sky_ruin,
+    hall_of_heliods_generosity, high_market, myriad_landscape, nesting_grounds,
+    nykthos_shrine_to_nyx, war_room, abdel_adrian_gorions_ward, anticausal_vestige,
+    charming_prince, elesh_norn_mother_of_machines, enduring_innocence, esper_sentinel,
+    flickering_hound, flickerwisp, inspiring_overseer, karmic_guide, knight_of_the_white_orchid,
+    loran_of_the_third_path, luminous_broodmoth, mangara_the_diplomat,
+    phelia_exuberant_shepherd, rescue_girl_first_responder, restoration_angel, reveillark,
+    rumor_gatherer, scholar_of_new_horizons, solemn_simulacrum, soul_warden, spirited_companion,
+    summon_ixion, summon_yojimbo, sun_titan, vizier_of_remedies, wall_of_omens,
+    welcoming_vampire, witch_enchanter, airbender_ascension, cathars_crusade, martyrs_cause,
+    smothering_tithe, solemnity, teleportation_circle, tocasias_welcome, brought_back,
+    cloudshift, eerie_interlude, enlightened_tutor, ephemerate, generous_gift, path_to_exile,
+    personify, reprieve, swords_to_plowshares, austere_command, cut_a_deal, morningtides_light,
+    sevinnes_reclamation, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];

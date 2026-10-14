@@ -13614,6 +13614,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ESIOR_COMMANDERS,
             main: decks::ESIOR_MAIN,
         },
+        // Seat 2194: Rhys, the Evermore's EDHREC average deck. `--pod-decks 2194`.
+        PodDeck {
+            name: "Rhys, the Evermore (W)",
+            commanders: decks::RHYS_COMMANDERS,
+            main: decks::RHYS_MAIN,
+        },
     ]
 }
 
@@ -17639,6 +17645,7 @@ mod tests {
             ("Viv Vision, Teen Synthezoid", &[0x12A5]),
             ("Loki Laufeyson", &[0x12A6]),
             ("Esior, Wardwing Familiar and Sengir, the Dark Baron", &[0x12A7]),
+            ("Rhys, the Evermore", &[0x12A8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
