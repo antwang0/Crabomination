@@ -4102,7 +4102,40 @@ impl crate::game::GameState {
         if self.damping_engine_locks(player) {
             return false;
         }
+        // Ward of Bones — an opponent ahead on lands can't play lands.
+        if land_statics && self.ward_of_bones_locks(player, &[crate::card::CardType::Land]) {
+            return false;
+        }
         self.players[player].lands_played_this_turn < self.max_lands_per_turn(player)
+    }
+
+    /// Ward of Bones — true when an opponent of `player` controls an active
+    /// `OpponentsWithMoreCantPlayThatType` and `player` controls more
+    /// permanents of one of `types` (creature, artifact, enchantment, land)
+    /// than that opponent does.
+    pub(crate) fn ward_of_bones_locks(&self, player: usize, types: &[crate::card::CardType]) -> bool {
+        use crate::card::CardType as T;
+        let locked: Vec<&T> =
+            types.iter().filter(|t| matches!(t, T::Creature | T::Artifact | T::Enchantment | T::Land)).collect();
+        if locked.is_empty() {
+            return false;
+        }
+        let count = |seat: usize, t: &T| {
+            self.battlefield
+                .iter()
+                .filter(|c| c.controller == seat && self.computed_permanent_on(c).is_some_and(|cp| cp.card_types().contains(t)))
+                .count()
+        };
+        self.battlefield.iter().any(|src| {
+            !self.same_team(src.controller, player)
+                && src.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, src),
+                        Some(crate::effect::StaticEffect::OpponentsWithMoreCantPlayThatType)
+                    )
+                })
+                && locked.iter().any(|t| count(player, t) > count(src.controller, t))
+        })
     }
 
     /// Damping Engine (CR 611) — true when `player` controls strictly more

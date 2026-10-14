@@ -4111,6 +4111,11 @@ pub enum StaticEffect {
     /// spells." Symmetric (any player's Damping Engine binds every player);
     /// escapable for the turn via `Effect::IgnoreStaticFromSourceThisTurn`.
     MostPermanentsCantPlay,
+    /// Ward of Bones — "Each opponent who controls more creatures than you
+    /// can't cast creature spells. The same is true for artifacts and
+    /// enchantments. Each opponent who controls more lands than you can't
+    /// play lands." Counted per type against the static's controller (CR 101.2).
+    OpponentsWithMoreCantPlayThatType,
     /// CR 509.1c — on an Equipment: "as long as equipped creature is
     /// attacking, it must be blocked by a [filter] if able" (Ace's Baseball
     /// Bat: a Dalek). One matching blocker satisfies it; read by

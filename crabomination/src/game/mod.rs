@@ -465,9 +465,11 @@ pub(crate) mod cast_lock {
     pub const DURING_YOUR_TURN: u32 = 1 << 11;
     /// Basandra, Battle Seraph.
     pub const COMBAT: u32 = 1 << 12;
+    /// Ward of Bones.
+    pub const MORE_THAN_YOU: u32 = 1 << 13;
     /// The locks whose gate reads the cast spell's characteristics.
     pub const ANY_CARD: u32 =
-        ONE_SPELL | MANA_MAZE | NAME | CHOSEN_COLOR | EVEN_MV | ABOVE_LANDS | DAMPING;
+        ONE_SPELL | MANA_MAZE | NAME | CHOSEN_COLOR | EVEN_MV | ABOVE_LANDS | DAMPING | MORE_THAN_YOU;
 }
 
 // `EventScratch`'s pool: cleared, grown event buffers parked by dropped
@@ -5795,6 +5797,7 @@ impl GameState {
                     SE::OpponentsCantCastEvenMv => cast_lock::EVEN_MV,
                     SE::OpponentsCantCastNoncreatureAboveLandCount => cast_lock::ABOVE_LANDS,
                     SE::MostPermanentsCantPlay => cast_lock::DAMPING,
+                    SE::OpponentsWithMoreCantPlayThatType => cast_lock::MORE_THAN_YOU,
                     SE::OpponentsWhoAttackedCantCast => cast_lock::ATTACKED,
                     SE::PlayersActOnlyOnTheirOwnTurn => cast_lock::OWN_TURN_ACT,
                     SE::PlayersCastOnlyOnOwnTurn => cast_lock::OWN_TURN_CAST,
@@ -6033,6 +6036,15 @@ impl GameState {
                 d.is_artifact() || d.is_creature() || d.is_enchantment()
             });
             if permanent_spell && self.damping_engine_locks(caster) {
+                return Some(GameError::SilencedThisTurn);
+            }
+        }
+        // Ward of Bones — an opponent ahead of its controller on the spell's
+        // type (creature, artifact, enchantment) can't cast it.
+        if is_cast && locks & cast_lock::MORE_THAN_YOU != 0 {
+            let types: &[crate::card::CardType] =
+                cast_card.map(|c| c.definition.card_types.as_slice()).unwrap_or(&[]);
+            if self.ward_of_bones_locks(caster, types) {
                 return Some(GameError::SilencedThisTurn);
             }
         }
@@ -34433,6 +34445,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerMaySkipDrawStepForLife { .. }
             | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
+            | StaticEffect::OpponentsWithMoreCantPlayThatType
             | StaticEffect::GrantConvokeToSpells { .. }
             | StaticEffect::EquippedMustBeBlockedByIfAble { .. }
             | StaticEffect::GrantStaticAbility { .. }
