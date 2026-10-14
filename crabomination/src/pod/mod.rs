@@ -12156,6 +12156,372 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::COMMANDER_GREVEN_IL_VEC_COMMANDERS,
             main: decks::COMMANDER_GREVEN_IL_VEC_MAIN,
         },
+        // Seat 1951: Hancock, Ghoulish Mayor's EDHREC average deck. `--pod-decks 1951`.
+        PodDeck {
+            name: "Hancock, Ghoulish Mayor (B)",
+            commanders: decks::HANCOCK_COMMANDERS,
+            main: decks::HANCOCK_MAIN,
+        },
+        // Seat 1952: Yargle, Glutton of Urborg's EDHREC average deck. `--pod-decks 1952`.
+        PodDeck {
+            name: "Yargle, Glutton of Urborg (B)",
+            commanders: decks::YARGLE_COMMANDERS,
+            main: decks::YARGLE_MAIN,
+        },
+        // Seat 1953: Professor Hulk's EDHREC average deck. `--pod-decks 1953`.
+        PodDeck {
+            name: "Professor Hulk (U)",
+            commanders: decks::PROFESSOR_HULK_COMMANDERS,
+            main: decks::PROFESSOR_HULK_MAIN,
+        },
+        // Seat 1954: Toph, the Blind Bandit's EDHREC average deck. `--pod-decks 1954`.
+        PodDeck {
+            name: "Toph, the Blind Bandit (G)",
+            commanders: decks::TOPH_3_COMMANDERS,
+            main: decks::TOPH_3_MAIN,
+        },
+        // Seat 1955: Xiahou Dun, the One-Eyed's EDHREC average deck. `--pod-decks 1955`.
+        PodDeck {
+            name: "Xiahou Dun, the One-Eyed (B)",
+            commanders: decks::XIAHOU_DUN_COMMANDERS,
+            main: decks::XIAHOU_DUN_MAIN,
+        },
+        // Seat 1956: Miara, Thorn of the Glade and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 1956`.
+        PodDeck {
+            name: "Miara, Thorn of the Glade and Numa, Joraga Chieftain (BG)",
+            commanders: decks::MIARA_COMMANDERS,
+            main: decks::MIARA_MAIN,
+        },
+        // Seat 1957: Ioreth of the Healing House's EDHREC average deck. `--pod-decks 1957`.
+        PodDeck {
+            name: "Ioreth of the Healing House (U)",
+            commanders: decks::IORETH_OF_THE_HEALING_HOUSE_COMMANDERS,
+            main: decks::IORETH_OF_THE_HEALING_HOUSE_MAIN,
+        },
+        // Seat 1958: Adéwalé, Breaker of Chains's EDHREC average deck. `--pod-decks 1958`.
+        PodDeck {
+            name: "Adéwalé, Breaker of Chains (UB)",
+            commanders: decks::ADEWALE_COMMANDERS,
+            main: decks::ADEWALE_MAIN,
+        },
+        // Seat 1959: Akal Pakal, First Among Equals's EDHREC average deck. `--pod-decks 1959`.
+        PodDeck {
+            name: "Akal Pakal, First Among Equals (U)",
+            commanders: decks::AKAL_PAKAL_COMMANDERS,
+            main: decks::AKAL_PAKAL_MAIN,
+        },
+        // Seat 1960: Dong Zhou, the Tyrant's EDHREC average deck. `--pod-decks 1960`.
+        PodDeck {
+            name: "Dong Zhou, the Tyrant (R)",
+            commanders: decks::DONG_ZHOU_COMMANDERS,
+            main: decks::DONG_ZHOU_MAIN,
+        },
+        // Seat 1961: Auron, Venerated Guardian's EDHREC average deck. `--pod-decks 1961`.
+        PodDeck {
+            name: "Auron, Venerated Guardian (W)",
+            commanders: decks::AURON_COMMANDERS,
+            main: decks::AURON_MAIN,
+        },
+        // Seat 1962: Myojin of Cryptic Dreams's EDHREC average deck. `--pod-decks 1962`.
+        PodDeck {
+            name: "Myojin of Cryptic Dreams (U)",
+            commanders: decks::MYOJIN_OF_CRYPTIC_DREAMS_COMMANDERS,
+            main: decks::MYOJIN_OF_CRYPTIC_DREAMS_MAIN,
+        },
+        // Seat 1963: Vogar, Necropolis Tyrant's EDHREC average deck. `--pod-decks 1963`.
+        PodDeck {
+            name: "Vogar, Necropolis Tyrant (B)",
+            commanders: decks::VOGAR_COMMANDERS,
+            main: decks::VOGAR_MAIN,
+        },
+        // Seat 1964: Lyra, Archangel of Dawn's EDHREC average deck. `--pod-decks 1964`.
+        PodDeck {
+            name: "Lyra, Archangel of Dawn (W)",
+            commanders: decks::LYRA_2_COMMANDERS,
+            main: decks::LYRA_2_MAIN,
+        },
+        // Seat 1965: Borborygmos's EDHREC average deck. `--pod-decks 1965`.
+        PodDeck {
+            name: "Borborygmos (RG)",
+            commanders: decks::BORBORYGMOS_COMMANDERS,
+            main: decks::BORBORYGMOS_MAIN,
+        },
+        // Seat 1966: Crovax, Ascendant Hero's EDHREC average deck. `--pod-decks 1966`.
+        PodDeck {
+            name: "Crovax, Ascendant Hero (W)",
+            commanders: decks::CROVAX_COMMANDERS,
+            main: decks::CROVAX_MAIN,
+        },
+        // Seat 1967: Red Ghost, Intangible Genius's EDHREC average deck. `--pod-decks 1967`.
+        PodDeck {
+            name: "Red Ghost, Intangible Genius (UR)",
+            commanders: decks::RED_GHOST_COMMANDERS,
+            main: decks::RED_GHOST_MAIN,
+        },
+        // Seat 1968: The Master, Gallifrey's End's EDHREC average deck. `--pod-decks 1968`.
+        PodDeck {
+            name: "The Master, Gallifrey's End (BR)",
+            commanders: decks::THE_MASTER_4_COMMANDERS,
+            main: decks::THE_MASTER_4_MAIN,
+        },
+        // Seat 1969: Nadier, Agent of the Duskenel and Numa, Joraga Chieftain's EDHREC average deck. `--pod-decks 1969`.
+        PodDeck {
+            name: "Nadier, Agent of the Duskenel and Numa, Joraga Chieftain (BG)",
+            commanders: decks::NADIER_COMMANDERS,
+            main: decks::NADIER_MAIN,
+        },
+        // Seat 1970: Arni Metalbrow's EDHREC average deck. `--pod-decks 1970`.
+        PodDeck {
+            name: "Arni Metalbrow (R)",
+            commanders: decks::ARNI_METALBROW_COMMANDERS,
+            main: decks::ARNI_METALBROW_MAIN,
+        },
+        // Seat 1971: Jolene, Plundering Pugilist's EDHREC average deck. `--pod-decks 1971`.
+        PodDeck {
+            name: "Jolene, Plundering Pugilist (RG)",
+            commanders: decks::JOLENE_2_COMMANDERS,
+            main: decks::JOLENE_2_MAIN,
+        },
+        // Seat 1972: Jet, Rebel Leader's EDHREC average deck. `--pod-decks 1972`.
+        PodDeck {
+            name: "Jet, Rebel Leader (W)",
+            commanders: decks::JET_COMMANDERS,
+            main: decks::JET_MAIN,
+        },
+        // Seat 1973: Bell Borca, Spectral Sergeant's EDHREC average deck. `--pod-decks 1973`.
+        PodDeck {
+            name: "Bell Borca, Spectral Sergeant (WR)",
+            commanders: decks::BELL_BORCA_COMMANDERS,
+            main: decks::BELL_BORCA_MAIN,
+        },
+        // Seat 1974: Skanos Dragonheart and Dragon Cultist's EDHREC average deck. `--pod-decks 1974`.
+        PodDeck {
+            name: "Skanos Dragonheart and Dragon Cultist (RG)",
+            commanders: decks::SKANOS_DRAGONHEART_COMMANDERS,
+            main: decks::SKANOS_DRAGONHEART_MAIN,
+        },
+        // Seat 1975: Uyo, Silent Prophet's EDHREC average deck. `--pod-decks 1975`.
+        PodDeck {
+            name: "Uyo, Silent Prophet (U)",
+            commanders: decks::UYO_COMMANDERS,
+            main: decks::UYO_MAIN,
+        },
+        // Seat 1976: Orca, Siege Demon's EDHREC average deck. `--pod-decks 1976`.
+        PodDeck {
+            name: "Orca, Siege Demon (BR)",
+            commanders: decks::ORCA_COMMANDERS,
+            main: decks::ORCA_MAIN,
+        },
+        // Seat 1977: Sanwell, Avenger Ace's EDHREC average deck. `--pod-decks 1977`.
+        PodDeck {
+            name: "Sanwell, Avenger Ace (W)",
+            commanders: decks::SANWELL_COMMANDERS,
+            main: decks::SANWELL_MAIN,
+        },
+        // Seat 1978: Heiko Yamazaki, the General's EDHREC average deck. `--pod-decks 1978`.
+        PodDeck {
+            name: "Heiko Yamazaki, the General (R)",
+            commanders: decks::HEIKO_YAMAZAKI_COMMANDERS,
+            main: decks::HEIKO_YAMAZAKI_MAIN,
+        },
+        // Seat 1979: The Destined White Mage's EDHREC average deck. `--pod-decks 1979`.
+        PodDeck {
+            name: "The Destined White Mage (W)",
+            commanders: decks::THE_DESTINED_WHITE_MAGE_COMMANDERS,
+            main: decks::THE_DESTINED_WHITE_MAGE_MAIN,
+        },
+        // Seat 1980: Zhao, Ruthless Admiral's EDHREC average deck. `--pod-decks 1980`.
+        PodDeck {
+            name: "Zhao, Ruthless Admiral (BR)",
+            commanders: decks::ZHAO_COMMANDERS,
+            main: decks::ZHAO_MAIN,
+        },
+        // Seat 1981: Rhys the Exiled's EDHREC average deck. `--pod-decks 1981`.
+        PodDeck {
+            name: "Rhys the Exiled (BG)",
+            commanders: decks::RHYS_THE_EXILED_COMMANDERS,
+            main: decks::RHYS_THE_EXILED_MAIN,
+        },
+        // Seat 1982: Casey Jones, Vigilante's EDHREC average deck. `--pod-decks 1982`.
+        PodDeck {
+            name: "Casey Jones, Vigilante (R)",
+            commanders: decks::CASEY_JONES_COMMANDERS,
+            main: decks::CASEY_JONES_MAIN,
+        },
+        // Seat 1983: Oyobi, Who Split the Heavens's EDHREC average deck. `--pod-decks 1983`.
+        PodDeck {
+            name: "Oyobi, Who Split the Heavens (W)",
+            commanders: decks::OYOBI_COMMANDERS,
+            main: decks::OYOBI_MAIN,
+        },
+        // Seat 1984: Vadmir, New Blood's EDHREC average deck. `--pod-decks 1984`.
+        PodDeck {
+            name: "Vadmir, New Blood (B)",
+            commanders: decks::VADMIR_COMMANDERS,
+            main: decks::VADMIR_MAIN,
+        },
+        // Seat 1985: Ashling, the Extinguisher's EDHREC average deck. `--pod-decks 1985`.
+        PodDeck {
+            name: "Ashling, the Extinguisher (B)",
+            commanders: decks::ASHLING_4_COMMANDERS,
+            main: decks::ASHLING_4_MAIN,
+        },
+        // Seat 1986: Sutina, Speaker of the Tajuru's EDHREC average deck. `--pod-decks 1986`.
+        PodDeck {
+            name: "Sutina, Speaker of the Tajuru (G)",
+            commanders: decks::SUTINA_COMMANDERS,
+            main: decks::SUTINA_MAIN,
+        },
+        // Seat 1987: Misty Knight, Hero for Hire's EDHREC average deck. `--pod-decks 1987`.
+        PodDeck {
+            name: "Misty Knight, Hero for Hire (R)",
+            commanders: decks::MISTY_KNIGHT_COMMANDERS,
+            main: decks::MISTY_KNIGHT_MAIN,
+        },
+        // Seat 1988: Kagemaro, First to Suffer's EDHREC average deck. `--pod-decks 1988`.
+        PodDeck {
+            name: "Kagemaro, First to Suffer (B)",
+            commanders: decks::KAGEMARO_COMMANDERS,
+            main: decks::KAGEMARO_MAIN,
+        },
+        // Seat 1989: Lu Bu, Master-at-Arms's EDHREC average deck. `--pod-decks 1989`.
+        PodDeck {
+            name: "Lu Bu, Master-at-Arms (R)",
+            commanders: decks::LU_BU_COMMANDERS,
+            main: decks::LU_BU_MAIN,
+        },
+        // Seat 1990: Éomer, Marshal of Rohan's EDHREC average deck. `--pod-decks 1990`.
+        PodDeck {
+            name: "Éomer, Marshal of Rohan (R)",
+            commanders: decks::EOMER_COMMANDERS,
+            main: decks::EOMER_MAIN,
+        },
+        // Seat 1991: Alirios, Enraptured's EDHREC average deck. `--pod-decks 1991`.
+        PodDeck {
+            name: "Alirios, Enraptured (U)",
+            commanders: decks::ALIRIOS_COMMANDERS,
+            main: decks::ALIRIOS_MAIN,
+        },
+        // Seat 1992: Professor Zei, Anthropologist's EDHREC average deck. `--pod-decks 1992`.
+        PodDeck {
+            name: "Professor Zei, Anthropologist (UR)",
+            commanders: decks::PROFESSOR_ZEI_COMMANDERS,
+            main: decks::PROFESSOR_ZEI_MAIN,
+        },
+        // Seat 1993: Geth, Thane of Contracts's EDHREC average deck. `--pod-decks 1993`.
+        PodDeck {
+            name: "Geth, Thane of Contracts (B)",
+            commanders: decks::GETH_2_COMMANDERS,
+            main: decks::GETH_2_MAIN,
+        },
+        // Seat 1994: Bumi, Eclectic Earthbender's EDHREC average deck. `--pod-decks 1994`.
+        PodDeck {
+            name: "Bumi, Eclectic Earthbender (G)",
+            commanders: decks::BUMI_2_COMMANDERS,
+            main: decks::BUMI_2_MAIN,
+        },
+        // Seat 1995: Shimatsu the Bloodcloaked's EDHREC average deck. `--pod-decks 1995`.
+        PodDeck {
+            name: "Shimatsu the Bloodcloaked (R)",
+            commanders: decks::SHIMATSU_THE_BLOODCLOAKED_COMMANDERS,
+            main: decks::SHIMATSU_THE_BLOODCLOAKED_MAIN,
+        },
+        // Seat 1996: Nev, the Practical Dean's EDHREC average deck. `--pod-decks 1996`.
+        PodDeck {
+            name: "Nev, the Practical Dean (G)",
+            commanders: decks::NEV_COMMANDERS,
+            main: decks::NEV_MAIN,
+        },
+        // Seat 1997: Lockjaw, Slobbering Teleporter's EDHREC average deck. `--pod-decks 1997`.
+        PodDeck {
+            name: "Lockjaw, Slobbering Teleporter (U)",
+            commanders: decks::LOCKJAW_COMMANDERS,
+            main: decks::LOCKJAW_MAIN,
+        },
+        // Seat 1998: Thriss, Nantuko Primus's EDHREC average deck. `--pod-decks 1998`.
+        PodDeck {
+            name: "Thriss, Nantuko Primus (G)",
+            commanders: decks::THRISS_COMMANDERS,
+            main: decks::THRISS_MAIN,
+        },
+        // Seat 1999: Saruman the White's EDHREC average deck. `--pod-decks 1999`.
+        PodDeck {
+            name: "Saruman the White (U)",
+            commanders: decks::SARUMAN_THE_WHITE_COMMANDERS,
+            main: decks::SARUMAN_THE_WHITE_MAIN,
+        },
+        // Seat 2000: Crovax the Cursed's EDHREC average deck. `--pod-decks 2000`.
+        PodDeck {
+            name: "Crovax the Cursed (B)",
+            commanders: decks::CROVAX_THE_CURSED_COMMANDERS,
+            main: decks::CROVAX_THE_CURSED_MAIN,
+        },
+        // Seat 2001: Alharu, Solemn Ritualist and Slurrk, All-Ingesting's EDHREC average deck. `--pod-decks 2001`.
+        PodDeck {
+            name: "Alharu, Solemn Ritualist and Slurrk, All-Ingesting (WG)",
+            commanders: decks::ALHARU_COMMANDERS,
+            main: decks::ALHARU_MAIN,
+        },
+        // Seat 2002: Opal-Eye, Konda's Yojimbo's EDHREC average deck. `--pod-decks 2002`.
+        PodDeck {
+            name: "Opal-Eye, Konda's Yojimbo (W)",
+            commanders: decks::OPAL_EYE_COMMANDERS,
+            main: decks::OPAL_EYE_MAIN,
+        },
+        // Seat 2003: Polukranos, World Eater's EDHREC average deck. `--pod-decks 2003`.
+        PodDeck {
+            name: "Polukranos, World Eater (G)",
+            commanders: decks::POLUKRANOS_2_COMMANDERS,
+            main: decks::POLUKRANOS_2_MAIN,
+        },
+        // Seat 2004: Avacyn, Guardian Angel's EDHREC average deck. `--pod-decks 2004`.
+        PodDeck {
+            name: "Avacyn, Guardian Angel (W)",
+            commanders: decks::AVACYN_3_COMMANDERS,
+            main: decks::AVACYN_3_MAIN,
+        },
+        // Seat 2005: Ambrosia Whiteheart's EDHREC average deck. `--pod-decks 2005`.
+        PodDeck {
+            name: "Ambrosia Whiteheart (W)",
+            commanders: decks::AMBROSIA_WHITEHEART_COMMANDERS,
+            main: decks::AMBROSIA_WHITEHEART_MAIN,
+        },
+        // Seat 2006: Flopsie, Bumi's Buddy's EDHREC average deck. `--pod-decks 2006`.
+        PodDeck {
+            name: "Flopsie, Bumi's Buddy (G)",
+            commanders: decks::FLOPSIE_COMMANDERS,
+            main: decks::FLOPSIE_MAIN,
+        },
+        // Seat 2007: Yosei, the Morning Star's EDHREC average deck. `--pod-decks 2007`.
+        PodDeck {
+            name: "Yosei, the Morning Star (W)",
+            commanders: decks::YOSEI_COMMANDERS,
+            main: decks::YOSEI_MAIN,
+        },
+        // Seat 2008: Sunastian Falconer's EDHREC average deck. `--pod-decks 2008`.
+        PodDeck {
+            name: "Sunastian Falconer (RG)",
+            commanders: decks::SUNASTIAN_FALCONER_COMMANDERS,
+            main: decks::SUNASTIAN_FALCONER_MAIN,
+        },
+        // Seat 2009: Elanor Gardner's EDHREC average deck. `--pod-decks 2009`.
+        PodDeck {
+            name: "Elanor Gardner (G)",
+            commanders: decks::ELANOR_GARDNER_COMMANDERS,
+            main: decks::ELANOR_GARDNER_MAIN,
+        },
+        // Seat 2010: Lady Zhurong, Warrior Queen's EDHREC average deck. `--pod-decks 2010`.
+        PodDeck {
+            name: "Lady Zhurong, Warrior Queen (G)",
+            commanders: decks::LADY_ZHURONG_COMMANDERS,
+            main: decks::LADY_ZHURONG_MAIN,
+        },
+        // Seat 2011: Kid Loki's EDHREC average deck. `--pod-decks 2011`.
+        PodDeck {
+            name: "Kid Loki (U)",
+            commanders: decks::KID_LOKI_COMMANDERS,
+            main: decks::KID_LOKI_MAIN,
+        },
     ]
 }
 
@@ -15938,6 +16304,67 @@ mod tests {
             ("Kalitas, Bloodchief of Ghet", &[0x11B2]),
             ("Alicia Masters, Skilled Sculptor", &[0x11B3]),
             ("Commander Greven il-Vec", &[0x11B4]),
+            ("Hancock, Ghoulish Mayor", &[0x11B5]),
+            ("Yargle, Glutton of Urborg", &[0x11B6]),
+            ("Professor Hulk", &[0x11B7]),
+            ("Toph, the Blind Bandit", &[0x11B8]),
+            ("Xiahou Dun, the One-Eyed", &[0x11B9]),
+            ("Miara, Thorn of the Glade and Numa, Joraga Chieftain", &[0x11BA]),
+            ("Ioreth of the Healing House", &[0x11BB]),
+            ("Adéwalé, Breaker of Chains", &[0x11BC]),
+            ("Akal Pakal, First Among Equals", &[0x11BD]),
+            ("Dong Zhou, the Tyrant", &[0x11BE]),
+            ("Auron, Venerated Guardian", &[0x11BF]),
+            ("Myojin of Cryptic Dreams", &[0x11C0]),
+            ("Vogar, Necropolis Tyrant", &[0x11C1]),
+            ("Lyra, Archangel of Dawn", &[0x11C2]),
+            ("Borborygmos", &[0x11C3]),
+            ("Crovax, Ascendant Hero", &[0x11C4]),
+            ("Red Ghost, Intangible Genius", &[0x11C5]),
+            ("The Master, Gallifrey's End", &[0x11C6]),
+            ("Nadier, Agent of the Duskenel and Numa, Joraga Chieftain", &[0x11C7]),
+            ("Arni Metalbrow", &[0x11C8]),
+            ("Jolene, Plundering Pugilist", &[0x11C9]),
+            ("Jet, Rebel Leader", &[0x11CA]),
+            ("Bell Borca, Spectral Sergeant", &[0x11CB]),
+            ("Skanos Dragonheart and Dragon Cultist", &[0x11CC]),
+            ("Uyo, Silent Prophet", &[0x11CD]),
+            ("Orca, Siege Demon", &[0x11CE]),
+            ("Sanwell, Avenger Ace", &[0x11CF]),
+            ("Heiko Yamazaki, the General", &[0x11D0]),
+            ("The Destined White Mage", &[0x11D1]),
+            ("Zhao, Ruthless Admiral", &[0x11D2]),
+            ("Rhys the Exiled", &[0x11D3]),
+            ("Casey Jones, Vigilante", &[0x11D4]),
+            ("Oyobi, Who Split the Heavens", &[0x11D5]),
+            ("Vadmir, New Blood", &[0x11D6]),
+            ("Ashling, the Extinguisher", &[0x11D7]),
+            ("Sutina, Speaker of the Tajuru", &[0x11D8]),
+            ("Misty Knight, Hero for Hire", &[0x11D9]),
+            ("Kagemaro, First to Suffer", &[0x11DA]),
+            ("Lu Bu, Master-at-Arms", &[0x11DB]),
+            ("Éomer, Marshal of Rohan", &[0x11DC]),
+            ("Alirios, Enraptured", &[0x11DD]),
+            ("Professor Zei, Anthropologist", &[0x11DE]),
+            ("Geth, Thane of Contracts", &[0x11DF]),
+            ("Bumi, Eclectic Earthbender", &[0x11E0]),
+            ("Shimatsu the Bloodcloaked", &[0x11E1]),
+            ("Nev, the Practical Dean", &[0x11E2]),
+            ("Lockjaw, Slobbering Teleporter", &[0x11E3]),
+            ("Thriss, Nantuko Primus", &[0x11E4]),
+            ("Saruman the White", &[0x11E5]),
+            ("Crovax the Cursed", &[0x11E6]),
+            ("Alharu, Solemn Ritualist and Slurrk, All-Ingesting", &[0x11E7]),
+            ("Opal-Eye, Konda's Yojimbo", &[0x11E8]),
+            ("Polukranos, World Eater", &[0x11E9]),
+            ("Avacyn, Guardian Angel", &[0x11EA]),
+            ("Ambrosia Whiteheart", &[0x11EB]),
+            ("Flopsie, Bumi's Buddy", &[0x11EC]),
+            ("Yosei, the Morning Star", &[0x11ED]),
+            ("Sunastian Falconer", &[0x11EE]),
+            ("Elanor Gardner", &[0x11EF]),
+            ("Lady Zhurong, Warrior Queen", &[0x11F0]),
+            ("Kid Loki", &[0x11F1]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
