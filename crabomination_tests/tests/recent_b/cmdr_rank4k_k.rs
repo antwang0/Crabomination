@@ -336,3 +336,56 @@ fn cast_flooded(g: &mut GameState, id: CardId) {
     drain_stack(g);
     g.players[0].mana_pool = Default::default();
 }
+
+/// Weathered Bodyguards: an unblocked attacker's combat damage lands on the
+/// untapped Bodyguards instead of their controller; tapped, it doesn't.
+#[test]
+fn weathered_bodyguards_absorb_unblocked_combat_damage() {
+    for untapped in [true, false] {
+        let mut g = pod(2);
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        let guard = g.add_card_to_battlefield(1, catalog::weathered_bodyguards());
+        g.battlefield_find_mut(guard).unwrap().tapped = !untapped;
+        let life = g.players[1].life;
+        declare(&mut g, vec![(bear, 1)]);
+        while g.step != TurnStep::EndCombat {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        let damage = g.battlefield_find(guard).unwrap().damage;
+        if untapped {
+            assert_eq!((g.players[1].life, damage), (life, 2), "absorbed");
+        } else {
+            assert_eq!((g.players[1].life, damage), (life - 2, 0), "tapped: not absorbed");
+        }
+    }
+}
+
+/// Oriss's {T} shields a creature from a Shock for the turn.
+#[test]
+fn oriss_prevents_damage_to_target_creature() {
+    let mut g = pod(2);
+    let oriss = ready(&mut g, 0, catalog::oriss_samite_guardian());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: oriss,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the shield held");
+}

@@ -2,7 +2,7 @@
 //! 2026-10-14 scan), eleventh file. Tests in `tests/recent_b/cmdr_rank4k_k.rs`.
 
 use crate::card::{
-    AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
     EventScope, EventSpec, Keyword, LandType, MayPlayDuration, SelectionRequirement as R,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
     Zone,
@@ -358,6 +358,75 @@ pub fn donnie_and_april_adorkable_duo() -> CardDefinition {
             ],
             3,
             3,
+        )
+    }
+}
+
+// ── Oriss, Samite Guardian ───────────────────────────────────────────────────
+
+/// Oriss, Samite Guardian — {1}{W}{W} legendary 1/3 Human Cleric. {T}: prevent
+/// all damage that would be dealt to target creature this turn. Grandeur —
+/// discard another card named Oriss: target player can't cast spells this
+/// turn, and creatures that player controls can't attack this turn.
+pub fn oriss_samite_guardian() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::PreventAllDamageThisTurn {
+                    target: target_filtered(R::Creature),
+                    redirect_to: None,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                discard_cost: Some((R::HasName("Oriss, Samite Guardian".to_string()), 1)),
+                effect: Effect::TargetPlayerThen {
+                    filter: R::Player,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::SilencePlayersThisTurn {
+                            who: PlayerRef::Target(0),
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::ControlledBy {
+                                who: PlayerRef::Target(0),
+                                filter: R::Creature,
+                            },
+                            keyword: Keyword::CantAttack,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+        ],
+        supertypes: vec![Supertype::Legendary],
+        ..creature(
+            "Oriss, Samite Guardian",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            3,
+        )
+    }
+}
+
+/// Weathered Bodyguards — {5}{W} 2/5 Human Soldier. As long as it's untapped,
+/// all combat damage that would be dealt to you by unblocked creatures is
+/// dealt to it instead. Morph {3}{W}.
+pub fn weathered_bodyguards() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(3), w()]))],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is untapped, all combat damage that would be dealt to you by unblocked creatures is dealt to this creature instead.",
+            effect: StaticEffect::AbsorbUnblockedCombatDamageWhileUntapped,
+        }],
+        ..creature(
+            "Weathered Bodyguards",
+            cost(&[generic(5), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            2,
+            5,
         )
     }
 }

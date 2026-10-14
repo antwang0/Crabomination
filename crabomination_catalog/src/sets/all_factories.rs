@@ -1455,6 +1455,8 @@ static DECKS: &[Factory] = &[
     super::decks::swallow_whole,
     super::decks::autumn_willow_harmony,
     super::decks::donnie_and_april_adorkable_duo,
+    super::decks::oriss_samite_guardian,
+    super::decks::weathered_bodyguards,
     // cmdr_rank5k_a (session 01KXJ5zX)
     super::decks::inundate,
     super::decks::luminous_bonds,
