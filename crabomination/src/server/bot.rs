@@ -9927,8 +9927,8 @@ fn gate_blame(state: &GameState, action: Option<&GameAction>) -> String {
                 .map(move |a| format!("{}: tap={} {:?}", c.definition.name, a.tap_cost, a.mana_cost.symbols))
         }));
     format!(
-        "{} ability {ability_index} in {zone}, printed cost {cost}, available total {} by_color {:?}; hand [{hand}]; board [{board}]; granted mana [{granted}]",
-        card.definition.name, have.total, have.by_color
+        "{} ability {ability_index} in {zone}, printed cost {cost}, available total {} by_color {:?}; restricted float {:?}; hand [{hand}]; board [{board}]; granted mana [{granted}]",
+        card.definition.name, have.total, have.by_color, state.players[card.controller].mana_pool.restricted_breakdown()
     )
 }
 
@@ -10105,9 +10105,13 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
             // Only a PRINTED ability's pips are read: a granted one may be
             // paid "as though it were mana of any color" (Drana and Linvala —
             // a six-seat strict debug pod asserted on its stolen sacrifice
-            // ability, seed 55001).
+            // ability, seed 55001). Nor a power-up's (CR 702.193b): the
+            // turn its source entered, its cost loses the source's mana cost,
+            // pips and all — Shang-Chi's {5}{G}{G} less {3}{G}{G} is {2}
+            // (a four-seat debug pod of Vhal seats asserted, seed 7).
             if idx < printed
                 && !pips_free
+                && !ab.power_up
                 && ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
                 && !restricted_floating
                 && !colors_coverable_paying_life(&ab.mana_cost, have.get(), life_pips)
