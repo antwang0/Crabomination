@@ -223,10 +223,11 @@ pub fn prophesied_end() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         // Read before the destroy: whether it was attacking is its last state.
+        // The destroy declares the slot; the condition reads it.
         effect: Effect::Seq(vec![
             Effect::If {
                 cond: Predicate::Not(Box::new(Predicate::EntityMatches {
-                    what: target_filtered(R::Creature),
+                    what: Selector::Target(0),
                     filter: R::IsAttacking,
                 })),
                 then: Box::new(Effect::Draw {
@@ -235,7 +236,7 @@ pub fn prophesied_end() -> CardDefinition {
                 }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::Destroy { what: Selector::Target(0) },
+            Effect::Destroy { what: target_filtered(R::Creature) },
         ]),
         ..Default::default()
     }
