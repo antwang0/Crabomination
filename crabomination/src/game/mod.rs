@@ -468,6 +468,8 @@ pub(crate) mod cast_lock {
     pub const COMBAT: u32 = 1 << 12;
     /// Ward of Bones.
     pub const MORE_THAN_YOU: u32 = 1 << 13;
+    /// Ashes of the Abhorrent (an activation of a graveyard card).
+    pub const GRAVEYARD: u32 = 1 << 14;
     /// The locks whose gate reads the cast spell's characteristics.
     pub const ANY_CARD: u32 =
         ONE_SPELL | MANA_MAZE | NAME | CHOSEN_COLOR | EVEN_MV | ABOVE_LANDS | DAMPING | MORE_THAN_YOU;
@@ -5824,9 +5826,10 @@ impl GameState {
                     | SE::OpponentsCantActDuringYourTurn => {
                         cast_lock::DURING_YOUR_TURN
                     }
-                    SE::PlayersCantCastDuringCombat | SE::OpponentsCantCastDuringCombat => {
-                        cast_lock::COMBAT
-                    }
+                    SE::PlayersCantCastDuringCombat
+                    | SE::OpponentsCantCastDuringCombat
+                    | SE::DefendingPlayerCantCastWhileAttacking => cast_lock::COMBAT,
+                    SE::GraveyardCastAndActivationLock => cast_lock::GRAVEYARD,
                     _ => 0,
                 };
             }
@@ -6094,6 +6097,15 @@ impl GameState {
         {
             return Some(GameError::SilencedThisTurn);
         }
+        // Ashes of the Abhorrent — no activation of a card in a graveyard.
+        if locks & cast_lock::GRAVEYARD != 0
+            && let GameAction::ActivateAbility { card_id, .. } | GameAction::ActivateAbilityWaterbend { card_id, .. } =
+                action
+            && self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == *card_id))
+            && self.graveyard_cast_activation_locked()
+        {
+            return Some(GameError::SilencedThisTurn);
+        }
         // Basandra — no player casts a spell during combat (CR 506.1).
         if is_cast
             && locks & cast_lock::COMBAT != 0
@@ -6103,6 +6115,9 @@ impl GameState {
                     StaticEffect::PlayersCantCastDuringCombat => true,
                     StaticEffect::OpponentsCantCastDuringCombat => {
                         !self.same_team(c.controller, caster)
+                    }
+                    StaticEffect::DefendingPlayerCantCastWhileAttacking => {
+                        self.defending_player_for_source(Some(c.id)) == Some(caster)
                     }
                     _ => false,
                 })
@@ -10969,6 +10984,18 @@ impl GameState {
             })
     }
 
+    /// Ashes of the Abhorrent — true while any permanent forbids casting
+    /// from, and activating cards in, graveyards.
+    pub(crate) fn graveyard_cast_activation_locked(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::GraveyardCastAndActivationLock))
+        })
+    }
+
     /// Soulless Jailer — true while any battlefield permanent locks
     /// graveyard entries and graveyard/exile noncreature casts.
     pub(crate) fn graveyard_exile_locked(&self) -> bool {
@@ -11141,6 +11168,7 @@ impl GameState {
         // other player may play from a graveyard this turn.
         (matches!(zone, Zone::Graveyard)
             && (self.graveyard_locked()
+                || self.graveyard_cast_activation_locked()
                 || self.graveyard_play_pooled_for.is_some_and(|only| only != caster)))
             || (matches!(zone, Zone::Library) && self.graveyard_library_locked())
             || (!def.is_creature()
@@ -22971,7 +22999,9 @@ impl GameState {
             })
             .flatten();
         // CR 614 — Out of the Tombs replaces the empty-library draw itself.
-        if self.players[p].library.is_empty() && self.reanimate_instead_of_empty_draw(p, events) {
+        if self.players[p].library.is_empty()
+            && (self.counters_instead_of_empty_draw(p) || self.reanimate_instead_of_empty_draw(p, events))
+        {
             return DrawOutcome::Drew;
         }
         // River Song — "you draw cards from the bottom of your library": the
@@ -34642,6 +34672,12 @@ fn static_effect_to_effects(
             // declaration (`opponent_forces_an_attack`); no layer effect.
             | StaticEffect::OpponentsMustAttackWithAtLeastOne
             | StaticEffect::OpponentsMustAttackYouWithAtLeastOne
+            // Both cast-lock statics — read by `action_lock_rejection` /
+            // `cast_from_zone_blocked`; no layer effect.
+            | StaticEffect::DefendingPlayerCantCastWhileAttacking
+            | StaticEffect::GraveyardCastAndActivationLock
+            // Ormos — read by `draw_one` (`counters_instead_of_empty_draw`).
+            | StaticEffect::CountersInsteadOfDrawFromEmpty { .. }
             // OpponentsFaceVillainousChoicesTwice — read where a villainous
             // choice is posed; FirstNonlegendaryArtifactSpellHasCasualty — read
             // in `casualty_for`. No layer effect.

@@ -3497,6 +3497,18 @@ pub enum StaticEffect {
     /// A declaration that leaves this controller unattacked is rejected while
     /// an able creature is idle or aimed at a seat no such static names.
     OpponentsMustAttackYouWithAtLeastOne,
+    /// CR 506.2 — "As long as this creature is attacking, defending player
+    /// can't cast spells" (Wardscale Dragon): the attacked seat (or the
+    /// controller of the attacked planeswalker/battle) is cast-locked.
+    DefendingPlayerCantCastWhileAttacking,
+    /// "Players can't cast spells from graveyards or activate abilities of
+    /// cards in graveyards" (Ashes of the Abhorrent) — the cast-and-activate
+    /// half of a graveyard lock, without Grafdigger's Cage's entry ban.
+    GraveyardCastAndActivationLock,
+    /// CR 614 — "If you would draw a card while your library has no cards in
+    /// it, instead put `amount` [kind] counters on this" (Ormos, Archive
+    /// Keeper). Read by the draw funnel beside Out of the Tombs.
+    CountersInsteadOfDrawFromEmpty { kind: crate::card::CounterType, amount: u32 },
     /// CR 701.55 — "If an opponent would face a villainous choice, they face
     /// that choice an additional time" (The Valeyard). Read where a
     /// villainous choice is posed; each such permanent adds one more.
@@ -4757,6 +4769,10 @@ pub struct ActivatedAbility {
     /// name:"). The pre-flight picks a name with enough matching copies.
     #[serde(default)]
     pub discard_cost_same_name: bool,
+    /// When set with `discard_cost`, the discarded cards must all have
+    /// different names (Ormos — "Discard three cards with different names:").
+    #[serde(default)]
+    pub discard_cost_distinct_names: bool,
     /// When set with `discard_cost`, the discard is at RANDOM rather than the
     /// controller's choice (Pyromancy's "{3}, Discard a card at random:").
     #[serde(default)]

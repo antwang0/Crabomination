@@ -235,6 +235,7 @@ pub(super) fn pick_discard_charge(state: &GameState, seat: usize) -> Option<Game
                 && ab.discard_cost.as_ref().is_some_and(|(_, n)| *n == 1)
                 && !ab.discard_cost_x
                 && !ab.discard_cost_same_name
+                && !ab.discard_cost_distinct_names
                 && !ab.sac_cost;
             if !charges {
                 return None;

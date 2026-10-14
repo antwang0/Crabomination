@@ -2631,6 +2631,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.discard_cost_same_name {
         parts.push("Discard a card with the same name".into());
     }
+    if ability.discard_cost_distinct_names {
+        parts.push("Discard cards with different names".into());
+    }
     if ability.x_life_cost {
         parts.push("Pay X life".into());
     }

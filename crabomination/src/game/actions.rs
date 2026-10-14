@@ -23231,6 +23231,23 @@ impl GameState {
                 } else {
                     picks.sort_by_key(|(_, cmc)| *cmc);
                 }
+                if ability.discard_cost_distinct_names {
+                    // "Discard N cards with different names" (Ormos): the
+                    // cheapest card of each name, cheapest names first.
+                    let mut seen: Vec<&str> = Vec::new();
+                    picks.retain(|(cid, _)| {
+                        let name = self.players[p].hand.iter().find(|c| c.id == *cid).map_or("", |c| c.definition.name);
+                        if seen.contains(&name) {
+                            false
+                        } else {
+                            seen.push(name);
+                            true
+                        }
+                    });
+                    if picks.len() < count {
+                        return Err(GameError::SelectionRequirementViolated);
+                    }
+                }
                 picks.into_iter().take(count).map(|(cid, _)| cid).collect()
             }
         } else {

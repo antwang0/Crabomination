@@ -8,6 +8,25 @@ use super::types::GameEvent;
 use crate::effect::{Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 
 impl GameState {
+    /// Ormos, Archive Keeper — "If you would draw a card while your library
+    /// has no cards in it, instead put five +1/+1 counters on Ormos." `true`
+    /// when a static of `p`'s applied (CR 614: the draw is replaced).
+    pub(crate) fn counters_instead_of_empty_draw(&mut self, p: usize) -> bool {
+        let Some((id, kind, amount)) = self.battlefield.iter().find_map(|c| {
+            (c.controller == p).then_some(())?;
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+                Some(StaticEffect::CountersInsteadOfDrawFromEmpty { kind, amount }) => Some((c.id, *kind, *amount)),
+                _ => None,
+            })
+        }) else {
+            return false;
+        };
+        if let Some(c) = self.battlefield_find_mut(id) {
+            c.add_counters(kind, amount);
+        }
+        true
+    }
+
     /// Out of the Tombs — "If you would draw a card while your library has no
     /// cards in it, instead return a creature card from your graveyard to the
     /// battlefield." `true` when a static applied and a creature came back;
