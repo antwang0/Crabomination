@@ -13620,6 +13620,210 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RHYS_COMMANDERS,
             main: decks::RHYS_MAIN,
         },
+        // Seat 2195: Kingpin, Wilson Fisk's EDHREC average deck. `--pod-decks 2195`.
+        PodDeck {
+            name: "Kingpin, Wilson Fisk (B)",
+            commanders: decks::KINGPIN_COMMANDERS,
+            main: decks::KINGPIN_MAIN,
+        },
+        // Seat 2196: Sosuke, Son of Seshiro's EDHREC average deck. `--pod-decks 2196`.
+        PodDeck {
+            name: "Sosuke, Son of Seshiro (G)",
+            commanders: decks::SOSUKE_COMMANDERS,
+            main: decks::SOSUKE_MAIN,
+        },
+        // Seat 2197: Vraska, the Cutting Glare's EDHREC average deck. `--pod-decks 2197`.
+        PodDeck {
+            name: "Vraska, the Cutting Glare (BG)",
+            commanders: decks::VRASKA_3_COMMANDERS,
+            main: decks::VRASKA_3_MAIN,
+        },
+        // Seat 2198: Beregond of the Guard's EDHREC average deck. `--pod-decks 2198`.
+        PodDeck {
+            name: "Beregond of the Guard (W)",
+            commanders: decks::BEREGOND_OF_THE_GUARD_COMMANDERS,
+            main: decks::BEREGOND_OF_THE_GUARD_MAIN,
+        },
+        // Seat 2199: Pianna, Nomad Captain's EDHREC average deck. `--pod-decks 2199`.
+        PodDeck {
+            name: "Pianna, Nomad Captain (W)",
+            commanders: decks::PIANNA_COMMANDERS,
+            main: decks::PIANNA_MAIN,
+        },
+        // Seat 2200: Zamriel, Seraph of Steel's EDHREC average deck. `--pod-decks 2200`.
+        PodDeck {
+            name: "Zamriel, Seraph of Steel (W)",
+            commanders: decks::ZAMRIEL_COMMANDERS,
+            main: decks::ZAMRIEL_MAIN,
+        },
+        // Seat 2201: Samwise the Stouthearted's EDHREC average deck. `--pod-decks 2201`.
+        PodDeck {
+            name: "Samwise the Stouthearted (W)",
+            commanders: decks::SAMWISE_THE_STOUTHEARTED_COMMANDERS,
+            main: decks::SAMWISE_THE_STOUTHEARTED_MAIN,
+        },
+        // Seat 2202: Tuktuk the Explorer's EDHREC average deck. `--pod-decks 2202`.
+        PodDeck {
+            name: "Tuktuk the Explorer (R)",
+            commanders: decks::TUKTUK_THE_EXPLORER_COMMANDERS,
+            main: decks::TUKTUK_THE_EXPLORER_MAIN,
+        },
+        // Seat 2203: Reed Richards, Smartest Man's EDHREC average deck. `--pod-decks 2203`.
+        PodDeck {
+            name: "Reed Richards, Smartest Man (U)",
+            commanders: decks::REED_RICHARDS_COMMANDERS,
+            main: decks::REED_RICHARDS_MAIN,
+        },
+        // Seat 2204: Rescue Girl, First Responder's EDHREC average deck. `--pod-decks 2204`.
+        PodDeck {
+            name: "Rescue Girl, First Responder (W)",
+            commanders: decks::RESCUE_GIRL_COMMANDERS,
+            main: decks::RESCUE_GIRL_MAIN,
+        },
+        // Seat 2205: Kiora of Fire and Ashes's EDHREC average deck. `--pod-decks 2205`.
+        PodDeck {
+            name: "Kiora of Fire and Ashes (R)",
+            commanders: decks::KIORA_OF_FIRE_AND_ASHES_COMMANDERS,
+            main: decks::KIORA_OF_FIRE_AND_ASHES_MAIN,
+        },
+        // Seat 2206: Arni, Humble Scribe's EDHREC average deck. `--pod-decks 2206`.
+        PodDeck {
+            name: "Arni, Humble Scribe (U)",
+            commanders: decks::ARNI_COMMANDERS,
+            main: decks::ARNI_MAIN,
+        },
+        // Seat 2207: Hazduhr the Abbot's EDHREC average deck. `--pod-decks 2207`.
+        PodDeck {
+            name: "Hazduhr the Abbot (W)",
+            commanders: decks::HAZDUHR_THE_ABBOT_COMMANDERS,
+            main: decks::HAZDUHR_THE_ABBOT_MAIN,
+        },
+        // Seat 2208: Syr Armont, the Redeemer's EDHREC average deck. `--pod-decks 2208`.
+        PodDeck {
+            name: "Syr Armont, the Redeemer (WG)",
+            commanders: decks::SYR_ARMONT_COMMANDERS,
+            main: decks::SYR_ARMONT_MAIN,
+        },
+        // Seat 2209: Killmonger, Ruthless Usurper's EDHREC average deck. `--pod-decks 2209`.
+        PodDeck {
+            name: "Killmonger, Ruthless Usurper (R)",
+            commanders: decks::KILLMONGER_COMMANDERS,
+            main: decks::KILLMONGER_MAIN,
+        },
+        // Seat 2210: Marwyn, the Preserver's EDHREC average deck. `--pod-decks 2210`.
+        PodDeck {
+            name: "Marwyn, the Preserver (G)",
+            commanders: decks::MARWYN_2_COMMANDERS,
+            main: decks::MARWYN_2_MAIN,
+        },
+        // Seat 2211: Myojin of Infinite Rage's EDHREC average deck. `--pod-decks 2211`.
+        PodDeck {
+            name: "Myojin of Infinite Rage (R)",
+            commanders: decks::MYOJIN_OF_INFINITE_RAGE_COMMANDERS,
+            main: decks::MYOJIN_OF_INFINITE_RAGE_MAIN,
+        },
+        // Seat 2212: White Widow, Yelena Belova's EDHREC average deck. `--pod-decks 2212`.
+        PodDeck {
+            name: "White Widow, Yelena Belova (B)",
+            commanders: decks::WHITE_WIDOW_COMMANDERS,
+            main: decks::WHITE_WIDOW_MAIN,
+        },
+        // Seat 2213: Kang the Conqueror's EDHREC average deck. `--pod-decks 2213`.
+        PodDeck {
+            name: "Kang the Conqueror (U)",
+            commanders: decks::KANG_THE_CONQUEROR_COMMANDERS,
+            main: decks::KANG_THE_CONQUEROR_MAIN,
+        },
+        // Seat 2214: Jiang Yanggu, Never Alone's EDHREC average deck. `--pod-decks 2214`.
+        PodDeck {
+            name: "Jiang Yanggu, Never Alone (G)",
+            commanders: decks::JIANG_YANGGU_COMMANDERS,
+            main: decks::JIANG_YANGGU_MAIN,
+        },
+        // Seat 2215: Big Bertha's EDHREC average deck. `--pod-decks 2215`.
+        PodDeck {
+            name: "Big Bertha (G)",
+            commanders: decks::BIG_BERTHA_COMMANDERS,
+            main: decks::BIG_BERTHA_MAIN,
+        },
+        // Seat 2216: Tempestra, Dame of Games's EDHREC average deck. `--pod-decks 2216`.
+        PodDeck {
+            name: "Tempestra, Dame of Games (R)",
+            commanders: decks::TEMPESTRA_COMMANDERS,
+            main: decks::TEMPESTRA_MAIN,
+        },
+        // Seat 2217: Kasimir the Lone Wolf's EDHREC average deck. `--pod-decks 2217`.
+        PodDeck {
+            name: "Kasimir the Lone Wolf (WU)",
+            commanders: decks::KASIMIR_THE_LONE_WOLF_COMMANDERS,
+            main: decks::KASIMIR_THE_LONE_WOLF_MAIN,
+        },
+        // Seat 2218: Nagao, Bound by Honor's EDHREC average deck. `--pod-decks 2218`.
+        PodDeck {
+            name: "Nagao, Bound by Honor (W)",
+            commanders: decks::NAGAO_COMMANDERS,
+            main: decks::NAGAO_MAIN,
+        },
+        // Seat 2219: Joel, Resolute Survivor's EDHREC average deck. `--pod-decks 2219`.
+        PodDeck {
+            name: "Joel, Resolute Survivor (BG)",
+            commanders: decks::JOEL_COMMANDERS,
+            main: decks::JOEL_MAIN,
+        },
+        // Seat 2220: Hunding Gjornersen's EDHREC average deck. `--pod-decks 2220`.
+        PodDeck {
+            name: "Hunding Gjornersen (WU)",
+            commanders: decks::HUNDING_GJORNERSEN_COMMANDERS,
+            main: decks::HUNDING_GJORNERSEN_MAIN,
+        },
+        // Seat 2221: Zuo Ci, the Mocking Sage's EDHREC average deck. `--pod-decks 2221`.
+        PodDeck {
+            name: "Zuo Ci, the Mocking Sage (G)",
+            commanders: decks::ZUO_CI_COMMANDERS,
+            main: decks::ZUO_CI_MAIN,
+        },
+        // Seat 2222: Ma Chao, Western Warrior's EDHREC average deck. `--pod-decks 2222`.
+        PodDeck {
+            name: "Ma Chao, Western Warrior (R)",
+            commanders: decks::MA_CHAO_COMMANDERS,
+            main: decks::MA_CHAO_MAIN,
+        },
+        // Seat 2223: Commander Sofia Daguerre's EDHREC average deck. `--pod-decks 2223`.
+        PodDeck {
+            name: "Commander Sofia Daguerre (W)",
+            commanders: decks::COMMANDER_SOFIA_DAGUERRE_COMMANDERS,
+            main: decks::COMMANDER_SOFIA_DAGUERRE_MAIN,
+        },
+        // Seat 2224: Ishi-Ishi, Akki Crackshot's EDHREC average deck. `--pod-decks 2224`.
+        PodDeck {
+            name: "Ishi-Ishi, Akki Crackshot (R)",
+            commanders: decks::ISHI_ISHI_COMMANDERS,
+            main: decks::ISHI_ISHI_MAIN,
+        },
+        // Seat 2225: Gandalf, Wandering Wizard's EDHREC average deck. `--pod-decks 2225`.
+        PodDeck {
+            name: "Gandalf, Wandering Wizard (U)",
+            commanders: decks::GANDALF_5_COMMANDERS,
+            main: decks::GANDALF_5_MAIN,
+        },
+        // Seat 2226: The Eighth Doctor and Jamie McCrimmon's EDHREC average deck. `--pod-decks 2226`.
+        PodDeck {
+            name: "The Eighth Doctor and Jamie McCrimmon (WUG)",
+            commanders: decks::THE_EIGHTH_DOCTOR_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_MAIN,
+        },
+        // Seat 2227: The Fabulous Frog-Man's EDHREC average deck. `--pod-decks 2227`.
+        PodDeck {
+            name: "The Fabulous Frog-Man (G)",
+            commanders: decks::THE_FABULOUS_FROG_MAN_COMMANDERS,
+            main: decks::THE_FABULOUS_FROG_MAN_MAIN,
+        },
+        // Seat 2228: Gallia, the Merrymaker's EDHREC average deck. `--pod-decks 2228`.
+        PodDeck {
+            name: "Gallia, the Merrymaker (R)",
+            commanders: decks::GALLIA_COMMANDERS,
+            main: decks::GALLIA_MAIN,
+        },
     ]
 }
 
@@ -17646,6 +17850,40 @@ mod tests {
             ("Loki Laufeyson", &[0x12A6]),
             ("Esior, Wardwing Familiar and Sengir, the Dark Baron", &[0x12A7]),
             ("Rhys, the Evermore", &[0x12A8]),
+            ("Kingpin, Wilson Fisk", &[0x12A9]),
+            ("Sosuke, Son of Seshiro", &[0x12AA]),
+            ("Vraska, the Cutting Glare", &[0x12AB]),
+            ("Beregond of the Guard", &[0x12AC]),
+            ("Pianna, Nomad Captain", &[0x12AD]),
+            ("Zamriel, Seraph of Steel", &[0x12AE]),
+            ("Samwise the Stouthearted", &[0x12AF]),
+            ("Tuktuk the Explorer", &[0x12B0]),
+            ("Reed Richards, Smartest Man", &[0x12B1]),
+            ("Rescue Girl, First Responder", &[0x12B2]),
+            ("Kiora of Fire and Ashes", &[0x12B3]),
+            ("Arni, Humble Scribe", &[0x12B4]),
+            ("Hazduhr the Abbot", &[0x12B5]),
+            ("Syr Armont, the Redeemer", &[0x12B6]),
+            ("Killmonger, Ruthless Usurper", &[0x12B7]),
+            ("Marwyn, the Preserver", &[0x12B8]),
+            ("Myojin of Infinite Rage", &[0x12B9]),
+            ("White Widow, Yelena Belova", &[0x12BA]),
+            ("Kang the Conqueror", &[0x12BB]),
+            ("Jiang Yanggu, Never Alone", &[0x12BC]),
+            ("Big Bertha", &[0x12BD]),
+            ("Tempestra, Dame of Games", &[0x12BE]),
+            ("Kasimir the Lone Wolf", &[0x12BF]),
+            ("Nagao, Bound by Honor", &[0x12C0]),
+            ("Joel, Resolute Survivor", &[0x12C1]),
+            ("Hunding Gjornersen", &[0x12C2]),
+            ("Zuo Ci, the Mocking Sage", &[0x12C3]),
+            ("Ma Chao, Western Warrior", &[0x12C4]),
+            ("Commander Sofia Daguerre", &[0x12C5]),
+            ("Ishi-Ishi, Akki Crackshot", &[0x12C6]),
+            ("Gandalf, Wandering Wizard", &[0x12C7]),
+            ("The Eighth Doctor and Jamie McCrimmon", &[0x12C8]),
+            ("The Fabulous Frog-Man", &[0x12C9]),
+            ("Gallia, the Merrymaker", &[0x12CA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
