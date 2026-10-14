@@ -14310,6 +14310,126 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::QUEEN_MOTHER_RAMONDA_COMMANDERS,
             main: decks::QUEEN_MOTHER_RAMONDA_MAIN,
         },
+        // Seat 2310: Hapatra, the Desert Frost's EDHREC average deck. `--pod-decks 2310`.
+        PodDeck {
+            name: "Hapatra, the Desert Frost (U)",
+            commanders: decks::HAPATRA_2_COMMANDERS,
+            main: decks::HAPATRA_2_MAIN,
+        },
+        // Seat 2311: Helmut Zemo, Mastermind's EDHREC average deck. `--pod-decks 2311`.
+        PodDeck {
+            name: "Helmut Zemo, Mastermind (U)",
+            commanders: decks::HELMUT_ZEMO_COMMANDERS,
+            main: decks::HELMUT_ZEMO_MAIN,
+        },
+        // Seat 2312: Nardole, Resourceful Cyborg's EDHREC average deck. `--pod-decks 2312`.
+        PodDeck {
+            name: "Nardole, Resourceful Cyborg (U)",
+            commanders: decks::NARDOLE_COMMANDERS,
+            main: decks::NARDOLE_MAIN,
+        },
+        // Seat 2313: Prava of the Steel Legion's EDHREC average deck. `--pod-decks 2313`.
+        PodDeck {
+            name: "Prava of the Steel Legion (W)",
+            commanders: decks::PRAVA_OF_THE_STEEL_LEGION_COMMANDERS,
+            main: decks::PRAVA_OF_THE_STEEL_LEGION_MAIN,
+        },
+        // Seat 2314: Landroval, Horizon Witness's EDHREC average deck. `--pod-decks 2314`.
+        PodDeck {
+            name: "Landroval, Horizon Witness (W)",
+            commanders: decks::LANDROVAL_COMMANDERS,
+            main: decks::LANDROVAL_MAIN,
+        },
+        // Seat 2315: Flash Thompson, Spider-Fan's EDHREC average deck. `--pod-decks 2315`.
+        PodDeck {
+            name: "Flash Thompson, Spider-Fan (W)",
+            commanders: decks::FLASH_THOMPSON_COMMANDERS,
+            main: decks::FLASH_THOMPSON_MAIN,
+        },
+        // Seat 2316: Myojin of Night's Reach's EDHREC average deck. `--pod-decks 2316`.
+        PodDeck {
+            name: "Myojin of Night's Reach (B)",
+            commanders: decks::MYOJIN_OF_NIGHTS_REACH_COMMANDERS,
+            main: decks::MYOJIN_OF_NIGHTS_REACH_MAIN,
+        },
+        // Seat 2317: Ruric Thar, Magecrusher's EDHREC average deck. `--pod-decks 2317`.
+        PodDeck {
+            name: "Ruric Thar, Magecrusher (G)",
+            commanders: decks::RURIC_THAR_3_COMMANDERS,
+            main: decks::RURIC_THAR_3_MAIN,
+        },
+        // Seat 2318: Appa, Aang's Companion's EDHREC average deck. `--pod-decks 2318`.
+        PodDeck {
+            name: "Appa, Aang's Companion (W)",
+            commanders: decks::APPA_4_COMMANDERS,
+            main: decks::APPA_4_MAIN,
+        },
+        // Seat 2319: Rashka the Slayer's EDHREC average deck. `--pod-decks 2319`.
+        PodDeck {
+            name: "Rashka the Slayer (W)",
+            commanders: decks::RASHKA_THE_SLAYER_COMMANDERS,
+            main: decks::RASHKA_THE_SLAYER_MAIN,
+        },
+        // Seat 2320: Zhang Liao, Hero of Hefei's EDHREC average deck. `--pod-decks 2320`.
+        PodDeck {
+            name: "Zhang Liao, Hero of Hefei (B)",
+            commanders: decks::ZHANG_LIAO_COMMANDERS,
+            main: decks::ZHANG_LIAO_MAIN,
+        },
+        // Seat 2321: Black Tom Cassidy's EDHREC average deck. `--pod-decks 2321`.
+        PodDeck {
+            name: "Black Tom Cassidy (G)",
+            commanders: decks::BLACK_TOM_CASSIDY_COMMANDERS,
+            main: decks::BLACK_TOM_CASSIDY_MAIN,
+        },
+        // Seat 2322: Katara, Heroic Healer's EDHREC average deck. `--pod-decks 2322`.
+        PodDeck {
+            name: "Katara, Heroic Healer (W)",
+            commanders: decks::KATARA_4_COMMANDERS,
+            main: decks::KATARA_4_MAIN,
+        },
+        // Seat 2323: Hammerhead, Maggia Boss's EDHREC average deck. `--pod-decks 2323`.
+        PodDeck {
+            name: "Hammerhead, Maggia Boss (B)",
+            commanders: decks::HAMMERHEAD_COMMANDERS,
+            main: decks::HAMMERHEAD_MAIN,
+        },
+        // Seat 2324: Leela, Sevateem Warrior's EDHREC average deck. `--pod-decks 2324`.
+        PodDeck {
+            name: "Leela, Sevateem Warrior (G)",
+            commanders: decks::LEELA_COMMANDERS,
+            main: decks::LEELA_MAIN,
+        },
+        // Seat 2325: Winter Soldier, Bucky Barnes's EDHREC average deck. `--pod-decks 2325`.
+        PodDeck {
+            name: "Winter Soldier, Bucky Barnes (W)",
+            commanders: decks::WINTER_SOLDIER_COMMANDERS,
+            main: decks::WINTER_SOLDIER_MAIN,
+        },
+        // Seat 2326: Gandalf, Spark Starter's EDHREC average deck. `--pod-decks 2326`.
+        PodDeck {
+            name: "Gandalf, Spark Starter (R)",
+            commanders: decks::GANDALF_6_COMMANDERS,
+            main: decks::GANDALF_6_MAIN,
+        },
+        // Seat 2327: Nyssa of Traken's EDHREC average deck. `--pod-decks 2327`.
+        PodDeck {
+            name: "Nyssa of Traken (U)",
+            commanders: decks::NYSSA_OF_TRAKEN_COMMANDERS,
+            main: decks::NYSSA_OF_TRAKEN_MAIN,
+        },
+        // Seat 2328: Peri Brown's EDHREC average deck. `--pod-decks 2328`.
+        PodDeck {
+            name: "Peri Brown (W)",
+            commanders: decks::PERI_BROWN_COMMANDERS,
+            main: decks::PERI_BROWN_MAIN,
+        },
+        // Seat 2329: Ellyn Harbreeze, Busybody and Shameless Charlatan's EDHREC average deck. `--pod-decks 2329`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Shameless Charlatan (WU)",
+            commanders: decks::ELLYN_HARBREEZE_2_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_2_MAIN,
+        },
     ]
 }
 
@@ -18450,6 +18570,26 @@ mod tests {
             ("W'Kabi, Shield of the Nation", &[0x1319]),
             ("The Frightful Four", &[0x131A]),
             ("Queen Mother Ramonda", &[0x131B]),
+            ("Hapatra, the Desert Frost", &[0x131C]),
+            ("Helmut Zemo, Mastermind", &[0x131D]),
+            ("Nardole, Resourceful Cyborg", &[0x131E]),
+            ("Prava of the Steel Legion", &[0x131F]),
+            ("Landroval, Horizon Witness", &[0x1320]),
+            ("Flash Thompson, Spider-Fan", &[0x1321]),
+            ("Myojin of Night's Reach", &[0x1322]),
+            ("Ruric Thar, Magecrusher", &[0x1323]),
+            ("Appa, Aang's Companion", &[0x1324]),
+            ("Rashka the Slayer", &[0x1325]),
+            ("Zhang Liao, Hero of Hefei", &[0x1326]),
+            ("Black Tom Cassidy", &[0x1327]),
+            ("Katara, Heroic Healer", &[0x1328]),
+            ("Hammerhead, Maggia Boss", &[0x1329]),
+            ("Leela, Sevateem Warrior", &[0x132A]),
+            ("Winter Soldier, Bucky Barnes", &[0x132B]),
+            ("Gandalf, Spark Starter", &[0x132C]),
+            ("Nyssa of Traken", &[0x132D]),
+            ("Peri Brown", &[0x132E]),
+            ("Ellyn Harbreeze, Busybody and Shameless Charlatan", &[0x132F]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
