@@ -14772,6 +14772,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NAMORA_COMMANDERS,
             main: decks::NAMORA_MAIN,
         },
+        // Seat 2387: Spider-Slayer, Hatred Honed's EDHREC average deck. `--pod-decks 2387`.
+        PodDeck {
+            name: "Spider-Slayer, Hatred Honed (C)",
+            commanders: decks::SPIDER_SLAYER_COMMANDERS,
+            main: decks::SPIDER_SLAYER_MAIN,
+        },
+        // Seat 2388: Moku, Meandering Drummer's EDHREC average deck. `--pod-decks 2388`.
+        PodDeck {
+            name: "Moku, Meandering Drummer (R)",
+            commanders: decks::MOKU_COMMANDERS,
+            main: decks::MOKU_MAIN,
+        },
+        // Seat 2389: Pang Tong, "Young Phoenix"'s EDHREC average deck. `--pod-decks 2389`.
+        PodDeck {
+            name: "Pang Tong, \"Young Phoenix\" (W)",
+            commanders: decks::PANG_TONG_COMMANDERS,
+            main: decks::PANG_TONG_MAIN,
+        },
+        // Seat 2390: Barbara Wright's EDHREC average deck. `--pod-decks 2390`.
+        PodDeck {
+            name: "Barbara Wright (W)",
+            commanders: decks::BARBARA_WRIGHT_COMMANDERS,
+            main: decks::BARBARA_WRIGHT_MAIN,
+        },
+        // Seat 2391: Iron Fist, Hero for Hire's EDHREC average deck. `--pod-decks 2391`.
+        PodDeck {
+            name: "Iron Fist, Hero for Hire (R)",
+            commanders: decks::IRON_FIST_COMMANDERS,
+            main: decks::IRON_FIST_MAIN,
+        },
+        // Seat 2392: Bofur, Reliable Guardian's EDHREC average deck. `--pod-decks 2392`.
+        PodDeck {
+            name: "Bofur, Reliable Guardian (W)",
+            commanders: decks::BOFUR_COMMANDERS,
+            main: decks::BOFUR_MAIN,
+        },
+        // Seat 2393: The Wondrous Wasp's EDHREC average deck. `--pod-decks 2393`.
+        PodDeck {
+            name: "The Wondrous Wasp (U)",
+            commanders: decks::THE_WONDROUS_WASP_COMMANDERS,
+            main: decks::THE_WONDROUS_WASP_MAIN,
+        },
+        // Seat 2394: Victor Timely, Wily Tycoon's EDHREC average deck. `--pod-decks 2394`.
+        PodDeck {
+            name: "Victor Timely, Wily Tycoon (U)",
+            commanders: decks::VICTOR_TIMELY_COMMANDERS,
+            main: decks::VICTOR_TIMELY_MAIN,
+        },
     ]
 }
 
@@ -18989,6 +19037,14 @@ mod tests {
             ("Rescue, Pepper Potts", &[0x1366]),
             ("Jack of Hearts, Volatile Hero", &[0x1367]),
             ("Namora, the Sea Queen", &[0x1368]),
+            ("Spider-Slayer, Hatred Honed", &[0x1369]),
+            ("Moku, Meandering Drummer", &[0x136A]),
+            ("Pang Tong, \"Young Phoenix\"", &[0x136B]),
+            ("Barbara Wright", &[0x136C]),
+            ("Iron Fist, Hero for Hire", &[0x136D]),
+            ("Bofur, Reliable Guardian", &[0x136E]),
+            ("The Wondrous Wasp", &[0x136F]),
+            ("Victor Timely, Wily Tycoon", &[0x1370]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
