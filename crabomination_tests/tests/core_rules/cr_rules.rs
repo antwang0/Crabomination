@@ -8480,6 +8480,45 @@ fn cr_119_5_lichs_mirror_reset_is_a_gain() {
     assert_eq!(g.players[0].life, -20, "the reset's gain of 20 became a loss of 20");
 }
 
+/// CR 400.7 — Lich's Mirror shuffles its controller's permanents into the
+/// library as new objects: a creature cast kicked (an offspring payment)
+/// forgets it. The reset kept `kicked` on the library card (pod seed 8032).
+#[test]
+fn cr_400_7_lichs_mirror_reset_forgets_spell_choices() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lichs_mirror());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().kicked = true;
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    let card = g.players[0].library.iter().chain(g.players[0].hand.iter()).find(|c| c.id == bear).expect("shuffled in");
+    assert!(!card.kicked);
+}
+
+/// CR 704.5m — Lich's Mirror's reset moves its controller's permanents
+/// through the zone-change funnel: an opponent's Aura on one of them is left
+/// attached to nothing and goes to its owner's graveyard. The reset lifted
+/// the land straight into the library and left Wild Growth on it (pod seed
+/// 8042).
+#[test]
+fn cr_704_5m_lichs_mirror_reset_drops_an_opponents_aura() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lichs_mirror());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let growth = g.add_card_to_battlefield(1, catalog::wild_growth());
+    g.battlefield_find_mut(growth).unwrap().attached_to = Some(forest);
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(growth).is_none());
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == growth));
+}
+
 /// CR 701.10d / 119.9 — doubling a life total is a gain of the total; under
 /// an opponent's Tainted Remedy it is a loss of the total, and the event says
 /// so. DoubleLife emitted a gain only (none at all once the gain converted).

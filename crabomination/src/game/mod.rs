@@ -22350,9 +22350,9 @@ impl GameState {
     /// draw seven, life becomes 20). Returns true when a replacement applied;
     /// a single application covers every loss SBA that fired at once. The
     /// Mirror itself is among the shuffled permanents, so it is consumed.
-    pub(crate) fn apply_loss_reset(&mut self, p: usize) -> bool {
+    pub(crate) fn apply_loss_reset(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
         use crate::effect::StaticEffect;
-        
+
         let has = self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition
@@ -22371,22 +22371,10 @@ impl GameState {
         let mut gy: Vec<crate::card::CardInstance> = std::mem::take(&mut *self.players[p].graveyard);
         self.commander_zone_redirect_all(&mut gy, Zone::Graveyard, Zone::Library);
         into_library.extend(gy);
-        // Tokens cease to exist rather than joining the library (CR 111.7).
-        let owned: Vec<CardId> =
-            self.battlefield.iter().filter(|c| c.owner == p).map(|c| c.id).collect();
-        let mut from_bf = Vec::new();
-        for id in owned {
-            if let Some(idx) = self.battlefield.iter().position(|c| c.id == id) {
-                let card = self.battlefield.remove(idx);
-                if !card.is_token {
-                    from_bf.push(card);
-                }
-            }
-        }
-        self.commander_zone_redirect_all(&mut from_bf, Zone::Battlefield, Zone::Library);
-        into_library.extend(from_bf);
-        // CR 122.2 — counters cease to exist on the zone change.
+        // CR 122.2 / 400.7 — counters and a spell's choices don't follow a
+        // card into the library.
         for card in &mut into_library {
+            card.forget_spell_choices();
             card.counters.clear();
             card.keyword_counters.clear();
             card.controller = card.owner;
@@ -22395,18 +22383,30 @@ impl GameState {
             card.attached_to = None;
         }
         self.players[p].library.extend(into_library);
-        let mut events = Vec::new();
-        self.shuffle_library(p, &mut events);
+        // The permanents leave through the zone-change funnel, so leave
+        // triggers fire, attachments fall off (an opponent's Wild Growth on
+        // one of them, pod seed 8042), the commander replacement is offered
+        // and tokens cease to exist (CR 111.7). The shuffle below mixes them in.
+        let owned: Vec<CardId> = self.battlefield.iter().filter(|c| c.owner == p).map(|c| c.id).collect();
+        let ctx = crate::game::effects::EffectContext::for_ability(CardId(0), p, None);
+        let dest = crate::effect::ZoneDest::Library {
+            who: crate::effect::PlayerRef::You,
+            pos: crate::effect::LibraryPosition::Top,
+        };
+        for id in owned {
+            self.move_card_to(id, &dest, &ctx, events);
+        }
+        self.shuffle_library(p, events);
         // CR 704.7 — the replacement SPENDS the loss that called it, an armed
         // CR 104.3c one included, and it is spent here rather than at the SBA
         // site: the seven draws below can arm a NEW one (a card pool smaller
         // than seven), and clearing the flag after them would erase that.
         self.players[p].pending_deck_loss = false;
-        self.draw_n(p, 7, &mut events);
+        self.draw_n(p, 7, events);
         // CR 119.5 — "your life total becomes 20" is a gain of the
         // difference, through the CR 119 funnel (doublers, can't-gain).
         let delta = 20 - self.effective_life(p);
-        self.adjust_life_emit(p, delta, &mut events);
+        self.adjust_life_emit(p, delta, events);
         self.players[p].poison_counters = 0;
         retain_cold!(self.commander_damage, |(victim, _), _| *victim != p);
         true

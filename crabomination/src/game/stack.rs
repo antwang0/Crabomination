@@ -8798,7 +8798,7 @@ impl GameState {
             // library, so the armed deck-out is spent with it (inside
             // `apply_loss_reset`, before its own draws).
             if lost && !self.player_cant_lose_game(i) {
-                if self.apply_loss_reset(i) {
+                if self.apply_loss_reset(i, events) {
                     // ⚠ The armed deck-out is spent INSIDE the reset now,
                     // before its own seven draws — which can arm a fresh one
                     // off a card pool smaller than seven, and clearing the
