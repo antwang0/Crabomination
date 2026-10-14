@@ -15486,6 +15486,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VHAL_2_COMMANDERS,
             main: decks::VHAL_2_MAIN,
         },
+        // Seat 2506: Nephilim Epochal's EDHREC average deck. `--pod-decks 2506`.
+        PodDeck {
+            name: "Nephilim Epochal (WUBRG)",
+            commanders: decks::NEPHILIM_EPOCHAL_COMMANDERS,
+            main: decks::NEPHILIM_EPOCHAL_MAIN,
+        },
+        // Seat 2507: The Meep's EDHREC average deck. `--pod-decks 2507`.
+        PodDeck {
+            name: "The Meep (B)",
+            commanders: decks::THE_MEEP_COMMANDERS,
+            main: decks::THE_MEEP_MAIN,
+        },
+        // Seat 2508: Zagorka, Mother of Sanctum's EDHREC average deck. `--pod-decks 2508`.
+        PodDeck {
+            name: "Zagorka, Mother of Sanctum (URG)",
+            commanders: decks::ZAGORKA_COMMANDERS,
+            main: decks::ZAGORKA_MAIN,
+        },
+        // Seat 2509: Mai, Scornful Striker's EDHREC average deck. `--pod-decks 2509`.
+        PodDeck {
+            name: "Mai, Scornful Striker (B)",
+            commanders: decks::MAI_2_COMMANDERS,
+            main: decks::MAI_2_MAIN,
+        },
+        // Seat 2510: Don & Leo, Problem Solvers's EDHREC average deck. `--pod-decks 2510`.
+        PodDeck {
+            name: "Don & Leo, Problem Solvers (WU)",
+            commanders: decks::DON_LEO_COMMANDERS,
+            main: decks::DON_LEO_MAIN,
+        },
+        // Seat 2511: Ultimate Green Goblin's EDHREC average deck. `--pod-decks 2511`.
+        PodDeck {
+            name: "Ultimate Green Goblin (BR)",
+            commanders: decks::ULTIMATE_GREEN_GOBLIN_COMMANDERS,
+            main: decks::ULTIMATE_GREEN_GOBLIN_MAIN,
+        },
+        // Seat 2512: Speedball, New Warrior's EDHREC average deck. `--pod-decks 2512`.
+        PodDeck {
+            name: "Speedball, New Warrior (UR)",
+            commanders: decks::SPEEDBALL_COMMANDERS,
+            main: decks::SPEEDBALL_MAIN,
+        },
+        // Seat 2513: Kuroki, Thief of Talents's EDHREC average deck. `--pod-decks 2513`.
+        PodDeck {
+            name: "Kuroki, Thief of Talents (B)",
+            commanders: decks::KUROKI_COMMANDERS,
+            main: decks::KUROKI_MAIN,
+        },
+        // Seat 2514: Slobad, Iron Goblin's EDHREC average deck. `--pod-decks 2514`.
+        PodDeck {
+            name: "Slobad, Iron Goblin (R)",
+            commanders: decks::SLOBAD_2_COMMANDERS,
+            main: decks::SLOBAD_2_MAIN,
+        },
+        // Seat 2515: Neva, Stalked by Nightmares's EDHREC average deck. `--pod-decks 2515`.
+        PodDeck {
+            name: "Neva, Stalked by Nightmares (WB)",
+            commanders: decks::NEVA_COMMANDERS,
+            main: decks::NEVA_MAIN,
+        },
+        // Seat 2516: Loki, God of Mischief's EDHREC average deck. `--pod-decks 2516`.
+        PodDeck {
+            name: "Loki, God of Mischief (U)",
+            commanders: decks::LOKI_2_COMMANDERS,
+            main: decks::LOKI_2_MAIN,
+        },
+        // Seat 2517: Azula, Ruthless Firebender's EDHREC average deck. `--pod-decks 2517`.
+        PodDeck {
+            name: "Azula, Ruthless Firebender (B)",
+            commanders: decks::AZULA_2_COMMANDERS,
+            main: decks::AZULA_2_MAIN,
+        },
+        // Seat 2518: Flitwing, Lyev Detective's EDHREC average deck. `--pod-decks 2518`.
+        PodDeck {
+            name: "Flitwing, Lyev Detective (U)",
+            commanders: decks::FLITWING_COMMANDERS,
+            main: decks::FLITWING_MAIN,
+        },
+        // Seat 2519: Venser, Visionary Traveler's EDHREC average deck. `--pod-decks 2519`.
+        PodDeck {
+            name: "Venser, Visionary Traveler (WU)",
+            commanders: decks::VENSER_3_COMMANDERS,
+            main: decks::VENSER_3_MAIN,
+        },
+        // Seat 2520: Tuknir Deathlock's EDHREC average deck. `--pod-decks 2520`.
+        PodDeck {
+            name: "Tuknir Deathlock (RG)",
+            commanders: decks::TUKNIR_DEATHLOCK_COMMANDERS,
+            main: decks::TUKNIR_DEATHLOCK_MAIN,
+        },
     ]
 }
 
@@ -19824,6 +19914,21 @@ mod tests {
             ("Baird, Steward of Argive", &[0x13DD]),
             ("Vhal, Candlekeep Researcher", &[0x13DE]),
             ("Vhal, Candlekeep Researcher and Master Chef", &[0x13DF]),
+            ("Nephilim Epochal", &[0x13E0]),
+            ("The Meep", &[0x13E1]),
+            ("Zagorka, Mother of Sanctum", &[0x13E2]),
+            ("Mai, Scornful Striker", &[0x13E3]),
+            ("Don & Leo, Problem Solvers", &[0x13E4]),
+            ("Ultimate Green Goblin", &[0x13E5]),
+            ("Speedball, New Warrior", &[0x13E6]),
+            ("Kuroki, Thief of Talents", &[0x13E7]),
+            ("Slobad, Iron Goblin", &[0x13E8]),
+            ("Neva, Stalked by Nightmares", &[0x13E9]),
+            ("Loki, God of Mischief", &[0x13EA]),
+            ("Azula, Ruthless Firebender", &[0x13EB]),
+            ("Flitwing, Lyev Detective", &[0x13EC]),
+            ("Venser, Visionary Traveler", &[0x13ED]),
+            ("Tuknir Deathlock", &[0x13EE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

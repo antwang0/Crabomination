@@ -791103,5 +791103,713 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=891910&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/151627?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Nivea, Beloved Battlemage": {
+    "object": "card",
+    "id": "9a845742-a20d-4332-aaa8-d6cd2d5f482b",
+    "oracle_id": "2a5376aa-8996-476e-9ee8-1426b0944091",
+    "multiverse_ids": [],
+    "tcgplayer_id": 709753,
+    "name": "Nivea, Beloved Battlemage",
+    "lang": "en",
+    "released_at": "2026-10-19",
+    "uri": "https://api.scryfall.com/cards/9a845742-a20d-4332-aaa8-d6cd2d5f482b",
+    "scryfall_uri": "https://scryfall.com/card/mbc/3/nivea-beloved-battlemage?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-03T12:06:39Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.jpg?1785758799",
+      "normal": "https://cards.scryfall.io/normal/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.jpg?1785758799",
+      "large": "https://cards.scryfall.io/large/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.jpg?1785758799",
+      "png": "https://cards.scryfall.io/png/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.png?1785758799",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.jpg?1785758799",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.jpg?1785758799",
+      "thumb": "https://cards.scryfall.io/thumb/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.webp?1785758799",
+      "grid": "https://cards.scryfall.io/grid/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.webp?1785758799",
+      "display": "https://cards.scryfall.io/display/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.webp?1785758799",
+      "art": "https://cards.scryfall.io/art/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.webp?1785758799",
+      "crop": "https://cards.scryfall.io/crop/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.webp?1785758799",
+      "jpeg": "https://cards.scryfall.io/normal/front/9/a/9a845742-a20d-4332-aaa8-d6cd2d5f482b.jpg?1785758799"
+    },
+    "mana_cost": "{2}{W}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Wizard Warrior",
+    "oracle_text": "Whenever a creature you control becomes blocked, you may untap it and remove it from combat.\n{5}{W}{W}{W}, Sacrifice Nivea: Create an Akroma, Angel of Wrath token. (She's a {5}{W}{W}{W} legendary 6/6 Angel creature with flying, first strike, vigilance, trample, haste, and protection from black and from red.)",
+    "power": "3",
+    "toughness": "1",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "70208c1f-56d4-4509-9d55-71e039236aa4",
+        "component": "combo_piece",
+        "name": "Akroma, Angel of Wrath",
+        "type_line": "Legendary Creature — Angel",
+        "uri": "https://api.scryfall.com/cards/70208c1f-56d4-4509-9d55-71e039236aa4"
+      },
+      {
+        "object": "related_card",
+        "id": "9a845742-a20d-4332-aaa8-d6cd2d5f482b",
+        "component": "combo_piece",
+        "name": "Nivea, Beloved Battlemage",
+        "type_line": "Legendary Creature — Human Wizard Warrior",
+        "uri": "https://api.scryfall.com/cards/9a845742-a20d-4332-aaa8-d6cd2d5f482b"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set": "mbc",
+    "set_name": "Mystery Booster Commander Edition",
+    "set_type": "draft_innovation",
+    "set_uri": "https://api.scryfall.com/sets/a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ambc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/mbc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/9a845742-a20d-4332-aaa8-d6cd2d5f482b/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A2a5376aa-8996-476e-9ee8-1426b0944091&unique=prints",
+    "collector_number": "3",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Winona Nelson",
+    "artist_ids": [
+      "e45fe8d3-75d6-42c9-a2df-e945ad81ea27"
+    ],
+    "illustration_id": "a14534e0-e998-4454-aea5-c4b7b4ec1845",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 24182,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DNivea%252C%2BBeloved%2BBattlemage",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DNivea%252C%2BBeloved%2BBattlemage",
+      "edhrec": "https://edhrec.com/route/?cc=Nivea%2C+Beloved+Battlemage"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709753%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=Nivea%2C+Beloved+Battlemage&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Nivea%2C+Beloved+Battlemage&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Sifa Grent": {
+    "object": "card",
+    "id": "f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5",
+    "oracle_id": "9a3d148c-e1bb-4e7a-a588-00a24041ebf7",
+    "multiverse_ids": [],
+    "tcgplayer_id": 709811,
+    "name": "Sifa Grent",
+    "lang": "en",
+    "released_at": "2026-10-19",
+    "uri": "https://api.scryfall.com/cards/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5",
+    "scryfall_uri": "https://scryfall.com/card/mbc/51/sifa-grent?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-03T13:09:12Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.jpg?1785762552",
+      "normal": "https://cards.scryfall.io/normal/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.jpg?1785762552",
+      "large": "https://cards.scryfall.io/large/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.jpg?1785762552",
+      "png": "https://cards.scryfall.io/png/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.png?1785762552",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.jpg?1785762552",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.jpg?1785762552",
+      "thumb": "https://cards.scryfall.io/thumb/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.webp?1785762552",
+      "grid": "https://cards.scryfall.io/grid/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.webp?1785762552",
+      "display": "https://cards.scryfall.io/display/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.webp?1785762552",
+      "art": "https://cards.scryfall.io/art/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.webp?1785762552",
+      "crop": "https://cards.scryfall.io/crop/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.webp?1785762552",
+      "jpeg": "https://cards.scryfall.io/normal/front/f/8/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5.jpg?1785762552"
+    },
+    "mana_cost": "{3}{B}{R}",
+    "cmc": 5.0,
+    "type_line": "Legendary Planeswalker — Sifa",
+    "oracle_text": "Whenever a creature dies, target opponent loses 1 life and you gain 1 life.\n+1: Goad up to two target creatures.\n−6: Each opponent exiles the top two cards of their library. Until end of turn, you may play those cards without paying their mana costs.\nSifa Grent can be your commander.",
+    "loyalty": "4",
+    "colors": [
+      "B",
+      "R"
+    ],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "keywords": [
+      "Goad"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set": "mbc",
+    "set_name": "Mystery Booster Commander Edition",
+    "set_type": "draft_innovation",
+    "set_uri": "https://api.scryfall.com/sets/a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ambc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/mbc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/f8724ac3-45f2-4f4e-91c4-04c8d1c4eed5/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A9a3d148c-e1bb-4e7a-a588-00a24041ebf7&unique=prints",
+    "collector_number": "51",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Alex Horley-Orlandelli",
+    "artist_ids": [
+      "1631a2ad-bf03-4ab9-b86c-60da982d58a1"
+    ],
+    "illustration_id": "08fa7462-2308-4e29-b385-af8cbb86320b",
+    "border_color": "black",
+    "frame": "2015",
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 25421,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DSifa%2BGrent",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DSifa%2BGrent",
+      "edhrec": "https://edhrec.com/route/?cc=Sifa+Grent"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709811%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=Sifa+Grent&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Sifa+Grent&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Gustha Ebbasdotter": {
+    "object": "card",
+    "id": "9ff02aab-9532-445e-915c-3ccf71147c76",
+    "oracle_id": "a0a8c04e-3ce7-4945-a6af-7e40a990c82c",
+    "multiverse_ids": [],
+    "tcgplayer_id": 709762,
+    "name": "Gustha Ebbasdotter",
+    "lang": "en",
+    "released_at": "2026-10-19",
+    "uri": "https://api.scryfall.com/cards/9ff02aab-9532-445e-915c-3ccf71147c76",
+    "scryfall_uri": "https://scryfall.com/card/mbc/10/gustha-ebbasdotter?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-03T12:07:39Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.jpg?1785758859",
+      "normal": "https://cards.scryfall.io/normal/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.jpg?1785758859",
+      "large": "https://cards.scryfall.io/large/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.jpg?1785758859",
+      "png": "https://cards.scryfall.io/png/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.png?1785758859",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.jpg?1785758859",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.jpg?1785758859",
+      "thumb": "https://cards.scryfall.io/thumb/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.webp?1785758859",
+      "grid": "https://cards.scryfall.io/grid/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.webp?1785758859",
+      "display": "https://cards.scryfall.io/display/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.webp?1785758859",
+      "art": "https://cards.scryfall.io/art/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.webp?1785758859",
+      "crop": "https://cards.scryfall.io/crop/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.webp?1785758859",
+      "jpeg": "https://cards.scryfall.io/normal/front/9/f/9ff02aab-9532-445e-915c-3ccf71147c76.jpg?1785758859"
+    },
+    "mana_cost": "{3}{U}{U}",
+    "cmc": 5.0,
+    "type_line": "Legendary Creature — Human Wizard",
+    "oracle_text": "Protection from red\nWhenever you cast your first spell during each opponent's turn, draw three cards, then put two cards from your hand on top of your library in any order.",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Protection"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set": "mbc",
+    "set_name": "Mystery Booster Commander Edition",
+    "set_type": "draft_innovation",
+    "set_uri": "https://api.scryfall.com/sets/a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ambc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/mbc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/9ff02aab-9532-445e-915c-3ccf71147c76/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Aa0a8c04e-3ce7-4945-a6af-7e40a990c82c&unique=prints",
+    "collector_number": "10",
+    "digital": false,
+    "rarity": "rare",
+    "flavor_text": "\"Turn your studies into uncompromising power. Only then will you be a royal mage.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Karl Kopinski",
+    "artist_ids": [
+      "0fad2c48-a56e-4a0b-b512-224f6f238f20"
+    ],
+    "illustration_id": "95c0877e-2f0d-4f0a-9a63-81f7c88f063d",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 26387,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DGustha%2BEbbasdotter",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DGustha%2BEbbasdotter",
+      "edhrec": "https://edhrec.com/route/?cc=Gustha+Ebbasdotter"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709762%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=Gustha+Ebbasdotter&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Gustha+Ebbasdotter&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Dyfed, the Guiding Hand": {
+    "object": "card",
+    "id": "067f5bb8-eff0-4b6f-8b2a-77c902f6584e",
+    "oracle_id": "ab23a9e4-2d62-4b01-9d52-593de40811b0",
+    "multiverse_ids": [],
+    "tcgplayer_id": 709759,
+    "name": "Dyfed, the Guiding Hand",
+    "lang": "en",
+    "released_at": "2026-10-19",
+    "uri": "https://api.scryfall.com/cards/067f5bb8-eff0-4b6f-8b2a-77c902f6584e",
+    "scryfall_uri": "https://scryfall.com/card/mbc/7/dyfed-the-guiding-hand?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-03T16:15:15Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.jpg?1785773715",
+      "normal": "https://cards.scryfall.io/normal/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.jpg?1785773715",
+      "large": "https://cards.scryfall.io/large/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.jpg?1785773715",
+      "png": "https://cards.scryfall.io/png/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.png?1785773715",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.jpg?1785773715",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.jpg?1785773715",
+      "thumb": "https://cards.scryfall.io/thumb/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.webp?1785773715",
+      "grid": "https://cards.scryfall.io/grid/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.webp?1785773715",
+      "display": "https://cards.scryfall.io/display/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.webp?1785773715",
+      "art": "https://cards.scryfall.io/art/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.webp?1785773715",
+      "crop": "https://cards.scryfall.io/crop/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.webp?1785773715",
+      "jpeg": "https://cards.scryfall.io/normal/front/0/6/067f5bb8-eff0-4b6f-8b2a-77c902f6584e.jpg?1785773715"
+    },
+    "mana_cost": "{3}{U}{U}",
+    "cmc": 5.0,
+    "type_line": "Legendary Planeswalker — Dyfed",
+    "oracle_text": "+1: Create two tapped Powerstone tokens. (They're artifacts with \"{T}: Add {C}. This mana can't be spent to cast a nonartifact spell.\")\n−X: Untap X target artifacts.\n−6: Search your library for an artifact card, put it onto the battlefield, then shuffle.\nDyfed, the Guiding Hand can be your commander.",
+    "loyalty": "4",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [],
+    "produced_mana": [
+      "C"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "d45fe4b6-aeaf-4f84-b660-c7b482ed8512",
+        "component": "token",
+        "name": "Powerstone",
+        "type_line": "Token Artifact — Powerstone",
+        "uri": "https://api.scryfall.com/cards/d45fe4b6-aeaf-4f84-b660-c7b482ed8512"
+      },
+      {
+        "object": "related_card",
+        "id": "067f5bb8-eff0-4b6f-8b2a-77c902f6584e",
+        "component": "combo_piece",
+        "name": "Dyfed, the Guiding Hand",
+        "type_line": "Legendary Planeswalker — Dyfed",
+        "uri": "https://api.scryfall.com/cards/067f5bb8-eff0-4b6f-8b2a-77c902f6584e"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set": "mbc",
+    "set_name": "Mystery Booster Commander Edition",
+    "set_type": "draft_innovation",
+    "set_uri": "https://api.scryfall.com/sets/a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ambc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/mbc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/067f5bb8-eff0-4b6f-8b2a-77c902f6584e/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Aab23a9e4-2d62-4b01-9d52-593de40811b0&unique=prints",
+    "collector_number": "7",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Alix Branwyn",
+    "artist_ids": [
+      "4f0a0e38-d74c-4e0b-ad91-fecccb1afa5d"
+    ],
+    "illustration_id": "b20390f2-c7ad-4d4a-9a30-d246d307520b",
+    "border_color": "black",
+    "frame": "2015",
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 26242,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DDyfed%252C%2Bthe%2BGuiding%2BHand",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DDyfed%252C%2Bthe%2BGuiding%2BHand",
+      "edhrec": "https://edhrec.com/route/?cc=Dyfed%2C+the+Guiding+Hand"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709759%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=Dyfed%2C+the+Guiding+Hand&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Dyfed%2C+the+Guiding+Hand&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Boss Uramon, Shadow's Reach": {
+    "object": "card",
+    "id": "17b3e50c-c878-4131-a1ff-250d62699f4f",
+    "oracle_id": "92eeedc6-a331-445f-af56-c91dac69412b",
+    "multiverse_ids": [],
+    "tcgplayer_id": 709767,
+    "name": "Boss Uramon, Shadow's Reach",
+    "lang": "en",
+    "released_at": "2026-10-19",
+    "uri": "https://api.scryfall.com/cards/17b3e50c-c878-4131-a1ff-250d62699f4f",
+    "scryfall_uri": "https://scryfall.com/card/mbc/13/boss-uramon-shadows-reach?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-03T12:07:54Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.jpg?1785758874",
+      "normal": "https://cards.scryfall.io/normal/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.jpg?1785758874",
+      "large": "https://cards.scryfall.io/large/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.jpg?1785758874",
+      "png": "https://cards.scryfall.io/png/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.png?1785758874",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.jpg?1785758874",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.jpg?1785758874",
+      "thumb": "https://cards.scryfall.io/thumb/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.webp?1785758874",
+      "grid": "https://cards.scryfall.io/grid/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.webp?1785758874",
+      "display": "https://cards.scryfall.io/display/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.webp?1785758874",
+      "art": "https://cards.scryfall.io/art/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.webp?1785758874",
+      "crop": "https://cards.scryfall.io/crop/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.webp?1785758874",
+      "jpeg": "https://cards.scryfall.io/normal/front/1/7/17b3e50c-c878-4131-a1ff-250d62699f4f.jpg?1785758874"
+    },
+    "mana_cost": "{3}{B}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Rogue",
+    "oracle_text": "Shadow (This creature can block or be blocked by only creatures with shadow.)\nAttacking Ninjas and Rogues you control have deathtouch.\nWhenever one or more Ninjas and/or Rogues you control deal combat damage to a player, create a 1/1 black Rat Rogue creature token.",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Shadow"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "695f72ea-13e6-40ab-afc7-55657701c82d",
+        "component": "token",
+        "name": "Rat Rogue",
+        "type_line": "Token Creature — Rat Rogue",
+        "uri": "https://api.scryfall.com/cards/695f72ea-13e6-40ab-afc7-55657701c82d"
+      },
+      {
+        "object": "related_card",
+        "id": "17b3e50c-c878-4131-a1ff-250d62699f4f",
+        "component": "combo_piece",
+        "name": "Boss Uramon, Shadow's Reach",
+        "type_line": "Legendary Creature — Human Rogue",
+        "uri": "https://api.scryfall.com/cards/17b3e50c-c878-4131-a1ff-250d62699f4f"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set": "mbc",
+    "set_name": "Mystery Booster Commander Edition",
+    "set_type": "draft_innovation",
+    "set_uri": "https://api.scryfall.com/sets/a4135564-9f37-4aaf-963a-90666f843e0d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ambc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/mbc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/17b3e50c-c878-4131-a1ff-250d62699f4f/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A92eeedc6-a331-445f-af56-c91dac69412b&unique=prints",
+    "collector_number": "13",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Daren Bader",
+    "artist_ids": [
+      "7da1a585-c875-45e4-b322-5da9e8e1f651"
+    ],
+    "illustration_id": "b71ef0dc-51f2-40d5-8939-cb221255a4fa",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 24551,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DBoss%2BUramon%252C%2BShadow%2527s%2BReach",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DBoss%2BUramon%252C%2BShadow%2527s%2BReach",
+      "edhrec": "https://edhrec.com/route/?cc=Boss+Uramon%2C+Shadow%27s+Reach"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F709767%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=Boss+Uramon%2C+Shadow%27s+Reach&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Boss+Uramon%2C+Shadow%27s+Reach&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }
