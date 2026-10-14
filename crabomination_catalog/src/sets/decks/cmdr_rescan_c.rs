@@ -554,3 +554,34 @@ pub fn boros_strike_captain() -> CardDefinition {
         )
     }
 }
+
+/// Ayesha Tanaka, Armorer — {3}{W}{U} legendary 2/4 Human Artificer. Whenever
+/// she attacks, look at the top four: put any number of artifact cards with
+/// mana value up to her power onto the battlefield tapped, the rest on the
+/// bottom in a random order. She can't be blocked while the defending player
+/// controls three or more artifacts.
+pub fn ayesha_tanaka_armorer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::LookTopPutMatchingOntoBattlefield {
+            count: Value::Const(4),
+            filter: R::Artifact.and(R::ManaValueAtMostSourcePower),
+            then: None,
+            max: Some(4),
+            tapped: true,
+            exile_rest: false,
+            rest_to_graveyard: false,
+            mandatory: false,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Ayesha Tanaka can't be blocked as long as defending player controls three or more artifacts.",
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Unblockable,
+                condition: Predicate::ValueAtLeast(
+                    Value::PermanentCountControlledByMatching(PlayerRef::DefendingPlayer, R::Artifact),
+                    Value::Const(3),
+                ),
+            },
+        }],
+        ..legend("Ayesha Tanaka, Armorer", cost(&[generic(3), w(), u()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 4)
+    }
+}

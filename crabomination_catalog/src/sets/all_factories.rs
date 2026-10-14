@@ -4607,6 +4607,7 @@ static DECKS: &[Factory] = &[
     super::decks::kuroki_thief_of_talents,
     super::decks::pick_up_the_pace,
     super::decks::boros_strike_captain,
+    super::decks::ayesha_tanaka_armorer,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

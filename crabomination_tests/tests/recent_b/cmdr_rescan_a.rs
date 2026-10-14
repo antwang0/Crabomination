@@ -941,3 +941,19 @@ fn boros_strike_captain_card_wakes_on_three_attacker_turns() {
     declare(&mut g, vec![(captain, 1), (a, 1), (b, 1)]);
     assert!(live(&g), "woken by a later three-attacker turn");
 }
+
+/// Ayesha Tanaka, Armorer deploys artifacts up to her power from the top four
+/// — a 2-drop artifact comes, a 3-drop doesn't.
+#[test]
+fn ayesha_deploys_artifacts_up_to_her_power() {
+    let mut g = pod(2);
+    let ring = g.add_card_to_library(0, catalog::sol_ring());
+    let mind = g.add_card_to_library(0, catalog::mind_stone());
+    let big = g.add_card_to_library(0, catalog::marut());
+    g.add_card_to_library(0, catalog::island());
+    let ayesha = ready(&mut g, 0, catalog::ayesha_tanaka_armorer());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![ring, mind])]));
+    declare(&mut g, vec![(ayesha, 1)]);
+    assert!(g.battlefield_find(ring).is_some() && g.battlefield_find(mind).is_some());
+    assert!(g.battlefield_find(big).is_none());
+}
