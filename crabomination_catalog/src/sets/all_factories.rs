@@ -1424,6 +1424,7 @@ static DECKS: &[Factory] = &[
     super::decks::mudslide,
     super::decks::string_of_disappearances,
     super::decks::asgardian_inspiration,
+    super::decks::blessing_of_frost,
     // cmdr_rank5k_a (session 01KXJ5zX)
     super::decks::inundate,
     super::decks::luminous_bonds,

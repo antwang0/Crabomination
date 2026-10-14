@@ -193,3 +193,31 @@ fn asgardian_inspiration_returns_on_noncombat_damage_to_an_opponent() {
         assert_eq!(g.players[0].hand.iter().any(|c| c.id == spell), back, "{target:?}");
     }
 }
+
+/// Blessing of Frost cast off four snow lands: four counters on the lone
+/// bear, which then has power 4+ and draws a card.
+#[test]
+fn blessing_of_frost_counts_snow_mana_spent() {
+    for snow in [true, false] {
+        let mut g = pod(2);
+        g.add_card_to_library(0, catalog::island());
+        for _ in 0..4 {
+            let land = if snow { catalog::snow_covered_forest() } else { catalog::forest() };
+            g.add_card_to_battlefield(0, land);
+        }
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, catalog::blessing_of_frost());
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("castable");
+        drain_stack(&mut g);
+        let power = g.computed_permanent(bear).unwrap().power;
+        assert_eq!(power, if snow { 6 } else { 2 }, "snow={snow}");
+        assert_eq!(g.players[0].hand.len(), usize::from(snow), "snow={snow}");
+    }
+}

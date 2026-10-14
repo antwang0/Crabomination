@@ -2,7 +2,7 @@
 //! 2026-10-14 scan), eleventh file. Tests in `tests/recent_b/cmdr_rank4k_k.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
     MayPlayDuration,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Value,
@@ -10,7 +10,7 @@ use crate::card::{
 use crate::game::types::TurnStep;
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{ChainCopyCost, Duration, Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{ManaCost, b, cost, generic, r, u};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u};
 
 fn creature(
     name: &'static str,
@@ -201,6 +201,35 @@ pub fn asgardian_inspiration() -> CardDefinition {
                 else_: None,
             },
         }],
+        ..Default::default()
+    }
+}
+
+// ── Kodama of the North Tree ─────────────────────────────────────────────────
+
+/// Blessing of Frost — {3}{G} snow sorcery. Distribute X +1/+1 counters among
+/// any number of creatures you control, where X is the amount of {S} spent to
+/// cast it. Then draw a card for each creature you control with power 4 or
+/// greater.
+pub fn blessing_of_frost() -> CardDefinition {
+    CardDefinition {
+        name: "Blessing of Frost",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DistributeCountersAmong {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                total: Value::SnowManaSpentToCastSource,
+                counter: CounterType::PlusOnePlusOne,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)),
+                ))),
+            },
+        ]),
         ..Default::default()
     }
 }
