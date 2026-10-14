@@ -108,7 +108,21 @@ fn walk(v: &Value, out: &mut ColorSet) {
             if m.get("description").and_then(Value::as_str).is_some_and(is_reminder_only_cost) {
                 return;
             }
+            // CR 305.6 — a land with a basic land type has that type's mana
+            // ability intrinsically; the engine prints it as an activated
+            // ability. On a card it's `basic_land_identity`'s; on a token the
+            // card makes (Staff of Titania's Forest Dryad) it's no symbol on
+            // the card at all.
+            let intrinsic = basic_colors_of(m);
             for (tag, p) in m {
+                if tag == "activated_abilities" && !intrinsic.is_empty() {
+                    for ab in p.as_array().into_iter().flatten() {
+                        if !is_intrinsic_land_mana(ab, &intrinsic) {
+                            walk(ab, out);
+                        }
+                    }
+                    continue;
+                }
                 match tag.as_str() {
                     // ManaSymbol — the colored halves of a cost pip.
                     "Colored" | "Phyrexian" => color_of(p, out),
@@ -186,6 +200,40 @@ fn walk(v: &Value, out: &mut ColorSet) {
         }
         _ => {}
     }
+}
+
+/// The basic land types' colors of a serialized land definition (card or
+/// token); empty for anything else.
+fn basic_colors_of(m: &serde_json::Map<String, Value>) -> Vec<&'static str> {
+    let is_land = m.get("card_types").and_then(Value::as_array).is_some_and(|t| t.iter().any(|x| x == "Land"));
+    if !is_land {
+        return Vec::new();
+    }
+    let types = m.get("subtypes").and_then(|s| s.get("land_types")).and_then(Value::as_array);
+    types
+        .into_iter()
+        .flatten()
+        .filter_map(|t| match t.as_str()? {
+            "Plains" => Some("White"),
+            "Island" => Some("Blue"),
+            "Swamp" => Some("Black"),
+            "Mountain" => Some("Red"),
+            "Forest" => Some("Green"),
+            _ => None,
+        })
+        .collect()
+}
+
+/// `{T}: Add` one of `colors` and nothing else — a basic type's own ability.
+fn is_intrinsic_land_mana(ab: &Value, colors: &[&str]) -> bool {
+    let Some(pool) = ab.get("effect").and_then(|e| e.get("AddMana")).and_then(|a| a.get("pool")) else {
+        return false;
+    };
+    ab.get("tap_cost").and_then(Value::as_bool) == Some(true)
+        && pool
+            .get("Colors")
+            .and_then(Value::as_array)
+            .is_some_and(|cs| cs.iter().all(|c| c.as_str().is_some_and(|c| colors.contains(&c))))
 }
 
 /// CR 903.4c — costs the engine models structurally but the card only prints
