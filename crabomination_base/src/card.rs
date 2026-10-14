@@ -391,6 +391,8 @@ pub enum CreatureType {
     Gnoll,
     // Star Trek (Captain James T. Kirk's Officer token).
     Officer,
+    // Star Trek (Sickbay Orderly).
+    Caitian,
 }
 
 /// Land subtypes (basic land types + others).
