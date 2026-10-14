@@ -4355,6 +4355,18 @@ static DECKS: &[Factory] = &[
     super::decks::palladia_mors_the_ruiner,
     super::decks::stangg_echo_warrior,
     super::decks::super_adaptoid,
+    // cmdr_rank6k_a (session 01PxmVAG)
+    super::decks::cartouche_of_ambition,
+    super::decks::henchbots,
+    super::decks::ice_tunnel,
+    super::decks::ms_marvel_kamala_khan,
+    super::decks::rasaad_yn_bashir,
+    super::decks::red_guardian_super_soldier,
+    super::decks::she_hulk_jennifer_walters,
+    super::decks::skill_borrower,
+    super::decks::vibranium_energy_daggers,
+    super::decks::victor_mancha_runaway,
+    super::decks::yoshimaru_scrappy_stray,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
