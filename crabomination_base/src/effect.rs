@@ -12979,6 +12979,10 @@ pub enum Effect {
     /// emits `GameEvent::DamagePrevented`, which
     /// `EventKind::DamageToPlayerPrevented` reads.
     PreventAllDamageToPlayerThisTurn { who: PlayerRef },
+    /// CR 615 — "Until your next turn, prevent all damage that would be dealt
+    /// to you" (Morningtide's Light): the player-scoped shield cleared as
+    /// that player's next turn begins (`Player.all_damage_prevented_until_next_turn`).
+    PreventAllDamageToPlayerUntilTheirNextTurn { who: PlayerRef },
     /// CR 508.1d — "During `who`'s next turn, creatures that player controls
     /// attack [this] if able" (Gideon Jura's +2). Sets each resolved player's
     /// `attack_lure` to the source; the declaration enforces it.

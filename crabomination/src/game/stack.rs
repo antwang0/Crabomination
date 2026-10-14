@@ -4990,6 +4990,9 @@ impl GameState {
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
+        if self.players[p].all_damage_prevented_until_next_turn {
+            self.players[p].all_damage_prevented_until_next_turn = false;
+        }
         if self.players[p].protected_from_seats_until_next_turn != 0 {
             self.players[p].protected_from_seats_until_next_turn = 0;
         }

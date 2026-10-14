@@ -1000,6 +1000,10 @@ pub struct PlayerData {
     /// Squire). Cleared at cleanup.
     #[serde(default)]
     pub all_damage_prevented_this_turn: bool,
+    /// "Until your next turn, prevent all damage that would be dealt to you"
+    /// (Morningtide's Light). Cleared as this player's turn begins.
+    #[serde(default)]
+    pub all_damage_prevented_until_next_turn: bool,
     /// CR 702.16 — "you gain protection from the color of your choice until
     /// end of turn" (Seht's Tiger): sources of these colors can't target this
     /// player and their damage to them is prevented. Cleared at cleanup.
@@ -1847,6 +1851,7 @@ impl Player {
             shroud_this_turn: false,
             protected_from_everything: false,
             all_damage_prevented_this_turn: false,
+            all_damage_prevented_until_next_turn: false,
             protection_colors_eot: crate::mana::ColorSet::empty(),
             protected_from_seats_eot: 0,
             protected_from_seats_until_next_turn: 0,

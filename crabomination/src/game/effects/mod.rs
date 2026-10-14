@@ -38748,6 +38748,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllDamageToPlayerUntilTheirNextTurn { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.players[p].all_damage_prevented_until_next_turn = true;
+                }
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageToPlayerAndWalkersThisTurn { who } => {
                 for p in self.resolve_players(who, ctx) {
                     if !self.combat_damage_prevented_to_players_this_turn.contains(&p) {

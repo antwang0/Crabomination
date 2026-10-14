@@ -2460,6 +2460,7 @@ impl Effect {
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. }
             | Effect::PreventAllCombatDamageToPlayerAndWalkersThisTurn { .. }
             | Effect::PreventAllDamageToPlayerThisTurn { .. }
+            | Effect::PreventAllDamageToPlayerUntilTheirNextTurn { .. }
             | Effect::EachPlayerMayCounterForPeace { .. }
             | Effect::EachPlayerMayCounterThenGoad { .. }
             | Effect::OpponentsChooseSilenceOrSnitch { .. }
