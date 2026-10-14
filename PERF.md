@@ -3136,6 +3136,29 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-14 (Commander run, `01PxmVAG`) — guardrail; EDHREC ranks 2501-3500, 269 cards, five primitives, one bot brake
+
+Hot-path touches: `begin_turn_resets` stamps `life_at_turn_start` in the
+per-seat loop that already writes every seat each turn; a non-mana
+activation bumps `Player.nonmana_activations_this_turn`; the damage funnel
+reads one more player flag (`all_damage_prevented_until_next_turn`); the
+bot asks `activation_cap::over_activation_cap` (a Commander-only early-out)
+per action. Release `bot_ladder`, toolchain 1.99, Xeon @ 2.10 GHz.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical
+                 after every engine commit (seat 2140, 2144 and final builds);
+                 decisions_per_s 175.9k-193.4k across builds (noisy box)
+golden traces    unchanged (core_rules::golden_trace, pod digests)
+clippy           workspace --all-targets (no client): 0 after two fixes
+pods (release)   final smoke: 118 pods / 464 games over seats 1774-2011,
+                 2016-2143, 2189-2194, 2236-2241 (4- and 6-seat), all decided,
+                 0 panics, stall rate 0 %; per-batch sweeps of every new seat
+                 (4- and 6-seat, three seeds) all decided after the activation
+                 brake; the two Peregrin Took + Nuka-Cola board-cap pods
+                 (2006-2009 seed 41, 2138-2143 seed 37) now decide
+```
+
 ### 2026-10-14 (Commander run, `01CwrNTA`, second half) — guardrail; 47 EDHREC seats, 56 cards, four primitives, five fixes
 
 Hot-path touches: `scaled_counter_count` walks the battlefield once more
