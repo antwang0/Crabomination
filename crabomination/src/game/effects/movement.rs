@@ -1584,6 +1584,22 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — "… by creatures" (Istvan): a creature source's noncombat
+        // damage; the combat half is `combat_damage_prevented_to_self`.
+        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+            && !self.damage_cant_be_prevented_this_turn
+            && self.battlefield_find(tgt).is_some_and(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::PreventAllDamageToThisFromCreatures)
+                    )
+                })
+            })
+            && self.battlefield_find(src).is_some_and(|s| self.computed_is_creature(s))
+        {
+            return;
+        }
         // CR 615 — Mark-of-Asylum-style "prevent all noncombat damage to
         // creatures you control" (this funnel only carries noncombat damage to
         // permanents; combat damage is marked elsewhere).

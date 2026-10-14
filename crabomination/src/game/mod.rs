@@ -9966,6 +9966,7 @@ impl GameState {
             && c.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, SE::PreventAllCombatDamageToThis)
                     || self.self_static_prevents_all_damage_active(&sa.effect, c)
+                    || matches!(self.active_static(&sa.effect, c), Some(SE::PreventAllDamageToThisFromCreatures))
             })
         {
             return true;
@@ -23729,6 +23730,20 @@ impl GameState {
                 reduction += amount;
             }
         }
+        let if_target: Vec<(crate::card::SelectionRequirement, u32)> = self.battlefield[equip_pos]
+            .definition
+            .static_abilities
+            .iter()
+            .filter_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::EquipCostReducedIfTarget { filter, amount } => Some((filter.clone(), *amount)),
+                _ => None,
+            })
+            .collect();
+        for (filter, amount) in if_target {
+            if self.evaluate_requirement_static(&filter, &Target::Permanent(target), p, Some(equipment)) {
+                reduction += amount;
+            }
+        }
         if reduction > 0 {
             equip_cost.reduce_generic(reduction);
         }
@@ -34352,6 +34367,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToMatching { .. }
             | StaticEffect::PreventAllDamageToAttackingMatching { .. }
             | StaticEffect::PreventAllDamageToThis
+            | StaticEffect::PreventAllDamageToThisFromCreatures
             | StaticEffect::PlayersCantCycle
             | StaticEffect::MorphCostsMore { .. }
             | StaticEffect::PreventSmallDamageToThis { .. }
@@ -34752,6 +34768,7 @@ fn static_effect_to_effects(
             | StaticEffect::EquipCostReducedPerControlled { .. }
             | StaticEffect::EquipCostReducedPerTargetColor
             | StaticEffect::EquipCostReducedWhile { .. }
+            | StaticEffect::EquipCostReducedIfTarget { .. }
             // Bludgeon Brawl — the granted subtype and bonus are synthesized
             // per artifact in `compute_battlefield`, not from a modification.
             | StaticEffect::ArtifactsAreEquipment

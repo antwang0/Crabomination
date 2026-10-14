@@ -1703,6 +1703,10 @@ pub enum StaticEffect {
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
     /// protection (Gideon Blackblade during your turn).
     PreventAllDamageToThis,
+    /// CR 615 — "Prevent all damage that would be dealt to this permanent by
+    /// creatures" (Istvan, Butcher of Eln): all combat damage, and noncombat
+    /// damage whose source is a creature (a fight, a pinger).
+    PreventAllDamageToThisFromCreatures,
     /// CR 702.29 — "Players can't cycle cards" (Stabilizer). Checked in
     /// `cycle_card` before any cost is paid.
     PlayersCantCycle,
@@ -2490,6 +2494,10 @@ pub enum StaticEffect {
     /// "This ability costs {N} less to activate if [condition]" on its own
     /// equip (Crown of Gondor: {3} less while you're the monarch).
     EquipCostReducedWhile { condition: crate::effect::Predicate, amount: u32 },
+    /// "This Equipment's equip ability costs {N} less to activate if it
+    /// targets a [filter]" (Ghostfire Blade: {2} less for a colorless
+    /// creature). Read by `GameState::equip` against the chosen target.
+    EquipCostReducedIfTarget { filter: crate::card::SelectionRequirement, amount: u32 },
     /// "Equipment you control have equip {0}" while `condition` holds
     /// (Puresteel Paladin's metalcraft). The {0} equip is always the cheaper
     /// of the two, so `GameState::equip` pays it in place of the printed one.
