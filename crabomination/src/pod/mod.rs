@@ -14610,6 +14610,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PIPSQUEAK_COMMANDERS,
             main: decks::PIPSQUEAK_MAIN,
         },
+        // Seat 2360: Denethor, Stone Seer's EDHREC average deck. `--pod-decks 2360`.
+        PodDeck {
+            name: "Denethor, Stone Seer (UR)",
+            commanders: decks::DENETHOR_2_COMMANDERS,
+            main: decks::DENETHOR_2_MAIN,
+        },
+        // Seat 2361: Myojin of Seeing Winds's EDHREC average deck. `--pod-decks 2361`.
+        PodDeck {
+            name: "Myojin of Seeing Winds (U)",
+            commanders: decks::MYOJIN_OF_SEEING_WINDS_COMMANDERS,
+            main: decks::MYOJIN_OF_SEEING_WINDS_MAIN,
+        },
+        // Seat 2362: Kodama of the North Tree's EDHREC average deck. `--pod-decks 2362`.
+        PodDeck {
+            name: "Kodama of the North Tree (G)",
+            commanders: decks::KODAMA_OF_THE_NORTH_TREE_COMMANDERS,
+            main: decks::KODAMA_OF_THE_NORTH_TREE_MAIN,
+        },
+        // Seat 2363: The Duke, Rebel Sentry's EDHREC average deck. `--pod-decks 2363`.
+        PodDeck {
+            name: "The Duke, Rebel Sentry (W)",
+            commanders: decks::THE_DUKE_COMMANDERS,
+            main: decks::THE_DUKE_MAIN,
+        },
+        // Seat 2364: Wiccan, Young Avenger's EDHREC average deck. `--pod-decks 2364`.
+        PodDeck {
+            name: "Wiccan, Young Avenger (R)",
+            commanders: decks::WICCAN_2_COMMANDERS,
+            main: decks::WICCAN_2_MAIN,
+        },
     ]
 }
 
@@ -18800,6 +18830,11 @@ mod tests {
             ("Photon, Lady of Light", &[0x134B]),
             ("Jennika, Bad Apple Big Sister", &[0x134C]),
             ("Pipsqueak, Rebel Strongarm", &[0x134D]),
+            ("Denethor, Stone Seer", &[0x134E]),
+            ("Myojin of Seeing Winds", &[0x134F]),
+            ("Kodama of the North Tree", &[0x1350]),
+            ("The Duke, Rebel Sentry", &[0x1351]),
+            ("Wiccan, Young Avenger", &[0x1352]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
