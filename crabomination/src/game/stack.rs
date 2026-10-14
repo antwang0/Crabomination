@@ -5734,6 +5734,7 @@ impl GameState {
                         | crate::game::types::DelayedKind::EachCombatThisTurn
                         | crate::game::types::DelayedKind::CombatNumberThisTurn(_)
                         | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
+                        | crate::game::types::DelayedKind::WhenCardAttacksOpponentThisTurn(_)
                         | crate::game::types::DelayedKind::MatchingCreatureBlocksThisTurn(_)
                         | crate::game::types::DelayedKind::SourceDealsDamageThisTurn(_)
                         | crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerThisTurn(_)

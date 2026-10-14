@@ -508,6 +508,7 @@ impl Effect {
             | Effect::DelayUntilWithCapture { body, .. }
             | Effect::WhenTargetDiesThisTurn { body, .. }
             | Effect::WhenTargetDies { body, .. }
+            | Effect::WhenTargetAttacksOpponentThisTurn { body, .. }
             | Effect::CreaturesYouControlEnteringThisTurn { body, .. }
             | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { body, .. }
             | Effect::CreaturesYouControlDyingThisTurn { body, .. }
@@ -2344,7 +2345,9 @@ impl Effect {
             Effect::DelayUntilWithCapture { capture, .. } => sel_has_target(capture),
             Effect::DelayUntil { body, .. } => body.requires_target(),
             // Needs a creature to watch for death (the watched target).
-            Effect::WhenTargetDiesThisTurn { .. } | Effect::WhenTargetDies { .. } => true,
+            Effect::WhenTargetDiesThisTurn { .. }
+            | Effect::WhenTargetDies { .. }
+            | Effect::WhenTargetAttacksOpponentThisTurn { .. } => true,
             // Needs a creature to watch for damage (Paladin's Forecast).
             Effect::GainLifeWhenTargetDealsDamageThisTurn { .. }
             | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { .. } => true,
@@ -3228,7 +3231,9 @@ impl Effect {
             Effect::WhenTargetDiesThisTurn { filter, .. } => {
                 filter.as_ref().or(Some(&SelectionRequirement::Creature))
             }
-            Effect::WhenTargetDies { .. } => Some(&SelectionRequirement::Creature),
+            Effect::WhenTargetDies { .. } | Effect::WhenTargetAttacksOpponentThisTurn { .. } => {
+                Some(&SelectionRequirement::Creature)
+            }
             Effect::GainLifeWhenTargetDealsDamageThisTurn { .. }
             | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { .. } => {
                 Some(&SelectionRequirement::Creature)

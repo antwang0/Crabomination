@@ -35228,6 +35228,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WhenTargetAttacksOpponentThisTurn { body, slot } => {
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned() {
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        kind: crate::game::types::DelayedKind::WhenCardAttacksOpponentThisTurn(cid),
+                        effect: (**body).clone(),
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: false,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::WhenTargetDies { body, slot, if_had_counter } => {
                 if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned()
                     && let Some((controller, ts)) =

@@ -24909,6 +24909,31 @@ impl GameState {
                 }
             }
         }
+        // Maeve, Insidious Singer — "whenever that creature attacks one of
+        // your opponents this turn".
+        if batch_bits & const { crate::effect::EventKind::Attacks.bit() } != 0
+            && self
+                .delayed_triggers
+                .iter()
+                .any(|dt| matches!(dt.kind, DelayedKind::WhenCardAttacksOpponentThisTurn(_)))
+        {
+            let fired: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    let DelayedKind::WhenCardAttacksOpponentThisTurn(cid) = dt.kind else { return false };
+                    events.iter().any(|e| matches!(e, GameEvent::AttackerDeclared(a) if *a == cid))
+                        && matches!(
+                            self.attack_for(cid).map(|a| a.target),
+                            Some(AttackTarget::Player(q)) if q != dt.controller && !self.same_team(q, dt.controller)
+                        )
+                })
+                .cloned()
+                .collect();
+            for dt in fired {
+                self.push_stack(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).target(dt.target.clone()).build());
+            }
+        }
         // "Until end of turn, whenever a [filter] creature blocks, …"
         // (Benefactor's Draught). `Blocks` is reached by `BlockerDeclared`
         // alone, so its bit is the scan; one trigger per declared blocker.

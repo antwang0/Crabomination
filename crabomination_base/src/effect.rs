@@ -12074,6 +12074,9 @@ pub enum Effect {
         filter: Option<SelectionRequirement>,
     },
 
+    /// "Whenever [target creature] attacks one of your opponents this turn,
+    /// [body]" (Maeve, Insidious Singer): watches `ctx.targets[slot]`.
+    WhenTargetAttacksOpponentThisTurn { body: Box<Effect>, slot: usize },
     /// "When that creature dies, [body]" with no "this turn" — the
     /// untimed `WhenTargetDiesThisTurn` (Xira, the Golden Sting's egg). The
     /// watch outlives cleanup; the dead creature is the body's trigger source.
