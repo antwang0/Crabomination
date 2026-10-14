@@ -13314,6 +13314,306 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_LUNAR_WHALE_COMMANDERS,
             main: decks::THE_LUNAR_WHALE_MAIN,
         },
+        // Seat 2144: Valeria Richards, Precocious's EDHREC average deck. `--pod-decks 2144`.
+        PodDeck {
+            name: "Valeria Richards, Precocious (U)",
+            commanders: decks::VALERIA_RICHARDS_COMMANDERS,
+            main: decks::VALERIA_RICHARDS_MAIN,
+        },
+        // Seat 2145: Boris Devilboon's EDHREC average deck. `--pod-decks 2145`.
+        PodDeck {
+            name: "Boris Devilboon (BR)",
+            commanders: decks::BORIS_DEVILBOON_COMMANDERS,
+            main: decks::BORIS_DEVILBOON_MAIN,
+        },
+        // Seat 2146: Autumn Willow's EDHREC average deck. `--pod-decks 2146`.
+        PodDeck {
+            name: "Autumn Willow (G)",
+            commanders: decks::AUTUMN_WILLOW_COMMANDERS,
+            main: decks::AUTUMN_WILLOW_MAIN,
+        },
+        // Seat 2147: Eron the Relentless's EDHREC average deck. `--pod-decks 2147`.
+        PodDeck {
+            name: "Eron the Relentless (R)",
+            commanders: decks::ERON_THE_RELENTLESS_COMMANDERS,
+            main: decks::ERON_THE_RELENTLESS_MAIN,
+        },
+        // Seat 2148: Myojin of Roaring Blades's EDHREC average deck. `--pod-decks 2148`.
+        PodDeck {
+            name: "Myojin of Roaring Blades (R)",
+            commanders: decks::MYOJIN_OF_ROARING_BLADES_COMMANDERS,
+            main: decks::MYOJIN_OF_ROARING_BLADES_MAIN,
+        },
+        // Seat 2149: Saradoc, Master of Buckland's EDHREC average deck. `--pod-decks 2149`.
+        PodDeck {
+            name: "Saradoc, Master of Buckland (W)",
+            commanders: decks::SARADOC_COMMANDERS,
+            main: decks::SARADOC_MAIN,
+        },
+        // Seat 2150: Rohgahh of Kher Keep's EDHREC average deck. `--pod-decks 2150`.
+        PodDeck {
+            name: "Rohgahh of Kher Keep (BR)",
+            commanders: decks::ROHGAHH_OF_KHER_KEEP_COMMANDERS,
+            main: decks::ROHGAHH_OF_KHER_KEEP_MAIN,
+        },
+        // Seat 2151: Soramaro, First to Dream's EDHREC average deck. `--pod-decks 2151`.
+        PodDeck {
+            name: "Soramaro, First to Dream (U)",
+            commanders: decks::SORAMARO_COMMANDERS,
+            main: decks::SORAMARO_MAIN,
+        },
+        // Seat 2152: Squee, Dubious Monarch's EDHREC average deck. `--pod-decks 2152`.
+        PodDeck {
+            name: "Squee, Dubious Monarch (R)",
+            commanders: decks::SQUEE_3_COMMANDERS,
+            main: decks::SQUEE_3_MAIN,
+        },
+        // Seat 2153: Éowyn, Lady of Rohan's EDHREC average deck. `--pod-decks 2153`.
+        PodDeck {
+            name: "Éowyn, Lady of Rohan (W)",
+            commanders: decks::EOWYN_3_COMMANDERS,
+            main: decks::EOWYN_3_MAIN,
+        },
+        // Seat 2154: Orysa, Tide Choreographer's EDHREC average deck. `--pod-decks 2154`.
+        PodDeck {
+            name: "Orysa, Tide Choreographer (U)",
+            commanders: decks::ORYSA_COMMANDERS,
+            main: decks::ORYSA_MAIN,
+        },
+        // Seat 2155: Pia and Kiran Nalaar's EDHREC average deck. `--pod-decks 2155`.
+        PodDeck {
+            name: "Pia and Kiran Nalaar (R)",
+            commanders: decks::PIA_AND_KIRAN_NALAAR_COMMANDERS,
+            main: decks::PIA_AND_KIRAN_NALAAR_MAIN,
+        },
+        // Seat 2156: Iname, Life Aspect's EDHREC average deck. `--pod-decks 2156`.
+        PodDeck {
+            name: "Iname, Life Aspect (G)",
+            commanders: decks::INAME_COMMANDERS,
+            main: decks::INAME_MAIN,
+        },
+        // Seat 2157: Lobelia Sackville-Baggins's EDHREC average deck. `--pod-decks 2157`.
+        PodDeck {
+            name: "Lobelia Sackville-Baggins (B)",
+            commanders: decks::LOBELIA_SACKVILLE_BAGGINS_COMMANDERS,
+            main: decks::LOBELIA_SACKVILLE_BAGGINS_MAIN,
+        },
+        // Seat 2158: April, Reporter of the Weird's EDHREC average deck. `--pod-decks 2158`.
+        PodDeck {
+            name: "April, Reporter of the Weird (U)",
+            commanders: decks::APRIL_COMMANDERS,
+            main: decks::APRIL_MAIN,
+        },
+        // Seat 2159: Akuta, Born of Ash's EDHREC average deck. `--pod-decks 2159`.
+        PodDeck {
+            name: "Akuta, Born of Ash (B)",
+            commanders: decks::AKUTA_COMMANDERS,
+            main: decks::AKUTA_MAIN,
+        },
+        // Seat 2160: Fang, Fearless l'Cie's EDHREC average deck. `--pod-decks 2160`.
+        PodDeck {
+            name: "Fang, Fearless l'Cie (B)",
+            commanders: decks::FANG_COMMANDERS,
+            main: decks::FANG_MAIN,
+        },
+        // Seat 2161: Tahngarth, Talruum Hero's EDHREC average deck. `--pod-decks 2161`.
+        PodDeck {
+            name: "Tahngarth, Talruum Hero (R)",
+            commanders: decks::TAHNGARTH_COMMANDERS,
+            main: decks::TAHNGARTH_MAIN,
+        },
+        // Seat 2162: Myojin of Life's Web's EDHREC average deck. `--pod-decks 2162`.
+        PodDeck {
+            name: "Myojin of Life's Web (G)",
+            commanders: decks::MYOJIN_OF_LIFES_WEB_COMMANDERS,
+            main: decks::MYOJIN_OF_LIFES_WEB_MAIN,
+        },
+        // Seat 2163: Ennis, Debate Moderator's EDHREC average deck. `--pod-decks 2163`.
+        PodDeck {
+            name: "Ennis, Debate Moderator (W)",
+            commanders: decks::ENNIS_COMMANDERS,
+            main: decks::ENNIS_MAIN,
+        },
+        // Seat 2164: Livonya Silone's EDHREC average deck. `--pod-decks 2164`.
+        PodDeck {
+            name: "Livonya Silone (RG)",
+            commanders: decks::LIVONYA_SILONE_COMMANDERS,
+            main: decks::LIVONYA_SILONE_MAIN,
+        },
+        // Seat 2165: Jo Grant's EDHREC average deck. `--pod-decks 2165`.
+        PodDeck {
+            name: "Jo Grant (W)",
+            commanders: decks::JO_GRANT_COMMANDERS,
+            main: decks::JO_GRANT_MAIN,
+        },
+        // Seat 2166: Lena, Selfless Champion's EDHREC average deck. `--pod-decks 2166`.
+        PodDeck {
+            name: "Lena, Selfless Champion (W)",
+            commanders: decks::LENA_COMMANDERS,
+            main: decks::LENA_MAIN,
+        },
+        // Seat 2167: Legolas Greenleaf's EDHREC average deck. `--pod-decks 2167`.
+        PodDeck {
+            name: "Legolas Greenleaf (G)",
+            commanders: decks::LEGOLAS_GREENLEAF_COMMANDERS,
+            main: decks::LEGOLAS_GREENLEAF_MAIN,
+        },
+        // Seat 2168: Thancred Waters's EDHREC average deck. `--pod-decks 2168`.
+        PodDeck {
+            name: "Thancred Waters (W)",
+            commanders: decks::THANCRED_WATERS_COMMANDERS,
+            main: decks::THANCRED_WATERS_MAIN,
+        },
+        // Seat 2169: Baxter, Fly in the Ointment's EDHREC average deck. `--pod-decks 2169`.
+        PodDeck {
+            name: "Baxter, Fly in the Ointment (U)",
+            commanders: decks::BAXTER_COMMANDERS,
+            main: decks::BAXTER_MAIN,
+        },
+        // Seat 2170: Linvala, the Preserver's EDHREC average deck. `--pod-decks 2170`.
+        PodDeck {
+            name: "Linvala, the Preserver (W)",
+            commanders: decks::LINVALA_2_COMMANDERS,
+            main: decks::LINVALA_2_MAIN,
+        },
+        // Seat 2171: Gaius van Baelsar's EDHREC average deck. `--pod-decks 2171`.
+        PodDeck {
+            name: "Gaius van Baelsar (B)",
+            commanders: decks::GAIUS_VAN_BAELSAR_COMMANDERS,
+            main: decks::GAIUS_VAN_BAELSAR_MAIN,
+        },
+        // Seat 2172: Quicksilver, Speedster's EDHREC average deck. `--pod-decks 2172`.
+        PodDeck {
+            name: "Quicksilver, Speedster (UR)",
+            commanders: decks::QUICKSILVER_COMMANDERS,
+            main: decks::QUICKSILVER_MAIN,
+        },
+        // Seat 2173: Paladin Danse, Steel Maverick's EDHREC average deck. `--pod-decks 2173`.
+        PodDeck {
+            name: "Paladin Danse, Steel Maverick (W)",
+            commanders: decks::PALADIN_DANSE_COMMANDERS,
+            main: decks::PALADIN_DANSE_MAIN,
+        },
+        // Seat 2174: Princess Lucrezia's EDHREC average deck. `--pod-decks 2174`.
+        PodDeck {
+            name: "Princess Lucrezia (UB)",
+            commanders: decks::PRINCESS_LUCREZIA_COMMANDERS,
+            main: decks::PRINCESS_LUCREZIA_MAIN,
+        },
+        // Seat 2175: Torsten Von Ursus's EDHREC average deck. `--pod-decks 2175`.
+        PodDeck {
+            name: "Torsten Von Ursus (WG)",
+            commanders: decks::TORSTEN_VON_URSUS_COMMANDERS,
+            main: decks::TORSTEN_VON_URSUS_MAIN,
+        },
+        // Seat 2176: Duchess, Wayward Tavernkeep's EDHREC average deck. `--pod-decks 2176`.
+        PodDeck {
+            name: "Duchess, Wayward Tavernkeep (R)",
+            commanders: decks::DUCHESS_COMMANDERS,
+            main: decks::DUCHESS_MAIN,
+        },
+        // Seat 2177: Black Panther, Most Dangerous's EDHREC average deck. `--pod-decks 2177`.
+        PodDeck {
+            name: "Black Panther, Most Dangerous (W)",
+            commanders: decks::BLACK_PANTHER_2_COMMANDERS,
+            main: decks::BLACK_PANTHER_2_MAIN,
+        },
+        // Seat 2178: Puppet Master, String Puller's EDHREC average deck. `--pod-decks 2178`.
+        PodDeck {
+            name: "Puppet Master, String Puller (R)",
+            commanders: decks::PUPPET_MASTER_COMMANDERS,
+            main: decks::PUPPET_MASTER_MAIN,
+        },
+        // Seat 2179: Lieutenant Kirtar's EDHREC average deck. `--pod-decks 2179`.
+        PodDeck {
+            name: "Lieutenant Kirtar (W)",
+            commanders: decks::LIEUTENANT_KIRTAR_COMMANDERS,
+            main: decks::LIEUTENANT_KIRTAR_MAIN,
+        },
+        // Seat 2180: Hikari, Twilight Guardian's EDHREC average deck. `--pod-decks 2180`.
+        PodDeck {
+            name: "Hikari, Twilight Guardian (W)",
+            commanders: decks::HIKARI_COMMANDERS,
+            main: decks::HIKARI_MAIN,
+        },
+        // Seat 2181: Lord Magnus's EDHREC average deck. `--pod-decks 2181`.
+        PodDeck {
+            name: "Lord Magnus (WG)",
+            commanders: decks::LORD_MAGNUS_COMMANDERS,
+            main: decks::LORD_MAGNUS_MAIN,
+        },
+        // Seat 2182: Gatta and Luzzu's EDHREC average deck. `--pod-decks 2182`.
+        PodDeck {
+            name: "Gatta and Luzzu (W)",
+            commanders: decks::GATTA_AND_LUZZU_COMMANDERS,
+            main: decks::GATTA_AND_LUZZU_MAIN,
+        },
+        // Seat 2183: Heart of Kiran's EDHREC average deck. `--pod-decks 2183`.
+        PodDeck {
+            name: "Heart of Kiran (C)",
+            commanders: decks::HEART_OF_KIRAN_COMMANDERS,
+            main: decks::HEART_OF_KIRAN_MAIN,
+        },
+        // Seat 2184: Fang, Roku's Companion's EDHREC average deck. `--pod-decks 2184`.
+        PodDeck {
+            name: "Fang, Roku's Companion (R)",
+            commanders: decks::FANG_2_COMMANDERS,
+            main: decks::FANG_2_MAIN,
+        },
+        // Seat 2185: Zuri, Warrior of Wakanda's EDHREC average deck. `--pod-decks 2185`.
+        PodDeck {
+            name: "Zuri, Warrior of Wakanda (G)",
+            commanders: decks::ZURI_COMMANDERS,
+            main: decks::ZURI_MAIN,
+        },
+        // Seat 2186: Tomik, Izzet Sparkmage's EDHREC average deck. `--pod-decks 2186`.
+        PodDeck {
+            name: "Tomik, Izzet Sparkmage (R)",
+            commanders: decks::TOMIK_2_COMMANDERS,
+            main: decks::TOMIK_2_MAIN,
+        },
+        // Seat 2187: Batroc the Leaper's EDHREC average deck. `--pod-decks 2187`.
+        PodDeck {
+            name: "Batroc the Leaper (R)",
+            commanders: decks::BATROC_THE_LEAPER_COMMANDERS,
+            main: decks::BATROC_THE_LEAPER_MAIN,
+        },
+        // Seat 2188: Traxos, Scourge Eternal's EDHREC average deck. `--pod-decks 2188`.
+        PodDeck {
+            name: "Traxos, Scourge Eternal (C)",
+            commanders: decks::TRAXOS_3_COMMANDERS,
+            main: decks::TRAXOS_3_MAIN,
+        },
+        // Seat 2189: Gosta Dirk's EDHREC average deck. `--pod-decks 2189`.
+        PodDeck {
+            name: "Gosta Dirk (WU)",
+            commanders: decks::GOSTA_DIRK_COMMANDERS,
+            main: decks::GOSTA_DIRK_MAIN,
+        },
+        // Seat 2190: Iron Lad, Diverging Destiny's EDHREC average deck. `--pod-decks 2190`.
+        PodDeck {
+            name: "Iron Lad, Diverging Destiny (U)",
+            commanders: decks::IRON_LAD_COMMANDERS,
+            main: decks::IRON_LAD_MAIN,
+        },
+        // Seat 2191: Viv Vision, Teen Synthezoid's EDHREC average deck. `--pod-decks 2191`.
+        PodDeck {
+            name: "Viv Vision, Teen Synthezoid (C)",
+            commanders: decks::VIV_VISION_COMMANDERS,
+            main: decks::VIV_VISION_MAIN,
+        },
+        // Seat 2192: Loki Laufeyson's EDHREC average deck. `--pod-decks 2192`.
+        PodDeck {
+            name: "Loki Laufeyson (R)",
+            commanders: decks::LOKI_LAUFEYSON_COMMANDERS,
+            main: decks::LOKI_LAUFEYSON_MAIN,
+        },
+        // Seat 2193: Esior, Wardwing Familiar and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 2193`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and Sengir, the Dark Baron (UB)",
+            commanders: decks::ESIOR_COMMANDERS,
+            main: decks::ESIOR_MAIN,
+        },
     ]
 }
 
@@ -17289,6 +17589,56 @@ mod tests {
             ("Ellie, Brick Master and Ellie, Vengeful Hunter", &[0x1273]),
             ("Bilbo, Fellow Conspirator", &[0x1274]),
             ("The Lunar Whale", &[0x1275]),
+            ("Valeria Richards, Precocious", &[0x1276]),
+            ("Boris Devilboon", &[0x1277]),
+            ("Autumn Willow", &[0x1278]),
+            ("Eron the Relentless", &[0x1279]),
+            ("Myojin of Roaring Blades", &[0x127A]),
+            ("Saradoc, Master of Buckland", &[0x127B]),
+            ("Rohgahh of Kher Keep", &[0x127C]),
+            ("Soramaro, First to Dream", &[0x127D]),
+            ("Squee, Dubious Monarch", &[0x127E]),
+            ("Éowyn, Lady of Rohan", &[0x127F]),
+            ("Orysa, Tide Choreographer", &[0x1280]),
+            ("Pia and Kiran Nalaar", &[0x1281]),
+            ("Iname, Life Aspect", &[0x1282]),
+            ("Lobelia Sackville-Baggins", &[0x1283]),
+            ("April, Reporter of the Weird", &[0x1284]),
+            ("Akuta, Born of Ash", &[0x1285]),
+            ("Fang, Fearless l'Cie", &[0x1286]),
+            ("Tahngarth, Talruum Hero", &[0x1287]),
+            ("Myojin of Life's Web", &[0x1288]),
+            ("Ennis, Debate Moderator", &[0x1289]),
+            ("Livonya Silone", &[0x128A]),
+            ("Jo Grant", &[0x128B]),
+            ("Lena, Selfless Champion", &[0x128C]),
+            ("Legolas Greenleaf", &[0x128D]),
+            ("Thancred Waters", &[0x128E]),
+            ("Baxter, Fly in the Ointment", &[0x128F]),
+            ("Linvala, the Preserver", &[0x1290]),
+            ("Gaius van Baelsar", &[0x1291]),
+            ("Quicksilver, Speedster", &[0x1292]),
+            ("Paladin Danse, Steel Maverick", &[0x1293]),
+            ("Princess Lucrezia", &[0x1294]),
+            ("Torsten Von Ursus", &[0x1295]),
+            ("Duchess, Wayward Tavernkeep", &[0x1296]),
+            ("Black Panther, Most Dangerous", &[0x1297]),
+            ("Puppet Master, String Puller", &[0x1298]),
+            ("Lieutenant Kirtar", &[0x1299]),
+            ("Hikari, Twilight Guardian", &[0x129A]),
+            ("Lord Magnus", &[0x129B]),
+            ("Gatta and Luzzu", &[0x129C]),
+            ("Heart of Kiran", &[0x129D]),
+            ("Fang, Roku's Companion", &[0x129E]),
+            ("Zuri, Warrior of Wakanda", &[0x129F]),
+            ("Tomik, Izzet Sparkmage", &[0x12A0]),
+            ("Batroc the Leaper", &[0x12A1]),
+            ("Traxos, Scourge Eternal", &[0x12A2]),
+            ("Gosta Dirk", &[0x12A3]),
+            ("Iron Lad, Diverging Destiny", &[0x12A4]),
+            ("Viv Vision, Teen Synthezoid", &[0x12A5]),
+            ("Loki Laufeyson", &[0x12A6]),
+            ("Esior, Wardwing Familiar and Sengir, the Dark Baron", &[0x12A7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
