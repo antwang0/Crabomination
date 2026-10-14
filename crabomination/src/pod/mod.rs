@@ -13902,6 +13902,198 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STANGG_COMMANDERS,
             main: decks::STANGG_MAIN,
         },
+        // Seat 2242: Patron of the Akki's EDHREC average deck. `--pod-decks 2242`.
+        PodDeck {
+            name: "Patron of the Akki (R)",
+            commanders: decks::PATRON_OF_THE_AKKI_COMMANDERS,
+            main: decks::PATRON_OF_THE_AKKI_MAIN,
+        },
+        // Seat 2243: Living Brain, Mechanical Marvel's EDHREC average deck. `--pod-decks 2243`.
+        PodDeck {
+            name: "Living Brain, Mechanical Marvel (C)",
+            commanders: decks::LIVING_BRAIN_COMMANDERS,
+            main: decks::LIVING_BRAIN_MAIN,
+        },
+        // Seat 2244: Daughter of Autumn's EDHREC average deck. `--pod-decks 2244`.
+        PodDeck {
+            name: "Daughter of Autumn (WG)",
+            commanders: decks::DAUGHTER_OF_AUTUMN_COMMANDERS,
+            main: decks::DAUGHTER_OF_AUTUMN_MAIN,
+        },
+        // Seat 2245: Kari Zev, Skyship Raider's EDHREC average deck. `--pod-decks 2245`.
+        PodDeck {
+            name: "Kari Zev, Skyship Raider (R)",
+            commanders: decks::KARI_ZEV_COMMANDERS,
+            main: decks::KARI_ZEV_MAIN,
+        },
+        // Seat 2246: Ryusei, the Falling Star's EDHREC average deck. `--pod-decks 2246`.
+        PodDeck {
+            name: "Ryusei, the Falling Star (R)",
+            commanders: decks::RYUSEI_COMMANDERS,
+            main: decks::RYUSEI_MAIN,
+        },
+        // Seat 2247: Mai, Jaded Edge's EDHREC average deck. `--pod-decks 2247`.
+        PodDeck {
+            name: "Mai, Jaded Edge (R)",
+            commanders: decks::MAI_COMMANDERS,
+            main: decks::MAI_MAIN,
+        },
+        // Seat 2248: Iron Lad, Young Avenger's EDHREC average deck. `--pod-decks 2248`.
+        PodDeck {
+            name: "Iron Lad, Young Avenger (UR)",
+            commanders: decks::IRON_LAD_2_COMMANDERS,
+            main: decks::IRON_LAD_2_MAIN,
+        },
+        // Seat 2249: Mona Lisa, Ever Adaptable's EDHREC average deck. `--pod-decks 2249`.
+        PodDeck {
+            name: "Mona Lisa, Ever Adaptable (G)",
+            commanders: decks::MONA_LISA_COMMANDERS,
+            main: decks::MONA_LISA_MAIN,
+        },
+        // Seat 2250: Spider-UK's EDHREC average deck. `--pod-decks 2250`.
+        PodDeck {
+            name: "Spider-UK (W)",
+            commanders: decks::SPIDER_UK_COMMANDERS,
+            main: decks::SPIDER_UK_MAIN,
+        },
+        // Seat 2251: Yukora, the Prisoner's EDHREC average deck. `--pod-decks 2251`.
+        PodDeck {
+            name: "Yukora, the Prisoner (B)",
+            commanders: decks::YUKORA_COMMANDERS,
+            main: decks::YUKORA_MAIN,
+        },
+        // Seat 2252: Jugan, the Rising Star's EDHREC average deck. `--pod-decks 2252`.
+        PodDeck {
+            name: "Jugan, the Rising Star (G)",
+            commanders: decks::JUGAN_COMMANDERS,
+            main: decks::JUGAN_MAIN,
+        },
+        // Seat 2253: Appa, Loyal Sky Bison's EDHREC average deck. `--pod-decks 2253`.
+        PodDeck {
+            name: "Appa, Loyal Sky Bison (W)",
+            commanders: decks::APPA_2_COMMANDERS,
+            main: decks::APPA_2_MAIN,
+        },
+        // Seat 2254: Rorix Bladewing's EDHREC average deck. `--pod-decks 2254`.
+        PodDeck {
+            name: "Rorix Bladewing (R)",
+            commanders: decks::RORIX_BLADEWING_COMMANDERS,
+            main: decks::RORIX_BLADEWING_MAIN,
+        },
+        // Seat 2255: Veldrane of Sengir's EDHREC average deck. `--pod-decks 2255`.
+        PodDeck {
+            name: "Veldrane of Sengir (B)",
+            commanders: decks::VELDRANE_OF_SENGIR_COMMANDERS,
+            main: decks::VELDRANE_OF_SENGIR_MAIN,
+        },
+        // Seat 2256: Shocker, Unshakable's EDHREC average deck. `--pod-decks 2256`.
+        PodDeck {
+            name: "Shocker, Unshakable (R)",
+            commanders: decks::SHOCKER_COMMANDERS,
+            main: decks::SHOCKER_MAIN,
+        },
+        // Seat 2257: Lita, Little Orphan Amphibian's EDHREC average deck. `--pod-decks 2257`.
+        PodDeck {
+            name: "Lita, Little Orphan Amphibian (W)",
+            commanders: decks::LITA_COMMANDERS,
+            main: decks::LITA_MAIN,
+        },
+        // Seat 2258: Ray Fillet, Wave Warrior's EDHREC average deck. `--pod-decks 2258`.
+        PodDeck {
+            name: "Ray Fillet, Wave Warrior (U)",
+            commanders: decks::RAY_FILLET_COMMANDERS,
+            main: decks::RAY_FILLET_MAIN,
+        },
+        // Seat 2259: Sophina, Spearsage Deserter's EDHREC average deck. `--pod-decks 2259`.
+        PodDeck {
+            name: "Sophina, Spearsage Deserter (WR)",
+            commanders: decks::SOPHINA_COMMANDERS,
+            main: decks::SOPHINA_MAIN,
+        },
+        // Seat 2260: Ur-Drago's EDHREC average deck. `--pod-decks 2260`.
+        PodDeck {
+            name: "Ur-Drago (UB)",
+            commanders: decks::UR_DRAGO_COMMANDERS,
+            main: decks::UR_DRAGO_MAIN,
+        },
+        // Seat 2261: Agent Bishop, Man in Black's EDHREC average deck. `--pod-decks 2261`.
+        PodDeck {
+            name: "Agent Bishop, Man in Black (W)",
+            commanders: decks::AGENT_BISHOP_COMMANDERS,
+            main: decks::AGENT_BISHOP_MAIN,
+        },
+        // Seat 2262: Myojin of Grim Betrayal's EDHREC average deck. `--pod-decks 2262`.
+        PodDeck {
+            name: "Myojin of Grim Betrayal (B)",
+            commanders: decks::MYOJIN_OF_GRIM_BETRAYAL_COMMANDERS,
+            main: decks::MYOJIN_OF_GRIM_BETRAYAL_MAIN,
+        },
+        // Seat 2263: The First Doctor and Graham O'Brien's EDHREC average deck. `--pod-decks 2263`.
+        PodDeck {
+            name: "The First Doctor and Graham O'Brien (WUG)",
+            commanders: decks::THE_FIRST_DOCTOR_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_MAIN,
+        },
+        // Seat 2264: G'raha Tia's EDHREC average deck. `--pod-decks 2264`.
+        PodDeck {
+            name: "G'raha Tia (W)",
+            commanders: decks::GRAHA_TIA_COMMANDERS,
+            main: decks::GRAHA_TIA_MAIN,
+        },
+        // Seat 2265: The First Doctor and Amy Pond's EDHREC average deck. `--pod-decks 2265`.
+        PodDeck {
+            name: "The First Doctor and Amy Pond (WUR)",
+            commanders: decks::THE_FIRST_DOCTOR_2_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_2_MAIN,
+        },
+        // Seat 2266: Grandmother Sengir's EDHREC average deck. `--pod-decks 2266`.
+        PodDeck {
+            name: "Grandmother Sengir (B)",
+            commanders: decks::GRANDMOTHER_SENGIR_COMMANDERS,
+            main: decks::GRANDMOTHER_SENGIR_MAIN,
+        },
+        // Seat 2267: Bumi, King of Three Trials's EDHREC average deck. `--pod-decks 2267`.
+        PodDeck {
+            name: "Bumi, King of Three Trials (G)",
+            commanders: decks::BUMI_3_COMMANDERS,
+            main: decks::BUMI_3_MAIN,
+        },
+        // Seat 2268: Vision, Spectral Synthezoid's EDHREC average deck. `--pod-decks 2268`.
+        PodDeck {
+            name: "Vision, Spectral Synthezoid (U)",
+            commanders: decks::VISION_2_COMMANDERS,
+            main: decks::VISION_2_MAIN,
+        },
+        // Seat 2269: Viconia, Drow Apostate's EDHREC average deck. `--pod-decks 2269`.
+        PodDeck {
+            name: "Viconia, Drow Apostate (B)",
+            commanders: decks::VICONIA_COMMANDERS,
+            main: decks::VICONIA_MAIN,
+        },
+        // Seat 2270: Jessica Jones, Private Eye's EDHREC average deck. `--pod-decks 2270`.
+        PodDeck {
+            name: "Jessica Jones, Private Eye (R)",
+            commanders: decks::JESSICA_JONES_COMMANDERS,
+            main: decks::JESSICA_JONES_MAIN,
+        },
+        // Seat 2271: Meriadoc Brandybuck's EDHREC average deck. `--pod-decks 2271`.
+        PodDeck {
+            name: "Meriadoc Brandybuck (G)",
+            commanders: decks::MERIADOC_BRANDYBUCK_COMMANDERS,
+            main: decks::MERIADOC_BRANDYBUCK_MAIN,
+        },
+        // Seat 2272: Renet, Temporal Apprentice's EDHREC average deck. `--pod-decks 2272`.
+        PodDeck {
+            name: "Renet, Temporal Apprentice (U)",
+            commanders: decks::RENET_COMMANDERS,
+            main: decks::RENET_MAIN,
+        },
+        // Seat 2273: Jiwari, the Earth Aflame's EDHREC average deck. `--pod-decks 2273`.
+        PodDeck {
+            name: "Jiwari, the Earth Aflame (R)",
+            commanders: decks::JIWARI_COMMANDERS,
+            main: decks::JIWARI_MAIN,
+        },
     ]
 }
 
@@ -17975,6 +18167,38 @@ mod tests {
             ("Palladia-Mors", &[0x12D5]),
             ("Super-Adaptoid", &[0x12D6]),
             ("Stangg", &[0x12D7]),
+            ("Patron of the Akki", &[0x12D8]),
+            ("Living Brain, Mechanical Marvel", &[0x12D9]),
+            ("Daughter of Autumn", &[0x12DA]),
+            ("Kari Zev, Skyship Raider", &[0x12DB]),
+            ("Ryusei, the Falling Star", &[0x12DC]),
+            ("Mai, Jaded Edge", &[0x12DD]),
+            ("Iron Lad, Young Avenger", &[0x12DE]),
+            ("Mona Lisa, Ever Adaptable", &[0x12DF]),
+            ("Spider-UK", &[0x12E0]),
+            ("Yukora, the Prisoner", &[0x12E1]),
+            ("Jugan, the Rising Star", &[0x12E2]),
+            ("Appa, Loyal Sky Bison", &[0x12E3]),
+            ("Rorix Bladewing", &[0x12E4]),
+            ("Veldrane of Sengir", &[0x12E5]),
+            ("Shocker, Unshakable", &[0x12E6]),
+            ("Lita, Little Orphan Amphibian", &[0x12E7]),
+            ("Ray Fillet, Wave Warrior", &[0x12E8]),
+            ("Sophina, Spearsage Deserter", &[0x12E9]),
+            ("Ur-Drago", &[0x12EA]),
+            ("Agent Bishop, Man in Black", &[0x12EB]),
+            ("Myojin of Grim Betrayal", &[0x12EC]),
+            ("The First Doctor and Graham O'Brien", &[0x12ED]),
+            ("G'raha Tia", &[0x12EE]),
+            ("The First Doctor and Amy Pond", &[0x12EF]),
+            ("Grandmother Sengir", &[0x12F0]),
+            ("Bumi, King of Three Trials", &[0x12F1]),
+            ("Vision, Spectral Synthezoid", &[0x12F2]),
+            ("Viconia, Drow Apostate", &[0x12F3]),
+            ("Jessica Jones, Private Eye", &[0x12F4]),
+            ("Meriadoc Brandybuck", &[0x12F5]),
+            ("Renet, Temporal Apprentice", &[0x12F6]),
+            ("Jiwari, the Earth Aflame", &[0x12F7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
