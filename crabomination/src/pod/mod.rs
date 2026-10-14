@@ -14430,6 +14430,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ELLYN_HARBREEZE_2_COMMANDERS,
             main: decks::ELLYN_HARBREEZE_2_MAIN,
         },
+        // Seat 2330: Jeong Jeong, the Deserter's EDHREC average deck. `--pod-decks 2330`.
+        PodDeck {
+            name: "Jeong Jeong, the Deserter (R)",
+            commanders: decks::JEONG_JEONG_COMMANDERS,
+            main: decks::JEONG_JEONG_MAIN,
+        },
     ]
 }
 
@@ -18590,6 +18596,7 @@ mod tests {
             ("Nyssa of Traken", &[0x132D]),
             ("Peri Brown", &[0x132E]),
             ("Ellyn Harbreeze, Busybody and Shameless Charlatan", &[0x132F]),
+            ("Jeong Jeong, the Deserter", &[0x1330]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

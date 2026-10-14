@@ -65526,3 +65526,32 @@ pub const ELLYN_HARBREEZE_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const JEONG_JEONG_COMMANDERS: &[CardFactory] = &[jeong_jeong_the_deserter];
+
+/// **Jeong Jeong, the Deserter**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Jeong Jeong, the Deserter (EDHREC, fetched 2026-10-14).
+pub const JEONG_JEONG_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, conjurers_closet, fire_diamond, fire_nation_turret,
+    racers_scoreboard, ruby_medallion, sol_ring, the_fire_crystal, arcane_lighthouse,
+    evolving_wilds, fire_nation_palace, forgotten_cave, karns_bastion, rogues_passage,
+    valakut_the_molten_pinnacle, avatar_roku_firebender, combustion_man, deserters_disciple,
+    electro_assaulting_battery, fire_nation_archers, fire_nation_cadets, fire_sages,
+    firebending_student, goldspan_dragon, guttersnipe, humble_defector, iroh_dragon_of_the_west,
+    kessig_flamebreather, longshot_rebel_bowman, norin_swift_survivalist, rough_rhino_cavalry,
+    solemn_simulacrum, storm_kiln_artist, tannuk_steadfast_second, zuko_exiled_prince,
+    zuko_firebending_master, braid_of_fire, fated_firepower, firebender_ascension,
+    rite_of_the_dragoncaller, the_cave_of_two_lovers, the_legend_of_roku, abrade, chaos_warp,
+    combustion_technique, cunning_maneuver, deflecting_swat, delayed_blast_fireball,
+    energybending, firebending_lesson, how_to_start_a_riot, overwhelming_victory, pyroblast,
+    redirect_lightning, solstice_revelations, souls_fire, zukos_exile, jaya_fiery_negotiator,
+    aangs_journey, blasphemous_act, environmental_sciences, illuminate_history,
+    introduction_to_annihilation, introduction_to_prophecy, irohs_demonstration,
+    price_of_freedom, reckless_blaze, sozins_comet, start_from_scratch, twinflame,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
