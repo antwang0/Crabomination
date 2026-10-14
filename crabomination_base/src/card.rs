@@ -548,6 +548,8 @@ pub enum PlaneswalkerSubtype {
     Yanling,
     // Dyfed, the Guiding Hand (its own EDHREC deck).
     Dyfed,
+    // Sifa Grent (its own EDHREC deck).
+    Sifa,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
