@@ -2,7 +2,8 @@
 //! 2026-10-14 scan), eleventh file. Tests in `tests/recent_b/cmdr_rank4k_k.rs`.
 
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
+    CumulativeUpkeepCost, EventKind, Predicate,
     EventScope, EventSpec, Keyword, LandType, MayPlayDuration, SelectionRequirement as R,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
     Zone,
@@ -427,6 +428,58 @@ pub fn weathered_bodyguards() -> CardDefinition {
             vec![CreatureType::Human, CreatureType::Soldier],
             2,
             5,
+        )
+    }
+}
+
+// ── Tetsuko Umezawa, Pursuer ─────────────────────────────────────────────────
+
+/// Tetsuko Umezawa, Pursuer — {3}{R} legendary 2/4 Human Mercenary; double
+/// strike, prowess. Whenever a creature an opponent controls with power or
+/// toughness 1 or less blocks, Tetsuko deals 1 damage to that creature's
+/// controller.
+pub fn tetsuko_umezawa_pursuer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::DoubleStrike, Keyword::Prowess],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::OpponentControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::PowerAtMost(1).or(R::ToughnessAtMost(1))),
+                },
+            ),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::ONE,
+            },
+        }],
+        supertypes: vec![Supertype::Legendary],
+        ..creature(
+            "Tetsuko Umezawa, Pursuer",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Mercenary],
+            2,
+            4,
+        )
+    }
+}
+
+/// Varchild's War-Riders — {1}{R} 3/4 Human Warrior; trample, rampage 1.
+/// Cumulative upkeep—have an opponent create a 1/1 red Survivor creature
+/// token.
+pub fn varchilds_war_riders() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::CumulativeUpkeep(CumulativeUpkeepCost::OpponentCreatesSurvivor),
+            Keyword::Trample,
+            Keyword::Rampage(1),
+        ],
+        ..creature(
+            "Varchild's War-Riders",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Human, CreatureType::Warrior],
+            3,
+            4,
         )
     }
 }

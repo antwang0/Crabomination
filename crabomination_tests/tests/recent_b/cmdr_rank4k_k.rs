@@ -389,3 +389,47 @@ fn oriss_prevents_damage_to_target_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "the shield held");
 }
+
+/// Varchild's War-Riders' cumulative upkeep hands the opponent a Survivor per
+/// age counter: one on the first upkeep.
+#[test]
+fn varchilds_war_riders_upkeep_gives_an_opponent_survivors() {
+    let mut g = pod(2);
+    for seat in 0..2 {
+        g.add_card_to_library(seat, catalog::island());
+        g.add_card_to_library(seat, catalog::island());
+    }
+    let riders = g.add_card_to_battlefield(0, catalog::varchilds_war_riders());
+    // Pass to seat 1's turn, then back to seat 0's upkeep.
+    while g.active_player_idx == 0 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    while g.active_player_idx != 0 || g.step != TurnStep::Draw {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(riders).is_some(), "upkeep paid");
+    let survivors = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token && c.controller == 1 && c.definition.name == "Survivor")
+        .count();
+    assert_eq!(survivors, 1);
+}
+
+/// Tetsuko, Pursuer pings the controller of a 1-toughness blocker.
+#[test]
+fn tetsuko_pursuer_pings_a_small_blockers_controller() {
+    let mut g = pod(2);
+    let tetsuko = ready(&mut g, 0, catalog::tetsuko_umezawa_pursuer());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let life = g.players[1].life;
+    declare(&mut g, vec![(tetsuko, 1)]);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(elf, tetsuko)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1);
+}

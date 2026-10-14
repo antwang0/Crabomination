@@ -1500,6 +1500,8 @@ static DECKS: &[Factory] = &[
     super::decks::donnie_and_april_adorkable_duo,
     super::decks::oriss_samite_guardian,
     super::decks::weathered_bodyguards,
+    super::decks::tetsuko_umezawa_pursuer,
+    super::decks::varchilds_war_riders,
     // cmdr_rank5k_a (session 01KXJ5zX)
     super::decks::inundate,
     super::decks::luminous_bonds,
