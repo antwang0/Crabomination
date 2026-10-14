@@ -4473,6 +4473,11 @@ static DECKS: &[Factory] = &[
     super::decks::plus_two_mace,
     super::decks::scrying_sheets,
     super::decks::wurmcalling,
+    // cmdr_rank6k_d (session 01PxmVAG)
+    super::decks::black_widow_super_spy,
+    super::decks::eligeth_crossroads_augur,
+    super::decks::petty_larceny,
+    super::decks::siani_eye_of_the_storm,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
