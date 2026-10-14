@@ -67354,3 +67354,141 @@ pub const ORISS_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const DOCTOR_JANE_FOSTER_COMMANDERS: &[CardFactory] = &[doctor_jane_foster];
+
+/// **Doctor Jane Foster**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Doctor Jane Foster (EDHREC, fetched 2026-10-14).
+pub const DOCTOR_JANE_FOSTER_MAIN: &[CardFactory] = &[
+    arcane_signet, caduceus_staff_of_hermes, conjurers_closet, imperial_recovery_unit,
+    medicine_bag, sol_ring, survivors_med_kit, emeria_the_sky_ruin, minas_tirith,
+    myriad_landscape, war_room, windbrisk_heights, angel_of_condemnation, archangel_of_thune,
+    aunt_may, auriok_champion, cathar_commando, children_of_korlis, dawn_evangel,
+    daxos_blessed_by_the_sun, delney_streetwise_lookout, drannith_healer, eldrazi_displacer,
+    essence_channeler, extraction_specialist, galepowder_mage, gilraen_dunedain_protector,
+    guide_of_souls, haliya_guided_by_light, helpful_hunter, icewind_stalwart,
+    inspiring_overseer, intrepid_adversary, knight_of_the_white_orchid, lifecreed_duo,
+    loran_of_the_third_path, order_of_whiteclay, outlaw_medic, phelia_exuberant_shepherd,
+    ratchet_field_medic, selfless_savior, selfless_spirit, serene_steward, soul_warden,
+    souls_attendant, spectacular_spider_man, suture_priest, thalia_heretic_cathar,
+    voice_of_the_blessed, wall_of_omens, welcoming_vampire, ajanis_welcome,
+    case_of_the_uneaten_feast, light_of_promise, surgical_suite_hospital_room,
+    teleportation_circle, tocasias_welcome, acrobatic_maneuver, cloudshift, ephemerate,
+    flicker_of_fate, hallow, heal, healing_salve, union_of_the_third_path, breath_of_life,
+    healing_hands, helping_hand, remember_the_fallen, resurrection,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const DARWIN_COMMANDERS: &[CardFactory] = &[darwin_adaptive_mutant];
+
+/// **Darwin, Adaptive Mutant**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Forests = 99.
+/// Darwin, Adaptive Mutant (EDHREC, fetched 2026-10-14).
+pub const DARWIN_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, haunted_cloak, moss_diamond, ozolith_the_shattered_spire,
+    shadowspear, sol_ring, the_great_henge, the_ozolith, wayfarers_bauble, bonders_enclave,
+    castle_garenbrig, forge_of_heroes, mosswort_bridge, myriad_landscape, opal_palace,
+    rogues_passage, war_room, armorcraft_judge, battering_krasis, champion_of_lambholt,
+    defiler_of_vigor, duskshell_crawler, evolution_sage, evolution_witness, experiment_one,
+    fertilid, forgotten_ancient, ghalta_primal_hunger, gyre_sage, incubation_druid,
+    kalonian_hydra, kami_of_whispered_hopes, kodama_of_the_west_tree, llanowar_elves,
+    renata_called_to_the_hunt, renegade_krasis, rishkar_peema_renegade, scurry_oak,
+    stonecoil_serpent, towering_titan, ulvenwald_tracker, watchful_radstag, wildwood_scourge,
+    wrens_run_hydra, beorns_hospitality, branching_evolution, doubling_season, guardian_project,
+    hardened_scales, hydras_growth, master_chef, wild_growth, hunters_insight,
+    inscription_of_abundance, inspiring_call, invigorating_surge, khalni_ambush, ram_through,
+    return_of_the_wildspeaker, silkguard, solidarity_of_heroes, windswift_slice,
+    nissa_ascended_animist, bridgeworks_battle, cultivate, gelatinous_genesis,
+    germination_practicum, primal_might, viviens_stampede, wurmcalling,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];
+
+pub const HERCULES_COMMANDERS: &[CardFactory] = &[hercules_prince_of_power];
+
+/// **Hercules, Prince of Power**'s EDHREC average deck, card for card:
+/// 65 nonbasic cards + 34 Forests = 99.
+/// Hercules, Prince of Power (EDHREC, fetched 2026-10-14).
+pub const HERCULES_MAIN: &[CardFactory] = &[
+    aetheric_amplifier, blade_of_selves, brotherhood_regalia, chimil_the_inner_sun,
+    conquerors_flail, herd_heirloom, mithril_coat, ozolith_the_shattered_spire, the_ozolith,
+    the_skullspore_nexus, myriad_landscape, reliquary_tower, rogues_passage, beast_whisperer,
+    brawn, bristly_bill_spine_sower, bushmaster_coiled_henchman, eternal_witness,
+    fanatic_of_rhonas, fyndhorn_elves, gamma_grotesque, goldvein_hydra,
+    goliath_mass_manipulator, guerrilla_gorilla, hydra_trainer, jumbo_cactuar,
+    kami_of_whispered_hopes, llanowar_elves, mightform_harmonizer, mossborn_hydra,
+    nantuko_mentor, noxious_newt, nyxborn_hydra, oracle_of_mul_daya, silent_arbiter,
+    studious_first_year, suspicious_bookcase, the_earth_king, whisperer_of_the_wilds,
+    wirewood_elf, zopandrel_hunger_dominus, claim_the_kingdom, court_of_garenbrig,
+    forced_adaptation, greater_good, hardened_scales, innkeepers_talent, unnatural_growth,
+    world_war_hulk, archdruids_charm, entish_restoration, giant_growth, heroic_intervention,
+    krosan_grip, overprotect, ram_through, return_of_the_wildspeaker, bushwhack, epic_fight,
+    fangs_of_kalonia, kodamas_reach, overwhelming_stampede, summer_bloom, thirsting_roots,
+    traverse_the_outlands,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest,
+];
+
+pub const EVERETT_K_ROSS_COMMANDERS: &[CardFactory] = &[everett_k_ross_hapless_attache];
+
+/// **Everett K. Ross, Hapless Attaché**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Plains = 99.
+/// Everett K. Ross, Hapless Attaché (EDHREC, fetched 2026-10-14).
+pub const EVERETT_K_ROSS_MAIN: &[CardFactory] = &[
+    plus_two_mace, arcane_signet, archaeomancers_map, bone_saw, brass_knuckles,
+    butchers_cleaver, celestial_armor, champions_helm, commanders_sphere, dunedain_blade,
+    fireshrieker, king_solomons_frogs, mind_stone, pearl_medallion, prowlers_helm, sol_ring,
+    bonders_enclave, buried_ruin, castle_ardenvale, command_tower, desert_of_the_true,
+    eiganjo_castle, emeria_the_sky_ruin, kor_haven, radiant_fountain, scrying_sheets, war_room,
+    ajanis_sunstriker, alms_collector, angel_of_invention, angelic_field_marshal,
+    archive_arbiter, avacyn_angel_of_hope, basilica_guards, brightmare, charismatic_conqueror,
+    claim_jumper, danitha_capashen, delney_streetwise_lookout, dust_animus, emeria_shepherd,
+    esper_sentinel, ginger_queen_of_sweets, giver_of_runes, jacked_rabbit, luminous_broodmoth,
+    mangara_the_diplomat, mother_of_runes, rumor_gatherer, skrelv_defector_mite,
+    welcoming_vampire, ajanis_mantra, eldrazi_conscription, gift_of_immortality, noble_heritage,
+    smugglers_share, sunbond, trouble_in_pairs, aangs_defense, akromas_will, blessed_reversal,
+    clever_concealment, flare_of_fortitude, generous_gift, path_to_exile, raise_the_alarm,
+    swords_to_plowshares, the_eagles_are_coming, approach_of_the_second_sun, austere_command,
+    chaplains_blessing, cut_a_deal, farewell, winds_of_abandon, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const HAWKEYE_2_COMMANDERS: &[CardFactory] = &[hawkeye_clint_barton];
+
+/// **Hawkeye, Clint Barton**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Plains = 99.
+/// Hawkeye, Clint Barton (EDHREC, fetched 2026-10-14).
+pub const HAWKEYE_2_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arcane_signet, caduceus_staff_of_hermes, colossus_hammer,
+    commanders_plate, excalibur_sword_of_eden, fellwar_stone, genji_glove, hammer_of_nazahn,
+    leyline_axe, masterwork_of_ingenuity, mind_stone, pearl_medallion, shadowspear, sol_ring,
+    swiftfoot_boots, sword_of_feast_and_famine, sword_of_fire_and_ice,
+    sword_of_forge_and_frontier, sword_of_hearth_and_home, sword_of_wealth_and_power,
+    sword_of_the_animist, swordsmans_steel, the_aetherspark, throne_of_eldraine, ancient_den,
+    buried_ruin, eiganjo_seat_of_the_empire, emeria_the_sky_ruin, inventors_fair,
+    nykthos_shrine_to_nyx, rogues_passage, ardenn_intrepid_archaeologist, armored_skyhunter,
+    cid_freeflier_pilot, codsworth_handy_helper, danitha_capashen, esper_sentinel,
+    grand_abolisher, halvar_god_of_battle, mother_of_runes, puresteel_paladin,
+    sram_senior_edificer, stoneforge_mystic, witch_enchanter, all_that_glitters, black_ward,
+    circle_of_protection_black, darksteel_mutation, forge_anew, green_ward, land_tax,
+    mantle_of_the_ancients, sigardas_aid, sphere_of_safety, super_state, super_soldier_serum,
+    trouble_in_pairs, akromas_will, dispatch, erode, flawless_maneuver, path_to_exile,
+    rebuff_the_wicked, restoration_magic, sejiri_shelter, silence, swords_to_plowshares,
+    open_the_armory, promise_of_loyalty, single_combat, steelshapers_gift,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];

@@ -14826,6 +14826,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ORISS_COMMANDERS,
             main: decks::ORISS_MAIN,
         },
+        // Seat 2396: Doctor Jane Foster's EDHREC average deck. `--pod-decks 2396`.
+        PodDeck {
+            name: "Doctor Jane Foster (W)",
+            commanders: decks::DOCTOR_JANE_FOSTER_COMMANDERS,
+            main: decks::DOCTOR_JANE_FOSTER_MAIN,
+        },
+        // Seat 2397: Darwin, Adaptive Mutant's EDHREC average deck. `--pod-decks 2397`.
+        PodDeck {
+            name: "Darwin, Adaptive Mutant (G)",
+            commanders: decks::DARWIN_COMMANDERS,
+            main: decks::DARWIN_MAIN,
+        },
+        // Seat 2398: Hercules, Prince of Power's EDHREC average deck. `--pod-decks 2398`.
+        PodDeck {
+            name: "Hercules, Prince of Power (G)",
+            commanders: decks::HERCULES_COMMANDERS,
+            main: decks::HERCULES_MAIN,
+        },
+        // Seat 2399: Everett K. Ross, Hapless Attaché's EDHREC average deck. `--pod-decks 2399`.
+        PodDeck {
+            name: "Everett K. Ross, Hapless Attaché (W)",
+            commanders: decks::EVERETT_K_ROSS_COMMANDERS,
+            main: decks::EVERETT_K_ROSS_MAIN,
+        },
+        // Seat 2400: Hawkeye, Clint Barton's EDHREC average deck. `--pod-decks 2400`.
+        PodDeck {
+            name: "Hawkeye, Clint Barton (W)",
+            commanders: decks::HAWKEYE_2_COMMANDERS,
+            main: decks::HAWKEYE_2_MAIN,
+        },
     ]
 }
 
@@ -19052,6 +19082,11 @@ mod tests {
             ("The Wondrous Wasp", &[0x136F]),
             ("Victor Timely, Wily Tycoon", &[0x1370]),
             ("Oriss, Samite Guardian", &[0x1371]),
+            ("Doctor Jane Foster", &[0x1372]),
+            ("Darwin, Adaptive Mutant", &[0x1373]),
+            ("Hercules, Prince of Power", &[0x1374]),
+            ("Everett K. Ross, Hapless Attaché", &[0x1375]),
+            ("Hawkeye, Clint Barton", &[0x1376]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
