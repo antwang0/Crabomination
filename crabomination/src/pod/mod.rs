@@ -14658,6 +14658,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAY_FILLET_2_COMMANDERS,
             main: decks::RAY_FILLET_2_MAIN,
         },
+        // Seat 2368: The Eleventh Doctor and Bill Potts's EDHREC average deck. `--pod-decks 2368`.
+        PodDeck {
+            name: "The Eleventh Doctor and Bill Potts (WUR)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_MAIN,
+        },
+        // Seat 2369: She-Hulk, Jennifer Walters's EDHREC average deck. `--pod-decks 2369`.
+        PodDeck {
+            name: "She-Hulk, Jennifer Walters (R)",
+            commanders: decks::SHE_HULK_COMMANDERS,
+            main: decks::SHE_HULK_MAIN,
+        },
+        // Seat 2370: Tri-Sentinel, Act of Vengeance's EDHREC average deck. `--pod-decks 2370`.
+        PodDeck {
+            name: "Tri-Sentinel, Act of Vengeance (C)",
+            commanders: decks::TRI_SENTINEL_COMMANDERS,
+            main: decks::TRI_SENTINEL_MAIN,
+        },
+        // Seat 2371: Brinelin, the Moon Kraken and Francisco, Fowl Marauder's EDHREC average deck. `--pod-decks 2371`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Francisco, Fowl Marauder (UB)",
+            commanders: decks::BRINELIN_COMMANDERS,
+            main: decks::BRINELIN_MAIN,
+        },
+        // Seat 2372: Red Guardian, Super-Soldier's EDHREC average deck. `--pod-decks 2372`.
+        PodDeck {
+            name: "Red Guardian, Super-Soldier (W)",
+            commanders: decks::RED_GUARDIAN_COMMANDERS,
+            main: decks::RED_GUARDIAN_MAIN,
+        },
+        // Seat 2373: Victor Mancha, Runaway's EDHREC average deck. `--pod-decks 2373`.
+        PodDeck {
+            name: "Victor Mancha, Runaway (C)",
+            commanders: decks::VICTOR_MANCHA_COMMANDERS,
+            main: decks::VICTOR_MANCHA_MAIN,
+        },
+        // Seat 2374: Yoshimaru, Scrappy Stray's EDHREC average deck. `--pod-decks 2374`.
+        PodDeck {
+            name: "Yoshimaru, Scrappy Stray (G)",
+            commanders: decks::YOSHIMARU_COMMANDERS,
+            main: decks::YOSHIMARU_MAIN,
+        },
+        // Seat 2375: The Eleventh Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 2375`.
+        PodDeck {
+            name: "The Eleventh Doctor and Adric, Mathematical Genius (WU)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_2_MAIN,
+        },
+        // Seat 2376: Bebop, Skull & Crossbones's EDHREC average deck. `--pod-decks 2376`.
+        PodDeck {
+            name: "Bebop, Skull & Crossbones (B)",
+            commanders: decks::BEBOP_COMMANDERS,
+            main: decks::BEBOP_MAIN,
+        },
+        // Seat 2377: Jocasta, Automaton Avenger's EDHREC average deck. `--pod-decks 2377`.
+        PodDeck {
+            name: "Jocasta, Automaton Avenger (C)",
+            commanders: decks::JOCASTA_COMMANDERS,
+            main: decks::JOCASTA_MAIN,
+        },
+        // Seat 2378: Teyo, Lightshield Expert's EDHREC average deck. `--pod-decks 2378`.
+        PodDeck {
+            name: "Teyo, Lightshield Expert (W)",
+            commanders: decks::TEYO_COMMANDERS,
+            main: decks::TEYO_MAIN,
+        },
     ]
 }
 
@@ -18856,6 +18922,17 @@ mod tests {
             ("Donnie & April, Adorkable Duo", &[0x1353]),
             ("Nakia, Wakandan Operative", &[0x1354]),
             ("Ray Fillet, Man Ray", &[0x1355]),
+            ("The Eleventh Doctor and Bill Potts", &[0x1356]),
+            ("She-Hulk, Jennifer Walters", &[0x1357]),
+            ("Tri-Sentinel, Act of Vengeance", &[0x1358]),
+            ("Brinelin, the Moon Kraken and Francisco, Fowl Marauder", &[0x1359]),
+            ("Red Guardian, Super-Soldier", &[0x135A]),
+            ("Victor Mancha, Runaway", &[0x135B]),
+            ("Yoshimaru, Scrappy Stray", &[0x135C]),
+            ("The Eleventh Doctor and Adric, Mathematical Genius", &[0x135D]),
+            ("Bebop, Skull & Crossbones", &[0x135E]),
+            ("Jocasta, Automaton Avenger", &[0x135F]),
+            ("Teyo, Lightshield Expert", &[0x1360]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
