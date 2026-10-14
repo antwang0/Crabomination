@@ -8148,6 +8148,7 @@ impl CardDefinition {
             casting_nonartifact_spell: !artifact,
             activating_ability: false,
             class_level: false,
+            power_up: false,
             any_color: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             kicked: false,

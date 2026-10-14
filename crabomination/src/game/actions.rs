@@ -21718,6 +21718,7 @@ impl GameState {
             };
             let mut kind = def.map(|d| d.ability_spend_kind()).unwrap_or_default();
             kind.class_level = matches!(ability.effect, crate::effect::Effect::AdvanceClassLevel);
+            kind.power_up = ability.power_up;
             kind
         };
 

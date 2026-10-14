@@ -918,6 +918,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast kicked spells" (Elfhame Druid). Reads
     /// `SpellKind::kicked`.
     KickedSpellsOnly,
+    /// "Spend this mana only to activate power-up abilities" (Quinjet
+    /// Technician, CR 702.193). Reads `SpellKind::power_up`.
+    PowerUpOnly,
 }
 
 impl SpendRestriction {
@@ -930,6 +933,7 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOrClassLevel => "only instants, sorceries and Class levels",
             SpendRestriction::InstantSorceryOrKicked => "only instants, sorceries and kicked spells",
             SpendRestriction::KickedSpellsOnly => "only kicked spells",
+            SpendRestriction::PowerUpOnly => "only power-up abilities",
             SpendRestriction::ArtifactOnly => "only artifacts",
             SpendRestriction::CreatureOfTypeUncounterable(_)
             | SpendRestriction::CreatureSpellOfType(_) => "only creatures of the chosen type",
@@ -1040,6 +1044,7 @@ impl SpendRestriction {
             SpendRestriction::InstantSorceryOrClassLevel => kind.instant_or_sorcery || kind.class_level,
             SpendRestriction::InstantSorceryOrKicked => kind.instant_or_sorcery || kind.kicked,
             SpendRestriction::KickedSpellsOnly => kind.kicked,
+            SpendRestriction::PowerUpOnly => kind.power_up,
             SpendRestriction::ArtifactOnly => kind.artifact,
             SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::NoNonartifactSpells => !kind.casting_nonartifact_spell,
@@ -1239,6 +1244,9 @@ pub struct SpellKind {
     /// The payment is a Class's level-up activation (CR 716.2a) — Sorcerer
     /// Class's mana may fund it.
     pub class_level: bool,
+    /// The payment is a power-up activation (CR 702.193) — Quinjet
+    /// Technician's mana may fund it.
+    pub power_up: bool,
     pub activating_ability: bool,
     /// CR 609.4b — the source lets its abilities be paid "as though it were
     /// mana of any color" (Drana and Linvala's and Manascape Refractor's
