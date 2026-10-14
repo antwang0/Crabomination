@@ -2153,3 +2153,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Rona, Disciple of Gix | a land card exiled with Rona can be played too (the grant is "may play", not "may cast spells") | `GrantMayPlay { WhileSourceOnBattlefield }` |
 | 🟡 Seifer, Balamb Rival | the double-block deathtouch rider watches only your own attackers, not every creature attacking one of your opponents | `BecomesBlockedByNOrMore(2)` / `YourControl` |
 | 🟡 Nivea, Beloved Battlemage | the Akroma token has no mana cost, so its mana value is 0 rather than 8 | `TokenDefinition` carries no cost |
+| 🟡 Gathering Stone | a top card of the chosen type is always taken (the "may" is the engine's yes) | `If` + `Move` to hand |
+| 🟡 Loki Laufeyson | an instant or sorcery above Loki's power spends the watch without a copy instead of leaving it armed | `OnYourNextInstantSorceryThisTurn` |
+| 🟡 Wanda's Vision | the free cast stays open until end of turn rather than only as the trigger resolves | `ExileTopUntilNonlandMayPlay { EndOfThisTurn }` |

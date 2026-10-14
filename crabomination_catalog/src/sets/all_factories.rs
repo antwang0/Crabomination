@@ -4085,6 +4085,13 @@ static DECKS: &[Factory] = &[
     super::decks::fogwells_gym,
     super::decks::labyrinth_raptor,
     super::decks::lady_spider_maybelle_reilly,
+    // cmdr_rank3k_o (session 01PxmVAG)
+    super::decks::eiganjo_exemplar,
+    super::decks::gathering_stone,
+    super::decks::loki_laufeyson,
+    super::decks::rimefire_torque,
+    super::decks::sengir_the_dark_baron,
+    super::decks::wandas_vision,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
