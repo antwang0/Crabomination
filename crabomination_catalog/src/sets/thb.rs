@@ -1257,17 +1257,7 @@ pub fn tectonic_giant() -> CardDefinition {
                 to: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(3),
             },
-            // "Choose one of them" collapses to both getting the may-play
-            // grant (strictly better for the controller; rarely relevant).
-            Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: true,
-                uncast_penalty: None,
-            },
+            crate::sets::impulse_choose_one(2, crate::card::MayPlayDuration::EndOfControllersNextTurn),
         ])
     };
     CardDefinition {

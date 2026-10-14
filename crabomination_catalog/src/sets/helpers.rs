@@ -597,3 +597,29 @@ pub fn deck_may_have_copies(n: Option<u32>) -> StaticAbility {
         effect: StaticEffect::DeckMayHaveCopies(n),
     }
 }
+
+/// "Exile the top `n` cards of your library. Choose one of them. Until
+/// `duration`, you may play that card." — the pick is made on resolution
+/// (CR 608.2d) and the others stay exiled with no permission (Tectonic Giant,
+/// Riverwheel Sweep, Mishra's Research Desk, Jaya, Fiery Negotiator).
+pub fn impulse_choose_one(n: i32, duration: crate::card::MayPlayDuration) -> Effect {
+    Effect::Seq(vec![
+        Effect::Move {
+            what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(n) },
+            to: crate::effect::ZoneDest::Exile,
+        },
+        Effect::ChooseOneAmong {
+            what: Selector::ExiledThisResolution { filter: SelectionRequirement::Any },
+            chooser: PlayerRef::You,
+            chosen: Box::new(Effect::GrantMayPlay {
+                what: Selector::SeparatedPile { chosen: true },
+                duration,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            }),
+            other: Box::new(Effect::Noop),
+        },
+    ])
+}

@@ -1145,17 +1145,7 @@ pub fn riverwheel_sweep() -> CardDefinition {
                 kind: CounterType::Stun,
                 amount: Value::Const(3),
             },
-            // "Choose one of them" collapses to a may-play grant on both — a
-            // strictly-better approximation matching the Tectonic Giant impulse.
-            Effect::ExileTopAndGrantMayPlay {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                pay_any_color: false,
-                max_mana_value: None,
-                pay_own_cost: true,
-                uncast_penalty: None,
-            },
+            crate::sets::impulse_choose_one(2, crate::card::MayPlayDuration::EndOfControllersNextTurn),
         ]),
         ..Default::default()
     }

@@ -197,8 +197,7 @@ pub fn reckless_crew() -> CardDefinition {
 
 /// Mishra's Research Desk — {1} artifact. {1}, {T}, sacrifice it: exile the top
 /// two cards of your library; until the end of your next turn you may play
-/// one of them. Unearth {1}{R}. (Residual: both exiled cards stay playable —
-/// the "choose one of them" collapses as in Tectonic Giant's impulse.)
+/// one of them. Unearth {1}{R}.
 pub fn mishras_research_desk() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
@@ -206,15 +205,7 @@ pub fn mishras_research_desk() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 tap_cost: true,
                 sac_cost: true,
-                effect: Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
-                    count: Value::Const(2),
-                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false,
-                    max_mana_value: None,
-                    pay_own_cost: true,
-                    uncast_penalty: None,
-                },
+                effect: crate::sets::impulse_choose_one(2, crate::card::MayPlayDuration::EndOfControllersNextTurn),
                 ..Default::default()
             },
             unearth(cost(&[generic(1), r()])),
