@@ -15072,6 +15072,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PALLADIA_MORS_2_COMMANDERS,
             main: decks::PALLADIA_MORS_2_MAIN,
         },
+        // Seat 2437: Fumulus, the Infestation's EDHREC average deck. `--pod-decks 2437`.
+        PodDeck {
+            name: "Fumulus, the Infestation (B)",
+            commanders: decks::FUMULUS_COMMANDERS,
+            main: decks::FUMULUS_MAIN,
+        },
+        // Seat 2438: Massacre Girl's EDHREC average deck. `--pod-decks 2438`.
+        PodDeck {
+            name: "Massacre Girl (B)",
+            commanders: decks::MASSACRE_GIRL_2_COMMANDERS,
+            main: decks::MASSACRE_GIRL_2_MAIN,
+        },
+        // Seat 2439: Scarlet Witch, Chaotic Avenger's EDHREC average deck. `--pod-decks 2439`.
+        PodDeck {
+            name: "Scarlet Witch, Chaotic Avenger (UR)",
+            commanders: decks::SCARLET_WITCH_COMMANDERS,
+            main: decks::SCARLET_WITCH_MAIN,
+        },
+        // Seat 2440: Asmira, Holy Avenger's EDHREC average deck. `--pod-decks 2440`.
+        PodDeck {
+            name: "Asmira, Holy Avenger (WG)",
+            commanders: decks::ASMIRA_COMMANDERS,
+            main: decks::ASMIRA_MAIN,
+        },
+        // Seat 2441: Cleon, Merry Champion's EDHREC average deck. `--pod-decks 2441`.
+        PodDeck {
+            name: "Cleon, Merry Champion (R)",
+            commanders: decks::CLEON_COMMANDERS,
+            main: decks::CLEON_MAIN,
+        },
+        // Seat 2442: Seifer Almasy's EDHREC average deck. `--pod-decks 2442`.
+        PodDeck {
+            name: "Seifer Almasy (R)",
+            commanders: decks::SEIFER_ALMASY_COMMANDERS,
+            main: decks::SEIFER_ALMASY_MAIN,
+        },
+        // Seat 2443: Mutagen Man, Living Ooze's EDHREC average deck. `--pod-decks 2443`.
+        PodDeck {
+            name: "Mutagen Man, Living Ooze (G)",
+            commanders: decks::MUTAGEN_MAN_COMMANDERS,
+            main: decks::MUTAGEN_MAN_MAIN,
+        },
+        // Seat 2444: Anafenza, Kin-Tree Spirit's EDHREC average deck. `--pod-decks 2444`.
+        PodDeck {
+            name: "Anafenza, Kin-Tree Spirit (W)",
+            commanders: decks::ANAFENZA_3_COMMANDERS,
+            main: decks::ANAFENZA_3_MAIN,
+        },
+        // Seat 2445: Gandalf, Shadow's Foe's EDHREC average deck. `--pod-decks 2445`.
+        PodDeck {
+            name: "Gandalf, Shadow's Foe (U)",
+            commanders: decks::GANDALF_7_COMMANDERS,
+            main: decks::GANDALF_7_MAIN,
+        },
+        // Seat 2446: Targ Nar, Demon-Fang Gnoll's EDHREC average deck. `--pod-decks 2446`.
+        PodDeck {
+            name: "Targ Nar, Demon-Fang Gnoll (RG)",
+            commanders: decks::TARG_NAR_COMMANDERS,
+            main: decks::TARG_NAR_MAIN,
+        },
+        // Seat 2447: Gimli of the Glittering Caves's EDHREC average deck. `--pod-decks 2447`.
+        PodDeck {
+            name: "Gimli of the Glittering Caves (R)",
+            commanders: decks::GIMLI_OF_THE_GLITTERING_CAVES_COMMANDERS,
+            main: decks::GIMLI_OF_THE_GLITTERING_CAVES_MAIN,
+        },
+        // Seat 2448: The Vision and Scarlet Witch's EDHREC average deck. `--pod-decks 2448`.
+        PodDeck {
+            name: "The Vision and Scarlet Witch (R)",
+            commanders: decks::THE_VISION_AND_SCARLET_WITCH_COMMANDERS,
+            main: decks::THE_VISION_AND_SCARLET_WITCH_MAIN,
+        },
+        // Seat 2449: Davvol, Evincar of Rath's EDHREC average deck. `--pod-decks 2449`.
+        PodDeck {
+            name: "Davvol, Evincar of Rath (BG)",
+            commanders: decks::DAVVOL_COMMANDERS,
+            main: decks::DAVVOL_MAIN,
+        },
+        // Seat 2450: Gargantos, the Endbringer's EDHREC average deck. `--pod-decks 2450`.
+        PodDeck {
+            name: "Gargantos, the Endbringer (BG)",
+            commanders: decks::GARGANTOS_COMMANDERS,
+            main: decks::GARGANTOS_MAIN,
+        },
+        // Seat 2451: Shauku, Endbringer's EDHREC average deck. `--pod-decks 2451`.
+        PodDeck {
+            name: "Shauku, Endbringer (B)",
+            commanders: decks::SHAUKU_COMMANDERS,
+            main: decks::SHAUKU_MAIN,
+        },
+        // Seat 2452: Sally Pride, Lioness Leader's EDHREC average deck. `--pod-decks 2452`.
+        PodDeck {
+            name: "Sally Pride, Lioness Leader (W)",
+            commanders: decks::SALLY_PRIDE_COMMANDERS,
+            main: decks::SALLY_PRIDE_MAIN,
+        },
     ]
 }
 
@@ -19339,6 +19435,22 @@ mod tests {
             ("Tersa Lightshatter", &[0x1398]),
             ("Norika Yamazaki, the Poet", &[0x1399]),
             ("Palladia-Mors, the Ruiner", &[0x139A]),
+            ("Fumulus, the Infestation", &[0x139B]),
+            ("Massacre Girl", &[0x139C]),
+            ("Scarlet Witch, Chaotic Avenger", &[0x139D]),
+            ("Asmira, Holy Avenger", &[0x139E]),
+            ("Cleon, Merry Champion", &[0x139F]),
+            ("Seifer Almasy", &[0x13A0]),
+            ("Mutagen Man, Living Ooze", &[0x13A1]),
+            ("Anafenza, Kin-Tree Spirit", &[0x13A2]),
+            ("Gandalf, Shadow's Foe", &[0x13A3]),
+            ("Targ Nar, Demon-Fang Gnoll", &[0x13A4]),
+            ("Gimli of the Glittering Caves", &[0x13A5]),
+            ("The Vision and Scarlet Witch", &[0x13A6]),
+            ("Davvol, Evincar of Rath", &[0x13A7]),
+            ("Gargantos, the Endbringer", &[0x13A8]),
+            ("Shauku, Endbringer", &[0x13A9]),
+            ("Sally Pride, Lioness Leader", &[0x13AA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
