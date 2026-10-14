@@ -957,3 +957,24 @@ fn ayesha_deploys_artifacts_up_to_her_power() {
     assert!(g.battlefield_find(ring).is_some() && g.battlefield_find(mind).is_some());
     assert!(g.battlefield_find(big).is_none());
 }
+
+/// Maeve draws when the creature she goaded attacks one of her opponents,
+/// not when it attacks her.
+#[test]
+fn maeve_draws_when_her_goaded_creature_hits_an_opponent() {
+    let mut g = pod(3);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let maeve = ready(&mut g, 0, catalog::maeve_insidious_singer());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    activate(&mut g, maeve, 0, Some(Target::Permanent(bear)));
+    let hand = g.players[0].hand.len();
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(2) }]))
+        .expect("attack seat 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}

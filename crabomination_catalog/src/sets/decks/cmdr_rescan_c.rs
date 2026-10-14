@@ -585,3 +585,20 @@ pub fn ayesha_tanaka_armorer() -> CardDefinition {
         ..legend("Ayesha Tanaka, Armorer", cost(&[generic(3), w(), u()]), vec![CreatureType::Human, CreatureType::Artificer], 2, 4)
     }
 }
+
+/// Maeve, Insidious Singer — {2}{U}{U} legendary 3/4 Siren. {2}{U}: goad
+/// target creature; whenever it attacks one of your opponents this turn, you
+/// draw a card. (Tetsuo Umezawa.)
+pub fn maeve_insidious_singer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Seq(vec![
+                Effect::Goad { what: target_filtered(R::Creature) },
+                Effect::WhenTargetAttacksOpponentThisTurn { slot: 0, body: Box::new(draw(1)) },
+            ]),
+            ..Default::default()
+        }],
+        ..legend("Maeve, Insidious Singer", cost(&[generic(2), u(), u()]), vec![CreatureType::Siren], 3, 4)
+    }
+}
