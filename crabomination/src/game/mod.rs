@@ -2332,6 +2332,10 @@ pub struct ColdState {
     /// entry is inert; only that effect writes it.
     #[serde(default)]
     pub(crate) legend_rule_off_this_turn: Vec<(usize, u32)>,
+    /// Stunning Reversal's armed loss replacements, as (seat, turn number):
+    /// one entry per resolution, spent by the next loss that turn.
+    #[serde(default)]
+    pub(crate) loss_reversals_this_turn: Vec<(usize, u32)>,
 }
 
 /// A declined optional extra-target slot (CR 601.2c — "up to N targets"),

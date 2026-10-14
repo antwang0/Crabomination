@@ -1444,6 +1444,10 @@ pub enum Value {
     /// `CardData::cast_snow_mana` stamp, read off the pool's snow provenance
     /// (conservative, like the pool's own clamp).
     SnowManaSpentToCastSource,
+    /// Mana from Treasures spent to cast the source spell — "a Treasure token
+    /// for each mana from a Treasure spent to cast it" (Marut): the
+    /// `CardData::cast_treasure_mana` stamp.
+    TreasureManaSpentToCastSource,
     /// "Each creature `who` controlled that dealt combat damage to a player
     /// this turn" (Excess): the distinct creatures in the other players'
     /// combat-damage lists, gone ones included — on the battlefield read by
@@ -5536,6 +5540,10 @@ pub enum Effect {
     /// Sets `Player.{cant_lose_this_turn, damage_floor_this_turn}`; cleared
     /// by `do_untap` at the turn boundary.
     CantLoseThisTurn { damage_floor: bool },
+    /// CR 614 / 104.3 — "The next time you would lose the game this turn,
+    /// instead draw seven cards and your life total becomes 1" (Stunning
+    /// Reversal): arms one turn-scoped loss replacement for the controller.
+    NextLossThisTurnDrawSevenAtOne,
     /// Forbidding Spirit — "until your next turn, creatures can't attack you or
     /// planeswalkers you control unless their controller pays {amount} for
     /// each." Sets `Player.attack_tax_until_your_turn` on the controller;

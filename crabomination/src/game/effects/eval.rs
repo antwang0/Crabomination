@@ -1748,6 +1748,10 @@ impl GameState {
                 let n = self.find_card_anywhere(id).map(|c| c.cast_desert_mana);
                 i32::from(n.or_else(|| self.resolving_spell(id).map(|s| s.cast_desert_mana)).unwrap_or(0))
             }),
+            Value::TreasureManaSpentToCastSource => ctx
+                .source
+                .and_then(|id| self.find_card_anywhere(id))
+                .map_or(0, |c| i32::from(c.cast_treasure_mana)),
             Value::SnowManaSpentToCastSource => ctx.source.map_or(0, |id| {
                 let n = self.find_card_anywhere(id).map(|c| c.cast_snow_mana);
                 i32::from(n.or_else(|| self.resolving_spell(id).map(|s| s.cast_snow_mana)).unwrap_or(0))

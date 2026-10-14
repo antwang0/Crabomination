@@ -818,6 +818,7 @@ impl Effect {
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext
             | Effect::LegendRuleOffThisTurn { .. }
+            | Effect::NextLossThisTurnDrawSevenAtOne
             | Effect::MayRepeat { .. }
             | Effect::DrainDefendersLandsForManaNextMain
             | Effect::ExileRandomFromHandMayPlayThisTurn { .. }

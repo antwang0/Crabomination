@@ -8813,6 +8813,9 @@ impl GameState {
                     events.push(GameEvent::PermanentExiled { card_id: throne });
                     continue;
                 }
+                if !self.loss_reversals_this_turn.is_empty() && self.apply_loss_reversal(i, events) {
+                    continue;
+                }
                 // Stamp the authoritative cause most-specific-first, matching
                 // the SBA order that would fire (life, then poison, then
                 // commander damage — CR 704.5a/c/v).

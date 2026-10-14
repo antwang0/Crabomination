@@ -10050,6 +10050,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NextLossThisTurnDrawSevenAtOne => {
+                let entry = (ctx.controller, self.turn_number);
+                self.loss_reversals_this_turn.retain(|&(_, t)| t == entry.1);
+                self.loss_reversals_this_turn.push(entry);
+                Ok(())
+            }
+
             Effect::CantLoseThisTurn { damage_floor } => {
                 let p = ctx.controller;
                 self.players[p].cant_lose_this_turn = true;
