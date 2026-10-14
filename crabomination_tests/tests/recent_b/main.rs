@@ -286,6 +286,7 @@ mod cmdr_rank3k_n;
 mod cmdr_rank3k_o;
 mod cmdr_rank3k_p;
 mod cmdr_rank3k_q;
+mod cmdr_rank4k_a;
 mod cmdr_edhrec53;
 mod cmdr_edhrec54;
 mod cmdr_edhrec55;
