@@ -221,3 +221,45 @@ fn blessing_of_frost_counts_snow_mana_spent() {
         assert_eq!(g.players[0].hand.len(), usize::from(snow), "snow={snow}");
     }
 }
+
+/// Swallow Whole taps the caster's bear as its cost, exiles their tapped
+/// creature, and grows the bear that paid.
+#[test]
+fn swallow_whole_grows_the_creature_tapped_to_pay() {
+    let mut g = pod(2);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::swallow_whole());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "swallowed");
+    assert!(tapped(&g, mine), "tapped as the cost");
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "and grew");
+}
+
+/// Without an untapped creature to tap, it can't be cast.
+#[test]
+fn swallow_whole_needs_a_creature_to_tap() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::swallow_whole());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err());
+}

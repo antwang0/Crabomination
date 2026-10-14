@@ -2,7 +2,8 @@
 //! 2026-10-14 scan), eleventh file. Tests in `tests/recent_b/cmdr_rank4k_k.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
+    AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, EventKind,
+    EventScope, EventSpec, Keyword,
     MayPlayDuration,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Value,
@@ -10,7 +11,7 @@ use crate::card::{
 use crate::game::types::TurnStep;
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{ChainCopyCost, Duration, Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{ManaCost, b, cost, g, generic, r, u};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -228,6 +229,34 @@ pub fn blessing_of_frost() -> CardDefinition {
                 amount: Value::CountOf(Box::new(Selector::EachPermanent(
                     R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)),
                 ))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── The Duke, Rebel Sentry ───────────────────────────────────────────────────
+
+/// Swallow Whole — {W} sorcery. As an additional cost, tap an untapped
+/// creature you control. Exile target tapped creature. Put a +1/+1 counter on
+/// the creature tapped to pay the additional cost.
+pub fn swallow_whole() -> CardDefinition {
+    CardDefinition {
+        name: "Swallow Whole",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::TapPermanents {
+            filter: R::Creature,
+            count: 1,
+        }],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(R::Creature.and(R::Tapped)),
+            },
+            Effect::AddCounter {
+                what: Selector::CostTappedPermanentOfSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
             },
         ]),
         ..Default::default()
