@@ -13872,6 +13872,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TAROX_BLADEWING_COMMANDERS,
             main: decks::TAROX_BLADEWING_MAIN,
         },
+        // Seat 2237: Jiang Yanggu, Alone's EDHREC average deck. `--pod-decks 2237`.
+        PodDeck {
+            name: "Jiang Yanggu, Alone (R)",
+            commanders: decks::JIANG_YANGGU_2_COMMANDERS,
+            main: decks::JIANG_YANGGU_2_MAIN,
+        },
+        // Seat 2238: Impossible Man's EDHREC average deck. `--pod-decks 2238`.
+        PodDeck {
+            name: "Impossible Man (U)",
+            commanders: decks::IMPOSSIBLE_MAN_COMMANDERS,
+            main: decks::IMPOSSIBLE_MAN_MAIN,
+        },
+        // Seat 2239: Palladia-Mors's EDHREC average deck. `--pod-decks 2239`.
+        PodDeck {
+            name: "Palladia-Mors (WRG)",
+            commanders: decks::PALLADIA_MORS_COMMANDERS,
+            main: decks::PALLADIA_MORS_MAIN,
+        },
+        // Seat 2240: Super-Adaptoid's EDHREC average deck. `--pod-decks 2240`.
+        PodDeck {
+            name: "Super-Adaptoid (C)",
+            commanders: decks::SUPER_ADAPTOID_COMMANDERS,
+            main: decks::SUPER_ADAPTOID_MAIN,
+        },
+        // Seat 2241: Stangg's EDHREC average deck. `--pod-decks 2241`.
+        PodDeck {
+            name: "Stangg (RG)",
+            commanders: decks::STANGG_COMMANDERS,
+            main: decks::STANGG_MAIN,
+        },
     ]
 }
 
@@ -17940,6 +17970,11 @@ mod tests {
             ("Dragon Man, Reformed Robot", &[0x12D0]),
             ("General Leo Cristophe", &[0x12D1]),
             ("Tarox Bladewing", &[0x12D2]),
+            ("Jiang Yanggu, Alone", &[0x12D3]),
+            ("Impossible Man", &[0x12D4]),
+            ("Palladia-Mors", &[0x12D5]),
+            ("Super-Adaptoid", &[0x12D6]),
+            ("Stangg", &[0x12D7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

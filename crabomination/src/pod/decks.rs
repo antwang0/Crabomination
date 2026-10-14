@@ -62939,3 +62939,142 @@ pub const TAROX_BLADEWING_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const JIANG_YANGGU_2_COMMANDERS: &[CardFactory] = &[jiang_yanggu_alone];
+
+/// **Jiang Yanggu, Alone**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Jiang Yanggu, Alone (EDHREC, fetched 2026-10-14).
+pub const JIANG_YANGGU_2_MAIN: &[CardFactory] = &[
+    arcane_signet, brasss_tunnel_grinder, currency_converter, cursed_mirror, hazorets_monument,
+    key_to_the_city, lightning_greaves, mind_stone, monument_to_endurance, ruby_medallion,
+    sol_ring, swiftfoot_boots, arena_of_glory, forgotten_cave, geier_reach_sanitarium,
+    rogues_passage, smoldering_crater, war_room, anger, anjes_ravager, brallin_skyshark_rider,
+    clive_ifrits_dominant, conspiracy_theorist, containment_construct, detectives_phoenix,
+    fear_of_missing_out, glint_horn_buccaneer, hobgoblin_mantled_marauder,
+    inti_seneschal_of_the_sun, ivora_insatiable_heir, living_laser, magmakin_artillerist,
+    magus_of_the_wheel, marauding_mako, misty_knight_hero_for_hire, naktamun_lorespinner,
+    ox_of_agonas, professional_face_breaker, samut_hazorets_champion, smellerbee_rebel_fighter,
+    spider_man_new_champion, squee_goblin_nabob, surly_badgersaur, tersa_lightshatter,
+    ajanis_anguish, connecting_the_dots, cool_but_rude, tectonic_reformation, abrade, big_score,
+    bolt_bend, chaos_warp, demand_answers, return_the_favor, seething_song,
+    thrill_of_possibility, unexpected_windfall, untimely_malfunction, blasphemous_act,
+    burning_inquiry, cathartic_reunion, change_of_fortune, faithless_looting, seize_the_spoils,
+    snort, sundering_eruption, vandalblast, wheel_of_misfortune, will_of_the_jeskai,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const IMPOSSIBLE_MAN_COMMANDERS: &[CardFactory] = &[impossible_man];
+
+/// **Impossible Man**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Islands = 99.
+/// Impossible Man (EDHREC, fetched 2026-10-14).
+pub const IMPOSSIBLE_MAN_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, chimil_the_inner_sun, expedition_map, gilded_lotus,
+    heartstone, helm_of_the_host, mind_stone, mirage_mirror, mirror_box, sapphire_medallion,
+    sol_ring, swiftfoot_boots, the_enigma_jewel, thought_vessel, dark_depths, lotus_field,
+    maze_of_ith, minamo_school_at_waters_edge, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, thespians_stage, urzas_cave, urzas_saga, vesuva,
+    auton_soldier, body_of_knowledge, chameleon_master_of_disguise, clever_impersonator,
+    clone_card, faerie_mastermind, glasspool_mimic, hullbreaker_horror,
+    ioreth_of_the_healing_house, irma_part_time_mutant, loki_god_of_mischief,
+    loki_lord_of_misrule, marvin_murderous_mimic, nezahal_primal_tide, omen_hawker,
+    phyrexian_metamorph, sakashima_of_a_thousand_faces, silver_myr, solemn_simulacrum,
+    spark_double, willbreaker, dissipation_field, extravagant_replication, impostor_syndrome,
+    mirrormade, propaganda, rhystic_study, training_grounds, unstoppable_plan, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell, frantic_search,
+    high_tide, mana_drain, mirrorform, negate, pongify, rapid_hybridization, snap,
+    hidden_strings, multiversal_recruitment, ponder, rite_of_replication, stock_up, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const PALLADIA_MORS_COMMANDERS: &[CardFactory] = &[palladia_mors];
+
+/// **Palladia-Mors**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 9 Forests + 7 Mountains + 6 Plains = 99.
+/// Palladia-Mors (EDHREC, fetched 2026-10-14).
+pub const PALLADIA_MORS_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, fellwar_stone, gruul_signet, lightning_greaves,
+    selesnya_signet, sol_ring, swiftfoot_boots, battlefield_forge, brushland, command_tower,
+    exotic_orchard, jetmirs_garden, jungle_shrine, karplusan_forest, plateau, sacred_foundry,
+    savannah, stomping_ground, taiga, temple_garden, windswept_heath, wooded_foothills,
+    ancient_gold_dragon, atarka_world_render, avacyns_pilgrim, beast_whisperer,
+    birds_of_paradise, dragonlord_dromoka, dragonlords_servant, dragonspeaker_shaman,
+    druid_of_the_anima, elvish_mystic, fyndhorn_elves, goblin_anarchomancer, johan,
+    lathliss_dragon_queen, llanowar_elves, palladia_mors_the_ruiner, rith_liberated_primeval,
+    rith_the_awakener, sakura_tribe_elder, savage_ventmaw, serra_angel, shivan_dragon,
+    sunscorch_regent, thrakkus_the_butcher, wood_elves, dragon_tempest, encroaching_dragonstorm,
+    fertile_ground, fires_of_yavimaya, garruks_uprising, miraris_wake, rhythm_of_the_wild,
+    sylvan_library, utopia_sprawl, wild_growth, beast_within, chaos_warp, disenchant,
+    enlightened_tutor, generous_gift, lightning_bolt, path_to_exile, return_of_the_wildspeaker,
+    swords_to_plowshares, cultivate, farseek, harmonize, kodamas_reach, natures_lore,
+    rampant_growth, regrowth, skyshroud_claim, three_visits, wrath_of_god,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const SUPER_ADAPTOID_COMMANDERS: &[CardFactory] = &[super_adaptoid];
+
+/// **Super-Adaptoid**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 13 Wastes = 99.
+/// Super-Adaptoid (EDHREC, fetched 2026-10-14).
+pub const SUPER_ADAPTOID_MAIN: &[CardFactory] = &[
+    arc_reactor, basilisk_collar, champions_helm, chimil_the_inner_sun, commanders_plate,
+    everflowing_chalice, fireshrieker, forsaken_monument, hedron_archive, heroes_podium,
+    lightning_greaves, manifold_key, mind_stone, mirror_of_galadriel, mystic_forge, nettlecyst,
+    shadowspear, sol_ring, swiftfoot_boots, the_ozolith, the_ten_rings, thought_vessel,
+    thran_dynamo, unwinding_clock, worn_powerstone, amonkhet_raceway, bonders_enclave,
+    buried_ruin, darksteel_citadel, inventors_fair, muraganda_raceway, nesting_grounds,
+    reliquary_tower, rogues_passage, scavenger_grounds, shrine_of_the_forsaken_gods,
+    temple_of_the_false_god, the_mycosynth_gardens, thespians_stage, tomb_of_the_spirit_dragon,
+    urzas_cave, urzas_mine, urzas_power_plant, urzas_saga, urzas_tower, urzas_workshop,
+    war_room, zhalfirin_void, crystalline_giant, ed_e_lonesome_eyebot, foundry_inspector,
+    galactus_devourer_of_worlds, glaring_fleshraker, herbie_lovable_robot, hope_of_ghirapur,
+    iron_spider_stark_upgrade, jhoiras_familiar, jocasta_automaton_avenger,
+    karn_legacy_reforged, krang_utrom_warlord, liberator_urzas_battlethopter,
+    ornithopter_of_paradise, scavenged_brawler, silver_surfer_galactuss_herald,
+    sire_of_seven_deaths, steel_overseer, stonecoil_serpent, syr_ginger_the_meal_ender,
+    the_peregrine_dynamo, the_vision, the_warring_triad, traxos_scourge_of_kroog,
+    tri_sentinel_act_of_vengeance, ultima_origin_of_oblivion, ultron_artificial_malevolence,
+    vision_synthezoid_avenger, viv_vision_teen_synthezoid, weathered_sentinels,
+    echoes_of_eternity, eldritch_immunity, kozileks_command, null_elemental_blast, warping_wail,
+    ugin_the_ineffable, all_is_dust, selective_obliteration,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes, wastes,
+];
+
+pub const STANGG_COMMANDERS: &[CardFactory] = &[stangg];
+
+/// **Stangg**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 13 Forests + 12 Mountains = 99.
+/// Stangg (EDHREC, fetched 2026-10-14).
+pub const STANGG_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_selves, gruul_signet, helm_of_the_host, mirror_box, mirror_gallery,
+    sol_ring, swiftfoot_boots, talisman_of_impulse, cinder_glade, command_tower, game_trail,
+    gruul_turf, karplusan_forest, mossfire_valley, rockfall_vale, rootbound_crag, spire_garden,
+    stomping_ground, temple_of_abandon, wooded_foothills, agate_instigator, anger,
+    birds_of_paradise, bramble_sovereign, elvish_mystic, enduring_courage, eternal_witness,
+    flamerush_rider, fyndhorn_elves, garruks_packleader, general_marhault_elsdragon,
+    goblin_anarchomancer, jaxis_the_troublemaker, kiki_jiki_mirror_breaker, llanowar_elves,
+    ogre_battledriver, purphoros_god_of_the_forge, reclamation_sage, sakura_tribe_elder,
+    solemn_simulacrum, stalking_vengeance, stangg_echo_warrior, terror_of_the_peaks, wood_elves,
+    zhur_taa_druid, elemental_bond, flameshadow_conjuring, impact_tremors, mirror_march,
+    rhythm_of_the_wild, splinter_twin, tribute_to_the_world_tree, warstorm_surge, wild_growth,
+    abrade, beast_within, chaos_warp, collective_resistance, fog, heroic_intervention,
+    krosan_grip, lightning_bolt, natures_claim, blasphemous_act, cultivate, decimate, farseek,
+    harmonize, hull_breach, kodamas_reach, natures_lore, rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
