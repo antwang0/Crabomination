@@ -60044,3 +60044,58 @@ pub const RAPHAEL_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const MELIRA_2_COMMANDERS: &[CardFactory] = &[melira_sylvok_outcast];
+
+/// **Melira, Sylvok Outcast**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// Melira, Sylvok Outcast (EDHREC, fetched 2026-10-14).
+pub const MELIRA_2_MAIN: &[CardFactory] = &[
+    altar_of_dementia, altar_of_the_brood, arcane_signet, ashnods_altar, blasting_station,
+    cauldron_of_souls, emerald_medallion, lightning_greaves, phyrexian_altar, sol_ring,
+    swiftfoot_boots, boseiju_who_endures, castle_garenbrig, myriad_landscape,
+    nykthos_shrine_to_nyx, reliquary_tower, yavimaya_cradle_of_growth, aerie_ouphes,
+    beast_whisperer, birds_of_paradise, cankerbloom, devoted_druid, elvish_mystic,
+    eternal_witness, evolution_sage, fauna_shaman, fyndhorn_elves, karametras_acolyte,
+    lesser_masticore, lichenthrope, llanowar_elves, magus_of_the_order, phyrexian_hydra,
+    phyrexian_swarmlord, protean_hulk, reclamation_sage, renata_called_to_the_hunt,
+    sakura_tribe_elder, soul_of_the_harvest, spinebiter, tyrranax_rex, venerated_rotpriest,
+    viridian_corrupter, witherscale_wurm, woodfall_primus, asceticism, defense_of_the_heart,
+    fecundity, greater_good, kenriths_transformation, pattern_of_rebirth, wild_growth,
+    archdruids_charm, beast_within, chord_of_calling, fog, heroic_intervention, krosan_grip,
+    tamiyos_safekeeping, worldly_tutor, vivien_on_the_hunt, cultivate, eldritch_evolution,
+    green_suns_zenith, harmonize, kodamas_reach, natural_order, natures_lore, rampant_growth,
+    regrowth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const RONA_3_COMMANDERS: &[CardFactory] = &[rona_disciple_of_gix];
+
+/// **Rona, Disciple of Gix**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 11 Islands + 8 Swamps = 99.
+/// Rona, Disciple of Gix (EDHREC, fetched 2026-10-14).
+pub const RONA_3_MAIN: &[CardFactory] = &[
+    aether_spellbomb, arcane_signet, bolass_citadel, commanders_sphere, dimir_signet,
+    executioners_capsule, fellwar_stone, isochron_scepter, mind_stone, mishras_bauble, mox_opal,
+    mystic_forge, nihil_spellbomb, senseis_divining_top, sol_ring, talisman_of_dominance,
+    thought_vessel, wayfarers_bauble, bojuka_bog, command_tower, darksteel_citadel,
+    dimir_aqueduct, drowned_catacomb, inventors_fair, mistvault_bridge, morphic_pool,
+    reliquary_tower, seat_of_the_synod, sunken_hollow, temple_of_deceit, underground_river,
+    vault_of_whispers, watery_grave, artificers_assistant, baleful_strix, burnished_hart,
+    displacer_kitten, emry_lurker_of_the_loch, etherium_sculptor, foundry_inspector,
+    golbez_crystal_collector, jhoiras_familiar, myr_retriever, noxious_gearhulk,
+    padeem_consul_of_innovation, phyrexian_metamorph, riddlesmith, sai_master_thopterist,
+    scrap_trawler, shimmer_myr, solemn_simulacrum, the_reality_chip, thought_monitor,
+    tribute_mage, trinket_mage, phyrexian_scriptures, rhystic_study, the_antiquities_war,
+    the_eldest_reborn, thopter_spy_network, arcane_denial, brainstorm, counterspell,
+    cyclonic_rift, dark_ritual, dramatic_reversal, ghostly_flicker, negate,
+    thirst_for_knowledge, vampiric_tutor, whir_of_invention, tezzeret_the_seeker,
+    tezzeret_artifice_master, tezzeret_master_of_the_bridge, demonic_tutor, fabricate,
+    feed_the_swarm, thoughtcast, toxic_deluge, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

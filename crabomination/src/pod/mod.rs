@@ -13242,6 +13242,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RAPHAEL_2_COMMANDERS,
             main: decks::RAPHAEL_2_MAIN,
         },
+        // Seat 2132: Melira, Sylvok Outcast's EDHREC average deck. `--pod-decks 2132`.
+        PodDeck {
+            name: "Melira, Sylvok Outcast (G)",
+            commanders: decks::MELIRA_2_COMMANDERS,
+            main: decks::MELIRA_2_MAIN,
+        },
+        // Seat 2133: Rona, Disciple of Gix's EDHREC average deck. `--pod-decks 2133`.
+        PodDeck {
+            name: "Rona, Disciple of Gix (UB)",
+            commanders: decks::RONA_3_COMMANDERS,
+            main: decks::RONA_3_MAIN,
+        },
     ]
 }
 
@@ -17205,6 +17217,8 @@ mod tests {
             ("Ruric Thar, Biomagus", &[0x1267]),
             ("Rinoa, Angel Wing", &[0x1268]),
             ("Raphael, Ninja Destroyer", &[0x1269]),
+            ("Melira, Sylvok Outcast", &[0x126A]),
+            ("Rona, Disciple of Gix", &[0x126B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
