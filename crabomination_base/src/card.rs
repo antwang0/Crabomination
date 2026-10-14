@@ -3578,6 +3578,11 @@ pub enum SelectionRequirement {
     /// Fury). Reads every seat's
     /// `creatures_that_damaged_me_this_turn`. Battlefield-only.
     DamagedAPlayerThisTurn,
+    /// The permanent dealt damage to anything this turn (Red Guardian's
+    /// "creature an opponent controls that dealt damage this turn"): read off
+    /// every player's `creatures_that_damaged_me_this_turn` and every
+    /// permanent's `damaged_by_this_turn`. Battlefield-only.
+    DealtDamageThisTurnAsSource,
     /// CR 506.5: "A creature attacks alone if it's the only creature
     /// declared as an attacker during the declare attackers step. A
     /// creature is attacking alone if it's attacking but no other

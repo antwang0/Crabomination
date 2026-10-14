@@ -5603,6 +5603,13 @@ impl GameState {
                 }
                 Target::Player(_) => false,
             },
+            R::DealtDamageThisTurnAsSource => match target {
+                Target::Permanent(cid) => {
+                    self.players.iter().any(|pl| pl.creatures_that_damaged_me_this_turn.contains(cid))
+                        || self.battlefield.iter().any(|c| c.damaged_by_this_turn.contains(cid))
+                }
+                Target::Player(_) => false,
+            },
             R::DamagedAPlayerThisTurn => match target {
                 // CR 603.10 — a dying creature's own trigger reads it off the
                 // death snapshot (Wave of Rats).
@@ -7890,7 +7897,7 @@ impl GameState {
             | R::ActivatedAbilityTargetsMatching(_)
             | R::SpellWithSingleTarget
             | R::SpellWithAnyTarget
-            | R::DealtDamageToControllerThisTurn | R::CombatDamagedSourceControllerThisTurn | R::DamagedAPlayerThisTurn | R::IsBestowed
+            | R::DealtDamageToControllerThisTurn | R::CombatDamagedSourceControllerThisTurn | R::DamagedAPlayerThisTurn | R::DealtDamageThisTurnAsSource | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::DamagedThisTurnByMatching(_)
