@@ -14940,6 +14940,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIANI_COMMANDERS,
             main: decks::SIANI_MAIN,
         },
+        // Seat 2415: Black Widow, Super Spy's EDHREC average deck. `--pod-decks 2415`.
+        PodDeck {
+            name: "Black Widow, Super Spy (B)",
+            commanders: decks::BLACK_WIDOW_3_COMMANDERS,
+            main: decks::BLACK_WIDOW_3_MAIN,
+        },
     ]
 }
 
@@ -19185,6 +19191,7 @@ mod tests {
             ("Tetsuko Umezawa, Pursuer", &[0x1382]),
             ("Klaw, Master of Sound", &[0x1383]),
             ("Siani, Eye of the Storm", &[0x1384]),
+            ("Black Widow, Super Spy", &[0x1385]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -67872,3 +67872,31 @@ pub const SIANI_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island, island, island,
 ];
+
+pub const BLACK_WIDOW_3_COMMANDERS: &[CardFactory] = &[black_widow_super_spy];
+
+/// **Black Widow, Super Spy**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Black Widow, Super Spy (EDHREC, fetched 2026-10-14).
+pub const BLACK_WIDOW_3_MAIN: &[CardFactory] = &[
+    arcane_signet, brotherhood_regalia, commanders_plate, dream_thiefs_bandana, fellwar_stone,
+    fireshrieker, jet_medallion, lightning_greaves, mind_stone, silver_shroud_costume, sol_ring,
+    staff_of_eden_vaults_key, swiftfoot_boots, the_darkness_crystal, the_soul_stone,
+    trailblazers_boots, whispersilk_cloak, bojuka_bog, cabal_coffers, cabal_stronghold,
+    nykthos_shrine_to_nyx, rogues_passage, shizo_deaths_storehouse, urborg_tomb_of_yawgmoth,
+    arvinox_the_mind_flail, black_cat_cunning_thief, black_widow_daring_operative,
+    black_widow_deadly_hunter, brainstealer_dragon, crypt_ghast, dauthi_voidwalker,
+    gix_yawgmoth_praetor, gonti_lord_of_luxury, gonti_night_minister, gray_merchant_of_asphodel,
+    grim_hireling, gwenom_remorseless, intellect_devourer, morbid_opportunist,
+    nashi_moon_sages_scion, opposition_agent, rev_tithe_extractor, sheoldred_the_apocalypse,
+    thieving_varmint, tinybones_the_pickpocket, animate_dead, black_market_connections,
+    court_of_locthwain, cunning_rhetoric, origin_of_black_widow, phyrexian_arena, dark_ritual,
+    deadly_dispute, deadly_rollick, defile, fell_the_profane, go_for_the_throat, imps_mischief,
+    infernal_grasp, snuff_out, withering_torment, liliana_of_the_dark_realms, damnation,
+    demonic_tutor, exsanguinate, feed_the_swarm, nights_whisper, praetors_grasp, reanimate,
+    sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
