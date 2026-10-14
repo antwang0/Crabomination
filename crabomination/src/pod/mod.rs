@@ -14856,6 +14856,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::HAWKEYE_2_COMMANDERS,
             main: decks::HAWKEYE_2_MAIN,
         },
+        // Seat 2401: Zhao Zilong, Tiger General's EDHREC average deck. `--pod-decks 2401`.
+        PodDeck {
+            name: "Zhao Zilong, Tiger General (W)",
+            commanders: decks::ZHAO_ZILONG_COMMANDERS,
+            main: decks::ZHAO_ZILONG_MAIN,
+        },
+        // Seat 2402: Glóin the Mighty's EDHREC average deck. `--pod-decks 2402`.
+        PodDeck {
+            name: "Glóin the Mighty (R)",
+            commanders: decks::GLOIN_THE_MIGHTY_COMMANDERS,
+            main: decks::GLOIN_THE_MIGHTY_MAIN,
+        },
+        // Seat 2403: Hulk, Always Angry's EDHREC average deck. `--pod-decks 2403`.
+        PodDeck {
+            name: "Hulk, Always Angry (R)",
+            commanders: decks::HULK_COMMANDERS,
+            main: decks::HULK_MAIN,
+        },
+        // Seat 2404: Éomer of the Riddermark's EDHREC average deck. `--pod-decks 2404`.
+        PodDeck {
+            name: "Éomer of the Riddermark (R)",
+            commanders: decks::EOMER_OF_THE_RIDDERMARK_COMMANDERS,
+            main: decks::EOMER_OF_THE_RIDDERMARK_MAIN,
+        },
+        // Seat 2405: Mockingbird, Ace Agent's EDHREC average deck. `--pod-decks 2405`.
+        PodDeck {
+            name: "Mockingbird, Ace Agent (W)",
+            commanders: decks::MOCKINGBIRD_COMMANDERS,
+            main: decks::MOCKINGBIRD_MAIN,
+        },
+        // Seat 2406: Zhao, the Seething Flame's EDHREC average deck. `--pod-decks 2406`.
+        PodDeck {
+            name: "Zhao, the Seething Flame (R)",
+            commanders: decks::ZHAO_2_COMMANDERS,
+            main: decks::ZHAO_2_MAIN,
+        },
     ]
 }
 
@@ -19087,6 +19123,12 @@ mod tests {
             ("Hercules, Prince of Power", &[0x1374]),
             ("Everett K. Ross, Hapless Attaché", &[0x1375]),
             ("Hawkeye, Clint Barton", &[0x1376]),
+            ("Zhao Zilong, Tiger General", &[0x1377]),
+            ("Glóin the Mighty", &[0x1378]),
+            ("Hulk, Always Angry", &[0x1379]),
+            ("Éomer of the Riddermark", &[0x137A]),
+            ("Mockingbird, Ace Agent", &[0x137B]),
+            ("Zhao, the Seething Flame", &[0x137C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

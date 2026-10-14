@@ -67492,3 +67492,170 @@ pub const HAWKEYE_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const ZHAO_ZILONG_COMMANDERS: &[CardFactory] = &[zhao_zilong_tiger_general];
+
+/// **Zhao Zilong, Tiger General**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Plains = 99.
+/// Zhao Zilong, Tiger General (EDHREC, fetched 2026-10-14).
+pub const ZHAO_ZILONG_MAIN: &[CardFactory] = &[
+    arcane_signet, argentum_armor, basilisk_collar, blackblade_reforged, buster_sword,
+    commanders_plate, genji_glove, icon_of_ancestry, marble_diamond, mind_stone,
+    oketras_monument, pearl_medallion, rogues_gloves, sol_ring, thran_power_suit,
+    vanquishers_banner, buried_ruin, castle_ardenvale, eiganjo_seat_of_the_empire,
+    emeria_the_sky_ruin, idyllic_grange, myriad_landscape, nykthos_shrine_to_nyx,
+    reliquary_tower, war_room, windbrisk_heights, adeline_resplendent_cathar,
+    archivist_of_oghma, bastion_protector, boromir_warden_of_the_tower, charismatic_conqueror,
+    danitha_capashen, defiler_of_faith, enduring_innocence, esper_sentinel,
+    guan_yu_sainted_warrior, intrepid_hero, knight_of_the_white_orchid, liu_bei_lord_of_shu,
+    mentor_of_the_meek, moonshaker_cavalry, mother_of_runes, puresteel_paladin,
+    recruiter_of_the_guard, rescue_retriever, shu_cavalry, shu_general, thalia_heretic_cathar,
+    zhang_fei_fierce_warrior, all_that_glitters, caretakers_talent, cathars_crusade,
+    flowering_of_the_white_tree, land_tax, mantle_of_the_ancients, monologue_tax, sigardas_aid,
+    smothering_tithe, trouble_in_pairs, akromas_will, call_the_coppercoats, enlightened_tutor,
+    erode, generous_gift, mana_tithe, path_to_exile, reprieve, swords_to_plowshares,
+    unbreakable_formation, elspeth_storm_slayer, ascend_from_avernus, austere_command,
+    open_the_armory, riding_red_hare, vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const GLOIN_THE_MIGHTY_COMMANDERS: &[CardFactory] = &[gloin_the_mighty];
+
+/// **Glóin the Mighty**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Glóin the Mighty (EDHREC, fetched 2026-10-14).
+pub const GLOIN_THE_MIGHTY_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, fellwar_stone, fire_diamond, guardian_idol, liquimetal_torque,
+    mind_stone, ruby_medallion, sol_ring, the_fire_crystal, thought_vessel, thran_dynamo,
+    wayfarers_bauble, arena_of_glory, forgotten_cave, mines_of_moria, scavenger_grounds,
+    valakut_the_molten_pinnacle, anger, balefire_dragon, clive_ifrits_dominant,
+    combustible_gearhulk, dori_bearer_of_friends, dragon_mage, drakuseth_maw_of_flames,
+    dain_ironfoot, etali_primal_storm, iron_myr, knollspine_dragon, magmatic_force, oliphaunt,
+    ornithopter_of_paradise, pinnacle_monk, quinjet_technician, runaway_steam_kin,
+    sandstone_oracle, smaug_the_great_calamity, sunset_strikemaster, torbran_thane_of_red_fell,
+    tyrants_familiar, zookeeper_mechan, oin_the_brave, fiery_emancipation, sunbirds_invocation,
+    triple_triad, warstorm_surge, abrade, big_score, chaos_warp, lightning_bolt, pyretic_ritual,
+    seething_song, thrill_of_possibility, tibalts_trickery, untimely_malfunction,
+    chandra_flameshaper, chandra_torch_of_defiance, blasphemous_act, faithless_looting,
+    glimpse_the_impossible, grab_the_prize, hit_the_mother_lode, ignite_the_future,
+    inspired_tinkering, jeskas_will, mana_geyser, seize_the_spoils, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const HULK_COMMANDERS: &[CardFactory] = &[hulk_always_angry];
+
+/// **Hulk, Always Angry**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Hulk, Always Angry (EDHREC, fetched 2026-10-14).
+pub const HULK_MAIN: &[CardFactory] = &[
+    arcane_signet, ichor_wellspring, lightning_greaves, lotus_petal, mycosynth_wellspring,
+    ruby_medallion, sol_ring, the_one_ring, ancient_tomb, myriad_landscape, rogues_passage,
+    shinka_the_bloodsoaked_keep, valakut_the_molten_pinnacle, war_room,
+    abomination_world_ravager, alexios_deimos_of_kosmos, anger, etali_primal_storm,
+    flamekin_herald, generator_servant, hellkite_courser, hexing_squelcher, hulk_bruce_banner,
+    imperial_recruiter, karlach_fury_of_avernus, kediss_emberclaw_familiar, magus_of_the_wheel,
+    pain_distributor, ragavan_nimble_pilferer, reckless_barbarian, red_hulk,
+    simian_spirit_guide, solemn_simulacrum, spider_punk, treasure_nabber, troop_of_ponies,
+    berserkers_onslaught, descent_into_avernus, fervor, fiery_emancipation, goblin_war_drums,
+    rising_of_the_day, vessel_of_volatility, abrade, big_score, chaos_warp, deflecting_swat,
+    desperate_ritual, pyretic_ritual, red_elemental_blast, seething_song, tibalts_trickery,
+    unexpected_windfall, untimely_malfunction, anzrags_rampage, blasphemous_act,
+    chandras_ignition, faithless_looting, geosurge, irencrag_feat, jeskas_will, mana_geyser,
+    nibelheim_aflame, nova_flame, seize_the_day, structural_assault, vandalblast,
+    wheel_of_fortune, world_at_war,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
+
+pub const EOMER_OF_THE_RIDDERMARK_COMMANDERS: &[CardFactory] = &[eomer_of_the_riddermark];
+
+/// **Éomer of the Riddermark**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Mountains = 99.
+/// Éomer of the Riddermark (EDHREC, fetched 2026-10-14).
+pub const EOMER_OF_THE_RIDDERMARK_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_plate, cursed_mirror, hazorets_monument, lightning_greaves,
+    long_lost_lances, mind_stone, orcrist_goblin_cleaver, ruby_medallion, skullclamp, sol_ring,
+    soul_guide_lantern, sting_bilbos_sword, swiftfoot_boots, the_fire_crystal, wayfarers_bauble,
+    arena_of_glory, castle_embereth, myriad_landscape, rogues_passage, the_lonely_mountain,
+    tyrite_sanctum, valakut_the_molten_pinnacle, war_room, abomination_world_ravager,
+    alena_kessig_trapper, anger, archetype_of_aggression, drakuseth_maw_of_flames,
+    erkenbrand_lord_of_westfold, etali_primal_storm, gloin_the_mighty, goblin_engineer,
+    hamletback_goliath, haradrim_spearmaster, hero_of_oxid_ridge, hulk_bruce_banner,
+    inferno_titan, karlach_fury_of_avernus, luke_cage_hero_for_hire, page_loose_leaf,
+    professional_face_breaker, quinjet_technician, riders_of_the_mark, rohirrim_lancer,
+    rubble_rouser, solemn_simulacrum, taurean_mauler, teapot_slinger, eomer_marshal_of_rohan,
+    furious_rise, impact_tremors, rising_of_the_day, rite_of_the_raging_storm, warstorm_surge,
+    abrade, big_score, chaos_warp, demand_answers, return_the_favor, thrill_of_possibility,
+    unexpected_windfall, wild_magic_surge, chandra_torch_of_defiance, blasphemous_act,
+    cathartic_reunion, chain_reaction, faithless_looting, jeskas_will, mana_geyser,
+    mizzium_mortars, rally_at_the_hornburg, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const MOCKINGBIRD_COMMANDERS: &[CardFactory] = &[mockingbird_ace_agent];
+
+/// **Mockingbird, Ace Agent**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Mockingbird, Ace Agent (EDHREC, fetched 2026-10-14).
+pub const MOCKINGBIRD_MAIN: &[CardFactory] = &[
+    arcane_signet, caduceus_staff_of_hermes, fellwar_stone, marble_diamond, mind_stone,
+    pearl_medallion, sol_ring, swiftfoot_boots, thought_vessel, thran_power_suit,
+    abandoned_air_temple, emeria_the_sky_ruin, hall_of_heliods_generosity, idyllic_grange,
+    myriad_landscape, nykthos_shrine_to_nyx, rogues_passage, akrasan_squire,
+    archon_of_suns_grace, colleen_wing_street_samurai, danitha_capashen, esper_sentinel,
+    knight_of_glory, kor_spiritdancer, luminarch_aspirant, mesa_enchantress,
+    optimistic_scavenger, pearl_ear_imperial_advisor, silent_arbiter, sram_senior_edificer,
+    starfield_mystic, starnheim_courser, thalia_the_survivor, transcendent_envoy,
+    all_that_glitters, angelic_gift, armored_ascension, brilliant_wings, darksteel_mutation,
+    daybreak_coronet, ethereal_armor, feather_of_flight, ghostly_prison, mantle_of_the_ancients,
+    on_serras_wings, sages_reverie, shardmages_rescue, sheltered_by_ghosts, spirit_mantle,
+    super_soldier_serum, timely_ward, unquestioned_authority, defiant_strike, fleeting_flight,
+    generous_gift, guided_strike, karametras_blessing, lightfoot_technique, lorans_escape,
+    path_to_exile, rebellious_strike, shelter, spectacular_tactics, swords_to_plowshares,
+    take_up_the_shield, avatars_wrath, dig_site_inventory, honor, kindred_judgment,
+    winds_of_rath,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const ZHAO_2_COMMANDERS: &[CardFactory] = &[zhao_the_seething_flame];
+
+/// **Zhao, the Seething Flame**'s EDHREC average deck, card for card:
+/// 64 nonbasic cards + 35 Mountains = 99.
+/// Zhao, the Seething Flame (EDHREC, fetched 2026-10-14).
+pub const ZHAO_2_MAIN: &[CardFactory] = &[
+    arcane_signet, chimil_the_inner_sun, commanders_sphere, coveted_jewel, everflowing_chalice,
+    fire_diamond, mind_stone, nexus_of_becoming, rolling_hamsphere, sol_ring, timesifter,
+    wayfarers_bauble, branch_of_vitu_ghazi, mirrex, myriad_landscape, rogues_passage,
+    scavenger_grounds, sunken_citadel, temple_of_the_false_god, untaidake_the_cloud_keeper,
+    anticausal_vestige, aurora_phoenix, boarding_party, cavern_hoard_dragon,
+    chancellor_of_the_forge, combustible_gearhulk, desert_were_worm, firbolg_flutist,
+    havoc_jester, hellkite_tyrant, hideous_taskmaster, incinerator_of_the_guilty,
+    oblivion_sower, oliphaunt, overlord_of_the_boilerbilges, rampaging_war_mammoth,
+    ruin_grinder, spitebellows, steel_hellkite, threefold_thunderhulk, trumpeting_carnosaur,
+    tyrants_familiar, charred_foyer_warped_space, confusion_in_the_ranks, impact_tremors,
+    spiked_corridor_torture_pit, triple_triad, warstorm_surge, divergent_transformations,
+    fiery_fall, reckless_ransacking, sear, tweeze, unexpected_windfall, vision_of_love,
+    all_is_dust, blasphemous_act, faithless_looting, kuldotha_rebirth, let_the_galaxy_burn,
+    slice_and_dice, star_of_extinction, ultimate_magic_meteor, volcanic_vision,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
