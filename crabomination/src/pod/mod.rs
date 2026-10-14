@@ -14136,6 +14136,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BILBO_3_COMMANDERS,
             main: decks::BILBO_3_MAIN,
         },
+        // Seat 2281: Tor Wauki's EDHREC average deck. `--pod-decks 2281`.
+        PodDeck {
+            name: "Tor Wauki (BR)",
+            commanders: decks::TOR_WAUKI_COMMANDERS,
+            main: decks::TOR_WAUKI_MAIN,
+        },
+        // Seat 2282: Arachne, Psionic Weaver's EDHREC average deck. `--pod-decks 2282`.
+        PodDeck {
+            name: "Arachne, Psionic Weaver (W)",
+            commanders: decks::ARACHNE_COMMANDERS,
+            main: decks::ARACHNE_MAIN,
+        },
+        // Seat 2283: Captain Mar-Vell, Space-Born's EDHREC average deck. `--pod-decks 2283`.
+        PodDeck {
+            name: "Captain Mar-Vell, Space-Born (W)",
+            commanders: decks::CAPTAIN_MAR_VELL_COMMANDERS,
+            main: decks::CAPTAIN_MAR_VELL_MAIN,
+        },
     ]
 }
 
@@ -18248,6 +18266,9 @@ mod tests {
             ("Layla Hassan", &[0x12FC]),
             ("The Ninth Doctor", &[0x12FD]),
             ("Bilbo, Unexpected Adventurer", &[0x12FE]),
+            ("Tor Wauki", &[0x12FF]),
+            ("Arachne, Psionic Weaver", &[0x1300]),
+            ("Captain Mar-Vell, Space-Born", &[0x1301]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

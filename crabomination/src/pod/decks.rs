@@ -64157,3 +64157,87 @@ pub const BILBO_3_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const TOR_WAUKI_COMMANDERS: &[CardFactory] = &[tor_wauki];
+
+/// **Tor Wauki**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Mountains + 12 Swamps = 99.
+/// Tor Wauki (EDHREC, fetched 2026-10-14).
+pub const TOR_WAUKI_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, commanders_sphere, fellwar_stone, gorgons_head,
+    magewrights_stone, mind_stone, rakdos_signet, sol_ring, talisman_of_indulgence,
+    thousand_year_elixir, wayfarers_bauble, blood_crypt, bloodstained_mire, bojuka_bog,
+    command_tower, dragonskull_summit, evolving_wilds, foreboding_ruins, luxury_suite,
+    rakdos_carnarium, smoldering_marsh, sulfurous_springs, tainted_peak, archetype_of_finality,
+    blood_artist, blood_cultist, brash_taunter, cunning_sparkmage, cuombajj_witches,
+    firebrand_archer, frostwielder, gideon_the_oathless, guttersnipe, kardur_doomscourge,
+    mahadi_emporium_master, massacre_wurm, morbid_opportunist, prodigal_pyromancer,
+    rakdos_ickspitter, royal_assassin, syr_carah_the_bold, syr_konrad_the_grim,
+    thermo_alchemist, tor_wauki_the_younger, torbran_thane_of_red_fell, vulshok_sorcerer,
+    black_market, death_pits_of_rath, dictate_of_the_twin_gods, fiery_emancipation,
+    ghoulish_impetus, phyrexian_arena, revel_in_riches, shiny_impetus, underworld_dreams,
+    abrade, bedevil, chaos_warp, dark_ritual, lightning_bolt, rakdos_charm, sudden_spoiling,
+    terminate, thrill_of_possibility, you_are_already_dead, blasphemous_act, demonic_tutor,
+    disrupt_decorum, faithless_looting, feed_the_swarm, nights_whisper, raise_dead,
+    read_the_bones, sign_in_blood,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const ARACHNE_COMMANDERS: &[CardFactory] = &[arachne_psionic_weaver];
+
+/// **Arachne, Psionic Weaver**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Arachne, Psionic Weaver (EDHREC, fetched 2026-10-14).
+pub const ARACHNE_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, cloudstone_curio, mind_stone, moonsilver_key,
+    oketras_monument, pearl_medallion, relic_of_legends, skullclamp, sol_ring, springleaf_drum,
+    the_arkenstone, the_one_ring, the_seriema, adagia_windswept_bastion, castle_ardenvale,
+    eiganjo_seat_of_the_empire, hall_of_heliods_generosity, holdout_settlement, minas_tirith,
+    nykthos_shrine_to_nyx, scavenger_grounds, windbrisk_heights, amazing_spider_girl,
+    ambrosia_whiteheart, archivist_of_oghma, aunt_may, aven_interrupter, defiler_of_faith,
+    drannith_magistrate, esper_sentinel, god_eternal_oketra, knight_of_the_white_orchid,
+    lightstall_inquisitor, loran_of_the_third_path, mangara_the_diplomat, mother_of_runes,
+    recruiter_of_the_guard, solemn_simulacrum, solitude, soul_warden, souls_attendant,
+    spider_man_web_slinger, spider_uk, spirited_companion, starfield_shepherd, tataru_taru,
+    tax_collector, thalia_guardian_of_thraben, weathered_wayfarer, windborn_muse,
+    witch_enchanter, aura_of_silence, authority_of_the_consuls, blind_obedience,
+    charitable_levy, ghostly_prison, gleaming_splendor, land_tax, smothering_tithe,
+    tocasias_welcome, ephemerate, generous_gift, mana_tithe, path_to_exile, razorgrass_ambush,
+    reprieve, stroke_of_midnight, swords_to_plowshares, austere_command, avatars_wrath,
+    sevinnes_reclamation, winds_of_abandon,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const CAPTAIN_MAR_VELL_COMMANDERS: &[CardFactory] = &[captain_mar_vell_space_born];
+
+/// **Captain Mar-Vell, Space-Born**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Captain Mar-Vell, Space-Born (EDHREC, fetched 2026-10-14).
+pub const CAPTAIN_MAR_VELL_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, benders_waterskin, marble_diamond, mind_stone,
+    oketras_monument, pearl_medallion, sol_ring, swiftfoot_boots, the_mind_stone,
+    the_wind_crystal, thought_vessel, abandoned_air_temple, command_beacon,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, minas_tirith, myriad_landscape,
+    nykthos_shrine_to_nyx, reliquary_tower, war_room, alms_collector, angel_of_indemnity,
+    angel_of_the_ruins, bastion_protector, captain_marvel_shooting_star, claim_jumper,
+    deep_gnome_terramancer, enduring_innocence, esper_sentinel, haliya_guided_by_light,
+    joined_researchers, keeper_of_the_accord, knight_of_the_white_orchid, kor_cartographer,
+    koth_of_the_homestead, loran_of_the_third_path, loyal_warhound, mangara_the_diplomat,
+    mentor_of_the_meek, moon_blessed_cleric, moonshaker_cavalry, solemn_simulacrum, sun_titan,
+    tataru_taru, welcoming_vampire, witch_enchanter, yoshimaru_beloved_companion,
+    authority_of_the_consuls, celebrate_the_mountain_king, flickering_ward, land_tax,
+    monologue_tax, rule_of_law, smothering_tithe, smugglers_share, teleportation_circle,
+    tocasias_welcome, ephemerate, generous_gift, path_to_exile, reprieve, sejiri_shelter,
+    swords_to_plowshares, elspeth_suns_champion, austere_command, avatars_wrath,
+    collective_effort, cut_a_deal, finale_of_glory, morningtides_light, requisition_raid, ultima,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
