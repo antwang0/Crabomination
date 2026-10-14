@@ -14360,7 +14360,11 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::SpellsCostMoreExceptOnControllerTurn { .. }
         | SE::ChosenCardTypeSpellsCostMore { .. }
         | SE::TaxOpponentSpellsTargeting { .. }
-        | SE::TaxOpponentSpellsTargetingThis { .. } => true,
+        | SE::TaxOpponentSpellsTargetingThis { .. }
+        // Arachne's chosen-card-type tax was missing, so the bot's narrowed
+        // source list dropped it and the cost-static audit fired in the
+        // long pod test (Generous Gift, 2026-10-14).
+        | SE::ChosenCardTypeSpellsCostMore { .. } => true,
         // `colored_spell_tax_for_spell_over`
         SE::ColoredSpellTax { .. } => true,
         // `cost_reduction_for_spell_full_over`'s source loop

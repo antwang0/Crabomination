@@ -1890,3 +1890,14 @@ fn no_library_search_names_a_set_of_searchers() {
     }
     assert!(hits.is_empty(), "Search with a fan-out searcher: {hits:?}");
 }
+
+/// CR 601.2f — every board-source cost tax the extra-cost walk charges must be
+/// admitted by `static_affects_spell_cost`, or the bot's narrowed
+/// `CostStaticSources` list drops the source and misprices the spell (the
+/// long pod test's cost-static audit fired on Arachne's chosen-card-type tax
+/// against Generous Gift, 2026-10-14).
+#[test]
+fn the_cost_source_filter_admits_the_chosen_card_type_tax() {
+    use crabomination::effect::{StaticEffect, static_affects_spell_cost};
+    assert!(static_affects_spell_cost(&StaticEffect::ChosenCardTypeSpellsCostMore { amount: 1 }));
+}
