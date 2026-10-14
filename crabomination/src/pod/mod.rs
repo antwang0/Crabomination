@@ -14928,6 +14928,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TETSUKO_UMEZAWA_2_COMMANDERS,
             main: decks::TETSUKO_UMEZAWA_2_MAIN,
         },
+        // Seat 2413: Klaw, Master of Sound's EDHREC average deck. `--pod-decks 2413`.
+        PodDeck {
+            name: "Klaw, Master of Sound (B)",
+            commanders: decks::KLAW_COMMANDERS,
+            main: decks::KLAW_MAIN,
+        },
+        // Seat 2414: Siani, Eye of the Storm's EDHREC average deck. `--pod-decks 2414`.
+        PodDeck {
+            name: "Siani, Eye of the Storm (U)",
+            commanders: decks::SIANI_COMMANDERS,
+            main: decks::SIANI_MAIN,
+        },
     ]
 }
 
@@ -19171,6 +19183,8 @@ mod tests {
             ("Xun Yu, Wei Advisor", &[0x1380]),
             ("Amazing Spider-Girl", &[0x1381]),
             ("Tetsuko Umezawa, Pursuer", &[0x1382]),
+            ("Klaw, Master of Sound", &[0x1383]),
+            ("Siani, Eye of the Storm", &[0x1384]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

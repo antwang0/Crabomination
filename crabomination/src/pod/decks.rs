@@ -67820,3 +67820,55 @@ pub const TETSUKO_UMEZAWA_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const KLAW_COMMANDERS: &[CardFactory] = &[klaw_master_of_sound];
+
+/// **Klaw, Master of Sound**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Swamps = 99.
+/// Klaw, Master of Sound (EDHREC, fetched 2026-10-14).
+pub const KLAW_MAIN: &[CardFactory] = &[
+    arcane_signet, blackblade_reforged, chaos_wand, charcoal_diamond, dream_thiefs_bandana,
+    extraplanar_lens, fireshrieker, interdimensional_web_watch, jet_medallion, lashwrithe,
+    lichs_relic, sceptre_of_eternal_glory, shadowspear, sol_ring, swiftfoot_boots,
+    sword_of_forge_and_frontier, sword_of_the_animist, thran_dynamo, throne_of_eldraine,
+    worn_powerstone, cabal_coffers, cabal_stronghold, myriad_landscape, nykthos_shrine_to_nyx,
+    rogues_passage, shizo_deaths_storehouse, arvinox_the_mind_flail, author_of_shadows,
+    bismuth_mindrender, black_cat_cunning_thief, black_widow_super_spy, brainstealer_dragon,
+    crabomination, crypt_ghast, dauthi_voidwalker, elder_brain, fiend_of_the_shadows,
+    gix_yawgmoth_praetor, gonti_lord_of_luxury, gonti_night_minister, grim_hireling,
+    intellect_devourer, nashi_moon_sages_scion, opposition_agent, rev_tithe_extractor,
+    thieving_varmint, tinybones_bauble_burglar, agent_of_the_shadow_thieves, court_of_locthwain,
+    cunning_rhetoric, hedonists_trove, vampiric_link, dark_ritual, deadly_rollick, doom_blade,
+    go_for_the_throat, outrageous_robbery, snuff_out, soul_shatter, withering_torment,
+    cruelclaws_heist, damnation, demonic_tutor, feed_the_swarm, heartless_conscription,
+    petty_larceny, predators_hour, scheming_symmetry,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SIANI_COMMANDERS: &[CardFactory] = &[siani_eye_of_the_storm];
+
+/// **Siani, Eye of the Storm**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 33 Islands = 99.
+/// Siani, Eye of the Storm (EDHREC, fetched 2026-10-14).
+pub const SIANI_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, commanders_sphere, lightning_greaves, mind_stone,
+    prismatic_lens, sky_diamond, sol_ring, thought_vessel, wayfarers_bauble, castle_vantress,
+    mystic_sanctuary, reliquary_tower, atemsis_all_seeing, curator_of_mysteries,
+    defiler_of_dreams, eligeth_crossroads_augur, esior_wardwing_familiar, faerie_formation,
+    faerie_seer, glitch_ghost_surveyor, il_mheg_pixie, laboratory_maniac, loyal_drake,
+    mockingbird, ornithopter, prognostic_sphinx, psychosis_crawler, sabotage_strategist,
+    scrounging_skyray, siren_stormtamer, skystreak_engineer, sphinx_of_foresight, tide_skimmer,
+    warden_of_evos_isle, windreader_sphinx, favorable_winds, gravitational_shift, jaces_sanctum,
+    omen_of_the_sea, reconnaissance_mission, teferis_ageless_insight, aetherize,
+    an_offer_you_cant_refuse, counterspell, cyclonic_rift, deliberate, dive_down, lofty_denial,
+    negate, opt, precognitive_perception, reality_shift, resculpt, spectral_interference,
+    syncopate, telling_time, voyages_end, eagle_vision, mystic_speculation, preordain,
+    ravenform, scour_all_possibilities, serum_visions, tamiyos_epiphany, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+];
