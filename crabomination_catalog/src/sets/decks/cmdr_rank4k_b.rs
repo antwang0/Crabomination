@@ -299,10 +299,8 @@ pub fn moment_of_glory() -> CardDefinition {
                 plus_one(target_filtered(R::Creature.and(R::ControlledByYou))),
                 Effect::If {
                     cond: Predicate::CastFromGraveyard,
-                    then: Box::new(plus_one(Selector::EachPermanent(
-                        R::Creature
-                            .and(R::ControlledByYou)
-                            .and(R::OtherThanTargetSlot(0)),
+                    then: Box::new(plus_one(Selector::EachPermanentExceptTargets(
+                        R::Creature.and(R::ControlledByYou),
                     ))),
                     else_: Box::new(Effect::Noop),
                 },
