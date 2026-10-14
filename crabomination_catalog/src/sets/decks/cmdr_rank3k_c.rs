@@ -54,7 +54,7 @@ fn counter_on(what: Selector, n: i32) -> Effect {
 pub fn traxos_academy_guardian() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Prowess],
         static_abilities: vec![StaticAbility {
             description: "This spell costs {2} less to cast if you've cast a noncreature spell this turn.",
             effect: StaticEffect::SelfCostReducedIf {

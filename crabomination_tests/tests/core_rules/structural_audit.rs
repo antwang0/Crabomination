@@ -805,7 +805,7 @@ fn no_shipped_card_nests_two_answer_log_arms() {
             flagged.push(format!("{}: {h}", def.name));
         }
     }
-    // The eight shipped nestings (Conspiracy Theorist left when its "pay {1}
+    // The nine shipped nestings (Conspiracy Theorist left when its "pay {1}
     // and discard" became one payment; Sail into the West's majority vote
     // clears the log before the winning option, which is its last act —
     // `cmdr_galadriel::sail_into_the_west_embark_resumes_for_ui_seats`). Each is safe for the reason in this test's
@@ -824,6 +824,9 @@ fn no_shipped_card_nests_two_answer_log_arms() {
         "Rottenmouth Viper: MaySacrifice > MayDiscard",
         "Sail into the West: Vote > MayDoBy",
         "Skirk Drill Sergeant: MayPay > RevealTopMayPutOntoBattlefield",
+        // Rottenmouth Viper's shape: the discard offer is the declined
+        // sacrifice's `else_`, its last act.
+        "Vision of Love: MaySacrifice > MayDiscard",
         "Worms of the Earth: AnyPlayerMayAccept > AnyPlayerMayAccept",
     ];
     flagged.sort();
