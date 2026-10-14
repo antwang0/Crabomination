@@ -546,6 +546,8 @@ pub enum PlaneswalkerSubtype {
     Zariel,
     // Mu Yanling, Sky Dancer (Mu Yanling, Wind Rider's EDHREC deck).
     Yanling,
+    // Dyfed, the Guiding Hand (its own EDHREC deck).
+    Dyfed,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
