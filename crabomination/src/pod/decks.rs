@@ -68953,3 +68953,31 @@ pub const RADIANT_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const THE_IMMORTAL_WEAPONS_COMMANDERS: &[CardFactory] = &[the_immortal_weapons];
+
+/// **The Immortal Weapons**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// The Immortal Weapons (EDHREC, fetched 2026-10-14).
+pub const THE_IMMORTAL_WEAPONS_MAIN: &[CardFactory] = &[
+    arcane_signet, mind_stone, ruby_medallion, sol_ring, swiftfoot_boots, the_fire_crystal,
+    ancient_tomb, fire_nation_palace, myriad_landscape, nykthos_shrine_to_nyx,
+    scavenger_grounds, anger, birgi_god_of_storytelling, coruscation_mage,
+    electro_assaulting_battery, firebending_student, firebrand_archer, firespitter_whelp,
+    guttersnipe, iron_fist_hero_for_hire, iron_fist_living_weapon, jessica_jones_private_eye,
+    kessig_flamebreather, luke_cage_hero_for_hire, misty_knight_hero_for_hire,
+    neheb_the_eternal, runaway_steam_kin, storm_kiln_artist, the_vision_and_scarlet_witch,
+    wiccan_young_avenger, artists_talent, fiery_inscription, shiny_impetus, abrade, big_score,
+    blazing_crescendo, bolt_bend, chaos_warp, demand_answers, desperate_ritual, expedite,
+    flare_of_duplication, sos_flashback_instant, lightning_bolt, might_of_the_meek,
+    monstrous_rage, opera_love_song, pyretic_ritual, seething_song, seize_opportunity,
+    temur_battle_rage, untimely_malfunction, ancestral_anger, blasphemous_act, chain_reaction,
+    chandras_ignition, embrace_the_unknown, hex_magic, mana_geyser, mizzixs_mastery,
+    past_in_flames, reckless_impulse, seize_the_spoils, tormenting_voice, vandalblast,
+    wheel_of_misfortune, will_of_the_jeskai, witchs_mark, youve_been_caught_stealing,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];

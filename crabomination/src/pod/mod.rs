@@ -15174,6 +15174,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RADIANT_2_COMMANDERS,
             main: decks::RADIANT_2_MAIN,
         },
+        // Seat 2454: The Immortal Weapons's EDHREC average deck. `--pod-decks 2454`.
+        PodDeck {
+            name: "The Immortal Weapons (R)",
+            commanders: decks::THE_IMMORTAL_WEAPONS_COMMANDERS,
+            main: decks::THE_IMMORTAL_WEAPONS_MAIN,
+        },
     ]
 }
 
@@ -19458,6 +19464,7 @@ mod tests {
             ("Shauku, Endbringer", &[0x13A9]),
             ("Sally Pride, Lioness Leader", &[0x13AA]),
             ("Radiant, Serra Archangel and Rebbec, Architect of Ascension", &[0x13AB]),
+            ("The Immortal Weapons", &[0x13AC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
