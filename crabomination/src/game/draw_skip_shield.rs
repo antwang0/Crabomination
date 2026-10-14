@@ -66,8 +66,8 @@ impl GameState {
             .filter(|c| self.computed_is_creature(c))
             .filter(|c| !self.evaluate_requirement_static(attackers, &Target::Permanent(c.id), p, Some(source)))
             .map(|c| self.computed_permanent(c.id).map_or(0, |cp| cp.power.max(0)))
-            .sum();
-        stopped >= 3 || stopped * 4 >= self.players[p].life
+            .fold(0i32, i32::saturating_add);
+        stopped >= 3 || stopped.saturating_mul(4) >= self.players[p].life
     }
 
     /// CR 508.1 — `attacker` may not attack `defender` under their shield.
