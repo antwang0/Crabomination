@@ -67327,3 +67327,30 @@ pub const VICTOR_TIMELY_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const ORISS_COMMANDERS: &[CardFactory] = &[oriss_samite_guardian];
+
+/// **Oriss, Samite Guardian**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Oriss, Samite Guardian (EDHREC, fetched 2026-10-14).
+pub const ORISS_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, helm_of_the_host, lightning_greaves, marble_diamond,
+    mind_stone, pariahs_shield, pearl_medallion, sol_ring, swiftfoot_boots,
+    thousand_year_elixir, wayfarers_bauble, command_beacon, emeria_the_sky_ruin,
+    hall_of_heliods_generosity, kor_haven, maze_of_ith, myriad_landscape, nykthos_shrine_to_nyx,
+    secluded_steppe, war_room, archivist_of_oghma, archon_of_coronation, drumbellower,
+    eight_and_a_half_tails, giver_of_runes, guardian_of_the_gateless, loran_of_the_third_path,
+    mangara_the_diplomat, mother_of_runes, palace_guard, palisade_giant, phyrexian_vindicator,
+    protector_of_the_crown, rune_tail_kitsune_ascendant, selfless_spirit, soul_warden,
+    souls_attendant, stuffy_doll, sun_titan, suture_priest, wall_of_glare, wall_of_omens,
+    weathered_bodyguards, weathered_wayfarer, white_plume_adventurer, windborn_muse,
+    court_of_ardenvale, court_of_grace, darksteel_mutation, entangler, ghostly_prison, land_tax,
+    luminarch_ascension, pariah, worship, comeuppance, dawn_charm, ethereal_haze,
+    everybody_lives, flare_of_fortitude, generous_gift, lapse_of_certainty, orims_chant,
+    path_to_exile, rebuff_the_wicked, reprieve, swords_to_plowshares, elspeth_suns_champion,
+    approach_of_the_second_sun, cut_a_deal, secret_rendezvous, sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

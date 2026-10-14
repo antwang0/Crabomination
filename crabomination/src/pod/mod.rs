@@ -14820,6 +14820,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VICTOR_TIMELY_COMMANDERS,
             main: decks::VICTOR_TIMELY_MAIN,
         },
+        // Seat 2395: Oriss, Samite Guardian's EDHREC average deck. `--pod-decks 2395`.
+        PodDeck {
+            name: "Oriss, Samite Guardian (W)",
+            commanders: decks::ORISS_COMMANDERS,
+            main: decks::ORISS_MAIN,
+        },
     ]
 }
 
@@ -19045,6 +19051,7 @@ mod tests {
             ("Bofur, Reliable Guardian", &[0x136E]),
             ("The Wondrous Wasp", &[0x136F]),
             ("Victor Timely, Wily Tycoon", &[0x1370]),
+            ("Oriss, Samite Guardian", &[0x1371]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
