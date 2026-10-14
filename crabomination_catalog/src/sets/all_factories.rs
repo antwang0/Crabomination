@@ -1353,6 +1353,9 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank4k_j (session 01MsQdht)
+    super::decks::karn_argent_defender,
+    super::decks::ward_of_bones,
     // cmdr_rank4k_i (session 01MsQdht)
     super::decks::an_unexpected_party,
     super::decks::arwens_gift,
