@@ -1066,6 +1066,9 @@ pub enum CounterType {
     Saurian,
     /// The Darkhold's sin counters (one per draw activation).
     Sin,
+    /// Livio, Oathsworn Sentinel's aegis counters (on the cards it exiles,
+    /// which its second ability returns).
+    Aegis,
 }
 
 /// Every zone a card can occupy.
