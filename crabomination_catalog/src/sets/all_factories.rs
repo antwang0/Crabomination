@@ -1353,6 +1353,12 @@ static CURSES: &[Factory] = &[
     super::curses::cruel_reality,
 ];
 static DECKS: &[Factory] = &[
+    // cmdr_rank4k_d (session 01MsQdht)
+    super::decks::by_invitation_only,
+    super::decks::dramatists_puppet,
+    super::decks::goblin_goliath,
+    super::decks::room_of_refuge,
+    super::decks::way_of_the_pyromancer,
     // cmdr_rank4k_c (session 01MsQdht)
     super::decks::behold_the_unspeakable,
     super::decks::does_machines,
