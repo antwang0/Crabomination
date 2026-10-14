@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-14 (Commander run, `01BeJu7Q`) — guardrail; the ranks 1-5500 rescan, 81 seats, eleven primitives
+
+Hot-path touches: `adjust_life` multiplies a loss by `life_loss_multiplier_now`
+(behind the life-static lane); the SBA legend-rule pass reads a turn-stamped
+`ColdState` list and the loss SBA one more (both empty on every non-Hall /
+non-Stunning-Reversal board); `declare_attackers` adds a Trove check behind the
+existing `MUST_ATTACK_WITH_ONE` bit; the bot's defender pick asks for a Trove
+seat only at N > 2. Release `bot_ladder` at `a9e4ceee8`, toolchain 1.99, Xeon @
+2.80 GHz, 4 cores.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs
+                 1); peak_rss 35.6 MiB; games_per_s 257.60 (host_calib_ms 45)
+```
+
 ### 2026-10-14 (Commander run, `01KXJ5zX`) — guardrail; 63 EDHREC seats, 84 cards, three primitives, two layer fixes
 
 Hot-path touches: `grant_keyword_for`'s `Permanent` arm asks
