@@ -14646,6 +14646,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DONNIE_APRIL_COMMANDERS,
             main: decks::DONNIE_APRIL_MAIN,
         },
+        // Seat 2366: Nakia, Wakandan Operative's EDHREC average deck. `--pod-decks 2366`.
+        PodDeck {
+            name: "Nakia, Wakandan Operative (G)",
+            commanders: decks::NAKIA_COMMANDERS,
+            main: decks::NAKIA_MAIN,
+        },
+        // Seat 2367: Ray Fillet, Man Ray's EDHREC average deck. `--pod-decks 2367`.
+        PodDeck {
+            name: "Ray Fillet, Man Ray (U)",
+            commanders: decks::RAY_FILLET_2_COMMANDERS,
+            main: decks::RAY_FILLET_2_MAIN,
+        },
     ]
 }
 
@@ -18842,6 +18854,8 @@ mod tests {
             ("The Duke, Rebel Sentry", &[0x1351]),
             ("Wiccan, Young Avenger", &[0x1352]),
             ("Donnie & April, Adorkable Duo", &[0x1353]),
+            ("Nakia, Wakandan Operative", &[0x1354]),
+            ("Ray Fillet, Man Ray", &[0x1355]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

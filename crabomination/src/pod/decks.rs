@@ -66528,3 +66528,57 @@ pub const DONNIE_APRIL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island,
 ];
+
+pub const NAKIA_COMMANDERS: &[CardFactory] = &[nakia_wakandan_operative];
+
+/// **Nakia, Wakandan Operative**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Forests = 99.
+/// Nakia, Wakandan Operative (EDHREC, fetched 2026-10-14).
+pub const NAKIA_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, illusionists_bracers, ozolith_the_shattered_spire,
+    peter_parkers_camera, replicating_ring, sol_ring, the_ozolith, boseiju_who_endures,
+    maze_of_ith, pit_of_offerings, shifting_woodland, tectonic_edge, throne_of_the_high_city,
+    war_room, birds_of_paradise, bristly_bill_spine_sower, dawnglade_regent, delighted_halfling,
+    duskshell_crawler, elvish_mystic, endurance, eternal_witness, evolution_witness,
+    forgotten_ancient, formidable_speaker, fyndhorn_elves, gyre_sage, hexhaven_invigorator,
+    hierophant_bio_titan, kami_of_whispered_hopes, llanowar_elves, mbaku_jabari_chieftain,
+    mole_man_moloid_master, nissa_resurgent_animist, ouroboroid, regal_behemoth,
+    sakura_tribe_elder, spore_frog, springheart_nantuko, walking_ballista, branching_evolution,
+    court_of_bounty, hardened_scales, innkeepers_talent, sylvan_library, terrasymbiosis,
+    utopia_sprawl, wild_growth, archdruids_charm, beast_within, chord_of_calling,
+    fight_for_the_throne, gift_of_the_viper, heroic_intervention, krosan_grip, natures_claim,
+    snakeskin_veil, nissa_who_shakes_the_world, vivien_reid, bala_ged_recovery,
+    bridgeworks_battle, eldritch_evolution, explore, harmonize, natures_lore, rampant_growth,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const RAY_FILLET_2_COMMANDERS: &[CardFactory] = &[ray_fillet_man_ray];
+
+/// **Ray Fillet, Man Ray**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Islands = 99.
+/// Ray Fillet, Man Ray (EDHREC, fetched 2026-10-14).
+pub const RAY_FILLET_2_MAIN: &[CardFactory] = &[
+    altar_of_the_pantheon, arcane_signet, basalt_monolith, benders_waterskin, bident_of_thassa,
+    commanders_sphere, everflowing_chalice, intelligence_bobblehead, midnight_clock,
+    sky_diamond, sol_ring, the_ooze, thought_vessel, throne_of_eldraine, waterbending_scroll,
+    castle_vantress, drannith_ruins, lonely_sandbar, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, urzas_tower, war_room, apprentice_wizard,
+    april_oneil_human_element, archaeomancer, baxter_fly_in_the_ointment, chasm_skulker,
+    chrome_host_seedshark, clinquant_skymage, cloudkin_seer, danny_pink, dreamtide_whale,
+    forensic_gadgeteer, hydroelectric_specimen, laboratory_maniac, lyla_holographic_assistant,
+    nadir_kraken, naru_meha_master_wizard, oneirophage, pensive_professor,
+    ray_fillet_wave_warrior, stonecoil_serpent, tekuthal_inquiry_dominus,
+    the_unagi_of_kyoshi_island, thrummingbird, toothy_imaginary_friend, walking_ballista,
+    curiosity, propaganda, rhystic_study, treasure_trove, wizard_class, bar_the_gate, blur,
+    cancel, counterspell, dispel, essence_capture, force_spike, negate, pongify,
+    rapid_hybridization, ripples_of_potential, saw_it_coming, slip_out_the_back, twist_reality,
+    wash_away, clear_the_mind, combat_tutorial, deep_analysis, fabricate, wave_goodbye,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
