@@ -4079,6 +4079,12 @@ static DECKS: &[Factory] = &[
     super::decks::seifer_balamb_rival,
     super::decks::sifa_grent,
     super::decks::warriors_resolve,
+    // cmdr_rank3k_n (session 01PxmVAG)
+    super::decks::cemetery_puca,
+    super::decks::daily_bugle_building,
+    super::decks::fogwells_gym,
+    super::decks::labyrinth_raptor,
+    super::decks::lady_spider_maybelle_reilly,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
