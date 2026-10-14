@@ -11076,6 +11076,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ISHKANAH_COMMANDERS,
             main: decks::ISHKANAH_MAIN,
         },
+        // Seat 1771: Hope of Ghirapur's EDHREC average deck. `--pod-decks 1771`.
+        PodDeck {
+            name: "Hope of Ghirapur (C)",
+            commanders: decks::HOPE_OF_GHIRAPUR_COMMANDERS,
+            main: decks::HOPE_OF_GHIRAPUR_MAIN,
+        },
+        // Seat 1772: Istvan, Butcher of Eln's EDHREC average deck. `--pod-decks 1772`.
+        PodDeck {
+            name: "Istvan, Butcher of Eln (B)",
+            commanders: decks::ISTVAN_COMMANDERS,
+            main: decks::ISTVAN_MAIN,
+        },
+        // Seat 1773: Darigaaz, the Igniter's EDHREC average deck. `--pod-decks 1773`.
+        PodDeck {
+            name: "Darigaaz, the Igniter (BRG)",
+            commanders: decks::DARIGAAZ_COMMANDERS,
+            main: decks::DARIGAAZ_MAIN,
+        },
+        // Seat 1774: Maraxus of Keld's EDHREC average deck. `--pod-decks 1774`.
+        PodDeck {
+            name: "Maraxus of Keld (R)",
+            commanders: decks::MARAXUS_OF_KELD_COMMANDERS,
+            main: decks::MARAXUS_OF_KELD_MAIN,
+        },
     ]
 }
 
@@ -14677,6 +14701,10 @@ mod tests {
             ("Celestial Kirin", &[0x10FD]),
             ("Gandalf, Party Guest", &[0x10FE]),
             ("Ishkanah, Grafwidow", &[0x10FF]),
+            ("Hope of Ghirapur", &[0x1100]),
+            ("Istvan, Butcher of Eln", &[0x1101]),
+            ("Darigaaz, the Igniter", &[0x1102]),
+            ("Maraxus of Keld", &[0x1103]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -50063,3 +50063,114 @@ pub const ISHKANAH_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const HOPE_OF_GHIRAPUR_COMMANDERS: &[CardFactory] = &[hope_of_ghirapur];
+
+/// **Hope of Ghirapur**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 12 Wastes = 99.
+/// Hope of Ghirapur (EDHREC, fetched 2026-10-14).
+pub const HOPE_OF_GHIRAPUR_MAIN: &[CardFactory] = &[
+    argentum_armor, basalt_monolith, blackblade_reforged, blinkmoth_urn, bloodforged_battle_axe,
+    cloud_key, commanders_plate, darksteel_forge, dreamstone_hedron, everflowing_chalice,
+    expedition_map, fireshrieker, forsaken_monument, ghostfire_blade, golem_skin_gauntlets,
+    hammer_of_nazahn, hedron_archive, lightning_greaves, loxodon_warhammer, manifold_key,
+    mask_of_memory, masterwork_of_ingenuity, mind_stone, mystic_forge, nettlecyst,
+    rogues_gloves, sculpting_steel, semblance_anvil, shadowspear, sol_ring, swiftfoot_boots,
+    sword_of_feast_and_famine, sword_of_fire_and_ice, sword_of_vengeance, thought_vessel,
+    thran_dynamo, unwinding_clock, worn_powerstone, ancient_tomb, buried_ruin,
+    darksteel_citadel, guildless_commons, inventors_fair, radiant_fountain, reliquary_tower,
+    rogues_passage, scavenger_grounds, shrine_of_the_forsaken_gods, temple_of_the_false_god,
+    the_mycosynth_gardens, thespians_stage, tomb_of_the_spirit_dragon, urzas_cave, urzas_mine,
+    urzas_power_plant, urzas_saga, urzas_tower, urzas_workshop, war_room, zhalfirin_void,
+    brass_squire, chief_of_the_foundry, foundry_inspector, glaring_fleshraker, hedron_crawler,
+    jhoiras_familiar, junk_diver, liberator_urzas_battlethopter, metalwork_colossus,
+    meteor_golem, myr_retriever, ornithopter, palladium_myr, scrap_trawler, shimmer_myr,
+    silent_arbiter, solemn_simulacrum, steel_overseer, wandering_archaic, echoes_of_eternity,
+    null_elemental_blast, scour_from_existence, warping_wail, ugin_the_ineffable,
+    ugin_the_spirit_dragon, all_is_dust, introduction_to_annihilation,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes,
+];
+
+pub const ISTVAN_COMMANDERS: &[CardFactory] = &[istvan_butcher_of_eln];
+
+/// **Istvan, Butcher of Eln**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Istvan, Butcher of Eln (EDHREC, fetched 2026-10-14).
+pub const ISTVAN_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, champions_helm, charcoal_diamond, commanders_plate,
+    gisas_favorite_shovel, haunted_cloak, jet_medallion, leyline_axe, lightning_greaves,
+    loxodon_warhammer, mithril_coat, shadowspear, sol_ring, swiftfoot_boots,
+    tarrians_soulcleaver, the_masamune, the_ozolith, vorpal_sword, bojuka_bog, cabal_coffers,
+    cabal_stronghold, nykthos_shrine_to_nyx, rogues_passage, shizo_deaths_storehouse,
+    urborg_tomb_of_yawgmoth, witchs_cottage, accursed_marauder, archfiend_of_depravity,
+    blood_artist, crypt_ghast, demons_disciple, dread_presence, drivnod_carnage_dominus,
+    fleshbag_marauder, gravelighter, gray_merchant_of_asphodel, massacre_girl, massacre_wurm,
+    merciless_executioner, morbid_opportunist, ophiomancer, phyrexian_obliterator,
+    plaguecrafter, uncle_istvan, black_market, black_market_connections, eternal_thirst,
+    grave_pact, no_mercy, phyrexian_arena, the_meathook_massacre, dark_ritual, deadly_rollick,
+    defile, force_of_despair, go_for_the_throat, imps_mischief, infernal_grasp,
+    sheoldreds_edict, soul_shatter, tragic_slip, withering_torment, bubbling_muck, damnation,
+    feed_the_swarm, mandate_of_abaddon, nights_whisper, reanimate, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const DARIGAAZ_COMMANDERS: &[CardFactory] = &[darigaaz_the_igniter];
+
+/// **Darigaaz, the Igniter**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 6 Forests + 6 Mountains + 6 Swamps = 99.
+/// Darigaaz, the Igniter (EDHREC, fetched 2026-10-14).
+pub const DARIGAAZ_MAIN: &[CardFactory] = &[
+    arcane_signet, black_vise, font_of_mythos, glasses_of_urza, howling_mine, lightning_greaves,
+    sol_ring, swiftfoot_boots, sword_of_war_and_peace, temple_bell, blood_crypt, cinder_glade,
+    command_tower, darigaazs_caldera, dragonskull_summit, exotic_orchard, llanowar_wastes,
+    mikokoro_center_of_the_sea, overgrown_tomb, reliquary_tower, rogues_passage, rootbound_crag,
+    savage_lands, smoldering_marsh, stomping_ground, woodland_cemetery, ziatoras_proving_ground,
+    balor, birds_of_paradise, dragon_mage, emberwilde_captain, fate_unraveler,
+    goblin_anarchomancer, heartwood_storyteller, howling_golem, ignoble_hierarch,
+    kederekt_parasite, llanowar_elves, magus_of_the_wheel, master_of_the_feast,
+    painters_servant, psychosis_crawler, razorkin_needlehead, sakura_tribe_elder,
+    scrawling_crawler, seizan_perverter_of_truth, sheoldred_the_apocalypse, stormfist_crusader,
+    thunderscape_familiar, viseling, zenith_chronicler, fires_of_yavimaya, phyrexian_arena,
+    price_of_knowledge, rhythm_of_the_wild, rites_of_flourishing, spiteful_visions,
+    underworld_dreams, unquenchable_fury, beast_within, chaos_warp, darigaazs_charm,
+    dark_ritual, putrefy, rakdos_charm, runeflare_trap, storm_seeker, terminate,
+    ob_nixilis_the_hate_twisted, blasphemous_act, breath_of_darigaaz, cultivate, decimate,
+    farseek, hull_breach, khorvaths_fury, kodamas_reach, natures_lore, peer_into_the_abyss,
+    rampant_growth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const MARAXUS_OF_KELD_COMMANDERS: &[CardFactory] = &[maraxus_of_keld];
+
+/// **Maraxus of Keld**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Maraxus of Keld (EDHREC, fetched 2026-10-14).
+pub const MARAXUS_OF_KELD_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, blackblade_reforged, commanders_plate, diamond_pick_axe,
+    fire_diamond, goldvein_pick, haunted_cloak, lightning_greaves, loxodon_warhammer,
+    mind_stone, mithril_coat, ruby_medallion, shadowspear, sol_ring, swiftfoot_boots,
+    sword_of_vengeance, sword_of_the_animist, tenza_godos_maul, the_reaver_cleaver,
+    trailblazers_boots, wayfarers_bauble, dwarven_mine, kher_keep, mines_of_moria,
+    myriad_landscape, rogues_passage, treasure_vault, war_room, academy_manufactor,
+    ancient_copper_dragon, archetype_of_aggression, burnished_hart, captain_lannery_storm,
+    generous_plunderer, goldspan_dragon, hellkite_tyrant, hoarding_ogre,
+    kazuul_tyrant_of_the_cliffs, kediss_emberclaw_familiar, krenko_mob_boss,
+    krenko_tin_street_kingpin, lizard_blades, loyal_apprentice, professional_face_breaker,
+    solemn_simulacrum, toggo_goblin_weaponsmith, treasure_nabber, xorn, burning_anger,
+    curse_of_opulence, descent_into_avernus, sticky_fingers, there_and_back_again, abrade,
+    big_score, chaos_warp, fling, kazuuls_fury, souls_fire, temur_battle_rage,
+    unexpected_windfall, blasphemous_act, brasss_bounty, chandras_ignition, faithless_looting,
+    gravitic_punch, mana_geyser, pirates_pillage, seize_the_spoils, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
