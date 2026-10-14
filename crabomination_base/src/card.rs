@@ -10331,6 +10331,11 @@ pub struct CardData {
     /// `Selector::ChosenPermanentOfSource` resolves to it. `None` until the
     /// ETB choice resolves (or if no legal choice existed).
     pub chosen_permanent: Option<CardId>,
+    /// The first permanent tapped to pay this spell's `TapPermanents`
+    /// additional cost (CR 601.2h), stamped by the cast path. Read by
+    /// `Selector::CostTappedPermanentOfSource` (Swallow Whole). Not
+    /// serialized.
+    pub cost_tapped: Option<CardId>,
     /// A player chosen and remembered by this permanent
     /// (`Effect::RememberPlayerOnSource`). `PlayerRef::ChosenPlayerOfSource`
     /// resolves to it — "that player" on a later trigger (Soul Scourge).
@@ -11292,6 +11297,7 @@ impl CardInstance {
             bounce_at_next_untap: false,
             name_choices_used: 0,
             chosen_permanent: None,
+            cost_tapped: None,
             chosen_player: None,
             remembered_amount: None,
             dealt_deathtouch_damage: false,

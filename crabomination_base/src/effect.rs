@@ -304,6 +304,11 @@ pub enum Selector {
     /// "the chosen creature"). Resolves to nothing if the remembered
     /// permanent has left the battlefield.
     ChosenPermanentOfSource,
+    /// The permanent tapped to pay the source spell's `TapPermanents`
+    /// additional cost — the `CardData::cost_tapped` stamp (Swallow Whole's
+    /// "the creature tapped to pay this spell's additional cost"). Resolves
+    /// to nothing once that permanent has left the battlefield.
+    CostTappedPermanentOfSource,
     /// CR 509.1 — every attacker the source permanent is currently blocking
     /// (all of them under a multi-block). Resolves via
     /// `GameState.block_map[source]`. Used by "whenever this blocks a creature,

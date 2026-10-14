@@ -44395,6 +44395,18 @@ impl GameState {
                     .collect()
             }
             Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
+            Selector::CostTappedPermanentOfSource => ctx
+                .source
+                .and_then(|s| {
+                    self.find_card_anywhere(s)
+                        .map(|c| c.cost_tapped)
+                        .or_else(|| self.resolving_spell(s).map(|r| r.cost_tapped))
+                        .flatten()
+                })
+                .filter(|cid| self.battlefield.find_by_id(*cid).is_some())
+                .map(EntityRef::Permanent)
+                .into_iter()
+                .collect(),
             Selector::ChosenPermanentOfSource => ctx
                 .source
                 // The source may already have left the battlefield when this

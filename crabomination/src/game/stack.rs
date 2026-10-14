@@ -2598,6 +2598,7 @@ impl GameState {
                         x_value,
                         cast_desert_mana: card.cast_desert_mana,
                         cast_snow_mana: card.cast_snow_mana,
+                        cost_tapped: card.cost_tapped,
                         cast_choices: crate::game::spell_copy::CastChoices::of(&card),
                     }));
 

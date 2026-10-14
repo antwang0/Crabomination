@@ -1844,6 +1844,10 @@ pub struct ColdState {
     /// Perfect).
     #[serde(default)]
     pub(crate) beheld_and_exiled: Option<CardId>,
+    /// The first permanent a `TapPermanents` cast cost just tapped, taken by
+    /// the cast path to stamp `CardData::cost_tapped` (Swallow Whole).
+    #[serde(default)]
+    pub(crate) cost_tapped_for_cast: Option<CardId>,
     /// Did the permanent returned to hand to pay the current activation's
     /// `bounce_other_filter` cost have a nonbasic land type as it last
     /// existed on the battlefield (Wonderscape Sage's "unless that land had a
@@ -4673,6 +4677,8 @@ pub(crate) struct ResolvingSpell {
     pub cast_desert_mana: u8,
     /// `CardData::cast_snow_mana`, for the same reason.
     pub cast_snow_mana: u8,
+    /// `CardData::cost_tapped`, for the same reason.
+    pub cost_tapped: Option<CardId>,
     /// CR 707.10 — the decisions a copy of it inherits (`spell_copy`).
     pub cast_choices: crate::game::spell_copy::CastChoices,
 }

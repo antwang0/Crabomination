@@ -11969,6 +11969,15 @@ impl GameState {
             {
                 c.exiled_with = Some(card.id);
             }
+            // CR 601.2h — remember the permanent tapped for the cost (Swallow
+            // Whole's counter goes on it).
+            if let Some(id) = self.cost_tapped_for_cast.take()
+                && additional_costs
+                    .iter()
+                    .any(|c| matches!(c, crate::card::AdditionalCastCost::TapPermanents { .. }))
+            {
+                card.cost_tapped = Some(id);
+            }
             // CR 601.2h — a discard paid as a cost happened before resolution;
             // carry its nonland count so "if the discarded card wasn't a land
             // card" (Grab the Prize) reads it, copies included (CR 707.10).
@@ -12741,6 +12750,7 @@ impl GameState {
                     cands.sort_by_key(|c| (c.definition.is_land(), c.definition.cost.cmc()));
                     let ids: Vec<CardId> =
                         cands.iter().take(*count as usize).map(|c| c.id).collect();
+                    self.cost_tapped_for_cast = ids.first().copied();
                     for id in ids {
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.tapped = true;
