@@ -3180,7 +3180,8 @@ re-gate 2        after seats 1426-1705 (cmdr_edhrec53-59, 98 cards; BlightX,
                  stalls byte-identical, thread_determinism ok, peak_rss 34.4
                  MiB, games_per_s 304.23; pod_sweep 9971 seats 1270-1470 ×
                  4,6,8 × 4 = 444 games and 9981 seats 1516-1705 × 4,6,8 × 3
-                 = 312 games, 0 bad
+                 = 312 games, 0 bad; full suite (nextest, no client) 26,084
+                 passed, 0 failed, 5 skipped; workspace clippy 0
 ```
 
 ### 2026-10-13 (Commander run, `01BJKf54`, close) — guardrail; 17 more seats, 59 cards, two primitives
