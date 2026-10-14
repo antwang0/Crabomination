@@ -2147,10 +2147,32 @@ impl GameState {
                     self.battlefield
                         .find_by_id(atk.attacker)
                         .map(|c| {
-                            (
-                                self.statics_granted_triggers_with(c, &trigger_grants),
-                                self.equip_granted_triggers_with(c, &equip_grants),
-                            )
+                            let mut equip = self.equip_granted_triggers_with(c, &equip_grants);
+                            // CR 702.95 — a paired creature's `soulbond_bonus`
+                            // grants its "whenever this creature attacks" to
+                            // both members (Imperious Mindbreaker); it fires
+                            // off the attacker, like an attachment's grant.
+                            if let Some(partner) = c.soulbond_partner
+                                && self.battlefield.find_by_id(partner).is_some()
+                            {
+                                for holder in [c.id, partner] {
+                                    let Some(bonus) = self
+                                        .battlefield
+                                        .find_by_id(holder)
+                                        .and_then(|h| h.definition.soulbond_bonus.as_ref())
+                                    else {
+                                        continue;
+                                    };
+                                    equip.extend(
+                                        bonus
+                                            .triggered_abilities
+                                            .iter()
+                                            .filter(|t| t.event.kind == EventKind::Attacks)
+                                            .map(|t| (c.id, t.clone())),
+                                    );
+                                }
+                            }
+                            (self.statics_granted_triggers_with(c, &trigger_grants), equip)
                         })
                         .unwrap_or_default()
                 })
