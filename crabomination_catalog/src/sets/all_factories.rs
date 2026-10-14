@@ -4168,6 +4168,10 @@ static DECKS: &[Factory] = &[
     super::decks::faiths_reward,
     super::decks::treasure_keeper,
     super::decks::katilda_dawnhart_martyr,
+    // cmdr_edhrec62 (session 01VkPyqk)
+    super::decks::khorvaths_fury,
+    super::decks::ghostfire_blade,
+    super::decks::istvan_butcher_of_eln,
     super::decks::gandalf_friend_of_the_shire,
     super::decks::ringwraiths,
     super::decks::sauron_the_necromancer,
