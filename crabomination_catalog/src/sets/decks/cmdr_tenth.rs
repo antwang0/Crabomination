@@ -167,7 +167,7 @@ pub fn all_of_history_all_at_once() -> CardDefinition {
 /// time counters off a suspended card you own; Doctor's companion.
 pub fn amy_pond() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::PartnerWith("Rory Williams".into())],
+        keywords: vec![Keyword::PartnerWith("Rory Williams".into()), Keyword::DoctorsCompanion],
         triggered_abilities: vec![on_combat_damage_to_player(Effect::RemoveTimeCountersFromSuspended {
             amount: Value::TriggerEventAmount,
         })],
@@ -299,7 +299,7 @@ pub fn dinosaurs_on_a_spaceship() -> CardDefinition {
 /// deal that much to target opponent; Doctor's companion.
 pub fn donna_noble() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::Soulbond],
+        keywords: vec![Keyword::Soulbond, Keyword::DoctorsCompanion],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::AnyPlayer)
                 .with_filter(trigger_is(R::IsSource.or(R::PairedWithSource))),

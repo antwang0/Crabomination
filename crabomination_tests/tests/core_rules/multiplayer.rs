@@ -3065,6 +3065,12 @@ fn cr_702_124m_doctors_companion_needs_a_pure_time_lord_doctor() {
     );
     // Two companions are not a pair either: neither is a Doctor.
     assert!(!commanders_may_pair(&graham, &graham.clone()));
+    // Bug fix: a factory's own `keywords:` list overwrote the companion
+    // helper's keyword, so Donna Noble and Amy Pond could not be seated with
+    // their Doctor (`scripts/audit_helper_keywords.py` finds the class).
+    for companion in [catalog::donna_noble(), catalog::amy_pond()] {
+        assert!(commanders_may_pair(&companion, &catalog::the_fifth_doctor()), "{}", companion.name);
+    }
 }
 
 /// A 100-card list led by the pair validates, and the combined identity is
