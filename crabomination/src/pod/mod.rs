@@ -15168,6 +15168,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SALLY_PRIDE_COMMANDERS,
             main: decks::SALLY_PRIDE_MAIN,
         },
+        // Seat 2453: Radiant, Serra Archangel and Rebbec, Architect of Ascension's EDHREC average deck. `--pod-decks 2453`.
+        PodDeck {
+            name: "Radiant, Serra Archangel and Rebbec, Architect of Ascension (W)",
+            commanders: decks::RADIANT_2_COMMANDERS,
+            main: decks::RADIANT_2_MAIN,
+        },
     ]
 }
 
@@ -19451,6 +19457,7 @@ mod tests {
             ("Gargantos, the Endbringer", &[0x13A8]),
             ("Shauku, Endbringer", &[0x13A9]),
             ("Sally Pride, Lioness Leader", &[0x13AA]),
+            ("Radiant, Serra Archangel and Rebbec, Architect of Ascension", &[0x13AB]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

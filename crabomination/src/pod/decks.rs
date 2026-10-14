@@ -68926,3 +68926,30 @@ pub const SALLY_PRIDE_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const RADIANT_2_COMMANDERS: &[CardFactory] = &[radiant_serra_archangel, rebbec_architect_of_ascension];
+
+/// **Radiant, Serra Archangel and Rebbec, Architect of Ascension**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Plains = 98.
+/// Radiant, Serra Archangel and Rebbec, Architect of Ascension (EDHREC, fetched
+/// 2026-10-14).
+pub const RADIANT_2_MAIN: &[CardFactory] = &[
+    arcane_signet, argentum_armor, blackblade_reforged, commanders_sphere, glimmer_lens,
+    golem_skin_gauntlets, haunted_cloak, hedron_archive, inspiring_statuary, lightning_greaves,
+    liquimetal_torque, loxodon_warhammer, marble_diamond, maul_of_the_skyclaves, mind_stone,
+    moonsilver_spear, nettlecyst, ring_of_the_lucii, sol_ring, starnheim_memento,
+    swiftfoot_boots, thopter_shop, thought_vessel, thran_dynamo, white_auracite, buried_ruin,
+    geier_reach_sanitarium, ishgard_the_holy_see, path_of_ancestry, tyrite_sanctum,
+    aang_air_nomad, angel_of_the_ruins, bladegriff_prototype, bronze_guardian, canoptek_spyder,
+    cloudsteel_kirin, iron_spider_stark_upgrade, ironsoul_enforcer, jhoiras_familiar, lion_sash,
+    ornithopter, ornithopter_of_paradise, rug_of_smothering, salvation_colossus,
+    scavenged_brawler, selfless_spirit, sephara_skys_blade, skyscanner, starnheim_courser,
+    stonecoil_serpent, teshar_ancestors_apostle, thopter_assembly, all_that_glitters,
+    builders_talent, luminarch_ascension, noble_heritage, sigardas_summons, crush_contraband,
+    dispatch, generous_gift, release_to_memory, return_to_dust, swords_to_plowshares,
+    unbreakable_formation, austere_command, farewell, secret_rendezvous, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
