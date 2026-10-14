@@ -14214,6 +14214,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIGRID_COMMANDERS,
             main: decks::SIGRID_MAIN,
         },
+        // Seat 2294: The Fifteenth Doctor and Tegan Jovanka's EDHREC average deck. `--pod-decks 2294`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Tegan Jovanka (WUR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_MAIN,
+        },
+        // Seat 2295: Firebird, Blazing Ranger's EDHREC average deck. `--pod-decks 2295`.
+        PodDeck {
+            name: "Firebird, Blazing Ranger (R)",
+            commanders: decks::FIREBIRD_COMMANDERS,
+            main: decks::FIREBIRD_MAIN,
+        },
+        // Seat 2296: Momo, Rambunctious Rascal's EDHREC average deck. `--pod-decks 2296`.
+        PodDeck {
+            name: "Momo, Rambunctious Rascal (W)",
+            commanders: decks::MOMO_3_COMMANDERS,
+            main: decks::MOMO_3_MAIN,
+        },
+        // Seat 2297: Photon, Mighty Marvel's EDHREC average deck. `--pod-decks 2297`.
+        PodDeck {
+            name: "Photon, Mighty Marvel (R)",
+            commanders: decks::PHOTON_COMMANDERS,
+            main: decks::PHOTON_MAIN,
+        },
+        // Seat 2298: Tokka & Rahzar, Unsupervised's EDHREC average deck. `--pod-decks 2298`.
+        PodDeck {
+            name: "Tokka & Rahzar, Unsupervised (R)",
+            commanders: decks::TOKKA_RAHZAR_COMMANDERS,
+            main: decks::TOKKA_RAHZAR_MAIN,
+        },
+        // Seat 2299: The Fifteenth Doctor and Peri Brown's EDHREC average deck. `--pod-decks 2299`.
+        PodDeck {
+            name: "The Fifteenth Doctor and Peri Brown (WUR)",
+            commanders: decks::THE_FIFTEENTH_DOCTOR_2_COMMANDERS,
+            main: decks::THE_FIFTEENTH_DOCTOR_2_MAIN,
+        },
+        // Seat 2300: Valor's Flagship's EDHREC average deck. `--pod-decks 2300`.
+        PodDeck {
+            name: "Valor's Flagship (W)",
+            commanders: decks::VALORS_FLAGSHIP_COMMANDERS,
+            main: decks::VALORS_FLAGSHIP_MAIN,
+        },
+        // Seat 2301: Spider-Byte, Web Warden's EDHREC average deck. `--pod-decks 2301`.
+        PodDeck {
+            name: "Spider-Byte, Web Warden (U)",
+            commanders: decks::SPIDER_BYTE_COMMANDERS,
+            main: decks::SPIDER_BYTE_MAIN,
+        },
+        // Seat 2302: Thalia, the Survivor's EDHREC average deck. `--pod-decks 2302`.
+        PodDeck {
+            name: "Thalia, the Survivor (W)",
+            commanders: decks::THALIA_3_COMMANDERS,
+            main: decks::THALIA_3_MAIN,
+        },
+        // Seat 2303: Ellyn Harbreeze, Busybody and Tavern Brawler's EDHREC average deck. `--pod-decks 2303`.
+        PodDeck {
+            name: "Ellyn Harbreeze, Busybody and Tavern Brawler (WR)",
+            commanders: decks::ELLYN_HARBREEZE_COMMANDERS,
+            main: decks::ELLYN_HARBREEZE_MAIN,
+        },
+        // Seat 2304: Ori, Plate Stacker's EDHREC average deck. `--pod-decks 2304`.
+        PodDeck {
+            name: "Ori, Plate Stacker (W)",
+            commanders: decks::ORI_COMMANDERS,
+            main: decks::ORI_MAIN,
+        },
+        // Seat 2305: Green Goblin, Back for More's EDHREC average deck. `--pod-decks 2305`.
+        PodDeck {
+            name: "Green Goblin, Back for More (B)",
+            commanders: decks::GREEN_GOBLIN_2_COMMANDERS,
+            main: decks::GREEN_GOBLIN_2_MAIN,
+        },
+        // Seat 2306: T'Chaka, Venerable King's EDHREC average deck. `--pod-decks 2306`.
+        PodDeck {
+            name: "T'Chaka, Venerable King (WG)",
+            commanders: decks::TCHAKA_COMMANDERS,
+            main: decks::TCHAKA_MAIN,
+        },
+        // Seat 2307: W'Kabi, Shield of the Nation's EDHREC average deck. `--pod-decks 2307`.
+        PodDeck {
+            name: "W'Kabi, Shield of the Nation (G)",
+            commanders: decks::WKABI_COMMANDERS,
+            main: decks::WKABI_MAIN,
+        },
+        // Seat 2308: The Frightful Four's EDHREC average deck. `--pod-decks 2308`.
+        PodDeck {
+            name: "The Frightful Four (B)",
+            commanders: decks::THE_FRIGHTFUL_FOUR_COMMANDERS,
+            main: decks::THE_FRIGHTFUL_FOUR_MAIN,
+        },
+        // Seat 2309: Queen Mother Ramonda's EDHREC average deck. `--pod-decks 2309`.
+        PodDeck {
+            name: "Queen Mother Ramonda (W)",
+            commanders: decks::QUEEN_MOTHER_RAMONDA_COMMANDERS,
+            main: decks::QUEEN_MOTHER_RAMONDA_MAIN,
+        },
     ]
 }
 
@@ -18338,6 +18434,22 @@ mod tests {
             ("Go-Shintai of Boundless Vigor", &[0x1309]),
             ("Karn, Argent Defender", &[0x130A]),
             ("Sigrid, God-Favored", &[0x130B]),
+            ("The Fifteenth Doctor and Tegan Jovanka", &[0x130C]),
+            ("Firebird, Blazing Ranger", &[0x130D]),
+            ("Momo, Rambunctious Rascal", &[0x130E]),
+            ("Photon, Mighty Marvel", &[0x130F]),
+            ("Tokka & Rahzar, Unsupervised", &[0x1310]),
+            ("The Fifteenth Doctor and Peri Brown", &[0x1311]),
+            ("Valor's Flagship", &[0x1312]),
+            ("Spider-Byte, Web Warden", &[0x1313]),
+            ("Thalia, the Survivor", &[0x1314]),
+            ("Ellyn Harbreeze, Busybody and Tavern Brawler", &[0x1315]),
+            ("Ori, Plate Stacker", &[0x1316]),
+            ("Green Goblin, Back for More", &[0x1317]),
+            ("T'Chaka, Venerable King", &[0x1318]),
+            ("W'Kabi, Shield of the Nation", &[0x1319]),
+            ("The Frightful Four", &[0x131A]),
+            ("Queen Mother Ramonda", &[0x131B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
