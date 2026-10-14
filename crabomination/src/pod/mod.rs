@@ -13176,6 +13176,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BARRET_WALLACE_COMMANDERS,
             main: decks::BARRET_WALLACE_MAIN,
         },
+        // Seat 2121: Infernal Kirin's EDHREC average deck. `--pod-decks 2121`.
+        PodDeck {
+            name: "Infernal Kirin (B)",
+            commanders: decks::INFERNAL_KIRIN_COMMANDERS,
+            main: decks::INFERNAL_KIRIN_MAIN,
+        },
+        // Seat 2122: Kodama of the Center Tree's EDHREC average deck. `--pod-decks 2122`.
+        PodDeck {
+            name: "Kodama of the Center Tree (G)",
+            commanders: decks::KODAMA_OF_THE_CENTER_TREE_COMMANDERS,
+            main: decks::KODAMA_OF_THE_CENTER_TREE_MAIN,
+        },
+        // Seat 2123: Jason Bright, Glowing Prophet's EDHREC average deck. `--pod-decks 2123`.
+        PodDeck {
+            name: "Jason Bright, Glowing Prophet (U)",
+            commanders: decks::JASON_BRIGHT_COMMANDERS,
+            main: decks::JASON_BRIGHT_MAIN,
+        },
+        // Seat 2124: Kodama of the South Tree's EDHREC average deck. `--pod-decks 2124`.
+        PodDeck {
+            name: "Kodama of the South Tree (G)",
+            commanders: decks::KODAMA_OF_THE_SOUTH_TREE_COMMANDERS,
+            main: decks::KODAMA_OF_THE_SOUTH_TREE_MAIN,
+        },
+        // Seat 2125: Kyoki, Sanity's Eclipse's EDHREC average deck. `--pod-decks 2125`.
+        PodDeck {
+            name: "Kyoki, Sanity's Eclipse (B)",
+            commanders: decks::KYOKI_COMMANDERS,
+            main: decks::KYOKI_MAIN,
+        },
+        // Seat 2126: Silver Surfer, Cosmic Voyager's EDHREC average deck. `--pod-decks 2126`.
+        PodDeck {
+            name: "Silver Surfer, Cosmic Voyager (U)",
+            commanders: decks::SILVER_SURFER_2_COMMANDERS,
+            main: decks::SILVER_SURFER_2_MAIN,
+        },
+        // Seat 2127: MJ, Rising Star's EDHREC average deck. `--pod-decks 2127`.
+        PodDeck {
+            name: "MJ, Rising Star (W)",
+            commanders: decks::MJ_COMMANDERS,
+            main: decks::MJ_MAIN,
+        },
     ]
 }
 
@@ -17128,6 +17170,13 @@ mod tests {
             ("Koth of the Homestead", &[0x125C]),
             ("Elena, Turk Recruit", &[0x125D]),
             ("Barret Wallace", &[0x125E]),
+            ("Infernal Kirin", &[0x125F]),
+            ("Kodama of the Center Tree", &[0x1260]),
+            ("Jason Bright, Glowing Prophet", &[0x1261]),
+            ("Kodama of the South Tree", &[0x1262]),
+            ("Kyoki, Sanity's Eclipse", &[0x1263]),
+            ("Silver Surfer, Cosmic Voyager", &[0x1264]),
+            ("MJ, Rising Star", &[0x1265]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

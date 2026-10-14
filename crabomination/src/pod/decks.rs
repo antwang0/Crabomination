@@ -59744,3 +59744,194 @@ pub const BARRET_WALLACE_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const INFERNAL_KIRIN_COMMANDERS: &[CardFactory] = &[infernal_kirin];
+
+/// **Infernal Kirin**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Swamps = 99.
+/// Infernal Kirin (EDHREC, fetched 2026-10-14).
+pub const INFERNAL_KIRIN_MAIN: &[CardFactory] = &[
+    arcane_signet, bontus_monument, entropic_battlecruiser, geths_grimoire, glasses_of_urza,
+    jet_medallion, long_forgotten_gohei, sol_ring, seance_board, bojuka_bog, cabal_coffers,
+    cabal_stronghold, nykthos_shrine_to_nyx, urborg_tomb_of_yawgmoth, witchs_cottage,
+    ashen_skin_zubera, banshee_of_the_dread_choir, bloodghast, crypt_ghast, emissary_of_despair,
+    ghost_lit_stalker, gibbering_kami, gravelighter, he_who_hungers, iname_death_aspect,
+    junji_the_midnight_sky, kami_of_empty_graves, kami_of_the_waning_moon, kemuri_onna,
+    kokusho_the_evening_star, kyoki_sanitys_eclipse, midnight_banshee, moira_urborg_haunt,
+    myojin_of_grim_betrayal, myojin_of_nights_reach, nether_traitor, souls_of_the_lost,
+    starving_revenant, thief_of_hope, tormented_soul, urborg_scavengers, will_o_the_wisp,
+    bandits_talent, lilianas_caress, megrim, painful_quandary, phyrexian_arena, raiders_wake,
+    waste_not, dark_ritual, death_denied, defile, goryos_vengeance, hideous_laughter,
+    horobis_whisper, rend_flesh, sickening_shoal, soulless_revival, davriel_rogue_shadowmage,
+    choice_of_damnations, cranial_extraction, dark_deal, devouring_greed, feed_the_swarm,
+    footsteps_of_the_goryo, sign_in_blood, swallowing_plague, syphon_mind, three_tragedies,
+    waking_nightmare,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const KODAMA_OF_THE_CENTER_TREE_COMMANDERS: &[CardFactory] = &[kodama_of_the_center_tree];
+
+/// **Kodama of the Center Tree**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// Kodama of the Center Tree (EDHREC, fetched 2026-10-14).
+pub const KODAMA_OF_THE_CENTER_TREE_MAIN: &[CardFactory] = &[
+    arcane_signet, baku_altar, emerald_medallion, heralds_horn, long_forgotten_gohei,
+    rhonass_monument, sol_ring, urzas_incubator, castle_garenbrig, mosswort_bridge,
+    myriad_landscape, nykthos_shrine_to_nyx, oran_rief_the_vastwood, path_of_ancestry,
+    reliquary_tower, arashi_the_sky_asunder, body_of_jukai, bounteous_kirin, briarknit_kami,
+    carven_caryatid, elder_pine_of_jukai, forked_branch_garami, hana_kami, harbinger_of_spring,
+    haru_onna, iname_life_aspect, jugan_the_rising_star, kami_of_whispered_hopes,
+    kodama_of_the_east_tree, kodama_of_the_north_tree, kodama_of_the_south_tree,
+    kodama_of_the_west_tree, kura_the_boundless_sky, lifespinner, loam_dweller,
+    myojin_of_lifes_web, myojin_of_towering_might, patron_of_the_orochi, permeating_mass,
+    petalmane_baku, primordial_sage, promised_kannushi, realmwalker, sekki_seasons_guide,
+    spinner_of_souls, thundering_mightmare, traproot_kami, willow_geist, concord_with_the_kami,
+    garruks_uprising, jugan_defends_the_temple, one_with_the_kami, sylvan_anthem,
+    tribute_to_the_world_tree, wild_growth, beast_within, kodamas_might, rending_vines,
+    roar_of_jukai, strength_of_cedars, unchecked_growth, wear_away, cultivate,
+    invoke_the_ancients, joyous_respite, kodamas_reach, natures_lore, rampant_growth,
+    skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const JASON_BRIGHT_COMMANDERS: &[CardFactory] = &[jason_bright_glowing_prophet];
+
+/// **Jason Bright, Glowing Prophet**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Jason Bright, Glowing Prophet (EDHREC, fetched 2026-10-14).
+pub const JASON_BRIGHT_MAIN: &[CardFactory] = &[
+    arcane_signet, heraldic_banner, icon_of_ancestry, kefnets_monument, mind_stone,
+    patchwork_banner, sapphire_medallion, skullclamp, sky_diamond, sol_ring, thought_vessel,
+    vanquishers_banner, accursed_duneyard, drannith_ruins, karns_bastion, myriad_landscape,
+    mystic_sanctuary, path_of_ancestry, reliquary_tower, war_room, adaptive_automaton,
+    aven_eternal, baxter_fly_in_the_ointment, benthic_biomancer, cleaver_skaab, cloudfin_raptor,
+    eternal_skylord, eternal_of_harsh_truths, falcon_abomination, forgotten_creation,
+    geralfs_mindcrusher, geralf_visionary_stitcher, geralf_the_fleshwright, havengul_runebinder,
+    hordewing_skaab, metallic_mimic, overcharged_amalgam, patchwork_crawler,
+    prophet_of_the_scarab, ray_fillet_wave_warrior, repository_skaab, simic_manipulator,
+    skaab_ruinator, stitched_assistant, stitcher_geralf, the_flood_of_mars, undead_alchemist,
+    vexing_radgull, kindred_discovery, necroduality, profts_eidetic_memory,
+    reflections_of_littjara, rooftop_storm, wizard_class, aetherize, arcane_denial,
+    commence_the_endgame, compelling_deterrence, counterspell, flip_the_switch, frantic_search,
+    lazotep_plating, negate, pongify, rapid_hybridization, reality_shift, callous_dismissal,
+    distant_melody, empty_the_laboratory, raise_the_palisade, tezzerets_gambit,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const KODAMA_OF_THE_SOUTH_TREE_COMMANDERS: &[CardFactory] = &[kodama_of_the_south_tree];
+
+/// **Kodama of the South Tree**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Forests = 99.
+/// Kodama of the South Tree (EDHREC, fetched 2026-10-14).
+pub const KODAMA_OF_THE_SOUTH_TREE_MAIN: &[CardFactory] = &[
+    arcane_signet, baku_altar, emerald_medallion, heralds_horn, long_forgotten_gohei,
+    rhonass_monument, sol_ring, castle_garenbrig, mosswort_bridge, myriad_landscape,
+    oran_rief_the_vastwood, path_of_ancestry, reliquary_tower, arashi_the_sky_asunder,
+    bounteous_kirin, briarknit_kami, elder_pine_of_jukai, forked_branch_garami, hana_kami,
+    harbinger_of_spring, haru_onna, iname_life_aspect, jugan_the_rising_star,
+    kami_of_whispered_hopes, kami_of_the_hunt, kodama_of_the_center_tree,
+    kodama_of_the_east_tree, kodama_of_the_north_tree, kodama_of_the_west_tree,
+    kura_the_boundless_sky, lifespinner, loam_dweller, myojin_of_lifes_web,
+    myojin_of_towering_might, patron_of_the_orochi, permeating_mass, petalmane_baku,
+    primordial_sage, sekki_seasons_guide, shinen_of_lifes_roar, soilshaper, spinner_of_souls,
+    strangleroot_geist, thundering_mightmare, traproot_kami, descendants_path, guardian_project,
+    jugan_defends_the_temple, one_with_the_kami, sylvan_anthem, tribute_to_the_world_tree,
+    beast_within, inner_calm_outer_strength, kodamas_might, rending_vines, roar_of_jukai,
+    strength_of_cedars, unchecked_growth, vital_surge, wear_away, cultivate, harmonize,
+    invoke_the_ancients, joyous_respite, kodamas_reach, natures_lore, rampant_growth,
+    shamanic_revelation,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const KYOKI_COMMANDERS: &[CardFactory] = &[kyoki_sanitys_eclipse];
+
+/// **Kyoki, Sanity's Eclipse**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Kyoki, Sanity's Eclipse (EDHREC, fetched 2026-10-14).
+pub const KYOKI_MAIN: &[CardFactory] = &[
+    arcane_signet, baku_altar, bontus_monument, caged_sun, charcoal_diamond, fellwar_stone,
+    geths_grimoire, jet_medallion, long_forgotten_gohei, sol_ring, seance_board,
+    the_darkness_crystal, bojuka_bog, cabal_coffers, cabal_stronghold, nykthos_shrine_to_nyx,
+    phyrexian_tower, reliquary_tower, urborg_tomb_of_yawgmoth, witchs_cottage,
+    banshee_of_the_dread_choir, bile_urchin, cruel_deceiver, crypt_ghast, emissary_of_despair,
+    ghost_lit_stalker, gibbering_kami, gravelighter, he_who_hungers, horobi_deaths_wail,
+    iname_death_aspect, infernal_kirin, junji_the_midnight_sky, kagemaro_first_to_suffer,
+    kami_of_the_waning_moon, kemuri_onna, kokusho_the_evening_star, midnight_banshee,
+    moira_urborg_haunt, myojin_of_grim_betrayal, myojin_of_nights_reach, nether_traitor,
+    seizan_perverter_of_truth, starving_revenant, thief_of_hope, urborg_scavengers,
+    leyline_of_the_void, megrim, painful_quandary, phyrexian_arena, shrieking_affliction,
+    waste_not, cabal_ritual, dark_ritual, death_denied, death_of_a_thousand_stings,
+    goryos_vengeance, hideous_laughter, horobis_whisper, rend_flesh, sickening_shoal,
+    soulless_revival, choice_of_damnations, damnation, devouring_greed, footsteps_of_the_goryo,
+    sign_in_blood, swallowing_plague, syphon_mind, three_tragedies, toxic_deluge,
+    waking_nightmare,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const SILVER_SURFER_2_COMMANDERS: &[CardFactory] = &[silver_surfer_cosmic_voyager];
+
+/// **Silver Surfer, Cosmic Voyager**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Silver Surfer, Cosmic Voyager (EDHREC, fetched 2026-10-14).
+pub const SILVER_SURFER_2_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, amulet_of_vigor, arcane_signet, conjurers_closet, cryogen_relic,
+    fellwar_stone, gilded_lotus, mind_stone, panharmonicon, sapphire_medallion, sol_ring,
+    the_water_crystal, thought_vessel, thran_dynamo, throne_of_eldraine, field_of_the_dead,
+    halimar_depths, myriad_landscape, mystic_sanctuary, nykthos_shrine_to_nyx,
+    otawara_soaring_city, reliquary_tower, skyline_cascade, talon_gates_of_madara, urzas_saga,
+    aether_channeler, anticausal_vestige, archaeomancer, cloud_of_faeries, deadeye_navigator,
+    displacer_kitten, dour_port_mage, gandalf_shadows_foe, grappling_kraken, guardian_of_tazeem,
+    herbie_scout_unit, hedron_crab, mulldrifter, peregrine_drake, roil_cartographer,
+    roil_elemental, ruin_crab, skycoach_conductor, solemn_simulacrum, spark_double,
+    starfield_vocalist, thassa_deep_dwelling, tiller_engine, trinket_mage, venser_shaper_savant,
+    yshtola_rhul, mystic_remora, propaganda, retreat_to_coralhelm, rhystic_study,
+    an_offer_you_cant_refuse, arcane_denial, blur, counterspell, cyclonic_rift, displace,
+    essence_flux, ghostly_flicker, high_tide, mana_drain, negate, planar_incision, pongify,
+    spaceshift, fabricate, ponder, splash_portal,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const MJ_COMMANDERS: &[CardFactory] = &[mj_rising_star];
+
+/// **MJ, Rising Star**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// MJ, Rising Star (EDHREC, fetched 2026-10-14).
+pub const MJ_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, angels_feather, arcane_signet, caduceus_staff_of_hermes, excalibur_ii,
+    pearl_medallion, pristine_talisman, sol_ring, staff_of_the_sun_magus, swiftfoot_boots,
+    the_ozolith, the_wind_crystal, wedding_ring, well_of_lost_dreams, adventurers_inn,
+    emeria_the_sky_ruin, kabira_crossroads, nykthos_shrine_to_nyx, radiant_fountain,
+    reliquary_tower, rogues_passage, aerith_gainsborough, archangel_of_thune, aunt_may,
+    auriok_champion, daxos_blessed_by_the_sun, dazzling_angel, elendas_hierophant,
+    esper_sentinel, exemplar_of_light, felidar_sovereign, guide_of_souls,
+    haliya_guided_by_light, heliod_sun_crowned, hinterland_sanctifier,
+    linden_the_steadfast_queen, lunarch_veteran, mother_of_runes, qala_ajanis_pridemate,
+    serra_ascendant, soul_warden, souls_attendant, spider_man_peter_parker, sunscorch_regent,
+    suture_priest, the_gaffer, ajanis_mantra, ajanis_welcome, amazing_alliance,
+    authority_of_the_consuls, cleric_class, dawn_of_hope, land_tax, light_of_promise,
+    spirit_link, test_of_endurance, dawn_charm, enlightened_tutor, generous_gift, path_to_exile,
+    restoration_magic, revitalize, riot_control, stroke_of_midnight, swords_to_plowshares,
+    ajani_caller_of_the_pride, austere_command, farewell, sanctify, secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
