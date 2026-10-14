@@ -64241,3 +64241,227 @@ pub const CAPTAIN_MAR_VELL_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const KILI_THE_RESOURCEFUL_COMMANDERS: &[CardFactory] = &[kili_the_resourceful];
+
+/// **Kíli the Resourceful**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Kíli the Resourceful (EDHREC, fetched 2026-10-14).
+pub const KILI_THE_RESOURCEFUL_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arcane_signet, basilisk_collar, blackblade_reforged,
+    bloodforged_battle_axe, buster_sword, caduceus_staff_of_hermes, celestial_armor,
+    champions_helm, colossus_hammer, commanders_plate, dragonfire_blade,
+    excalibur_sword_of_eden, hammer_of_nazahn, leyline_axe, loxodon_warhammer,
+    masterwork_of_ingenuity, mithril_coat, nettlecyst, shadowspear, sol_ring,
+    sting_bilbos_sword, swiftfoot_boots, sword_of_feast_and_famine, sword_of_fire_and_ice,
+    sword_of_forge_and_frontier, sword_of_hearth_and_home, sword_of_vengeance,
+    sword_of_the_animist, thran_power_suit, trailblazers_boots, ancient_den, buried_ruin,
+    darksteel_citadel, eiganjo_seat_of_the_empire, inventors_fair, minas_tirith,
+    monumental_henge, rogues_passage, aerial_responder, bofur_reliable_guardian,
+    cid_freeflier_pilot, cloud_midgar_mercenary, danitha_capashen, danitha_sword_of_hope,
+    digsite_engineer, dain_lord_of_the_iron_hills, esper_sentinel, fili_the_pathfinder,
+    giver_of_runes, iron_hills_blacksmith, lion_sash, mother_of_runes, puresteel_paladin,
+    shattered_acolyte, sram_senior_edificer, stoneforge_mystic, an_unexpected_party, forge_anew,
+    roads_go_ever_ever_on, sigardas_aid, bilbos_gambit, dispatch, erode, generous_gift,
+    path_to_exile, settle_the_wreckage, swords_to_plowshares, open_the_armory,
+    steelshapers_gift, vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const MONSTROSITY_OF_THE_LAKE_COMMANDERS: &[CardFactory] = &[monstrosity_of_the_lake];
+
+/// **Monstrosity of the Lake**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Monstrosity of the Lake (EDHREC, fetched 2026-10-14).
+pub const MONSTROSITY_OF_THE_LAKE_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, caged_sun, conjurers_closet, everflowing_chalice,
+    extraplanar_lens, kefnets_monument, midnight_clock, mjolnir_storm_hammer,
+    sapphire_medallion, sol_ring, thought_vessel, thran_dynamo, karns_bastion, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, deepglow_skate,
+    defiler_of_dreams, displacer_kitten, fear_of_sleep_paralysis, floodpits_drowner,
+    flux_channeler, grappling_kraken, guildpact_informant, hapatra_the_desert_frost,
+    hullbreaker_horror, lulu_stern_guardian, referee_squad, samut_tyrant_of_naktamun,
+    seasoned_cryomancer, serpent_of_yawning_depths, solemn_simulacrum, spawning_kraken,
+    tekuthal_inquiry_dominus, thassa_deep_dwelling, the_watcher_in_the_water, thrummingbird,
+    thryx_the_sudden_storm, inexorable_tide, lost_in_the_maze, mesmerizing_dose, ominous_seas,
+    rhystic_study, scroll_of_isildur, verity_circle, blustersquall, counterspell, essence_flux,
+    experimental_augury, fuel_for_the_cause, high_tide, negate, pongify, reality_shift,
+    reject_imperfection, serum_snare, steady_progress, succumb_to_the_cold, swan_song,
+    teferis_time_twist, tamiyo_the_moon_sage, borrowing_100_000_arrows, contentious_plan,
+    freeze_in_place, impede_momentum, tezzerets_gambit, theft_of_dreams, vivisurgeons_insight,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];
+
+pub const K_9_COMMANDERS: &[CardFactory] = &[k_9_mark_i];
+
+/// **K-9, Mark I**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// K-9, Mark I (EDHREC, fetched 2026-10-14).
+pub const K_9_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, blackblade_reforged, champions_helm,
+    crystal_skull_isu_spyglass, excalibur_sword_of_eden, heroes_podium, midnight_clock,
+    patriars_seal, relic_of_legends, sapphire_medallion, sol_ring, swiftfoot_boots,
+    thought_vessel, castle_vantress, lonely_sandbar, minamo_school_at_waters_edge,
+    mystic_sanctuary, otawara_soaring_city, reliquary_tower, rivendell, atemsis_all_seeing,
+    baral_chief_of_compliance, callaphe_beloved_of_the_sea, eluge_the_shoreless_sea,
+    esior_wardwing_familiar, fblthp_impossibly_lost, grazilaxx_illithid_scholar,
+    hapatra_the_desert_frost, ioreth_of_the_healing_house, iymrith_desert_doom,
+    jin_gitaxias_progress_tyrant, kairi_the_swirling_sky, kira_great_glass_spinner,
+    malcolm_alluring_scoundrel, nezahal_primal_tide, piper_wright_publick_reporter,
+    solemn_simulacrum, sun_quan_lord_of_wu, teferi_mage_of_zhalfir, thassa_god_of_the_sea,
+    the_blue_spirit, the_reality_chip, unctus_grand_metatect, venser_shaper_savant,
+    aqueous_form, combat_research, imprisoned_in_the_moon, propaganda, teferis_ageless_insight,
+    wizard_class, aetherize, an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell,
+    desynchronization, frantic_search, high_tide, negate, opt, pongify, rapid_hybridization,
+    reality_shift, kaito_cunning_infiltrator, arwens_gift, lorien_revealed, ponder, preordain,
+    serum_visions,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const AUGUSTA_COMMANDERS: &[CardFactory] = &[augusta_order_returned];
+
+/// **Augusta, Order Returned**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Augusta, Order Returned (EDHREC, fetched 2026-10-14).
+pub const AUGUSTA_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, caduceus_staff_of_hermes, commanders_plate,
+    ghoulcallers_bell, mask_of_memory, mesmeric_orb, mind_stone, mindcrank, pearl_medallion,
+    sol_ring, swiftfoot_boots, the_ozolith, wayfarers_bauble, worry_beads, emeria_the_sky_ruin,
+    geier_reach_sanitarium, idyllic_grange, reliquary_tower, rogues_passage, secluded_steppe,
+    tyrite_sanctum, war_room, anafenza_unyielding_lineage, archivist_of_oghma, cathar_commando,
+    dusk_legion_duelist, eagle_of_the_great_shelf, envoy_of_the_ancestors, esper_sentinel,
+    generous_pup, guardian_scalelord, iron_hills_blacksmith, lake_town_lookout,
+    lake_town_toymaker, loran_of_the_third_path, mangara_the_diplomat, metastatic_evangel,
+    mother_of_runes, scholar_of_new_horizons, selfless_savior, selfless_spirit, serra_paragon,
+    sun_titan, troop_of_ponies, welcoming_vampire, witch_enchanter, citadel_siege,
+    darksteel_mutation, primary_research, resourceful_defense, timely_ward, tocasias_welcome,
+    together_forever, duty_beyond_death, flawless_maneuver, generous_gift, gods_willing,
+    path_to_exile, rebuff_the_wicked, reprieve, sejiri_shelter, stroke_of_midnight,
+    swords_to_plowshares, valorous_stance, austere_command, cut_a_deal, damning_verdict,
+    divine_reckoning, requisition_raid, secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const DAIN_COMMANDERS: &[CardFactory] = &[dain_lord_of_the_iron_hills];
+
+/// **Dáin, Lord of the Iron Hills**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Dáin, Lord of the Iron Hills (EDHREC, fetched 2026-10-14).
+pub const DAIN_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, cursed_totem, dwarven_shortsword, fellwar_stone,
+    marble_diamond, mind_stone, norns_annex, oketras_monument, pearl_medallion, sol_ring,
+    stone_of_erech, the_wind_crystal, thought_vessel, winter_moon, abandoned_air_temple,
+    ancient_den, castle_ardenvale, emeria_the_sky_ruin, hall_of_heliods_generosity,
+    minas_tirith, reliquary_tower, war_room, archangel_of_tithes, archon_of_absolution,
+    aven_mindcensor, baird_steward_of_argive, bofur_reliable_guardian, esper_sentinel,
+    fili_the_pathfinder, grand_abolisher, knight_of_the_white_orchid, loran_of_the_third_path,
+    mangara_the_diplomat, nils_discipline_enforcer, ori_plate_stacker,
+    reidane_god_of_the_worthy, soul_warden, sram_senior_edificer, summon_yojimbo, sun_titan,
+    thalia_heretic_cathar, the_queen_of_dale, windborn_muse, witch_enchanter, aura_of_silence,
+    authority_of_the_consuls, darksteel_mutation, flowering_of_the_white_tree, ghostly_prison,
+    gleaming_splendor, land_tax, monologue_tax, roads_go_ever_ever_on, smothering_tithe,
+    sphere_of_safety, the_restoration_of_eiganjo, enlightened_tutor, erode, generous_gift,
+    path_to_exile, reprieve, settle_the_wreckage, silence, swords_to_plowshares,
+    elspeth_suns_champion, approach_of_the_second_sun, austere_command, cut_a_deal,
+    secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const GO_SHINTAI_OF_SHARED_PURPOSE_COMMANDERS: &[CardFactory] = &[go_shintai_of_shared_purpose];
+
+/// **Go-Shintai of Shared Purpose**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Go-Shintai of Shared Purpose (EDHREC, fetched 2026-10-14).
+pub const GO_SHINTAI_OF_SHARED_PURPOSE_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, helm_of_the_host, heraldic_banner, idol_of_oblivion,
+    marble_diamond, mind_stone, mirage_mirror, oketras_monument, pearl_medallion, skullclamp,
+    sol_ring, swiftfoot_boots, emeria_the_sky_ruin, hall_of_heliods_generosity,
+    myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, war_room, windbrisk_heights,
+    anointer_priest, archetype_of_courage, bennie_bracks_zoologist, daxos_blessed_by_the_sun,
+    elesh_norn_grand_cenobite, enduring_innocence, esper_sentinel, katilda_dawnhart_martyr,
+    keeper_of_the_accord, mangara_the_diplomat, mentor_of_the_meek, mesa_enchantress,
+    mondrak_glory_dominus, moon_blessed_cleric, myojin_of_blooming_dawn,
+    ojer_taq_deepest_foundation, rumor_gatherer, selfless_spirit, shrine_steward, soul_warden,
+    spirited_companion, welcoming_vampire, anointed_procession, caretakers_talent,
+    cathars_crusade, court_of_grace, ethereal_armor, ghostly_prison, glorious_anthem,
+    honden_of_cleansing_fire, inspiring_leader, intangible_virtue, land_tax,
+    sanctum_of_tranquil_light, smothering_tithe, southern_air_temple,
+    the_restoration_of_eiganjo, tocasias_welcome, disenchant, enlightened_tutor, generous_gift,
+    kabira_takedown, path_to_exile, swords_to_plowshares, unbreakable_formation,
+    austere_command, brilliant_restoration, hour_of_reckoning, return_to_the_light_realms,
+    secret_rendezvous,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const GO_SHINTAI_OF_ANCIENT_WARS_COMMANDERS: &[CardFactory] = &[go_shintai_of_ancient_wars];
+
+/// **Go-Shintai of Ancient Wars**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Go-Shintai of Ancient Wars (EDHREC, fetched 2026-10-14).
+pub const GO_SHINTAI_OF_ANCIENT_WARS_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, fire_diamond, helm_of_the_host, lithoform_engine, mind_stone,
+    mirage_mirror, mirror_box, mirror_gallery, ruby_medallion, sol_ring, strionic_resonator,
+    wayfarers_bauble, arena_of_glory, emergence_zone, forgotten_cave, mirrorpool,
+    myriad_landscape, rogues_passage, spinerock_knoll, valakut_the_molten_pinnacle, war_room,
+    angraths_marauders, archetype_of_aggression, brash_taunter, burnished_hart,
+    chandras_incinerator, combustible_gearhulk, delina_wild_mage, felhide_spiritbinder,
+    fiendish_duo, forgeborn_oreads, goblin_goliath, hexing_squelcher, jaxis_the_troublemaker,
+    orthion_hero_of_lavabrink, shrine_steward, solemn_simulacrum, solphim_mayhem_dominus,
+    torbran_thane_of_red_fell, twinflame_tyrant, city_on_fire, count_on_luck,
+    crescent_island_temple, dictate_of_the_twin_gods, fiery_emancipation, furnace_of_rath,
+    gratuitous_violence, honden_of_infinite_rage, outpost_siege, sanctum_of_shattered_heights,
+    sulfuric_vortex, the_rollercrusher_ride, valakut_exploration, abrade, big_score, chaos_warp,
+    demand_answers, lightning_bolt, thrill_of_possibility, unexpected_windfall,
+    valakut_awakening, daretti_scrap_savant, blasphemous_act, chain_reaction, electroduplicate,
+    faithless_looting, jeskas_will, mana_geyser, twinflame, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const GO_SHINTAI_OF_BOUNDLESS_VIGOR_COMMANDERS: &[CardFactory] = &[go_shintai_of_boundless_vigor];
+
+/// **Go-Shintai of Boundless Vigor**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Go-Shintai of Boundless Vigor (EDHREC, fetched 2026-10-14).
+pub const GO_SHINTAI_OF_BOUNDLESS_VIGOR_MAIN: &[CardFactory] = &[
+    arcane_signet, belt_of_giant_strength, bow_of_nylea, emerald_medallion, fireshrieker,
+    ozolith_the_shattered_spire, sol_ring, swiftfoot_boots, the_ozolith, blighted_woodland,
+    boseiju_who_endures, mosswort_bridge, myriad_landscape, rogues_passage, tranquil_thicket,
+    war_room, arbor_elf, birds_of_paradise, destiny_spinner, eidolon_of_blossoms, elvish_mystic,
+    forgotten_ancient, fyndhorn_elves, generous_visitor, herald_of_the_pantheon,
+    kami_of_transience, kami_of_whispered_hopes, llanowar_elves, pia_aether_ascetic,
+    renata_called_to_the_hunt, sanctum_weaver, setessan_champion, shrine_steward,
+    verduran_enchantress, weaver_of_harmony, blanchwood_armor, branching_evolution,
+    enchantresss_presence, forced_adaptation, hardened_scales, honden_of_lifes_web,
+    hydras_growth, kenriths_transformation, kyoshi_island_plaza, lignify, lion_umbra,
+    retreat_to_kazandu, roaring_earth, sanctum_of_fruitful_harvest, seal_of_primordium,
+    song_of_the_dryads, utopia_sprawl, wild_growth, beast_within, fog, invigorating_surge,
+    natures_claim, ram_through, return_of_the_wildspeaker, return_to_nature, snakeskin_veil,
+    solidarity_of_heroes, tamiyos_safekeeping, cultivate, exponential_growth, harmonize,
+    kodamas_reach, natures_lore, rampant_growth,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];

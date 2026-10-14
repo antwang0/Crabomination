@@ -14154,6 +14154,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_MAR_VELL_COMMANDERS,
             main: decks::CAPTAIN_MAR_VELL_MAIN,
         },
+        // Seat 2284: Kíli the Resourceful's EDHREC average deck. `--pod-decks 2284`.
+        PodDeck {
+            name: "Kíli the Resourceful (W)",
+            commanders: decks::KILI_THE_RESOURCEFUL_COMMANDERS,
+            main: decks::KILI_THE_RESOURCEFUL_MAIN,
+        },
+        // Seat 2285: Monstrosity of the Lake's EDHREC average deck. `--pod-decks 2285`.
+        PodDeck {
+            name: "Monstrosity of the Lake (U)",
+            commanders: decks::MONSTROSITY_OF_THE_LAKE_COMMANDERS,
+            main: decks::MONSTROSITY_OF_THE_LAKE_MAIN,
+        },
+        // Seat 2286: K-9, Mark I's EDHREC average deck. `--pod-decks 2286`.
+        PodDeck {
+            name: "K-9, Mark I (U)",
+            commanders: decks::K_9_COMMANDERS,
+            main: decks::K_9_MAIN,
+        },
+        // Seat 2287: Augusta, Order Returned's EDHREC average deck. `--pod-decks 2287`.
+        PodDeck {
+            name: "Augusta, Order Returned (W)",
+            commanders: decks::AUGUSTA_COMMANDERS,
+            main: decks::AUGUSTA_MAIN,
+        },
+        // Seat 2288: Dáin, Lord of the Iron Hills's EDHREC average deck. `--pod-decks 2288`.
+        PodDeck {
+            name: "Dáin, Lord of the Iron Hills (W)",
+            commanders: decks::DAIN_COMMANDERS,
+            main: decks::DAIN_MAIN,
+        },
+        // Seat 2289: Go-Shintai of Shared Purpose's EDHREC average deck. `--pod-decks 2289`.
+        PodDeck {
+            name: "Go-Shintai of Shared Purpose (W)",
+            commanders: decks::GO_SHINTAI_OF_SHARED_PURPOSE_COMMANDERS,
+            main: decks::GO_SHINTAI_OF_SHARED_PURPOSE_MAIN,
+        },
+        // Seat 2290: Go-Shintai of Ancient Wars's EDHREC average deck. `--pod-decks 2290`.
+        PodDeck {
+            name: "Go-Shintai of Ancient Wars (R)",
+            commanders: decks::GO_SHINTAI_OF_ANCIENT_WARS_COMMANDERS,
+            main: decks::GO_SHINTAI_OF_ANCIENT_WARS_MAIN,
+        },
+        // Seat 2291: Go-Shintai of Boundless Vigor's EDHREC average deck. `--pod-decks 2291`.
+        PodDeck {
+            name: "Go-Shintai of Boundless Vigor (G)",
+            commanders: decks::GO_SHINTAI_OF_BOUNDLESS_VIGOR_COMMANDERS,
+            main: decks::GO_SHINTAI_OF_BOUNDLESS_VIGOR_MAIN,
+        },
     ]
 }
 
@@ -18269,6 +18317,14 @@ mod tests {
             ("Tor Wauki", &[0x12FF]),
             ("Arachne, Psionic Weaver", &[0x1300]),
             ("Captain Mar-Vell, Space-Born", &[0x1301]),
+            ("Kíli the Resourceful", &[0x1302]),
+            ("Monstrosity of the Lake", &[0x1303]),
+            ("K-9, Mark I", &[0x1304]),
+            ("Augusta, Order Returned", &[0x1305]),
+            ("Dáin, Lord of the Iron Hills", &[0x1306]),
+            ("Go-Shintai of Shared Purpose", &[0x1307]),
+            ("Go-Shintai of Ancient Wars", &[0x1308]),
+            ("Go-Shintai of Boundless Vigor", &[0x1309]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
