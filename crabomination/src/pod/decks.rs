@@ -67900,3 +67900,29 @@ pub const BLACK_WIDOW_3_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const ARCADES_SABBOTH_COMMANDERS: &[CardFactory] = &[arcades_sabboth];
+
+/// **Arcades Sabboth**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 8 Forests + 6 Islands + 8 Plains = 99.
+/// Arcades Sabboth (EDHREC, fetched 2026-10-14).
+pub const ARCADES_SABBOTH_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, fellwar_stone, rammas_echor_ancient_shield, selesnya_signet,
+    simic_signet, sol_ring, adarkar_wastes, breeding_pool, brushland, canopy_vista,
+    command_tower, evolving_wilds, exotic_orchard, glacial_fortress, hinterland_harbor,
+    prairie_stream, reliquary_tower, seaside_citadel, sparas_headquarters, sunpetal_grove,
+    yavimaya_coast, arcades_the_strategist, axebane_guardian, bedrock_tortoise,
+    birds_of_paradise, charix_the_raging_isle, crashing_drawbridge, crystal_barricade, flumph,
+    fog_bank, jungle_barrier, llanowar_elves, noble_hierarch, overgrown_battlement,
+    perimeter_captain, rasaad_yn_bashir, shield_wall_sentinel, stalwart_shield_bearers,
+    sunscape_familiar, tetsuko_umezawa_fugitive, the_pride_of_hull_clade, vine_trellis,
+    walking_bulwark, wall_of_blossoms, wall_of_denial, wall_of_frost, wall_of_omens,
+    wall_of_runes, assault_formation, brave_the_sands, high_alert, land_tax, miraris_wake,
+    propaganda, rhystic_study, stoneskin, sylvan_library, wild_growth, bant_charm, beast_within,
+    counterspell, disenchant, fog, generous_gift, growth_spiral, path_to_exile,
+    swords_to_plowshares, tower_defense, huatli_the_suns_heart, cultivate, farseek,
+    kodamas_reach, natures_lore, rampant_growth, regrowth, wrath_of_god,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, island, island, island,
+    island, island, island, plains, plains, plains, plains, plains, plains, plains, plains,
+];

@@ -14946,6 +14946,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BLACK_WIDOW_3_COMMANDERS,
             main: decks::BLACK_WIDOW_3_MAIN,
         },
+        // Seat 2416: Arcades Sabboth's EDHREC average deck. `--pod-decks 2416`.
+        PodDeck {
+            name: "Arcades Sabboth (WUG)",
+            commanders: decks::ARCADES_SABBOTH_COMMANDERS,
+            main: decks::ARCADES_SABBOTH_MAIN,
+        },
     ]
 }
 
@@ -19192,6 +19198,7 @@ mod tests {
             ("Klaw, Master of Sound", &[0x1383]),
             ("Siani, Eye of the Storm", &[0x1384]),
             ("Black Widow, Super Spy", &[0x1385]),
+            ("Arcades Sabboth", &[0x1386]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
