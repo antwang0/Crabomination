@@ -2,12 +2,14 @@
 //! 2026-10-14 scan), eleventh file. Tests in `tests/recent_b/cmdr_rank4k_k.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes,
-    Supertype, Value,
+    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TriggeredAbility, Value,
 };
+use crate::game::types::TurnStep;
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
-use crate::mana::{ManaCost, b, cost, generic};
+use crate::mana::{ManaCost, b, cost, generic, r};
 
 fn creature(
     name: &'static str,
@@ -94,5 +96,47 @@ pub fn poison_blade_mentor() -> CardDefinition {
             2,
             1,
         )
+    }
+}
+
+// ── Denethor, Stone Seer ─────────────────────────────────────────────────────
+
+/// Mudslide — {2}{R} enchantment. Creatures without flying don't untap during
+/// their controllers' untap steps. At the beginning of each player's upkeep,
+/// that player may pay {2} for each of their tapped creatures without flying;
+/// untap each one paid for.
+pub fn mudslide() -> CardDefinition {
+    let grounded = || R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying))));
+    CardDefinition {
+        name: "Mudslide",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures without flying don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntapGlobal {
+                applies_to: Selector::EachPermanent(grounded()),
+                condition: None,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::ForEach {
+                selector: Selector::ControlledBy {
+                    who: PlayerRef::ActivePlayer,
+                    filter: grounded().and(R::Tapped),
+                },
+                body: Box::new(Effect::MayPayBy {
+                    who: PlayerRef::ActivePlayer,
+                    description: "Pay {2} to untap this creature?".into(),
+                    mana_cost: cost(&[generic(2)]),
+                    body: Box::new(Effect::Untap {
+                        what: Selector::TriggerSource,
+                        up_to: None,
+                    }),
+                    else_: None,
+                }),
+            },
+        }],
+        ..Default::default()
     }
 }

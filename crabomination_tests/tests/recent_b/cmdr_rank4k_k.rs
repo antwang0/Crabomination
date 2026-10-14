@@ -2,6 +2,7 @@
 
 use crabomination::card::{CardId, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
 use crabomination::game::*;
 
@@ -75,4 +76,53 @@ fn poison_blade_mentor_arms_an_assassin() {
     std::sync::Arc::make_mut(g.battlefield_find_mut(other).unwrap().definition_mut()).keywords.clear();
     declare(&mut g, vec![(mentor, 1)]);
     assert!(has(&g, other, Keyword::Deathtouch));
+}
+
+fn tapped(g: &GameState, id: CardId) -> bool {
+    g.battlefield_find(id).unwrap().tapped
+}
+
+/// Mudslide: a grounded creature skips its untap step, a flyer doesn't, and
+/// the upkeep {2} buys the grounded one back.
+#[test]
+fn mudslide_holds_ground_creatures_until_paid_for() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::mudslide());
+    for seat in 0..2 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bird = g.add_card_to_battlefield(1, catalog::wind_drake());
+    let lands: Vec<CardId> =
+        (0..2).map(|_| g.add_card_to_battlefield(1, catalog::forest())).collect();
+    for id in [bear, bird].into_iter().chain(lands.iter().copied()) {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    assert!(g.untap_prevented_by_static(bear));
+    assert!(!g.untap_prevented_by_static(bird));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    while g.active_player_idx == 0 || g.step != TurnStep::Draw {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(!tapped(&g, bird), "the flyer untaps normally");
+    assert!(!tapped(&g, bear), "the {{2}} at upkeep untapped the bear");
+    assert!(lands.iter().all(|&l| tapped(&g, l)), "both lands paid for it");
+}
+
+/// With no mana to pay, the grounded creature stays tapped.
+#[test]
+fn mudslide_keeps_an_unpaid_creature_tapped() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::mudslide());
+    for seat in 0..2 {
+        g.add_card_to_library(seat, catalog::island());
+    }
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    while g.active_player_idx == 0 || g.step != TurnStep::Draw {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(tapped(&g, bear));
 }
