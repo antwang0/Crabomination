@@ -2869,6 +2869,10 @@ pub enum CumulativeUpkeepCost {
     /// "Cumulative upkeep—Add {R}" (Braid of Fire): one mana of the color per
     /// age counter. Always payable.
     AddMana(crate::mana::Color),
+    /// "Cumulative upkeep—Have an opponent create a 1/1 red Survivor creature
+    /// token" (Varchild's War-Riders): one token per age counter, all under
+    /// one opponent's control. Payable while an opponent is alive.
+    OpponentCreatesSurvivor,
 }
 
 impl CumulativeUpkeepCost {
@@ -2882,6 +2886,7 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::FlipCoin => "Flip a coin".into(),
             CumulativeUpkeepCost::PutCounterOnSelf(k) => format!("Put a {k:?} counter on this"),
             CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
+            CumulativeUpkeepCost::OpponentCreatesSurvivor => "Have an opponent create a 1/1 red Survivor".into(),
             CumulativeUpkeepCost::AddMana(c) => format!("Add one {c:?} mana"),
             CumulativeUpkeepCost::PutCounterOnOpponentCreature(k) => {
                 format!("Put a {k:?} counter on a creature an opponent controls")

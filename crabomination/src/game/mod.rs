@@ -9108,6 +9108,46 @@ impl GameState {
                     }
                     true
                 }
+                CumulativeUpkeepCost::OpponentCreatesSurvivor => {
+                    // The payer's pick: the living opponent with the fewest
+                    // creatures (lowest seat breaks ties) takes the tokens.
+                    let pick = (0..self.players.len())
+                        .filter(|&s| self.players[s].is_alive() && !self.same_team(active, s))
+                        .min_by_key(|&s| {
+                            (
+                                self.battlefield
+                                    .iter()
+                                    .filter(|c| c.controller == s && self.computed_is_creature(c))
+                                    .count(),
+                                s,
+                            )
+                        });
+                    match pick {
+                        Some(opp) => {
+                            let survivor = crate::card::TokenDefinition {
+                                name: "Survivor".into(),
+                                power: 1,
+                                toughness: 1,
+                                card_types: vec![crate::card::CardType::Creature],
+                                colors: vec![crate::mana::Color::Red],
+                                subtypes: crate::card::Subtypes {
+                                    creature_types: vec![crate::card::CreatureType::Survivor],
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
+                            let make = crate::effect::Effect::CreateToken {
+                                who: crate::effect::PlayerRef::You,
+                                count: crate::effect::Value::Const(n as i32),
+                                definition: std::sync::Arc::new(survivor),
+                            };
+                            let ctx = crate::game::effects::EffectContext::for_ability(id, opp, None);
+                            let _ = self.run_effect(&make, &ctx, &mut events);
+                            true
+                        }
+                        None => false,
+                    }
+                }
                 CumulativeUpkeepCost::PutCounterOnOpponentCreature(kind) => {
                     // The payer's pick: every counter on the opponents'
                     // smallest creature (lowest id breaks ties).
