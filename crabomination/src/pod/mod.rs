@@ -14544,6 +14544,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WITCH_KING_COMMANDERS,
             main: decks::WITCH_KING_MAIN,
         },
+        // Seat 2349: Stick, Fearless Mentor's EDHREC average deck. `--pod-decks 2349`.
+        PodDeck {
+            name: "Stick, Fearless Mentor (R)",
+            commanders: decks::STICK_COMMANDERS,
+            main: decks::STICK_MAIN,
+        },
+        // Seat 2350: Go-Shintai of Hidden Cruelty's EDHREC average deck. `--pod-decks 2350`.
+        PodDeck {
+            name: "Go-Shintai of Hidden Cruelty (B)",
+            commanders: decks::GO_SHINTAI_OF_HIDDEN_CRUELTY_COMMANDERS,
+            main: decks::GO_SHINTAI_OF_HIDDEN_CRUELTY_MAIN,
+        },
+        // Seat 2351: Huang Zhong, Shu General's EDHREC average deck. `--pod-decks 2351`.
+        PodDeck {
+            name: "Huang Zhong, Shu General (W)",
+            commanders: decks::HUANG_ZHONG_COMMANDERS,
+            main: decks::HUANG_ZHONG_MAIN,
+        },
+        // Seat 2352: Splinter, Aging Champion's EDHREC average deck. `--pod-decks 2352`.
+        PodDeck {
+            name: "Splinter, Aging Champion (W)",
+            commanders: decks::SPLINTER_COMMANDERS,
+            main: decks::SPLINTER_MAIN,
+        },
+        // Seat 2353: Iron Man, Modern Marvel's EDHREC average deck. `--pod-decks 2353`.
+        PodDeck {
+            name: "Iron Man, Modern Marvel (U)",
+            commanders: decks::IRON_MAN_4_COMMANDERS,
+            main: decks::IRON_MAN_4_MAIN,
+        },
+        // Seat 2354: Damocles Base, Sword of Kang's EDHREC average deck. `--pod-decks 2354`.
+        PodDeck {
+            name: "Damocles Base, Sword of Kang (B)",
+            commanders: decks::DAMOCLES_BASE_COMMANDERS,
+            main: decks::DAMOCLES_BASE_MAIN,
+        },
+        // Seat 2355: Namor, Scourge of the Seas's EDHREC average deck. `--pod-decks 2355`.
+        PodDeck {
+            name: "Namor, Scourge of the Seas (U)",
+            commanders: decks::NAMOR_COMMANDERS,
+            main: decks::NAMOR_MAIN,
+        },
+        // Seat 2356: Hellcat, Undying Vigilante's EDHREC average deck. `--pod-decks 2356`.
+        PodDeck {
+            name: "Hellcat, Undying Vigilante (G)",
+            commanders: decks::HELLCAT_COMMANDERS,
+            main: decks::HELLCAT_MAIN,
+        },
+        // Seat 2357: Photon, Lady of Light's EDHREC average deck. `--pod-decks 2357`.
+        PodDeck {
+            name: "Photon, Lady of Light (W)",
+            commanders: decks::PHOTON_2_COMMANDERS,
+            main: decks::PHOTON_2_MAIN,
+        },
+        // Seat 2358: Jennika, Bad Apple Big Sister's EDHREC average deck. `--pod-decks 2358`.
+        PodDeck {
+            name: "Jennika, Bad Apple Big Sister (W)",
+            commanders: decks::JENNIKA_COMMANDERS,
+            main: decks::JENNIKA_MAIN,
+        },
+        // Seat 2359: Pipsqueak, Rebel Strongarm's EDHREC average deck. `--pod-decks 2359`.
+        PodDeck {
+            name: "Pipsqueak, Rebel Strongarm (W)",
+            commanders: decks::PIPSQUEAK_COMMANDERS,
+            main: decks::PIPSQUEAK_MAIN,
+        },
     ]
 }
 
@@ -18723,6 +18789,17 @@ mod tests {
             ("Franklin Richards, Ascendant", &[0x1340]),
             ("Interceptor, Shadow's Hound", &[0x1341]),
             ("Witch-king, Bringer of Ruin", &[0x1342]),
+            ("Stick, Fearless Mentor", &[0x1343]),
+            ("Go-Shintai of Hidden Cruelty", &[0x1344]),
+            ("Huang Zhong, Shu General", &[0x1345]),
+            ("Splinter, Aging Champion", &[0x1346]),
+            ("Iron Man, Modern Marvel", &[0x1347]),
+            ("Damocles Base, Sword of Kang", &[0x1348]),
+            ("Namor, Scourge of the Seas", &[0x1349]),
+            ("Hellcat, Undying Vigilante", &[0x134A]),
+            ("Photon, Lady of Light", &[0x134B]),
+            ("Jennika, Bad Apple Big Sister", &[0x134C]),
+            ("Pipsqueak, Rebel Strongarm", &[0x134D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

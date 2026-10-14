@@ -66059,3 +66059,307 @@ pub const WITCH_KING_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const STICK_COMMANDERS: &[CardFactory] = &[stick_fearless_mentor];
+
+/// **Stick, Fearless Mentor**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Stick, Fearless Mentor (EDHREC, fetched 2026-10-14).
+pub const STICK_MAIN: &[CardFactory] = &[
+    ankh_of_mishra, arcane_signet, basilisk_collar, dragons_claw, ivory_tower,
+    lightning_greaves, loxodon_warhammer, pristine_talisman, ruby_medallion, shadowspear,
+    sol_ring, sun_droplet, unstable_amulet, vensers_journal, adventurers_inn, barbarian_ring,
+    city_of_brass, fogwells_gym, forgotten_cave, grand_coliseum, radiant_fountain,
+    roadside_reliquary, war_room, auntie_blyte_bad_influence, cemetery_gatekeeper,
+    daredevil_fearless_fighter, eidolon_of_the_great_revel, fireslinger, goblin_artillery,
+    heartless_hidetsugu, iraxxa_empress_of_mars, laelia_the_blade_reforged, magebane_lizard,
+    neheb_the_eternal, nico_minoru_runaway, orcish_artillery, orcish_cannoneers, party_thrasher,
+    rampaging_ferocidon, razorkin_needlehead, scytheclaw_raptor, spear_spewer,
+    torbran_thane_of_red_fell, zo_zu_the_punisher, burning_earth, descent_into_avernus,
+    manabarbs, passionate_archaeologist, pyrostatic_pillar, roiling_vortex,
+    shadow_of_the_goblin, spellshock, sulfuric_vortex, arcbond, chaos_warp, char,
+    delayed_blast_fireball, sos_flashback_instant, lightning_bolt, price_of_progress,
+    pyretic_ritual, return_the_favor, seething_song, aftershock, blasphemous_act, earthquake,
+    flame_rift, glimpse_the_impossible, light_up_the_stage, reckless_impulse,
+    rolling_earthquake, wrenns_resolve,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const GO_SHINTAI_OF_HIDDEN_CRUELTY_COMMANDERS: &[CardFactory] = &[go_shintai_of_hidden_cruelty];
+
+/// **Go-Shintai of Hidden Cruelty**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Swamps = 99.
+/// Go-Shintai of Hidden Cruelty (EDHREC, fetched 2026-10-14).
+pub const GO_SHINTAI_OF_HIDDEN_CRUELTY_MAIN: &[CardFactory] = &[
+    altar_of_the_pantheon, arcane_signet, charcoal_diamond, helm_of_the_host, jet_medallion,
+    mind_stone, nyx_lotus, pristine_talisman, sol_ring, viridian_longbow, wayfarers_bauble,
+    bojuka_bog, cabal_coffers, cabal_stronghold, castle_locthwain, myriad_landscape,
+    nykthos_shrine_to_nyx, reliquary_tower, urborg_tomb_of_yawgmoth, valgavoths_lair, war_room,
+    agent_of_erebos, aphemia_the_cacophony, ashioks_reaper, blightcaster, crypt_ghast,
+    dockside_chef, doomwake_giant, dreadbringer_lampads, erebos_god_of_the_dead,
+    gray_merchant_of_asphodel, grim_guardian, hateful_eidolon, kaervek_the_spiteful,
+    maha_its_feathers_night, massacre_wurm, morbid_opportunist, nighthowler, nightmare_shepherd,
+    thoughtrender_lamia, wicked_visitor, cacophony_unleashed, casting_of_bones,
+    changing_loyalty, eternal_thirst, honden_of_nights_reach, kayas_ghostform,
+    lilianas_contract, mires_grasp, necrosynthesis, night_of_souls_betrayal,
+    northern_air_temple, nowhere_to_run, nurgles_rot, oubliette, phyrexian_arena,
+    sanctum_of_stone_fangs, screams_from_within, underworld_connections, dark_ritual,
+    drag_to_the_underworld, fell_the_profane, imps_mischief, malakir_rebirth, sudden_spoiling,
+    tragic_slip, liliana_deaths_majesty, extinguish_all_hope, feed_the_swarm, nights_whisper,
+    read_the_bones, sign_in_blood, torment_of_hailfire, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const HUANG_ZHONG_COMMANDERS: &[CardFactory] = &[huang_zhong_shu_general];
+
+/// **Huang Zhong, Shu General**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Plains = 99.
+/// Huang Zhong, Shu General (EDHREC, fetched 2026-10-14).
+pub const HUANG_ZHONG_MAIN: &[CardFactory] = &[
+    aettir_and_priwen, arcane_signet, blackblade_reforged, buster_sword, chitinous_cloak,
+    commanders_plate, endless_atlas, excalibur_sword_of_eden, genji_glove, hammer_of_nazahn,
+    inquisitorial_rosette, lightning_greaves, mask_of_avacyn, masterwork_of_ingenuity,
+    maul_of_the_skyclaves, mind_stone, mithril_coat, pearl_medallion, shadowspear, sol_ring,
+    swiftfoot_boots, sword_of_feast_and_famine, sword_of_fire_and_ice, sword_of_the_animist,
+    thran_power_suit, ancient_den, command_beacon, eiganjo_seat_of_the_empire,
+    emeria_the_sky_ruin, idyllic_grange, myriad_landscape, nykthos_shrine_to_nyx,
+    rogues_passage, war_room, ardenn_intrepid_archaeologist, brass_squire, cenns_tactician,
+    esper_sentinel, foundry_inspector, halvar_god_of_battle, harvest_hand,
+    indomitable_archangel, kili_the_resourceful, lion_sash, mangara_the_diplomat,
+    orzhov_advokist, puresteel_paladin, sram_senior_edificer, stoneforge_mystic, sun_titan,
+    all_that_glitters, bonds_of_faith, forge_anew, ghostly_prison, gleaming_splendor,
+    hyena_umbra, sigardas_aid, unquestioned_authority, disenchant, dispatch, flawless_maneuver,
+    generous_gift, mana_tithe, path_to_exile, rebuff_the_wicked, restoration_magic,
+    stroke_of_midnight, swords_to_plowshares, divine_reckoning, open_the_armory,
+    promise_of_loyalty, single_combat, slash_the_ranks, steelshapers_gift,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains,
+];
+
+pub const SPLINTER_COMMANDERS: &[CardFactory] = &[splinter_aging_champion];
+
+/// **Splinter, Aging Champion**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Splinter, Aging Champion (EDHREC, fetched 2026-10-14).
+pub const SPLINTER_MAIN: &[CardFactory] = &[
+    arcane_signet, conjurers_closet, hyldas_crown_of_winter, panharmonicon, pearl_medallion,
+    sol_ring, the_mind_stone, the_wind_crystal, thought_vessel, wedding_ring,
+    emeria_the_sky_ruin, lotus_field, myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower,
+    urzas_saga, war_room, all_fates_stalker, aven_interrupter, beza_the_bounding_spring,
+    charming_prince, dack_fayden_helping_hand, danitha_sword_of_hope, delney_streetwise_lookout,
+    enduring_innocence, esper_sentinel, flickerwisp, fortune_loyal_steed, gideons_lawkeeper,
+    gilraen_dunedain_protector, knight_of_the_white_orchid, loran_of_the_third_path,
+    loyal_warhound, monk_gyatso, ob_nixilis_the_ascended, pegasus_guardian,
+    phelia_exuberant_shepherd, recruiter_of_the_guard, restoration_angel, solemn_simulacrum,
+    soul_warden, souls_attendant, spirited_companion, tataru_taru, welcoming_vampire,
+    airbender_ascension, authority_of_the_consuls, gleaming_splendor, smothering_tithe,
+    teleportation_circle, the_legend_of_yangchen, tocasias_welcome, bilbos_gambit, cloudshift,
+    ephemerate, flicker_of_fate, getaway_glamer, justiciars_portal, otherworldly_journey,
+    parting_gust, path_to_exile, personify, reprieve, set_phasers_to, slip_on_the_ring,
+    swords_to_plowshares, the_eternal_wanderer, austere_command, avatars_wrath, daydream,
+    morningtides_light,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const IRON_MAN_4_COMMANDERS: &[CardFactory] = &[iron_man_modern_marvel];
+
+/// **Iron Man, Modern Marvel**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Iron Man, Modern Marvel (EDHREC, fetched 2026-10-14).
+pub const IRON_MAN_4_MAIN: &[CardFactory] = &[
+    arc_reactor, arcane_signet, bident_of_thassa, crystal_skull_isu_spyglass,
+    everflowing_chalice, mind_stone, sapphire_medallion, sculpting_steel,
+    simulacrum_synthesizer, sol_ring, thought_vessel, unwinding_clock, uthros_research_craft,
+    academy_ruins, buried_ruin, reliquary_tower, rogues_passage, seat_of_the_synod, urzas_mine,
+    urzas_tower, uthros_titanic_godcore, chief_of_the_foundry, cryptothrall,
+    cyberdrive_awakener, emry_lurker_of_the_loch, etherium_sculptor, foundry_inspector,
+    hydraulic_helper, iron_lad_diverging_destiny, iron_man_armored_avenger,
+    iron_man_bleeding_edge, iron_man_futurist_paragon, iron_spider_stark_upgrade,
+    jhoiras_familiar, kappa_cannoneer, krang_master_mind, krang_utrom_warlord,
+    lyla_holographic_assistant, master_of_etherium, mechan_assembler, mmmenon_the_right_hand,
+    mycosynth_golem, ornithopter_of_paradise, sai_master_thopterist, shuri_wakandan_inventor,
+    silver_myr, solemn_simulacrum, steel_overseer, walls_of_ba_sing_se, thought_monitor,
+    ultron_artificial_malevolence, unctus_grand_metatect, efficient_construction,
+    fateful_discovery, mechanized_production, propaganda, rhystic_study,
+    an_offer_you_cant_refuse, arcane_denial, archmages_charm, brainstorm, counterspell,
+    high_tide, pongify, rapid_hybridization, swan_song, fabricate, one_with_the_machine,
+    stock_up, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const DAMOCLES_BASE_COMMANDERS: &[CardFactory] = &[damocles_base_sword_of_kang];
+
+/// **Damocles Base, Sword of Kang**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Swamps = 99.
+/// Damocles Base, Sword of Kang (EDHREC, fetched 2026-10-14).
+pub const DAMOCLES_BASE_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, bontus_monument, charcoal_diamond, cranial_plating,
+    dawnsire_sunstar_dreadnought, guidelight_matrix, jet_medallion, lightning_greaves,
+    mystic_forge, nautiloid_ship, portal_to_phyrexia, sceptre_of_eternal_glory, sol_ring,
+    the_fire_nation_drill, thought_vessel, wayfarers_bauble, bojuka_bog, cabal_coffers,
+    cabal_stronghold, castle_doom, command_tower, myriad_landscape, nykthos_shrine_to_nyx,
+    secluded_starforge, urborg_tomb_of_yawgmoth, war_room, anrakyr_the_traveller,
+    barbed_servitor, bloodletter_of_aclazotz, canoptek_scarab_swarm, canoptek_spyder,
+    chronomancer, crypt_ghast, cryptek, cryptothrall, dauntless_scrapbot, doctor_doom,
+    jocasta_automaton_avenger, king_macar_the_gold_cursed, necron_overlord, noxious_gearhulk,
+    psychomancer, psychosis_crawler, royal_warden, scrap_trawler, sheoldred_the_apocalypse,
+    skorpekh_lord, szarekh_the_silent_king, the_vision, triarch_stalker, ultron_the_annihilator,
+    biotransference, black_market_connections, phyrexian_arena, phyrexian_scriptures,
+    ripples_of_undeath, bitter_triumph, culling_the_weak, dark_ritual, deadly_dispute,
+    deadly_rollick, doom_blade, go_for_the_throat, withering_torment, bubbling_muck,
+    feed_the_swarm, invoke_despair, living_death, reanimate, their_name_is_death,
+    their_number_is_legion, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const NAMOR_COMMANDERS: &[CardFactory] = &[namor_scourge_of_the_seas];
+
+/// **Namor, Scourge of the Seas**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Islands = 99.
+/// Namor, Scourge of the Seas (EDHREC, fetched 2026-10-14).
+pub const NAMOR_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, coat_of_arms, door_of_destinies, heralds_horn, mind_stone,
+    sapphire_medallion, sol_ring, thought_vessel, castle_vantress, halimar_depths,
+    mystic_sanctuary, path_of_ancestry, reliquary_tower, three_tree_city, alandra_sky_dreamer,
+    atlantean_cavalry, atlantean_skirmisher, attuma_atlantean_warlord, benthic_biomancer,
+    coralhelm_commander, cosis_trickster, daughter_of_the_deep, deepchannel_mentor,
+    emperor_mihail_ii, harbinger_of_the_seas, harmonized_trio, herald_of_secret_streams,
+    kiora_the_rising_tide, kopala_warden_of_waves, lord_of_atlantis, lullmage_mentor,
+    master_of_the_pearl_trident, merfolk_sovereign, merfolk_trickster, merrow_harbinger,
+    merrow_reejerey, mindspring_merfolk, mist_dancer, mist_cloaked_herald,
+    namor_the_sub_mariner, seafloor_oracle, stonybrook_banneret, svyelun_of_sea_and_sky,
+    talrand_sky_summoner, vodalian_hexcatcher, coastal_piracy, deeproot_pilgrimage,
+    deeproot_waters, kindred_discovery, reconnaissance_mission, reflections_of_littjara,
+    arcane_denial, archmages_charm, brainstorm, consider, counterspell, harmonized_crescendo,
+    high_tide, negate, opt, pongify, rapid_hybridization, reject_imperfection, aquitects_will,
+    curse_of_the_swine, distant_melody, ponder, preordain, raise_the_palisade,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island,
+];
+
+pub const HELLCAT_COMMANDERS: &[CardFactory] = &[hellcat_undying_vigilante];
+
+/// **Hellcat, Undying Vigilante**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Forests = 99.
+/// Hellcat, Undying Vigilante (EDHREC, fetched 2026-10-14).
+pub const HELLCAT_MAIN: &[CardFactory] = &[
+    armory_of_iroas, emerald_medallion, glowcap_lantern, herd_heirloom, hunters_bow,
+    infiltration_lens, mask_of_memory, medics_kitesail, necklace_of_girion,
+    ozolith_the_shattered_spire, pip_boy_3000, power_fist, ring_of_kalonia, sol_ring,
+    swiftfoot_boots, sword_of_the_animist, the_ozolith, rogues_passage, shifting_woodland,
+    war_room, yavimaya_hollow, bramble_familiar, brawn, disciple_of_freyalise, eternal_witness,
+    guerrilla_gorilla, kalonian_hydra, kami_of_whispered_hopes, kodama_of_the_west_tree,
+    kogla_the_titan_ape, llanowar_elves, michelangelo_weirdness_to_11, sakura_tribe_elder,
+    shigeki_jukai_visionary, studious_first_year, timeless_witness, alpha_authority,
+    garruks_uprising, hardened_scales, hunters_talent, hydras_growth, keen_sense, level_up,
+    one_with_nature, ordeal_of_nylea, rancor, seismic_tutelage, thickest_in_the_thicket,
+    tiger_claws, archdruids_charm, beast_within, biosynthic_burst, gaeas_gift,
+    gift_of_the_viper, invigorating_surge, ram_through, return_of_the_wildspeaker,
+    snakeskin_veil, strength_of_will, garruk_primal_hunter, bridgeworks_battle, bushwhack,
+    cultivate, ezuris_predation, harmonize, natures_lore, rishkars_expertise, skyshroud_claim,
+    three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const PHOTON_2_COMMANDERS: &[CardFactory] = &[photon_lady_of_light];
+
+/// **Photon, Lady of Light**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Photon, Lady of Light (EDHREC, fetched 2026-10-14).
+pub const PHOTON_2_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, lightning_greaves, mace_of_the_valiant, oketras_monument,
+    panharmonicon, pearl_medallion, sol_ring, swiftfoot_boots, sword_of_hearth_and_home,
+    sword_of_the_animist, abandoned_air_temple, castle_ardenvale, emeria_the_sky_ruin, war_room,
+    windbrisk_heights, abdel_adrian_gorions_ward, archangel_of_thune, captain_of_the_watch,
+    charming_prince, circuit_mender, evangel_of_heliod, flickerwisp, geist_honored_monk,
+    herbie_scout_unit, helpful_hunter, inspiring_overseer, knight_of_the_white_orchid,
+    kor_cartographer, loran_of_the_third_path, loyal_warhound, lunarch_veteran,
+    mentor_of_the_meek, moonshaker_cavalry, mother_of_runes, okoye_dora_milaje_leader,
+    phelia_exuberant_shepherd, priest_of_ancient_lore, recruiter_of_the_guard, reverent_hoplite,
+    rumor_gatherer, skyclave_apparition, solemn_simulacrum, spirited_companion,
+    suki_courageous_rescuer, toby_beastie_befriender, wall_of_omens, wingmate_roc,
+    witch_enchanter, airbender_ascension, cathars_crusade, far_traveler, light_of_promise,
+    quantum_entanglement, teleportation_circle, touch_the_spirit_realm, cloudshift,
+    eerie_interlude, ephemerate, parting_gust, path_to_exile, prophesied_end, sejiri_shelter,
+    swords_to_plowshares, the_eternal_wanderer, austere_command, farewell, steelshapers_gift,
+    vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const JENNIKA_COMMANDERS: &[CardFactory] = &[jennika_bad_apple_big_sister];
+
+/// **Jennika, Bad Apple Big Sister**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Jennika, Bad Apple Big Sister (EDHREC, fetched 2026-10-14).
+pub const JENNIKA_MAIN: &[CardFactory] = &[
+    angels_feather, arcane_signet, archaeomancers_map, carrot_cake, halo_fountain,
+    marble_diamond, oketras_monument, paradise_plume, pearl_medallion, sol_ring,
+    desert_of_the_true, horizon_of_progress, lotus_field, mirrex, myriad_landscape,
+    terrain_generator, adeline_resplendent_cathar, adorned_pouncer, cat_collector,
+    dawnbringer_cleric, emeria_shepherd, falcon_and_redwing, felidar_guardian, hunted_witness,
+    inside_source, knight_of_the_new_coalition, leonin_warleader, lunarch_veteran,
+    mighty_mutanimals, mondrak_glory_dominus, moonshaker_cavalry, museum_nightwatch,
+    myrel_shield_of_argive, ocelot_pride, okoye_dora_milaje_leader, rosie_cotton_of_south_lane,
+    sally_pride_lioness_leader, skyclave_apparition, steadfast_sentinel, timeless_dragon,
+    unyielding_gatekeeper, ajanis_welcome, anointed_procession, caretakers_talent,
+    darksteel_mutation, felidar_retreat, grasp_of_fate, muster_the_departed, smugglers_share,
+    teleportation_circle, trouble_in_pairs, acrobatic_maneuver, cloudshift, disenchant,
+    ephemerate, fateful_absence, flicker_of_fate, generous_gift, parting_gust, reprieve,
+    scrollshift, swords_to_plowshares, thraben_charm, elspeth_storm_slayer, against_all_odds,
+    flicker, group_project, revoke_existence, settle_beyond_reality,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const PIPSQUEAK_COMMANDERS: &[CardFactory] = &[pipsqueak_rebel_strongarm];
+
+/// **Pipsqueak, Rebel Strongarm**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Plains = 99.
+/// Pipsqueak, Rebel Strongarm (EDHREC, fetched 2026-10-14).
+pub const PIPSQUEAK_MAIN: &[CardFactory] = &[
+    arcane_signet, colossus_hammer, commanders_sphere, marble_diamond, mind_stone,
+    oketras_monument, pearl_medallion, replicating_ring, sol_ring, sol_talisman,
+    sword_of_the_animist, symmetry_matrix, the_wind_crystal, thran_power_suit,
+    trailblazers_boots, abandoned_air_temple, emeria_the_sky_ruin, ghost_quarter, minas_tirith,
+    nykthos_shrine_to_nyx, war_room, abzan_battle_priest, abzan_falconer,
+    agent_bishop_man_in_black, ainok_bond_kin, anti_venom_horrifying_healer, avatar_enthusiasts,
+    basris_lieutenant, dusk_legion_duelist, esper_sentinel, felidar_sovereign,
+    hero_of_goma_fada, hinterland_sanctifier, jeong_jeongs_deserters, keeper_of_the_accord,
+    luminarch_aspirant, mangara_the_diplomat, mentor_of_the_meek, mikaeus_the_lunarch,
+    rhox_faithmender, scholar_of_new_horizons, souls_attendant, the_duke_rebel_sentry,
+    troop_of_ponies, urdnan_dromoka_warrior, welcoming_vampire, ajanis_welcome,
+    armored_ascension, cathars_crusade, felidar_retreat, flowering_of_the_white_tree,
+    gleam_of_authority, kithkin_armor, spirit_link, angelic_intervention, disenchant,
+    feat_of_resistance, flawless_maneuver, path_to_exile, silence, swords_to_plowshares,
+    take_up_the_shield, ajani_caller_of_the_pride, cut_a_deal, farewell, fumigate,
+    idyllic_tutor, vanquish_the_horde,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
