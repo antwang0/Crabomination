@@ -446,3 +446,32 @@ pub fn sudden_strike() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Vhal, Candlekeep Researcher ──────────────────────────────────────────────
+
+/// Vhal, Candlekeep Researcher — {3}{U} legendary 2/3 vigilance Human Wizard;
+/// choose a Background. {T}: add {C} equal to her toughness, not spendable on
+/// spells cast from your hand.
+pub fn vhal_candlekeep_researcher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::ChooseABackground],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::ToughnessOf(Box::new(Selector::This)))),
+                    crate::mana::SpendRestriction::NotSpellsFromHand,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Vhal, Candlekeep Researcher",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            2,
+            3,
+        )
+    }
+}

@@ -97,3 +97,30 @@ fn giant_man_adds_green_per_big_creature() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2);
 }
+
+/// CR 106.6 — Vhal's mana (`SpendRestriction::NotSpellsFromHand`) pays for
+/// an ability but not for a spell cast from hand.
+#[test]
+fn cr_106_6_vhal_mana_skips_spells_from_hand() {
+    let mut g = pod(2);
+    let vhal = ready(&mut g, 0, catalog::vhal_candlekeep_researcher());
+    let ability = |id, index| GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    g.perform_action(ability(vhal, 0)).expect("tap for three restricted {C}");
+    drain_stack(&mut g);
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    let cast = GameAction::CastSpell { card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None };
+    assert!(g.perform_action(cast).is_err(), "not for a spell from hand");
+    // (The Urn arrives only now: auto-pay would otherwise route Vhal's mana
+    // through its ability and pay the Sol Ring with the Urn's.)
+    let urn = ready(&mut g, 0, catalog::urn_of_godfire());
+    g.perform_action(ability(urn, 0)).expect("but for Urn of Godfire's {2}");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1);
+}
+

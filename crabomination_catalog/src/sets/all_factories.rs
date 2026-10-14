@@ -1374,6 +1374,7 @@ static DECKS: &[Factory] = &[
     super::decks::kor_line_slinger,
     super::decks::friendly_neighborhood,
     super::decks::sudden_strike,
+    super::decks::vhal_candlekeep_researcher,
     // cmdr_rank5k_e (session 01KXJ5zX)
     super::decks::zhao_zilong_tiger_general,
     super::decks::shu_cavalry,
