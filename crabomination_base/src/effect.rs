@@ -14350,6 +14350,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::OpponentSpellsFromGraveyardOrExileCostMore { .. }
         | SE::SpellTaxPerControllerPermanent { .. }
         | SE::SpellsCostMoreExceptOnControllerTurn { .. }
+        | SE::ChosenCardTypeSpellsCostMore { .. }
         | SE::TaxOpponentSpellsTargeting { .. }
         | SE::TaxOpponentSpellsTargetingThis { .. } => true,
         // `colored_spell_tax_for_spell_over`

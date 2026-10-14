@@ -11178,7 +11178,7 @@ impl GameState {
         let mut inst = crate::card::CardInstance::new_token(id, def, controller);
         // Hallowed Moonlight — a token is never cast, so a creature token
         // is exiled instead and ceases to exist (CR 111.7).
-        if self.uncast_creature_entry_exiled() && inst.definition.is_creature() {
+        if self.uncast_creature_entry_exiled() && self.computed_is_creature(&inst) {
             return id;
         }
         // CR 111.2 — a token's owner is the player under whose control it
