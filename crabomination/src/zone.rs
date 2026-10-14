@@ -992,6 +992,7 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
         | S::LifeGainBecomesDraw
         | S::LifeGainBonus { .. }
         | S::LifeGainMultiplier { .. }
+        | S::LifeLossMultiplier { .. }
         | S::ControllerLifeGainDoubledAtOrBelow { .. }
         | S::PlayerCannotGainLife { .. }
         | S::PlayerCannotLoseLife { .. }

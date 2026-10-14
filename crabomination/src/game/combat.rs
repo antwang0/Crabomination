@@ -314,7 +314,9 @@ pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
                 SE::AttackTaxToController { .. } | SE::AttackTaxOnYourPlaneswalkers { .. } => {
                     attack_static::ATTACK_TAX
                 }
-                SE::OpponentsMustAttackWithAtLeastOne => attack_static::MUST_ATTACK_WITH_ONE,
+                SE::OpponentsMustAttackWithAtLeastOne | SE::OpponentsMustAttackYouWithAtLeastOne => {
+                    attack_static::MUST_ATTACK_WITH_ONE
+                }
                 _ => 0,
             };
         }
@@ -1782,6 +1784,32 @@ impl GameState {
             && let Some(c) = self.battlefield.iter().find(|c| c.controller == p && able_to_attack(c))
         {
             return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
+        }
+        // CR 508.1d — Trove of Temptation: each demanding opponent must be
+        // attacked (them or a planeswalker they control) while some able
+        // creature is idle or aimed at a seat no Trove names — the most
+        // requirements obeyed without more attackers than there are.
+        if attack_requirement && statics & attack_static::MUST_ATTACK_WITH_ONE != 0 {
+            let demanding = self.opponents_demanding_attack(p);
+            if !demanding.is_empty() {
+                let aims_at = |a: &Attack| match a.target {
+                    AttackTarget::Player(q) => Some(q),
+                    AttackTarget::Planeswalker(pw) => self.battlefield.find_by_id(pw).map(|c| c.controller),
+                    _ => None,
+                };
+                let unmet = demanding.iter().any(|&q| !attacks.iter().any(|a| aims_at(a) == Some(q)));
+                let spare = self.battlefield.iter().find(|c| {
+                    c.controller == p
+                        && able_to_attack(c)
+                        && attacks
+                            .iter()
+                            .find(|a| a.attacker == c.id)
+                            .is_none_or(|a| aims_at(a).is_none_or(|q| !demanding.contains(&q)))
+                });
+                if unmet && let Some(c) = spare {
+                    return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
+                }
+            }
         }
         // CR 508.1d — Magnetic Web (`groups`, built above the layer pass).
         for filter in groups {
@@ -5721,9 +5749,33 @@ impl GameState {
             c.controller != p
                 && !self.same_team(p, c.controller)
                 && c.definition.static_abilities.iter().any(|s| {
-                    matches!(s.effect, crate::effect::StaticEffect::OpponentsMustAttackWithAtLeastOne)
+                    matches!(
+                        s.effect,
+                        crate::effect::StaticEffect::OpponentsMustAttackWithAtLeastOne
+                            | crate::effect::StaticEffect::OpponentsMustAttackYouWithAtLeastOne
+                    )
                 })
         })
+    }
+
+    /// CR 508.1d — the opponents of `p` whose Trove of Temptation demands an
+    /// attack aimed at them or their planeswalkers, in seat order.
+    pub(crate) fn opponents_demanding_attack(&self, p: usize) -> smallvec::SmallVec<[usize; 4]> {
+        let mut out = smallvec::SmallVec::new();
+        for c in self.battlefield.iter() {
+            if c.controller != p
+                && !self.same_team(p, c.controller)
+                && self.players.get(c.controller).is_some_and(|q| q.is_alive())
+                && !out.contains(&c.controller)
+                && c.definition.static_abilities.iter().any(|s| {
+                    matches!(s.effect, crate::effect::StaticEffect::OpponentsMustAttackYouWithAtLeastOne)
+                })
+            {
+                out.push(c.controller);
+            }
+        }
+        out.sort_unstable();
+        out
     }
 
     /// Sekki, Seasons' Guide (CR 615) — prevent `dealt` damage to `recipient`,

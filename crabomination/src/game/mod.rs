@@ -6896,6 +6896,7 @@ impl GameState {
                                     | crate::effect::StaticEffect::LifeGainBecomesDraw
                                     | crate::effect::StaticEffect::LifeGainBonus { .. }
                                     | crate::effect::StaticEffect::LifeGainMultiplier { .. }
+                                    | crate::effect::StaticEffect::LifeLossMultiplier { .. }
                                     | crate::effect::StaticEffect::ControllerLifeGainDoubledAtOrBelow { .. }
                                     | crate::effect::StaticEffect::PlayerCannotGainLife { .. }
                                     | crate::effect::StaticEffect::PlayerCannotLoseLife { .. }
@@ -6976,6 +6977,7 @@ impl GameState {
         } else {
             delta
         };
+        let delta = if delta < 0 { delta.saturating_mul(self.life_loss_multiplier_now(seat)) } else { delta };
         let team_idx = self
             .teams
             .iter()
@@ -12413,6 +12415,32 @@ impl GameState {
                     } else {
                         None
                     }
+                })
+            })
+            .fold(1, |acc, f| acc.saturating_mul(f))
+    }
+
+    /// CR 614 — the compounded `LifeLossMultiplier` factor on `seat`'s life
+    /// loss (Selenia's Curse); 1 when none applies.
+    pub fn life_loss_multiplier_now(&self, seat: usize) -> i32 {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        if !self.battlefield.has_life_static() {
+            return 1;
+        }
+        self.battlefield
+            .iter()
+            .flat_map(|src| {
+                src.definition.static_abilities.iter().filter_map(move |sa| match &sa.effect {
+                    StaticEffect::LifeLossMultiplier { target, factor } => {
+                        let hits = match target {
+                            PlayerStaticTarget::Controller => src.controller == seat,
+                            PlayerStaticTarget::EachOpponent => src.controller != seat,
+                            PlayerStaticTarget::EachPlayer => true,
+                            PlayerStaticTarget::EnchantedPlayer => src.attached_to_player == Some(seat),
+                        };
+                        hits.then_some(*factor)
+                    }
+                    _ => None,
                 })
             })
             .fold(1, |acc, f| acc.saturating_mul(f))
@@ -34613,6 +34641,7 @@ fn static_effect_to_effects(
             // OpponentsMustAttackWithAtLeastOne — read at the attack
             // declaration (`opponent_forces_an_attack`); no layer effect.
             | StaticEffect::OpponentsMustAttackWithAtLeastOne
+            | StaticEffect::OpponentsMustAttackYouWithAtLeastOne
             // OpponentsFaceVillainousChoicesTwice — read where a villainous
             // choice is posed; FirstNonlegendaryArtifactSpellHasCasualty — read
             // in `casualty_for`. No layer effect.
@@ -35076,6 +35105,7 @@ fn static_effect_to_effects(
             // LifeGainMultiplier — consulted in `adjust_life` via
             // `life_gain_multiplier_now` (Rhox Faithmender); no layer effect.
             | StaticEffect::LifeGainMultiplier { .. }
+            | StaticEffect::LifeLossMultiplier { .. }
             | StaticEffect::ControllerLifeGainDoubledAtOrBelow { .. }
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.

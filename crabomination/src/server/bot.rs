@@ -12627,6 +12627,13 @@ fn attack_target_player(state: &GameState, seat: usize, leader_target: u8) -> us
     {
         return super::pod_attack::attackable_or(state, seat, q);
     }
+    // CR 508.1d — a Trove of Temptation opponent must be attacked: aim there
+    // (a duel has only the one opponent to aim at).
+    if state.players.len() > 2
+        && let Some(&q) = state.opponents_demanding_attack(seat).first()
+    {
+        return super::pod_attack::attackable_or(state, seat, q);
+    }
     let pick = if let Some(m) = state.monarch
         && m != seat
         && state.players.get(m).is_some_and(|p| p.is_alive())

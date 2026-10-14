@@ -1213,6 +1213,10 @@ pub enum StaticEffect {
     /// instead"). Consulted in `adjust_life` for positive deltas, applied
     /// before any additive `LifeGainBonus`. Multiple multipliers compound.
     LifeGainMultiplier { target: PlayerStaticTarget, factor: i32 },
+    /// CR 614 — "If [target] would lose life, they lose `factor` times that
+    /// much instead" (Selenia's Curse on the enchanted player). The loss
+    /// mirror of `LifeGainMultiplier`; compounds with it and with Bloodletter.
+    LifeLossMultiplier { target: PlayerStaticTarget, factor: i32 },
     /// CR 614 — "If you would gain life while you have `life` or less life,
     /// you gain twice that much life instead" (Phial of Galadriel). Read with
     /// `LifeGainMultiplier` in `life_gain_multiplier_now`, against the
@@ -3487,6 +3491,12 @@ pub enum StaticEffect {
     /// creatures is able to attack (`declare_attackers_banded`); the bot's
     /// forced-attacker repair adds one.
     OpponentsMustAttackWithAtLeastOne,
+    /// CR 508.1d — "Each opponent must attack you or a planeswalker you
+    /// control with at least one creature each combat if able" (Trove of
+    /// Temptation): the aimed sibling of `OpponentsMustAttackWithAtLeastOne`.
+    /// A declaration that leaves this controller unattacked is rejected while
+    /// an able creature is idle or aimed at a seat no such static names.
+    OpponentsMustAttackYouWithAtLeastOne,
     /// CR 701.55 — "If an opponent would face a villainous choice, they face
     /// that choice an additional time" (The Valeyard). Read where a
     /// villainous choice is posed; each such permanent adds one more.
