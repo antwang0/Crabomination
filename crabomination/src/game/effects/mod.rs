@@ -13088,6 +13088,21 @@ impl GameState {
                         })
                         .sum::<usize>();
                 }
+                // CR 614.1a — Eligeth, Crossroads Augur: "If you would scry a
+                // number of cards, draw that many cards instead."
+                if n > 0
+                    && matches!(effect, Effect::Scry { .. })
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && c.definition
+                                .static_abilities
+                                .iter()
+                                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ScryBecomesDraw))
+                    })
+                {
+                    self.draw_n(p, n, events);
+                    return Ok(());
+                }
                 // CR 701.22b: "If a player is instructed to scry 0, no
                 // scry event occurs. Abilities that trigger whenever a
                 // player scries won't trigger." (Same wording covers

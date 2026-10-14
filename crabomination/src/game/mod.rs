@@ -34860,6 +34860,7 @@ fn static_effect_to_effects(
             // Read by `Effect::Surveil` and the surveil answer.
             | StaticEffect::SurveilLooksExtra { .. }
             | StaticEffect::ScryLooksExtra { .. }
+            | StaticEffect::ScryBecomesDraw
             // Thran Portal — read by `intrinsic_land_mana_abilities_with`.
             | StaticEffect::SelfManaAbilitiesCostLife(_)
             | StaticEffect::MayPlaySurveilledThisTurnForLife

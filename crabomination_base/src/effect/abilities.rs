@@ -2434,6 +2434,9 @@ pub enum StaticEffect {
     /// "If you would scry a number of cards, scry that many cards plus `n`
     /// instead" (Kenessos, Priest of Thassa), read by `Effect::Scry`.
     ScryLooksExtra { n: u32 },
+    /// "If you would scry a number of cards, draw that many cards instead"
+    /// (Eligeth, Crossroads Augur — CR 614.1a), read by `Effect::Scry`.
+    ScryBecomesDraw,
     /// Thran Portal — "This land is the chosen type in addition to its other
     /// types": the source's own `chosen_land_type`, layer 4 (Realmwright's
     /// `LandsYouControlAreChosenType` covers every land you control).
