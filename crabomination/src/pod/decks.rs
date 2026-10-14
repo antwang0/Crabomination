@@ -69256,3 +69256,31 @@ pub const MACHINE_MAN_MAIN: &[CardFactory] = &[
     // Basics
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
 ];
+
+pub const EVIE_FRYE_COMMANDERS: &[CardFactory] = &[evie_frye];
+
+/// **Evie Frye**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Evie Frye (EDHREC, fetched 2026-10-14).
+pub const EVIE_FRYE_MAIN: &[CardFactory] = &[
+    aether_syphon, bag_of_holding, basilisk_collar, bident_of_thassa, lightning_greaves,
+    midnight_clock, sculpting_steel, sol_ring, thought_vessel, uthros_research_craft,
+    amonkhet_raceway, ancient_tomb, castle_vantress, darksteel_citadel, demolition_field,
+    rogues_passage, seat_of_the_synod, war_room, alandra_sky_dreamer, arcane_artisan,
+    chasm_skulker, containment_construct, detective_of_the_month, emeritus_of_ideation,
+    exhibition_tidecaller, frogmite, glasspool_mimic, hullbreaker_horror, hydro_man_fluid_felon,
+    il_mheg_pixie, kiora_the_rising_tide, lady_octopus_inspired_inventor,
+    malcolm_alluring_scoundrel, memory_guardian, minn_wily_illusionist, ornithopter_of_paradise,
+    psychosis_crawler, scourge_of_fleets, serpent_of_the_pass, shoreline_looter, silver_myr,
+    solemn_simulacrum, stormsurge_kraken, the_dawning_archaic, the_lord_of_the_eagles,
+    the_warring_triad, toothy_imaginary_friend, tui_and_la_moon_and_ocean, utrom_monitor,
+    virulent_silencer, vnwxt_verbose_host, wan_shi_tong_librarian, wharf_infiltrator, wonder,
+    archmage_ascension, coastal_piracy, propaganda, unstoppable_plan, an_offer_you_cant_refuse,
+    banishing_betrayal, counterspell, dissolve, frantic_search, high_tide, mana_sculpt, pongify,
+    rapid_hybridization, whir_of_invention, kaito_cunning_infiltrator, aether_gale, reshape,
+    spectral_deluge, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];

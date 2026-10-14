@@ -15240,6 +15240,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MACHINE_MAN_COMMANDERS,
             main: decks::MACHINE_MAN_MAIN,
         },
+        // Seat 2465: Evie Frye's EDHREC average deck. `--pod-decks 2465`.
+        PodDeck {
+            name: "Evie Frye (U)",
+            commanders: decks::EVIE_FRYE_COMMANDERS,
+            main: decks::EVIE_FRYE_MAIN,
+        },
     ]
 }
 
@@ -19535,6 +19541,7 @@ mod tests {
             ("Shisato, Whispering Hunter", &[0x13B4]),
             ("Kei Takahashi", &[0x13B5]),
             ("Machine Man, Model X-51", &[0x13B6]),
+            ("Evie Frye", &[0x13B7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
