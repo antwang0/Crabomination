@@ -1120,7 +1120,9 @@ fn pack_printed(def: &crate::card::CardDefinition) -> u64 {
         pips[color_index(col)] += 1;
     }
     for (ci, n) in pips.iter().enumerate() {
-        debug_assert!(*n <= 7, "{}: {n} pips of one colour saturate the encoding", def.name);
+        // Three bits a colour: a count past 7 saturates. Khalni Hydra's
+        // eight {G} is the one printed card that reaches it, and "seven or
+        // more green" is all a castability feature needs to say.
         w |= (*n).min(7) << (penc::PIPS_SHIFT + 3 * ci as u32);
     }
     w
@@ -2478,10 +2480,12 @@ pub(super) mod tests {
             assert_eq!(o.feats[53], want(def.is_artifact()), "{}: artifact", def.name);
             assert_eq!(o.feats[54], want(def.is_enchantment()), "{}: enchantment", def.name);
             assert_eq!(o.feats[35], want(def.is_aura() || def.is_equipment()), "{}: attachment", def.name);
-            let mut pips = [0.0f32; 5];
+            let mut counts = [0u32; 5];
             for col in def.cost.colored_symbols() {
-                pips[color_index(col)] += 1.0 / 2.0;
+                counts[color_index(col)] += 1;
             }
+            // The word's three bits a colour saturate at 7 (Khalni Hydra).
+            let pips = counts.map(|n| n.min(7) as f32 / 2.0);
             assert_eq!(&o.feats[20..25], &pips, "{}: pips", def.name);
             checked += 1;
         }
