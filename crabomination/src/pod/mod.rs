@@ -15246,6 +15246,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::EVIE_FRYE_COMMANDERS,
             main: decks::EVIE_FRYE_MAIN,
         },
+        // Seat 2466: Xira, the Golden Sting's EDHREC average deck. `--pod-decks 2466`.
+        PodDeck {
+            name: "Xira, the Golden Sting (BRG)",
+            commanders: decks::XIRA_COMMANDERS,
+            main: decks::XIRA_MAIN,
+        },
+        // Seat 2467: Xira Arien's EDHREC average deck. `--pod-decks 2467`.
+        PodDeck {
+            name: "Xira Arien (BRG)",
+            commanders: decks::XIRA_ARIEN_COMMANDERS,
+            main: decks::XIRA_ARIEN_MAIN,
+        },
+        // Seat 2468: Kalain, Reclusive Painter's EDHREC average deck. `--pod-decks 2468`.
+        PodDeck {
+            name: "Kalain, Reclusive Painter (BR)",
+            commanders: decks::KALAIN_COMMANDERS,
+            main: decks::KALAIN_MAIN,
+        },
+        // Seat 2469: Mastermind Plum's EDHREC average deck. `--pod-decks 2469`.
+        PodDeck {
+            name: "Mastermind Plum (B)",
+            commanders: decks::MASTERMIND_PLUM_COMMANDERS,
+            main: decks::MASTERMIND_PLUM_MAIN,
+        },
+        // Seat 2470: The Last Ride's EDHREC average deck. `--pod-decks 2470`.
+        PodDeck {
+            name: "The Last Ride (B)",
+            commanders: decks::THE_LAST_RIDE_COMMANDERS,
+            main: decks::THE_LAST_RIDE_MAIN,
+        },
+        // Seat 2471: Morinfen's EDHREC average deck. `--pod-decks 2471`.
+        PodDeck {
+            name: "Morinfen (B)",
+            commanders: decks::MORINFEN_COMMANDERS,
+            main: decks::MORINFEN_MAIN,
+        },
     ]
 }
 
@@ -19544,6 +19580,12 @@ mod tests {
             ("Kei Takahashi", &[0x13B5]),
             ("Machine Man, Model X-51", &[0x13B6]),
             ("Evie Frye", &[0x13B7]),
+            ("Xira, the Golden Sting", &[0x13B8]),
+            ("Xira Arien", &[0x13B9]),
+            ("Kalain, Reclusive Painter", &[0x13BA]),
+            ("Mastermind Plum", &[0x13BB]),
+            ("The Last Ride", &[0x13BC]),
+            ("Morinfen", &[0x13BD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

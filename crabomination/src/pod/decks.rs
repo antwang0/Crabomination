@@ -69284,3 +69284,165 @@ pub const EVIE_FRYE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island,
 ];
+
+pub const XIRA_COMMANDERS: &[CardFactory] = &[xira_the_golden_sting];
+
+/// **Xira, the Golden Sting**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 7 Forests + 4 Mountains + 6 Swamps = 99.
+/// Xira, the Golden Sting (EDHREC, fetched 2026-10-14).
+pub const XIRA_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, cauldron_of_essence, skullclamp, sol_ring, strionic_resonator,
+    swiftfoot_boots, blood_crypt, bojuka_bog, cinder_glade, command_tower, dragonskull_summit,
+    exotic_orchard, overgrown_tomb, path_of_ancestry, reliquary_tower, rockfall_vale,
+    rootbound_crag, savage_lands, smoldering_marsh, spire_garden, stomping_ground, swarmyard,
+    undergrowth_stadium, woodland_cemetery, ziatoras_proving_ground, aatchik_emerald_radian,
+    amzu_swarms_hunger, ant_queen, blex_vexing_pest, blood_artist, braids_arisen_nightmare,
+    broodhatch_nantuko, caustic_caterpillar, dragonlair_spider, fumulus_the_infestation,
+    generous_patron, giant_adephage, haywire_mite, hornet_nest, hornet_queen, ignoble_hierarch,
+    living_hive, mahadi_emporium_master, mayhem_devil, mazirek_kraul_death_priest,
+    mirkwood_bats, morbid_opportunist, pitiless_plunderer, radiant_performer,
+    sakura_tribe_elder, scute_swarm, the_swarmweaver, viscera_seer, zask_skittering_swarmlord,
+    zulaport_cutthroat, bastion_of_remembrance, deathreap_ritual, doubling_season,
+    goblin_bombardment, impact_tremors, moldervine_reclamation, parallel_lives,
+    assassins_trophy, beast_within, chaos_warp, corrupted_conviction, deadly_dispute,
+    heroic_intervention, putrefy, terminate, village_rites, grist_the_hunger_tide,
+    blasphemous_act, cultivate, farseek, kodamas_reach, natures_lore, rampant_growth,
+    swarmyard_massacre, three_visits, victimize,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const XIRA_ARIEN_COMMANDERS: &[CardFactory] = &[xira_arien];
+
+/// **Xira Arien**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 8 Forests + 5 Mountains + 6 Swamps = 99.
+/// Xira Arien (EDHREC, fetched 2026-10-14).
+pub const XIRA_ARIEN_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, golgari_signet, gruul_signet, howling_mine, rakdos_signet,
+    sol_ring, temple_bell, blood_crypt, bloodstained_mire, bojuka_bog, cinder_glade,
+    command_tower, exotic_orchard, karplusan_forest, llanowar_wastes, overgrown_tomb,
+    reliquary_tower, rootbound_crag, savage_lands, smoldering_marsh, stomping_ground,
+    wooded_foothills, woodland_cemetery, ziatoras_proving_ground, anger, birds_of_paradise,
+    deathrite_shaman, dragonlair_spider, elves_of_deep_shadow, eternal_witness, fate_unraveler,
+    fyndhorn_elves, hornet_queen, humble_defector, ignoble_hierarch, kederekt_parasite,
+    llanowar_elves, magus_of_the_wheel, master_of_the_feast, psychosis_crawler,
+    razorkin_needlehead, royal_assassin, sakura_tribe_elder, scrawling_crawler, seedborn_muse,
+    seizan_perverter_of_truth, sheoldred_the_apocalypse, stormfist_crusader, wood_elves,
+    xira_the_golden_sting, animate_dead, mana_flare, phyrexian_arena, rites_of_flourishing,
+    spiteful_visions, sylvan_library, underworld_dreams, wild_growth, assassins_trophy,
+    beast_within, chaos_warp, dark_ritual, fog, lightning_bolt, putrefy, terminate,
+    ob_nixilis_the_hate_twisted, blasphemous_act, cultivate, decimate, demonic_tutor,
+    faithless_looting, farseek, kodamas_reach, natures_lore, rampant_growth, reanimate,
+    regrowth, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KALAIN_COMMANDERS: &[CardFactory] = &[kalain_reclusive_painter];
+
+/// **Kalain, Reclusive Painter**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Mountains + 9 Swamps = 99.
+/// Kalain, Reclusive Painter (EDHREC, fetched 2026-10-14).
+pub const KALAIN_MAIN: &[CardFactory] = &[
+    arcane_signet, beamtown_beatstick, coin_of_mastery, diamond_pick_axe, glittering_stockpile,
+    goldvein_pick, rakdos_signet, sol_ring, the_reaver_cleaver, treasure_map, blood_crypt,
+    bojuka_bog, command_tower, dragonskull_summit, foreboding_ruins, haunted_ridge,
+    luxury_suite, mines_of_moria, rakdos_carnarium, smoldering_marsh, sulfurous_springs,
+    tainted_peak, temple_of_malice, treasure_vault, academy_manufactor, ancient_copper_dragon,
+    captain_lannery_storm, crime_novelist, decadent_dragon, exava_rakdos_blood_witch,
+    fain_the_broker, forsworn_paladin, gadrak_the_crown_scourge, goldspan_dragon, grim_hireling,
+    hagra_constrictor, hoard_robber, hoarding_ogre, impulsive_pilferer,
+    juri_master_of_the_revue, kellogg_dangerous_mind, magda_brazen_outlaw,
+    mahadi_emporium_master, marionette_master, marut, mayhem_devil, mirkwood_bats,
+    nadiers_nightblade, professional_face_breaker, reckless_fireweaver, skullport_merchant,
+    smaug_the_magnificent, smaug_wicked_worm, swashbuckler_extraordinaire, xorn,
+    alchemists_talent, black_market_connections, rain_of_riches, revel_in_riches,
+    sticky_fingers, bedevil, big_score, chaos_warp, deadly_dispute, demand_answers,
+    fake_your_own_death, rakdos_charm, terminate, unexpected_windfall, blasphemous_act,
+    blood_money, brasss_bounty, feed_the_swarm, grim_bounty, inspired_tinkering,
+    pirates_pillage, seize_the_spoils, strike_it_rich,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const MASTERMIND_PLUM_COMMANDERS: &[CardFactory] = &[mastermind_plum];
+
+/// **Mastermind Plum**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Swamps = 99.
+/// Mastermind Plum (EDHREC, fetched 2026-10-14).
+pub const MASTERMIND_PLUM_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, coin_of_mastery, collectors_vault, expedition_map,
+    gilded_pinions, goldvein_pick, jet_medallion, mind_stone, nobles_purse,
+    nuka_cola_vending_machine, prized_statue, sol_ring, swiftfoot_boots, thieves_tools,
+    treasure_map, wayfarers_bauble, bojuka_bog, cabal_coffers, cabal_stronghold,
+    myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, treasure_vault,
+    urborg_tomb_of_yawgmoth, academy_manufactor, braids_arisen_nightmare, burakos_party_leader,
+    disciple_of_the_vault, fain_the_broker, forsworn_paladin, gray_merchant_of_asphodel,
+    greedy_freebooter, grim_hireling, hoard_robber, lobelia_sackville_baggins,
+    marionette_apprentice, marionette_master, marut, mirkwood_bats, nadiers_nightblade,
+    pitiless_plunderer, ruthless_knave, ruthless_technomancer, shambling_ghast,
+    skullport_merchant, solemn_simulacrum, treasure_dredger, undercity_scrounger,
+    warren_soultrader, zhentarim_bandit, agent_of_the_iron_throne, black_market_connections,
+    phyrexian_arena, revel_in_riches, costly_plunder, dark_ritual, deadly_derision,
+    deadly_dispute, defile, fake_your_own_death, fanatical_offering, go_for_the_throat,
+    withering_torment, blood_money, exsanguinate, feed_the_swarm, lich_knights_conquest,
+    monumental_corruption, reanimate, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_LAST_RIDE_COMMANDERS: &[CardFactory] = &[the_last_ride];
+
+/// **The Last Ride**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// The Last Ride (EDHREC, fetched 2026-10-14).
+pub const THE_LAST_RIDE_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, charcoal_diamond, jet_medallion, lichs_mirror, lichs_tomb,
+    pact_weapon, sol_ring, soul_conduit, staff_of_compleation, the_darkhold,
+    the_darkness_crystal, the_golden_throne, thought_vessel, bojuka_bog, cabal_coffers,
+    cabal_stronghold, nykthos_shrine_to_nyx, reliquary_tower, rogues_passage, the_black_gate,
+    urborg_tomb_of_yawgmoth, caustic_bronco, crypt_ghast, dark_confidant, darkstar_augur,
+    darksteel_angel, deaths_shadow, defiler_of_flesh, doom_whisperer, dread_presence,
+    erebos_god_of_the_dead, gray_merchant_of_asphodel, krrik_son_of_yawgmoth, keen_duelist,
+    magus_of_the_mirror, platinum_angel, shadow_of_mortality, the_speed_demon,
+    tree_of_perdition, vilis_broker_of_blood, wall_of_blood, black_market_connections,
+    font_of_agonies, greed, lichs_mastery, necropotence, phyrexian_arena, unspeakable_symbol,
+    bitter_triumph, dark_ritual, deadly_rollick, defile, dismember, imps_mischief,
+    infernal_grasp, snuff_out, stunning_reversal, withering_torment, liliana_of_the_dark_realms,
+    blasphemous_edict, bubbling_muck, damnation, exsanguinate, feed_the_swarm, nights_whisper,
+    profane_transfusion, reanimate, repay_in_kind, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const MORINFEN_COMMANDERS: &[CardFactory] = &[morinfen];
+
+/// **Morinfen**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Swamps = 99.
+/// Morinfen (EDHREC, fetched 2026-10-14).
+pub const MORINFEN_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, charcoal_diamond, eternity_vessel, jet_medallion,
+    lichs_mirror, mind_stone, pact_weapon, sol_ring, soul_conduit, the_endstone,
+    the_golden_throne, thought_vessel, whip_of_erebos, bojuka_bog, cabal_coffers,
+    cabal_stronghold, myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower,
+    urborg_tomb_of_yawgmoth, crypt_ghast, defiler_of_flesh, doom_whisperer, dread_presence,
+    erebos_god_of_the_dead, gallowbraid, gray_merchant_of_asphodel, hex_parasite,
+    krrik_son_of_yawgmoth, magus_of_the_coffers, magus_of_the_mirror, platinum_angel,
+    shadow_of_mortality, solemn_simulacrum, thrull_parasite, tree_of_perdition, vampire_hexmage,
+    vilis_broker_of_blood, vito_thorn_of_the_dusk_rose, wall_of_blood, black_market_connections,
+    exquisite_blood, font_of_agonies, greed, necropotence, phyrexian_arena, wound_reflection,
+    bitter_triumph, dark_ritual, dismember, imps_mischief, infernal_grasp, slaughter, snuff_out,
+    stunning_reversal, withering_boon, bubbling_muck, demonic_tutor, exsanguinate,
+    feed_the_swarm, nights_whisper, peer_into_the_abyss, profane_transfusion, read_the_bones,
+    reanimate, repay_in_kind, sign_in_blood, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp,
+];
