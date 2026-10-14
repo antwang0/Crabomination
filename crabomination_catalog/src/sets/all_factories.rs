@@ -4064,6 +4064,11 @@ static DECKS: &[Factory] = &[
     super::decks::pyre_rhymer,
     super::decks::ruric_thar_biomagus,
     super::decks::variable_chaser,
+    // cmdr_rank3k_k (session 01PxmVAG)
+    super::decks::fated_clash,
+    super::decks::raphael_ninja_destroyer,
+    super::decks::raphaels_technique,
+    super::decks::rinoa_angel_wing,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
