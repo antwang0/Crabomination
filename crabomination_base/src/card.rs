@@ -1058,6 +1058,8 @@ pub enum CounterType {
     /// Sauron, Dino Devotee's saurian counters (a green 5/5 Dinosaur while
     /// it has one).
     Saurian,
+    /// The Darkhold's sin counters (one per draw activation).
+    Sin,
 }
 
 /// Every zone a card can occupy.
