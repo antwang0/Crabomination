@@ -3851,6 +3851,11 @@ static DECKS: &[Factory] = &[
     super::decks::borborygmos_and_fblthp,
     super::decks::fblthp_impossibly_lost,
     super::decks::fblthp_knows_the_way,
+    // cmdr_rank2k_l (session 01CwrNTA)
+    super::decks::arachnus_spinner,
+    super::decks::gandalf_party_guest,
+    super::decks::multiversal_incursion,
+    super::decks::traverse_the_ulvenwald,
     // cmdr_rank2k_k (session 01CwrNTA)
     super::decks::descent_of_the_dragons,
     super::decks::down_in_the_valley,
