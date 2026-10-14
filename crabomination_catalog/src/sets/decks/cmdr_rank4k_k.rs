@@ -3,6 +3,7 @@
 
 use crate::card::{
     CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
+    MayPlayDuration,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
@@ -161,6 +162,45 @@ pub fn string_of_disappearances() -> CardDefinition {
                 cost: ChainCopyCost::Mana(cost(&[u(), u()])),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+// ── Wiccan, Young Avenger ────────────────────────────────────────────────────
+
+/// Asgardian Inspiration — {R} sorcery. Exile the top card of your library;
+/// you may play it this turn. From your graveyard: whenever a source you
+/// control deals noncombat damage to an opponent, you may pay {2} to return
+/// this card to your hand.
+pub fn asgardian_inspiration() -> CardDefinition {
+    CardDefinition {
+        name: "Asgardian Inspiration",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            duration: MayPlayDuration::EndOfThisTurn,
+            pay_any_color: false,
+            max_mana_value: None,
+            pay_own_cost: true,
+            uncast_penalty: None,
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::PlayerDealtNoncombatDamage,
+                EventScope::FromYourGraveyardSourceDamagedOpponent,
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {2} to return Asgardian Inspiration to your hand?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                else_: None,
+            },
+        }],
         ..Default::default()
     }
 }

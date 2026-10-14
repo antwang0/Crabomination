@@ -154,3 +154,42 @@ fn string_of_disappearances_chains_back_at_the_caster() {
     assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "bounced home");
     assert!(g.players[0].hand.iter().any(|c| c.id == mine), "the copy bounced mine");
 }
+
+/// Asgardian Inspiration impulses one card; from the graveyard, a Shock to an
+/// opponent buys it back for {2}, and a Shock to a creature doesn't.
+#[test]
+fn asgardian_inspiration_returns_on_noncombat_damage_to_an_opponent() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::asgardian_inspiration());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell));
+    assert_eq!(g.exile.len(), 1, "the top card was exiled to play");
+
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for (target, back) in [(Target::Permanent(bear), false), (Target::Player(1), true)] {
+        let shock = g.add_card_to_hand(0, catalog::shock());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        g.perform_action(GameAction::CastSpell {
+            card_id: shock,
+            target: Some(target.clone()),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("castable");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == spell), back, "{target:?}");
+    }
+}
