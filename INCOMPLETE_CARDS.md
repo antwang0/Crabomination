@@ -2175,3 +2175,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Black Widow, Super Spy | the +1/+1 counter and the cast aren't exclusive: the counter is offered and the exiled card stays castable either way | `ExileTopUntilNonlandMayPlay` + `MayDo` |
 | 🟡 Petty Larceny | the two cards are exiled face up rather than face down | `ExileTopAndGrantMayPlay { WhileExiled }` |
 | 🟡 The Prismatic Piper | the "choose a color before the game begins; it is the chosen color" commander clause is not modelled — the Piper stays colorless | plain partner creature |
+| 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |

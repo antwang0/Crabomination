@@ -4482,6 +4482,14 @@ static DECKS: &[Factory] = &[
     super::decks::mask_of_the_jadecrafter,
     super::decks::rebbec_architect_of_ascension,
     super::decks::the_prismatic_piper,
+    // cmdr_rank6k_f (session 01PxmVAG)
+    super::decks::christine_chapel_combat_medic,
+    super::decks::kirk_enterprising_captain,
+    super::decks::quicksilver_gargantuan,
+    super::decks::starnheim_memento,
+    super::decks::titanbones_towering_heart,
+    super::decks::trelane_squire_of_gothos,
+    super::decks::trusty_packbeast,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,
