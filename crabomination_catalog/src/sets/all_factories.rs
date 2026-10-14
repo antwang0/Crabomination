@@ -4148,6 +4148,12 @@ static DECKS: &[Factory] = &[
     // cmdr_rank3k_q (session 01PxmVAG)
     super::decks::morningtides_light,
     super::decks::rescue_girl_first_responder,
+    // cmdr_rank3k_r (session 01PxmVAG)
+    super::decks::impossible_man,
+    super::decks::jiang_yanggu_alone,
+    super::decks::palladia_mors_the_ruiner,
+    super::decks::stangg_echo_warrior,
+    super::decks::super_adaptoid,
     // cmdr_rank3k_a (session 01PxmVAG)
     super::decks::angelsong,
     super::decks::archive_arbiter,

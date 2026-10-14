@@ -2157,3 +2157,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Loki Laufeyson | an instant or sorcery above Loki's power spends the watch without a copy instead of leaving it armed | `OnYourNextInstantSorceryThisTurn` |
 | 🟡 Wanda's Vision | the free cast stays open until end of turn rather than only as the trigger resolves | `ExileTopUntilNonlandMayPlay { EndOfThisTurn }` |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
+| 🟡 Jiang Yanggu, Alone | an attack alone on a planeswalker or battle triggers too, not only one on a player | `R::IsAttackingAlone` |
+| 🟡 Impossible Man | the copy takes the copied permanent's name rather than keeping "Impossible Man" | `BecomeCopyOfFor { EndOfTurn }` |
+| 🟡 Stangg, Echo Warrior | copies of the Auras and Equipment attached to Stangg aren't made for Stangg Twin | `CreateTokenAttacking` |
