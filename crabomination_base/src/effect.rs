@@ -9491,6 +9491,10 @@ pub enum Effect {
     /// onto `Player.pending_is_discounts` that lapses after the next such
     /// spell.
     GrantNextInstantOrSorceryDiscountThisTurn { amount: Value },
+    /// "The next spell you cast this turn costs {amount} less to cast" — any
+    /// spell (Peerless Samurai). Pushes onto `Player.pending_spell_discounts`,
+    /// keyed on the spells-cast tally so it lapses with the next spell.
+    GrantNextSpellDiscountThisTurn { amount: Value },
     /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
     /// creatures." Each of slots `0..max_targets` is an optional creature
     /// target (filtered by `filter`); every supplied target gains one +1/+1

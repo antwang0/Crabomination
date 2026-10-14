@@ -1467,6 +1467,7 @@ impl Effect {
             Effect::ExileSource => false,
             Effect::SacrificeSourceUnlessSacrifice { .. } => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
+            Effect::GrantNextSpellDiscountThisTurn { amount } => value_has_target(amount),
             Effect::ReturnSelfAsEnchantment => false,
             Effect::ReturnSelfRetypedWithCounters { .. } => false,
             Effect::ReturnSelfTappedWithCounters { .. } => false,

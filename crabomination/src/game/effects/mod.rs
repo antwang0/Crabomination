@@ -23926,6 +23926,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantNextSpellDiscountThisTurn { amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                let p = ctx.controller;
+                if amt > 0 {
+                    let cast_so_far = self.players[p].spells_cast_this_turn;
+                    self.players[p].pending_spell_discounts.push((amt, cast_so_far));
+                }
+                Ok(())
+            }
+
             Effect::EnlistThen { then } => {
                 let tapped = events.len();
                 self.run_effect(&Effect::Enlist, ctx, events)?;
