@@ -248,3 +248,24 @@ fn bilbo_brings_back_a_cheap_permanent() {
         .expect("back");
     assert_eq!(back.controller, 1, "under its owner's control");
 }
+
+/// CR 506.1 — Yuriko locks spells (a flash creature included) during combat.
+#[test]
+fn yuriko_locks_spells_during_combat() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::yuriko_blade_of_the_mighty());
+    g.step = TurnStep::DeclareAttackers;
+    let viper = g.add_card_to_hand(0, catalog::ambush_viper());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    let cast = GameAction::CastSpell {
+        card_id: viper,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(cast.clone()).is_err(), "no flash creature during combat");
+    g.step = TurnStep::End;
+    assert!(g.perform_action(cast).is_ok(), "outside combat it resolves as usual");
+}

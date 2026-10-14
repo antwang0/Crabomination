@@ -221,19 +221,25 @@ pub fn goblin_wizardry() -> CardDefinition {
 /// Yuriko, Blade of the Mighty — {3}{W} legendary 2/3 Human Samurai. During
 /// combat, players can't cast spells or activate non-mana abilities. Whenever a
 /// creature you control attacks a player alone, it gains double strike until
-/// end of turn. (Residual: the combat lock is Hand to Hand's, which still lets
-/// a flash permanent be cast during combat.)
+/// end of turn. The lock is Basandra's spell half beside Hand to Hand's
+/// activation half.
 pub fn yuriko_blade_of_the_mighty() -> CardDefinition {
     CardDefinition {
-        static_abilities: vec![StaticAbility {
-            description: "During combat, players can't cast spells or activate abilities that aren't mana abilities.",
-            effect: StaticEffect::NoInstantsOrAbilitiesDuringCombat,
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "During combat, players can't cast spells.",
+                effect: StaticEffect::PlayersCantCastDuringCombat,
+            },
+            StaticAbility {
+                description: "During combat, players can't activate abilities that aren't mana abilities.",
+                effect: StaticEffect::NoInstantsOrAbilitiesDuringCombat,
+            },
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::IsAttackingAlone,
+                    filter: R::IsAttackingAlone.and(R::IsAttackingOpponentPlayer),
                 },
             ),
             effect: Effect::GrantKeyword {
