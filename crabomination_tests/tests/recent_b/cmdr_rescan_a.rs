@@ -390,3 +390,58 @@ fn xira_egg_pays_off_on_a_later_turn() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Insect"));
 }
+
+/// CR 614 / 104.3 — Stunning Reversal replaces the next loss this turn:
+/// seven cards and life 1 instead of losing at 0 life.
+#[test]
+fn stunning_reversal_replaces_the_next_loss() {
+    let mut g = pod(3);
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let spell = g.add_card_to_hand(0, catalog::stunning_reversal());
+    cast_with(&mut g, spell, None, vec![], None);
+    assert!(g.exile.iter().any(|c| c.id == spell), "exiles itself");
+    g.players[0].life = 0;
+    let _ = g.check_state_based_actions();
+    assert!(!g.players[0].eliminated);
+    assert_eq!(g.players[0].life, 1);
+    assert_eq!(g.players[0].hand.len(), 7);
+    // Spent: the next loss this turn is a loss.
+    g.players[0].life = 0;
+    let _ = g.check_state_based_actions();
+    assert!(g.players[0].eliminated);
+}
+
+/// Marut's Treasure refund counts the Treasure mana spent on it.
+#[test]
+fn marut_refunds_treasure_mana() {
+    let mut g = pod(2);
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 {
+        let t = g.add_token_to_battlefield(0, &crabomination_base::tokens::treasure_token());
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: t,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("Treasure for mana");
+    }
+    let marut = g.add_card_to_hand(0, catalog::marut());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: marut,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("five from the pool, three from Treasures");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(marut).is_some());
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 3, "three spent, three made");
+}

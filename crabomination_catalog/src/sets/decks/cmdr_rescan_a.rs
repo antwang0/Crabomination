@@ -550,3 +550,42 @@ pub fn xira_the_golden_sting() -> CardDefinition {
         )
     }
 }
+
+/// Marut — {8} 7/7 artifact Construct; trample. When it enters, if mana from
+/// a Treasure was spent to cast it, create a Treasure for each such mana.
+/// (Kalain, Mastermind Plum.)
+pub fn marut() -> CardDefinition {
+    CardDefinition {
+        name: "Marut",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::CastWithTreasureMana { what: Selector::This }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::TreasureManaSpentToCastSource,
+                definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stunning Reversal — {3}{B} instant. The next time you would lose the game
+/// this turn, instead draw seven cards and your life total becomes 1. Exile
+/// Stunning Reversal. (The Last Ride, Morinfen.)
+pub fn stunning_reversal() -> CardDefinition {
+    CardDefinition {
+        name: "Stunning Reversal",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::NextLossThisTurnDrawSevenAtOne,
+        exile_on_resolve: true,
+        ..Default::default()
+    }
+}
