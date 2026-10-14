@@ -1004,6 +1004,11 @@ pub struct PlayerData {
     /// (Morningtide's Light). Cleared as this player's turn begins.
     #[serde(default)]
     pub all_damage_prevented_until_next_turn: bool,
+    /// Non-mana activated abilities this player activated this turn — the
+    /// Commander bot's activation-loop brake (`server::activation_cap`).
+    /// Reset for every seat as each turn begins.
+    #[serde(default)]
+    pub nonmana_activations_this_turn: u32,
     /// CR 702.16 — "you gain protection from the color of your choice until
     /// end of turn" (Seht's Tiger): sources of these colors can't target this
     /// player and their damage to them is prevented. Cleared at cleanup.
@@ -1852,6 +1857,7 @@ impl Player {
             protected_from_everything: false,
             all_damage_prevented_this_turn: false,
             all_damage_prevented_until_next_turn: false,
+            nonmana_activations_this_turn: 0,
             protection_colors_eot: crate::mana::ColorSet::empty(),
             protected_from_seats_eot: 0,
             protected_from_seats_until_next_turn: 0,

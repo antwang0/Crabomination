@@ -3264,6 +3264,7 @@ impl Bot for HeuristicBot {
         let step = state.with_frozen_layers(|state| self.next_action_inner(state, seat))?;
         Some(
             if stacks_onto_own_activation(state, seat, &step.action)
+                || super::activation_cap::over_activation_cap(state, seat, &step.action)
                 || super::loop_hazard::action_starts_loop(state, seat, &step, &self.weights)
             {
                 BotStep::plain(GameAction::PassPriority)

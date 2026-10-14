@@ -5261,6 +5261,9 @@ impl GameState {
         for pl in &mut self.players {
             pl.life_gained_this_turn = 0;
             pl.life_at_turn_start = pl.life;
+            if pl.nonmana_activations_this_turn != 0 {
+                pl.nonmana_activations_this_turn = 0;
+            }
             // "For the first time each turn" life-gain gates key on the same
             // turn boundary.
             pl.gained_life_earlier_this_turn = false;

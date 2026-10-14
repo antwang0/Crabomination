@@ -24069,6 +24069,9 @@ impl GameState {
         if ability.waterbend {
             self.note_bent(p, crate::effect::BendKind::Water, events);
         }
+        if !ability_is_mana {
+            self.players[p].nonmana_activations_this_turn += 1;
+        }
         if !ability_is_mana || !ability.tap_cost {
             events.push(GameEvent::AbilityActivated {
                 source: card_id,
