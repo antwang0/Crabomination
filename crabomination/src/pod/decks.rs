@@ -60297,3 +60297,88 @@ pub const VISARA_THE_DREADFUL_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const ELLIE_COMMANDERS: &[CardFactory] = &[ellie_brick_master, ellie_vengeful_hunter];
+
+/// **Ellie, Brick Master and Ellie, Vengeful Hunter**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 8 Mountains + 9 Swamps = 98.
+/// Ellie, Brick Master and Ellie, Vengeful Hunter (EDHREC, fetched 2026-10-14).
+pub const ELLIE_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, idol_of_oblivion, lightning_greaves, rakdos_signet,
+    skullclamp, sol_ring, talisman_of_indulgence, whip_of_erebos, blackcleave_cliffs,
+    blazemire_verge, blightstep_pathway, blood_crypt, bloodstained_mire, command_tower,
+    dragonskull_summit, exotic_orchard, foreboding_ruins, graven_cairns, haunted_ridge,
+    luxury_suite, raucous_theater, shadowblood_ridge, smoldering_marsh, sulfurous_springs,
+    tainted_peak, arnyn_deathbloom_botanist, blood_artist, braids_arisen_nightmare,
+    elegy_acolyte, forsaken_miner, garna_bloodfist_of_keld, gisa_the_hellraiser, gravecrawler,
+    jadar_ghoulcaller_of_nephalia, juri_master_of_the_revue, kardur_doomscourge,
+    lagomos_hand_of_hatred, loyal_apprentice, mahadi_emporium_master, marionette_apprentice,
+    massacre_wurm, mayhem_devil, mirkwood_bats, morbid_opportunist, nadiers_nightblade,
+    ophiomancer, pitiless_plunderer, professional_face_breaker, sephiroth_fabled_soldier,
+    siege_gang_lieutenant, undead_augur, vengeful_bloodwitch, warren_soultrader,
+    zulaport_cutthroat, agent_of_the_iron_throne, bastion_of_remembrance, city_on_fire,
+    curse_of_opulence, dictate_of_erebos, eternal_thirst, goblin_bombardment, impact_tremors,
+    vampiric_link, chaos_warp, dark_ritual, deadly_dispute, deadly_rollick, rakdos_charm,
+    terminate, tragic_slip, village_rites, withering_torment, liliana_dreadhorde_general,
+    blasphemous_act, demonic_tutor, feed_the_swarm, nights_whisper, sundering_eruption,
+    vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const BILBO_2_COMMANDERS: &[CardFactory] = &[bilbo_fellow_conspirator];
+
+/// **Bilbo, Fellow Conspirator**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Forests = 99.
+/// Bilbo, Fellow Conspirator (EDHREC, fetched 2026-10-14).
+pub const BILBO_2_MAIN: &[CardFactory] = &[
+    arcane_signet, bag_end_banquet, emerald_medallion, hot_dog_cart, idol_of_oblivion,
+    inspiring_statuary, krark_clan_ironworks, necklace_of_girion, nuka_cola_vending_machine,
+    sol_ring, transmutation_font, fountainport, gingerbread_cabin, hobbit_hole, reliquary_tower,
+    stardew_valley, the_shire, war_room, academy_manufactor, bosco_just_a_bear,
+    bristlebud_farmer, delighted_halfling, displaced_dinosaurs, elanor_gardner, feasting_hobbit,
+    feasting_troll_king, galadriel_gift_giver, gilded_goose, honored_dreyleader,
+    jaheira_friend_of_the_forest, llanowar_elves, meriadoc_brandybuck, michelangelo_the_heart,
+    mutagen_man_living_ooze, peregrin_took, provisions_merchant, quina_qu_gourmet,
+    sarinth_steelseeker, stridehangar_automaton, syr_ginger_the_meal_ender, teething_wurmlet,
+    the_cabbage_merchant, tippy_toe_terrific_partner, tireless_provisioner, tough_cookie,
+    unlucky_cabbage_merchant, campsite_cuisine, doubling_season, gourmands_talent, heroic_feast,
+    killer_service, night_of_the_sweets_revenge, ninja_pizza, parallel_lives, trail_of_crumbs,
+    beast_within, fog, heroic_intervention, pawpatch_formation, rampage_of_the_clans,
+    second_harvest, stew_the_coneys, bumis_feast_lecture, for_the_common_good,
+    giant_opportunity, many_partings, natures_lore, return_from_the_wilds, revive_the_shire,
+    spider_food, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];
+
+pub const THE_LUNAR_WHALE_COMMANDERS: &[CardFactory] = &[the_lunar_whale];
+
+/// **The Lunar Whale**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// The Lunar Whale (EDHREC, fetched 2026-10-14).
+pub const THE_LUNAR_WHALE_MAIN: &[CardFactory] = &[
+    aether_spellbomb, aetherflux_reservoir, arcane_signet, basalt_monolith, cloud_key,
+    crystal_skull_isu_spyglass, everflowing_chalice, fellwar_stone, midnight_clock, mind_stone,
+    mystic_forge, sapphire_medallion, senseis_divining_top, sky_diamond, sol_ring,
+    thought_vessel, uthros_research_craft, academy_ruins, buried_ruin, darksteel_citadel,
+    inventors_fair, mystic_sanctuary, otawara_soaring_city, reliquary_tower, seat_of_the_synod,
+    theorists_sanctum, urzas_saga, cyberdrive_awakener, emrakul_the_exigent_doom,
+    emry_lurker_of_the_loch, etherium_sculptor, foundry_inspector, glaring_fleshraker,
+    hullbreaker_horror, jhoiras_familiar, kappa_cannoneer, laboratory_maniac,
+    mmmenon_the_right_hand, ornithopter_of_paradise, padeem_consul_of_innovation,
+    phyrexian_metamorph, riddlesmith, sai_master_thopterist, silver_myr, starbreach_whale,
+    the_reality_chip, thought_monitor, trinket_mage, urza_lord_high_artificer,
+    efficient_construction, plan_for_all_outcomes, propaganda, rhystic_study,
+    thopter_spy_network, an_offer_you_cant_refuse, brainstorm, counterspell, cyclonic_rift,
+    frantic_search, high_tide, mana_drain, negate, pongify, rapid_hybridization,
+    sink_into_stupor, snap, tezzeret_the_seeker, fabricate, gitaxian_probe, ponder, preordain,
+    thoughtcast, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];

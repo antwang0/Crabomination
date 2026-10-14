@@ -13296,6 +13296,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VISARA_THE_DREADFUL_COMMANDERS,
             main: decks::VISARA_THE_DREADFUL_MAIN,
         },
+        // Seat 2141: Ellie, Brick Master and Ellie, Vengeful Hunter's EDHREC average deck. `--pod-decks 2141`.
+        PodDeck {
+            name: "Ellie, Brick Master and Ellie, Vengeful Hunter (BR)",
+            commanders: decks::ELLIE_COMMANDERS,
+            main: decks::ELLIE_MAIN,
+        },
+        // Seat 2142: Bilbo, Fellow Conspirator's EDHREC average deck. `--pod-decks 2142`.
+        PodDeck {
+            name: "Bilbo, Fellow Conspirator (G)",
+            commanders: decks::BILBO_2_COMMANDERS,
+            main: decks::BILBO_2_MAIN,
+        },
+        // Seat 2143: The Lunar Whale's EDHREC average deck. `--pod-decks 2143`.
+        PodDeck {
+            name: "The Lunar Whale (U)",
+            commanders: decks::THE_LUNAR_WHALE_COMMANDERS,
+            main: decks::THE_LUNAR_WHALE_MAIN,
+        },
     ]
 }
 
@@ -17268,6 +17286,9 @@ mod tests {
             ("Kentaro, the Smiling Cat", &[0x1270]),
             ("Jadzi, Steward of Fate", &[0x1271]),
             ("Visara the Dreadful", &[0x1272]),
+            ("Ellie, Brick Master and Ellie, Vengeful Hunter", &[0x1273]),
+            ("Bilbo, Fellow Conspirator", &[0x1274]),
+            ("The Lunar Whale", &[0x1275]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
