@@ -3226,7 +3226,7 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].dealt_combat_damage_to_player_this_turn),
-            Predicate::SourceHasDealtDamage => {
+            Predicate::SourceHasDealtDamage | Predicate::SourceHasDealtCombatDamage => {
                 ctx.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| c.has_dealt_damage)
             }
             Predicate::AttackedByYourAssassinThisTurn { who } => self

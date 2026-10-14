@@ -7364,6 +7364,9 @@ pub(crate) mod debug_flag {
     /// The card asks whether it has dealt damage yet
     /// (`Predicate::SourceHasDealtDamage` — Ratonhnhaké꞉ton).
     pub const OWN_DAMAGE: u8 = 1 << 6;
+    /// The same question about **combat** damage only
+    /// (`Predicate::SourceHasDealtCombatDamage` — Ruric Thar, Magecrusher).
+    pub const OWN_COMBAT_DAMAGE: u8 = 1 << 7;
 }
 
 impl CardDefinition {
@@ -7986,6 +7989,13 @@ impl CardDefinition {
         self.debug_flags() & debug_flag::OWN_DAMAGE != 0
     }
 
+    /// Whether this card asks if it has dealt **combat** damage yet
+    /// (`Predicate::SourceHasDealtCombatDamage`): only combat damage then
+    /// stamps `CardInstance::has_dealt_damage`.
+    pub fn tracks_own_combat_damage(&self) -> bool {
+        self.debug_flags() & debug_flag::OWN_COMBAT_DAMAGE != 0
+    }
+
     /// Whether combat damage this card deals is remembered **by its name**
     /// (`Selector::OpponentsCombatDamagedByOwnName`, Gollum). Gates the combat
     /// path's write into `combat_victims_by_name`.
@@ -8068,6 +8078,9 @@ impl CardDefinition {
                 }
                 if dbg.contains("SourceHasDealtDamage") {
                     v |= debug_flag::OWN_DAMAGE;
+                }
+                if dbg.contains("SourceHasDealtCombatDamage") {
+                    v |= debug_flag::OWN_COMBAT_DAMAGE;
                 }
                 if dbg.contains("DamageToSourceThisTurnFromOthersNamedSame") {
                     v |= debug_flag::DAMAGE_BY_NAME;

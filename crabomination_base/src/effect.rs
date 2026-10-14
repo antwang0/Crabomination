@@ -2301,6 +2301,10 @@ pub enum Predicate {
     /// The effect's source permanent has dealt damage since it entered —
     /// negated, "as long as [this] hasn't dealt damage yet" (Ratonhnhaké꞉ton).
     SourceHasDealtDamage,
+    /// The source permanent has dealt **combat** damage since it entered —
+    /// negated, "as long as [this] hasn't dealt combat damage yet" (Ruric
+    /// Thar, Magecrusher). Shares `CardInstance::has_dealt_damage`.
+    SourceHasDealtCombatDamage,
     /// `who` was attacked this turn by an Assassin the effect's controller
     /// controlled (Ramses, Assassin Lord). Backed by
     /// `Player::attacked_by_assassins_of`.
