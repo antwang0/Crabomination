@@ -15288,6 +15288,156 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MIKEY_MONA_COMMANDERS,
             main: decks::MIKEY_MONA_MAIN,
         },
+        // Seat 2473: Shu Yun, the Silent Tempest's EDHREC average deck. `--pod-decks 2473`.
+        PodDeck {
+            name: "Shu Yun, the Silent Tempest (WUR)",
+            commanders: decks::SHU_YUN_COMMANDERS,
+            main: decks::SHU_YUN_MAIN,
+        },
+        // Seat 2474: Tokka & Rahzar, Terrible Twos's EDHREC average deck. `--pod-decks 2474`.
+        PodDeck {
+            name: "Tokka & Rahzar, Terrible Twos (BR)",
+            commanders: decks::TOKKA_RAHZAR_2_COMMANDERS,
+            main: decks::TOKKA_RAHZAR_2_MAIN,
+        },
+        // Seat 2475: Taeko, the Patient Avalanche's EDHREC average deck. `--pod-decks 2475`.
+        PodDeck {
+            name: "Taeko, the Patient Avalanche (UB)",
+            commanders: decks::TAEKO_COMMANDERS,
+            main: decks::TAEKO_MAIN,
+        },
+        // Seat 2476: Vikya, Scorching Stalwart's EDHREC average deck. `--pod-decks 2476`.
+        PodDeck {
+            name: "Vikya, Scorching Stalwart (WR)",
+            commanders: decks::VIKYA_COMMANDERS,
+            main: decks::VIKYA_MAIN,
+        },
+        // Seat 2477: The Tarrasque's EDHREC average deck. `--pod-decks 2477`.
+        PodDeck {
+            name: "The Tarrasque (G)",
+            commanders: decks::THE_TARRASQUE_COMMANDERS,
+            main: decks::THE_TARRASQUE_MAIN,
+        },
+        // Seat 2478: Gerrard, Weatherlight Hero's EDHREC average deck. `--pod-decks 2478`.
+        PodDeck {
+            name: "Gerrard, Weatherlight Hero (WR)",
+            commanders: decks::GERRARD_COMMANDERS,
+            main: decks::GERRARD_MAIN,
+        },
+        // Seat 2479: Risona, Asari Commander's EDHREC average deck. `--pod-decks 2479`.
+        PodDeck {
+            name: "Risona, Asari Commander (WR)",
+            commanders: decks::RISONA_COMMANDERS,
+            main: decks::RISONA_MAIN,
+        },
+        // Seat 2480: Taniwha's EDHREC average deck. `--pod-decks 2480`.
+        PodDeck {
+            name: "Taniwha (U)",
+            commanders: decks::TANIWHA_COMMANDERS,
+            main: decks::TANIWHA_MAIN,
+        },
+        // Seat 2481: Weatherlight Compleated's EDHREC average deck. `--pod-decks 2481`.
+        PodDeck {
+            name: "Weatherlight Compleated (C)",
+            commanders: decks::WEATHERLIGHT_COMPLEATED_COMMANDERS,
+            main: decks::WEATHERLIGHT_COMPLEATED_MAIN,
+        },
+        // Seat 2482: Najal, the Storm Runner's EDHREC average deck. `--pod-decks 2482`.
+        PodDeck {
+            name: "Najal, the Storm Runner (UR)",
+            commanders: decks::NAJAL_COMMANDERS,
+            main: decks::NAJAL_MAIN,
+        },
+        // Seat 2483: Moon Girl and Devil Dinosaur's EDHREC average deck. `--pod-decks 2483`.
+        PodDeck {
+            name: "Moon Girl and Devil Dinosaur (UG)",
+            commanders: decks::MOON_GIRL_AND_DEVIL_DINOSAUR_COMMANDERS,
+            main: decks::MOON_GIRL_AND_DEVIL_DINOSAUR_MAIN,
+        },
+        // Seat 2484: Katilda, Dawnhart Martyr's EDHREC average deck. `--pod-decks 2484`.
+        PodDeck {
+            name: "Katilda, Dawnhart Martyr (W)",
+            commanders: decks::KATILDA_2_COMMANDERS,
+            main: decks::KATILDA_2_MAIN,
+        },
+        // Seat 2485: Aron, Benalia's Ruin's EDHREC average deck. `--pod-decks 2485`.
+        PodDeck {
+            name: "Aron, Benalia's Ruin (WB)",
+            commanders: decks::ARON_COMMANDERS,
+            main: decks::ARON_MAIN,
+        },
+        // Seat 2486: Basandra, Battle Seraph's EDHREC average deck. `--pod-decks 2486`.
+        PodDeck {
+            name: "Basandra, Battle Seraph (WR)",
+            commanders: decks::BASANDRA_COMMANDERS,
+            main: decks::BASANDRA_MAIN,
+        },
+        // Seat 2487: Kitsune, Dragon's Daughter's EDHREC average deck. `--pod-decks 2487`.
+        PodDeck {
+            name: "Kitsune, Dragon's Daughter (U)",
+            commanders: decks::KITSUNE_COMMANDERS,
+            main: decks::KITSUNE_MAIN,
+        },
+        // Seat 2488: Wilfred Mott's EDHREC average deck. `--pod-decks 2488`.
+        PodDeck {
+            name: "Wilfred Mott (W)",
+            commanders: decks::WILFRED_MOTT_COMMANDERS,
+            main: decks::WILFRED_MOTT_MAIN,
+        },
+        // Seat 2489: Hua Tuo, Honored Physician's EDHREC average deck. `--pod-decks 2489`.
+        PodDeck {
+            name: "Hua Tuo, Honored Physician (G)",
+            commanders: decks::HUA_TUO_COMMANDERS,
+            main: decks::HUA_TUO_MAIN,
+        },
+        // Seat 2490: Thomil, the Destroyer's EDHREC average deck. `--pod-decks 2490`.
+        PodDeck {
+            name: "Thomil, the Destroyer (B)",
+            commanders: decks::THOMIL_COMMANDERS,
+            main: decks::THOMIL_MAIN,
+        },
+        // Seat 2491: Balefang the Unslayable's EDHREC average deck. `--pod-decks 2491`.
+        PodDeck {
+            name: "Balefang the Unslayable (R)",
+            commanders: decks::BALEFANG_THE_UNSLAYABLE_COMMANDERS,
+            main: decks::BALEFANG_THE_UNSLAYABLE_MAIN,
+        },
+        // Seat 2492: Chief Magistrate of Mercadia's EDHREC average deck. `--pod-decks 2492`.
+        PodDeck {
+            name: "Chief Magistrate of Mercadia (WR)",
+            commanders: decks::CHIEF_MAGISTRATE_OF_MERCADIA_COMMANDERS,
+            main: decks::CHIEF_MAGISTRATE_OF_MERCADIA_MAIN,
+        },
+        // Seat 2493: Meatsqueak, Hoard Lord's EDHREC average deck. `--pod-decks 2493`.
+        PodDeck {
+            name: "Meatsqueak, Hoard Lord (G)",
+            commanders: decks::MEATSQUEAK_COMMANDERS,
+            main: decks::MEATSQUEAK_MAIN,
+        },
+        // Seat 2494: Bosco, Just a Bear's EDHREC average deck. `--pod-decks 2494`.
+        PodDeck {
+            name: "Bosco, Just a Bear (G)",
+            commanders: decks::BOSCO_COMMANDERS,
+            main: decks::BOSCO_MAIN,
+        },
+        // Seat 2495: Vulture, Feathered Fiend's EDHREC average deck. `--pod-decks 2495`.
+        PodDeck {
+            name: "Vulture, Feathered Fiend (U)",
+            commanders: decks::VULTURE_COMMANDERS,
+            main: decks::VULTURE_MAIN,
+        },
+        // Seat 2496: Captain Marvel, Shooting Star's EDHREC average deck. `--pod-decks 2496`.
+        PodDeck {
+            name: "Captain Marvel, Shooting Star (W)",
+            commanders: decks::CAPTAIN_MARVEL_COMMANDERS,
+            main: decks::CAPTAIN_MARVEL_MAIN,
+        },
+        // Seat 2497: Senu, Keen-Eyed Protector's EDHREC average deck. `--pod-decks 2497`.
+        PodDeck {
+            name: "Senu, Keen-Eyed Protector (W)",
+            commanders: decks::SENU_COMMANDERS,
+            main: decks::SENU_MAIN,
+        },
     ]
 }
 
@@ -19593,6 +19743,31 @@ mod tests {
             ("The Last Ride", &[0x13BC]),
             ("Morinfen", &[0x13BD]),
             ("Mikey & Mona, Mutant Sitters", &[0x13BE]),
+            ("Shu Yun, the Silent Tempest", &[0x13BF]),
+            ("Tokka & Rahzar, Terrible Twos", &[0x13C0]),
+            ("Taeko, the Patient Avalanche", &[0x13C1]),
+            ("Vikya, Scorching Stalwart", &[0x13C2]),
+            ("The Tarrasque", &[0x13C3]),
+            ("Gerrard, Weatherlight Hero", &[0x13C4]),
+            ("Risona, Asari Commander", &[0x13C5]),
+            ("Taniwha", &[0x13C6]),
+            ("Weatherlight Compleated", &[0x13C7]),
+            ("Najal, the Storm Runner", &[0x13C8]),
+            ("Moon Girl and Devil Dinosaur", &[0x13C9]),
+            ("Katilda, Dawnhart Martyr", &[0x13CA]),
+            ("Aron, Benalia's Ruin", &[0x13CB]),
+            ("Basandra, Battle Seraph", &[0x13CC]),
+            ("Kitsune, Dragon's Daughter", &[0x13CD]),
+            ("Wilfred Mott", &[0x13CE]),
+            ("Hua Tuo, Honored Physician", &[0x13CF]),
+            ("Thomil, the Destroyer", &[0x13D0]),
+            ("Balefang the Unslayable", &[0x13D1]),
+            ("Chief Magistrate of Mercadia", &[0x13D2]),
+            ("Meatsqueak, Hoard Lord", &[0x13D3]),
+            ("Bosco, Just a Bear", &[0x13D4]),
+            ("Vulture, Feathered Fiend", &[0x13D5]),
+            ("Captain Marvel, Shooting Star", &[0x13D6]),
+            ("Senu, Keen-Eyed Protector", &[0x13D7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
