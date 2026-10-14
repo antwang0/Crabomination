@@ -28875,6 +28875,31 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GuessTopCardKind { right, wrong } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let land = rand::RngExt::random::<bool>(&mut self.rng.draw());
+                let kind = if land { "land" } else { "nonland" };
+                let Some(top_is_land) =
+                    self.players[ctx.controller].library.first().map(|c| c.definition.is_land())
+                else {
+                    return self.run_effect(right, ctx, events);
+                };
+                let guess_yes = matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        description: format!("Is the top card of their library a {kind} card?"),
+                        kind: OptionalKind::Neutral,
+                    }),
+                    DecisionAnswer::Bool(true)
+                );
+                let guessed_right = guess_yes == (top_is_land == land);
+                if guessed_right {
+                    self.run_effect(right, ctx, events)
+                } else {
+                    self.run_effect(wrong, ctx, events)
+                }
+            }
+
             Effect::ReturnVictimAndAttachSelf => {
                 // Scythe of the Wretched — the dying creature must have been
                 // damaged this turn by the Equipment's host.

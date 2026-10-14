@@ -6898,6 +6898,14 @@ pub enum Effect {
     /// wrong. The guess rides a `Decision::OptionalTrigger` asked of the
     /// opponent.
     LiarsPendulum,
+    /// Gollum, Scheming Guide — the controller chooses land or nonland, an
+    /// opponent guesses whether the top card of the controller's library is
+    /// the chosen kind, and the card is revealed (CR 701.20): a right guess
+    /// runs `right`, a wrong one `wrong`. The kind is the game RNG's pick (a
+    /// bluff is policy, not rules); the guess rides a `Decision::OptionalTrigger`
+    /// asked of the first opponent in turn order. An empty library is a
+    /// right guess.
+    GuessTopCardKind { right: Box<Effect>, wrong: Box<Effect> },
     /// Scythe of the Wretched: a creature the Equipment's host damaged this
     /// turn died — return that card to the battlefield under the Equipment
     /// controller's control and attach the Equipment to it. The check reads

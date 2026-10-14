@@ -412,6 +412,10 @@ impl Effect {
                 f(friend);
                 f(foe);
             }
+            Effect::GuessTopCardKind { right, wrong } => {
+                f(right);
+                f(wrong);
+            }
             Effect::SecretCouncilPlayerVote { per_vote, unvoted } => {
                 f(per_vote);
                 f(unvoted);
@@ -1261,6 +1265,7 @@ impl Effect {
                 on_opponent.requires_target() || on_you.requires_target()
             }
             Effect::FriendOrFoe { friend, foe } => friend.requires_target() || foe.requires_target(),
+            Effect::GuessTopCardKind { right, wrong } => right.requires_target() || wrong.requires_target(),
             Effect::ChooseDistinctPlayers(v) => v.iter().any(|e| e.requires_target()),
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames
