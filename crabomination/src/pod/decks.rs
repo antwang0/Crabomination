@@ -64493,3 +64493,31 @@ pub const KARN_4_MAIN: &[CardFactory] = &[
     // Basics
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
 ];
+
+pub const SIGRID_COMMANDERS: &[CardFactory] = &[sigrid_god_favored];
+
+/// **Sigrid, God-Favored**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Sigrid, God-Favored (EDHREC, fetched 2026-10-14).
+pub const SIGRID_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, endless_atlas, erratic_portal, marble_diamond,
+    mind_stone, oketras_monument, panharmonicon, pearl_medallion, sol_ring, castle_ardenvale,
+    demolition_field, eiganjo_seat_of_the_empire, emeria_the_sky_ruin, guildless_commons,
+    myriad_landscape, scavenger_grounds, secluded_steppe, tyrite_sanctum, war_room,
+    angel_of_the_dire_hour, aven_interrupter, aven_mindcensor, containment_priest,
+    deep_gnome_terramancer, fiend_hunter, githzerai_monk, glorious_protector, guardian_of_faith,
+    jeskai_barricade, keeper_of_the_accord, knight_of_the_white_orchid, loran_of_the_third_path,
+    loyal_warhound, mangara_the_diplomat, reidane_god_of_the_worthy, rescuer_chwinga,
+    restoration_angel, selfless_squire, skyclave_apparition, solemn_simulacrum, stonecloaker,
+    sun_titan, welcoming_vampire, werefox_bodyguard, whitemane_lion, windshaper_planetar,
+    elspeth_conquers_death, ghostly_prison, land_tax, oblivion_ring, smothering_tithe,
+    soul_snare, tocasias_welcome, touch_the_spirit_realm, cloudshift, comeuppance, dawn_charm,
+    ephemerate, flicker_of_fate, generous_gift, hallowed_moonlight, path_to_exile, reprieve,
+    return_to_dust, sejiri_shelter, settle_the_wreckage, swords_to_plowshares,
+    approach_of_the_second_sun, austere_command, return_to_the_light_realms, secret_rendezvous,
+    sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

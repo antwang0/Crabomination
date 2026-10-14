@@ -14208,6 +14208,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KARN_4_COMMANDERS,
             main: decks::KARN_4_MAIN,
         },
+        // Seat 2293: Sigrid, God-Favored's EDHREC average deck. `--pod-decks 2293`.
+        PodDeck {
+            name: "Sigrid, God-Favored (W)",
+            commanders: decks::SIGRID_COMMANDERS,
+            main: decks::SIGRID_MAIN,
+        },
     ]
 }
 
@@ -18331,6 +18337,7 @@ mod tests {
             ("Go-Shintai of Ancient Wars", &[0x1308]),
             ("Go-Shintai of Boundless Vigor", &[0x1309]),
             ("Karn, Argent Defender", &[0x130A]),
+            ("Sigrid, God-Favored", &[0x130B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
