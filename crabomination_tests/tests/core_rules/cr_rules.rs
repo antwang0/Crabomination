@@ -8519,6 +8519,38 @@ fn cr_704_5m_lichs_mirror_reset_drops_an_opponents_aura() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == growth));
 }
 
+/// CR 400.7 — a buyback card cast again doesn't carry its last cast's
+/// cost wrapper: Constant Mists' land sacrifice wrapped the definition in
+/// `WithSacrificedPt` once more per cast until the resolver overflowed the
+/// stack (pod seed 8642).
+#[test]
+fn cr_400_7_buyback_recast_does_not_nest_cost_wrappers() {
+    use crabomination::effect::Effect;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let mists = g.add_card_to_hand(0, catalog::constant_mists());
+    for _ in 0..3 {
+        g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpellBuyback {
+            card_id: mists, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("buyback cast");
+        drain_stack(&mut g);
+    }
+    let card = g.players[0].hand.iter().find(|c| c.id == mists).expect("bought back");
+    let mut depth = 0;
+    let mut e = &card.definition.effect;
+    while let Effect::WithSacrificedPt { body, .. } = e {
+        depth += 1;
+        e = body;
+    }
+    assert!(depth <= 1, "nested {depth} deep");
+}
+
 /// CR 701.10d / 119.9 — doubling a life total is a gain of the total; under
 /// an opponent's Tainted Remedy it is a loss of the total, and the event says
 /// so. DoubleLife emitted a gain only (none at all once the gain converted).

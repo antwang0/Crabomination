@@ -11998,6 +11998,23 @@ impl GameState {
             {
                 card.cost_tapped = Some(id);
             }
+            // CR 400.7 — the wrappers below ride the cast card's definition, so
+            // a card that comes back to be cast again (buyback, flashback)
+            // still carries the last cast's: peel them before re-wrapping, or
+            // every Constant Mists buyback nests one more until the resolver's
+            // recursion overflows the stack (pod seed 8642).
+            if matches!(
+                card.definition.effect,
+                Effect::WithCastDiscards { .. } | Effect::WithRevealedForCost { .. } | Effect::WithSacrificedPt { .. }
+            ) {
+                let def = card.definition_make_mut();
+                while let Effect::WithCastDiscards { body, .. }
+                | Effect::WithRevealedForCost { body, .. }
+                | Effect::WithSacrificedPt { body, .. } = &mut def.effect
+                {
+                    def.effect = std::mem::replace(&mut **body, Effect::Noop);
+                }
+            }
             // CR 601.2h — a discard paid as a cost happened before resolution;
             // carry its nonland count so "if the discarded card wasn't a land
             // card" (Grab the Prize) reads it, copies included (CR 707.10).
