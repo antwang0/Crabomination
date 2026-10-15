@@ -17478,6 +17478,108 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TITANIUM_MAN_COMMANDERS,
             main: decks::TITANIUM_MAN_MAIN,
         },
+        // Seat 2838: Rafiq of the Many's EDHREC average deck. `--pod-decks 2838`.
+        PodDeck {
+            name: "Rafiq of the Many (WUG)",
+            commanders: decks::RAFIQ_OF_THE_MANY_COMMANDERS,
+            main: decks::RAFIQ_OF_THE_MANY_MAIN,
+        },
+        // Seat 2839: The Scorpion God's EDHREC average deck. `--pod-decks 2839`.
+        PodDeck {
+            name: "The Scorpion God (BR)",
+            commanders: decks::THE_SCORPION_GOD_COMMANDERS,
+            main: decks::THE_SCORPION_GOD_MAIN,
+        },
+        // Seat 2840: Iname, Death Aspect's EDHREC average deck. `--pod-decks 2840`.
+        PodDeck {
+            name: "Iname, Death Aspect (B)",
+            commanders: decks::INAME_2_COMMANDERS,
+            main: decks::INAME_2_MAIN,
+        },
+        // Seat 2841: The Master, Mesmerist's EDHREC average deck. `--pod-decks 2841`.
+        PodDeck {
+            name: "The Master, Mesmerist (UB)",
+            commanders: decks::THE_MASTER_5_COMMANDERS,
+            main: decks::THE_MASTER_5_MAIN,
+        },
+        // Seat 2842: Haakon, Stromgald Scourge's EDHREC average deck. `--pod-decks 2842`.
+        PodDeck {
+            name: "Haakon, Stromgald Scourge (B)",
+            commanders: decks::HAAKON_COMMANDERS,
+            main: decks::HAAKON_MAIN,
+        },
+        // Seat 2843: Araña, Heart of the Spider's EDHREC average deck. `--pod-decks 2843`.
+        PodDeck {
+            name: "Araña, Heart of the Spider (WR)",
+            commanders: decks::ARANA_COMMANDERS,
+            main: decks::ARANA_MAIN,
+        },
+        // Seat 2844: Leonardo, Sewer Samurai's EDHREC average deck. `--pod-decks 2844`.
+        PodDeck {
+            name: "Leonardo, Sewer Samurai (W)",
+            commanders: decks::LEONARDO_2_COMMANDERS,
+            main: decks::LEONARDO_2_MAIN,
+        },
+        // Seat 2845: Spider-Rex, Daring Dino's EDHREC average deck. `--pod-decks 2845`.
+        PodDeck {
+            name: "Spider-Rex, Daring Dino (G)",
+            commanders: decks::SPIDER_REX_COMMANDERS,
+            main: decks::SPIDER_REX_MAIN,
+        },
+        // Seat 2846: Zuberi, Golden Feather's EDHREC average deck. `--pod-decks 2846`.
+        PodDeck {
+            name: "Zuberi, Golden Feather (W)",
+            commanders: decks::ZUBERI_COMMANDERS,
+            main: decks::ZUBERI_MAIN,
+        },
+        // Seat 2847: Arni Brokenbrow's EDHREC average deck. `--pod-decks 2847`.
+        PodDeck {
+            name: "Arni Brokenbrow (R)",
+            commanders: decks::ARNI_BROKENBROW_COMMANDERS,
+            main: decks::ARNI_BROKENBROW_MAIN,
+        },
+        // Seat 2848: Erkenbrand, Lord of Westfold's EDHREC average deck. `--pod-decks 2848`.
+        PodDeck {
+            name: "Erkenbrand, Lord of Westfold (R)",
+            commanders: decks::ERKENBRAND_COMMANDERS,
+            main: decks::ERKENBRAND_MAIN,
+        },
+        // Seat 2849: Saheeli, Consul of Oversight's EDHREC average deck. `--pod-decks 2849`.
+        PodDeck {
+            name: "Saheeli, Consul of Oversight (W)",
+            commanders: decks::SAHEELI_4_COMMANDERS,
+            main: decks::SAHEELI_4_MAIN,
+        },
+        // Seat 2850: Teo, Spirited Glider's EDHREC average deck. `--pod-decks 2850`.
+        PodDeck {
+            name: "Teo, Spirited Glider (U)",
+            commanders: decks::TEO_COMMANDERS,
+            main: decks::TEO_MAIN,
+        },
+        // Seat 2851: Danitha, Sword of Hope's EDHREC average deck. `--pod-decks 2851`.
+        PodDeck {
+            name: "Danitha, Sword of Hope (W)",
+            commanders: decks::DANITHA_4_COMMANDERS,
+            main: decks::DANITHA_4_MAIN,
+        },
+        // Seat 2852: Hawkeye, Bowslinger's EDHREC average deck. `--pod-decks 2852`.
+        PodDeck {
+            name: "Hawkeye, Bowslinger (W)",
+            commanders: decks::HAWKEYE_5_COMMANDERS,
+            main: decks::HAWKEYE_5_MAIN,
+        },
+        // Seat 2853: Fíli the Pathfinder's EDHREC average deck. `--pod-decks 2853`.
+        PodDeck {
+            name: "Fíli the Pathfinder (W)",
+            commanders: decks::FILI_THE_PATHFINDER_COMMANDERS,
+            main: decks::FILI_THE_PATHFINDER_MAIN,
+        },
+        // Seat 2854: Falcon, Joaquin Torres's EDHREC average deck. `--pod-decks 2854`.
+        PodDeck {
+            name: "Falcon, Joaquin Torres (W)",
+            commanders: decks::FALCON_COMMANDERS,
+            main: decks::FALCON_MAIN,
+        },
     ]
 }
 
@@ -22151,6 +22253,23 @@ mod tests {
             ("Spider-Man, Web-Spinner", &[0x1529]),
             ("Silver Sable, Mercenary Leader", &[0x152A]),
             ("Titanium Man", &[0x152B]),
+            ("Rafiq of the Many", &[0x152C]),
+            ("The Scorpion God", &[0x152D]),
+            ("Iname, Death Aspect", &[0x152E]),
+            ("The Master, Mesmerist", &[0x152F]),
+            ("Haakon, Stromgald Scourge", &[0x1530]),
+            ("Araña, Heart of the Spider", &[0x1531]),
+            ("Leonardo, Sewer Samurai", &[0x1532]),
+            ("Spider-Rex, Daring Dino", &[0x1533]),
+            ("Zuberi, Golden Feather", &[0x1534]),
+            ("Arni Brokenbrow", &[0x1535]),
+            ("Erkenbrand, Lord of Westfold", &[0x1536]),
+            ("Saheeli, Consul of Oversight", &[0x1537]),
+            ("Teo, Spirited Glider", &[0x1538]),
+            ("Danitha, Sword of Hope", &[0x1539]),
+            ("Hawkeye, Bowslinger", &[0x153A]),
+            ("Fíli the Pathfinder", &[0x153B]),
+            ("Falcon, Joaquin Torres", &[0x153C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
