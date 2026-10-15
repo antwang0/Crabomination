@@ -77545,3 +77545,90 @@ pub const THE_TERROR_OF_SERPENTS_PASS_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island, island, island,
 ];
+
+pub const MISHRA_5_COMMANDERS: &[CardFactory] = &[mishra_artificer_prodigy];
+
+/// **Mishra, Artificer Prodigy**'s EDHREC average deck, card for card:
+/// 87 nonbasic cards + 5 Islands + 3 Mountains + 4 Swamps = 99.
+/// Mishra, Artificer Prodigy (EDHREC, fetched 2026-10-15).
+pub const MISHRA_5_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, bolass_citadel, cloud_key, darksteel_forge,
+    dimir_signet, encroaching_mycosynth, fellwar_stone, izzet_signet, lightning_greaves,
+    mox_opal, mycosynth_lattice, mystic_forge, rakdos_signet, sculpting_steel,
+    senseis_divining_top, sol_ring, talisman_of_creativity, talisman_of_dominance,
+    talisman_of_indulgence, unwinding_clock, vexing_bauble, void_mirror, academy_ruins,
+    blood_crypt, bloodstained_mire, buried_ruin, command_tower, crumbling_necropolis,
+    darksteel_citadel, exotic_orchard, great_furnace, inventors_fair, luxury_suite,
+    morphic_pool, polluted_delta, scalding_tarn, seat_of_the_synod, spire_of_industry,
+    steam_vents, training_center, urzas_saga, vault_of_whispers, watery_grave, xanders_lounge,
+    baleful_strix, emry_lurker_of_the_loch, enthusiastic_mechanaut, etherium_sculptor,
+    foundry_inspector, goblin_welder, jhoira_weatherlight_captain, master_transmuter,
+    myr_retriever, neera_wild_mage, nullstone_gargoyle, padeem_consul_of_innovation,
+    phyrexian_metamorph, sai_master_thopterist, scrap_trawler, shimmer_myr, solemn_simulacrum,
+    thada_adel_acquisitor, the_reality_chip, thought_monitor, urza_lord_high_artificer,
+    vedalken_archmage, biotransference, blood_funnel, nether_void, planar_chaos,
+    possibility_storm, rhystic_study, an_offer_you_cant_refuse, arcane_denial, chaos_warp,
+    counterspell, cyclonic_rift, vampiric_tutor, whir_of_invention, tezzeret_the_seeker,
+    blasphemous_act, demonic_tutor, fabricate, praetors_grasp, toxic_deluge, vandalblast,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const ARWEN_2_COMMANDERS: &[CardFactory] = &[arwen_mortal_queen];
+
+/// **Arwen, Mortal Queen**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Forests + 9 Plains = 99.
+/// Arwen, Mortal Queen (EDHREC, fetched 2026-10-15).
+pub const ARWEN_2_MAIN: &[CardFactory] = &[
+    arcane_signet, ozolith_the_shattered_spire, sol_ring, staff_of_compleation,
+    sword_of_truth_and_justice, the_great_henge, the_ozolith, bountiful_promenade, brushland,
+    canopy_vista, command_tower, fortified_village, gavony_township, hushwood_verge,
+    karns_bastion, nesting_grounds, overgrown_farmland, selesnya_sanctuary, sungrass_prairie,
+    sunpetal_grove, temple_garden, temple_of_plenty, windswept_heath, abzan_falconer,
+    aragorn_company_leader, arwen_weaver_of_hope, avacyns_pilgrim, birds_of_paradise,
+    bloated_contaminator, cankerbloom, champion_of_lambholt, conclave_mentor,
+    dusk_legion_duelist, elvish_mystic, evolution_sage, evolution_witness, exemplar_of_light,
+    forgotten_ancient, grateful_apparition, gyre_sage, huatlis_raptor, incubation_druid,
+    kami_of_whispered_hopes, kodama_of_the_west_tree, kutzil_malamet_exemplar,
+    laezel_vlaakiths_champion, llanowar_elves, metastatic_evangel, norns_choirmaster,
+    park_heights_maverick, patrolling_peacemaker, pollenbright_druid, rishkar_peema_renegade,
+    slippery_bogbonder, dawn_of_a_new_age, felidar_retreat, hardened_scales, innkeepers_talent,
+    resourceful_defense, terrasymbiosis, tribute_to_the_world_tree, beast_within,
+    contractual_safeguard, ephemerate, generous_gift, heroic_intervention, inspiring_call,
+    path_to_exile, swords_to_plowshares, unbounded_potential, elspeth_resplendent,
+    austere_command, cultivate, damning_verdict, natures_lore, rampant_growth, smell_fear,
+    thirsting_roots, unnatural_restoration,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const FRODO_BAGGINS_COMMANDERS: &[CardFactory] = &[frodo_baggins];
+
+/// **Frodo Baggins**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Forests + 11 Plains = 99.
+/// Frodo Baggins (EDHREC, fetched 2026-10-15).
+pub const FRODO_BAGGINS_MAIN: &[CardFactory] = &[
+    arcane_signet, barrow_blade, bilbos_ring, infiltration_lens, inherited_envelope,
+    mirror_of_galadriel, mithril_coat, relic_of_legends, sol_ring, swiftfoot_boots, brushland,
+    canopy_vista, command_tower, fortified_village, great_hall_of_the_citadel, minas_tirith,
+    overgrown_farmland, rogues_passage, selesnya_sanctuary, sungrass_prairie, sunpetal_grove,
+    temple_garden, the_grey_havens, the_shire, aragorn_and_arwen_wed, aragorn_company_leader,
+    arwen_mortal_queen, belladonna_took, bill_the_pony, boromir_warden_of_the_tower,
+    butterbur_bree_innkeeper, delighted_halfling, faramir_field_commander, farmer_cotton,
+    gandalf_the_white, kutzil_malamet_exemplar, legolas_greenleaf, loran_of_the_third_path,
+    meriadoc_brandybuck, odric_master_tactician, peregrin_took, radagast_of_rhosgobel,
+    reki_the_history_of_kamigawa, rosie_cotton_of_south_lane, saffi_eriksdotter,
+    sam_loyal_attendant, samwise_gamgee, samwise_the_stouthearted, serah_farron,
+    shalai_voice_of_plenty, teshar_ancestors_apostle, the_notary_hobbits,
+    toski_bearer_of_secrets, venat_heart_of_hydaelyn, eowyn_lady_of_rohan, day_of_destiny,
+    duelists_heritage, flowering_of_the_white_tree, shortcut_to_mushrooms, tale_of_tinuviel,
+    war_of_the_last_alliance, wild_growth, beast_within, bombadils_song, heroic_intervention,
+    path_to_exile, reprieve, slip_on_the_ring, swords_to_plowshares, you_cannot_pass, cultivate,
+    many_partings, rampant_growth, revive_the_shire, the_battle_of_bywater, the_ring_goes_south,
+    urzas_ruinous_blast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

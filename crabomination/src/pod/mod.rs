@@ -17028,6 +17028,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_TERROR_OF_SERPENTS_PASS_COMMANDERS,
             main: decks::THE_TERROR_OF_SERPENTS_PASS_MAIN,
         },
+        // Seat 2763: Mishra, Artificer Prodigy's EDHREC average deck. `--pod-decks 2763`.
+        PodDeck {
+            name: "Mishra, Artificer Prodigy (UBR)",
+            commanders: decks::MISHRA_5_COMMANDERS,
+            main: decks::MISHRA_5_MAIN,
+        },
+        // Seat 2764: Arwen, Mortal Queen's EDHREC average deck. `--pod-decks 2764`.
+        PodDeck {
+            name: "Arwen, Mortal Queen (WG)",
+            commanders: decks::ARWEN_2_COMMANDERS,
+            main: decks::ARWEN_2_MAIN,
+        },
+        // Seat 2765: Frodo Baggins's EDHREC average deck. `--pod-decks 2765`.
+        PodDeck {
+            name: "Frodo Baggins (WG)",
+            commanders: decks::FRODO_BAGGINS_COMMANDERS,
+            main: decks::FRODO_BAGGINS_MAIN,
+        },
     ]
 }
 
@@ -21626,6 +21644,9 @@ mod tests {
             ("Lady Orca", &[0x14DE]),
             ("Casey Jones, Jury-Rig Justiciar", &[0x14DF]),
             ("The Terror of Serpent's Pass", &[0x14E0]),
+            ("Mishra, Artificer Prodigy", &[0x14E1]),
+            ("Arwen, Mortal Queen", &[0x14E2]),
+            ("Frodo Baggins", &[0x14E3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
