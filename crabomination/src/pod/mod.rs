@@ -15804,6 +15804,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NIGHTHAWK_COMMANDERS,
             main: decks::NIGHTHAWK_MAIN,
         },
+        // Seat 2559: Krydle of Baldur's Gate's EDHREC average deck. `--pod-decks 2559`.
+        PodDeck {
+            name: "Krydle of Baldur's Gate (UB)",
+            commanders: decks::KRYDLE_OF_BALDURS_GATE_COMMANDERS,
+            main: decks::KRYDLE_OF_BALDURS_GATE_MAIN,
+        },
+        // Seat 2560: Zareth San, the Trickster's EDHREC average deck. `--pod-decks 2560`.
+        PodDeck {
+            name: "Zareth San, the Trickster (UB)",
+            commanders: decks::ZARETH_SAN_COMMANDERS,
+            main: decks::ZARETH_SAN_MAIN,
+        },
+        // Seat 2561: Koth, the Geomancer's EDHREC average deck. `--pod-decks 2561`.
+        PodDeck {
+            name: "Koth, the Geomancer (R)",
+            commanders: decks::KOTH_COMMANDERS,
+            main: decks::KOTH_MAIN,
+        },
+        // Seat 2562: Marwyn, the Clearcutter's EDHREC average deck. `--pod-decks 2562`.
+        PodDeck {
+            name: "Marwyn, the Clearcutter (R)",
+            commanders: decks::MARWYN_3_COMMANDERS,
+            main: decks::MARWYN_3_MAIN,
+        },
+        // Seat 2563: Hawkeye, Avenging Archer's EDHREC average deck. `--pod-decks 2563`.
+        PodDeck {
+            name: "Hawkeye, Avenging Archer (UR)",
+            commanders: decks::HAWKEYE_3_COMMANDERS,
+            main: decks::HAWKEYE_3_MAIN,
+        },
+        // Seat 2564: Hawkeye, Master Marksman's EDHREC average deck. `--pod-decks 2564`.
+        PodDeck {
+            name: "Hawkeye, Master Marksman (R)",
+            commanders: decks::HAWKEYE_4_COMMANDERS,
+            main: decks::HAWKEYE_4_MAIN,
+        },
     ]
 }
 
@@ -20195,6 +20231,12 @@ mod tests {
             ("Rocksteady, Mutant Marauder", &[0x1412]),
             ("Hulk, Bruce Banner", &[0x1413]),
             ("Nighthawk, Dark Defender", &[0x1414]),
+            ("Krydle of Baldur's Gate", &[0x1415]),
+            ("Zareth San, the Trickster", &[0x1416]),
+            ("Koth, the Geomancer", &[0x1417]),
+            ("Marwyn, the Clearcutter", &[0x1418]),
+            ("Hawkeye, Avenging Archer", &[0x1419]),
+            ("Hawkeye, Master Marksman", &[0x141A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

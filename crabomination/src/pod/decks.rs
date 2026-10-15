@@ -71871,3 +71871,172 @@ pub const NIGHTHAWK_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains,
 ];
+
+pub const KRYDLE_OF_BALDURS_GATE_COMMANDERS: &[CardFactory] = &[krydle_of_baldurs_gate];
+
+/// **Krydle of Baldur's Gate**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Islands + 11 Swamps = 99.
+/// Krydle of Baldur's Gate (EDHREC, fetched 2026-10-15).
+pub const KRYDLE_OF_BALDURS_GATE_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, commanders_sphere, dimir_signet, mind_stone, mindcrank,
+    quietus_spike, sol_ring, swiftfoot_boots, talisman_of_dominance, thought_vessel,
+    vorpal_sword, bojuka_bog, choked_estuary, command_tower, darkwater_catacombs,
+    dimir_aqueduct, dismal_backwater, drowned_catacomb, reliquary_tower, rogues_passage,
+    sunken_hollow, temple_of_deceit, watery_grave, anowon_the_ruin_thief, baleful_strix,
+    changeling_outcast, consuming_aberration, fallen_shinobi, ghostly_pilferer,
+    grazilaxx_illithid_scholar, grim_hireling, hoard_robber, invisible_stalker,
+    merfolk_windrobber, nighthawk_scavenger, notion_thief, oonas_blackguard, prosperous_thief,
+    ruin_crab, shadowmage_infiltrator, slither_blade, soaring_thought_thief, soulknife_spy,
+    syr_konrad_the_grim, tetsuko_umezawa_fugitive, thief_of_sanity, thieves_guild_enforcer,
+    triton_shorestalker, zareth_san_the_trickster, aqueous_form, coastal_piracy, propaganda,
+    psychic_corrosion, reconnaissance_mission, rogue_class, aetherize, an_offer_you_cant_refuse,
+    arcane_denial, counterspell, dark_ritual, didnt_say_please, drown_in_the_loch,
+    go_for_the_throat, infernal_grasp, murder, negate, kaito_shizuki, arcane_heist,
+    extract_from_darkness, feed_the_swarm, fractured_sanity, maddening_cacophony, reanimate,
+    singularity_rupture, stolen_identity, tashas_hideous_laughter,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const ZARETH_SAN_COMMANDERS: &[CardFactory] = &[zareth_san_the_trickster];
+
+/// **Zareth San, the Trickster**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Islands + 9 Swamps = 99.
+/// Zareth San, the Trickster (EDHREC, fetched 2026-10-15).
+pub const ZARETH_SAN_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, commanders_sphere, dimir_signet, mind_stone, mindcrank,
+    sol_ring, swiftfoot_boots, talisman_of_dominance, the_water_crystal, whispersilk_cloak,
+    choked_estuary, command_tower, darkwater_catacombs, dimir_aqueduct, dismal_backwater,
+    drowned_catacomb, path_of_ancestry, reliquary_tower, rogues_passage, shipwreck_marsh,
+    sunken_hollow, temple_of_deceit, watery_grave, alora_merry_thief, anowon_the_ruin_thief,
+    azure_beastbinder, blackbloom_rogue, changeling_outcast, consuming_aberration,
+    frogtosser_banneret, ghostly_pilferer, gonti_lord_of_luxury, grazilaxx_illithid_scholar,
+    invisible_stalker, krydle_of_baldurs_gate, marang_river_prowler, merfolk_windrobber,
+    nighthawk_scavenger, notion_thief, oonas_blackguard, prosperous_thief, ruin_crab,
+    slither_blade, soaring_thought_thief, sure_footed_infiltrator, sygg_river_cutthroat,
+    thieves_guild_enforcer, thieving_skydiver, triton_shorestalker, aqueous_form,
+    court_of_cunning, psychic_corrosion, reconnaissance_mission, rogue_class, teferis_tutelage,
+    aetherize, anticognition, counterspell, dark_ritual, didnt_say_please, drown_in_the_loch,
+    go_for_the_throat, infernal_grasp, memory_plunder, negate, soul_manipulation,
+    withering_torment, kaito_dancing_shadow, breach_the_multiverse, extract_from_darkness,
+    feed_the_swarm, fractured_sanity, maddening_cacophony, notorious_throng, reanimate,
+    singularity_rupture, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KOTH_COMMANDERS: &[CardFactory] = &[koth_the_geomancer];
+
+/// **Koth, the Geomancer**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Koth, the Geomancer (EDHREC, fetched 2026-10-15).
+pub const KOTH_MAIN: &[CardFactory] = &[
+    arcane_signet, bitterthorn_nissas_animus, crucible_of_worlds, endless_atlas, expedition_map,
+    ghirapur_orrery, ruby_medallion, seers_sundial, sol_ring, sword_of_the_animist, the_regalia,
+    wayfarers_bauble, cabaretti_courtyard, escape_tunnel, evolving_wilds, fabled_passage,
+    maestros_theater, myriad_landscape, riveteers_overlook, terrain_generator,
+    terramorphic_expanse, valakut_the_molten_pinnacle, akoum_hellkite, alpine_guide,
+    burnished_hart, cosis_ravager, dauntless_scrapbot, desert_were_worm, dragonmaster_outcast,
+    geode_rager, hawkeye_young_avenger, molten_man_inferno_incarnate, moraug_fury_of_akoum,
+    nesting_dragon, ojer_axonil_deepest_might, pupu_ufo, pyre_rhymer, sabotender,
+    solemn_simulacrum, spitfire_lagac, tomik_izzet_sparkmage, torbran_thane_of_red_fell,
+    troop_of_ponies, tunneling_geopede, walking_atlas, zell_dincht, fated_firepower,
+    fiery_emancipation, last_light_of_durins_day, mechanized_warfare, tectonic_reformation,
+    valakut_exploration, abrade, big_score, chaos_warp, return_the_favor, solstice_revelations,
+    thrill_of_possibility, unexpected_windfall, untimely_malfunction, koth_of_the_hammer,
+    koth_fire_of_resistance, blasphemous_act, cleansing_wildfire, faithless_looting,
+    geomancers_gambit, hew_the_entwood, magmatic_insight, nahiris_lithoforming,
+    sundering_eruption, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];
+
+pub const MARWYN_3_COMMANDERS: &[CardFactory] = &[marwyn_the_clearcutter];
+
+/// **Marwyn, the Clearcutter**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Marwyn, the Clearcutter (EDHREC, fetched 2026-10-15).
+pub const MARWYN_3_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_star, cloud_key, crucible_of_worlds, cursed_mirror, getaway_barrel,
+    ichor_wellspring, implement_of_combustion, krark_clan_ironworks, mycosynth_wellspring,
+    nimblewright_schematic, nutrient_block, prized_statue, ruby_medallion, sculpting_steel,
+    servo_schematic, sol_ring, spine_of_ish_sah, terrarion, ugins_nexus, wayfarers_bauble,
+    buried_ruin, great_furnace, inventors_fair, urzas_mine, urzas_saga, burnished_hart,
+    circuit_mender, craterclaw_colossus, crime_novelist, daretti_rocketeer_engineer,
+    dross_scorpion, farid_enterprising_salvager, foundry_inspector, goblin_engineer,
+    goblin_welder, imperial_recruiter, ingenious_artillerist, junk_diver, loyal_apprentice,
+    myr_retriever, palladium_myr, phyrexian_triniform, pit_automaton, ravenous_robots,
+    reckless_fireweaver, rust_harvester, scrap_trawler, solemn_simulacrum, weftstalker_ardent,
+    workshop_assistant, ghirapur_aether_grid, impact_tremors, pias_revolution,
+    underworld_breach, weapons_manufacturing, big_score, chaos_warp, demand_answers,
+    lightning_bolt, seething_song, unexpected_windfall, daretti_scrap_savant, blasphemous_act,
+    hew_the_entwood, mana_geyser, reckless_handling, scrap_mastery, trash_for_treasure,
+    vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const HAWKEYE_3_COMMANDERS: &[CardFactory] = &[hawkeye_avenging_archer];
+
+/// **Hawkeye, Avenging Archer**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 11 Islands + 11 Mountains = 99.
+/// Hawkeye, Avenging Archer (EDHREC, fetched 2026-10-15).
+pub const HAWKEYE_3_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, fellwar_stone, gorgon_flail, gorgons_head, hawkeyes_bow,
+    hunters_blowgun, izzet_signet, lightning_greaves, quietus_spike, sol_ring,
+    sting_the_glinting_dagger, swiftfoot_boots, talisman_of_creativity, thornbite_staff,
+    thought_vessel, thousand_year_elixir, arcane_lighthouse, cascade_bluffs, command_tower,
+    exotic_orchard, frostboil_snarl, reliquary_tower, riverpyre_verge, scorched_geyser,
+    shivan_reef, steam_vents, stormcarved_coast, sulfur_falls, thundering_falls,
+    training_center, aphetto_alchemist, ghyrson_starn_kelermorph, goblin_sharpshooter,
+    hawkeye_master_marksman, hawkeye_young_avenger, human_torch_johnny_storm,
+    ioreth_of_the_healing_house, kelpie_guide, loki_god_of_mischief, magda_the_hoardmaster,
+    niv_mizzet_parun, niv_mizzet_the_firemind, ojer_axonil_deepest_might, prodigal_pyromancer,
+    prodigal_sorcerer, red_hulk, thor_asgards_avenger, torbran_thane_of_red_fell, trinket_mage,
+    vizier_of_tumbling_sands, city_on_fire, curiosity, fiery_emancipation, freed_from_the_real,
+    ophidian_eye, propaganda, sigil_of_sleep, unstoppable_plan, abrade,
+    an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell, dramatic_reversal,
+    lightning_bolt, magic_damper, negate, octopus_form, pongify, refocus, shore_up,
+    blasphemous_act, chandras_ignition, fabricate, nibelheim_aflame, vandalblast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const HAWKEYE_4_COMMANDERS: &[CardFactory] = &[hawkeye_master_marksman];
+
+/// **Hawkeye, Master Marksman**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Mountains = 99.
+/// Hawkeye, Master Marksman (EDHREC, fetched 2026-10-15).
+pub const HAWKEYE_4_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, fire_diamond, hawkeyes_bow, honor_worn_shaku,
+    lightning_greaves, mind_stone, mjolnir_hammer_of_thor, mobile_garrison,
+    monument_to_endurance, paradise_mantle, patriars_seal, relic_of_legends, ruby_medallion,
+    smugglers_copter, sol_ring, springleaf_drum, sting_the_glinting_dagger, swiftfoot_boots,
+    thousand_year_elixir, fire_nation_palace, holdout_settlement, rogues_passage,
+    survivors_encampment, valakut_the_molten_pinnacle, war_room, anger, brallin_skyshark_rider,
+    containment_construct, electro_assaulting_battery, firebrand_archer, glint_horn_buccaneer,
+    hawkeye_young_avenger, inti_seneschal_of_the_sun, longshot_rebel_bowman,
+    magmakin_artillerist, misty_knight_hero_for_hire, neheb_the_eternal,
+    ojer_axonil_deepest_might, runaway_steam_kin, solphim_mayhem_dominus,
+    spider_man_new_champion, surly_badgersaur, thor_asgards_avenger, tomik_izzet_sparkmage,
+    torbran_thane_of_red_fell, city_on_fire, cool_but_rude, fated_firepower, fiery_emancipation,
+    gratuitous_violence, abrade, big_score, chaos_warp, deflecting_swat, demand_answers,
+    lightning_bolt, redirect_lightning, thrill_of_possibility, unexpected_windfall,
+    untimely_malfunction, blasphemous_act, cathartic_reunion, faithless_looting, gamble,
+    jeskas_will, mana_geyser, seize_the_spoils, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain,
+];
