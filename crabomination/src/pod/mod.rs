@@ -17262,6 +17262,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_EVERFORGER_COMMANDERS,
             main: decks::THE_EVERFORGER_MAIN,
         },
+        // Seat 2802: Dralnu, Lich Lord's EDHREC average deck. `--pod-decks 2802`.
+        PodDeck {
+            name: "Dralnu, Lich Lord (UB)",
+            commanders: decks::DRALNU_COMMANDERS,
+            main: decks::DRALNU_MAIN,
+        },
     ]
 }
 
@@ -21899,6 +21905,7 @@ mod tests {
             ("Maular, the Next Evolution", &[0x1505]),
             ("Seluma, Light of Aysen", &[0x1506]),
             ("The Everforger", &[0x1507]),
+            ("Dralnu, Lich Lord", &[0x1508]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

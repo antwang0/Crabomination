@@ -78617,3 +78617,30 @@ pub const THE_EVERFORGER_MAIN: &[CardFactory] = &[
     forest, forest, island, island, island, mountain, mountain, mountain, plains, plains,
     plains, swamp, swamp, swamp, wastes, wastes, wastes, wastes, wastes,
 ];
+
+pub const DRALNU_COMMANDERS: &[CardFactory] = &[dralnu_lich_lord];
+
+/// **Dralnu, Lich Lord**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Islands + 9 Swamps = 99.
+/// Dralnu, Lich Lord (EDHREC, fetched 2026-10-15).
+pub const DRALNU_MAIN: &[CardFactory] = &[
+    arcane_signet, catalyst_stone, dimir_signet, fellwar_stone, lightning_greaves, mind_stone,
+    sol_ring, swiftfoot_boots, talisman_of_dominance, thought_vessel, bojuka_bog,
+    choked_estuary, command_tower, dimir_aqueduct, drowned_catacomb, morphic_pool,
+    mystic_sanctuary, reliquary_tower, riptide_laboratory, shipwreck_marsh, sunken_hollow,
+    tainted_isle, temple_of_deceit, underground_river, watery_grave, archmage_emeritus,
+    baleful_strix, baral_chief_of_compliance, deranged_assistant, emet_selch_of_the_third_seat,
+    fatestitcher, gravebreaker_lamia, lord_of_the_forsaken, murmuring_mystic, oriq_loremage,
+    river_kelpie, rona_sheoldreds_faithful, sedgemoor_witch, talrand_sky_summoner,
+    tormod_the_desecrator, vohar_vodalian_desecrator, jaces_sanctum, mystic_remora, propaganda,
+    rhystic_study, secrets_of_the_dead, aetherize, an_offer_you_cant_refuse, arcane_denial,
+    brainstorm, cabal_ritual, consider, counterspell, dark_ritual, drown_in_the_loch, entomb,
+    fact_or_fiction, forbidden_alchemy, frantic_search, high_tide, infernal_grasp, negate,
+    swan_song, thought_scour, waterlogged_teachings, withering_torment, professor_onyx,
+    army_of_the_damned, damnation, decree_of_pain, demonic_tutor, exsanguinate, feed_the_swarm,
+    ponder, preordain, reanimate, rise_from_the_tides, torment_of_hailfire, toxic_deluge,
+    windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
