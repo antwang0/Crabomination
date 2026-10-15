@@ -2,15 +2,16 @@
 //! Tests in `tests/recent_b/cmdr_scan7k_a.rs`.
 
 use crate::card::{
+    LoyaltyAbility, PlaneswalkerSubtype,
     ActivatedAbility, ArtifactSubtype, BattleSubtype, CounterType, EnchantmentSubtype, EquipBonus, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
     Value,
 };
 use crate::effect::shortcut::{etb, on_attack};
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, x};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, x};
 use crate::sets::tap_add_colorless;
 use std::sync::Arc;
 
@@ -280,6 +281,240 @@ pub fn forebears_blade() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
             effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature.and(R::ControlledByYou)) },
         }],
+        ..Default::default()
+    }
+}
+
+fn trigger_is(filter: R) -> Predicate {
+    Predicate::EntityMatches { what: Selector::TriggerSource, filter }
+}
+
+fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        cost: mana,
+        supertypes: vec![],
+        ..legend(name, types, p, t)
+    }
+}
+
+/// Rune of Flight — {1}{U} Aura Rune, enchant permanent. Enters: draw a card.
+/// An enchanted creature has flying; on an Equipment, the creature it equips does.
+pub fn rune_of_flight() -> CardDefinition {
+    CardDefinition {
+        name: "Rune of Flight",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Rune], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Permanent) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying],
+            relays_through_equipment: true,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Zhalfirin Shapecraft — {1}{U} instant. Target creature has base P/T 4/3
+/// until end of turn. Draw a card.
+pub fn zhalfirin_shapecraft() -> CardDefinition {
+    CardDefinition {
+        name: "Zhalfirin Shapecraft",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SetBasePT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(4),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Orchard Warden — {4}{G}{G} 4/6 Treefolk Shaman. Whenever another Treefolk
+/// creature you control enters, you may gain life equal to its toughness.
+pub fn orchard_warden() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(trigger_is(R::Creature.and(R::HasCreatureType(CreatureType::Treefolk)))),
+            effect: Effect::MayDo {
+                description: "Gain life equal to that Treefolk's toughness?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                }),
+            },
+        }],
+        ..creature("Orchard Warden", cost(&[generic(4), g(), g()]), vec![CreatureType::Treefolk, CreatureType::Shaman], 4, 6)
+    }
+}
+
+/// Ulvenwald Observer — {4}{G}{G} 6/6 Treefolk. Whenever a creature you
+/// control with toughness 4 or greater dies, draw a card.
+pub fn ulvenwald_observer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(trigger_is(R::ToughnessAtLeast(4))),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..creature("Ulvenwald Observer", cost(&[generic(4), g(), g()]), vec![CreatureType::Treefolk], 6, 6)
+    }
+}
+
+fn changeling(name: &'static str, ability: ActivatedAbility) -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Changeling],
+        activated_abilities: vec![ability],
+        ..creature(name, cost(&[generic(2), b()]), vec![CreatureType::Shapeshifter], 2, 2)
+    }
+}
+
+/// Ghostly Changeling — {2}{B} 2/2 changeling; {1}{B}: +1/+1 until end of turn.
+pub fn ghostly_changeling() -> CardDefinition {
+    changeling(
+        "Ghostly Changeling",
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+            ..Default::default()
+        },
+    )
+}
+
+/// Moonglove Changeling — {2}{B} 2/2 changeling; {B}: deathtouch until end of turn.
+pub fn moonglove_changeling() -> CardDefinition {
+    changeling(
+        "Moonglove Changeling",
+        ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            ..Default::default()
+        },
+    )
+}
+
+/// Futurist Forge — {1}{U} artifact. Enters: draw a card. {3}{U}, sacrifice
+/// it: draw two cards.
+pub fn futurist_forge() -> CardDefinition {
+    CardDefinition {
+        name: "Futurist Forge",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// True Polymorph — {4}{U}{U} instant. Target artifact or creature becomes a
+/// copy of another target artifact or creature.
+pub fn true_polymorph() -> CardDefinition {
+    let either = || R::Artifact.or(R::Creature);
+    CardDefinition {
+        name: "True Polymorph",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BecomeCopyOf {
+            what: target_filtered(either()),
+            source: Selector::TargetFiltered { slot: 1, filter: either().and(R::OtherThanTargetSlot(0)) },
+            extra_creature_types: vec![],
+            keep_own_triggered: false,
+            keep_own_activated: false,
+            keep_name: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Iceman and Firestar — {2}{U/R}{U/R} legendary 3/3 flying Mutant Hero.
+/// Casting a blue spell taps up to one target creature; casting a red one,
+/// you may discard a card to draw a card.
+pub fn iceman_and_firestar() -> CardDefinition {
+    let cast = |c: Color| EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(R::HasColor(c)));
+    CardDefinition {
+        cost: cost(&[generic(2), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: cast(Color::Blue),
+                effect: Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                },
+            },
+            TriggeredAbility {
+                event: cast(Color::Red),
+                effect: Effect::MayDo {
+                    description: "Discard a card to draw a card?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    ])),
+                },
+            },
+        ],
+        ..legend("Iceman and Firestar", vec![CreatureType::Mutant, CreatureType::Hero], 3, 3)
+    }
+}
+
+/// The Royal Scions — {1}{U}{R} Will Rowan, loyalty 5. +1: loot. +1: target
+/// creature gets +2/+0, first strike and trample until end of turn. −8: draw
+/// four; when you do, damage equal to your hand size to any target.
+pub fn the_royal_scions() -> CardDefinition {
+    let target = || Selector::TargetFiltered { slot: 0, filter: R::Creature };
+    CardDefinition {
+        name: "The Royal Scions",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Will, PlaneswalkerSubtype::Rowan], ..Default::default() },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT { what: target(), power: Value::Const(2), toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+                    Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+                    // CR 603.7c — the reflexive trigger targets as it triggers.
+                    Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::DealDamage {
+                            to: crate::effect::shortcut::target_any(),
+                            amount: Value::HandSizeOf(PlayerRef::You),
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

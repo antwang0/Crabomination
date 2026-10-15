@@ -15802,6 +15802,16 @@ static DECKS: &[Factory] = &[
     super::decks::pelia_immortal_innovator,
     super::decks::happy_hogan_bodyguard,
     super::decks::forebears_blade,
+    super::decks::rune_of_flight,
+    super::decks::zhalfirin_shapecraft,
+    super::decks::orchard_warden,
+    super::decks::ulvenwald_observer,
+    super::decks::ghostly_changeling,
+    super::decks::moonglove_changeling,
+    super::decks::futurist_forge,
+    super::decks::true_polymorph,
+    super::decks::iceman_and_firestar,
+    super::decks::the_royal_scions,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

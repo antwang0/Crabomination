@@ -134,7 +134,7 @@ pub fn rune_of_mortality() -> CardDefinition {
         name: "Rune of Mortality",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Rune], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Permanent) },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Deathtouch],

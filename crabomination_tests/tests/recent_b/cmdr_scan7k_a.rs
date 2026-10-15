@@ -2495,3 +2495,83 @@ fn forebears_blade_follows_to_a_new_bearer() {
     assert_eq!(g.battlefield_find(blade).unwrap().attached_to, Some(heir));
     assert_eq!(pt(&g, heir), (9, 4));
 }
+
+/// Rune of Flight relays flying through an Equipment to its creature.
+#[test]
+fn rune_of_flight_on_equipment_flies_the_bearer() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let blade = g.add_card_to_battlefield(0, catalog::forebears_blade());
+    g.battlefield_find_mut(blade).unwrap().attached_to = Some(bear);
+    let rune = g.add_card_to_hand(0, catalog::rune_of_flight());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: rune, target: Some(Target::Permanent(blade)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Flying));
+    assert_eq!(g.players[0].hand.len(), 1, "drew on entry");
+}
+
+/// Orchard Warden gains a Treefolk's toughness; Ulvenwald Observer draws
+/// when a toughness-4 creature dies, not a 2/2.
+#[test]
+fn colfenor_treefolk_pair() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::orchard_warden());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let observer = g.add_card_to_hand(0, catalog::ulvenwald_observer());
+    cast(&mut g, observer);
+    assert_eq!(g.players[0].life, 26, "gained the Observer's 6 toughness");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    for id in [bear, observer] {
+        let bolt = g.add_card_to_hand(0, catalog::murder());
+        flood(&mut g);
+        g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(id)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("murder");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 1, "only the 6/6's death draws");
+}
+
+/// True Polymorph turns one creature into a copy of another.
+#[test]
+fn true_polymorph_copies_the_second_target() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let tp = g.add_card_to_hand(0, catalog::true_polymorph());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: tp, target: Some(Target::Permanent(bear)), additional_targets: vec![Target::Permanent(wurm)], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (6, 4));
+}
+
+/// Iceman and Firestar: a blue spell taps a creature.
+#[test]
+fn iceman_taps_on_a_blue_spell() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::iceman_and_firestar());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let forge = g.add_card_to_hand(0, catalog::futurist_forge());
+    cast(&mut g, forge);
+    assert!(g.battlefield_find(wurm).unwrap().tapped);
+}
+
+/// The Royal Scions' −8: draw four, then the reflexive trigger deals damage
+/// equal to the hand size.
+#[test]
+fn royal_scions_ultimate_burns_for_hand_size() {
+    let mut g = pod(3);
+    library(&mut g, 0, 6);
+    let pw = ready(&mut g, 0, catalog::the_royal_scions());
+    g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 5);
+    loyalty(&mut g, pw, 2, None);
+    assert_eq!(g.players[0].hand.len(), 4);
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(g.players[1].life + g.players[2].life, 36, "four damage to an opponent");
+}

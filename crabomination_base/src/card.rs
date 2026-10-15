@@ -472,6 +472,8 @@ pub enum EnchantmentSubtype {
     Aura, Saga, Shrine, Cartouche, Curse, Room, Class, Case, Background, Role,
     // Marvel: the Plan enchantments (Glorious Purpose's plan counters).
     Plan,
+    // Dominaria United: the Rune Auras (Rune of Flight).
+    Rune,
 }
 
 /// Spell subtypes (for instants/sorceries).
