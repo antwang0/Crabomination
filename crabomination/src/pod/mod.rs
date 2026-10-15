@@ -16146,6 +16146,72 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::AANG_5_COMMANDERS,
             main: decks::AANG_5_MAIN,
         },
+        // Seat 2616: Zuko, Avatar Hunter's EDHREC average deck. `--pod-decks 2616`.
+        PodDeck {
+            name: "Zuko, Avatar Hunter (R)",
+            commanders: decks::ZUKO_4_COMMANDERS,
+            main: decks::ZUKO_4_MAIN,
+        },
+        // Seat 2617: Morbius the Living Vampire's EDHREC average deck. `--pod-decks 2617`.
+        PodDeck {
+            name: "Morbius the Living Vampire (UB)",
+            commanders: decks::MORBIUS_THE_LIVING_VAMPIRE_COMMANDERS,
+            main: decks::MORBIUS_THE_LIVING_VAMPIRE_MAIN,
+        },
+        // Seat 2618: Gandalf, White Rider's EDHREC average deck. `--pod-decks 2618`.
+        PodDeck {
+            name: "Gandalf, White Rider (W)",
+            commanders: decks::GANDALF_8_COMMANDERS,
+            main: decks::GANDALF_8_MAIN,
+        },
+        // Seat 2619: Bayek of Siwa's EDHREC average deck. `--pod-decks 2619`.
+        PodDeck {
+            name: "Bayek of Siwa (WR)",
+            commanders: decks::BAYEK_OF_SIWA_COMMANDERS,
+            main: decks::BAYEK_OF_SIWA_MAIN,
+        },
+        // Seat 2620: Go-Shintai of Lost Wisdom's EDHREC average deck. `--pod-decks 2620`.
+        PodDeck {
+            name: "Go-Shintai of Lost Wisdom (U)",
+            commanders: decks::GO_SHINTAI_OF_LOST_WISDOM_COMMANDERS,
+            main: decks::GO_SHINTAI_OF_LOST_WISDOM_MAIN,
+        },
+        // Seat 2621: Aya of Alexandria's EDHREC average deck. `--pod-decks 2621`.
+        PodDeck {
+            name: "Aya of Alexandria (WR)",
+            commanders: decks::AYA_OF_ALEXANDRIA_COMMANDERS,
+            main: decks::AYA_OF_ALEXANDRIA_MAIN,
+        },
+        // Seat 2622: Sokka, Lateral Strategist's EDHREC average deck. `--pod-decks 2622`.
+        PodDeck {
+            name: "Sokka, Lateral Strategist (WU)",
+            commanders: decks::SOKKA_4_COMMANDERS,
+            main: decks::SOKKA_4_MAIN,
+        },
+        // Seat 2623: Thanos, Death's Consort's EDHREC average deck. `--pod-decks 2623`.
+        PodDeck {
+            name: "Thanos, Death's Consort (B)",
+            commanders: decks::THANOS_COMMANDERS,
+            main: decks::THANOS_MAIN,
+        },
+        // Seat 2624: Lord Jyscal Guado's EDHREC average deck. `--pod-decks 2624`.
+        PodDeck {
+            name: "Lord Jyscal Guado (W)",
+            commanders: decks::LORD_JYSCAL_GUADO_COMMANDERS,
+            main: decks::LORD_JYSCAL_GUADO_MAIN,
+        },
+        // Seat 2625: Mockingbird, Bobbi Morse's EDHREC average deck. `--pod-decks 2625`.
+        PodDeck {
+            name: "Mockingbird, Bobbi Morse (W)",
+            commanders: decks::MOCKINGBIRD_2_COMMANDERS,
+            main: decks::MOCKINGBIRD_2_MAIN,
+        },
+        // Seat 2626: Jacob Frye's EDHREC average deck. `--pod-decks 2626`.
+        PodDeck {
+            name: "Jacob Frye (B)",
+            commanders: decks::JACOB_FRYE_COMMANDERS,
+            main: decks::JACOB_FRYE_MAIN,
+        },
     ]
 }
 
@@ -20594,6 +20660,17 @@ mod tests {
             ("Naomi, Pillar of Order", &[0x144B]),
             ("Basri, Tomorrow's Champion", &[0x144C]),
             ("Aang, A Lot to Learn", &[0x144D]),
+            ("Zuko, Avatar Hunter", &[0x144E]),
+            ("Morbius the Living Vampire", &[0x144F]),
+            ("Gandalf, White Rider", &[0x1450]),
+            ("Bayek of Siwa", &[0x1451]),
+            ("Go-Shintai of Lost Wisdom", &[0x1452]),
+            ("Aya of Alexandria", &[0x1453]),
+            ("Sokka, Lateral Strategist", &[0x1454]),
+            ("Thanos, Death's Consort", &[0x1455]),
+            ("Lord Jyscal Guado", &[0x1456]),
+            ("Mockingbird, Bobbi Morse", &[0x1457]),
+            ("Jacob Frye", &[0x1458]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
