@@ -25290,6 +25290,14 @@ impl GameState {
             && !source_in_hand
             && let Some(owner) = self.battlefield_find(card_id).map(|c| c.owner)
         {
+            // CR 608.2h — like the sacrifice and bounce costs above, stash the
+            // leaves-battlefield LKI so a body reading the exiled source's own
+            // counters (Lost Isle Calling's "a card for each verse counter")
+            // sees the total it had when the cost was paid (CR 122.2 strips
+            // them on the move).
+            if let Some(snap) = self.battlefield_find(card_id).cloned() {
+                self.leaves_bf_lki.insert(card_id, snap);
+            }
             let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
             self.move_card_to(card_id, &crate::effect::ZoneDest::Exile, &ctx, events);
         }
