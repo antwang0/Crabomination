@@ -3410,7 +3410,7 @@ impl HeuristicBot {
             TurnStep::DeclareBlockers
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
-                if let Some(a) = pick_ninjutsu(state, seat) {
+                if let Some(a) = pick_ninjutsu(state, seat).or_else(|| super::sneak_pick::pick_sneak(state, seat)) {
                     return Some(BotStep::plain(a));
                 }
                 if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights)
@@ -7802,6 +7802,9 @@ pub(super) fn cast_candidates<'a>(
             // Coram casts from ANY graveyard, so an empty own one isn't a skip.
             && (!state.players[seat].graveyard.is_empty() || state.has_milled_play_permission(seat)))
             || (state.graveyard_creature_cast_live(seat) && !state.players[seat].graveyard.is_empty())
+            || (state.step == crate::game::types::TurnStep::DeclareBlockers
+                && !state.players[seat].graveyard.is_empty()
+                && state.graveyard_sneak_cost(seat).is_some())
         {
             spec::GY_GRANT
         } else {
@@ -9399,6 +9402,9 @@ pub(super) fn cast_candidates<'a>(
                 && (state.graveyard_sac_cast_grant(seat, c.id).is_some()
                     || state.graveyard_cast_type_available(seat, c.id).is_some()))
                 || state.graveyard_creature_cast_available(seat, c.id));
+        // CR 702.190 — Ninja Teen's graveyard sneak: an alternative cast, so
+        // it rides the own-alternative action below.
+        let own_alt = own_alt || (!granted && state.graveyard_sneak_alt(seat, c.id).is_some());
         if !own_alt && !granted {
             continue;
         }

@@ -2323,6 +2323,12 @@ pub enum StaticEffect {
     /// CR 702.133 — "each [filter] card in your graveyard has jump-start"
     /// (Niv-Mizzet, Supreme), read by `GameState::effective_jump_start`.
     GraveyardCardsHaveJumpStart { filter: SelectionRequirement },
+    /// CR 702.190 — "Creature cards in your graveyard have sneak [cost]. You
+    /// may cast creature spells from your graveyard using their sneak
+    /// abilities" (Ninja Teen's level 3): a printed sneak is used as printed,
+    /// any other creature card takes this one. Read by the graveyard
+    /// alternative-cast hop (`GameState::graveyard_sneak_cost`).
+    GraveyardCreaturesHaveSneak { cost: crate::mana::ManaCost },
     /// "Land cards in your graveyard have dredge N" (The Necrobloom, CR
     /// 702.52) — read by `GameState::try_dredge_instead_of_draw`.
     YourGraveyardLandsHaveDredge(u32),

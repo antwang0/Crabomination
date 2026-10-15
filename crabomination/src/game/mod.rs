@@ -11164,6 +11164,34 @@ impl GameState {
         })
     }
 
+    /// CR 702.190 — the sneak cost a `GraveyardCreaturesHaveSneak` static `p`
+    /// controls gives the creature cards in `p`'s graveyard (Ninja Teen's
+    /// level 3; `active_static` opens the Class-level gate).
+    pub(crate) fn graveyard_sneak_cost(&self, p: usize) -> Option<crate::mana::ManaCost> {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+                Some(StaticEffect::GraveyardCreaturesHaveSneak { cost }) => Some(cost.clone()),
+                _ => None,
+            })
+        })
+    }
+
+    /// CR 702.190 — the sneak `p` may cast the graveyard card `card_id` with
+    /// under a `GraveyardCreaturesHaveSneak` grant: its printed sneak, else the
+    /// granted one. `None` for a noncreature card or with no grant.
+    pub(crate) fn graveyard_sneak_alt(&self, p: usize, card_id: CardId) -> Option<crate::card::AlternativeCost> {
+        let card = self.players.get(p)?.graveyard.iter().find(|c| c.id == card_id)?;
+        if !card.definition.card_types.contains(&crate::card::CardType::Creature) {
+            return None;
+        }
+        let cost = self.graveyard_sneak_cost(p)?;
+        match &card.definition.alternative_cost {
+            Some(alt) if alt.sneak => Some(alt.clone()),
+            _ => Some(crate::effect::shortcut::sneak(cost)),
+        }
+    }
+
     /// CR 702.133 — `card` in `p`'s graveyard has jump-start: printed, granted
     /// until end of turn, or by a `GraveyardCardsHaveJumpStart` static `p`
     /// controls (Niv-Mizzet, Supreme).
@@ -35206,6 +35234,7 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::GraveyardCardsHaveRetrace { .. }
             | StaticEffect::GraveyardCardsHaveJumpStart { .. }
+            | StaticEffect::GraveyardCreaturesHaveSneak { .. }
             | StaticEffect::YourGraveyardLandsHaveDredge(_)
             | StaticEffect::CollectsLeaverCounters
             | StaticEffect::OpponentsCantActivateArtifactAbilities

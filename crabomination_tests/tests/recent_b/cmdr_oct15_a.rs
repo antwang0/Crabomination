@@ -212,3 +212,145 @@ fn dralnu_blocking_sacrifices_for_combat_damage() {
     assert_eq!(named_count(&g, 1, "Swamp"), 1, "two Swamps for the Bears' two");
     assert!(g.battlefield_find(bear).is_none(), "Dralnu's 3 kills the Bears");
 }
+
+/// Ninja Teen level 1: a creature of yours leaving drains each opponent.
+#[test]
+fn ninja_teen_drains_when_a_creature_leaves() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::ninja_teen());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::ExactObjects(vec![bear]) },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[2].life), (19, 19));
+}
+
+/// CR 702.190 — Ninja Teen level 3: during declare blockers a creature card
+/// in the graveyard is cast by the granted sneak {3}{B}, returning an
+/// unblocked attacker, and enters attacking what it attacked.
+#[test]
+fn ninja_teen_sneaks_a_creature_from_the_graveyard() {
+    let mut g = pod(2);
+    let teen = g.add_card_to_battlefield(0, catalog::ninja_teen());
+    g.battlefield_find_mut(teen).unwrap().class_level = 3;
+    let scout = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: scout, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: wurm,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("sneak from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == scout), "the unblocked Bears went home");
+    assert!(g.battlefield_find(wurm).is_some(), "the Wurm resolved");
+    assert!(g.attacking.iter().any(|a| a.attacker == wurm), "and attacks");
+}
+
+/// Below level 3 there's no graveyard sneak (CR 716 — a Class level's
+/// ability only exists once the level is gained).
+#[test]
+fn ninja_teen_level_two_grants_no_sneak() {
+    let mut g = pod(2);
+    let teen = g.add_card_to_battlefield(0, catalog::ninja_teen());
+    g.battlefield_find_mut(teen).unwrap().class_level = 2;
+    let scout = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: scout, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: wurm,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err());
+    assert_eq!(pt(&g, scout), (3, 2), "level 2's +1/+0");
+}
+
+/// The bot finds Ninja Teen's graveyard sneak: with an unblocked Bears and
+/// {3}{B} up in declare blockers, it casts the Craw Wurm from its graveyard.
+#[test]
+fn the_bot_sneaks_from_the_graveyard_under_ninja_teen() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    let teen = g.add_card_to_battlefield(0, catalog::ninja_teen());
+    g.battlefield_find_mut(teen).unwrap().class_level = 3;
+    let scout = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: scout, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    g.priority.player_with_priority = 0;
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(action, Some(GameAction::CastSpellAlternative { card_id, .. }) if card_id == wurm),
+        "{action:?}",
+    );
+}
+
+/// CR 702.190 — the bot casts a printed sneak from hand in its declare
+/// blockers window (Raphael, the Nightwatcher for {1}{R}{R}, returning an
+/// unblocked Bears), where before it could only hard-cast one.
+#[test]
+fn the_bot_casts_a_printed_sneak_from_hand() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    let scout = ready(&mut g, 0, catalog::grizzly_bears());
+    let raph = g.add_card_to_hand(0, catalog::raphael_the_nightwatcher());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: scout, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    g.priority.player_with_priority = 0;
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(
+        matches!(action, Some(GameAction::CastSpellAlternative { card_id, .. }) if card_id == raph),
+        "{action:?}",
+    );
+}

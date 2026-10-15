@@ -360,7 +360,8 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        if !card.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard)
+        if !(card.definition.alternative_cost.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard)
+            || self.graveyard_sneak_alt(p, card_id).is_some())
             || self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard)
         {
             return Err(GameError::NoAlternativeCost);
@@ -565,6 +566,17 @@ impl GameState {
             .clone();
         if self.cast_granted_alt {
             return self.granted_alternative_cost_in(p, zone, card_id);
+        }
+        // CR 702.190 — Ninja Teen: a creature hopped from the graveyard under
+        // a sneak grant is cast by sneak (its own, else the granted one).
+        if self.casting_hop == Some((card_id, crate::game::HopFrom::Graveyard))
+            && !printed.as_ref().is_some_and(|a| a.from_graveyard || a.also_from_graveyard)
+            && let Some(cost) = self.graveyard_sneak_cost(p)
+        {
+            return Some(match &printed {
+                Some(alt) if alt.sneak => alt.clone(),
+                _ => crate::effect::shortcut::sneak(cost),
+            });
         }
         // Scourge of Nel Toth — a graveyard-only alternative cost is offered
         // only on the graveyard hop (`cast_alternative_from_graveyard`).

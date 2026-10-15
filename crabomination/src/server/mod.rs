@@ -89,6 +89,7 @@ pub mod mcts;
 pub mod bot;
 mod pod_attack;
 mod combat_only;
+mod sneak_pick;
 mod suspend;
 mod foretell;
 mod room;

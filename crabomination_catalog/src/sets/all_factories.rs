@@ -16078,6 +16078,7 @@ static DECKS: &[Factory] = &[
     super::decks::seluma_light_of_aysen,
     super::decks::the_everforger,
     super::decks::dralnu_lich_lord,
+    super::decks::ninja_teen,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

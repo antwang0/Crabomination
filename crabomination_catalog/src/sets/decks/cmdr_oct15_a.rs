@@ -1904,3 +1904,45 @@ pub fn dralnu_lich_lord() -> CardDefinition {
         ..legend("Dralnu, Lich Lord", vec![CreatureType::Zombie, CreatureType::Wizard], 3, 3)
     }
 }
+
+/// Ninja Teen — {2}{B} Class. A creature of yours leaving the battlefield
+/// drains each opponent for 1. Level 2 ({1}{B}): creatures you control get
+/// +1/+0 and have menace. Level 3 ({B}): creature cards in your graveyard have
+/// sneak {3}{B}, and creature spells may be cast from your graveyard by sneak
+/// (CR 702.190).
+pub fn ninja_teen() -> CardDefinition {
+    let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
+        mana_cost: mana,
+        sorcery_speed: true,
+        condition: Some(Predicate::SourceClassLevelIs(from)),
+        effect: Effect::AdvanceClassLevel,
+        ..Default::default()
+    };
+    let at = |n: u8, description: &'static str, inner: StaticEffect| StaticAbility {
+        description,
+        effect: StaticEffect::WhileClassLevelAtLeast { n, inner: Box::new(inner) },
+    };
+    let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Ninja Teen",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Class], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::YourControl)
+                .with_filter(trigger_is(R::Creature)),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        }],
+        static_abilities: vec![
+            at(2, "Creatures you control get +1/+0.", StaticEffect::PumpPT { applies_to: yours(), power: 1, toughness: 0 }),
+            at(2, "Creatures you control have menace.", StaticEffect::GrantKeyword { applies_to: yours(), keyword: Keyword::Menace }),
+            at(
+                3,
+                "Creature cards in your graveyard have sneak {3}{B}; you may cast creature spells from your graveyard using their sneak abilities.",
+                StaticEffect::GraveyardCreaturesHaveSneak { cost: cost(&[generic(3), b()]) },
+            ),
+        ],
+        activated_abilities: vec![level_up(cost(&[generic(1), b()]), 1), level_up(cost(&[b()]), 2)],
+        ..Default::default()
+    }
+}
