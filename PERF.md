@@ -3152,6 +3152,8 @@ golden traces    unchanged (13/13)
 suite            26,897 passed, 5 skipped; 8 structural-audit reds fixed and
                  re-run green (284/284); the precon pod-games
                  long pole outran the 5,400 s run budget (6,920 s last time)
+clippy           workspace (minus client) --all-targets: 0 warnings;
+                 release-fast typecheck clean
 pod smoke        release, seed 9401, the Commander field at 4 / 6 / 8 seats x
                  600: 1,800 games, 1,800 decided, 0 panics, 0 stalls (0.0 %)
 ```
