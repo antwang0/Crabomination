@@ -135,6 +135,40 @@ the handoff.
 8. **The concurrent eighteenth run (`01Xu59CH`, ENGINE_BACKLOG "eighteenth Commander run"):** CR 601.2c (every required slot at cast; ratchet `spells_requiring_two_targets_print_no_optional_target`), CR 701.21a (only a controller sacrifices), CR 115.3 (an "up to N" instance under an `If`), `LastMoved` never names a commander gone home (Tinybones), Gishath's "any number" pick + the bot declining a loop-starting entry (Polyraptor), loop watch sees face-down faces, Soul Cauldron sink gate, Subtlety, seat 356 Anti-Venom; `audit_cr_citations.py` catches a real-but-wrong keyword number (report 0; absent numbers 61 → 48). **Sweeps: plain 181001/182001/187001, `--a dflt` 183001, fuzzed strict 184001/185001/186001 — ~48,000 pod games, 6 aborts, all fixed.** Fuzz (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`) found 4 of the 6: run it every session. **Gates at `80eea8640`:** strict suite 24,889 / 2 / 5 (both the reveal answer-log leak, fixed concurrently); workspace clippy 0; `--bench` 196,176 / 27.64 / 613.0 byte-identical, both determinism checks ok; paired A/B vs the run's base +3.3 % (PERF). (Both of its open rows are closed: a `TriggerSource` that left its graveyard before resolution is a new object (CR 400.7), and a counter is now growth to the loop watch.)
 9. **The concurrent nineteenth run (`01Vk2K6g`, ENGINE_BACKLOG "nineteenth Commander run"):** seats 357-368, 372-375 and 379 (Avatar Aang: bending events, `KeywordAct::Bent`) (Fire Lord Zuko … Toph, the First Metalbender; ~140 cards in `decks::cmdr_edhrec3`, 20 primitives), each 40 debug pod games decided. ⚠ It built Miirym + Tiamat in parallel with the other session; its copies were dropped at the rebase — fetch before *starting* a deck. Gates at `f2d66e817`: suite 25,282 / 0 / 6 (after registering Avatar Kyoshi) + the long-pole `cr_903_5a_the_official_precon_seats_play_pod_games` (2,011 s), clippy 0, `--bench` byte-identical + both determinism checks, release pod smoke 970 games (4/6/19 seats + the new seats) 0 panics, 1 undecided (a Miirym / Astral Dragon / Ureni token board cap). Final tip `5ccaee51b`: suite 25,316 / 0 / 6, clippy 0, `--bench` byte-identical. Then audit sweeps 197001 + fuzzed 198001 over seats 335-378 only (`pod_sweep.py --decks 335-378`, 2,220 games): 0 aborts; an Anti-Venom / All Will Be One loop fixed (CR 109.5: a damage-to-counters replacement's controller puts the counters). Scan after seat 379: Iroh 4, Lorehold 4, High Perfect Morcant 6, Obeka 7, Galadriel 7 (scry triggers, the Ring).
 
+## FIXED/OPEN 2026-10-15 (Commander run, `012vc8CU`) — audit sweep 9301, the stall a barred attacker made
+
+- **Seats** 2687-2705, 2708-2715 (46 cards, `decks::cmdr_oct15_a`, tests at the end of
+  `recent_b/cmdr_scan7k_a.rs`). Five zero-gap decks, the rest one- and two-card gaps and the
+  shared blockers (Ordinary Bear 5 decks, Quake / Denzilore / Gorging Vulture / Sapphire Dragon /
+  Shortcut to Mushrooms / Restoration Specialist / Cosmos Charger 4 each). Ich-Tekik + The
+  Prismatic Piper left out: its average deck mixes the Piper's chosen colours (CR 903.4b).
+- **Primitives:** `Predicate::CombatDamagedSinceYourTurn` (seat mask beside
+  `opponent_cast_since_your_turn`), `Effect::ChooseLetterForSource` +
+  `SelectionRequirement::NameBeginsWithChosenLetterOfSource` (`effects/choose_letter.rs`),
+  `Effect::ChangeSpellCreatureTarget` (Meddle), `StaticEffect::ForetellCostsLessAnyTurn`, hone
+  counters pump an Equipment's bearer, `EnchantmentSubtype::Rune`, `CreatureType::Lanthanite`.
+- **FIXED (CR 702.40a, bot):** storm-style copies spread past a covered target
+  (`spell_copy.rs::storm_copy_default`) — Photon Blast Barrage no longer fizzles its pings.
+- **FIXED (CR 508.1, bot):** a defender-reading prohibition (Island Sanctuary's shield, Arboria,
+  a filtered can't-attack-you) sank the whole declaration; `combat.rs::attack_target_prohibited`
+  is the one walker and `pod_attack::reaim_prohibited_attacks` re-aims. Two Sanctuary seats had
+  passed for 3,000 turns (8-seat pod seed 31664: 9 of 40 undecided, 424 turns/game).
+- **FIXED:** Verdant Mastery / Endless Whispers named `EachOpponent` as a move destination (a
+  debug-assert in a 14-seat pod); `structural_audit::no_move_destination_names_a_fan_out_player`.
+- **FIXED (audit sweep 9301, 2,934 games over every seat × 4/6/8):** Karn's wish kept Victor
+  Mancha's exile-play permission and could take a face-down card (CR 400.7); a combatant that
+  stopped being a creature after the combat-damage sweep kept attacking (Thassa, a Garland steal
+  ending with the monarchy, CR 506.4); `ExileChosenUntilSourceLeaves` exiled after its source
+  left (Intellect Devourer, CR 610.3c); the sink gate missed an untapped restricted-mana source
+  (Omen Hawker paying Adric). **OPEN:** four undecided — Polyraptor + Marauding Raptor's
+  mandatory loop (a true CR 104.4b draw), Scute Swarm, Blech + Root Manipulation, Mirkwood Bats +
+  Ninja Pizza board caps (seeds 931080, 932470, 931150, 930612).
+- **Blocked (primitive):** Jurin (each attacker's own defending player), The Neutrinos (flicker
+  returning attacking), Linessa (grandeur discard cost), Auditore Ambush (target player in one
+  mode of a `ChooseModesCast` searching), Aragorn, Company Leader (per-kind counter echo), Blood
+  Sun (lose all but mana abilities), Jermane (a "legs" table), Reservoir Kraken (an accepter taps
+  their own creature).
+
 ## FIXED/OPEN 2026-10-15 (Commander run, `01ANcpHx`) — the full-list scan's two-card gaps
 
 - **Scan:** all 6,799 EDHREC commanders (70 pages, average decks fetched 8-wide); 107 seats
@@ -169,8 +203,7 @@ the handoff.
   losses; Ganax's true loop), the Dovehawk cap above, and two **OPEN board caps** — Mazirek + Scurry
   Oak + Iridescent Hornbeetle (6 seats, seed 920254 game 1) and Roil Elemental + Zagorka + Machine Man
   (seed 921736 game 1): token explosions the bot opts into, the Preston / Cathars' Crusade lever.
-- **OPEN (bot):** storm-style cast copies keep the original's target by default (Photon Blast
-  Barrage's copies all hit one creature, the rest fizzling once it dies).
+- ✅ ~~**OPEN (bot):** storm-style cast copies keep the original's target~~ — fixed by `012vc8CU`.
 - **Blocked (primitive):** My Precious (an Adventure half with an additional sacrifice cost —
   `Adventure` has no `additional_cast_cost`, 173 literals), Charging Tuskodon (a per-creature
   "double combat damage to a player"), Sahir (lose *exactly* 1 life from your own source), Bilbo's
