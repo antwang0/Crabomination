@@ -17244,6 +17244,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DAKKON_BLACKBLADE_COMMANDERS,
             main: decks::DAKKON_BLACKBLADE_MAIN,
         },
+        // Seat 2799: Maular, the Next Evolution's EDHREC average deck. `--pod-decks 2799`.
+        PodDeck {
+            name: "Maular, the Next Evolution (G)",
+            commanders: decks::MAULAR_COMMANDERS,
+            main: decks::MAULAR_MAIN,
+        },
+        // Seat 2800: Seluma, Light of Aysen's EDHREC average deck. `--pod-decks 2800`.
+        PodDeck {
+            name: "Seluma, Light of Aysen (W)",
+            commanders: decks::SELUMA_COMMANDERS,
+            main: decks::SELUMA_MAIN,
+        },
+        // Seat 2801: The Everforger's EDHREC average deck. `--pod-decks 2801`.
+        PodDeck {
+            name: "The Everforger (C)",
+            commanders: decks::THE_EVERFORGER_COMMANDERS,
+            main: decks::THE_EVERFORGER_MAIN,
+        },
     ]
 }
 
@@ -21878,6 +21896,9 @@ mod tests {
             ("Myojin of Blooming Dawn", &[0x1502]),
             ("Spider-Man 2099, Miguel O'Hara", &[0x1503]),
             ("Dakkon Blackblade", &[0x1504]),
+            ("Maular, the Next Evolution", &[0x1505]),
+            ("Seluma, Light of Aysen", &[0x1506]),
+            ("The Everforger", &[0x1507]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -78530,3 +78530,90 @@ pub const DAKKON_BLACKBLADE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, plains, plains, plains, plains, plains,
     plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const MAULAR_COMMANDERS: &[CardFactory] = &[maular_the_next_evolution];
+
+/// **Maular, the Next Evolution**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Forests + 3 Islands + 3 Mountains + 3 Plains + 3 Swamps = 99.
+/// Maular, the Next Evolution (EDHREC, fetched 2026-10-15).
+pub const MAULAR_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, herd_heirloom, monster_manual, sol_ring,
+    the_great_henge, abundant_countryside, ancient_ziggurat, castle_garenbrig, city_of_brass,
+    exotic_orchard, fabled_passage, mana_confluence, mosswort_bridge, prismatic_vista,
+    reflecting_pool, reliquary_tower, yavimaya_cradle_of_growth, absolute_virtue,
+    ancient_silver_dragon, apex_devastator, avacyn_angel_of_hope, avacyn_angel_of_horror,
+    birds_of_paradise, bloom_tender, bugenhagen_wise_elder, delighted_halfling,
+    dryad_of_the_ilysian_grove, elvish_piper, etali_primal_conqueror, fanatic_of_rhonas,
+    ghalta_and_mavren, ghalta_the_unstoppable, ghalta_primal_hunger, ghalta_stampede_tyrant,
+    gisela_blade_of_goldnight, goreclaw_terror_of_qal_sisma, gwenna_eyes_of_gaea,
+    klauth_unrivaled_ancient, llanowar_elves, maelstrom_wanderer, nezahal_primal_tide,
+    nyxbloom_ancient, old_gnawbone, oviya_automech_artisan, radagast_of_rhosgobel,
+    raph_mikey_troublemakers, sakura_tribe_elder, selvala_heart_of_the_wilds, starwinder,
+    vaultborn_tyrant, zacama_primal_calamity, zopandrel_hunger_dominus, garruks_uprising,
+    lurking_predators, monstrous_vortex, prismatic_omen, unnatural_growth, up_the_beanstalk,
+    beast_within, entish_restoration, heroic_intervention, return_of_the_wildspeaker,
+    smugglers_surprise, cultivate, farseek, kodamas_reach, last_march_of_the_ents,
+    migration_path, natures_lore, rampant_growth, shared_roots, three_visits,
+    traverse_the_outlands,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, mountain, mountain, mountain, plains, plains, plains, swamp,
+    swamp, swamp,
+];
+
+pub const SELUMA_COMMANDERS: &[CardFactory] = &[seluma_light_of_aysen];
+
+/// **Seluma, Light of Aysen**'s EDHREC average deck, card for card:
+/// 77 nonbasic cards + 2 Forests + 2 Islands + 2 Mountains + 12 Plains + 4 Swamps = 99.
+/// Seluma, Light of Aysen (EDHREC, fetched 2026-10-15).
+pub const SELUMA_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, fellwar_stone, heralds_horn, key_to_the_city,
+    lightning_greaves, mask_of_memory, patchwork_banner, pearl_medallion, sol_ring,
+    swiftfoot_boots, sword_of_the_animist, urzas_incubator, abundant_countryside,
+    cavern_of_souls, city_of_brass, emeria_the_sky_ruin, evolving_wilds, exotic_orchard,
+    fabled_passage, mana_confluence, path_of_ancestry, reflecting_pool, secluded_courtyard,
+    seraph_sanctuary, three_tree_city, unclaimed_territory, urborg_tomb_of_yawgmoth,
+    angel_of_despair, angel_of_the_ruins, archangel_of_thune, archangel_of_tithes,
+    atraxa_grand_unifier, aurelia_the_law_above, aurelia_the_warleader, avacyn_angel_of_hope,
+    avacyn_angel_of_horror, battle_angels_of_tyr, bruna_the_fading_light, darksteel_angel,
+    drana_and_linvala, errant_and_giada, firemane_commando, firja_judge_of_valor,
+    giada_font_of_hope, gisela_blade_of_goldnight, gisela_the_broken_blade, herald_of_war,
+    liesa_forgotten_archangel, lyra_dawnbringer, lyra_archangel_of_dawn, maelstrom_archangel,
+    resplendent_angel, righteous_valkyrie, selenia_the_cursed_heart, sephara_skys_blade,
+    serras_emissary, shalai_voice_of_plenty, sigarda_font_of_blessings, sigarda_host_of_herons,
+    starnheim_aspirant, youthful_valkyrie, authority_of_the_consuls, gleaming_splendor,
+    land_tax, smothering_tithe, trouble_in_pairs, akromas_will, flare_of_fortitude,
+    flawless_maneuver, generous_gift, path_to_exile, swords_to_plowshares, teferis_protection,
+    austere_command, vanquish_the_horde, wrath_of_god,
+    // Basics
+    forest, forest, island, island, mountain, mountain, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+];
+
+pub const THE_EVERFORGER_COMMANDERS: &[CardFactory] = &[the_everforger];
+
+/// **The Everforger**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 2 Forests + 3 Islands + 3 Mountains + 3 Plains + 3 Swamps + 5 Wastes = 99.
+/// The Everforger (EDHREC, fetched 2026-10-15).
+pub const THE_EVERFORGER_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, bitterthorn_nissas_animus, buster_sword, chromatic_lantern,
+    chromatic_orrery, cloud_key, commanders_plate, cranial_ram, darksteel_forge, fellwar_stone,
+    forsaken_monument, lightning_greaves, mox_opal, mystic_forge, nettlecyst, sculpting_steel,
+    sol_ring, swiftfoot_boots, sword_of_the_animist, the_eternity_elevator, the_one_ring,
+    the_reaver_cleaver, the_ten_rings, thought_vessel, thran_dynamo, unwinding_clock,
+    buried_ruin, castle_doom, darksteel_citadel, exotic_orchard, fabled_passage, inventors_fair,
+    power_depot, reliquary_tower, spire_of_industry, urzas_cave, urzas_mine, urzas_power_plant,
+    urzas_saga, urzas_tower, urzas_workshop, war_room, alibou_ancient_witness, alloy_myr,
+    baleful_strix, bronze_guardian, craterclaw_colossus, cryptothrall, cyberdrive_awakener,
+    cybermen_squadron, enthusiastic_mechanaut, esper_sentinel, etherium_sculptor,
+    foundry_inspector, gold_myr, iron_man_bleeding_edge, iron_myr, jhoiras_familiar,
+    kappa_cannoneer, krang_utrom_warlord, liberator_urzas_battlethopter,
+    mendicant_core_guidelight, mycosynth_golem, myr_retriever, noxious_gearhulk,
+    ornithopter_of_paradise, palladium_myr, phyrexian_metamorph, scrap_trawler, shimmer_myr,
+    silver_myr, solemn_simulacrum, steel_overseer, thought_monitor,
+    ultron_artificial_malevolence, voyager_quickwelder, eldritch_immunity, null_elemental_blast,
+    tezzeret_cruel_captain, all_is_dust,
+    // Basics
+    forest, forest, island, island, island, mountain, mountain, mountain, plains, plains,
+    plains, swamp, swamp, swamp, wastes, wastes, wastes, wastes, wastes,
+];
