@@ -3718,3 +3718,159 @@ fn divining_duelist_wake_thrasher_and_crashing_tide() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == giant));
 }
+
+/// Wu Longbowman pings only on your turn before attackers; Wu Spy bins one
+/// of a target player's top two.
+#[test]
+fn wu_longbowman_timing_and_wu_spy() {
+    let mut g = pod(2);
+    let lb = ready(&mut g, 0, catalog::wu_longbowman());
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::ActivateAbility { card_id: lb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None }).is_err());
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, lb, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 19);
+    library(&mut g, 1, 3);
+    let spy = g.add_card_to_hand(0, catalog::wu_spy());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: spy, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 1);
+}
+
+/// CR 702.137 — Ardenvale Paladin's adamant counter needs three white mana.
+#[test]
+fn ardenvale_paladin_adamant() {
+    let mut g = pod(2);
+    let ap = g.add_card_to_hand(0, catalog::ardenvale_paladin());
+    g.players[0].mana_pool.add(Color::White, 4);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: ap, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, ap), 1);
+    let ap2 = g.add_card_to_hand(0, catalog::ardenvale_paladin());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell { card_id: ap2, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, ap2), 0);
+}
+
+/// Venerable Knight's death counters a Knight; Thorin's Last Stand pumps.
+#[test]
+fn venerable_knight_and_thorins_last_stand() {
+    let mut g = pod(2);
+    let vk = ready(&mut g, 0, catalog::venerable_knight());
+    let ap = ready(&mut g, 0, catalog::ardenvale_paladin());
+    kill(&mut g, vk);
+    assert_eq!(plus(&g, ap), 1);
+    let tls = g.add_card_to_hand(0, catalog::thorins_last_stand());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: tls, target: None, additional_targets: vec![], mode: Some(0), x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, ap), (5, 7));
+}
+
+/// Liliana's Shade fetches a Swamp; shades pump on {B}.
+#[test]
+fn lilianas_shade_finds_a_swamp() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let sw = g.add_card_to_library(0, catalog::swamp());
+    let ls = g.add_card_to_hand(0, catalog::lilianas_shade());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, ls);
+    assert!(g.players[0].hand.iter().any(|c| c.id == sw));
+    activate(&mut g, ls, 0, None);
+    assert_eq!(pt(&g, ls), (2, 2));
+}
+
+/// Deathrender: the equipped creature dies, a creature card from hand comes
+/// in wearing it.
+#[test]
+fn deathrender_reequips_a_creature_from_hand() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let dr = ready(&mut g, 0, catalog::deathrender());
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    flood(&mut g);
+    g.perform_action(GameAction::Equip { equipment: dr, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (4, 4));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    kill(&mut g, bear);
+    assert!(g.battlefield_find(giant).is_some(), "the Giant came in");
+    assert_eq!(g.battlefield_find(dr).unwrap().attached_to, Some(giant));
+}
+
+/// Acid Web Spider destroys an Equipment; Blind-Spot Giant needs another
+/// Giant to attack; Basalt Ravager counts shared types.
+#[test]
+fn acid_web_spider_blind_spot_giant_and_basalt_ravager() {
+    let mut g = pod(2);
+    let axe = ready(&mut g, 1, catalog::bearded_axe());
+    let aws = g.add_card_to_hand(0, catalog::acid_web_spider());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: aws, target: Some(Target::Permanent(axe)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(axe).is_none());
+    let bsg = ready(&mut g, 0, catalog::blind_spot_giant());
+    assert!(g.permanent_has_keyword(bsg, &Keyword::CantAttack));
+    ready(&mut g, 0, catalog::hill_giant());
+    assert!(!g.permanent_has_keyword(bsg, &Keyword::CantAttack));
+    let br = g.add_card_to_hand(0, catalog::basalt_ravager());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: br, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "three Giants");
+}
+
+/// Seven Dwarves count each other and a deck may hold seven of them.
+#[test]
+fn seven_dwarves_grow_together_and_allow_seven_copies() {
+    let mut g = pod(2);
+    let ds: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::seven_dwarves())).collect();
+    assert_eq!(pt(&g, ds[0]), (4, 4));
+    let deck = crabomination::format::Deck {
+        commanders: vec![catalog::dori_bearer_of_friends()],
+        main: (0..7).map(|_| catalog::seven_dwarves()).chain((0..92).map(|_| catalog::mountain())).collect(),
+        ..Default::default()
+    };
+    assert!(crabomination::format::validate_commander_deck(&deck).is_ok());
+}
+
+/// Sparktongue Dragon's paid kicker-shot; Fang Dragon's Forktail Sweep.
+#[test]
+fn sparktongue_dragon_and_forktail_sweep() {
+    let mut g = pod(3);
+    let sd = g.add_card_to_hand(0, catalog::sparktongue_dragon());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: sd, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "paid {{2}}{{R}}: 3 to the opponent (CR 603.7c, a hostile slot in a pod)");
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let mine = ready(&mut g, 0, catalog::llanowar_elves());
+    let fd = g.add_card_to_hand(0, catalog::fang_dragon());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventure { card_id: fd, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("sweep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none() && g.battlefield_find(mine).is_some());
+}
+
+/// Abzan Beastmaster draws with the toughest creature; Doorman's evasion.
+#[test]
+fn abzan_beastmaster_draws_with_the_toughest() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    library(&mut g, 1, 3);
+    ready(&mut g, 0, catalog::abzan_beastmaster());
+    ready(&mut g, 0, catalog::grizzled_leotau());
+    ready(&mut g, 1, catalog::hill_giant());
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    let hand = g.players[0].hand.len();
+    step_to(&mut g, 0, TurnStep::Upkeep);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "toughness 5 beats 3");
+}

@@ -1354,3 +1354,549 @@ pub fn crashing_tide() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Two- to five-card-gap decks: Iroh, Lu Meng, Syr Alin, Jasmine Boreal,
+// Ihsan's Shade, Guan Yu, Arasta, The Lady of the Mountain, Dori, Smaug,
+// Jacques le Vert, Flatman ──────────────────────────────────────────────────
+
+fn soldier(name: &'static str, mana: ManaCost, p: i32, t: i32) -> CardDefinition {
+    creature(name, mana, vec![CreatureType::Human, CreatureType::Soldier], p, t)
+}
+
+/// Capital Guard — {1}{R} 2/2 Human Soldier.
+pub fn capital_guard() -> CardDefinition {
+    soldier("Capital Guard", cost(&[generic(1), r()]), 2, 2)
+}
+
+/// Dragon Moose — {3}{R} 3/3 haste Dragon Elk.
+pub fn dragon_moose() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        ..creature("Dragon Moose", cost(&[generic(3), r()]), vec![CreatureType::Dragon, CreatureType::Elk], 3, 3)
+    }
+}
+
+/// Komodo Rhino — {3}{R} 5/2 trample Lizard Rhino.
+pub fn komodo_rhino() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        ..creature("Komodo Rhino", cost(&[generic(3), r()]), vec![CreatureType::Lizard, CreatureType::Rhino], 5, 2)
+    }
+}
+
+/// Warship Scout — {R} 2/1 Human Scout.
+pub fn warship_scout() -> CardDefinition {
+    creature("Warship Scout", cost(&[r()]), vec![CreatureType::Human, CreatureType::Scout], 2, 1)
+}
+
+/// Explosive Shot — {1}{R} sorcery. 4 damage to target creature.
+pub fn explosive_shot() -> CardDefinition {
+    CardDefinition {
+        name: "Explosive Shot",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Lu Meng, Wu General — {3}{U}{U} legendary 4/4 Human Soldier, horsemanship.
+pub fn lu_meng_wu_general() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Horsemanship],
+        ..soldier("Lu Meng, Wu General", cost(&[generic(3), u(), u()]), 4, 4)
+    }
+}
+
+/// Wu Elite Cavalry — {3}{U} 2/3 Human Soldier, horsemanship.
+pub fn wu_elite_cavalry() -> CardDefinition {
+    CardDefinition { keywords: vec![Keyword::Horsemanship], ..soldier("Wu Elite Cavalry", cost(&[generic(3), u()]), 2, 3) }
+}
+
+/// Wu Light Cavalry — {1}{U} 1/2 Human Soldier, horsemanship.
+pub fn wu_light_cavalry() -> CardDefinition {
+    CardDefinition { keywords: vec![Keyword::Horsemanship], ..soldier("Wu Light Cavalry", cost(&[generic(1), u()]), 1, 2) }
+}
+
+fn before_attackers_on_your_turn() -> Predicate {
+    use crate::game::types::TurnStep as S;
+    Predicate::All(vec![
+        Predicate::IsTurnOf(PlayerRef::You),
+        Predicate::Any(vec![
+            Predicate::CurrentStepIs(S::Upkeep),
+            Predicate::CurrentStepIs(S::Draw),
+            Predicate::CurrentStepIs(S::PreCombatMain),
+            Predicate::CurrentStepIs(S::BeginCombat),
+        ]),
+    ])
+}
+
+/// Wu Longbowman — {2}{U} 1/1 Human Soldier Archer. {T}: 1 damage to any
+/// target; only during your turn, before attackers are declared.
+pub fn wu_longbowman() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(before_attackers_on_your_turn()),
+            effect: Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature(
+            "Wu Longbowman",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Archer],
+            1,
+            1,
+        )
+    }
+}
+
+/// Wu Spy — {1}{U} 1/1 Human Soldier Rogue. Enters: look at the top two of
+/// target player's library; put one of them into their graveyard.
+pub fn wu_spy() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::TargetPlayerThen {
+            filter: R::Player,
+            then: Box::new(Effect::LookTopKeepOneRestToGraveyard {
+                count: Value::Const(2),
+                who: Some(PlayerRef::Target(0)),
+                exile_rest: false,
+                rest_bottom_random: false,
+            }),
+        })],
+        ..creature("Wu Spy", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Rogue], 1, 1)
+    }
+}
+
+/// Ardenvale Paladin — {3}{W} 2/5 Human Knight. Adamant — three white mana
+/// spent: a +1/+1 counter as it enters. Residual: the counter arrives by an
+/// enters trigger, not the enters-with replacement.
+pub fn ardenvale_paladin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SourceCastWithColorSpent { color: Color::White, at_least: 3 },
+            then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature("Ardenvale Paladin", cost(&[generic(3), w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 5)
+    }
+}
+
+/// Dwarven Provisioner — {1}{W} 2/2 Dwarf Citizen. {3}{W}: creatures you
+/// control get +1/+1 until end of turn.
+pub fn dwarven_provisioner() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Dwarven Provisioner", cost(&[generic(1), w()]), vec![CreatureType::Dwarf, CreatureType::Citizen], 2, 2)
+    }
+}
+
+/// Venerable Knight — {W} 2/1 Human Knight. Dies: a +1/+1 counter on target
+/// Knight you control.
+pub fn venerable_knight() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::AddCounter {
+            what: target_filtered(R::HasCreatureType(CreatureType::Knight).and(R::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..creature("Venerable Knight", cost(&[w()]), vec![CreatureType::Human, CreatureType::Knight], 2, 1)
+    }
+}
+
+/// Thorin's Last Stand — {2}{W}{W} instant. Choose one: creatures you control
+/// get +2/+1 until end of turn; or destroy target artifact or enchantment and
+/// gain 2 life.
+pub fn thorins_last_stand() -> CardDefinition {
+    CardDefinition {
+        name: "Thorin's Last Stand",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(2),
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Devilthorn Fox — {1}{W} 3/1 Fox.
+pub fn devilthorn_fox() -> CardDefinition {
+    creature("Devilthorn Fox", cost(&[generic(1), w()]), vec![CreatureType::Fox], 3, 1)
+}
+
+/// Raptor Companion — {1}{W} 3/1 Dinosaur.
+pub fn raptor_companion() -> CardDefinition {
+    creature("Raptor Companion", cost(&[generic(1), w()]), vec![CreatureType::Dinosaur], 3, 1)
+}
+
+/// Dromoka Warrior — {1}{W} 3/1 Human Warrior.
+pub fn dromoka_warrior() -> CardDefinition {
+    creature("Dromoka Warrior", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Warrior], 3, 1)
+}
+
+/// Grizzled Leotau — {G}{W} 1/5 Cat.
+pub fn grizzled_leotau() -> CardDefinition {
+    creature("Grizzled Leotau", cost(&[g(), w()]), vec![CreatureType::Cat], 1, 5)
+}
+
+fn shade_pump() -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost(&[b()]),
+        effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+        ..Default::default()
+    }
+}
+
+/// Dread Shade — {B}{B}{B} 3/3 Shade. {B}: +1/+1 until end of turn.
+pub fn dread_shade() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![shade_pump()],
+        ..creature("Dread Shade", cost(&[b(), b(), b()]), vec![CreatureType::Shade], 3, 3)
+    }
+}
+
+/// Drifting Shade — {3}{B} 1/1 flying Shade. {B}: +1/+1 until end of turn.
+pub fn drifting_shade() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![shade_pump()],
+        ..creature("Drifting Shade", cost(&[generic(3), b()]), vec![CreatureType::Shade], 1, 1)
+    }
+}
+
+/// Hoar Shade — {3}{B} 1/2 Shade. {B}: +1/+1 until end of turn.
+pub fn hoar_shade() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![shade_pump()],
+        ..creature("Hoar Shade", cost(&[generic(3), b()]), vec![CreatureType::Shade], 1, 2)
+    }
+}
+
+/// Liliana's Shade — {2}{B}{B} 1/1 Shade. Enters: you may search for a Swamp
+/// card to your hand. {B}: +1/+1 until end of turn.
+pub fn lilianas_shade() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search your library for a Swamp card?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasLandType(LandType::Swamp),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        activated_abilities: vec![shade_pump()],
+        ..creature("Liliana's Shade", cost(&[generic(2), b(), b()]), vec![CreatureType::Shade], 1, 1)
+    }
+}
+
+/// Deathrender — {4} Equipment. +2/+2. Whenever the equipped creature dies,
+/// you may put a creature card from your hand onto the battlefield and attach
+/// this to it. Equip {2}.
+pub fn deathrender() -> CardDefinition {
+    CardDefinition {
+        name: "Deathrender",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(crate::card::EquipBonus { power: 2, toughness: 2, ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::MayDo {
+                description: "Put a creature card from your hand onto the battlefield and attach Deathrender to it?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::MoveChosen {
+                        from: Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: R::Creature },
+                        filter: None,
+                        count: Value::ONE,
+                        up_to: false,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::Attach { what: Selector::This, to: Selector::LastMoved },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shu Elite Companions — {4}{W} 3/3 Human Soldier, horsemanship.
+pub fn shu_elite_companions() -> CardDefinition {
+    CardDefinition { keywords: vec![Keyword::Horsemanship], ..soldier("Shu Elite Companions", cost(&[generic(4), w()]), 3, 3) }
+}
+
+/// Shu Grain Caravan — {2}{W} 2/2 Human Soldier. Enters: gain 2 life.
+pub fn shu_grain_caravan() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        ..soldier("Shu Grain Caravan", cost(&[generic(2), w()]), 2, 2)
+    }
+}
+
+/// Volunteer Militia — {W} 1/2 Human Soldier.
+pub fn volunteer_militia() -> CardDefinition {
+    soldier("Volunteer Militia", cost(&[w()]), 1, 2)
+}
+
+fn spider(name: &'static str, mana: ManaCost, p: i32, t: i32, keywords: Vec<Keyword>) -> CardDefinition {
+    CardDefinition { keywords, ..creature(name, mana, vec![CreatureType::Spider], p, t) }
+}
+
+/// Acid Web Spider — {3}{G}{G} 3/5 reach Spider. Enters: you may destroy
+/// target Equipment.
+pub fn acid_web_spider() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Destroy { what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment)) }),
+        })],
+        ..spider("Acid Web Spider", cost(&[generic(3), g(), g()]), 3, 5, vec![Keyword::Reach])
+    }
+}
+
+/// Juvenile Gloomwidow — {G}{G} 1/3 reach, wither Spider.
+pub fn juvenile_gloomwidow() -> CardDefinition {
+    spider("Juvenile Gloomwidow", cost(&[g(), g()]), 1, 3, vec![Keyword::Reach, Keyword::Wither])
+}
+
+/// Kessig Recluse — {2}{G}{G} 2/3 reach, deathtouch Spider.
+pub fn kessig_recluse() -> CardDefinition {
+    spider("Kessig Recluse", cost(&[generic(2), g(), g()]), 2, 3, vec![Keyword::Reach, Keyword::Deathtouch])
+}
+
+/// Skysnare Spider — {4}{G}{G} 6/6 vigilance, reach Spider.
+pub fn skysnare_spider() -> CardDefinition {
+    spider("Skysnare Spider", cost(&[generic(4), g(), g()]), 6, 6, vec![Keyword::Vigilance, Keyword::Reach])
+}
+
+/// Attercop — {1}{G} 2/1 reach, deathtouch Spider. Landfall: +1/+1 until end
+/// of turn.
+pub fn attercop() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::landfall(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: Duration::EndOfTurn,
+        })],
+        ..spider("Attercop", cost(&[generic(1), g()]), 2, 1, vec![Keyword::Reach, Keyword::Deathtouch])
+    }
+}
+
+/// Basalt Ravager — {3}{R} 4/2 Giant Wizard. Enters: X damage to any target,
+/// X = the greatest number of creatures you control sharing a creature type.
+pub fn basalt_ravager() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: crate::effect::shortcut::target_any(),
+            amount: Value::GreatestSharedCreatureTypeCount,
+        })],
+        ..creature("Basalt Ravager", cost(&[generic(3), r()]), vec![CreatureType::Giant, CreatureType::Wizard], 4, 2)
+    }
+}
+
+/// Blind-Spot Giant — {2}{R} 4/3 Giant Warrior; can't attack or block unless
+/// you control another Giant.
+pub fn blind_spot_giant() -> CardDefinition {
+    let alone = Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
+        R::HasCreatureType(CreatureType::Giant).and(R::ControlledByYou).and(R::OtherThanSource),
+    ))));
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "This creature can't attack unless you control another Giant.",
+                effect: StaticEffect::SelfHasKeywordWhilePredicate { keyword: Keyword::CantAttack, condition: alone.clone() },
+            },
+            StaticAbility {
+                description: "This creature can't block unless you control another Giant.",
+                effect: StaticEffect::SelfHasKeywordWhilePredicate { keyword: Keyword::CantBlock, condition: alone },
+            },
+        ],
+        ..creature("Blind-Spot Giant", cost(&[generic(2), r()]), vec![CreatureType::Giant, CreatureType::Warrior], 4, 3)
+    }
+}
+
+/// Giant Harbinger — {4}{R} 3/4 Giant Shaman. Enters: you may search for a
+/// Giant card and put it on top of your library.
+pub fn giant_harbinger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search your library for a Giant card to put on top?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Giant),
+                to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+            }),
+        })],
+        ..creature("Giant Harbinger", cost(&[generic(4), r()]), vec![CreatureType::Giant, CreatureType::Shaman], 3, 4)
+    }
+}
+
+/// Seven Dwarves — {1}{R} 2/2 Dwarf; +1/+1 per other Seven Dwarves you
+/// control. A deck can have up to seven cards named Seven Dwarves.
+pub fn seven_dwarves() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "This creature gets +1/+1 for each other creature named Seven Dwarves you control.",
+                effect: StaticEffect::PumpSelfByControlledPermanents {
+                    filter: R::Creature.and(R::HasName("Seven Dwarves".into())).and(R::OtherThanSource).and(R::ControlledByYou),
+                    per_power: 1,
+                    per_toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "A deck can have up to seven cards named Seven Dwarves.",
+                effect: StaticEffect::DeckMayHaveCopies(Some(7)),
+            },
+        ],
+        ..creature("Seven Dwarves", cost(&[generic(1), r()]), vec![CreatureType::Dwarf], 2, 2)
+    }
+}
+
+/// Sparktongue Dragon — {3}{R}{R} 3/3 flying Dragon. Enters: you may pay
+/// {2}{R}; when you do, 3 damage to any target.
+pub fn sparktongue_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayPay {
+            description: "Pay {2}{R} to deal 3 damage to any target?".into(),
+            mana_cost: cost(&[generic(2), r()]),
+            body: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::DealDamage { to: crate::effect::shortcut::target_any(), amount: Value::Const(3) }),
+            }),
+            else_: None,
+        })],
+        ..creature("Sparktongue Dragon", cost(&[generic(3), r(), r()]), vec![CreatureType::Dragon], 3, 3)
+    }
+}
+
+/// Young Red Dragon — {3}{R} 3/2 flying Dragon that can't block. Adventure:
+/// Bathe in Gold {1}{R} instant — create a Treasure.
+pub fn young_red_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Bathe in Gold",
+            cost: cost(&[generic(1), r()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(crabomination_base::tokens::treasure_token()),
+            },
+        })),
+        ..creature("Young Red Dragon", cost(&[generic(3), r()]), vec![CreatureType::Dragon], 3, 2)
+    }
+}
+
+/// Amethyst Dragon — {4}{R}{R} 4/4 flying, haste Dragon. Adventure: Explosive
+/// Crystal {4}{R} sorcery — 4 damage divided among any number of targets.
+pub fn amethyst_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Explosive Crystal",
+            cost: cost(&[generic(4), r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::DealDamageDivided {
+                total: Value::Const(4),
+                filter: R::any_target(),
+                max_targets: 4,
+                retaliate_to_source: false,
+            },
+        })),
+        ..creature("Amethyst Dragon", cost(&[generic(4), r(), r()]), vec![CreatureType::Dragon], 4, 4)
+    }
+}
+
+/// Fang Dragon — {5}{R}{R} 6/3 flying Dragon. Adventure: Forktail Sweep {1}{R}
+/// sorcery — 1 damage to each creature you don't control.
+pub fn fang_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Forktail Sweep",
+            cost: cost(&[generic(1), r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::DealDamage {
+                to: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))),
+                amount: Value::ONE,
+            },
+        })),
+        ..creature("Fang Dragon", cost(&[generic(5), r(), r()]), vec![CreatureType::Dragon], 6, 3)
+    }
+}
+
+/// Abzan Beastmaster — {2}{G} 2/1 Dog Shaman. Your upkeep: draw a card if you
+/// control the creature with the greatest toughness or tied for it.
+pub fn abzan_beastmaster() -> CardDefinition {
+    let toughest = Predicate::ControlsGreatestToughnessCreature { who: PlayerRef::You };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::YourControl)
+                .with_filter(toughest.clone()),
+            effect: Effect::If {
+                cond: toughest,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Abzan Beastmaster", cost(&[generic(2), g()]), vec![CreatureType::Dog, CreatureType::Shaman], 2, 1)
+    }
+}
+
+/// Overgrown Armasaur — {3}{G}{G} 4/4 Dinosaur. Enrage — a 1/1 green Saproling.
+pub fn overgrown_armasaur() -> CardDefinition {
+    let saproling = TokenDefinition {
+        name: "Saproling".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![enrage(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(saproling) })],
+        ..creature("Overgrown Armasaur", cost(&[generic(3), g(), g()]), vec![CreatureType::Dinosaur], 4, 4)
+    }
+}
+
+/// Doorman — {1}{G} legendary 2/3 Mutant Hero. {T}: until end of turn, target
+/// creature can't be blocked by creatures with power 2 or less and/or Walls.
+pub fn doorman() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::CantBeBlockedBy(Box::new(R::PowerAtMost(2).or(R::HasCreatureType(CreatureType::Wall)))),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Doorman", cost(&[generic(1), g()]), vec![CreatureType::Mutant, CreatureType::Hero], 2, 3)
+    }
+}
