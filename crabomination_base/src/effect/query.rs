@@ -803,6 +803,7 @@ impl Effect {
             | Effect::GrantCastSpellRiders { .. }
             | Effect::GrantReboundToSpell { .. }
             | Effect::TriggersThisTurn { .. }
+            | Effect::TriggersUntilYourNextTurn { .. }
             | Effect::CapSpellsThisTurn { .. }
             | Effect::CastExiledFreeOwnersLoseLife { .. }
             | Effect::CastExiledFree { .. }
@@ -1208,6 +1209,7 @@ impl Effect {
             }
             Effect::ExileTopFaceDownPlayIfYouControl { .. } => false,
             Effect::SacrificeAtNextUpkeep { what }
+            | Effect::ExileAtYourNextUpkeep { what }
             | Effect::SacrificeAtNextEndStep { what }
             | Effect::ReturnToOwnersHandAtNextEndStep { what } => sel_has_target(what),
             Effect::ExileAtNextEndStep { what }

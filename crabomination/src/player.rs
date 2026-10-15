@@ -66,6 +66,10 @@ pub struct Emblem {
     /// abilities of `Effect::TriggersThisTurn`, dropped at cleanup.
     #[serde(default)]
     pub this_turn: bool,
+    /// CR 611.2b — `Effect::TriggersUntilYourNextTurn`'s emblem, dropped as
+    /// its owner's next turn begins.
+    #[serde(default)]
+    pub until_your_next_turn: bool,
 }
 
 /// CR 702.50 — a resolved Epic spell, snapshotted for the per-upkeep copy.
@@ -1395,6 +1399,10 @@ pub struct PlayerData {
     /// their graveyard by foraging (Osteomancer Adept). Cleared at cleanup.
     #[serde(default)]
     pub forage_graveyard_casts_turn: Option<u32>,
+    /// The last turn this player activated a power-up ability (CR 702.193;
+    /// Advancing the Spirit's "first power-up ability … each of your turns").
+    #[serde(default)]
+    pub power_up_turn: Option<u32>,
     /// "You may cast a creature spell from your graveyard this turn"
     /// (Chainer, Nightmare Adept): the turn it was granted, cleared by the
     /// one cast it allows. Read by `graveyard_creature_cast_available`.
@@ -1961,6 +1969,7 @@ impl Player {
             spell_names_cast_this_turn: crate::copyvec::CopyVec::new(),
             spell_ids_cast_this_turn: crate::copyvec::CopyVec::new(),
             forage_graveyard_casts_turn: None,
+            power_up_turn: None,
             graveyard_creature_cast_turn: None,
             graveyard_creature_cast_rider: None,
             skip_turns: 0,

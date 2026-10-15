@@ -106,7 +106,8 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         | E::DieResult { .. }
         | E::Bent { .. }
         | E::SpellCausedLifeGain { .. }
-        | E::EchoPaid { .. } => {
+        | E::EchoPaid { .. }
+        | E::TappedForTeamwork { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
         }
         E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
@@ -295,6 +296,7 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::Bent(want), GameEvent::Bent { kind, .. }) => want.is_none_or(|w| w == *kind),
         (A::SpellCausedLifeGain, GameEvent::SpellCausedLifeGain { .. }) => true,
         (A::EchoPaid, GameEvent::EchoPaid { .. }) => true,
+        (A::TappedForTeamwork, GameEvent::TappedForTeamwork { .. }) => true,
         _ => false,
     }
 }
@@ -1475,6 +1477,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::LifeGained { player, .. }
         | GameEvent::SpellCausedLifeGain { player, .. }
         | GameEvent::EchoPaid { controller: player, .. }
+        | GameEvent::TappedForTeamwork { controller: player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::CardExiledFrom { player, .. }
         | GameEvent::CreatureFought { controller: player, .. }
@@ -1679,7 +1682,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::ManifestedDread { milled, .. } => Some(EntityRef::Card(*milled)),
         // The spell that caused the gain (Firesong and Sunspeaker's filter).
         GameEvent::SpellCausedLifeGain { spell, .. } => Some(EntityRef::Card(*spell)),
-        GameEvent::EchoPaid { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::EchoPaid { card_id, .. } | GameEvent::TappedForTeamwork { card_id, .. } => {
+            Some(EntityRef::Permanent(*card_id))
+        }
         GameEvent::LifeGained { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::LifeLost { player, .. }
@@ -2023,6 +2028,7 @@ mod tests {
             E::LifeGained { player: 0, amount: 1 },
             E::SpellCausedLifeGain { player: 0, spell: c, amount: 1 },
             E::EchoPaid { card_id: c, controller: 0 },
+            E::TappedForTeamwork { card_id: c, controller: 0 },
             E::CardsExiledFromHandOrBy { player: 0, count: 1 },
             E::CreatureFought { card_id: c, controller: 0 },
             E::PaidLife { player: 0, amount: 1 },
@@ -2210,6 +2216,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::Bent(None)),
             K::Performed(crate::effect::KeywordAct::SpellCausedLifeGain),
             K::Performed(crate::effect::KeywordAct::EchoPaid),
+            K::Performed(crate::effect::KeywordAct::TappedForTeamwork),
             K::EvidenceCollected,
             K::GiftGiven,
             K::PoisonAdded,

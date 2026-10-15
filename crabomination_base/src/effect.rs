@@ -4144,6 +4144,9 @@ pub enum KeywordAct {
     /// upkeep; the permanent is the subject ("When this creature's echo cost
     /// is paid" — Shah of Naar Isle).
     EchoPaid,
+    /// A creature became tapped to pay a teamwork cost; it is the subject
+    /// (Agent Maria Hill).
+    TappedForTeamwork,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.
@@ -7099,6 +7102,9 @@ pub enum Effect {
     /// Register a delayed trigger sacrificing each resolved permanent at the
     /// beginning of the controller's next upkeep (Firion's copy token).
     SacrificeAtNextUpkeep { what: Selector },
+    /// "Exile those creatures at the beginning of your next upkeep" (Rally the
+    /// Ancestors) — the exile twin of `SacrificeAtNextUpkeep`.
+    ExileAtYourNextUpkeep { what: Selector },
     /// "Sacrifice them at the beginning of the next end step" (Pull). The
     /// selector is resolved now; each hit gets its own CR 603.7a delayed
     /// trigger.
@@ -13072,6 +13078,11 @@ pub enum Effect {
     /// Harmony, Bonus Round): the controller gets a this-turn emblem with
     /// `triggered`, dropped at cleanup.
     TriggersThisTurn { triggered: Vec<TriggeredAbility> },
+
+    /// CR 611.2b — "until your next turn, whenever [event], [effect]" (Don't
+    /// Move): `TriggersThisTurn`'s emblem, dropped as the controller's next
+    /// turn begins instead of at cleanup.
+    TriggersUntilYourNextTurn { triggered: Vec<TriggeredAbility> },
 
     /// "You can cast only `more` more spells this turn" (Irencrag Feat): caps
     /// the controller's spells this turn at the count so far plus `more`.

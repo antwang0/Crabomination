@@ -30820,6 +30820,7 @@ mod stack_response_tests {
             }],
             statics: vec![],
             this_turn: false,
+            until_your_next_turn: false,
         };
         let draw = emblem(Effect::Draw { who: Selector::You, amount: Value::Const(2) });
         let life = emblem(Effect::GainLife { who: Selector::You, amount: Value::Const(1) });

@@ -6025,6 +6025,27 @@ impl GameState {
             AttackTarget::Planeswalker(id) | AttackTarget::Battle(id) => Some(id),
         };
         let scaled = self.attached_combat_damage_doubling(source, to, self.scale_damage_to(source, ent, amount));
+        // Charging Tuskodon — its own combat damage to a player, doubled.
+        let scaled = match (source, target) {
+            (Some(src), AttackTarget::Player(_))
+                if scaled > 0 && self.battlefield.has_damage_scaler(crate::game::card_can_scale_damage) =>
+            {
+                let n = self.battlefield_find(src).map_or(0, |c| {
+                    c.definition
+                        .static_abilities
+                        .iter()
+                        .filter(|sa| {
+                            matches!(
+                                self.active_static(&sa.effect, c),
+                                Some(crate::effect::StaticEffect::SelfDealsDoubleCombatDamageToPlayers)
+                            )
+                        })
+                        .count()
+                });
+                scaled.saturating_mul(1u32 << n.min(8))
+            }
+            _ => scaled,
+        };
         // Jeska, Thrice Reborn — triple to one of the registrant's opponents.
         match (source, target) {
             (Some(src), AttackTarget::Player(p)) if !self.tripled_combat_damage_to_opponents.is_empty() => {

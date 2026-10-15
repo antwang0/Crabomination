@@ -42298,14 +42298,19 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SacrificeAtNextUpkeep { what } => {
+            Effect::SacrificeAtNextUpkeep { what } | Effect::ExileAtYourNextUpkeep { what } => {
+                let then = if matches!(effect, Effect::SacrificeAtNextUpkeep { .. }) {
+                    Effect::SacrificeSource
+                } else {
+                    Effect::Exile { what: crate::effect::Selector::This }
+                };
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source: id,
                         kind: crate::game::types::DelayedKind::YourNextUpkeep,
-                        effect: Effect::SacrificeSource,
+                        effect: then.clone(),
                         target: None,
                         bound_token: None,
                         bound_subject: None,
@@ -44099,6 +44104,7 @@ impl GameState {
                             triggered: triggered.clone(),
                             statics: statics.clone(),
                             this_turn: false,
+                            until_your_next_turn: false,
                         });
                         self.offboard_keyword_grants = true;
                     }
@@ -44113,16 +44119,18 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::TriggersThisTurn { triggered } => {
+            Effect::TriggersThisTurn { triggered } | Effect::TriggersUntilYourNextTurn { triggered } => {
                 let name = ctx
                     .source
                     .and_then(|id| self.find_card_anywhere(id))
                     .map_or_else(String::new, |c| c.definition.name.to_string());
+                let this_turn = matches!(effect, Effect::TriggersThisTurn { .. });
                 self.players[ctx.controller].emblems.push(crate::player::Emblem {
                     name,
                     triggered: triggered.clone(),
                     statics: Vec::new(),
-                    this_turn: true,
+                    this_turn,
+                    until_your_next_turn: !this_turn,
                 });
                 Ok(())
             }

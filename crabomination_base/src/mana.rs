@@ -909,6 +909,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast a Knight or Equipment spell."
     /// (Tournament Grounds.) A Kindred Knight or a changeling counts.
     KnightOrEquipmentSpells,
+    /// "Spend this mana only to cast Dwarf, Equipment, and Saga spells"
+    /// (Fíli and Kíli, Joyous).
+    DwarfEquipmentOrSagaSpells,
     /// "Spend this mana only to cast Mount or Vehicle spells." (Intrepid
     /// Stablemaster.) Spells only; a changeling spell is a Mount.
     MountOrVehicleSpells,
@@ -988,6 +991,7 @@ impl SpendRestriction {
             SpendRestriction::EquipmentOnly => "only Equipment",
             SpendRestriction::AuraOrEquipmentSpells => "only Aura and Equipment spells",
             SpendRestriction::KnightOrEquipmentSpells => "only Knight and Equipment spells",
+            SpendRestriction::DwarfEquipmentOrSagaSpells => "only Dwarf, Equipment, and Saga spells",
             SpendRestriction::MountOrVehicleSpells => "only Mount and Vehicle spells",
             SpendRestriction::PilotOrVehicleSpells => "only Pilot and Vehicle spells",
             SpendRestriction::CreatureOfEitherTypeOrItsAbility(..) => {
@@ -1136,6 +1140,13 @@ impl SpendRestriction {
                     && (kind.equipment
                         || kind.changeling
                         || kind.creature_types.contains(&crate::card::CreatureType::Knight))
+            }
+            SpendRestriction::DwarfEquipmentOrSagaSpells => {
+                !kind.activating_ability
+                    && (kind.equipment
+                        || kind.saga
+                        || kind.changeling
+                        || kind.creature_types.contains(&crate::card::CreatureType::Dwarf))
             }
             SpendRestriction::MountOrVehicleSpells => {
                 !kind.activating_ability
@@ -1298,6 +1309,8 @@ pub struct SpellKind {
     pub equipment: bool,
     /// Casting an Aura spell (Codsworth's "Aura and/or Equipment spells").
     pub aura: bool,
+    /// Casting a Saga spell (Fíli and Kíli's "Dwarf, Equipment, and Saga").
+    pub saga: bool,
     /// Casting a Vehicle spell (Intrepid Stablemaster's "Mount or Vehicle").
     pub vehicle: bool,
     /// Casting a colorless spell (Sage of the Unknowable's "spend this mana

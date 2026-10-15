@@ -12910,6 +12910,7 @@ impl GameState {
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.tapped = true;
                             events.push(GameEvent::PermanentTapped { card_id: id, actor: None, as_attacker: false });
+                            events.push(GameEvent::TappedForTeamwork { card_id: id, controller: p });
                         }
                     }
                 }
@@ -23810,6 +23811,22 @@ impl GameState {
             if let Some(cost) = entered.map(|c| c.definition.cost.clone()) {
                 effective_mana_cost.reduce_by_cost(&cost);
             }
+            // Advancing the Spirit — the first power-up of each of your turns
+            // may cost {0} instead.
+            if self.active_player_idx == p
+                && self.players[p].power_up_turn != Some(self.turn_number)
+                && self.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                self.active_static(&sa.effect, c),
+                                Some(crate::effect::StaticEffect::FirstPowerUpEachYourTurnFree)
+                            )
+                        })
+                })
+            {
+                effective_mana_cost.symbols.clear();
+            }
         }
         if let Some(v) = &ability.cost_reduction_value {
             let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
@@ -24449,6 +24466,9 @@ impl GameState {
             && !card.exhausted_abilities.contains(&ability_index)
         {
             card.exhausted_abilities.push(ability_index);
+        }
+        if ability.power_up && !source_in_gy {
+            self.players[p].power_up_turn = Some(self.turn_number);
         }
         if ability.exhaust && !self.turn.exhaust_activators_this_turn.contains(&p) {
             self.turn.exhaust_activators_this_turn.push(p);

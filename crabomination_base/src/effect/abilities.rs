@@ -1812,6 +1812,15 @@ pub enum StaticEffect {
     /// of Drums): one doubling per such attachment, at the combat funnels
     /// only (`GameState::attached_combat_damage_doubling`).
     AttachedDealsDoubleCombatDamage,
+    /// CR 614.1a — "If this creature would deal combat damage to a player, it
+    /// deals double that damage to that player instead" (Charging Tuskodon),
+    /// at the attacker-to-player combat funnel only.
+    SelfDealsDoubleCombatDamageToPlayers,
+    /// CR 702.193 — "You may pay {0} rather than pay the power-up cost of the
+    /// first power-up ability you activate during each of your turns"
+    /// (Advancing the Spirit). Read at activation; `Player::power_up_turn`
+    /// says whether one was already activated this turn.
+    FirstPowerUpEachYourTurnFree,
     /// CR 614.1a — "If another creature would deal combat damage to equipped
     /// creature, it deals double that damage to equipped creature instead"
     /// (Inquisitor's Flail's second line): the receiving side of

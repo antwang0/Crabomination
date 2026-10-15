@@ -33798,6 +33798,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::DoubleDamageToYou
         | SE::DoubleDamageToThis
         | SE::AttachedDealsDoubleCombatDamage
+        | SE::SelfDealsDoubleCombatDamageToPlayers
         | SE::AttachedDealsDoubleDamage
         | SE::AttachedTakesDoubleCombatDamage
         | SE::DoubleDamageToChosenPlayer
@@ -35680,6 +35681,8 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageToYou
             | StaticEffect::DoubleDamageToThis
             | StaticEffect::AttachedDealsDoubleCombatDamage
+            | StaticEffect::SelfDealsDoubleCombatDamageToPlayers
+            | StaticEffect::FirstPowerUpEachYourTurnFree
             | StaticEffect::AttachedDealsDoubleDamage
             | StaticEffect::NewDamageHealsOldDamage
             | StaticEffect::AttachedTakesDoubleCombatDamage

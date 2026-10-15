@@ -4954,6 +4954,10 @@ impl GameState {
         // CR 611.2b — "until your next turn" control ends as that turn begins
         // (it used to snap back in the cleanup of the turn it was taken).
         self.revert_temporary_control(&[crate::effect::Duration::UntilNextTurn]);
+        // CR 611.2b — "until your next turn, whenever …" emblems end now.
+        if self.players[p].emblems.iter().any(|e| e.until_your_next_turn) {
+            self.players[p].emblems.retain(|e| !e.until_your_next_turn);
+        }
         // Every write below is gated on the field not already holding the
         // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
         // of the permanent, and on a quiet board none of these flags is set.

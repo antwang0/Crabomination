@@ -398,6 +398,9 @@ pub enum CreatureType {
     // Star Trek (Pelia, Immortal Innovator).
     Lanthanite,
     Talosian,
+    // Star Trek (General Chang; Bio-Asset Allocator).
+    Klingon,
+    Borg,
 }
 
 /// Land subtypes (basic land types + others).
@@ -8251,6 +8254,7 @@ impl CardDefinition {
             equipment: self.is_equipment(),
             vehicle: self.is_vehicle(),
             aura: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura),
+            saga: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Saga),
             colorless: colors.is_empty(),
             mana_value: self.cost.cmc(),
             has_x: self.cost.has_x(),
