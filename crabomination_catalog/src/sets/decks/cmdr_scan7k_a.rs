@@ -6,7 +6,7 @@ use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType,
     CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
     LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, StaticAbility,
-    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, mint_token, mint_treasures, on_attack, target_any, target_filtered, target_n};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
@@ -452,3 +452,19 @@ pub fn dragonrage() -> CardDefinition {
     }
 }
 
+
+/// Thrull Wizard — {2}{B} 1/1 Thrull Wizard. {1}{B}: counter target black
+/// spell unless its controller pays {B} or {3}. (Phage the Untouchable.)
+pub fn thrull_wizard() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::CounterUnless {
+                what: target_filtered(R::IsSpellOnStack.and(R::HasColor(Color::Black))),
+                cost: WardCost::ManaOrMana(cost(&[b()]), cost(&[generic(3)])),
+            },
+            ..Default::default()
+        }],
+        ..creature("Thrull Wizard", cost(&[generic(2), b()]), vec![CreatureType::Thrull, CreatureType::Wizard], 1, 1)
+    }
+}

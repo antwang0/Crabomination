@@ -295,6 +295,7 @@ mod cmdr_rank6k_b;
 mod cmdr_rank6k_c;
 mod cmdr_rank6k_d;
 mod cmdr_rescan_a;
+mod cmdr_scan7k_a;
 mod cmdr_rank6k_e;
 mod cmdr_rank6k_f;
 mod cmdr_rank6k_g;
