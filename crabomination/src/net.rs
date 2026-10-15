@@ -2835,6 +2835,8 @@ pub enum GameEventWire {
     CardsExiledFromHandOrBy { player: usize, count: u32 },
     /// Wire mirror of `GameEvent::SpellCausedLifeGain`.
     SpellCausedLifeGain { player: usize, spell: CardId, amount: u32 },
+    /// Wire mirror of `GameEvent::EchoPaid`.
+    EchoPaid { card_id: CardId, controller: usize },
     /// Wire mirror of `GameEvent::CreatureFought`.
     CreatureFought { card_id: CardId, controller: usize },
     PaidLife { player: usize, amount: u32 },
@@ -3109,6 +3111,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::SpellCausedLifeGain { player, spell, amount } => {
                 GameEventWire::SpellCausedLifeGain { player: *player, spell: *spell, amount: *amount }
+            }
+            GameEvent::EchoPaid { card_id, controller } => {
+                GameEventWire::EchoPaid { card_id: *card_id, controller: *controller }
             }
             GameEvent::CreatureFought { card_id, controller } => {
                 GameEventWire::CreatureFought { card_id: *card_id, controller: *controller }
@@ -3533,6 +3538,7 @@ impl GameEventWire {
             E::CardsExiledFromHandOrBy { player, count } => {
                 format!("{count} card(s) exiled from {}'s hand or by them", pn(*player))
             }
+            E::EchoPaid { controller, .. } => format!("{} paid echo", pn(*controller)),
             E::SpellCausedLifeGain { player, amount, .. } => {
                 format!("a spell gained {} {amount} life", pn(*player))
             }

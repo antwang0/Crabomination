@@ -4134,6 +4134,10 @@ pub enum KeywordAct {
     /// `Predicate::EntityMatches` on `TriggerSource`), the gainer the actor,
     /// the total gained the event amount; one event per gainer.
     SpellCausedLifeGain,
+    /// CR 702.30a — a permanent's echo cost was paid at its controller's
+    /// upkeep; the permanent is the subject ("When this creature's echo cost
+    /// is paid" — Shah of Naar Isle).
+    EchoPaid,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.

@@ -10439,6 +10439,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.echo_paid = true;
                     }
+                    events.push(GameEvent::EchoPaid { card_id: id, controller: p });
                 } else {
                     self.sacrifice_one(id, p, events);
                 }

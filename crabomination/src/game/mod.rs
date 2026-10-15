@@ -9451,6 +9451,7 @@ impl GameState {
                 if let Some(c) = self.battlefield_find_mut(id) {
                     c.echo_paid = true;
                 }
+                events.push(crate::game::GameEvent::EchoPaid { card_id: id, controller: active });
             } else {
                 self.sacrifice_one(id, active, &mut events);
             }
