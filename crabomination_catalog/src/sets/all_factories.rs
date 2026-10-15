@@ -15618,6 +15618,23 @@ static DECKS: &[Factory] = &[
     super::decks::sokkas_sword_training,
     super::decks::thats_rough_buddy,
     super::decks::paramecia_coloniex,
+    // cmdr_scan7k_c
+    super::decks::fall_of_gil_galad,
+    super::decks::the_huntsmans_redemption,
+    super::decks::hall_of_tagsin,
+    super::decks::clay_revenant,
+    super::decks::cartouche_of_strength,
+    super::decks::most_wanted,
+    super::decks::suburban_sanctuary,
+    super::decks::supportive_parents,
+    super::decks::hansk_slayer_zealot,
+    super::decks::vicious_shadows,
+    super::decks::thor_odinson,
+    super::decks::monica_rambeau,
+    super::decks::unflinching_hortimancer,
+    super::decks::way_of_the_mentor,
+    super::decks::donatello_gadget_master,
+    super::decks::donatello_mutant_mechanic,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

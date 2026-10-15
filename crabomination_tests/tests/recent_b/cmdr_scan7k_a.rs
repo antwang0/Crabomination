@@ -526,3 +526,234 @@ fn paramecia_coloniex_stacks_a_creature_on_top() {
     assert!(g.exile.iter().any(|c| c.id == worm));
     assert_eq!(g.players[0].library.first().map(|c| c.id), Some(angel), "on top");
 }
+
+// ── decks::cmdr_scan7k_c ─────────────────────────────────────────────────────
+
+fn kill(g: &mut GameState, id: CardId) {
+    let owner = g.battlefield_find(id).unwrap().controller;
+    let mut evs = Vec::new();
+    g.sacrifice_one(id, owner, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(g);
+}
+
+/// Fall of Gil-galad III: your creature gains "dies: draw two" and fights; it
+/// loses the fight and you draw.
+#[test]
+fn fall_of_gil_galad_chapter_three_fights_with_a_death_draw() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let big = ready(&mut g, 1, catalog::serra_angel());
+    let saga = ready(&mut g, 0, catalog::fall_of_gil_galad());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    let hand = g.players[0].hand.len();
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert!(g.battlefield_find(bear).is_none(), "the bear lost the fight");
+    assert_eq!(g.battlefield_find(big).unwrap().damage, 2);
+    assert_eq!(g.players[0].hand.len(), hand + 1 + 2, "the draw step and the granted draw two");
+}
+
+/// The Huntsman's Redemption III: up to two creatures get +2/+2 and trample.
+#[test]
+fn the_huntsmans_redemption_chapter_three_pumps_two() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    let saga = ready(&mut g, 0, catalog::the_huntsmans_redemption());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    for id in [a, b] {
+        assert_eq!(pt(&g, id), (4, 4));
+        assert!(g.permanent_has_keyword(id, &Keyword::Trample));
+    }
+}
+
+/// Hall of Tagsin's {4} ability makes a tapped Powerstone.
+#[test]
+fn hall_of_tagsin_makes_a_tapped_powerstone() {
+    let mut g = pod(2);
+    let hall = ready(&mut g, 0, catalog::hall_of_tagsin());
+    activate(&mut g, hall, 2, None);
+    let stone = g.battlefield.iter().find(|c| c.definition.name == "Powerstone").expect("a Powerstone");
+    assert!(stone.tapped);
+}
+
+/// Clay Revenant returns from the graveyard to hand for {2}{B}.
+#[test]
+fn clay_revenant_returns_from_the_graveyard() {
+    let mut g = pod(2);
+    let golem = g.add_card_to_graveyard(0, catalog::clay_revenant());
+    activate(&mut g, golem, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == golem));
+}
+
+/// Cartouche of Strength's entry fight kills the opponent's bear.
+#[test]
+fn cartouche_of_strength_fights_on_entry() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::cartouche_of_strength());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("aura");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+    assert_eq!(pt(&g, angel), (5, 5));
+    assert!(g.permanent_has_keyword(angel, &Keyword::Trample));
+}
+
+/// Most Wanted pays two Treasures when its creature dies.
+#[test]
+fn most_wanted_leaves_two_treasures() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::most_wanted());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("aura");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (4, 3));
+    kill(&mut g, bear);
+    assert_eq!(named_count(&g, 0, "Treasure"), 2);
+}
+
+/// Supportive Parents taps two creatures for one mana of any color.
+#[test]
+fn supportive_parents_taps_two_for_mana() {
+    let mut g = pod(2);
+    let parents = ready(&mut g, 0, catalog::supportive_parents());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: parents, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("tap two");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    assert!(g.battlefield_find(parents).unwrap().tapped && g.battlefield_find(bear).unwrap().tapped);
+}
+
+/// Hansk hands its opponent three Walkers each upkeep and draws when one dies.
+#[test]
+fn hansk_gives_walkers_and_draws_on_their_deaths() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    library(&mut g, 1, 4);
+    ready(&mut g, 0, catalog::hansk_slayer_zealot());
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::Draw);
+    let walkers: Vec<CardId> = g.battlefield.iter().filter(|c| c.definition.name == "Walker").map(|c| c.id).collect();
+    assert_eq!(walkers.len(), 3);
+    assert!(walkers.iter().all(|id| g.battlefield_find(*id).unwrap().controller == 1));
+    let hand = g.players[0].hand.len();
+    kill(&mut g, walkers[0]);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Vicious Shadows burns a player for their hand size when a creature dies.
+#[test]
+fn vicious_shadows_burns_for_hand_size() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::vicious_shadows());
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    kill(&mut g, bear);
+    assert_eq!(g.players[1].life, life - 4);
+}
+
+/// Thor Odinson's two prowess instances: +2/+2 per noncreature spell.
+#[test]
+fn thor_odinson_has_double_prowess() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let thor = ready(&mut g, 0, catalog::thor_odinson());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt);
+    assert_eq!(pt(&g, thor), (6, 6));
+}
+
+/// Monica Rambeau transforms into Photon, whose noncreature spells grow the
+/// rest of the team.
+#[test]
+fn monica_rambeau_transforms_into_photon() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let monica = ready(&mut g, 0, catalog::monica_rambeau());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, monica, 0, None);
+    assert!(g.battlefield_find(monica).unwrap().transformed);
+    assert!(g.permanent_has_keyword(monica, &Keyword::Hexproof));
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt);
+    assert_eq!(plus(&g, bear), 1);
+    assert_eq!(plus(&g, monica), 0, "each *other* creature");
+}
+
+/// Unflinching Hortimancer grows on life gain; Way of the Mentor makes a
+/// five-loyalty Jace and adds loyalty on life gain.
+#[test]
+fn sundial_life_gain_grows_hortimancer_and_jace() {
+    let mut g = pod(2);
+    let hort = ready(&mut g, 0, catalog::unflinching_hortimancer());
+    let way = g.add_card_to_hand(0, catalog::way_of_the_mentor());
+    cast(&mut g, way);
+    let jace = g.battlefield.iter().find(|c| c.definition.is_planeswalker()).map(|c| c.id).expect("a Jace token");
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 5);
+    let salve = g.add_card_to_hand(0, catalog::healing_salve());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: salve, target: Some(Target::Player(0)), additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("salve");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, hort), 1);
+    assert_eq!(g.battlefield_find(jace).unwrap().counter_count(CounterType::Loyalty), 6);
+}
+
+/// Donatello, Mutant Mechanic turns a Sol Ring into a 3/3 Robot; when it
+/// dies its counters move on.
+#[test]
+fn donatello_mutant_mechanic_animates_and_salvages_counters() {
+    let mut g = pod(2);
+    let don = ready(&mut g, 0, catalog::donatello_mutant_mechanic());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    activate(&mut g, don, 0, Some(Target::Permanent(ring)));
+    assert_eq!(pt(&g, ring), (3, 3));
+    assert!(g.computed_permanent(ring).unwrap().subtypes().creature_types.contains(&crabomination::card::CreatureType::Robot));
+    kill(&mut g, ring);
+    assert_eq!(plus(&g, don), 3, "the counters moved to Donatello");
+}
+
+/// Donatello, Gadget Master's hit copies an artifact.
+#[test]
+fn donatello_gadget_master_copies_an_artifact() {
+    let mut g = pod(2);
+    let don = ready(&mut g, 0, catalog::donatello_gadget_master());
+    ready(&mut g, 0, catalog::sol_ring());
+    declare(&mut g, vec![(don, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert_eq!(named_count(&g, 0, "Sol Ring"), 2);
+}

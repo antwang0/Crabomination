@@ -1005,3 +1005,6 @@ pub use cmdr_scan7k_a::*;
 #[path = "../../../src/sets/decks/cmdr_scan7k_b.rs"]
 mod cmdr_scan7k_b;
 pub use cmdr_scan7k_b::*;
+#[path = "../../../src/sets/decks/cmdr_scan7k_c.rs"]
+mod cmdr_scan7k_c;
+pub use cmdr_scan7k_c::*;
