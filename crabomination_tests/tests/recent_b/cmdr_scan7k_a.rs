@@ -4516,3 +4516,56 @@ fn zar_ojanen_domain_package() {
     assert_eq!(plus(&g, elf), 1, "toughness 1 < 3 types");
     assert_eq!(plus(&g, zar), 0, "toughness 4");
 }
+
+/// CR 113.10b — Blood Sun: lands lose all abilities except mana abilities.
+/// Mutavault still taps for {C} but can't animate; Evolving Wilds can't fetch.
+#[test]
+fn blood_sun_leaves_lands_only_their_mana_abilities() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let vault = g.add_card_to_battlefield(0, catalog::mutavault());
+    let wilds = g.add_card_to_battlefield(0, catalog::evolving_wilds());
+    let sun = g.add_card_to_hand(0, catalog::blood_sun());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, sun);
+    assert_eq!(g.players[0].hand.len(), hand, "Blood Sun left, a card came");
+    g.players[0].mana_pool = Default::default();
+    g.perform_action(GameAction::ActivateAbility { card_id: vault, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("the mana ability survives");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    flood(&mut g);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility { card_id: vault, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None }).is_err(),
+        "no animation",
+    );
+    assert!(
+        g.perform_action(GameAction::ActivateAbility { card_id: wilds, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None }).is_err(),
+        "no fetch",
+    );
+}
+
+/// CR 614.12 — under Blood Sun a tapland has no "enters tapped" and no
+/// enter trigger: Dismal Backwater comes in untapped and gains no life.
+#[test]
+fn blood_sun_lets_taplands_enter_untapped() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::blood_sun());
+    let land = g.add_card_to_hand(0, catalog::dismal_backwater());
+    g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "enters untapped");
+    assert_eq!(g.players[0].life, 20, "no enter trigger");
+}
+
+/// CR 614.12 — bug fix: under Blood Moon a tapland is a Mountain as it
+/// enters, so it enters untapped and its enter trigger is gone too.
+#[test]
+fn blood_moon_tapland_enters_untapped() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(1, catalog::blood_moon());
+    let land = g.add_card_to_hand(0, catalog::dismal_backwater());
+    g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "enters untapped");
+    assert_eq!(g.players[0].life, 20, "no enter trigger");
+}

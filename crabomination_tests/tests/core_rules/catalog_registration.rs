@@ -1279,7 +1279,7 @@ fn a_land_type_setting_aura_takes_the_lands_abilities() {
 #[test]
 fn a_card_that_prints_losing_all_abilities_strips_them() {
     /// Everything that reaches `Modification::RemoveAllAbilities`.
-    const STRIPPERS: [&str; 8] = [
+    const STRIPPERS: [&str; 9] = [
         "remove_abilities: true",
         "RemoveAllAbilities",
         "LoseAllAbilities",
@@ -1291,6 +1291,8 @@ fn a_card_that_prints_losing_all_abilities_strips_them() {
         // CR 613's full rewrite: "becomes a 3/3 Elk with no abilities".
         "ResetCreature",
         "BecomeCreatureType",
+        // Blood Sun: every land, mana abilities spared.
+        "LandsLoseNonManaAbilities",
     ];
     let cache_path =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");

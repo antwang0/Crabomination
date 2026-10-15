@@ -12937,7 +12937,7 @@ impl GameState {
                     || !self
                         .gather_continuous_effects()
                         .iter()
-                        .any(|e| matches!(e.modification, Modification::RemoveAllAbilities)),
+                        .any(|e| matches!(e.modification, Modification::RemoveAllAbilities | Modification::RemoveAllAbilitiesButMana)),
                 "the ability-strip presence gate missed a RemoveAllAbilities source",
             );
             return Vec::new();
@@ -12969,7 +12969,7 @@ impl GameState {
     #[inline(never)]
     fn permanents_with_abilities_removed_cold(&self) -> Vec<CardId> {
         fn strip(state: &GameState, fx: &[ContinuousEffect]) -> Vec<CardId> {
-            if !fx.iter().any(|e| matches!(e.modification, Modification::RemoveAllAbilities)) {
+            if !fx.iter().any(|e| matches!(e.modification, Modification::RemoveAllAbilities | Modification::RemoveAllAbilitiesButMana)) {
                 return Vec::new();
             }
             crate::game::layers::apply_layers(&state.battlefield, fx)
@@ -34473,6 +34473,22 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::RemoveAllAbilities,
+                    });
+                }
+            }
+            // Blood Sun — every land loses all but its mana abilities.
+            StaticEffect::LandsLoseNonManaAbilities => {
+                debug_assert!(static_effect_strips_abilities(effect), "strip gate: Blood Sun");
+                let lands = crate::effect::Selector::EachPermanent(crate::card::SelectionRequirement::Land);
+                if let Some(affected) = selector_to_affected(&lands, card) {
+                    out.push(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::RemoveAllAbilitiesButMana,
                     });
                 }
             }

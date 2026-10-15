@@ -191,11 +191,22 @@ the handoff.
   (Omen Hawker paying Adric). **OPEN:** four undecided — Polyraptor + Marauding Raptor's
   mandatory loop (a true CR 104.4b draw), Scute Swarm, Blech + Root Manipulation, Mirkwood Bats +
   Ninja Pizza board caps (seeds 931080, 932470, 931150, 930612).
+- **Later seats** 2727-2728, 2763-2765 (Bard King of Dale, Jhoira Weatherlight Corsair, Mishra
+  Artificer Prodigy, Arwen, Frodo Baggins). Maraxus of Keld isn't legendary and Whtz's average
+  deck is 255 cards (Rulebreaker), so neither is seated.
+- **Primitives (second leg):** `Search`/`SearchZones` resolve `SameNameAsTarget` (Mishra);
+  Aragorn, Company Leader rides `AddCounterOfTriggerKind` on `YouPutCounters`;
+  `StaticEffect::LandsLoseNonManaAbilities` → layer-6 `Modification::RemoveAllAbilitiesButMana`,
+  read as `ComputedPermanent::keeps_mana_abilities` by the two mana paths only (Blood Sun).
+- **FIXED (CR 614.12 / 113.10b):** an entrant stripped as it enters kept its own "enters tapped"
+  static and its printed ETB triggers (`apply_enters_tapped_replacement`,
+  `fire_self_etb_triggers`) — a tapland under Blood Moon entered tapped and gained its life.
+- **FIXED (CR 400.7, audit sweep 9304):** a commander spell bounced to hand (Reprieve on Me, the
+  Immortal) kept its counters; `MoveSpellToZone` / `CounterSpellToZone` drop them for the zone.
 - **Blocked (primitive):** Jurin (each attacker's own defending player), The Neutrinos (flicker
   returning attacking), Linessa (grandeur discard cost), Auditore Ambush (target player in one
-  mode of a `ChooseModesCast` searching), Aragorn, Company Leader (per-kind counter echo), Blood
-  Sun (lose all but mana abilities), Jermane (a "legs" table), Reservoir Kraken (an accepter taps
-  their own creature).
+  mode of a `ChooseModesCast` searching), Jermane (a "legs" table), Reservoir Kraken (an accepter
+  taps their own creature).
 
 ## FIXED/OPEN 2026-10-15 (Commander run, `01ANcpHx`) — the full-list scan's two-card gaps
 

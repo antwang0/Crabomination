@@ -14438,6 +14438,7 @@ pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
         // Dress Down; Titania's Song; Alpine Moon; Ultima.
         SE::CreaturesLoseAllAbilities
         | SE::MatchingLoseAllAbilities { .. }
+        | SE::LandsLoseNonManaAbilities
         | SE::NoncreatureArtifactsLoseAbilities
         | SE::NamedLandsNeutralized
         | SE::BlightedLandsNeutralized => true,

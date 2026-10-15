@@ -154,6 +154,10 @@ pub enum Modification {
     /// stripped after every Add has applied.
     CantHaveKeyword(Keyword),
     RemoveAllAbilities,
+    /// CR 113.10b — Blood Sun's "loses all abilities except mana abilities":
+    /// a strip that leaves the printed mana abilities activatable
+    /// ([`ComputedPermanent::keeps_mana_abilities`]).
+    RemoveAllAbilitiesButMana,
 
     // ── Layer 7 ──────────────────────────────────────────────────────────────
     SetPowerToughness(i32, i32),   // 7b
@@ -260,7 +264,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         M::AddKeyword(k) if crate::card::is_ability_lock_keyword(k) => F::KEYWORD | F::ABILITY_LOCK,
         M::AddKeyword(_) => F::KEYWORD,
         M::RemoveKeyword(_) | M::CantHaveKeyword(_) | M::ReplaceColorWord(..) => F::KEYWORD_EDIT,
-        M::RemoveAllAbilities => F::STRIP,
+        M::RemoveAllAbilities | M::RemoveAllAbilitiesButMana => F::STRIP,
         M::SetPowerToughnessLive(_) => F::LIVE_PT,
         // Family-less, each for the same reason: **nothing gates on it**. The
         // requirement walker's `has_stype` and `has_atype` closures read the
@@ -925,6 +929,9 @@ pub struct ComputedPermanent {
     /// abilities, not just keywords. Defaults to false so pre-push snapshots
     /// keep their existing behavior.
     pub lost_all_abilities: bool,
+    /// CR 113.10b — the strip behind `lost_all_abilities` is only Blood Sun's
+    /// "except mana abilities": the printed mana abilities still activate.
+    pub keeps_mana_abilities: bool,
     /// CR 702.73a / 613.1d — a layer-4 effect set this permanent's creature
     /// types (Curse of Conformity's "lose all creature types"), which
     /// overrides changeling's characteristic-defining "every type".
@@ -984,6 +991,7 @@ impl std::fmt::Debug for ComputedPermanent {
             .field("power", &self.power)
             .field("toughness", &self.toughness)
             .field("lost_all_abilities", &self.lost_all_abilities)
+            .field("keeps_mana_abilities", &self.keeps_mana_abilities)
             .field("creature_types_set", &self.creature_types_set)
             .finish()
     }
@@ -1113,7 +1121,8 @@ impl SecondPass {
                 Modification::AddKeyword(_)
                 | Modification::RemoveKeyword(_)
                 | Modification::CantHaveKeyword(_)
-                | Modification::RemoveAllAbilities => g.keyword_changer = true,
+                | Modification::RemoveAllAbilities
+                | Modification::RemoveAllAbilitiesButMana => g.keyword_changer = true,
                 _ => {}
             }
         }
@@ -1408,6 +1417,7 @@ fn compute_permanent_pass(
     let mut mod_toughness: i32 = 0;
     let mut switched = false;
     let mut lost_all_abilities = false;
+    let mut full_strip = false;
     let mut strip_all_ts = 0u64;
     let mut creature_types_set = false;
     let mut every_creature_type = false;
@@ -1557,6 +1567,12 @@ fn compute_permanent_pass(
                 cant_have_keywords.push(kw.clone());
             }
             Modification::RemoveAllAbilities => {
+                keywords.clear();
+                lost_all_abilities = true;
+                full_strip = true;
+                strip_all_ts = effect.timestamp;
+            }
+            Modification::RemoveAllAbilitiesButMana => {
                 keywords.clear();
                 lost_all_abilities = true;
                 strip_all_ts = effect.timestamp;
@@ -1731,6 +1747,7 @@ fn compute_permanent_pass(
         toughness,
         base_pt_nibbles,
         lost_all_abilities,
+        keeps_mana_abilities: lost_all_abilities && !full_strip,
         creature_types_set,
     }
 }

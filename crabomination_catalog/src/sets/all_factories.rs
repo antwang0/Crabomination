@@ -16049,6 +16049,10 @@ static DECKS: &[Factory] = &[
     super::decks::navigators_compass,
     super::decks::nishoba_brawler,
     super::decks::solarium_sentry,
+    super::decks::whtz_the_bibliophile,
+    super::decks::mishra_artificer_prodigy,
+    super::decks::aragorn_company_leader,
+    super::decks::blood_sun,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -1756,3 +1756,19 @@ pub fn aragorn_company_leader() -> CardDefinition {
         ..legend("Aragorn, Company Leader", vec![CreatureType::Human, CreatureType::Ranger], 3, 3)
     }
 }
+
+/// Blood Sun — {2}{R} enchantment. Enters: draw a card. All lands lose all
+/// abilities except mana abilities (CR 113.10b, layer 6).
+pub fn blood_sun() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Sun",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        static_abilities: vec![StaticAbility {
+            description: "All lands lose all abilities except mana abilities.",
+            effect: StaticEffect::LandsLoseNonManaAbilities,
+        }],
+        ..Default::default()
+    }
+}

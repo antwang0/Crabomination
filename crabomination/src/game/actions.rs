@@ -5632,7 +5632,14 @@ impl GameState {
         // Beyond): untapped only if a reveal is the arm that held and the
         // controller chose to reveal.
         let mut reveal_ask = false;
-        for sa in &self.battlefield[idx].definition.static_abilities {
+        // CR 614.12 / 113.10b — an entrant that has lost its abilities as it
+        // enters (Blood Moon, Blood Sun on a tapland) has no "enters tapped".
+        let own_statics: &[crate::card::StaticAbility] = if self.lost_all_abilities(card_id) {
+            &[]
+        } else {
+            &self.battlefield[idx].definition.static_abilities
+        };
+        for sa in own_statics {
             match &sa.effect {
                 StaticEffect::EntersTapped { applies_to: crate::effect::Selector::This } => {
                     should_tap = true;
@@ -5925,6 +5932,9 @@ impl GameState {
         }
         use crate::effect::{EventKind, EventScope};
         #[allow(clippy::type_complexity)]
+        // CR 113.10b / 603.6d — an entrant stripped as it enters (Blood Sun or
+        // Blood Moon on a tapland) has no printed ETB to fire.
+        let stripped = self.lost_all_abilities(card_id);
         let etb_triggers: Vec<(Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
             .find_by_id(card_id)
@@ -5932,8 +5942,9 @@ impl GameState {
                 // Printed + statics-granted ETBs ("Slivers you control have
                 // 'When this enters…'" — Lavabelly) fire alike.
                 let static_granted = self.statics_granted_triggers_for(c);
-                c.definition
-                    .triggered_abilities
+                let printed: &[crate::card::TriggeredAbility] =
+                    if stripped { &[] } else { &c.definition.triggered_abilities };
+                printed
                     .iter()
                     .chain(static_granted.iter())
                     .filter(|t| t.event.kind == EventKind::EntersBattlefield
@@ -20094,7 +20105,8 @@ impl GameState {
         // land-type rewrite (Humility on an animated manland) is not covered
         // here and would need the gate to widen; `activate_ability`'s own
         // check, which pays `ability_strip_in_scope`, still refuses it.
-        let lost_all = computed.as_ref().is_some_and(|cp| cp.lost_all_abilities);
+        // Blood Sun's strip spares mana abilities (CR 113.10b).
+        let lost_all = computed.as_ref().is_some_and(|cp| cp.lost_all_abilities && !cp.keeps_mana_abilities);
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
                 && !lost_all
@@ -21700,8 +21712,11 @@ impl GameState {
             };
             // CR 113.10b — `lost_all_abilities`, behind both legs of the
             // ability-strip presence gate.
-            let stripped = self.ability_strip_in_scope()
-                && bf_cp!().as_ref().is_some_and(|c| c.lost_all_abilities);
+            let (stripped, keeps_mana) = if self.ability_strip_in_scope() {
+                bf_cp!().as_ref().map_or((false, false), |c| (c.lost_all_abilities, c.keeps_mana_abilities))
+            } else {
+                (false, false)
+            };
             // `creature_source` is the caller's "did a creature make this
             // mana" flag (CR 106.12 / Cursed Totem-style restrictions). Layer 4
             // is the only thing that can move a permanent off its printed card
@@ -21748,7 +21763,8 @@ impl GameState {
                 // This used to carve mana abilities out, so the direct
                 // activation path disagreed with the auto-tapper's source
                 // table, which drops the printed list on `lost_all_abilities`.
-                if stripped {
+                // Blood Sun's strip spares the printed mana abilities.
+                if stripped && !(keeps_mana && is_mana_ability(&def.activated_abilities[ability_index].effect)) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
                 // CR 305.6 / 612 — a basic's intrinsic mana ability follows its

@@ -3759,6 +3759,10 @@ pub enum StaticEffect {
     /// over `applies_to`). Sludge Monster: "Non-Horror creatures with slime
     /// counters on them lose all abilities".
     MatchingLoseAllAbilities { applies_to: Selector },
+    /// CR 113.10b / 605 — Blood Sun: "all lands lose all abilities except
+    /// mana abilities" (layer 6 `RemoveAllAbilitiesButMana`). A land keeps its
+    /// printed mana abilities unless a full strip applies too.
+    LandsLoseNonManaAbilities,
     /// Lantern of Insight — every player plays with their library top
     /// revealed (the all-players sibling of `TopOfLibraryRevealed`).
     AllLibraryTopsRevealed,
