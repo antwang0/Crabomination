@@ -556,6 +556,8 @@ pub enum PlaneswalkerSubtype {
     Sifa,
     // Thomil, the Destroyer (its own EDHREC deck).
     Thomil,
+    // Worzel, the Protector (Basri, Tomorrow's Champion's deck).
+    Worzel,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
