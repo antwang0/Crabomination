@@ -15600,6 +15600,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::TETSUO_UMEZAWA_COMMANDERS,
             main: decks::TETSUO_UMEZAWA_MAIN,
         },
+        // Seat 2525: Auntie Blyte, Bad Influence's EDHREC average deck. `--pod-decks 2525`.
+        PodDeck {
+            name: "Auntie Blyte, Bad Influence (R)",
+            commanders: decks::AUNTIE_BLYTE_COMMANDERS,
+            main: decks::AUNTIE_BLYTE_MAIN,
+        },
     ]
 }
 
@@ -19957,6 +19963,7 @@ mod tests {
             ("Razia, Boros Archangel", &[0x13F0]),
             ("Ayesha Tanaka, Armorer", &[0x13F1]),
             ("Tetsuo Umezawa", &[0x13F2]),
+            ("Auntie Blyte, Bad Influence", &[0x13F3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

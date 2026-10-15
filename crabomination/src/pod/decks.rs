@@ -70924,3 +70924,29 @@ pub const TETSUO_UMEZAWA_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, mountain, mountain, mountain, mountain,
     mountain, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const AUNTIE_BLYTE_COMMANDERS: &[CardFactory] = &[auntie_blyte_bad_influence];
+
+/// **Auntie Blyte, Bad Influence**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Auntie Blyte, Bad Influence (EDHREC, fetched 2026-10-15).
+pub const AUNTIE_BLYTE_MAIN: &[CardFactory] = &[
+    ankh_of_mishra, arcane_signet, basilisk_collar, batterbone, commanders_plate,
+    lightning_greaves, loxodon_warhammer, mind_stone, resurrection_orb, ruby_medallion,
+    shadowspear, sol_ring, swiftfoot_boots, the_ozolith, barbarian_ring, city_of_brass,
+    fogwells_gym, grand_coliseum, rogues_passage, tarnished_citadel, war_room, witchs_clinic,
+    brash_taunter, cemetery_gatekeeper, daredevil_fearless_fighter, eidolon_of_the_great_revel,
+    fireslinger, fortune_thief, goblin_artillery, heartless_hidetsugu,
+    kediss_emberclaw_familiar, orcish_artillery, orcish_cannoneers, scytheclaw_raptor,
+    solphim_mayhem_dominus, spear_spewer, stuffy_doll, sunspine_lynx, torbran_thane_of_red_fell,
+    volcano_hellion, zo_zu_the_punisher, all_will_be_one, citadel_of_pain, descent_into_avernus,
+    manabarbs, pyrohemia, repercussion, roiling_vortex, spellshock, sulfuric_vortex, abrade,
+    arcbond, big_score, bolt_bend, chaos_warp, lightning_bolt, price_of_progress, souls_fire,
+    thrill_of_possibility, tibalts_trickery, koth_fire_of_resistance, acidic_soil, aftershock,
+    blasphemous_act, chandras_ignition, earthquake, faithless_looting, flame_rift, jeskas_will,
+    mana_geyser, vandalblast, wheel_of_misfortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
