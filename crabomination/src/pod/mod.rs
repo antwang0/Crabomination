@@ -17202,6 +17202,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAO_REN_COMMANDERS,
             main: decks::CAO_REN_MAIN,
         },
+        // Seat 2792: Zhao, the Moon Slayer's EDHREC average deck. `--pod-decks 2792`.
+        PodDeck {
+            name: "Zhao, the Moon Slayer (R)",
+            commanders: decks::ZHAO_3_COMMANDERS,
+            main: decks::ZHAO_3_MAIN,
+        },
     ]
 }
 
@@ -21829,6 +21835,7 @@ mod tests {
             ("Zar Ojanen, Scion of Efrava", &[0x14FB]),
             ("Arashi, the Sky Asunder", &[0x14FC]),
             ("Cao Ren, Wei Commander", &[0x14FD]),
+            ("Zhao, the Moon Slayer", &[0x14FE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

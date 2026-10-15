@@ -78337,3 +78337,30 @@ pub const CAO_REN_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const ZHAO_3_COMMANDERS: &[CardFactory] = &[zhao_the_moon_slayer];
+
+/// **Zhao, the Moon Slayer**'s EDHREC average deck, card for card:
+/// 66 nonbasic cards + 33 Mountains = 99.
+/// Zhao, the Moon Slayer (EDHREC, fetched 2026-10-15).
+pub const ZHAO_3_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, fire_diamond, fire_nation_turret, lightning_greaves,
+    mind_stone, ruby_medallion, sol_ring, swiftfoot_boots, the_fire_crystal, the_one_ring,
+    vexing_bauble, winter_moon, fire_nation_palace, strip_mine, valakut_the_molten_pinnacle,
+    anger, avatar_roku_firebender, electro_assaulting_battery, firebending_student,
+    harsh_mentor, hexing_squelcher, leyline_tyrant, magus_of_the_moon,
+    molten_man_inferno_incarnate, professional_face_breaker, ragavan_nimble_pilferer,
+    razorkin_needlehead, scytheclaw_raptor, simian_spirit_guide, solemn_simulacrum,
+    sunspine_lynx, torbran_thane_of_red_fell, treasure_nabber, zo_zu_the_punisher,
+    zuko_exiled_prince, blood_moon, blood_sun, burning_earth, manabarbs, price_of_glory,
+    stranglehold, the_legend_of_roku, wars_toll, abrade, big_score, chaos_warp, deflecting_swat,
+    lightning_bolt, price_of_progress, pyretic_ritual, pyroblast, red_elemental_blast,
+    redirect_lightning, seething_song, koth_fire_of_resistance, blasphemous_act,
+    faithless_looting, from_the_ashes, gamble, jeskas_will, mana_geyser, price_of_freedom,
+    ruination, sozins_comet, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
