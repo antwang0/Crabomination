@@ -15864,6 +15864,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PHAGE_THE_UNTOUCHABLE_COMMANDERS,
             main: decks::PHAGE_THE_UNTOUCHABLE_MAIN,
         },
+        // Seat 2569: Baron Helmut Zemo's EDHREC average deck. `--pod-decks 2569`.
+        PodDeck {
+            name: "Baron Helmut Zemo (B)",
+            commanders: decks::BARON_HELMUT_ZEMO_COMMANDERS,
+            main: decks::BARON_HELMUT_ZEMO_MAIN,
+        },
+        // Seat 2570: The Master of Lake-town's EDHREC average deck. `--pod-decks 2570`.
+        PodDeck {
+            name: "The Master of Lake-town (B)",
+            commanders: decks::THE_MASTER_OF_LAKE_TOWN_COMMANDERS,
+            main: decks::THE_MASTER_OF_LAKE_TOWN_MAIN,
+        },
+        // Seat 2571: M.O.D.O.K.'s EDHREC average deck. `--pod-decks 2571`.
+        PodDeck {
+            name: "M.O.D.O.K. (B)",
+            commanders: decks::M_O_D_O_K_COMMANDERS,
+            main: decks::M_O_D_O_K_MAIN,
+        },
     ]
 }
 
@@ -20265,6 +20283,9 @@ mod tests {
             ("Losheel, Clockwork Scholar", &[0x141C]),
             ("Lita, Mechanical Engineer", &[0x141D]),
             ("Phage the Untouchable", &[0x141E]),
+            ("Baron Helmut Zemo", &[0x141F]),
+            ("The Master of Lake-town", &[0x1420]),
+            ("M.O.D.O.K.", &[0x1421]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

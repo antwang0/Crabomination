@@ -72151,3 +72151,87 @@ pub const PHAGE_THE_UNTOUCHABLE_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BARON_HELMUT_ZEMO_COMMANDERS: &[CardFactory] = &[baron_helmut_zemo];
+
+/// **Baron Helmut Zemo**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Baron Helmut Zemo (EDHREC, fetched 2026-10-15).
+pub const BARON_HELMUT_ZEMO_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, jet_medallion, lightning_greaves, sol_ring, swiftfoot_boots,
+    the_darkness_crystal, the_soul_stone, bojuka_bog, cabal_coffers, cabal_stronghold,
+    dakmor_salvage, nykthos_shrine_to_nyx, takenuma_abandoned_mire, urborg_tomb_of_yawgmoth,
+    angel_of_suffering, ardyn_the_usurper, ayara_first_of_locthwain, blood_pet,
+    bloodletter_of_aclazotz, boggart_trawler, crypt_ghast, dauthi_voidwalker, doom_whisperer,
+    doomsday_excruciator, golgari_thug, grave_researcher, gray_merchant_of_asphodel,
+    hoarding_broodlord, krrik_son_of_yawgmoth, massacre_wurm, overlord_of_the_balemurk,
+    phyrexian_obliterator, shard_of_the_nightbringer, stinkweed_imp, stitchers_supplier,
+    syr_konrad_the_grim, valgavoth_terror_eater, vile_entomber, vilis_broker_of_blood,
+    zodiark_umbral_god, animate_dead, black_market_connections, cemetery_tampering,
+    meathook_massacre_ii, phyrexian_arena, ripples_of_undeath, archenemys_charm, cabal_ritual,
+    dark_ritual, deadly_rollick, dismember, entomb, fell_the_profane, imps_mischief,
+    malakir_rebirth, songs_of_the_damned, agadeems_awakening, breach_the_multiverse,
+    buried_alive, feed_the_swarm, invoke_despair, peer_into_the_abyss, phthisis, pox_plague,
+    reanimate, rise_of_the_dark_realms, sign_in_blood, stitch_together, temporal_extortion,
+    toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const THE_MASTER_OF_LAKE_TOWN_COMMANDERS: &[CardFactory] = &[the_master_of_lake_town];
+
+/// **The Master of Lake-town**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// The Master of Lake-town (EDHREC, fetched 2026-10-15).
+pub const THE_MASTER_OF_LAKE_TOWN_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, bolass_citadel, bontus_monument, jet_medallion,
+    lightning_greaves, mesmeric_orb, mindcrank, sol_ring, the_soul_stone, bojuka_bog,
+    cabal_coffers, cabal_stronghold, crypt_of_agadeem, nykthos_shrine_to_nyx, phyrexian_tower,
+    urborg_tomb_of_yawgmoth, ayara_first_of_locthwain, baron_helmut_zemo, blood_artist,
+    bloodletter_of_aclazotz, bloodthirsty_conqueror, boggart_trawler, braids_arisen_nightmare,
+    chainer_dementia_master, creeping_bloodsucker, crypt_ghast, dark_confidant,
+    dauthi_voidwalker, doctor_doom_unrivaled, dreadhound, grave_researcher,
+    gray_merchant_of_asphodel, krrik_son_of_yawgmoth, massacre_wurm, orcish_bowmasters,
+    sheoldred_whispering_one, sheoldred_the_apocalypse, syr_konrad_the_grim,
+    valgavoth_terror_eater, vilis_broker_of_blood, zulaport_cutthroat, animate_dead,
+    black_market_connections, bloodchief_ascension, painful_quandary, phyrexian_arena,
+    ripples_of_undeath, underworld_dreams, cabal_ritual, dark_ritual, deadly_rollick,
+    fell_the_profane, imps_mischief, infernal_grasp, malakir_rebirth, snuff_out,
+    songs_of_the_damned, withering_torment, breach_the_multiverse, dread_return, exsanguinate,
+    feed_the_swarm, nights_whisper, peer_into_the_abyss, reanimate, rise_of_the_dark_realms,
+    sign_in_blood, stitch_together, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
+
+pub const M_O_D_O_K_COMMANDERS: &[CardFactory] = &[m_o_d_o_k];
+
+/// **M.O.D.O.K.**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// M.O.D.O.K. (EDHREC, fetched 2026-10-15).
+pub const M_O_D_O_K_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, bolass_citadel, cryptcaller_chariot,
+    currency_converter, jet_medallion, lightning_greaves, mind_stone, monument_to_endurance,
+    sol_ring, swiftfoot_boots, the_darkness_crystal, the_soul_stone, thought_vessel, bojuka_bog,
+    cabal_coffers, cabal_stronghold, nykthos_shrine_to_nyx, phyrexian_tower, reliquary_tower,
+    spymasters_vault, urborg_tomb_of_yawgmoth, archfiend_of_ifnir, baron_helmut_zemo,
+    blood_artist, bloodthirsty_conqueror, bone_miser, containment_construct, crypt_ghast,
+    doctor_doom_unrivaled, gixian_puppeteer, grave_researcher, gray_merchant_of_asphodel,
+    iron_monger_sadistic_tycoon, krrik_son_of_yawgmoth, m_o_d_o_k_evil_intellect,
+    maha_its_feathers_night, massacre_wurm, moonstone_harsh_mistress, psychosis_crawler,
+    sheoldred_the_apocalypse, starving_revenant, syr_konrad_the_grim, vilis_broker_of_blood,
+    vito_thorn_of_the_dusk_rose, animate_dead, black_market_connections, faith_of_the_devoted,
+    feast_of_sanity, font_of_agonies, phyrexian_arena, cabal_ritual, dark_ritual,
+    deadly_rollick, fell_the_profane, imps_mischief, malakir_rebirth, snuff_out,
+    songs_of_the_damned, vampiric_tutor, withering_torment, call_to_the_netherworld,
+    demonic_tutor, dread_return, exsanguinate, feed_the_swarm, living_death, reanimate,
+    sign_in_blood, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
