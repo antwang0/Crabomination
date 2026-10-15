@@ -76336,3 +76336,58 @@ pub const PLARGG_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const AISHA_OF_SPARKS_AND_SMOKE_COMMANDERS: &[CardFactory] = &[aisha_of_sparks_and_smoke];
+
+/// **Aisha of Sparks and Smoke**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 13 Mountains + 8 Plains = 99.
+/// Aisha of Sparks and Smoke (EDHREC, fetched 2026-10-15).
+pub const AISHA_OF_SPARKS_AND_SMOKE_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, glamdring, lightning_greaves, mind_stone, sol_ring, sunforger,
+    swiftfoot_boots, sword_of_the_animist, talisman_of_conviction, two_handed_axe,
+    battlefield_forge, boros_garrison, clifftop_retreat, command_tower, furycalm_snarl,
+    rogues_passage, rugged_prairie, sacred_foundry, slayers_stronghold, spectator_seating,
+    sundown_pass, sunhome_fortress_of_the_legion, temple_of_triumph, esper_sentinel,
+    feather_the_redeemed, guttersnipe, karlach_fury_of_avernus, kediss_emberclaw_familiar,
+    lizard_blades, monastery_mentor, mother_of_runes, pinnacle_monk, raiyuu_storms_edge,
+    storm_kiln_artist, velomachus_lorehold, young_pyromancer, double_vision, duelists_heritage,
+    flaming_fist, smothering_tithe, boros_charm, chaos_warp, deflecting_palm, expedite,
+    fists_of_flame, generous_gift, legion_leadership, lightning_bolt, lorans_escape,
+    path_to_exile, swords_to_plowshares, temur_battle_rage, twinferno, unleash_fury,
+    angelfire_ignition, chandras_ignition, cut_a_deal, faithless_looting, full_throttle,
+    hit_the_mother_lode, howl_of_the_horde, jeskas_will, mizzixs_mastery, overpowering_attack,
+    pirates_pillage, reconstruct_history, reforge_the_soul, relentless_assault, rip_apart,
+    secret_rendezvous, seize_the_day, seize_the_spoils, single_combat, slash_the_ranks,
+    volcanic_vision, wheel_of_fate, world_at_war,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const WITCH_KING_2_COMMANDERS: &[CardFactory] = &[witch_king_sky_scourge];
+
+/// **Witch-king, Sky Scourge**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 9 Mountains + 11 Swamps = 99.
+/// Witch-king, Sky Scourge (EDHREC, fetched 2026-10-15).
+pub const WITCH_KING_2_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, inherited_envelope, jet_medallion, lightning_greaves,
+    mind_stone, nazgul_battle_mace, rakdos_signet, sol_ring, swiftfoot_boots,
+    talisman_of_indulgence, the_one_ring, barad_dur, blood_crypt, bojuka_bog, command_tower,
+    dragonskull_summit, foreboding_ruins, haunted_ridge, luxury_suite,
+    minas_morgul_dark_fortress, mines_of_moria, mount_doom, path_of_ancestry, smoldering_marsh,
+    sulfurous_springs, the_black_gate, urborg_tomb_of_yawgmoth, anger, canoptek_wraith,
+    changeling_outcast, fell_beast_of_mordor, grim_hireling, keeper_of_secrets, nalfeshnee,
+    nazgul, nazgul, nazgul, nazgul, nazgul, nazgul, nazgul, nazgul, neheb_the_eternal,
+    professional_face_breaker, prosper_tome_bound, ringwraiths, roaming_throne,
+    sauron_the_necromancer, taurean_mauler, wild_magic_sorcerer, witch_king_of_angmar,
+    witch_king_bringer_of_ruin, black_market_connections, call_of_the_ring,
+    passionate_archaeologist, phyrexian_arena, rising_of_the_day, there_and_back_again, bedevil,
+    big_score, chaos_warp, dark_ritual, delayed_blast_fireball, rakdos_charm, seething_song,
+    terminate, unexpected_windfall, blasphemous_act, call_forth_the_tempest, claim_the_precious,
+    faithless_looting, feed_the_swarm, jeskas_will, mana_geyser, mordor_on_the_march, reanimate,
+    sams_desperate_rescue, toxic_deluge,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

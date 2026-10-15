@@ -16764,6 +16764,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PLARGG_COMMANDERS,
             main: decks::PLARGG_MAIN,
         },
+        // Seat 2719: Aisha of Sparks and Smoke's EDHREC average deck. `--pod-decks 2719`.
+        PodDeck {
+            name: "Aisha of Sparks and Smoke (WR)",
+            commanders: decks::AISHA_OF_SPARKS_AND_SMOKE_COMMANDERS,
+            main: decks::AISHA_OF_SPARKS_AND_SMOKE_MAIN,
+        },
+        // Seat 2720: Witch-king, Sky Scourge's EDHREC average deck. `--pod-decks 2720`.
+        PodDeck {
+            name: "Witch-king, Sky Scourge (BR)",
+            commanders: decks::WITCH_KING_2_COMMANDERS,
+            main: decks::WITCH_KING_2_MAIN,
+        },
     ]
 }
 
@@ -21318,6 +21330,8 @@ mod tests {
             ("Dynaheir, Invoker Adept", &[0x14B2]),
             ("Moritte of the Frost", &[0x14B3]),
             ("Plargg, Dean of Chaos", &[0x14B4]),
+            ("Aisha of Sparks and Smoke", &[0x14B5]),
+            ("Witch-king, Sky Scourge", &[0x14B6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
