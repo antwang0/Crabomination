@@ -2927,3 +2927,23 @@ fn thassa_leaves_combat_when_devotion_drops_between_sweeps() {
     g.perform_action(GameAction::PassPriority).expect("pass");
     assert!(g.attacking.iter().all(|a| a.attacker != thassa), "devotion 3: not a creature, not attacking");
 }
+
+/// CR 610.3c — bug fix: Intellect Devourer gone before its trigger resolves
+/// exiles nothing (8-seat audit pod, seed 932212).
+#[test]
+fn intellect_devourer_gone_before_its_trigger_exiles_nothing() {
+    let mut g = pod(2);
+    let id = g.add_card_to_hand(0, catalog::intellect_devourer());
+    let card = g.add_card_to_hand(1, catalog::grizzly_bears());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    // Resolve the creature spell, leaving its enter trigger on the stack.
+    g.resolve_top_of_stack().expect("resolve");
+    assert!(!g.stack.is_empty(), "the trigger waits");
+    let bolt = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(id)), additional_targets: vec![], mode: None, x_value: None }).expect("murder");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == card), "nothing exiled");
+}

@@ -33872,7 +33872,10 @@ impl GameState {
                 // DiscardChosen, but the chosen card is exiled and linked to
                 // the ability's source instead of discarded.
                 use crate::decision::Decision;
-                let Some(source) = ctx.source else { return Ok(()); };
+                // CR 610.3c — a source already gone exiles nothing: Intellect
+                // Devourer sacrificed in response to its own trigger left a
+                // Hellkite Courser exiled for ever (8-seat audit pod, seed 932212).
+                let Some(source) = ctx.source.filter(|s| self.battlefield_find(*s).is_some()) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
                 let picker = ctx.controller;
