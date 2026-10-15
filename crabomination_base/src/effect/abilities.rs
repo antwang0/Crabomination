@@ -3501,6 +3501,10 @@ pub enum StaticEffect {
     /// A declaration that leaves this controller unattacked is rejected while
     /// an able creature is idle or aimed at a seat no such static names.
     OpponentsMustAttackYouWithAtLeastOne,
+    /// CR 508.1 — "Planeswalkers you control have 'No more than `n`
+    /// creatures can attack this planeswalker each combat'" (Tomik, Orzhov
+    /// Lawmage): the per-planeswalker sibling of `AttackerCapAgainstController`.
+    YourPlaneswalkersAttackerCap { n: usize },
     /// CR 506.2 — "As long as this creature is attacking, defending player
     /// can't cast spells" (Wardscale Dragon): the attacked seat (or the
     /// controller of the attacked planeswalker/battle) is cast-locked.

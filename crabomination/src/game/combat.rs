@@ -306,7 +306,8 @@ pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
             }
             m |= match *eff {
                 SE::AttackerCapAgainstController { .. }
-                | SE::AttackerCapAgainstControllerWhileTapped { .. } => attack_static::ATTACKER_CAP,
+                | SE::AttackerCapAgainstControllerWhileTapped { .. }
+                | SE::YourPlaneswalkersAttackerCap { .. } => attack_static::ATTACKER_CAP,
                 SE::AttackPowerCapByControllerHand => attack_static::POWER_CAP,
                 SE::CreaturesCantAttackController { .. } => {
                     attack_static::CANT_ATTACK_CONTROLLER
@@ -1087,6 +1088,20 @@ impl GameState {
             .min()
     }
 
+    /// Tomik — the smallest `YourPlaneswalkersAttackerCap` among `d`'s
+    /// permanents: how many creatures may attack each of `d`'s planeswalkers.
+    fn planeswalker_attacker_cap(&self, d: usize) -> Option<usize> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == d)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::YourPlaneswalkersAttackerCap { n } => Some(n),
+                _ => None,
+            })
+            .min()
+    }
+
     /// CR 508.1d — a creature a requirement binds may stay home when a cap
     /// leaves it no room: the global cap (Silent Arbiter) is full, or every
     /// opponent it could attack is at its own cap (Crawlspace) and controls
@@ -1509,6 +1524,18 @@ impl GameState {
                 attacks.iter().filter(|a| a.target == AttackTarget::Player(p)).count();
             if against > cap {
                 return Err(GameError::InvalidAttackTarget(p));
+            }
+        }
+        // Tomik — each planeswalker its controller's cap covers takes no more
+        // than `n` attackers.
+        if statics & attack_static::ATTACKER_CAP != 0 {
+            for atk in &attacks {
+                let AttackTarget::Planeswalker(pw) = atk.target else { continue };
+                let Some(owner_seat) = self.battlefield_find(pw).map(|c| c.controller) else { continue };
+                let Some(cap) = self.planeswalker_attacker_cap(owner_seat) else { continue };
+                if attacks.iter().filter(|a| a.target == AttackTarget::Planeswalker(pw)).count() > cap {
+                    return Err(GameError::InvalidAttackTarget(owner_seat));
+                }
             }
         }
 
