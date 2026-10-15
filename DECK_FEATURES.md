@@ -36,6 +36,8 @@ they call a deck 🟡, the table wins.
 
 Full-list scan `01ANcpHx` (2026-10-15, all 6,799 EDHREC commanders): 107 seats — 2544-2558, 2568, 2572-2580, 2583-2602, 2609-2636, 2649-2675, 2680-2686 (`decks::cmdr_scan7k_a`..`k`, 181 cards; the zero-, one- and two-card-gap decks, later batches pairing the two cards a single deck lacks); residual: The Kingpin of Crime (INCOMPLETE_CARDS).
 
+Commander run `01Xb59Dm` (2026-10-15 evening): 50 seats — 2805-2854 (`decks::cmdr_oct15_c`, 135 cards in six batches; tests `recent_b/cmdr_oct15_c.rs`); 2805-2806 (Orcus, Baron Sengir) were zero-gap decks nobody had seated; residuals: Raven Clan War-Axe, Master Skald (INCOMPLETE_CARDS).
+
 Commander run `01XShaqR` (2026-10-15 afternoon): 65 seats — 2729-2762, 2766-2791, 2793-2797 less the concurrent session's (`decks::cmdr_oct15_b`, 201 cards; tests at the end of `recent_b/cmdr_scan7k_a.rs`); residuals: Touch of Moonglove, Ib Halfheart, Xathrid Gorgon, Tocasia, Nishoba Brawler, Unholy Indenture, Crush Underfoot, Nimble Hobbit (INCOMPLETE_CARDS).
 
 Commander run `012vc8CU` (2026-10-15): 27 seats — 2687-2705, 2708-2715 (`decks::cmdr_oct15_a`, 46 cards; tests at the end of `recent_b/cmdr_scan7k_a.rs`); residuals: Safe Passage, Dwalin (INCOMPLETE_CARDS).

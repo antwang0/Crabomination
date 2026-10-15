@@ -2213,3 +2213,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Crush Underfoot | the Giant is the greatest-power one you control, picked automatically rather than chosen (ties go to the first) | `DealDamageEqualToPower { TakeGreatestPower }` |
 | 🟡 Nimble Hobbit | with a Food out, sacrificing a Food is the only offered cost (paying {2}{W} is offered only with no Food) | `If(SelectorExists Food)` |
 | 🟡 Unholy Indenture | the +1/+1 counter is put on just after the card returns, so its enters triggers don't see it | `Move` + `AddCounter { LastMoved }` |
+| 🟡 Raven Clan War-Axe | "you may search your library and/or graveyard" takes Eivor from the graveyard when one is there, else searches the library; the search can't be declined | `If(CardsInZone gy) Move else Search` |
+| 🟡 Master Skald | the exiled creature card is picked automatically (first in the graveyard), not chosen | `MayDo { Move(take 1) + Move(target) }` |
