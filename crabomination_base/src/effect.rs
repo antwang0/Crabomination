@@ -8432,6 +8432,10 @@ pub enum Effect {
     /// "You may tap any number of untapped `filter` you control. Draw a card
     /// for each one tapped this way" (Guild Summit).
     TapAnyNumberThenDraw { filter: SelectionRequirement },
+    /// "Tap any number of untapped `filter` you control. [body] for each one
+    /// tapped this way" (Devout Invocation's Angels): `body` runs once with
+    /// `Value::XFromCost` the number tapped. Nothing runs when none are.
+    TapAnyNumberThen { filter: SelectionRequirement, body: Box<Effect> },
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },

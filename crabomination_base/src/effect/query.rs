@@ -488,6 +488,7 @@ impl Effect {
             | Effect::IgnoreAllButHighestRoll { roll: body, .. }
             | Effect::OptionalTargets { body, .. }
             | Effect::WithX { body, .. }
+            | Effect::TapAnyNumberThen { body, .. }
             | Effect::OathCatchUp { body, .. }
             | Effect::OnAttackedUntilYourNextTurn { body, .. }
             | Effect::OnMatchingAttacksThisTurn { body, .. }
@@ -1047,6 +1048,7 @@ impl Effect {
             | Effect::EachPlayerGainsChosenFromRightNeighbor { .. }
             | Effect::TapAnyNumberThenCounters { .. }
             | Effect::TapAnyNumberThenDraw { .. }
+            | Effect::TapAnyNumberThen { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.
             | Effect::AddManaAtNextMainPhase { .. }

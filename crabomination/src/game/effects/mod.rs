@@ -17183,6 +17183,18 @@ impl GameState {
                 self.resolve_tap_any_number_then_draw(filter, ctx, events, effect)
             }
 
+            Effect::TapAnyNumberThen { filter, body } => {
+                let Some(tapped) = self.tap_any_number(filter, "Tap any number of untapped creatures you control", ctx, events, effect)
+                else {
+                    return Ok(());
+                };
+                if tapped > 0 {
+                    let run = Effect::WithX { x: crate::effect::Value::Const(tapped), body: body.clone() };
+                    self.resolve_effect_into(&run, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::TapAnyNumberThenCounters { filter, counter } => {
                 // "You may tap any number of untapped [filter] you control. If
                 // you do, put a counter on each of those" (Urge to Feed).
