@@ -3136,6 +3136,28 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-15 (Commander run, `01ANcpHx`, second checkpoint) — guardrail; 107 seats, 181 cards
+
+Hot-path touches: an exile-self activation cost clones the source into
+`leaves_bf_lki` before the move (CR 608.2h; the sacrifice/bounce costs already
+did); five tokens trade a mint-time `dynamic_pt` for a `SelfBasePtFromValue`
+static. Neither is in the fixed pool. Release `bot_ladder` at `b0f6ee2b8`,
+toolchain 1.99, Xeon @ 2.80 GHz.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs
+                 1); peak_rss 36.8 MiB; games_per_s 210.25 (host_calib_ms 48 —
+                 a slower host draw than the first checkpoint's 46, not a
+                 regression the decision count would show)
+golden traces    unchanged
+suite            26,761 passed, 5 skipped (cr_903_5a_the_official_precon_seats
+                 _play_pod_games 6,920 s under nextest's default profile)
+pod sweep        audit build, seed 9303, every deck x 4,6,8 seats: 1,456 games,
+                 3 panics (2 fixed upstream concurrently, 1 a stale sweep
+                 invariant — ENGINE_BACKLOG `01ANcpHx`), 1 board cap (0.07 %)
+```
+
 ### 2026-10-15 (Commander run, `01ANcpHx`) — guardrail; 63 seats, 102 cards, four primitives, two bot fixes
 
 Hot-path touches: the hostile auto-target's player block tries other living
