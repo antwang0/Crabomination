@@ -15778,8 +15778,11 @@ impl GameState {
         }
         if alt.marks_kicked {
             // CR 702.117 — Surge: stamp the spell kicked so "if its surge
-            // cost was paid" ETB riders fire via `SpellWasKicked`.
+            // cost was paid" ETB riders fire via `SpellWasKicked`. Marked
+            // as the alternative cost's so it can't pass for a paid granted
+            // offspring (CR 702.175).
             card.kicked = true;
+            card.kicked_options.push(crate::card::ALT_COST_KICK_OPTION);
         }
         self.stamp_as_cast_condition(&mut card, p);
 

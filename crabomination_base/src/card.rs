@@ -1431,6 +1431,11 @@ pub const MAY_PLAY_DORMANT: usize = usize::MAX;
 /// offspring of its own, so a cast can pay both.
 pub const GRANTED_OFFSPRING_OPTION: u8 = u8::MAX;
 
+/// A `kicked_options` entry marking a `kicked` stamp that an alternative
+/// cost's `marks_kicked` set (surge, prowl, web-slinging riders) rather than
+/// a paid kicker or offspring, so it is never read as a granted offspring.
+pub const ALT_COST_KICK_OPTION: u8 = u8::MAX - 1;
+
 /// Per-instance permission for "you may cast that card without paying its
 /// mana cost" — granted by Practiced Scrollsmith, Suspend Aggression,
 /// Elemental Mascot, Tablet of Discovery, Ark of Hunger, Archaic's Agony,
@@ -12377,6 +12382,7 @@ impl CardInstance {
     /// with its own (Agate Instigator) through [`GRANTED_OFFSPRING_OPTION`].
     pub fn paid_granted_offspring(&self) -> bool {
         self.kicked
+            && !self.kicked_options.contains(&ALT_COST_KICK_OPTION)
             && ((self.definition.has_kicker().is_none()
                 && self.definition.kicker_action_cost.is_none()
                 && self.definition.kicker_options.is_empty())
