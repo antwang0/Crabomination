@@ -2204,6 +2204,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |
 | 🟡 Whtz, the Bibliophile | the "{3} less with 200 or more cards in your starting deck" discount isn't modelled (no starting-deck size is kept; every seated deck has 100) | `ActivatedAbility` |
 | 🟡 Aragorn, Company Leader | "one of each of those kinds" is one trigger per kind put, so two kinds at once may land on two different creatures | `AddCounterOfTriggerKind` on `YouPutCounters` |
+| 🟡 The Everforger | "do this only once each turn" counts the trigger, so declining the copy still spends the turn's | `SpellCast` `.once_per_turn()` + `MayDo { CopySpell }` |
 | 🟡 Touch of Moonglove | the granted "a creature it damaged dies" trigger doesn't look back (CR 603.10a) when the pumped creature dies in the same event as its victim | `GrantTriggeredAbility { EndOfTurn }` |
 | 🟡 Ib Halfheart, Goblin Tactician | the blocked Goblin deals its 4 just before it is sacrificed (the blockers leave the block map with it), and only while it is still yours | `DealDamageFrom` + `SacrificeSelected` |
 | 🟡 Xathrid Gorgon | a petrified creature's mana abilities can still be activated (`CantActivateAbilities` spares them) | `GrantKeyword { CantActivateAbilities, Permanent }` |

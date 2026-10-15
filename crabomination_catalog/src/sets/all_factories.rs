@@ -16074,6 +16074,9 @@ static DECKS: &[Factory] = &[
     super::decks::kapow,
     super::decks::venom_blast,
     super::decks::herald_of_leshrac,
+    super::decks::maular_the_next_evolution,
+    super::decks::seluma_light_of_aysen,
+    super::decks::the_everforger,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

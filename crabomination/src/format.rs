@@ -827,6 +827,27 @@ pub fn chosen_commander_color<'a>(
     }
 }
 
+/// Does `cmd` print a Rulebreaker static matching `want`?
+fn rulebreaker(cmd: &CardDefinition, want: impl Fn(&crate::effect::StaticEffect) -> bool) -> bool {
+    cmd.static_abilities.iter().any(|sa| want(&sa.effect))
+}
+
+/// Is `card` one of the cards a Rulebreaker allowance names?
+fn rulebreaker_allows(cards: &crate::effect::RulebreakerCards, card: &CardDefinition) -> bool {
+    use crate::effect::RulebreakerCards as RC;
+    let creature = card.card_types.contains(&crate::card::CardType::Creature);
+    match cards {
+        RC::CreaturesWithManaValueAtLeast(n) => creature && card.cost.cmc() >= *n,
+        RC::OfCreatureType(t) => {
+            card.subtypes.creature_types.contains(t) || card.keywords.contains(&crate::card::Keyword::Changeling)
+        }
+        RC::ArtifactCreaturesAndEquipment => {
+            (creature && card.card_types.contains(&crate::card::CardType::Artifact))
+                || card.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Equipment)
+        }
+    }
+}
+
 /// Validate a Commander-format deck. Runs the generic
 /// [`validate_deck`] checks first (100-card singleton main, etc.),
 /// then layers on Commander-specific rules: at least one commander,
@@ -847,6 +868,11 @@ pub fn validate_commander_deck(
     let all: Vec<&CardDefinition> = deck.commanders.iter().chain(deck.main.iter()).collect();
     if let Err(es) = validate_deck_refs(&all, Format::Commander) {
         generic = es;
+    }
+    // Rulebreaker — "a deck with this commander has no maximum deck size"
+    // (Whtz): CR 903.5a's 100 is only a floor.
+    if deck.commanders.iter().any(|c| rulebreaker(c, |e| matches!(e, crate::effect::StaticEffect::RulebreakerNoMaxDeckSize))) {
+        generic.retain(|e| !matches!(e, DeckError::TooManyCards { .. }));
     }
     // CR 903.5e — "Commander games do not use sideboards." `validate_deck_refs`
     // takes a flat card list, which is what lets CR 903.5a count the commander
@@ -898,10 +924,22 @@ pub fn validate_commander_deck(
         combined.insert(c);
     }
 
-    // Every main-deck card must fit inside the commander identity.
+    // Every main-deck card must fit inside the commander identity, but for
+    // what a Rulebreaker commander lets in whatever its colors.
+    let allowances: Vec<&crate::effect::RulebreakerCards> = deck
+        .commanders
+        .iter()
+        .flat_map(|c| c.static_abilities.iter())
+        .filter_map(|sa| match &sa.effect {
+            crate::effect::StaticEffect::RulebreakerAnyColorIdentity { cards } => Some(cards),
+            _ => None,
+        })
+        .collect();
     for card in &deck.main {
         let id = color_identity(card);
-        if !id.is_subset_of(combined) {
+        let excepted = !allowances.is_empty()
+            && (is_basic_land(card) || allowances.iter().any(|a| rulebreaker_allows(a, card)));
+        if !id.is_subset_of(combined) && !excepted {
             cmd_errors.push(CommanderDeckError::OffColorIdentity {
                 card_name: card.name,
                 card_identity: id,

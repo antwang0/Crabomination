@@ -34695,6 +34695,8 @@ fn static_effect_to_effects(
             // Deck construction / pre-game only.
             | StaticEffect::ReduceMinimumDeckSize(_)
             | StaticEffect::DeckMayHaveCopies(_)
+            | StaticEffect::RulebreakerAnyColorIdentity { .. }
+            | StaticEffect::RulebreakerNoMaxDeckSize
             | StaticEffect::ExtraOpeningHand
             // ReplaceControllerLossWithReset — read by the loss SBA via
             // `apply_loss_reset` (Lich's Mirror); no layer effect.

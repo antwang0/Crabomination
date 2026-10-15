@@ -1504,6 +1504,14 @@ pub enum StaticEffect {
     /// (`None`: Relentless Rats, Hare Apparent) or "up to N" (`Some(N)`:
     /// Seven Dwarves, Nazgûl). Read by `format`'s copy counts, not the game.
     DeckMayHaveCopies(Option<u32>),
+    /// Rulebreaker (Commander, CR 903.4 exception printed on the card) — "A
+    /// deck with this commander can have [`cards`] of any color identity and
+    /// any basic land cards" (Maular, Seluma, The Everforger). Read by
+    /// `format::validate_commander_deck` for a commander, not by the game.
+    RulebreakerAnyColorIdentity { cards: RulebreakerCards },
+    /// Rulebreaker — "A deck with this commander has no maximum deck size"
+    /// (Whtz, the Bibliophile): the CR 903.5a 100 becomes a minimum.
+    RulebreakerNoMaxDeckSize,
     /// "Your starting hand size is reduced by N" (Sovereign's Realm's five).
     StartingHandSizeReduced(u32),
     /// "Your starting deck can't have basic land cards" (Sovereign's Realm).
@@ -5103,4 +5111,18 @@ pub enum KeywordDonors {
     CreatureCardsInGraveyards,
     /// Exiled creature cards with a counter of this kind (Rayami's blood).
     ExiledCreatureCardsWithCounter(CounterType),
+}
+
+/// The cards a Rulebreaker commander lets its deck hold whatever their color
+/// identity (`StaticEffect::RulebreakerAnyColorIdentity`); basic land cards
+/// always come along.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RulebreakerCards {
+    /// Creature cards with mana value `n` or greater (Maular, the Next
+    /// Evolution).
+    CreaturesWithManaValueAtLeast(u32),
+    /// Cards of this creature type, changelings included (Seluma's Angels).
+    OfCreatureType(crate::card::CreatureType),
+    /// Artifact creature and Equipment cards (The Everforger).
+    ArtifactCreaturesAndEquipment,
 }

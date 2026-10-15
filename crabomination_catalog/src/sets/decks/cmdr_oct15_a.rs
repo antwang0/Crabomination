@@ -1676,12 +1676,17 @@ pub fn great_gilded_boat() -> CardDefinition {
     }
 }
 
-/// Whtz, the Bibliophile — {1}{W}{U} legendary 1/3 Homunculus. {3}, {T}: draw
-/// a card and gain 1 life. (Rulebreaker: no maximum deck size; the "{3} less
-/// with a 200-card starting deck" discount is not modelled — INCOMPLETE_CARDS.)
+/// Whtz, the Bibliophile — {1}{W}{U} legendary 1/3 Homunculus. Rulebreaker:
+/// no maximum deck size. {3}, {T}: draw a card and gain 1 life. (The "{3}
+/// less with a 200-card starting deck" discount is not modelled —
+/// INCOMPLETE_CARDS.)
 pub fn whtz_the_bibliophile() -> CardDefinition {
     CardDefinition {
         cost: cost(&[generic(1), w(), u()]),
+        static_abilities: vec![StaticAbility {
+            description: "Rulebreaker — A deck with this commander has no maximum deck size.",
+            effect: StaticEffect::RulebreakerNoMaxDeckSize,
+        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(3)]),
@@ -1796,5 +1801,84 @@ pub fn herald_of_leshrac() -> CardDefinition {
             effect: Effect::OwnersGainControlOf { filter: R::Land.and(R::ControlledByYou) },
         }],
         ..creature("Herald of Leshrac", cost(&[generic(6), b()]), vec![CreatureType::Avatar], 2, 4)
+    }
+}
+
+fn rulebreaker(description: &'static str, cards: crate::effect::RulebreakerCards) -> StaticAbility {
+    StaticAbility { description, effect: StaticEffect::RulebreakerAnyColorIdentity { cards } }
+}
+
+/// Maular, the Next Evolution — {5}{G}{G} legendary 10/10 Dinosaur Mutant.
+/// Rulebreaker: creature cards with mana value 7 or greater of any color
+/// identity and any basic lands. A creature of yours with mana value 7 or
+/// greater attacking doubles its power and toughness until end of turn.
+pub fn maular_the_next_evolution() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(5), g(), g()]),
+        static_abilities: vec![rulebreaker(
+            "Rulebreaker — creature cards with mana value 7 or greater of any color identity, and any basic land cards.",
+            crate::effect::RulebreakerCards::CreaturesWithManaValueAtLeast(7),
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(trigger_is(R::Creature.and(R::ManaValueAtLeast(7)))),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                toughness: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..legend("Maular, the Next Evolution", vec![CreatureType::Dinosaur, CreatureType::Mutant], 10, 10)
+    }
+}
+
+/// Seluma, Light of Aysen — {4}{W} legendary 4/4 flying Angel Warrior.
+/// Rulebreaker: Angel cards of any color identity and any basic lands. Combat
+/// damage to a player returns target Angel creature card from your graveyard
+/// to the battlefield.
+pub fn seluma_light_of_aysen() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(4), w()]),
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![rulebreaker(
+            "Rulebreaker — Angel cards of any color identity, and any basic land cards.",
+            crate::effect::RulebreakerCards::OfCreatureType(CreatureType::Angel),
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Angel)).and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..legend("Seluma, Light of Aysen", vec![CreatureType::Angel, CreatureType::Warrior], 4, 4)
+    }
+}
+
+/// The Everforger — {6} legendary 4/5 artifact Construct. Rulebreaker:
+/// artifact creature and Equipment cards of any color identity and any basic
+/// lands. Casting an artifact creature or Equipment spell, you may copy it,
+/// once each turn (a declined copy spends the turn's — INCOMPLETE_CARDS).
+pub fn the_everforger() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![rulebreaker(
+            "Rulebreaker — artifact creature and Equipment cards of any color identity, and any basic land cards.",
+            crate::effect::RulebreakerCards::ArtifactCreaturesAndEquipment,
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(trigger_is(
+                    R::Artifact.and(R::Creature).or(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                ))
+                .once_per_turn(),
+            effect: Effect::MayDo {
+                description: "Copy that spell?".into(),
+                body: Box::new(Effect::CopySpell { what: Selector::TriggerSource, count: Value::ONE }),
+            },
+        }],
+        ..legend("The Everforger", vec![CreatureType::Construct], 4, 5)
     }
 }
