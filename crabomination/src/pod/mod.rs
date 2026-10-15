@@ -15618,6 +15618,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DR_BEVERLY_CRUSHER_COMMANDERS,
             main: decks::DR_BEVERLY_CRUSHER_MAIN,
         },
+        // Seat 2528: The Cabbage Merchant's EDHREC average deck. `--pod-decks 2528`.
+        PodDeck {
+            name: "The Cabbage Merchant (G)",
+            commanders: decks::THE_CABBAGE_MERCHANT_COMMANDERS,
+            main: decks::THE_CABBAGE_MERCHANT_MAIN,
+        },
+        // Seat 2529: Varchild, Betrayer of Kjeldor's EDHREC average deck. `--pod-decks 2529`.
+        PodDeck {
+            name: "Varchild, Betrayer of Kjeldor (R)",
+            commanders: decks::VARCHILD_COMMANDERS,
+            main: decks::VARCHILD_MAIN,
+        },
+        // Seat 2530: The Weaver King's EDHREC average deck. `--pod-decks 2530`.
+        PodDeck {
+            name: "The Weaver King (UB)",
+            commanders: decks::THE_WEAVER_KING_COMMANDERS,
+            main: decks::THE_WEAVER_KING_MAIN,
+        },
+        // Seat 2531: Rikala, Homarid King's EDHREC average deck. `--pod-decks 2531`.
+        PodDeck {
+            name: "Rikala, Homarid King (UG)",
+            commanders: decks::RIKALA_COMMANDERS,
+            main: decks::RIKALA_MAIN,
+        },
+        // Seat 2532: Nivea, Beloved Battlemage's EDHREC average deck. `--pod-decks 2532`.
+        PodDeck {
+            name: "Nivea, Beloved Battlemage (W)",
+            commanders: decks::NIVEA_COMMANDERS,
+            main: decks::NIVEA_MAIN,
+        },
+        // Seat 2533: Sifa Grent's EDHREC average deck. `--pod-decks 2533`.
+        PodDeck {
+            name: "Sifa Grent (BR)",
+            commanders: decks::SIFA_GRENT_COMMANDERS,
+            main: decks::SIFA_GRENT_MAIN,
+        },
+        // Seat 2534: Gustha Ebbasdotter's EDHREC average deck. `--pod-decks 2534`.
+        PodDeck {
+            name: "Gustha Ebbasdotter (U)",
+            commanders: decks::GUSTHA_EBBASDOTTER_COMMANDERS,
+            main: decks::GUSTHA_EBBASDOTTER_MAIN,
+        },
+        // Seat 2535: Dyfed, the Guiding Hand's EDHREC average deck. `--pod-decks 2535`.
+        PodDeck {
+            name: "Dyfed, the Guiding Hand (U)",
+            commanders: decks::DYFED_COMMANDERS,
+            main: decks::DYFED_MAIN,
+        },
+        // Seat 2536: Kuro, Pitlord's EDHREC average deck. `--pod-decks 2536`.
+        PodDeck {
+            name: "Kuro, Pitlord (B)",
+            commanders: decks::KURO_COMMANDERS,
+            main: decks::KURO_MAIN,
+        },
+        // Seat 2537: Urdnan, Dromoka Warrior's EDHREC average deck. `--pod-decks 2537`.
+        PodDeck {
+            name: "Urdnan, Dromoka Warrior (W)",
+            commanders: decks::URDNAN_COMMANDERS,
+            main: decks::URDNAN_MAIN,
+        },
+        // Seat 2538: Loran, Disciple of History's EDHREC average deck. `--pod-decks 2538`.
+        PodDeck {
+            name: "Loran, Disciple of History (W)",
+            commanders: decks::LORAN_COMMANDERS,
+            main: decks::LORAN_MAIN,
+        },
+        // Seat 2539: Boss Uramon, Shadow's Reach's EDHREC average deck. `--pod-decks 2539`.
+        PodDeck {
+            name: "Boss Uramon, Shadow's Reach (B)",
+            commanders: decks::BOSS_URAMON_COMMANDERS,
+            main: decks::BOSS_URAMON_MAIN,
+        },
+        // Seat 2540: Joven and Chandler's EDHREC average deck. `--pod-decks 2540`.
+        PodDeck {
+            name: "Joven and Chandler (R)",
+            commanders: decks::JOVEN_AND_CHANDLER_COMMANDERS,
+            main: decks::JOVEN_AND_CHANDLER_MAIN,
+        },
+        // Seat 2541: Autumn Willow, Harmony's EDHREC average deck. `--pod-decks 2541`.
+        PodDeck {
+            name: "Autumn Willow, Harmony (G)",
+            commanders: decks::AUTUMN_WILLOW_2_COMMANDERS,
+            main: decks::AUTUMN_WILLOW_2_MAIN,
+        },
+        // Seat 2542: Greensleeves's EDHREC average deck. `--pod-decks 2542`.
+        PodDeck {
+            name: "Greensleeves (G)",
+            commanders: decks::GREENSLEEVES_2_COMMANDERS,
+            main: decks::GREENSLEEVES_2_MAIN,
+        },
+        // Seat 2543: Captain James T. Kirk's EDHREC average deck. `--pod-decks 2543`.
+        PodDeck {
+            name: "Captain James T. Kirk (R)",
+            commanders: decks::CAPTAIN_JAMES_T_KIRK_COMMANDERS,
+            main: decks::CAPTAIN_JAMES_T_KIRK_MAIN,
+        },
     ]
 }
 
@@ -19978,6 +20074,22 @@ mod tests {
             ("Auntie Blyte, Bad Influence", &[0x13F3]),
             ("Saheeli, Jewel of Avishkar", &[0x13F4]),
             ("Dr. Beverly Crusher", &[0x13F5]),
+            ("The Cabbage Merchant", &[0x13F6]),
+            ("Varchild, Betrayer of Kjeldor", &[0x13F7]),
+            ("The Weaver King", &[0x13F8]),
+            ("Rikala, Homarid King", &[0x13F9]),
+            ("Nivea, Beloved Battlemage", &[0x13FA]),
+            ("Sifa Grent", &[0x13FB]),
+            ("Gustha Ebbasdotter", &[0x13FC]),
+            ("Dyfed, the Guiding Hand", &[0x13FD]),
+            ("Kuro, Pitlord", &[0x13FE]),
+            ("Urdnan, Dromoka Warrior", &[0x13FF]),
+            ("Loran, Disciple of History", &[0x1400]),
+            ("Boss Uramon, Shadow's Reach", &[0x1401]),
+            ("Joven and Chandler", &[0x1402]),
+            ("Autumn Willow, Harmony", &[0x1403]),
+            ("Greensleeves", &[0x1404]),
+            ("Captain James T. Kirk", &[0x1405]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
