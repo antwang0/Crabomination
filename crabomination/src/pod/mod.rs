@@ -16092,6 +16092,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::INAME_AS_ONE_COMMANDERS,
             main: decks::INAME_AS_ONE_MAIN,
         },
+        // Seat 2607: Thor Odinson's EDHREC average deck. `--pod-decks 2607`.
+        PodDeck {
+            name: "Thor Odinson (WR)",
+            commanders: decks::THOR_ODINSON_COMMANDERS,
+            main: decks::THOR_ODINSON_MAIN,
+        },
+        // Seat 2608: Exava, Rakdos Blood Witch's EDHREC average deck. `--pod-decks 2608`.
+        PodDeck {
+            name: "Exava, Rakdos Blood Witch (BR)",
+            commanders: decks::EXAVA_COMMANDERS,
+            main: decks::EXAVA_MAIN,
+        },
     ]
 }
 
@@ -20531,6 +20543,8 @@ mod tests {
             ("Rem Karolus, Stalwart Slayer", &[0x1442]),
             ("Koh, the Face Stealer", &[0x1443]),
             ("Iname as One", &[0x1444]),
+            ("Thor Odinson", &[0x1445]),
+            ("Exava, Rakdos Blood Witch", &[0x1446]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -73203,3 +73203,59 @@ pub const INAME_AS_ONE_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THOR_ODINSON_COMMANDERS: &[CardFactory] = &[thor_odinson];
+
+/// **Thor Odinson**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 13 Mountains + 10 Plains = 99.
+/// Thor Odinson (EDHREC, fetched 2026-10-15).
+pub const THOR_ODINSON_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, fellwar_stone, hammer_of_nazahn, lightning_greaves, mind_stone,
+    mjolnir_hammer_of_thor, mjolnir_storm_hammer, sol_ring, sunforger, swiftfoot_boots,
+    talisman_of_conviction, the_reaver_cleaver, asgardian_citadel, battlefield_forge,
+    clifftop_retreat, command_tower, furycalm_snarl, radiant_summit, rogues_passage,
+    rugged_prairie, sacred_foundry, spectator_seating, sundown_pass,
+    sunhome_fortress_of_the_legion, temple_of_triumph, bastion_protector,
+    electro_assaulting_battery, feather_the_redeemed, firebending_student, guttersnipe,
+    kediss_emberclaw_familiar, leonin_lightscribe, loki_laufeyson, monastery_mentor,
+    monica_rambeau, puresteel_paladin, raiyuu_storms_edge, storm_kiln_artist,
+    thor_asgards_avenger, thor_god_of_thunder, graduation_day, leyline_of_resonance,
+    origin_of_thor, sigardas_aid, smothering_tithe, big_score, blazing_crescendo, boros_charm,
+    bulk_up, chaos_warp, defiant_strike, expedite, fists_of_flame, legion_leadership,
+    lightning_bolt, lightning_strike, lorans_escape, path_to_exile, psychotic_fury,
+    rebellious_strike, shelter, swords_to_plowshares, take_up_the_shield, temur_battle_rage,
+    thrill_of_possibility, unleash_fury, angelfire_ignition, blasphemous_act, chandras_ignition,
+    crash_through, faithless_looting, honor, impolite_entrance, jeskas_will, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const EXAVA_COMMANDERS: &[CardFactory] = &[exava_rakdos_blood_witch];
+
+/// **Exava, Rakdos Blood Witch**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Mountains + 12 Swamps = 99.
+/// Exava, Rakdos Blood Witch (EDHREC, fetched 2026-10-15).
+pub const EXAVA_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, fellwar_stone, mind_stone, rakdos_signet, sol_ring,
+    talisman_of_indulgence, the_ozolith, whip_of_erebos, blood_crypt, bojuka_bog, command_tower,
+    dragonskull_summit, foreboding_ruins, haunted_ridge, karns_bastion, rakdos_carnarium,
+    rogues_passage, smoldering_marsh, sulfurous_springs, tainted_peak, temple_of_malice,
+    akki_battle_squad, alesha_who_laughs_at_fate, archetype_of_aggression,
+    archpriest_of_shadows, bloodfray_giant, bloodtracker, carnival_hellsteed, chaos_imps,
+    cryptborn_horror, death_greeters_champion, drana_liberator_of_malakir, dreadhorde_butcher,
+    hagra_constrictor, hellhole_flailer, kardur_doomscourge, madame_null_power_broker,
+    mer_ek_nightblade, mirror_style_master, necropolis_regent, nikara_lair_scavenger,
+    rakdos_cackler, rakdos_drake, skyclave_shadowcat, splatter_thug, tenured_inkcaster,
+    tesak_judiths_hellhound, thrill_kill_assassin, thundering_raiju, towashi_guide_bot,
+    unforgiving_one, yathan_tombguard, all_will_be_one, berserkers_onslaught,
+    feast_on_the_fallen, theater_of_horrors, uncivil_unrest, unspeakable_symbol, abrade,
+    bedevil, chaos_warp, dark_ritual, lethal_exploit, rakdos_charm, terminate, volt_charge,
+    withering_torment, blasphemous_act, dreadbore, drown_in_ichor, feed_the_swarm,
+    nights_whisper, sign_in_blood, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
