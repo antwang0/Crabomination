@@ -16914,6 +16914,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SIR_SHANDLAR_OF_EBERYN_COMMANDERS,
             main: decks::SIR_SHANDLAR_OF_EBERYN_MAIN,
         },
+        // Seat 2744: Ayula, Queen Among Bears's EDHREC average deck. `--pod-decks 2744`.
+        PodDeck {
+            name: "Ayula, Queen Among Bears (G)",
+            commanders: decks::AYULA_COMMANDERS,
+            main: decks::AYULA_MAIN,
+        },
+        // Seat 2745: Wayta, Trainer Prodigy's EDHREC average deck. `--pod-decks 2745`.
+        PodDeck {
+            name: "Wayta, Trainer Prodigy (WRG)",
+            commanders: decks::WAYTA_COMMANDERS,
+            main: decks::WAYTA_MAIN,
+        },
+        // Seat 2746: Sophia, Dogged Detective's EDHREC average deck. `--pod-decks 2746`.
+        PodDeck {
+            name: "Sophia, Dogged Detective (WUG)",
+            commanders: decks::SOPHIA_COMMANDERS,
+            main: decks::SOPHIA_MAIN,
+        },
+        // Seat 2747: Tocasia, Dig Site Mentor's EDHREC average deck. `--pod-decks 2747`.
+        PodDeck {
+            name: "Tocasia, Dig Site Mentor (WUG)",
+            commanders: decks::TOCASIA_COMMANDERS,
+            main: decks::TOCASIA_MAIN,
+        },
+        // Seat 2748: Sisters of Stone Death's EDHREC average deck. `--pod-decks 2748`.
+        PodDeck {
+            name: "Sisters of Stone Death (BG)",
+            commanders: decks::SISTERS_OF_STONE_DEATH_COMMANDERS,
+            main: decks::SISTERS_OF_STONE_DEATH_MAIN,
+        },
+        // Seat 2749: Bard, Heir of Girion's EDHREC average deck. `--pod-decks 2749`.
+        PodDeck {
+            name: "Bard, Heir of Girion (WU)",
+            commanders: decks::BARD_2_COMMANDERS,
+            main: decks::BARD_2_MAIN,
+        },
+        // Seat 2750: Siegfried, Famed Swordsman's EDHREC average deck. `--pod-decks 2750`.
+        PodDeck {
+            name: "Siegfried, Famed Swordsman (B)",
+            commanders: decks::SIEGFRIED_COMMANDERS,
+            main: decks::SIEGFRIED_MAIN,
+        },
+        // Seat 2751: Mister Immortal's EDHREC average deck. `--pod-decks 2751`.
+        PodDeck {
+            name: "Mister Immortal (G)",
+            commanders: decks::MISTER_IMMORTAL_COMMANDERS,
+            main: decks::MISTER_IMMORTAL_MAIN,
+        },
+        // Seat 2752: Faramir, Field Commander's EDHREC average deck. `--pod-decks 2752`.
+        PodDeck {
+            name: "Faramir, Field Commander (W)",
+            commanders: decks::FARAMIR_3_COMMANDERS,
+            main: decks::FARAMIR_3_MAIN,
+        },
     ]
 }
 
@@ -21493,6 +21547,15 @@ mod tests {
             ("Sivitri Scarzam", &[0x14CB]),
             ("Aang, Air Nomad", &[0x14CC]),
             ("Sir Shandlar of Eberyn", &[0x14CD]),
+            ("Ayula, Queen Among Bears", &[0x14CE]),
+            ("Wayta, Trainer Prodigy", &[0x14CF]),
+            ("Sophia, Dogged Detective", &[0x14D0]),
+            ("Tocasia, Dig Site Mentor", &[0x14D1]),
+            ("Sisters of Stone Death", &[0x14D2]),
+            ("Bard, Heir of Girion", &[0x14D3]),
+            ("Siegfried, Famed Swordsman", &[0x14D4]),
+            ("Mister Immortal", &[0x14D5]),
+            ("Faramir, Field Commander", &[0x14D6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
