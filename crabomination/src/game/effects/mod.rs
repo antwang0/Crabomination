@@ -24314,14 +24314,33 @@ impl GameState {
                 // Sunborns and a board cap, seed 99300254). The default skips
                 // such a doubler when another token is there to copy.
                 let made = self.scaled_token_count(p, 1, true);
+                // A token that populates is the same runaway one step removed:
+                // every Nesting Dovehawk token copies another each combat, so
+                // the count doubles a turn and its counter triggers square
+                // (seed 922560 reached the action cap at 185,447 life). Past
+                // the ceiling the default copies something else.
+                let ceiling = crate::recommend::TOKEN_DOUBLER_CEILING as usize;
+                let populates = |c: &CardInstance| {
+                    c.definition
+                        .triggered_abilities
+                        .iter()
+                        .any(|t| t.effect.any_nested(&|e| matches!(e, Effect::Populate { .. })))
+                };
                 let runaway = |id: CardId| {
-                    self.token_doublers_for(p).saturating_add(made) >= crate::recommend::TOKEN_DOUBLER_CEILING
-                        && self.battlefield_find(id).is_some_and(|c| {
-                            c.definition
+                    self.battlefield_find(id).is_some_and(|c| {
+                        (self.token_doublers_for(p).saturating_add(made) >= crate::recommend::TOKEN_DOUBLER_CEILING
+                            && c.definition
                                 .static_abilities
                                 .iter()
-                                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::DoubleTokens))
-                        })
+                                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::DoubleTokens)))
+                            || (populates(c)
+                                && self
+                                    .battlefield
+                                    .iter()
+                                    .filter(|o| o.controller == p && o.definition.name == c.definition.name)
+                                    .count()
+                                    >= ceiling)
+                    })
                 };
                 let Some(best) = tokens
                     .iter()

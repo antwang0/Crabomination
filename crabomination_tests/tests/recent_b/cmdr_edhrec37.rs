@@ -130,6 +130,26 @@ fn cr_701_32_populate_skips_a_runaway_doubler() {
     assert_eq!(named(&g, 0, "Grizzly Bears").len(), 1 + 8, "three doublings");
 }
 
+/// CR 701.32 — a token that populates (Nesting Dovehawk) copied each
+/// combat doubles a turn; at ten copies the default populates the other
+/// token instead (seed 922560 reached the action cap).
+#[test]
+fn cr_701_32_populate_skips_a_runaway_populater() {
+    let mut g = pod(2);
+    for _ in 0..10 {
+        let hawk = g.add_card_to_battlefield(0, catalog::nesting_dovehawk());
+        let c = g.battlefield_find_mut(hawk).unwrap();
+        c.is_token = true;
+        c.add_counters(CounterType::PlusOnePlusOne, 5);
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().is_token = true;
+    let rites = g.add_card_to_hand(0, catalog::rootborn_defenses());
+    cast(&mut g, rites, None).expect("populate");
+    assert_eq!(named(&g, 0, "Nesting Dovehawk").len(), 10);
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 2);
+}
+
 /// CR 614.13 — a bot holds Second Harvest ("for each token you control, a
 /// copy") when its tokens under its doublers would overflow the board: the
 /// gate priced a `ForEach` spell at 0, and an Elda pod's Exalted Sunborn
