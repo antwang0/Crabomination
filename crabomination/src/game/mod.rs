@@ -26211,6 +26211,10 @@ impl GameState {
                                 | GameEvent::FirstCardDrawnThisTurn { .. }
                                 | GameEvent::NthCardDrawnThisTurn { .. }
                         ),
+                        lifegain_player: match ev {
+                            GameEvent::LifeGained { player, .. } => Some(*player),
+                            _ => None,
+                        },
                         damaged_creature_controller: self.damaged_creature_controller(ev),
                         from_mana_ability: matches!(
                             ev,
@@ -26381,6 +26385,7 @@ impl GameState {
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
                             triggered_by_draw: false,
+                            lifegain_player: None,
                             damaged_creature_controller: self.damaged_creature_controller(ev),
                         });
                     }
@@ -26417,6 +26422,7 @@ impl GameState {
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
                                 triggered_by_draw: false,
+                                lifegain_player: None,
                                 damaged_creature_controller: self.damaged_creature_controller(ev),
                             });
                         }
@@ -26465,6 +26471,7 @@ impl GameState {
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
                                 triggered_by_draw: false,
+                                lifegain_player: None,
                                 damaged_creature_controller: None,
                             });
                         }
@@ -26589,6 +26596,7 @@ impl GameState {
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
                             triggered_by_draw: false,
+                            lifegain_player: None,
                             damaged_creature_controller: None,
                             from_mana_ability: matches!(
                                 ev,
@@ -26658,6 +26666,7 @@ impl GameState {
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
                                 triggered_by_draw: false,
+                                lifegain_player: None,
                                 damaged_creature_controller: None,
                                 from_mana_ability: false,
                             });
@@ -26732,6 +26741,7 @@ impl GameState {
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
                             triggered_by_draw: false,
+                            lifegain_player: None,
                             damaged_creature_controller: None,
                             from_mana_ability: false,
                         });
@@ -26786,6 +26796,7 @@ impl GameState {
                                     triggered_by_land_entry: false,
                                     triggered_by_face_up: false,
                                     triggered_by_draw: false,
+                                    lifegain_player: None,
                                     damaged_creature_controller: None,
                                 });
                                 break;
@@ -26830,6 +26841,7 @@ impl GameState {
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
                             triggered_by_draw: false,
+                            lifegain_player: None,
                             damaged_creature_controller: None,
                             });
                         }
@@ -26934,6 +26946,7 @@ impl GameState {
                             triggered_by_land_entry: false,
                             triggered_by_face_up: false,
                             triggered_by_draw: false,
+                            lifegain_player: None,
                             damaged_creature_controller: None,
                         });
                     }
@@ -26989,6 +27002,7 @@ impl GameState {
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
                                 triggered_by_draw: false,
+                                lifegain_player: None,
                                 damaged_creature_controller: None,
                                 });
                             }
@@ -27018,6 +27032,7 @@ impl GameState {
                                 triggered_by_land_entry: false,
                                 triggered_by_face_up: false,
                                 triggered_by_draw: false,
+                                lifegain_player: None,
                                 damaged_creature_controller: None,
                                 });
                             }
@@ -27256,6 +27271,17 @@ impl GameState {
             .count()
     }
 
+    /// Dr. Beverly Crusher (`StaticEffect::DoubleControllerLifeGainTriggers`)
+    /// — how many extra times a trigger your life gain caused fires.
+    pub(crate) fn lifegain_trigger_extra_fires(&self, controller: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == controller)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter(|sa| matches!(sa.effect, crate::effect::StaticEffect::DoubleControllerLifeGainTriggers))
+            .count()
+    }
+
     /// Hama Pashar (`StaticEffect::DungeonRoomsTriggerTwice`) — how many extra
     /// times a room ability of `owner`'s dungeon triggers.
     pub(crate) fn dungeon_room_extra_fires(&self, owner: usize) -> usize {
@@ -27299,6 +27325,7 @@ impl GameState {
                 triggered_by_land_entry,
                 triggered_by_face_up,
                 triggered_by_draw,
+                lifegain_player,
                 damaged_creature_controller,
                 from_mana_ability,
             } = candidate;
@@ -27465,9 +27492,16 @@ impl GameState {
                 } else {
                     0
                 };
+                // Dr. Beverly Crusher: a trigger of yours your own life gain caused.
+                let lifegain_extra = if lifegain_player == Some(controller) {
+                    self.lifegain_trigger_extra_fires(controller)
+                } else {
+                    0
+                };
                 let fires = 1
                     + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
                     + draw_extra
+                    + lifegain_extra
                     + death_extra
                     + attack_extra
                     + land_extra
@@ -34763,6 +34797,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerTurnedFaceUpTriggers
             // Krang — read at trigger dispatch via `draw_trigger_extra_fires`.
             | StaticEffect::DoubleControllerDrawTriggers
+            | StaticEffect::DoubleControllerLifeGainTriggers
             // Barbara Wright — read in `saga_enter_advance`.
             | StaticEffect::YourSagasHaveReadAhead
             // Anhelo — read by `casualty_for`; no layer effect.

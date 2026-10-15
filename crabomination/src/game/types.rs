@@ -1671,6 +1671,12 @@ pub struct TriggerCandidate {
     /// triggers an additional time".
     #[serde(default)]
     pub triggered_by_draw: bool,
+    /// The player whose life gain fired this trigger (a `LifeGained`), else
+    /// `None` — Dr. Beverly Crusher's "if you gaining life causes a
+    /// triggered ability … to trigger, that ability triggers an additional
+    /// time".
+    #[serde(default)]
+    pub lifegain_player: Option<usize>,
     /// The controller of the creature whose being dealt damage fired this
     /// trigger (a `DamageDealt` to a creature), else `None` — Wayta, Trainer
     /// Prodigy's "a creature you control being dealt damage causes …

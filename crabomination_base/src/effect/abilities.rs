@@ -2083,6 +2083,10 @@ pub enum StaticEffect {
     /// triggers an additional time." Read at trigger dispatch off the
     /// `triggered_by_draw` candidate flag.
     DoubleControllerDrawTriggers,
+    /// CR 603.2 — "If you gaining life causes a triggered ability of a
+    /// permanent you control to trigger, that ability triggers an additional
+    /// time" (Dr. Beverly Crusher).
+    DoubleControllerLifeGainTriggers,
     /// Barbara Wright — "Sagas you control have read ahead" (CR 714.3c): read
     /// in `saga_enter_advance` beside the printed `read_ahead` flag.
     YourSagasHaveReadAhead,

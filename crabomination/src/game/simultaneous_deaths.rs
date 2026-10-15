@@ -134,6 +134,7 @@ impl GameState {
                         triggered_by_land_entry: false,
                         triggered_by_face_up: false,
                         triggered_by_draw: false,
+                        lifegain_player: None,
                         damaged_creature_controller: None,
                         from_mana_ability: false,
                         actor: events::event_actor(self, ev),

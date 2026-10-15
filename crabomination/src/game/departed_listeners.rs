@@ -165,6 +165,10 @@ impl GameState {
                         triggered_by_land_entry: false,
                         triggered_by_face_up: false,
                         triggered_by_draw: matches!(ev, GameEvent::CardDrawn { .. }),
+                        lifegain_player: match ev {
+                            GameEvent::LifeGained { player, .. } => Some(*player),
+                            _ => None,
+                        },
                         damaged_creature_controller: None,
                         from_mana_ability: false,
                         actor: events::event_actor(self, ev),
