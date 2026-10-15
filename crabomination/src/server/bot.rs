@@ -9404,7 +9404,12 @@ pub(super) fn cast_candidates<'a>(
                 || state.graveyard_creature_cast_available(seat, c.id));
         // CR 702.190 — Ninja Teen's graveyard sneak: an alternative cast, so
         // it rides the own-alternative action below.
-        let own_alt = own_alt || (!granted && state.graveyard_sneak_alt(seat, c.id).is_some());
+        // Sneak is castable only in the declare blockers step — the same
+        // condition the `GY_GRANT` gate reads, so the two can't disagree.
+        let own_alt = own_alt
+            || (!granted
+                && state.step == crate::game::types::TurnStep::DeclareBlockers
+                && state.graveyard_sneak_alt(seat, c.id).is_some());
         if !own_alt && !granted {
             continue;
         }
@@ -25453,6 +25458,25 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never replicated");
+    }
+
+    /// CR 702.190 — Ninja Teen's granted graveyard sneak is offered only in
+    /// the declare blockers step (bug fix: offered in a main phase, the
+    /// `GY_GRANT` gate disagreed and debug pods panicked — seat 2855, seed
+    /// 31005, game 8).
+    #[test]
+    fn bot_offers_graveyard_sneak_only_in_declare_blockers() {
+        let mut g = two_player_game();
+        let teen = g.add_card_to_battlefield(0, catalog::ninja_teen());
+        g.battlefield_find_mut(teen).unwrap().class_level = 3;
+        let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+        g.players[0].mana_pool.add_colorless(10);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+        g.step = crate::game::types::TurnStep::PostCombatMain;
+        let offered = cast_candidates(&g, 0, &EvalWeights::default(), None).into_iter().any(|(a, _)| {
+            matches!(a, GameAction::CastSpellAlternative { card_id, .. } if card_id == wurm)
+        });
+        assert!(!offered, "no sneak outside declare blockers");
     }
 
     /// CR 702.27 — a buyback cast is a candidate when the extra cost is
