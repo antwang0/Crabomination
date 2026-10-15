@@ -1096,3 +1096,36 @@ pub fn koh_the_face_stealer() -> CardDefinition {
         )
     }
 }
+
+/// Asgardian Citadel — land, enters tapped. ETB: gain 1 life. {T}: {R} or {W}.
+/// (Thor Odinson.)
+pub fn asgardian_citadel() -> CardDefinition {
+    super::super::tapland_untyped("Asgardian Citadel", Color::Red, Color::White, super::super::etb_gain_one())
+}
+
+/// Lethal Exploit — {1}{B} instant. Target creature gets -2/-2, and an
+/// additional -1/-1 for each modified creature you control (CR 700.9).
+/// Approximation: the modified creatures are counted as it resolves, not as
+/// it's cast. (Exava, Rakdos Blood Witch.)
+pub fn lethal_exploit() -> CardDefinition {
+    let shrink = || {
+        Value::Negate(Box::new(Value::Sum(vec![
+            Value::Const(2),
+            Value::CountOf(Box::new(Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou).and(R::IsModified),
+            ))),
+        ])))
+    };
+    CardDefinition {
+        name: "Lethal Exploit",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: shrink(),
+            toughness: shrink(),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}

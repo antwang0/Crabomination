@@ -1342,3 +1342,22 @@ fn koh_wears_the_last_chosen_face() {
     let borrowed = &g.battlefield_find(koh).unwrap().definition.activated_abilities[own];
     assert!(!matches!(borrowed.effect, crabomination::effect::Effect::AddMana { .. }));
 }
+
+/// CR 700.9 — Lethal Exploit's shrink grows by one per modified creature you
+/// control: two +1/+1-countered bears take a Serra Angel to -4/-4.
+#[test]
+fn lethal_exploit_counts_your_modified_creatures() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::lethal_exploit());
+    cast_with(&mut g, spell, Some(Target::Permanent(angel)), vec![], None);
+    assert_eq!(pt(&g, angel), (2, 2), "no modified creatures: -2/-2");
+    for _ in 0..2 {
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    let other = ready(&mut g, 1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::lethal_exploit());
+    cast_with(&mut g, spell, Some(Target::Permanent(other)), vec![], None);
+    assert!(g.battlefield_find(other).is_none());
+}
