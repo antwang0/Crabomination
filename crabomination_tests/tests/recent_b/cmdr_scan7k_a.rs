@@ -3845,3 +3845,187 @@ fn untap_symbol_source_cannot_pay_for_its_own_activation() {
     assert!(!g.battlefield_find(order).unwrap().tapped);
     assert!(g.battlefield_find(bear).is_some());
 }
+
+/// Howl of the Night Pack counts Forests, including a Lush Growth land.
+#[test]
+fn howl_counts_forests_and_lush_growth_adds_three_types() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::forest());
+    }
+    let isl = ready(&mut g, 0, catalog::island());
+    let lg = g.add_card_to_hand(0, catalog::lush_growth());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: lg, target: Some(Target::Permanent(isl)), additional_targets: vec![], mode: None, x_value: None }).expect("aura");
+    drain_stack(&mut g);
+    use crabomination::card::LandType;
+    let lts = g.computed_permanent(isl).unwrap().subtypes().land_types.clone();
+    assert!(lts.contains(&LandType::Mountain) && lts.contains(&LandType::Forest) && lts.contains(&LandType::Plains));
+    assert!(!lts.contains(&LandType::Island));
+    let howl = g.add_card_to_hand(0, catalog::howl_of_the_night_pack());
+    cast(&mut g, howl);
+    assert_eq!(named_count(&g, 0, "Wolf"), 3);
+}
+
+/// Thelonite Monk sacrifices a green creature to make a land a Forest.
+#[test]
+fn thelonite_monk_makes_a_forest() {
+    let mut g = pod(2);
+    let monk = ready(&mut g, 0, catalog::thelonite_monk());
+    ready(&mut g, 0, catalog::lynx());
+    let isl = ready(&mut g, 1, catalog::island());
+    activate(&mut g, monk, 0, Some(Target::Permanent(isl)));
+    use crabomination::card::LandType;
+    assert_eq!(g.computed_permanent(isl).unwrap().subtypes().land_types, vec![LandType::Forest]);
+}
+
+/// Jace, Ingenious Mind-Mage's +1 untaps your creatures; Invoke the Winds
+/// steals and untaps.
+#[test]
+fn jace_untaps_and_invoke_the_winds_steals() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let jace = ready(&mut g, 0, catalog::jace_ingenious_mind_mage());
+    g.battlefield_find_mut(jace).unwrap().add_counters(CounterType::Loyalty, 5);
+    loyalty(&mut g, jace, 1, None);
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+    let theirs = ready(&mut g, 1, catalog::hill_giant());
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    let inv = g.add_card_to_hand(0, catalog::invoke_the_winds());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: inv, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(theirs).unwrap();
+    assert!(c.controller == 0 && !c.tapped);
+}
+
+/// Take Flight draws on attack; Displacement Wave bounces cheap nonlands.
+#[test]
+fn take_flight_draws_and_displacement_wave_bounces() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let tf = g.add_card_to_hand(0, catalog::take_flight());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: tf, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("aura");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Flying));
+    let hand = g.players[0].hand.len();
+    declare(&mut g, vec![(bear, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    g.step = TurnStep::PostCombatMain;
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let wave = g.add_card_to_hand(0, catalog::displacement_wave());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: wave, target: None, additional_targets: vec![], mode: None, x_value: Some(2) }).expect("wave");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == elf), "mana value 1 bounced");
+    assert!(g.battlefield_find(giant).is_some(), "mana value 4 stays");
+}
+
+/// Vampire Sovereign drains a target opponent; Wicked Guardian pings your own
+/// creature to draw; Malevolent Noble grows off a sacrifice.
+#[test]
+fn lo_and_li_nobles() {
+    let mut g = pod(3);
+    library(&mut g, 0, 3);
+    let vs = g.add_card_to_hand(0, catalog::vampire_sovereign());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: vs, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23);
+    assert_eq!(g.players[1].life + g.players[2].life, 37);
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let wg = g.add_card_to_hand(0, catalog::wicked_guardian());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, wg);
+    let hurt = g.battlefield.iter().filter(|c| c.controller == 0 && c.damage == 2).count();
+    assert_eq!(hurt, 1, "2 damage to another creature of yours");
+    let _ = giant;
+    assert_eq!(g.players[0].hand.len(), hand, "cast it, drew one");
+    let mn = ready(&mut g, 0, catalog::malevolent_noble());
+    activate(&mut g, mn, 0, None);
+    assert_eq!(plus(&g, mn), 1);
+}
+
+/// Iron Hills Stalwart attaches an Equipment as it enters; Power Boost pumps.
+#[test]
+fn iron_hills_stalwart_attaches_and_power_boost_pumps() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let axe = ready(&mut g, 0, catalog::bearded_axe());
+    let ihs = g.add_card_to_hand(0, catalog::iron_hills_stalwart());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: ihs, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(axe).unwrap().attached_to.is_some(), "the Axe went on");
+    let _ = bear;
+    let lynx = ready(&mut g, 0, catalog::lynx());
+    ready(&mut g, 0, catalog::power_boost());
+    assert_eq!(pt(&g, lynx), (3, 1), "Power Boost's +1/+0");
+}
+
+/// Purple Dragon Punks' mana can't cast a nonartifact spell.
+#[test]
+fn purple_dragon_punks_mana_is_artifact_or_ability_only() {
+    let mut g = pod(2);
+    let pdp = ready(&mut g, 0, catalog::purple_dragon_punks());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: pdp, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None }).expect("tap");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let r = g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None });
+    assert!(r.is_err(), "restricted {{R}} can't pay for Bolt");
+}
+
+/// Masumaro's three: Burlfist Oak grows on draws, Sylvan Yeti counts the
+/// hand, Triumph of Ferocity draws for the biggest creature.
+#[test]
+fn burlfist_oak_sylvan_yeti_and_triumph_of_ferocity() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    library(&mut g, 1, 5);
+    let oak = ready(&mut g, 0, catalog::burlfist_oak());
+    let yeti = ready(&mut g, 0, catalog::sylvan_yeti());
+    ready(&mut g, 0, catalog::triumph_of_ferocity());
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, oak), (4, 5));
+    assert_eq!(pt(&g, yeti).0, g.players[0].hand.len() as i32);
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    let hand = g.players[0].hand.len();
+    step_to(&mut g, 0, TurnStep::Upkeep);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Triumph drew at upkeep");
+}
+
+/// Kopala's three: Divining Duelist taps a creature, Wake Thrasher grows on
+/// untaps, Crashing Tide has flash with a Merfolk.
+#[test]
+fn divining_duelist_wake_thrasher_and_crashing_tide() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let dd = g.add_card_to_hand(0, catalog::divining_duelist());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: dd, target: Some(Target::Permanent(giant)), additional_targets: vec![], mode: Some(0), x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).unwrap().tapped);
+    let wt = ready(&mut g, 0, catalog::wake_thrasher());
+    let land = ready(&mut g, 0, catalog::island());
+    let evs = vec![crabomination::game::types::GameEvent::PermanentUntapped { card_id: land }];
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, wt), (2, 2));
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    let tide = g.add_card_to_hand(0, catalog::crashing_tide());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: tide, target: Some(Target::Permanent(giant)), additional_targets: vec![], mode: None, x_value: None }).expect("flash with a Merfolk");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == giant));
+}
