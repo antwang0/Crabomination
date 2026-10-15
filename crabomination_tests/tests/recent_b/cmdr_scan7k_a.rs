@@ -3813,3 +3813,35 @@ fn dragon_scarred_bear_regenerates_only_when_formidable() {
     ready(&mut g, 0, catalog::ancient_brontodon());
     activate(&mut g, bear, 0, None);
 }
+
+/// CR 601.2g / 107.17 — bug fix: a {Q} cost untaps its source only after the
+/// mana is paid, so Order of Whiteclay can't untap and then tap itself for
+/// {W} through Cryptolith Rite (four-seat debug pod's gate audit, seed 27441).
+#[test]
+fn untap_symbol_source_cannot_pay_for_its_own_activation() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::cryptolith_rite());
+    let order = ready(&mut g, 0, catalog::order_of_whiteclay());
+    g.battlefield_find_mut(order).unwrap().tapped = true;
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: order,
+            ability_index: 0,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(act(&mut g).is_err(), "{{1}}{{W}}{{W}} from {{1}}{{W}} and nothing else");
+    assert!(g.battlefield_find(order).unwrap().tapped, "still tapped after the failed activation");
+    g.players[0].mana_pool.add(Color::White, 1);
+    act(&mut g).expect("paid in full");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(order).unwrap().tapped);
+    assert!(g.battlefield_find(bear).is_some());
+}

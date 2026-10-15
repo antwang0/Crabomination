@@ -24183,19 +24183,22 @@ impl GameState {
             }
             perm.tapped = true;
         }
-        // CR 107.17 — pay a {Q} cost: the source must be tapped; untap it.
+        // CR 107.17 — a {Q} cost: the source must be tapped. It untaps only
+        // once the mana is paid (below): CR 601.2g activates mana abilities
+        // before 601.2h pays the costs, so the source can't untap and then
+        // tap itself for mana (Order of Whiteclay under Cryptolith Rite —
+        // a four-seat debug pod's gate audit, seed 27441).
         if ability.untap_self_cost {
             if source_in_gy || source_in_hand || source_in_exile {
                 return Err(GameError::CardIsTapped(card_id));
             }
             let perm = self
                 .battlefield
-                .find_by_id_mut(card_id)
+                .find_by_id(card_id)
                 .ok_or(GameError::CardNotOnBattlefield(card_id))?;
             if !perm.tapped {
                 return Err(GameError::CardIsTapped(card_id));
             }
-            perm.tapped = false;
         }
         // Snapshot the payer *after* the {T} / {Q} costs: a payment that
         // restores it between attempts (the restricted-source search) must
@@ -24247,11 +24250,6 @@ impl GameState {
                     {
                         perm.tapped = false;
                     }
-                    if ability.untap_self_cost
-                        && let Some(perm) = self.battlefield.find_by_id_mut(card_id)
-                    {
-                        perm.tapped = true;
-                    }
                     return Err(e);
                 }
             };
@@ -24265,6 +24263,11 @@ impl GameState {
             self.pay_life_cost(p, receipt.side_effects.life_lost);
             life_spent += receipt.side_effects.life_lost;
             auto_mana_events = receipt.auto_events;
+        }
+        if ability.untap_self_cost
+            && let Some(perm) = self.battlefield.find_by_id_mut(card_id)
+        {
+            perm.tapped = false;
         }
 
         // Pay the life cost. Tap and mana are committed; the life
