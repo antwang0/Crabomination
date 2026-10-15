@@ -1679,3 +1679,39 @@ fn the_irencrag_becomes_everflame() {
     drain_stack(&mut g);
     assert_eq!(pt(&g, tomik), (5, 4));
 }
+
+/// CR 715.3 / 601.2b — Allure of Power costs a creature: with none to
+/// sacrifice the Adventure can't be cast; with one it goes and two are drawn.
+/// The card's main-half cast pays no sacrifice.
+#[test]
+fn my_precious_allure_of_power_sacrifices_as_a_cost() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let precious = g.add_card_to_hand(0, catalog::my_precious());
+    flood(&mut g);
+    let adventure = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastAdventure {
+            card_id: precious,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(adventure(&mut g).is_err(), "no creature to sacrifice");
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    adventure(&mut g).expect("Allure of Power");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].hand.len(), 2);
+    assert!(g.exile.iter().any(|c| c.id == precious));
+
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let precious = g.add_card_to_hand(0, catalog::my_precious());
+    cast_with(&mut g, precious, None, vec![], None);
+    assert!(g.battlefield_find(precious).is_some() && g.battlefield_find(bear).is_some());
+}

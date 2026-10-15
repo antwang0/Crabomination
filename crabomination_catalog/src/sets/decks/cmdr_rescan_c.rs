@@ -2,7 +2,7 @@
 //! third file. Tests in `tests/recent_b/cmdr_rescan_a.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    ActivatedAbility, Adventure, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
     EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Predicate, SelectionRequirement as R,
     StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
@@ -1527,6 +1527,37 @@ pub fn the_irencrag() -> CardDefinition {
                     toughness: 3,
                 }),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// My Precious // Allure of Power — {3} legendary Equipment: equipped
+/// creature has hexproof and can't be blocked; equip—{2}, pay 2 life.
+/// Adventure {1}{B} instant: as an additional cost, sacrifice a creature; draw
+/// two cards. (Gollum, Riddle Master.)
+pub fn my_precious() -> CardDefinition {
+    CardDefinition {
+        name: "My Precious",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equip_life_cost: 2,
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::Hexproof, Keyword::Unblockable],
+            ..Default::default()
+        }),
+        adventure: Some(Box::new(Adventure {
+            name: "Allure of Power",
+            cost: cost(&[generic(1), b()]),
+            card_types: vec![CardType::Instant],
+            effect: draw(2),
+        })),
+        adventure_additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature.and(R::ControlledByYou),
+            count: 1,
         }],
         ..Default::default()
     }
