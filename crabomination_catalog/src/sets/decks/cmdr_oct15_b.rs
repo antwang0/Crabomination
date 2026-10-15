@@ -2946,3 +2946,400 @@ pub fn solarium_sentry() -> CardDefinition {
         ..creature("Solarium Sentry", cost(&[g(), w()]), vec![CreatureType::Cat, CreatureType::Soldier], 3, 3)
     }
 }
+
+// ── Ghost-Spider, Spider-Man 2099, Myojin of Blooming Dawn, Kazarov, Tobias,
+// Spider-Man (Miles Morales) ─────────────────────────────────────────────────
+
+/// Rampaging Classmate — {2}{R} 3/2 Lizard Berserker. Attacking: +1/+0 until
+/// end of turn per other attacking creature.
+pub fn rampaging_classmate() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::count(Selector::EachPermanent(R::Creature.and(R::IsAttacking).and(R::OtherThanSource))),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Rampaging Classmate", cost(&[generic(2), r()]), vec![CreatureType::Lizard, CreatureType::Berserker], 3, 2)
+    }
+}
+
+/// The Mary Janes — {3}{R} legendary 3/3 menace Human Bard Performer; {1} less
+/// per creature that attacked this turn.
+pub fn the_mary_janes() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast for each creature that attacked this turn.",
+            effect: StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per: 1, all_players: true },
+        }],
+        ..creature(
+            "The Mary Janes",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Bard, CreatureType::Performer],
+            3,
+            3,
+        )
+    }
+}
+
+/// Double Trouble — {4}{R} instant. Double the power of each creature you
+/// control until end of turn.
+pub fn double_trouble() -> CardDefinition {
+    CardDefinition {
+        name: "Double Trouble",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DoublePower {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            times: Value::ONE,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Future Flight — {2}{U}{U} Aura. Enters: draw two. Enchanted creature gets
+/// +2/+0 and has flying.
+pub fn future_flight() -> CardDefinition {
+    CardDefinition {
+        name: "Future Flight",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(2) })],
+        static_abilities: vec![
+            StaticAbility { description: "Enchanted creature gets +2/+0.", effect: StaticEffect::PumpPT { applies_to: enchanted(), power: 2, toughness: 0 } },
+            StaticAbility {
+                description: "Enchanted creature has flying.",
+                effect: StaticEffect::GrantKeyword { applies_to: enchanted(), keyword: Keyword::Flying },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Amazing Acrobatics — {1}{U}{U} instant. Choose one or both: counter target
+/// spell; tap one or two target creatures.
+pub fn amazing_acrobatics() -> CardDefinition {
+    CardDefinition {
+        name: "Amazing Acrobatics",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseModesCast {
+            modes: vec![
+                Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+                Effect::OptionalTargets {
+                    min: 1,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+                        Effect::Tap { what: Selector::TargetFiltered { slot: 1, filter: R::Creature } },
+                    ])),
+                },
+            ],
+            min: 1,
+            max: 2,
+            allow_repeats: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Whoosh! — {1}{U} instant, kicker {1}{U}. Return target nonland permanent to
+/// its owner's hand; kicked, draw a card.
+pub fn whoosh() -> CardDefinition {
+    CardDefinition {
+        name: "Whoosh!",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::Move { what: target_filtered(R::Nonland), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Meticulous Excavation — {W} enchantment. {2}{W}: return target permanent
+/// you control to its owner's hand; only during your turn. Residual: the
+/// unearth branch (exile, then return to hand) is the same bounce.
+pub fn meticulous_excavation() -> CardDefinition {
+    CardDefinition {
+        name: "Meticulous Excavation",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent.and(R::ControlledByYou)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+fn pump_or_bounce(name: &'static str, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(p),
+                toughness: Value::Const(t),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Move { what: target_filtered(R::Creature.and(R::ControlledByYou)), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Alley Evasion — {W} instant. Your creature gets +1/+2, or returns to hand.
+pub fn alley_evasion() -> CardDefinition {
+    pump_or_bounce("Alley Evasion", 1, 2)
+}
+
+/// You're Ambushed on the Road — {W} instant. Your creature returns to hand,
+/// or target creature gets +1/+3. Residual: the pump is limited to your
+/// creatures, like Alley Evasion's.
+pub fn youre_ambushed_on_the_road() -> CardDefinition {
+    pump_or_bounce("You're Ambushed on the Road", 1, 3)
+}
+
+/// Kazarov, Sengir Pureblood — {5}{B}{B} legendary 4/4 flying Vampire.
+/// Whenever a creature an opponent controls is dealt damage, a +1/+1 counter
+/// on it. {3}{R}: 2 damage to target creature.
+pub fn kazarov_sengir_pureblood() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::OpponentControl).with_filter(trigger_is(R::Creature)),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..creature("Kazarov, Sengir Pureblood", cost(&[generic(5), b(), b()]), vec![CreatureType::Vampire], 4, 4)
+    }
+}
+
+fn no_blocks_for(filter: R) -> Effect {
+    Effect::GrantKeyword { what: Selector::EachPermanent(filter), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn }
+}
+
+/// Barrage of Boulders — {2}{R} sorcery. 1 damage to each creature you don't
+/// control. Ferocious — creatures can't block this turn. Residual: "can't
+/// block" covers the creatures on the battlefield as it resolves.
+pub fn barrage_of_boulders() -> CardDefinition {
+    CardDefinition {
+        name: "Barrage of Boulders",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::ControlledByYou)))), amount: Value::ONE },
+            Effect::If {
+                cond: Predicate::FerociousActive { who: PlayerRef::You },
+                then: Box::new(no_blocks_for(R::Creature)),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cosmotronic Wave — {3}{R} sorcery. 1 damage to each creature your
+/// opponents control; they can't block this turn.
+pub fn cosmotronic_wave() -> CardDefinition {
+    CardDefinition {
+        name: "Cosmotronic Wave",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)), amount: Value::ONE },
+            no_blocks_for(R::Creature.and(R::ControlledByOpponent)),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tobias, Doomed Conqueror — {2}{W}{U} legendary 3/2 flash Human Soldier.
+/// Dies: a 2/2 black Zombie per creature of yours that died this turn.
+/// Residual: tokens that died count too.
+pub fn tobias_doomed_conqueror() -> CardDefinition {
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::CreaturesDiedThisTurn(PlayerRef::You),
+            definition: Arc::new(zombie),
+        })],
+        ..creature("Tobias, Doomed Conqueror", cost(&[generic(2), w(), u()]), vec![CreatureType::Human, CreatureType::Soldier], 3, 2)
+    }
+}
+
+/// Inga Rune-Eyes — {3}{U} legendary 3/3 Human Wizard. Enters: scry 3. Dies:
+/// draw three if three or more creatures died this turn.
+pub fn inga_rune_eyes() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) }),
+            crate::effect::shortcut::on_dies(Effect::If {
+                cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(3) },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+                else_: Box::new(Effect::Noop),
+            }),
+        ],
+        ..creature("Inga Rune-Eyes", cost(&[generic(3), u()]), vec![CreatureType::Human, CreatureType::Wizard], 3, 3)
+    }
+}
+
+/// Sphinx of False Conclusions — {2}{U}{U} 4/2 flash, flying Sphinx Illusion.
+/// Attacking: draw, then discard. Dies, if not a token: a token copy of it.
+pub fn sphinx_of_false_conclusions() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![
+            on_attack(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource).with_filter(trigger_is(R::NotToken)),
+                effect: crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, Selector::TriggerSource),
+            },
+        ],
+        ..creature("Sphinx of False Conclusions", cost(&[generic(2), u(), u()]), vec![CreatureType::Sphinx, CreatureType::Illusion], 4, 2)
+    }
+}
+
+/// Guy in the Chair — {2}{G} 2/3 Human Advisor. {T}: one mana of any color.
+/// Web Support — {2}{G}, {T}: a +1/+1 counter on target Spider (sorcery).
+pub fn guy_in_the_chair() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), g()]),
+                tap_cost: true,
+                sorcery_speed: true,
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::HasCreatureType(CreatureType::Spider)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature("Guy in the Chair", cost(&[generic(2), g()]), vec![CreatureType::Human, CreatureType::Advisor], 2, 3)
+    }
+}
+
+/// Prowler, Misguided Mentor — {2}{G} legendary 3/3 Human Rogue Villain; can't
+/// be blocked by power 2 or less. Combat damage to a player: a +1/+1 counter
+/// on another target creature you control.
+pub fn prowler_misguided_mentor() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::PowerAtMost(2)))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..creature(
+            "Prowler, Misguided Mentor",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Villain],
+            3,
+            3,
+        )
+    }
+}
+
+/// Twisted Spider-Clone — {3}{G} 4/4 Spider Human. Enters: a +1/+1 counter on
+/// each creature you control that has one.
+pub fn twisted_spider_clone() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne))),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..creature("Twisted Spider-Clone", cost(&[generic(3), g()]), vec![CreatureType::Spider, CreatureType::Human], 4, 4)
+    }
+}
+
+/// Kapow! — {2}{G} sorcery. A +1/+1 counter on target creature you control,
+/// then it fights target creature an opponent controls.
+pub fn kapow() -> CardDefinition {
+    let mine = Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) };
+    CardDefinition {
+        name: "Kapow!",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: mine.clone(), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            Effect::Fight {
+                attacker: mine,
+                defender: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Venom Blast — {2}{G}{G} sorcery. Two +1/+1 counters on target creature you
+/// control; it deals damage equal to its power to up to one other target
+/// creature.
+pub fn venom_blast() -> CardDefinition {
+    let mine = Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) };
+    CardDefinition {
+        name: "Venom Blast",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter { what: mine.clone(), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2) },
+            Effect::OptionalTargets {
+                min: 1,
+                body: Box::new(Effect::DealDamageEqualToPower {
+                    source: mine,
+                    target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::OtherThanTargetSlot(0)) },
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}

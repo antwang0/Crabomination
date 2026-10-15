@@ -4569,3 +4569,113 @@ fn blood_moon_tapland_enters_untapped() {
     assert!(!g.battlefield_find(land).unwrap().tapped, "enters untapped");
     assert_eq!(g.players[0].life, 20, "no enter trigger");
 }
+
+/// Rampaging Classmate grows per other attacker; Double Trouble doubles power;
+/// The Mary Janes cost {1} less per attacker this turn.
+#[test]
+fn ghost_spider_trio() {
+    let mut g = pod(2);
+    let rc = ready(&mut g, 0, catalog::rampaging_classmate());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(rc, 1), (bear, 1)]);
+    assert_eq!(pt(&g, rc).0, 4);
+    let dt = g.add_card_to_hand(0, catalog::double_trouble());
+    cast(&mut g, dt);
+    assert_eq!(pt(&g, rc).0, 8);
+    assert_eq!(pt(&g, bear).0, 4);
+    g.step = TurnStep::PostCombatMain;
+    let mj = g.add_card_to_hand(0, catalog::the_mary_janes());
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: mj, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("{1}{R} after two attackers");
+}
+
+/// Future Flight draws two and lifts; Whoosh! kicked bounces and draws.
+#[test]
+fn future_flight_and_whoosh() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ff = g.add_card_to_hand(0, catalog::future_flight());
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: ff, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("aura");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cast one, drew two");
+    assert_eq!(pt(&g, bear), (4, 2));
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let wh = g.add_card_to_hand(0, catalog::whoosh());
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellKicked { card_id: wh, target: Some(Target::Permanent(giant)), additional_targets: vec![], mode: None, x_value: None }).expect("kicked");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == giant));
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+}
+
+/// Kazarov grows when an opposing creature is dealt damage; Cosmotronic Wave
+/// pings and stops blocks.
+#[test]
+fn kazarov_grows_off_cosmotronic_wave() {
+    let mut g = pod(2);
+    let kz = ready(&mut g, 0, catalog::kazarov_sengir_pureblood());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let cw = g.add_card_to_hand(0, catalog::cosmotronic_wave());
+    cast(&mut g, cw);
+    assert_eq!(plus(&g, kz), 1);
+    assert!(g.permanent_has_keyword(giant, &Keyword::CantBlock));
+}
+
+/// Tobias makes a Zombie per creature of yours that died this turn; Inga
+/// draws three after three deaths.
+#[test]
+fn tobias_and_inga_count_the_dead() {
+    let mut g = pod(2);
+    library(&mut g, 0, 5);
+    let tb = ready(&mut g, 0, catalog::tobias_doomed_conqueror());
+    let inga = ready(&mut g, 0, catalog::inga_rune_eyes());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    let hand = g.players[0].hand.len();
+    kill(&mut g, inga);
+    assert_eq!(g.players[0].hand.len(), hand, "two deaths: no draw");
+    kill(&mut g, tb);
+    assert_eq!(named_count(&g, 0, "Zombie"), 3, "bear, Inga, Tobias");
+}
+
+/// Sphinx of False Conclusions leaves a token copy of itself when it dies.
+#[test]
+fn sphinx_of_false_conclusions_returns_as_a_token() {
+    let mut g = pod(2);
+    let sp = ready(&mut g, 0, catalog::sphinx_of_false_conclusions());
+    kill(&mut g, sp);
+    assert_eq!(named_count(&g, 0, "Sphinx of False Conclusions"), 1);
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Sphinx of False Conclusions").unwrap().id;
+    kill(&mut g, tok);
+    assert_eq!(named_count(&g, 0, "Sphinx of False Conclusions"), 0, "a token doesn't copy itself");
+}
+
+/// Twisted Spider-Clone tops up countered creatures; Kapow! fights; Venom
+/// Blast hits for the grown power.
+#[test]
+fn miles_morales_counters_and_fights() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let kp = g.add_card_to_hand(0, catalog::kapow());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: kp, target: Some(Target::Permanent(bear)), additional_targets: vec![Target::Permanent(elf)], mode: None, x_value: None }).expect("kapow");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none());
+    assert_eq!(plus(&g, bear), 1);
+    let tsc = g.add_card_to_hand(0, catalog::twisted_spider_clone());
+    cast(&mut g, tsc);
+    assert_eq!(plus(&g, bear), 2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let vb = g.add_card_to_hand(0, catalog::venom_blast());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: vb, target: Some(Target::Permanent(bear)), additional_targets: vec![Target::Permanent(giant)], mode: None, x_value: None }).expect("venom blast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "6 power into the Giant");
+}
