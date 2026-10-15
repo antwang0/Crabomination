@@ -16824,6 +16824,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JHOIRA_3_COMMANDERS,
             main: decks::JHOIRA_3_MAIN,
         },
+        // Seat 2729: Teshar, Ancestor's Apostle's EDHREC average deck. `--pod-decks 2729`.
+        PodDeck {
+            name: "Teshar, Ancestor's Apostle (W)",
+            commanders: decks::TESHAR_COMMANDERS,
+            main: decks::TESHAR_MAIN,
+        },
+        // Seat 2730: Ib Halfheart, Goblin Tactician's EDHREC average deck. `--pod-decks 2730`.
+        PodDeck {
+            name: "Ib Halfheart, Goblin Tactician (R)",
+            commanders: decks::IB_HALFHEART_COMMANDERS,
+            main: decks::IB_HALFHEART_MAIN,
+        },
+        // Seat 2731: Goldbug, Humanity's Ally's EDHREC average deck. `--pod-decks 2731`.
+        PodDeck {
+            name: "Goldbug, Humanity's Ally (WU)",
+            commanders: decks::GOLDBUG_COMMANDERS,
+            main: decks::GOLDBUG_MAIN,
+        },
+        // Seat 2732: Ao, the Dawn Sky's EDHREC average deck. `--pod-decks 2732`.
+        PodDeck {
+            name: "Ao, the Dawn Sky (W)",
+            commanders: decks::AO_COMMANDERS,
+            main: decks::AO_MAIN,
+        },
+        // Seat 2733: Gnostro, Voice of the Crags's EDHREC average deck. `--pod-decks 2733`.
+        PodDeck {
+            name: "Gnostro, Voice of the Crags (WUR)",
+            commanders: decks::GNOSTRO_COMMANDERS,
+            main: decks::GNOSTRO_MAIN,
+        },
+        // Seat 2734: Catti-brie of Mithral Hall's EDHREC average deck. `--pod-decks 2734`.
+        PodDeck {
+            name: "Catti-brie of Mithral Hall (WG)",
+            commanders: decks::CATTI_BRIE_OF_MITHRAL_HALL_COMMANDERS,
+            main: decks::CATTI_BRIE_OF_MITHRAL_HALL_MAIN,
+        },
+        // Seat 2735: Sapling of Colfenor's EDHREC average deck. `--pod-decks 2735`.
+        PodDeck {
+            name: "Sapling of Colfenor (BG)",
+            commanders: decks::SAPLING_OF_COLFENOR_COMMANDERS,
+            main: decks::SAPLING_OF_COLFENOR_MAIN,
+        },
+        // Seat 2736: Terrian, World Tyrant's EDHREC average deck. `--pod-decks 2736`.
+        PodDeck {
+            name: "Terrian, World Tyrant (G)",
+            commanders: decks::TERRIAN_COMMANDERS,
+            main: decks::TERRIAN_MAIN,
+        },
+        // Seat 2737: He Who Hungers's EDHREC average deck. `--pod-decks 2737`.
+        PodDeck {
+            name: "He Who Hungers (B)",
+            commanders: decks::HE_WHO_HUNGERS_COMMANDERS,
+            main: decks::HE_WHO_HUNGERS_MAIN,
+        },
+        // Seat 2738: Livaan, Cultist of Tiamat and Hardy Outlander's EDHREC average deck. `--pod-decks 2738`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Hardy Outlander (RG)",
+            commanders: decks::LIVAAN_COMMANDERS,
+            main: decks::LIVAAN_MAIN,
+        },
+        // Seat 2739: Axelrod Gunnarson's EDHREC average deck. `--pod-decks 2739`.
+        PodDeck {
+            name: "Axelrod Gunnarson (BR)",
+            commanders: decks::AXELROD_GUNNARSON_COMMANDERS,
+            main: decks::AXELROD_GUNNARSON_MAIN,
+        },
+        // Seat 2740: Massacre Girl, Most Wanted's EDHREC average deck. `--pod-decks 2740`.
+        PodDeck {
+            name: "Massacre Girl, Most Wanted (B)",
+            commanders: decks::MASSACRE_GIRL_3_COMMANDERS,
+            main: decks::MASSACRE_GIRL_3_MAIN,
+        },
+        // Seat 2741: Sivitri Scarzam's EDHREC average deck. `--pod-decks 2741`.
+        PodDeck {
+            name: "Sivitri Scarzam (UB)",
+            commanders: decks::SIVITRI_SCARZAM_COMMANDERS,
+            main: decks::SIVITRI_SCARZAM_MAIN,
+        },
+        // Seat 2742: Aang, Air Nomad's EDHREC average deck. `--pod-decks 2742`.
+        PodDeck {
+            name: "Aang, Air Nomad (W)",
+            commanders: decks::AANG_6_COMMANDERS,
+            main: decks::AANG_6_MAIN,
+        },
+        // Seat 2743: Sir Shandlar of Eberyn's EDHREC average deck. `--pod-decks 2743`.
+        PodDeck {
+            name: "Sir Shandlar of Eberyn (WG)",
+            commanders: decks::SIR_SHANDLAR_OF_EBERYN_COMMANDERS,
+            main: decks::SIR_SHANDLAR_OF_EBERYN_MAIN,
+        },
     ]
 }
 
@@ -21388,6 +21478,21 @@ mod tests {
             ("Madame Hydra, Reanimated", &[0x14BC]),
             ("Bard, King of Dale", &[0x14BD]),
             ("Jhoira, Weatherlight Corsair", &[0x14BE]),
+            ("Teshar, Ancestor's Apostle", &[0x14BF]),
+            ("Ib Halfheart, Goblin Tactician", &[0x14C0]),
+            ("Goldbug, Humanity's Ally", &[0x14C1]),
+            ("Ao, the Dawn Sky", &[0x14C2]),
+            ("Gnostro, Voice of the Crags", &[0x14C3]),
+            ("Catti-brie of Mithral Hall", &[0x14C4]),
+            ("Sapling of Colfenor", &[0x14C5]),
+            ("Terrian, World Tyrant", &[0x14C6]),
+            ("He Who Hungers", &[0x14C7]),
+            ("Livaan, Cultist of Tiamat and Hardy Outlander", &[0x14C8]),
+            ("Axelrod Gunnarson", &[0x14C9]),
+            ("Massacre Girl, Most Wanted", &[0x14CA]),
+            ("Sivitri Scarzam", &[0x14CB]),
+            ("Aang, Air Nomad", &[0x14CC]),
+            ("Sir Shandlar of Eberyn", &[0x14CD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
