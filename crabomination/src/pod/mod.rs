@@ -17238,6 +17238,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SPIDER_MAN_2099_COMMANDERS,
             main: decks::SPIDER_MAN_2099_MAIN,
         },
+        // Seat 2798: Dakkon Blackblade's EDHREC average deck. `--pod-decks 2798`.
+        PodDeck {
+            name: "Dakkon Blackblade (WUB)",
+            commanders: decks::DAKKON_BLACKBLADE_COMMANDERS,
+            main: decks::DAKKON_BLACKBLADE_MAIN,
+        },
     ]
 }
 
@@ -21871,6 +21877,7 @@ mod tests {
             ("Ghost-Spider, Gwen Stacy", &[0x1501]),
             ("Myojin of Blooming Dawn", &[0x1502]),
             ("Spider-Man 2099, Miguel O'Hara", &[0x1503]),
+            ("Dakkon Blackblade", &[0x1504]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

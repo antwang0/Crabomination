@@ -78502,3 +78502,31 @@ pub const SPIDER_MAN_2099_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island,
 ];
+
+pub const DAKKON_BLACKBLADE_COMMANDERS: &[CardFactory] = &[dakkon_blackblade];
+
+/// **Dakkon Blackblade**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 6 Islands + 8 Plains + 5 Swamps = 99.
+/// Dakkon Blackblade (EDHREC, fetched 2026-10-15).
+pub const DAKKON_BLACKBLADE_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, bitterthorn_nissas_animus, blackblade_reforged,
+    crucible_of_worlds, expedition_map, explorers_scope, lightning_greaves, shadowspear,
+    sol_ring, swiftfoot_boots, sword_of_forge_and_frontier, sword_of_hearth_and_home,
+    sword_of_the_animist, thaumatic_compass, wayfarers_bauble, arcane_sanctum, bojuka_bog,
+    command_tower, evolving_wilds, fabled_passage, flooded_strand, godless_shrine,
+    hallowed_fountain, marsh_flats, myriad_landscape, polluted_delta, prairie_stream,
+    raffines_tower, rogues_passage, sunken_hollow, terrain_generator, terramorphic_expanse,
+    urborg_tomb_of_yawgmoth, watery_grave, baleful_strix, burnished_hart,
+    deep_gnome_terramancer, dreamscape_artist, emeria_angel, emeria_shepherd, herald_of_leshrac,
+    knight_of_the_white_orchid, kor_cartographer, ob_nixilis_the_fallen, oblivion_sower,
+    pupu_ufo, puresteel_paladin, scaretiller, solemn_simulacrum, sun_titan, the_reality_chip,
+    troop_of_ponies, walking_atlas, weathered_wayfarer, felidar_retreat, land_tax,
+    phyrexian_arena, retreat_to_coralhelm, retreat_to_hagra, rhystic_study,
+    steel_of_the_godhead, anguished_unmaking, arcane_denial, brainstorm, counterspell, despark,
+    dovins_veto, enlightened_tutor, fact_or_fiction, path_to_exile, swords_to_plowshares,
+    void_rend, dakkon_shadow_slayer, damn, mandate_of_abaddon, open_the_armory, profane_tutor,
+    sevinnes_reclamation, toxic_deluge,
+    // Basics
+    island, island, island, island, island, island, plains, plains, plains, plains, plains,
+    plains, plains, plains, swamp, swamp, swamp, swamp, swamp,
+];
