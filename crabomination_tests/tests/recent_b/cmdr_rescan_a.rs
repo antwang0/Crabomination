@@ -1344,3 +1344,34 @@ fn zareth_san_swaps_for_an_unblocked_rogue_and_steals() {
     }
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Sol Ring" && c.controller == 0), "{ring:?}");
 }
+
+/// CR 602.5b / 107.3 — Fabrication Foundry's X is the total mana value it
+/// exiles: a target the board can't cover is rejected, and a coverable one
+/// costs the cheapest cover (one Arcane Signet for a Mind Stone).
+#[test]
+fn fabrication_foundry_exiles_enough_mana_value_to_cover_the_target() {
+    let mut g = pod(2);
+    let foundry = ready(&mut g, 0, catalog::fabrication_foundry());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let thopter = ready(&mut g, 0, catalog::ornithopter());
+    let signet = ready(&mut g, 0, catalog::arcane_signet());
+    let solemn = g.add_card_to_graveyard(0, catalog::solemn_simulacrum());
+    let stone = g.add_card_to_graveyard(0, catalog::mind_stone());
+    flood(&mut g);
+    let act = |g: &mut GameState, t: CardId| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: foundry,
+            ability_index: 1,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(act(&mut g, solemn).is_err(), "3 mana value on board can't cover a 4");
+    act(&mut g, stone).expect("a 2 is covered");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stone).is_some());
+    assert!(g.battlefield_find(signet).is_none());
+    assert!(g.battlefield_find(ring).is_some() && g.battlefield_find(thopter).is_some());
+}

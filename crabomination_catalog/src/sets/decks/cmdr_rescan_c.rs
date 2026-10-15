@@ -863,3 +863,42 @@ pub fn zareth_san_the_trickster() -> CardDefinition {
         )
     }
 }
+
+/// Fabrication Foundry — {1}{W} artifact. {T}: add {W}, spent only on
+/// artifact spells or abilities of artifacts. {2}{W}, {T}, exile one or more
+/// other artifacts you control with total mana value X: return target
+/// artifact card with mana value X or less from your graveyard to the
+/// battlefield; sorcery speed. (The Prydwen, Losheel, Lita.)
+pub fn fabrication_foundry() -> CardDefinition {
+    CardDefinition {
+        name: "Fabrication Foundry",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::White])),
+                        crate::mana::SpendRestriction::ArtifactOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), w()]),
+                tap_cost: true,
+                sorcery_speed: true,
+                exile_permanent_cost: Some((R::Artifact.and(R::OtherThanSource), 1)),
+                exile_permanent_cost_covers_target_mv: true,
+                effect: Effect::Move {
+                    what: target_filtered(R::Artifact.from_your_graveyard()),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
