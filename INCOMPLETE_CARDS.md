@@ -2202,3 +2202,5 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Safe Passage | "creatures you control" are the ones you control as it resolves; a creature that enters later this turn is unshielded | two `PreventAllDamageThisTurn` |
 | 🟡 Dwalin, Weaponmaster | a hone counter pumps only through an Equipment that prints an `equipped_bonus` | `AddCounter { Hone }` + the equip-bonus gather |
 | 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |
+| 🟡 Whtz, the Bibliophile | the "{3} less with 200 or more cards in your starting deck" discount isn't modelled (no starting-deck size is kept; every seated deck has 100) | `ActivatedAbility` |
+| 🟡 Aragorn, Company Leader | "one of each of those kinds" is one trigger per kind put, so two kinds at once may land on two different creatures | `AddCounterOfTriggerKind` on `YouPutCounters` |

@@ -4368,6 +4368,16 @@ impl SelectionRequirement {
         }
     }
 
+    /// Does this tree name [`SameNameAsTarget`](Self::SameNameAsTarget)?
+    pub fn mentions_target_name(&self) -> bool {
+        match self {
+            Self::SameNameAsTarget => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_target_name() || b.mentions_target_name(),
+            Self::Not(inner) => inner.mentions_target_name(),
+            _ => false,
+        }
+    }
+
     /// Does this tree name [`SharesCreatureTypeWithSource`](Self::SharesCreatureTypeWithSource)?
     pub fn mentions_source_creature_types(&self) -> bool {
         match self {

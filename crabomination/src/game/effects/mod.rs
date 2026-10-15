@@ -27282,6 +27282,20 @@ impl GameState {
                 } else {
                     filter
                 };
+                // "A card with the same name as that spell" (Mishra, Artificer
+                // Prodigy, under `WithTargets`) — the target's name, as
+                // `SearchUpToN` reads it; with no target the leaf matches nothing.
+                let named_filter;
+                let filter = if filter.mentions_target_name() {
+                    let target_name = ctx.targets.iter().find_map(|t| match t {
+                        crate::game::Target::Permanent(id) => self.find_card_anywhere(*id).map(|c| c.definition.name),
+                        _ => None,
+                    });
+                    named_filter = filter.resolve_target_name(target_name);
+                    &named_filter
+                } else {
+                    filter
+                };
                 // The library-search prohibitions only bite when a library is
                 // actually being searched; a hand/graveyard-only search
                 // (Dark Supplicant with an empty library clause) goes ahead.

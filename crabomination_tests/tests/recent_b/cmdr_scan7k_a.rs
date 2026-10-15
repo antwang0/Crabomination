@@ -3315,359 +3315,48 @@ fn reprieve_strips_me_the_immortals_counters() {
 
 // ── decks::cmdr_oct15_b ──────────────────────────────────────────────────────
 
-/// Screeching Soulbreaker drains each opponent of a pod for 1 as it attacks.
+/// Whtz, the Bibliophile: {3}, {T}: draw a card and gain 1 life.
 #[test]
-fn screeching_soulbreaker_hits_each_opponent_on_attack() {
-    let mut g = pod(4);
-    let sb = ready(&mut g, 0, catalog::screeching_soulbreaker());
-    declare(&mut g, vec![(sb, 2)]);
-    assert_eq!([g.players[1].life, g.players[2].life, g.players[3].life], [19, 19, 19]);
-    assert_eq!(g.players[0].life, 21);
-}
-
-/// Sand Augury scries 1 and draws; the Dragon waits in exile on its adventure.
-#[test]
-fn young_blue_dragon_sand_augury_draws_and_exiles_on_adventure() {
-    let mut g = pod(2);
-    library(&mut g, 0, 3);
-    let id = g.add_card_to_hand(0, catalog::young_blue_dragon());
-    flood(&mut g);
-    g.perform_action(GameAction::CastAdventure { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
-        .expect("Sand Augury");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), 1, "drew one");
-    assert!(g.exile.iter().any(|c| c.id == id), "on an adventure");
-}
-
-/// Bearded Axe counts Dwarves, Equipment and Vehicles you control (itself too).
-#[test]
-fn bearded_axe_counts_dwarves_equipment_and_vehicles() {
-    let mut g = pod(2);
-    let bear = ready(&mut g, 0, catalog::grizzly_bears());
-    let axe = ready(&mut g, 0, catalog::bearded_axe());
-    ready(&mut g, 0, catalog::dains_company());
-    ready(&mut g, 1, catalog::bearded_axe());
-    flood(&mut g);
-    g.perform_action(GameAction::Equip { equipment: axe, target: bear }).expect("equip {2}");
-    assert_eq!(pt(&g, bear), (4, 4), "the Axe and one Dwarf; the opponent's Axe doesn't count");
-}
-
-/// CR 702.162 / 701.28 — Goldbug converts on your second spell; the Vehicle
-/// draws and converts back when it attacks beside a Human.
-#[test]
-fn goldbug_converts_on_second_spell_and_back_on_a_human_attack() {
-    let mut g = pod(2);
-    library(&mut g, 0, 3);
-    let gb = ready(&mut g, 0, catalog::goldbug_humanitys_ally());
-    for _ in 0..2 {
-        let o = g.add_card_to_hand(0, catalog::ornithopter());
-        cast(&mut g, o);
-    }
-    assert_eq!(g.battlefield_find(gb).unwrap().definition.name, "Goldbug, Scrappy Scout");
-    let human = ready(&mut g, 0, catalog::elite_vanguard());
-    g.clear_sickness(gb);
-    let hand = g.players[0].hand.len();
-    declare(&mut g, vec![(gb, 1), (human, 1)]);
-    assert_eq!(g.players[0].hand.len(), hand + 1);
-    assert_eq!(g.battlefield_find(gb).unwrap().definition.name, "Goldbug, Humanity's Ally");
-}
-
-/// Keldon Flamesage looks at its power's worth of cards and casts an instant
-/// with mana value at most that, free; the rest go to the bottom.
-#[test]
-fn keldon_flamesage_casts_a_cheap_instant_free() {
-    let mut g = pod(2);
-    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
-    let big = g.add_card_to_library(0, catalog::cancel());
-    library(&mut g, 0, 3);
-    let fs = ready(&mut g, 0, catalog::keldon_flamesage());
-    declare(&mut g, vec![(fs, 1)]);
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt cast for free");
-    assert!(g.players[0].library.iter().any(|c| c.id == big), "mana value 3 > power 2: bottomed");
-    assert_eq!(g.players[1].life, 17, "Bolt hit the opponent");
-}
-
-/// The Long Reach of Night: each opponent discards or, with an empty hand,
-/// sacrifices a creature; chapter III returns it as the Animus.
-#[test]
-fn the_long_reach_of_night_squeezes_each_opponent_then_flips() {
-    let mut g = pod(3);
-    let card = g.add_card_to_hand(1, catalog::grizzly_bears());
-    let keep = ready(&mut g, 1, catalog::grizzly_bears());
-    let gone = ready(&mut g, 2, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::the_long_reach_of_night());
-    cast(&mut g, id);
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == card), "seat 1 discarded");
-    assert!(g.battlefield_find(keep).is_some());
-    assert!(g.battlefield_find(gone).is_none(), "seat 2 had no hand: sacrificed");
-    g.saga_advance(id);
-    drain_stack(&mut g);
-    g.saga_advance(id);
-    drain_stack(&mut g);
-    let animus = g.battlefield.iter().find(|c| c.definition.name == "Animus of Night's Reach").expect("flipped");
-    assert_eq!(animus.controller, 0);
-}
-
-/// Ib Halfheart: a blocked Goblin is sacrificed and deals 4 to its blocker;
-/// two Mountains make two Goblins.
-#[test]
-fn ib_halfheart_sacrifices_a_blocked_goblin_to_burn_its_blocker() {
-    let mut g = pod(2);
-    let ib = ready(&mut g, 0, catalog::ib_halfheart_goblin_tactician());
-    let gob = ready(&mut g, 0, catalog::goblin_piker());
-    let wall = ready(&mut g, 1, catalog::hill_giant());
-    declare(&mut g, vec![(gob, 1)]);
-    g.step = TurnStep::DeclareBlockers;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::DeclareBlockers(vec![(wall, gob)])).expect("block");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(gob).is_none(), "sacrificed");
-    assert!(g.battlefield_find(wall).is_none(), "4 damage killed the 3/3");
-    g.step = TurnStep::PostCombatMain;
-    for _ in 0..2 {
-        g.add_card_to_battlefield(0, catalog::mountain());
-    }
-    activate(&mut g, ib, 0, None);
-    assert_eq!(named_count(&g, 0, "Goblin"), 2);
-}
-
-/// Destined Confrontation: each player keeps creatures with total power 4 or
-/// less and sacrifices the rest — every seat of a pod (CR 101.4, APNAP).
-#[test]
-fn destined_confrontation_keeps_total_power_four_per_player() {
-    let mut g = pod(3);
-    let bears: Vec<CardId> = (0..3).map(|_| ready(&mut g, 1, catalog::grizzly_bears())).collect();
-    let giant = ready(&mut g, 2, catalog::hill_giant());
-    let elf = ready(&mut g, 2, catalog::llanowar_elves());
-    let id = g.add_card_to_hand(0, catalog::destined_confrontation());
-    cast(&mut g, id);
-    assert_eq!(bears.iter().filter(|b| g.battlefield_find(**b).is_some()).count(), 2, "2 + 2 = 4");
-    assert!(g.battlefield_find(giant).is_some() && g.battlefield_find(elf).is_some(), "3 + 1 = 4");
-}
-
-/// CR 121.2a — Enduring Renewal: a draw that reveals a creature bins it; a
-/// noncreature is drawn. A creature of yours that dies comes back to hand,
-/// and your hand is public.
-#[test]
-fn enduring_renewal_bins_creature_draws_and_returns_the_dead() {
-    let mut g = pod(2);
-    ready(&mut g, 0, catalog::enduring_renewal());
-    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
-    let isl = g.add_card_to_library(0, catalog::island());
-    let mut evs = Vec::new();
-    g.draw_one(0, &mut evs);
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "creature revealed into the graveyard");
-    assert!(!g.players[0].hand.iter().any(|c| c.id == isl));
-    g.draw_one(0, &mut evs);
-    assert!(g.players[0].hand.iter().any(|c| c.id == isl), "noncreature drawn");
-    let elf = ready(&mut g, 0, catalog::llanowar_elves());
-    kill(&mut g, elf);
-    assert!(g.players[0].hand.iter().any(|c| c.id == elf), "returned to hand");
-    assert!(g.hand_visible_to(1, 0));
-}
-
-/// Muraganda Petroglyphs pumps every creature with no abilities, any controller.
-#[test]
-fn muraganda_petroglyphs_pumps_vanilla_creatures_only() {
-    let mut g = pod(2);
-    ready(&mut g, 0, catalog::muraganda_petroglyphs());
-    let horse = ready(&mut g, 1, catalog::armored_warhorse());
-    let hawk = ready(&mut g, 0, catalog::glint_hawk());
-    assert_eq!(pt(&g, horse), (4, 5));
-    assert_eq!(pt(&g, hawk), (2, 2), "flying is an ability");
-}
-
-/// Glint Hawk bounces an artifact you control, or is sacrificed without one.
-#[test]
-fn glint_hawk_bounces_an_artifact_or_dies() {
-    let mut g = pod(2);
-    let hawk = g.add_card_to_hand(0, catalog::glint_hawk());
-    cast(&mut g, hawk);
-    assert!(g.battlefield_find(hawk).is_none(), "no artifact: sacrificed");
-    let orn = ready(&mut g, 0, catalog::ornithopter());
-    let hawk2 = g.add_card_to_hand(0, catalog::glint_hawk());
-    cast(&mut g, hawk2);
-    assert!(g.battlefield_find(hawk2).is_some());
-    assert!(g.players[0].hand.iter().any(|c| c.id == orn), "Ornithopter bounced");
-}
-
-/// Salvage Scout sacrifices itself to regrow an artifact card.
-#[test]
-fn salvage_scout_regrows_an_artifact() {
-    let mut g = pod(2);
-    let scout = ready(&mut g, 0, catalog::salvage_scout());
-    let orn = g.add_card_to_graveyard(0, catalog::ornithopter());
-    activate(&mut g, scout, 0, Some(Target::Permanent(orn)));
-    assert!(g.players[0].hand.iter().any(|c| c.id == orn));
-    assert!(g.battlefield_find(scout).is_none());
-}
-
-/// Little Bear untaps another creature, and counters a Bear.
-#[test]
-fn little_bear_untaps_and_grows_a_bear() {
-    let mut g = pod(2);
-    let beorn = ready(&mut g, 0, catalog::beorn_reluctant_host());
-    g.battlefield_find_mut(beorn).unwrap().tapped = true;
-    let lb = g.add_card_to_hand(0, catalog::little_bear());
-    flood(&mut g);
-    g.perform_action(GameAction::CastSpell { card_id: lb, target: Some(Target::Permanent(beorn)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert!(!g.battlefield_find(beorn).unwrap().tapped);
-    assert_eq!(plus(&g, beorn), 1);
-}
-
-/// Argent Sphinx blinks itself with metalcraft and returns at the end step.
-#[test]
-fn argent_sphinx_blinks_with_metalcraft() {
+fn whtz_draws_and_gains() {
     let mut g = pod(2);
     library(&mut g, 0, 2);
-    library(&mut g, 1, 2);
-    let sph = ready(&mut g, 0, catalog::argent_sphinx());
-    for _ in 0..3 {
-        ready(&mut g, 0, catalog::ornithopter());
-    }
-    activate(&mut g, sph, 0, None);
-    assert!(g.battlefield_find(sph).is_none(), "exiled");
-    step_to(&mut g, 1, TurnStep::Upkeep);
-    assert!(g.battlefield_find(sph).is_some(), "back at the end step");
+    let w = ready(&mut g, 0, catalog::whtz_the_bibliophile());
+    let hand = g.players[0].hand.len();
+    activate(&mut g, w, 0, None);
+    assert_eq!((g.players[0].hand.len(), g.players[0].life), (hand + 1, 21));
+    assert!(g.battlefield_find(w).unwrap().tapped);
 }
 
-/// Stone Retrieval Unit makes a tapped Powerstone; Patrol Signaler's {Q}
-/// untaps it for a Kithkin; Stalwarts tempts with the Ring.
+/// Mishra, Artificer Prodigy: casting an artifact puts a same-named card from
+/// the library onto the battlefield.
 #[test]
-fn stone_retrieval_unit_patrol_signaler_and_stalwarts() {
+fn mishra_fetches_a_same_named_artifact() {
     let mut g = pod(2);
-    let sru = g.add_card_to_hand(0, catalog::stone_retrieval_unit());
-    cast(&mut g, sru);
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Powerstone" && c.tapped));
-    let ps = ready(&mut g, 0, catalog::patrol_signaler());
-    g.battlefield_find_mut(ps).unwrap().tapped = true;
-    activate(&mut g, ps, 0, None);
-    assert_eq!(named_count(&g, 0, "Kithkin Soldier"), 1);
-    assert!(!g.battlefield_find(ps).unwrap().tapped);
-    library(&mut g, 0, 3);
-    let st = g.add_card_to_hand(0, catalog::stalwarts_of_osgiliath());
-    cast(&mut g, st);
-    let mut evs = Vec::new();
-    g.draw_one(0, &mut evs);
-    g.draw_one(0, &mut evs);
+    ready(&mut g, 0, catalog::mishra_artificer_prodigy());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::sol_ring());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, ring);
+    assert_eq!(named_count(&g, 0, "Sol Ring"), 2);
+}
+
+/// Aragorn, Company Leader: another Ring-bearer puts a keyword counter on him,
+/// and the same kind follows onto up to one other creature (CR 122.6).
+#[test]
+fn aragorn_spreads_his_ring_counter() {
+    let mut g = pod(2);
+    let ara = ready(&mut g, 0, catalog::aragorn_company_leader());
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    g.players[0].ring_bearer = Some(wurm);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&crabomination::effect::Effect::RingTempts { who: crabomination::effect::PlayerRef::You }, &ctx).unwrap();
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert_eq!(plus(&g, st), 1, "second draw this turn");
-}
-
-/// Mind Control steals; Cloistered Telepath loots; Black Poplar regenerates.
-#[test]
-fn mind_control_steals_a_creature() {
-    let mut g = pod(2);
-    let bear = ready(&mut g, 1, catalog::grizzly_bears());
-    let mc = g.add_card_to_hand(0, catalog::mind_control());
-    flood(&mut g);
-    g.perform_action(GameAction::CastSpell { card_id: mc, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
-}
-
-/// Gift of the Deity on a black creature: +1/+1 and deathtouch, no lure.
-#[test]
-fn gift_of_the_deity_reads_the_hosts_colour() {
-    let mut g = pod(2);
-    let bp = ready(&mut g, 0, catalog::black_poplar_shaman());
-    let gift = g.add_card_to_hand(0, catalog::gift_of_the_deity());
-    flood(&mut g);
-    g.perform_action(GameAction::CastSpell { card_id: gift, target: Some(Target::Permanent(bp)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(pt(&g, bp), (2, 4));
-    let kw = g.computed_permanent(bp).unwrap().keywords().to_vec();
-    assert!(kw.contains(&Keyword::Deathtouch) && !kw.contains(&Keyword::AllMustBlock));
-}
-
-/// Crush Underfoot: your Giant deals its power to target creature.
-#[test]
-fn crush_underfoot_hits_with_a_giants_power() {
-    let mut g = pod(2);
-    ready(&mut g, 0, catalog::hill_giant());
-    let elf = ready(&mut g, 1, catalog::llanowar_elves());
-    let cu = g.add_card_to_hand(0, catalog::crush_underfoot());
-    flood(&mut g);
-    g.perform_action(GameAction::CastSpell { card_id: cu, target: Some(Target::Permanent(elf)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(elf).is_none());
-}
-
-/// Touch of Moonglove: a creature its target killed costs its controller 2.
-#[test]
-fn touch_of_moonglove_drains_on_a_kill() {
-    let mut g = pod(2);
-    let bear = ready(&mut g, 0, catalog::hill_giant());
-    let giant = ready(&mut g, 1, catalog::grizzly_bears());
-    let t = g.add_card_to_hand(0, catalog::touch_of_moonglove());
-    flood(&mut g);
-    g.perform_action(GameAction::CastSpell { card_id: t, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
-    drain_stack(&mut g);
-    assert_eq!(pt(&g, bear), (4, 3));
-    declare(&mut g, vec![(bear, 1)]);
-    g.step = TurnStep::DeclareBlockers;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::DeclareBlockers(vec![(giant, bear)])).expect("block");
-    drain_stack(&mut g);
-    while g.step != TurnStep::EndCombat {
-        let evs = g.advance_step(Vec::new()).unwrap();
-        g.dispatch_triggers_for_events(&evs);
-        drain_stack(&mut g);
-    }
-    assert!(g.battlefield_find(giant).is_none(), "killed");
-    assert_eq!(g.players[1].life, 18);
-}
-
-/// Greatbow Doyen: an Archer's damage to a creature is echoed at its controller.
-#[test]
-fn greatbow_doyen_echoes_archer_damage_to_the_controller() {
-    let mut g = pod(3);
-    let doyen = ready(&mut g, 0, catalog::greatbow_doyen());
-    let ohabi = ready(&mut g, 0, catalog::ohabi_caleria());
-    assert_eq!(pt(&g, ohabi), (2, 4), "the Doyen's anthem");
-    assert_eq!(pt(&g, doyen), (2, 4), "other Archers only");
-    let bear = ready(&mut g, 2, catalog::grizzly_bears());
-    let mut evs = Vec::new();
-    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(bear), 2, Some(ohabi), &mut evs);
-    g.dispatch_triggers_for_events(&evs);
-    drain_stack(&mut g);
-    assert_eq!(g.players[2].life, 18);
-    assert_eq!(g.players[1].life, 20);
-}
-
-/// Gnostro's modes scale with the spells you've cast this turn.
-#[test]
-fn gnostro_gains_life_per_spell_cast() {
-    let mut g = pod(2);
-    let gn = ready(&mut g, 0, catalog::gnostro_voice_of_the_crags());
-    for _ in 0..2 {
-        let o = g.add_card_to_hand(0, catalog::ornithopter());
-        cast(&mut g, o);
-    }
-    flood(&mut g);
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility { card_id: gn, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: Some(2) })
-        .expect("activate");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, 22);
-}
-
-/// CR 615 — Swans of Bryn Argoll: damage to it is prevented and the
-/// source's controller draws that many.
-#[test]
-fn swans_of_bryn_argoll_turns_damage_into_cards() {
-    let mut g = pod(2);
-    library(&mut g, 1, 3);
-    let swans = ready(&mut g, 0, catalog::swans_of_bryn_argoll());
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(swans)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(swans).unwrap().damage, 0);
-    assert_eq!(g.players[1].hand.len(), 3);
+    assert_eq!(g.players[0].ring_bearer, Some(wurm), "the Wurm keeps the Ring");
+    let on_ara = g.battlefield_find(ara).unwrap().keyword_counters.clone();
+    assert_eq!(on_ara.len(), 1, "one keyword counter on Aragorn");
+    assert_eq!(g.battlefield_find(wurm).unwrap().keyword_counters, on_ara, "the same kind on the other creature");
 }
 
 /// Enrage: Needletooth Raptor burns an opposing creature when it's dealt

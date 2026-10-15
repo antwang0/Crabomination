@@ -1675,3 +1675,84 @@ pub fn great_gilded_boat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Whtz, the Bibliophile — {1}{W}{U} legendary 1/3 Homunculus. {3}, {T}: draw
+/// a card and gain 1 life. (Rulebreaker: no maximum deck size; the "{3} less
+/// with a 200-card starting deck" discount is not modelled — INCOMPLETE_CARDS.)
+pub fn whtz_the_bibliophile() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(1), w(), u()]),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..legend("Whtz, the Bibliophile", vec![CreatureType::Homunculus], 1, 3)
+    }
+}
+
+/// Mishra, Artificer Prodigy — {1}{U}{B}{R} legendary 4/4 Human Artificer.
+/// Casting an artifact spell, you may search your graveyard, hand and/or
+/// library for a card with its name and put it onto the battlefield.
+pub fn mishra_artificer_prodigy() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        cost: cost(&[generic(1), u(), b(), r()]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(R::Artifact)),
+            effect: Effect::MayDo {
+                description: "Search for a card with the same name and put it onto the battlefield?".into(),
+                body: Box::new(Effect::WithTargets {
+                    what: Selector::TriggerSource,
+                    body: Box::new(Effect::SearchZones {
+                        who: PlayerRef::You,
+                        zones: vec![Zone::Graveyard, Zone::Hand, Zone::Library],
+                        filter: R::SameNameAsTarget,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                }),
+            },
+        }],
+        ..legend("Mishra, Artificer Prodigy", vec![CreatureType::Human, CreatureType::Artificer], 4, 4)
+    }
+}
+
+/// Aragorn, Company Leader — {1}{G}{W} legendary 3/3 Human Ranger. The Ring
+/// tempting you with another creature chosen as Ring-bearer puts your choice
+/// of a first strike, vigilance, deathtouch or lifelink counter on him; you
+/// putting counters on him puts one of each of those kinds on up to one other
+/// target creature.
+pub fn aragorn_company_leader() -> CardDefinition {
+    let counter = |keyword: Keyword| Effect::AddKeywordCounter { what: Selector::This, keyword, amount: Value::ONE };
+    CardDefinition {
+        cost: cost(&[generic(1), g(), w()]),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                // CR 701.54c — the chosen bearer is the event's subject.
+                event: EventSpec::new(EventKind::RingTempted, EventScope::YourControl)
+                    .with_filter(trigger_is(R::OtherThanSource)),
+                effect: Effect::ChooseMode(vec![
+                    counter(Keyword::FirstStrike),
+                    counter(Keyword::Vigilance),
+                    counter(Keyword::Deathtouch),
+                    counter(Keyword::Lifelink),
+                ]),
+            },
+            TriggeredAbility {
+                // CR 122.6 — keyed on who put them; one trigger per kind put.
+                event: EventSpec::new(EventKind::AnyCounterAdded, EventScope::YouPutCounters)
+                    .with_filter(trigger_is(R::OtherThanSource.negate())),
+                effect: Effect::AddCounterOfTriggerKind {
+                    what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    amount: Value::ONE,
+                    event_placer: false,
+                },
+            },
+        ],
+        ..legend("Aragorn, Company Leader", vec![CreatureType::Human, CreatureType::Ranger], 3, 3)
+    }
+}

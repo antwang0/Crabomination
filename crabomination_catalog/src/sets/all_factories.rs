@@ -15940,6 +15940,9 @@ static DECKS: &[Factory] = &[
     super::decks::divining_duelist,
     super::decks::wake_thrasher,
     super::decks::crashing_tide,
+    super::decks::whtz_the_bibliophile,
+    super::decks::mishra_artificer_prodigy,
+    super::decks::aragorn_company_leader,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
