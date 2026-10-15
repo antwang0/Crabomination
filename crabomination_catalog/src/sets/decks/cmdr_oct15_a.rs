@@ -1166,3 +1166,350 @@ pub fn mordor_on_the_march() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Stalwarts of Osgiliath — {4}{W} 4/3 Human Soldier. Enters: the Ring
+/// tempts you. Your second card drawn each turn: a +1/+1 counter on it.
+pub fn stalwarts_of_osgiliath() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::RingTempts { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+        ],
+        ..creature("Stalwarts of Osgiliath", cost(&[generic(4), w()]), vec![CreatureType::Human, CreatureType::Soldier], 4, 3)
+    }
+}
+
+/// Lakeshore Apothecary — {1}{U} 1/2 vigilance Human Cleric; your second card
+/// drawn each turn puts a +1/+1 counter on it.
+pub fn lakeshore_apothecary() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        ..creature("Lakeshore Apothecary", cost(&[generic(1), u()]), vec![CreatureType::Human, CreatureType::Cleric], 1, 2)
+    }
+}
+
+/// She-Hulk, Jade Defender — {3}{G} legendary 4/4 reach trample Gamma Hero.
+/// Power-up — {4}{G}{G}: destroy up to one target artifact or enchantment,
+/// and a +1/+1 counter on her.
+pub fn she_hulk_jade_defender() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(3), g()]),
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            power_up: true,
+            effect: Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    min_targets: 0,
+                    filter: R::Artifact.or(R::HasCardType(CardType::Enchantment)),
+                    effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..legend("She-Hulk, Jade Defender", vec![CreatureType::Gamma, CreatureType::Hero], 4, 4)
+    }
+}
+
+/// Madame Hydra, Reanimated — {3}{B} legendary 2/2 menace Human Horror
+/// Villain; +1/+1 per creature card in your graveyard; entering or attacking,
+/// mill two.
+pub fn madame_hydra_reanimated() -> CardDefinition {
+    let mill = || Effect::Mill { who: Selector::You, amount: Value::Const(2) };
+    CardDefinition {
+        cost: cost(&[generic(3), b()]),
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "Madame Hydra gets +1/+1 for each creature card in your graveyard.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::CountOf(Box::new(Selector::EachMatching {
+                    zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                    filter: R::Creature,
+                })),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![etb(mill()), on_attack(mill())],
+        ..legend("Madame Hydra, Reanimated", vec![CreatureType::Human, CreatureType::Horror, CreatureType::Villain], 2, 2)
+    }
+}
+
+/// Shake the Foundations — {2}{R} instant. 1 damage to each creature without
+/// flying; draw a card.
+pub fn shake_the_foundations() -> CardDefinition {
+    CardDefinition {
+        name: "Shake the Foundations",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying))))),
+                amount: Value::ONE,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Legolas, Counter of Kills — {2}{G}{U} legendary 2/3 reach Elf Archer.
+/// Whenever you scry, if he's tapped, you may untap him (once each turn).
+/// Whenever a creature an opponent controls dies, a +1/+1 counter on him.
+pub fn legolas_counter_of_kills() -> CardDefinition {
+    let tapped = Predicate::EntityMatches { what: Selector::This, filter: R::Tapped };
+    CardDefinition {
+        cost: cost(&[generic(2), g(), u()]),
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec { once_per_turn: true, ..EventSpec::new(EventKind::Scried, EventScope::YourControl).with_filter(tapped.clone()) },
+                effect: Effect::If {
+                    cond: tapped,
+                    then: Box::new(Effect::MayDo {
+                        description: "Untap Legolas?".into(),
+                        body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+        ],
+        ..legend("Legolas, Counter of Kills", vec![CreatureType::Elf, CreatureType::Archer], 2, 3)
+    }
+}
+
+/// Tolarian Kraken — {4}{U}{U} 4/6 Kraken. Whenever you draw a card, you may
+/// pay {1}; when you do, you may tap or untap target creature.
+pub fn tolarian_kraken() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {1} to tap or untap target creature?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::TapOrUntap { what: target_filtered(R::Creature) }),
+                }),
+                else_: None,
+            },
+        }],
+        ..creature("Tolarian Kraken", cost(&[generic(4), u(), u()]), vec![CreatureType::Kraken], 4, 6)
+    }
+}
+
+/// Ghost-Spider, Gwen Stacy — {3}{R}{R} legendary 4/4 menace Spider Human
+/// Hero. Attacking, X damage to the defending player, X = attacking creatures.
+pub fn ghost_spider_gwen_stacy() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(3), r(), r()]),
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![on_attack(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::DefendingPlayer),
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::IsAttacking)))),
+        })],
+        ..legend("Ghost-Spider, Gwen Stacy", vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero], 4, 4)
+    }
+}
+
+/// Web-Shooters — {1}{W} Equipment. +1/+1, reach, and "Whenever this
+/// creature attacks, tap target creature an opponent controls." Equip {2}.
+pub fn web_shooters() -> CardDefinition {
+    CardDefinition {
+        name: "Web-Shooters",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Reach],
+            triggered_abilities: vec![on_attack(Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Michelangelo, On the Scene — {4}{G}{G} legendary 2/2 trample Mutant Ninja
+/// Turtle; enters with a +1/+1 counter per land you control; dies: return it
+/// to your hand.
+pub fn michelangelo_on_the_scene() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(4), g(), g()]),
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountOf(Box::new(Selector::EachPermanent(R::Land.and(R::ControlledByYou)))),
+        )),
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Move {
+            what: Selector::This,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..legend("Michelangelo, On the Scene", vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Turtle], 2, 2)
+    }
+}
+
+/// X-23, Deadly Weapon — {2}{G} legendary 3/3 Mutant Berserker Hero. Whenever
+/// another Mutant you control enters, a +1/+1 counter on it and on X-23.
+pub fn x_23_deadly_weapon() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(2), g()]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(trigger_is(R::HasCreatureType(CreatureType::Mutant))),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::TriggerSource, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            ]),
+        }],
+        ..legend("X-23, Deadly Weapon", vec![CreatureType::Mutant, CreatureType::Berserker, CreatureType::Hero], 3, 3)
+    }
+}
+
+/// Splinter, Hamato Yoshi — {1}{B} legendary 1/3 menace Mutant Ninja Rat;
+/// sneak {B}; other Ninjas you control get +1/+1.
+pub fn splinter_hamato_yoshi() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(1), b()]),
+        keywords: vec![Keyword::Menace],
+        alternative_cost: Some(crate::effect::shortcut::sneak(cost(&[b()]))),
+        static_abilities: vec![StaticAbility {
+            description: "Other Ninjas you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Ninja).and(R::ControlledByYou).and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..legend("Splinter, Hamato Yoshi", vec![CreatureType::Mutant, CreatureType::Ninja, CreatureType::Rat], 1, 3)
+    }
+}
+
+/// Doom's Servo-Guards — {1}{B} 2/2 artifact Robot Villain. Enters: gain 2
+/// life and mill two.
+pub fn dooms_servo_guards() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..creature("Doom's Servo-Guards", cost(&[generic(1), b()]), vec![CreatureType::Robot, CreatureType::Villain], 2, 2)
+    }
+}
+
+/// Nimrodel Watcher — {1}{U} 2/1 Elf Scout. Whenever you scry, +1/+0 and
+/// unblockable this turn; once each turn.
+pub fn nimrodel_watcher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec { once_per_turn: true, ..EventSpec::new(EventKind::Scried, EventScope::YourControl) },
+            effect: Effect::Seq(vec![
+                Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ZERO, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Unblockable, duration: Duration::EndOfTurn },
+            ]),
+        }],
+        ..creature("Nimrodel Watcher", cost(&[generic(1), u()]), vec![CreatureType::Elf, CreatureType::Scout], 2, 1)
+    }
+}
+
+/// Little Bear — {2}{G} 3/2 flash Bear. Enters: untap another target creature
+/// you control; a Bear gets a +1/+1 counter too.
+pub fn little_bear() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Untap { what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)), up_to: None },
+            Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::HasCreatureType(CreatureType::Bear) },
+                then: Box::new(Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..creature("Little Bear", cost(&[generic(2), g()]), vec![CreatureType::Bear], 3, 2)
+    }
+}
+
+/// Bard, Heir of Girion — {2}{W}{U} legendary 4/4 reach vigilance Human
+/// Archer; other creatures you control get +1/+1; whenever you attack, draw.
+pub fn bard_heir_of_girion() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(2), w(), u()]),
+        keywords: vec![Keyword::Reach, Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..legend("Bard, Heir of Girion", vec![CreatureType::Human, CreatureType::Archer], 4, 4)
+    }
+}
+
+/// Lucky the Pizza Dog — {1}{G} legendary 2/2 Dog. Casting a Cat, Dog or
+/// Hero spell makes a Food; at each end step, if you gained life this turn,
+/// a +1/+1 counter on Lucky.
+pub fn lucky_the_pizza_dog() -> CardDefinition {
+    let gained = Predicate::PlayerGainedLifeThisTurn { who: PlayerRef::You };
+    CardDefinition {
+        cost: cost(&[generic(1), g()]),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(
+                    R::HasCreatureType(CreatureType::Cat)
+                        .or(R::HasCreatureType(CreatureType::Dog))
+                        .or(R::HasCreatureType(CreatureType::Hero)),
+                )),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Arc::new(crabomination_base::tokens::food_token()),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(gained.clone()),
+                effect: Effect::If {
+                    cond: gained,
+                    then: Box::new(Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..legend("Lucky the Pizza Dog", vec![CreatureType::Dog], 2, 2)
+    }
+}
+
+/// Mind Control — {3}{U}{U} Aura. Enchant creature; you control it.
+pub fn mind_control() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Control",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        ..Default::default()
+    }
+}

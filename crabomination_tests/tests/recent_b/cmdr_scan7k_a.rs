@@ -3069,3 +3069,161 @@ fn aisha_casts_a_sorcery_off_combat_damage() {
     step_to(&mut g, 0, TurnStep::PostCombatMain);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == howl), "Howl was cast free");
 }
+
+/// Madame Hydra counts creature cards in your graveyard and mills on entry.
+#[test]
+fn madame_hydra_grows_with_the_graveyard() {
+    let mut g = pod(2);
+    for def in [catalog::grizzly_bears(), catalog::craw_wurm(), catalog::island()] {
+        g.add_card_to_library(0, def);
+    }
+    let mh = g.add_card_to_hand(0, catalog::madame_hydra_reanimated());
+    cast(&mut g, mh);
+    assert_eq!(pt(&g, mh), (4, 4), "milled two creature cards");
+}
+
+/// Shake the Foundations hits only creatures without flying.
+#[test]
+fn shake_the_foundations_spares_flyers() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    let st = g.add_card_to_hand(0, catalog::shake_the_foundations());
+    cast(&mut g, st);
+    assert!(g.battlefield_find(elf).is_none());
+    assert_eq!(g.battlefield_find(angel).unwrap().damage, 0);
+}
+
+/// Legolas grows when an opponent's creature dies.
+#[test]
+fn legolas_counts_opposing_deaths() {
+    let mut g = pod(2);
+    let leg = ready(&mut g, 0, catalog::legolas_counter_of_kills());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    assert_eq!(plus(&g, leg), 1);
+}
+
+/// Ghost-Spider deals the attacking-creature count to the defender.
+#[test]
+fn ghost_spider_burns_by_attackers() {
+    let mut g = pod(2);
+    let gs = ready(&mut g, 0, catalog::ghost_spider_gwen_stacy());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(gs, 1), (bear, 1)]);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Web-Shooters' bearer taps an opposing creature as it attacks.
+#[test]
+fn web_shooters_tap_on_attack() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let ws = g.add_card_to_battlefield(0, catalog::web_shooters());
+    g.battlefield_find_mut(ws).unwrap().attached_to = Some(bear);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    assert!(g.permanent_has_keyword(bear, &Keyword::Reach));
+    declare(&mut g, vec![(bear, 1)]);
+    assert!(g.battlefield_find(wurm).unwrap().tapped);
+}
+
+/// Michelangelo, On the Scene enters with a counter per land and comes back
+/// to hand when he dies.
+#[test]
+fn michelangelo_on_the_scene_counters_and_returns() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let m = g.add_card_to_hand(0, catalog::michelangelo_on_the_scene());
+    cast(&mut g, m);
+    assert_eq!(plus(&g, m), 3);
+    kill(&mut g, m);
+    assert!(g.players[0].hand.iter().any(|c| c.id == m));
+}
+
+/// X-23 counters herself and another entering Mutant.
+#[test]
+fn x_23_counters_entering_mutants() {
+    let mut g = pod(2);
+    let x = ready(&mut g, 0, catalog::x_23_deadly_weapon());
+    let m = g.add_card_to_hand(0, catalog::michelangelo_on_the_scene());
+    cast(&mut g, m);
+    assert_eq!(plus(&g, x), 1);
+}
+
+/// Splinter pumps other Ninjas.
+#[test]
+fn splinter_pumps_other_ninjas() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::splinter_hamato_yoshi());
+    let m = ready(&mut g, 0, catalog::michelangelo_on_the_scene());
+    assert_eq!(pt(&g, m), (3, 3));
+}
+
+/// Little Bear untaps a Bear and counters it.
+#[test]
+fn little_bear_untaps_and_counters_a_bear() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let lb = g.add_card_to_hand(0, catalog::little_bear());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: lb, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(!b.tapped);
+    assert_eq!(plus(&g, bear), 1);
+}
+
+/// Bard pumps the team and draws on attack.
+#[test]
+fn bard_heir_of_girion_pumps_and_draws() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    let bard = ready(&mut g, 0, catalog::bard_heir_of_girion());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, bear), (3, 3));
+    let hand = g.players[0].hand.len();
+    declare(&mut g, vec![(bard, 1)]);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Lucky makes a Food off a Dog spell.
+#[test]
+fn lucky_the_pizza_dog_makes_food() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::lucky_the_pizza_dog());
+    let dog = g.add_card_to_hand(0, catalog::lucky_the_pizza_dog());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: dog, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(named_count(&g, 0, "Food"), 1);
+}
+
+/// Mind Control steals the enchanted creature.
+#[test]
+fn mind_control_steals() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let mc = g.add_card_to_hand(0, catalog::mind_control());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: mc, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wurm).unwrap().controller, 0);
+}
+
+/// Stalwarts of Osgiliath grows on your second draw each turn.
+#[test]
+fn stalwarts_grow_on_the_second_draw() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let st = ready(&mut g, 0, catalog::stalwarts_of_osgiliath());
+    let forge = g.add_card_to_hand(0, catalog::futurist_forge());
+    cast(&mut g, forge);
+    assert_eq!(plus(&g, st), 0, "one draw");
+    let f = g.battlefield.iter().find(|c| c.definition.name == "Futurist Forge").map(|c| c.id).unwrap();
+    activate(&mut g, f, 0, None);
+    assert_eq!(plus(&g, st), 1, "the second draw");
+}
