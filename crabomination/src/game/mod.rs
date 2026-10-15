@@ -21171,10 +21171,10 @@ impl GameState {
         // at once, not at the next sweep: an answer that leaves another ask
         // pending skipped the sweep above, and a Klothys whose devotion a
         // sacrifice took kept attacking as an enchantment (pod seed 819257).
-        if result.is_ok()
-            && self.pending_decision.is_some()
-            && (!self.attacking.is_empty() || !self.block_map.is_empty())
-        {
+        // Nor only then: a monarch change after the combat-damage sweep
+        // ended a Garland steal, the devotion went with it, and Thassa kept
+        // attacking (four-seat audit pod, seed 931960).
+        if result.is_ok() && (!self.attacking.is_empty() || !self.block_map.is_empty()) {
             self.remove_noncreature_combatants();
         }
         if result.is_ok() && self.players.iter().any(|p| !p.commanders.is_empty()) {

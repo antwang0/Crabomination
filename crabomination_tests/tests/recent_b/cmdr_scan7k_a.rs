@@ -2910,3 +2910,20 @@ fn karn_wish_drops_an_exile_play_permission() {
     let card = g.players[0].hand.iter().find(|c| c.id == trawler).expect("wished to hand");
     assert!(card.may_play_until.is_none());
 }
+
+/// CR 506.4 — bug fix: an attacking Thassa whose devotion drops without a
+/// state-based sweep (a control change ending) leaves combat as the next
+/// action settles (four-seat audit pod, seed 931960).
+#[test]
+fn thassa_leaves_combat_when_devotion_drops_between_sweeps() {
+    let mut g = pod(3);
+    let thassa = ready(&mut g, 0, catalog::thassa_deep_dwelling());
+    let sowers: Vec<CardId> = (0..2).map(|_| ready(&mut g, 0, catalog::sower_of_temptation())).collect();
+    assert!(g.computed_permanent(thassa).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
+    declare(&mut g, vec![(thassa, 1)]);
+    assert!(g.attacking.iter().any(|a| a.attacker == thassa));
+    g.battlefield_find_mut(sowers[0]).unwrap().controller = 2;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    assert!(g.attacking.iter().all(|a| a.attacker != thassa), "devotion 3: not a creature, not attacking");
+}
