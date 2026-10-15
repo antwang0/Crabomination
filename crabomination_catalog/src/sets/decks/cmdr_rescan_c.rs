@@ -1309,28 +1309,21 @@ pub fn grim_reapers_scythe() -> CardDefinition {
 }
 
 /// Devout Invocation — {6}{W} sorcery. Tap any number of untapped creatures
-/// you control; a 4/4 white flying Angel for each one tapped. Approximation:
-/// a yes/no per creature rather than one subset pick. (Masako the
+/// you control; a 4/4 white flying Angel for each one tapped. (Masako the
 /// Humorless.)
 pub fn devout_invocation() -> CardDefinition {
     CardDefinition {
         name: "Devout Invocation",
         cost: cost(&[generic(6), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::ForEach {
-                selector: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::Untapped)),
-                body: Box::new(Effect::MayDo {
-                    description: "Tap this creature for an Angel?".into(),
-                    body: Box::new(Effect::Tap { what: Selector::TriggerSource }),
-                }),
-            },
-            Effect::CreateToken {
+        effect: Effect::TapAnyNumberThen {
+            filter: R::Creature,
+            body: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
-                count: Value::PermanentsTappedThisEffect,
+                count: Value::XFromCost,
                 definition: Arc::new(token("Angel", 4, 4, vec![Color::White], vec![CreatureType::Angel], vec![Keyword::Flying])),
-            },
-        ]),
+            }),
+        },
         ..Default::default()
     }
 }

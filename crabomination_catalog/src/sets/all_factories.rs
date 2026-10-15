@@ -15727,6 +15727,13 @@ static DECKS: &[Factory] = &[
     super::decks::massacre_girl_most_wanted,
     super::decks::wispweaver_angel,
     super::decks::northampton_farm,
+    // cmdr_scan7k_h
+    super::decks::iron_man_armor,
+    super::decks::ajani_goldmane,
+    super::decks::saved_by_the_shell,
+    super::decks::avatar_of_burgeoning_echoes,
+    super::decks::fire_nation_salvagers,
+    super::decks::gimli_mournful_avenger,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

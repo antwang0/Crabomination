@@ -1507,15 +1507,9 @@ fn grim_reapers_scythe_reanimates_and_mints_a_zombie() {
 #[test]
 fn devout_invocation_angels_per_creature_tapped() {
     let mut g = pod(2);
-    for _ in 0..3 {
-        ready(&mut g, 0, catalog::grizzly_bears());
-    }
+    let bears: Vec<CardId> = (0..3).map(|_| ready(&mut g, 0, catalog::grizzly_bears())).collect();
     let spell = g.add_card_to_hand(0, catalog::devout_invocation());
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Bool(true),
-        DecisionAnswer::Bool(false),
-        DecisionAnswer::Bool(true),
-    ]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bears[0], bears[2]])]));
     cast_with(&mut g, spell, None, vec![], None);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Angel").count(), 2);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.tapped).count(), 2);

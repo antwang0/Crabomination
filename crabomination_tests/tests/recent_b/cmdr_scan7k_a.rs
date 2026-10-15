@@ -1466,3 +1466,105 @@ fn northampton_farm_stores_and_returns_a_creature() {
     activate(&mut g, farm, 2, None);
     assert!(g.battlefield_find(bear).is_some());
 }
+
+// ── decks::cmdr_scan7k_h ─────────────────────────────────────────────────────
+
+/// Iron Man Armor attaches as it enters and flies its wearer; unattached, it
+/// suits up as a flier as big as your artifact count.
+#[test]
+fn iron_man_armor_attaches_and_suits_up() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let armor = g.add_card_to_hand(0, catalog::iron_man_armor());
+    cast(&mut g, armor);
+    assert_eq!(g.battlefield_find(armor).unwrap().attached_to, Some(bear));
+    assert_eq!(pt(&g, bear), (4, 3));
+    let spare = ready(&mut g, 0, catalog::iron_man_armor());
+    ready(&mut g, 0, catalog::sol_ring());
+    activate(&mut g, spare, 0, None);
+    assert_eq!(pt(&g, spare), (3, 3), "three artifacts");
+    assert!(g.permanent_has_keyword(spare, &Keyword::Flying));
+}
+
+/// Ajani Goldmane's −1 counters the team and grants vigilance.
+#[test]
+fn ajani_goldmane_minus_one_counters_the_team() {
+    let mut g = pod(2);
+    let pw = ready(&mut g, 0, catalog::ajani_goldmane());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    loyalty(&mut g, pw, 1, None);
+    assert_eq!(plus(&g, bear), 1);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Vigilance));
+}
+
+/// Saved by the Shell costs {G} beside a Turtle.
+#[test]
+fn saved_by_the_shell_discounts_with_a_turtle() {
+    let mut g = pod(2);
+    let turtle = ready(&mut g, 0, catalog::donatello_gadget_master());
+    let spell = g.add_card_to_hand(0, catalog::saved_by_the_shell());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(turtle)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{G} with a Turtle");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, turtle), 1);
+    assert!(g.permanent_has_keyword(turtle, &Keyword::Indestructible));
+}
+
+/// Avatar of Burgeoning Echoes' landfall makes a Jace with two loyalty.
+#[test]
+fn avatar_of_burgeoning_echoes_empowers_jace_on_landfall() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::avatar_of_burgeoning_echoes());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    let jace = g.battlefield.iter().find(|c| c.definition.is_planeswalker()).expect("a Jace token");
+    assert_eq!(jace.counter_count(CounterType::Loyalty), 2);
+}
+
+/// Fall of the Impostor III exiles the opponent's biggest creature.
+#[test]
+fn fall_of_the_impostor_exiles_the_biggest() {
+    let mut g = pod(2);
+    library(&mut g, 0, 6);
+    library(&mut g, 1, 6);
+    let small = ready(&mut g, 1, catalog::grizzly_bears());
+    let big = ready(&mut g, 1, catalog::serra_angel());
+    let saga = ready(&mut g, 0, catalog::fall_of_the_impostor());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    step_to(&mut g, 0, TurnStep::PreCombatMain);
+    assert!(g.battlefield_find(big).is_none());
+    assert!(g.battlefield_find(small).is_some());
+}
+
+/// Devout Invocation turns each tapped creature into a 4/4 Angel.
+#[test]
+fn devout_invocation_makes_an_angel_per_tapped_creature() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::devout_invocation());
+    cast(&mut g, spell);
+    assert_eq!(named_count(&g, 0, "Angel"), 3);
+}
+
+/// Gimli fights on the third death of the turn and is indestructible from
+/// the second.
+#[test]
+fn gimli_fights_on_the_third_death() {
+    let mut g = pod(2);
+    let gimli = ready(&mut g, 0, catalog::gimli_mournful_avenger());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        let bear = ready(&mut g, 0, catalog::llanowar_elves());
+        kill(&mut g, bear);
+    }
+    assert_eq!(plus(&g, gimli), 3);
+    assert!(g.permanent_has_keyword(gimli, &Keyword::Indestructible));
+    assert!(g.battlefield_find(theirs).is_none(), "the third resolution's fight");
+}
