@@ -2518,6 +2518,8 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     // pluralises off the exile count.
     if let Some(total) = ability.exile_other_total_mv {
         parts.push(format!("Exile cards with total mana value {total}+ from gy"));
+    } else if let Some((color, total)) = ability.exile_other_total_pips {
+        parts.push(format!("Exile cards with {total}+ {{{}}} symbols from gy", crate::mana::color_pip_letter(color)));
     } else if let Some((_, n)) = ability.exile_other_filter.as_ref() {
         if *n == 1 {
             parts.push("Exile a card from gy".into());

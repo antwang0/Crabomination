@@ -22596,9 +22596,17 @@ impl GameState {
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            let picks: Vec<CardId> = if let Some(total) = ability.exile_other_total_mv {
+            let total_measure = ability
+                .exile_other_total_mv
+                .map(|t| (t, None))
+                .or(ability.exile_other_total_pips.map(|(c, t)| (t, Some(c))));
+            let picks: Vec<CardId> = if let Some((total, pip_color)) = total_measure {
+                // Mana value, or one color's pips (Baron Helmut Zemo).
                 let mv = |id: &CardId| {
-                    self.players[p].graveyard.iter().find(|c| c.id == *id).map_or(0, |c| c.definition.cost.cmc())
+                    self.players[p].graveyard.iter().find(|c| c.id == *id).map_or(0, |c| match pip_color {
+                        Some(color) => c.definition.cost.pips_of(color),
+                        None => c.definition.cost.cmc(),
+                    })
                 };
                 let mut by_mv = candidates.clone();
                 by_mv.sort_by_key(|id| std::cmp::Reverse(mv(id)));

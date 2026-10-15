@@ -272,6 +272,23 @@ impl ManaCost {
         Self { symbols }
     }
 
+    /// CR 107.4 / 202.2 — how many of the cost's mana symbols are `color`
+    /// (a hybrid or Phyrexian symbol of that color counts once): Baron Helmut
+    /// Zemo's "fifteen or more black mana symbols among their mana costs".
+    pub fn pips_of(&self, color: Color) -> u32 {
+        self.symbols
+            .iter()
+            .filter(|s| match s {
+                ManaSymbol::Colored(c)
+                | ManaSymbol::Phyrexian(c)
+                | ManaSymbol::MonoHybrid(_, c)
+                | ManaSymbol::ColorlessHybrid(c) => *c == color,
+                ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => *a == color || *b == color,
+                _ => false,
+            })
+            .count() as u32
+    }
+
     /// CR 107.4 — how many colored mana symbols the cost has (hybrid and
     /// Phyrexian ones included, each counted once): Omnath, Locus of All's
     /// "three or more colored mana symbols".

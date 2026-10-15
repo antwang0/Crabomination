@@ -4553,6 +4553,12 @@ pub struct ActivatedAbility {
     /// mana value first, whose mana values sum to at least N.
     #[serde(default)]
     pub exile_other_total_mv: Option<u32>,
+    /// "Exile any number of [filter] cards from your graveyard with N or more
+    /// [color] mana symbols among their mana costs" (Baron Helmut Zemo's
+    /// boast): the `exile_other_total_mv` shape measured in `color` pips
+    /// (`ManaCost::pips_of`) instead of mana value.
+    #[serde(default)]
+    pub exile_other_total_pips: Option<(crate::mana::Color, u32)>,
     /// "X can't be 0" (Ludevic, Necrogenius): an activation at X = 0 is
     /// rejected.
     #[serde(default)]
