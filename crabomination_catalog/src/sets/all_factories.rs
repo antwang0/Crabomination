@@ -4637,6 +4637,7 @@ static DECKS: &[Factory] = &[
     super::decks::go_nuts,
     super::decks::the_irencrag,
     super::decks::my_precious,
+    super::decks::diaochan_artful_beauty,
     // cmdr_rank2k_m (session 01CwrNTA)
     super::decks::hans_eriksson,
     super::decks::keensight_mentor,

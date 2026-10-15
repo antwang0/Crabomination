@@ -1562,3 +1562,41 @@ pub fn my_precious() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Diaochan, Artful Beauty — {3}{R} legendary 1/1 Human Advisor. {T}: destroy
+/// target creature of your choice, then destroy target creature of an
+/// opponent's choice; only during your turn, before attackers are declared.
+/// (The opponent's pick is made as it resolves, Volcanic Offering's shape.)
+pub fn diaochan_artful_beauty() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::Any(vec![
+                    Predicate::CurrentStepIs(TurnStep::Upkeep),
+                    Predicate::CurrentStepIs(TurnStep::Draw),
+                    Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+                    Predicate::CurrentStepIs(TurnStep::BeginCombat),
+                ]),
+            ])),
+            effect: Effect::Seq(vec![
+                Effect::Destroy { what: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+                Effect::OpponentChoosesPermanentThen {
+                    filter: R::Creature,
+                    body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                    chooser: None,
+                    theirs: false,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Diaochan, Artful Beauty",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Advisor],
+            1,
+            1,
+        )
+    }
+}

@@ -1715,3 +1715,30 @@ fn my_precious_allure_of_power_sacrifices_as_a_cost() {
     cast_with(&mut g, precious, None, vec![], None);
     assert!(g.battlefield_find(precious).is_some() && g.battlefield_find(bear).is_some());
 }
+
+/// Diaochan destroys your pick and then an opponent's pick, but only on your
+/// turn before attackers (CR 602.5b timing restriction).
+#[test]
+fn diaochan_destroys_two_before_attackers() {
+    let mut g = pod(2);
+    let diaochan = ready(&mut g, 0, catalog::diaochan_artful_beauty());
+    let angel = ready(&mut g, 1, catalog::serra_angel());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g
+        .perform_action(GameAction::ActivateAbility {
+            card_id: diaochan,
+            ability_index: 0,
+            target: Some(Target::Permanent(angel)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(), "after combat");
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, diaochan, 0, Some(Target::Permanent(angel)));
+    assert!(g.battlefield_find(angel).is_none());
+    let creatures = g.battlefield.iter().filter(|c| c.definition.card_types.contains(&crabomination::card::CardType::Creature)).count();
+    assert_eq!(creatures, 1, "the opponent's pick died too");
+}
