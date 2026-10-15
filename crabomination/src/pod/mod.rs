@@ -16812,6 +16812,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MADAME_HYDRA_COMMANDERS,
             main: decks::MADAME_HYDRA_MAIN,
         },
+        // Seat 2727: Bard, King of Dale's EDHREC average deck. `--pod-decks 2727`.
+        PodDeck {
+            name: "Bard, King of Dale (WU)",
+            commanders: decks::BARD_COMMANDERS,
+            main: decks::BARD_MAIN,
+        },
+        // Seat 2728: Jhoira, Weatherlight Corsair's EDHREC average deck. `--pod-decks 2728`.
+        PodDeck {
+            name: "Jhoira, Weatherlight Corsair (B)",
+            commanders: decks::JHOIRA_3_COMMANDERS,
+            main: decks::JHOIRA_3_MAIN,
+        },
     ]
 }
 
@@ -21374,6 +21386,8 @@ mod tests {
             ("Lucky the Pizza Dog", &[0x14BA]),
             ("Iymrith, Desert Doom", &[0x14BB]),
             ("Madame Hydra, Reanimated", &[0x14BC]),
+            ("Bard, King of Dale", &[0x14BD]),
+            ("Jhoira, Weatherlight Corsair", &[0x14BE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

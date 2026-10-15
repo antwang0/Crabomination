@@ -76557,3 +76557,58 @@ pub const MADAME_HYDRA_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp,
 ];
+
+pub const BARD_COMMANDERS: &[CardFactory] = &[bard_king_of_dale];
+
+/// **Bard, King of Dale**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 10 Islands + 11 Plains = 99.
+/// Bard, King of Dale (EDHREC, fetched 2026-10-15).
+pub const BARD_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, fellwar_stone, great_gilded_boat, horn_of_gondor,
+    lightning_greaves, skullclamp, sol_ring, talisman_of_progress, the_arkenstone,
+    thought_vessel, adarkar_wastes, command_tower, deserted_beach, exotic_orchard,
+    flooded_strand, floodfarm_verge, glacial_fortress, hallowed_fountain, lake_town,
+    meticulous_archive, minas_tirith, port_town, prairie_stream, reliquary_tower, sea_of_clouds,
+    adeline_resplendent_cathar, alandra_sky_dreamer, bard_the_bowman, bards_company,
+    bard_heir_of_girion, belladonna_took, chasm_skulker, cosmogrand_zenith, curiosity_crafter,
+    emrakuls_messenger, esper_sentinel, faerie_mastermind, faramir_prince_of_ithilien,
+    homunculus_horde, king_tchalla, loran_of_the_third_path, mischievous_mystic,
+    mister_fantastic_reed_richards, moonshaker_cavalry, prince_imrahil_the_fair, tataru_taru,
+    the_council_of_four, the_queen_of_dale, voice_of_victory, anointed_procession,
+    caretakers_talent, gleaming_splendor, monologue_tax, mystic_remora, rhystic_study,
+    smothering_tithe, teferis_ageless_insight, an_offer_you_cant_refuse, arcane_denial,
+    bilbos_gambit, brainstorm, counterspell, dovins_veto, frantic_search, generous_gift, opt,
+    path_to_exile, reprieve, swan_song, swords_to_plowshares, the_eagles_are_coming,
+    elspeth_storm_slayer, hour_of_reckoning, ponder, preordain, supreme_verdict, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const JHOIRA_3_COMMANDERS: &[CardFactory] = &[jhoira_weatherlight_corsair];
+
+/// **Jhoira, Weatherlight Corsair**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Jhoira, Weatherlight Corsair (EDHREC, fetched 2026-10-15).
+pub const JHOIRA_3_MAIN: &[CardFactory] = &[
+    arcane_signet, blade_of_selves, bontus_monument, charcoal_diamond, conjurers_closet,
+    fellwar_stone, helm_of_the_host, jet_medallion, lightning_greaves, mind_stone, my_precious,
+    panharmonicon, sol_ring, swiftfoot_boots, the_darkness_crystal, wayfarers_bauble,
+    whip_of_erebos, bojuka_bog, cabal_coffers, cabal_stronghold, nykthos_shrine_to_nyx,
+    phyrexian_tower, rogues_passage, urborg_tomb_of_yawgmoth, war_room, accursed_marauder,
+    avacyn_angel_of_horror, black_cat_cunning_thief, black_widow_super_spy,
+    bloodthirsty_conqueror, brainstealer_dragon, crypt_ghast, dauthi_voidwalker,
+    gonti_lord_of_luxury, gonti_night_minister, gray_merchant_of_asphodel,
+    krrik_son_of_yawgmoth, morbid_opportunist, noxious_gearhulk, rev_tithe_extractor,
+    sepulchral_primordial, solemn_simulacrum, thieving_amalgam, tinybones_the_pickpocket,
+    twilight_prophet, animate_dead, black_market_connections, cunning_rhetoric, kayas_ghostform,
+    phyrexian_arena, consuming_corruption, dark_ritual, deadly_dispute, defile,
+    fake_your_own_death, feign_death, malakir_rebirth, not_dead_after_all, saw_in_half,
+    supernatural_stamina, undying_malice, withering_torment, bubbling_muck, damnation,
+    exsanguinate, feed_the_swarm, inside_information, nights_whisper, reanimate, sign_in_blood,
+    toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];
