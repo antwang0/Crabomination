@@ -3898,6 +3898,9 @@ pub enum SelectionRequirement {
     /// Mana value equals the number chosen earlier in this resolution
     /// (`Effect::PlayerChoosesNumber` — Void's hand half).
     ManaValueEqualsChosenNumber,
+    /// The card's name begins with the letter the source chose
+    /// (`Effect::ChooseLetterForSource` — Katerina of Myra's Marvels).
+    NameBeginsWithChosenLetterOfSource,
     /// Mana value equals that of at least one battlefield permanent matching
     /// the inner filter, read from the evaluating controller's side — Rebbec,
     /// Architect of Ascension's "protection from each mana value among

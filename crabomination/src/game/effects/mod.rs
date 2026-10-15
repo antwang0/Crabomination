@@ -58,6 +58,7 @@ mod amend_copy;
 mod immediate_cast;
 mod top_pile;
 mod time_travel;
+pub(crate) mod choose_letter;
 mod phasing;
 mod supertypes;
 mod revival;
@@ -38366,6 +38367,39 @@ impl GameState {
                 };
                 // "Choose a number between 1 and 10" (Talion).
                 let n = n.max(*min).min(*max);
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_number = Some(n);
+                }
+                Ok(())
+            }
+
+            Effect::ChooseLetterForSource => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let decision = Decision::ChooseAmount {
+                    source,
+                    prompt: "Choose a letter (0 = A … 25 = Z)".to_string(),
+                    max: 25,
+                    kind: AmountKind::NamedNumber,
+                };
+                let n = match take_opt_scratch!(self.stashed_resolution_answer) {
+                    Some(DecisionAnswer::Amount(n)) => n.min(25),
+                    Some(_) => 0,
+                    None if self.seat_suspends(ctx.controller) => {
+                        self.suspend_signal = Some(Box::new((
+                            decision,
+                            PendingEffectState::seated(ctx.controller, PendingEffectState::AmountAnswerPending { max: 25 }),
+                            effect.clone(),
+                        )));
+                        return Ok(());
+                    }
+                    // AutoDecider's 0 reads as "no opinion": the commonest
+                    // initial among the chooser's own spells.
+                    None => match self.decider.decide(&decision) {
+                        DecisionAnswer::Amount(n) if n > 0 => n.min(25),
+                        _ => self.commonest_spell_initial(ctx.controller),
+                    },
+                };
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.chosen_number = Some(n);
                 }

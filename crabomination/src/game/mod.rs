@@ -14516,6 +14516,9 @@ impl GameState {
             // Flat bonus plus optional board-scaled bonus (Nettlecyst: +1/+1
             // for each artifact/enchantment the Equipment's controller controls).
             let (mut bp, mut bt) = (bonus.power, bonus.toughness);
+            // "Each hone counter on an Equipment grants +1/+0 to equipped
+            // creature" (Dwalin, Weaponmaster's reminder text).
+            bp += card.counter_count(crate::card::CounterType::Hone) as i32;
             if let Some(scale) = &bonus.scale {
                 // The host creature's controller (Righteous Authority /
                 // Death's Approach scale on the *enchanted* creature's

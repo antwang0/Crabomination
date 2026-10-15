@@ -12539,6 +12539,10 @@ pub enum Effect {
     /// `Value::ChosenNumberOfSource` (Greymond, Avacyn's Stalwart's two
     /// chosen abilities).
     SetSourceChosenNumber(u32),
+    /// "As [this] enters, choose a letter" (Katerina of Myra's Marvels): the
+    /// letter's index (A = 0 … Z = 25) as the source's `chosen_number`, read
+    /// by `SelectionRequirement::NameBeginsWithChosenLetterOfSource`.
+    ChooseLetterForSource,
     ChooseNumberForSource {
         max: u32,
         /// The number is life the chooser pays (Phyrexian Processor), so the

@@ -960,6 +960,7 @@ impl Effect {
             | Effect::SearchAuraAttachToSource
             | Effect::SearchAuraAttachToSourceCappedBy { .. }
             | Effect::SetSourceChosenNumber(_)
+            | Effect::ChooseLetterForSource
             | Effect::YourLandsEnterTappedThisTurn
             | Effect::OpponentsCreaturesEnterTappedUntilYourNextTurn
             | Effect::PutOntoBattlefieldAttached { .. }

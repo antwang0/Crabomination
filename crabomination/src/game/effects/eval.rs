@@ -6922,6 +6922,10 @@ impl GameState {
                         // fall back to the per-resolution scratchpad (Predict).
                         .or(self.scratch.named_card_this_resolution.as_deref())
                         .is_some_and(|n| card.definition.has_name(n)),
+                    R::NameBeginsWithChosenLetterOfSource => source
+                        .and_then(|sid| self.static_source(sid))
+                        .and_then(|s| s.chosen_number)
+                        .is_some_and(|n| crate::game::effects::choose_letter::initial(card.definition.name) == Some(n)),
                     R::NameChosenForSource => source.and_then(|sid| self.static_source(sid)).is_some_and(|s| {
                         s.named_card.as_deref().is_some_and(|n| card.definition.has_name(n))
                             || s.cold_any(|k| k.chosen_names.iter().any(|n| card.definition.has_name(n)))
@@ -7424,6 +7428,7 @@ impl GameState {
             | R::SameNameAsExiledWithSource
             | R::SharesNameWithSource
             | R::NameChosenForSource
+            | R::NameBeginsWithChosenLetterOfSource
             | R::SharesColorWithAttachedHost
             | R::SharesCreatureTypeWithAttachedHost
             | R::SharesCreatureTypeWithSource => false,
