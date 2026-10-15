@@ -2340,6 +2340,10 @@ pub struct ColdState {
     /// (seat, turn number). A stale turn's entry is inert.
     #[serde(default)]
     pub(crate) ignore_opponent_hexproof_this_turn: Vec<(usize, u32)>,
+    /// `Effect::PlayerCantCastMatchingDuringTheirNextTurn` locks waiting for
+    /// their seat's next turn (Azor, the Lawbringer), as (seat, filter).
+    #[serde(default)]
+    pub(crate) cast_locks_next_turn: Vec<(usize, crate::card::SelectionRequirement)>,
     /// Stunning Reversal's armed loss replacements, as (seat, turn number):
     /// one entry per resolution, spent by the next loss that turn.
     #[serde(default)]

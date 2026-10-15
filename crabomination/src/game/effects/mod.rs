@@ -39663,6 +39663,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayerCantCastMatchingDuringTheirNextTurn { who, filter } => {
+                for seat in self.resolve_players(who, ctx) {
+                    self.cast_locks_next_turn.push((seat, filter.clone()));
+                }
+                Ok(())
+            }
+
             Effect::PlayerCantCastMatchingThisTurn { who, filter } => {
                 if let Some(seat) = self.resolve_player(who, ctx) {
                     self.players[seat].cant_cast_matching_this_turn.push(filter.clone());

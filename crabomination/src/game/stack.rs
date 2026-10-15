@@ -5284,6 +5284,17 @@ impl GameState {
             // Johann's once-per-turn top-of-library cast resets each turn.
             pl.cast_from_library_top_this_turn = false;
         }
+        // Azor's "during that player's next turn" cast locks arm now (after the per-turn clear above); a
+        // departed seat's are dropped.
+        if !self.cast_locks_next_turn.is_empty() {
+            for (seat, filter) in std::mem::take(&mut self.cast_locks_next_turn) {
+                if seat == p {
+                    self.players[p].cant_cast_matching_this_turn.push(filter);
+                } else if !ends(seat) {
+                    self.cast_locks_next_turn.push((seat, filter));
+                }
+            }
+        }
         // "This turn" is the *current* turn, one shared turn — so Infusion and
         // every other "if you gained life this turn" gate resets for EVERY
         // player at each untap, not just the active one.

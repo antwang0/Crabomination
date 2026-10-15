@@ -8695,6 +8695,10 @@ pub enum Effect {
     /// "Target player can't cast [filter] spells this turn" (Cease-Fire).
     /// Checked at the cast gate; cleared at cleanup.
     PlayerCantCastMatchingThisTurn { who: PlayerRef, filter: SelectionRequirement },
+    /// "Each opponent can't cast [filter] spells during that player's next
+    /// turn" (Azor, the Lawbringer): each player `who` names gets a
+    /// `PlayerCantCastMatchingThisTurn` lock as their next turn begins.
+    PlayerCantCastMatchingDuringTheirNextTurn { who: PlayerRef, filter: SelectionRequirement },
     /// CR 602 — "that player can't activate abilities that aren't mana
     /// abilities" this turn (Abeyance). Sets
     /// `Player.cant_activate_nonmana_abilities_this_turn`, cleared at cleanup.
