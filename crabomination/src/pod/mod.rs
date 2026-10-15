@@ -16530,6 +16530,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YOMIJI_COMMANDERS,
             main: decks::YOMIJI_MAIN,
         },
+        // Seat 2680: The Astonishing Ant-Man's EDHREC average deck. `--pod-decks 2680`.
+        PodDeck {
+            name: "The Astonishing Ant-Man (UG)",
+            commanders: decks::THE_ASTONISHING_ANT_MAN_COMMANDERS,
+            main: decks::THE_ASTONISHING_ANT_MAN_MAIN,
+        },
+        // Seat 2681: The Fantastic Four's EDHREC average deck. `--pod-decks 2681`.
+        PodDeck {
+            name: "The Fantastic Four (WURG)",
+            commanders: decks::THE_FANTASTIC_FOUR_COMMANDERS,
+            main: decks::THE_FANTASTIC_FOUR_MAIN,
+        },
+        // Seat 2682: Geist of Saint Traft's EDHREC average deck. `--pod-decks 2682`.
+        PodDeck {
+            name: "Geist of Saint Traft (WU)",
+            commanders: decks::GEIST_OF_SAINT_TRAFT_COMMANDERS,
+            main: decks::GEIST_OF_SAINT_TRAFT_MAIN,
+        },
+        // Seat 2683: Erestor of the Council's EDHREC average deck. `--pod-decks 2683`.
+        PodDeck {
+            name: "Erestor of the Council (UG)",
+            commanders: decks::ERESTOR_OF_THE_COUNCIL_COMMANDERS,
+            main: decks::ERESTOR_OF_THE_COUNCIL_MAIN,
+        },
+        // Seat 2684: Zetalpa, Primal Dawn's EDHREC average deck. `--pod-decks 2684`.
+        PodDeck {
+            name: "Zetalpa, Primal Dawn (W)",
+            commanders: decks::ZETALPA_COMMANDERS,
+            main: decks::ZETALPA_MAIN,
+        },
+        // Seat 2685: Niambi, Esteemed Speaker's EDHREC average deck. `--pod-decks 2685`.
+        PodDeck {
+            name: "Niambi, Esteemed Speaker (WU)",
+            commanders: decks::NIAMBI_COMMANDERS,
+            main: decks::NIAMBI_MAIN,
+        },
+        // Seat 2686: Storm, Queen of Wakanda's EDHREC average deck. `--pod-decks 2686`.
+        PodDeck {
+            name: "Storm, Queen of Wakanda (WG)",
+            commanders: decks::STORM_COMMANDERS,
+            main: decks::STORM_MAIN,
+        },
     ]
 }
 
@@ -21042,6 +21084,13 @@ mod tests {
             ("Bushmaster, Coiled Henchman", &[0x148B]),
             ("Tippy-Toe, Terrific Partner", &[0x148C]),
             ("Yomiji, Who Bars the Way", &[0x148D]),
+            ("The Astonishing Ant-Man", &[0x148E]),
+            ("The Fantastic Four", &[0x148F]),
+            ("Geist of Saint Traft", &[0x1490]),
+            ("Erestor of the Council", &[0x1491]),
+            ("Zetalpa, Primal Dawn", &[0x1492]),
+            ("Niambi, Esteemed Speaker", &[0x1493]),
+            ("Storm, Queen of Wakanda", &[0x1494]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
