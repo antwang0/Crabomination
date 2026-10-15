@@ -16506,6 +16506,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::IRON_FIST_2_COMMANDERS,
             main: decks::IRON_FIST_2_MAIN,
         },
+        // Seat 2676: Adrestia's EDHREC average deck. `--pod-decks 2676`.
+        PodDeck {
+            name: "Adrestia (C)",
+            commanders: decks::ADRESTIA_COMMANDERS,
+            main: decks::ADRESTIA_MAIN,
+        },
+        // Seat 2677: Bushmaster, Coiled Henchman's EDHREC average deck. `--pod-decks 2677`.
+        PodDeck {
+            name: "Bushmaster, Coiled Henchman (G)",
+            commanders: decks::BUSHMASTER_COMMANDERS,
+            main: decks::BUSHMASTER_MAIN,
+        },
+        // Seat 2678: Tippy-Toe, Terrific Partner's EDHREC average deck. `--pod-decks 2678`.
+        PodDeck {
+            name: "Tippy-Toe, Terrific Partner (G)",
+            commanders: decks::TIPPY_TOE_COMMANDERS,
+            main: decks::TIPPY_TOE_MAIN,
+        },
+        // Seat 2679: Yomiji, Who Bars the Way's EDHREC average deck. `--pod-decks 2679`.
+        PodDeck {
+            name: "Yomiji, Who Bars the Way (W)",
+            commanders: decks::YOMIJI_COMMANDERS,
+            main: decks::YOMIJI_MAIN,
+        },
     ]
 }
 
@@ -21014,6 +21038,10 @@ mod tests {
             ("Sachi, Daughter of Seshiro", &[0x1487]),
             ("Tura Kennerüd, Skyknight", &[0x1488]),
             ("Iron Fist, Living Weapon", &[0x1489]),
+            ("Adrestia", &[0x148A]),
+            ("Bushmaster, Coiled Henchman", &[0x148B]),
+            ("Tippy-Toe, Terrific Partner", &[0x148C]),
+            ("Yomiji, Who Bars the Way", &[0x148D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

@@ -798347,5 +798347,305 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=900592&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/153940?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Bushmaster, Coiled Henchman": {
+    "object": "card",
+    "id": "0e249024-f9d6-459e-ac2e-53209abb7d53",
+    "oracle_id": "21067a25-f749-4b79-bc6d-820a91af2834",
+    "multiverse_ids": [],
+    "resource_id": "7585D608D77DD66EB9798EA839862578D38B5D0D056697A4A02EF6D97BC79947",
+    "mtgo_id": 151881,
+    "arena_id": 105726,
+    "tcgplayer_id": 697380,
+    "cardmarket_id": 892178,
+    "name": "Bushmaster, Coiled Henchman",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/0e249024-f9d6-459e-ac2e-53209abb7d53",
+    "scryfall_uri": "https://scryfall.com/card/msc/716/bushmaster-coiled-henchman?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:21Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.jpg?1783903041",
+      "normal": "https://cards.scryfall.io/normal/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.jpg?1783903041",
+      "large": "https://cards.scryfall.io/large/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.jpg?1783903041",
+      "png": "https://cards.scryfall.io/png/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.png?1783903041",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.jpg?1783903041",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.jpg?1783903041",
+      "thumb": "https://cards.scryfall.io/thumb/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.webp?1783903041",
+      "grid": "https://cards.scryfall.io/grid/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.webp?1783903041",
+      "display": "https://cards.scryfall.io/display/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.webp?1783903041",
+      "art": "https://cards.scryfall.io/art/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.webp?1783903041",
+      "crop": "https://cards.scryfall.io/crop/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.webp?1783903041",
+      "jpeg": "https://cards.scryfall.io/normal/front/0/e/0e249024-f9d6-459e-ac2e-53209abb7d53.jpg?1783903041"
+    },
+    "mana_cost": "{1}{G}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Snake Human Villain",
+    "oracle_text": "Deathtouch\nEach other creature you control with a +1/+1 counter on it has deathtouch.",
+    "power": "2",
+    "toughness": "1",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Deathtouch"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/0e249024-f9d6-459e-ac2e-53209abb7d53/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A21067a25-f749-4b79-bc6d-820a91af2834&unique=prints",
+    "collector_number": "716",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"Lost my limbs in an accident. Roxxon labs put me back together as a snake. Zemo offers me a job . . . I go where I'm wanted.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Milivoj Ćeran",
+    "artist_ids": [
+      "1eced451-4da5-42bc-b49d-70c41246581f"
+    ],
+    "illustration_id": "97d56316-6436-4479-a277-5340bb46bb64",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 15486,
+    "prices": {
+      "usd": "0.46",
+      "usd_foil": "2.03",
+      "usd_etched": null,
+      "eur": "0.37",
+      "eur_foil": "0.45",
+      "tix": "1.53"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DBushmaster%252C%2BCoiled%2BHenchman",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DBushmaster%252C%2BCoiled%2BHenchman",
+      "edhrec": "https://edhrec.com/route/?cc=Bushmaster%2C+Coiled+Henchman"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697380%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892178&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151881?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Tippy-Toe, Terrific Partner": {
+    "object": "card",
+    "id": "6082ab9f-290e-4230-84a0-46c7f8ed712d",
+    "oracle_id": "6a1bce89-0c11-4d8d-aacb-c0a5a5effffc",
+    "multiverse_ids": [],
+    "resource_id": "091FB63D7B87EE07DFB62CF7C0858B5273A619AF682B4F4F4CE9F9076EE73454",
+    "mtgo_id": 151917,
+    "arena_id": 105744,
+    "tcgplayer_id": 697396,
+    "cardmarket_id": 892194,
+    "name": "Tippy-Toe, Terrific Partner",
+    "lang": "en",
+    "released_at": "2026-06-26",
+    "uri": "https://api.scryfall.com/cards/6082ab9f-290e-4230-84a0-46c7f8ed712d",
+    "scryfall_uri": "https://scryfall.com/card/msc/734/tippy-toe-terrific-partner?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-13T00:37:15Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.jpg?1783903035",
+      "normal": "https://cards.scryfall.io/normal/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.jpg?1783903035",
+      "large": "https://cards.scryfall.io/large/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.jpg?1783903035",
+      "png": "https://cards.scryfall.io/png/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.png?1783903035",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.jpg?1783903035",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.jpg?1783903035",
+      "thumb": "https://cards.scryfall.io/thumb/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.webp?1783903035",
+      "grid": "https://cards.scryfall.io/grid/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.webp?1783903035",
+      "display": "https://cards.scryfall.io/display/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.webp?1783903035",
+      "art": "https://cards.scryfall.io/art/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.webp?1783903035",
+      "crop": "https://cards.scryfall.io/crop/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.webp?1783903035",
+      "jpeg": "https://cards.scryfall.io/normal/front/6/0/6082ab9f-290e-4230-84a0-46c7f8ed712d.jpg?1783903035"
+    },
+    "mana_cost": "{3}{G}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Squirrel Hero",
+    "oracle_text": "If you would create one or more tokens, instead create those tokens plus an additional Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\nAt the beginning of your end step, if you gained life this turn, draw a card.",
+    "power": "2",
+    "toughness": "4",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Food"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "6082ab9f-290e-4230-84a0-46c7f8ed712d",
+        "component": "combo_piece",
+        "name": "Tippy-Toe, Terrific Partner",
+        "type_line": "Legendary Creature — Squirrel Hero",
+        "uri": "https://api.scryfall.com/cards/6082ab9f-290e-4230-84a0-46c7f8ed712d"
+      },
+      {
+        "object": "related_card",
+        "id": "39389acc-cfa7-4a44-9d46-45be7dd72564",
+        "component": "token",
+        "name": "Food",
+        "type_line": "Token Artifact — Food",
+        "uri": "https://api.scryfall.com/cards/39389acc-cfa7-4a44-9d46-45be7dd72564"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set": "msc",
+    "set_name": "Marvel Super Heroes Commander",
+    "set_type": "commander",
+    "set_uri": "https://api.scryfall.com/sets/9d739461-c5ac-43a1-af41-3d5a585b5c8d",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amsc&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/msc?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/6082ab9f-290e-4230-84a0-46c7f8ed712d/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A6a1bce89-0c11-4d8d-aacb-c0a5a5effffc&unique=prints",
+    "collector_number": "734",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "Squirrel Girl's bravest and bestest friend.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Allen Douglas",
+    "artist_ids": [
+      "e17f248e-6a47-4889-b048-a646739923b0"
+    ],
+    "illustration_id": "dd1ee104-ac2b-4c80-b0a0-0ac705af54ea",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 8786,
+    "prices": {
+      "usd": "2.69",
+      "usd_foil": "7.97",
+      "usd_etched": null,
+      "eur": "4.09",
+      "eur_foil": "6.03",
+      "tix": "1.34"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DTippy-Toe%252C%2BTerrific%2BPartner",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DTippy-Toe%252C%2BTerrific%2BPartner",
+      "edhrec": "https://edhrec.com/route/?cc=Tippy-Toe%2C+Terrific+Partner"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F697396%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=892194&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/151917?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

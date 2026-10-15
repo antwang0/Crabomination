@@ -75132,3 +75132,118 @@ pub const IRON_FIST_2_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain,
 ];
+
+pub const ADRESTIA_COMMANDERS: &[CardFactory] = &[adrestia];
+
+/// **Adrestia**'s EDHREC average deck, card for card:
+/// 92 nonbasic cards + 7 Wastes = 99.
+/// Adrestia (EDHREC, fetched 2026-10-15).
+pub const ADRESTIA_MAIN: &[CardFactory] = &[
+    birthing_boughs, bonders_ornament, brotherhood_regalia, cloud_key, cultivators_caravan,
+    darksteel_forge, expedition_map, forsaken_monument, genji_glove, hedron_archive,
+    hidden_blade, lifecraft_engine, maskwood_nexus, mind_stone, mirror_of_the_forebears,
+    mystic_forge, patchwork_banner, quicksilver_fountain, racers_scoreboard, replicating_ring,
+    sculpting_steel, smugglers_copter, sol_ring, stone_of_erech, the_echoverse_fulcrum,
+    the_irencrag, thought_vessel, thran_dynamo, world_map, wrecking_ball_arm, arch_of_orazca,
+    bonders_enclave, buried_ruin, darksteel_citadel, inventors_fair, mech_hangar,
+    mikokoro_center_of_the_sea, muraganda_raceway, mutavault, reliquary_tower, rogues_passage,
+    scavenger_grounds, shrine_of_the_forsaken_gods, snow_covered_wastes, snow_covered_wastes,
+    snow_covered_wastes, snow_covered_wastes, snow_covered_wastes, snow_covered_wastes,
+    soulstone_sanctuary, temple_of_the_false_god, tomb_of_the_spirit_dragon, urzas_cave,
+    urzas_mine, urzas_power_plant, urzas_tower, urzas_workshop, war_room, zhalfirin_void,
+    adaptive_automaton, barkform_harvester, bloodline_pretender, foundry_inspector,
+    glaring_fleshraker, iron_spider_stark_upgrade, jhoiras_familiar, junk_diver,
+    kuldotha_forgemaster, liberator_urzas_battlethopter, metallic_mimic, meteor_golem,
+    myr_convert, myr_retriever, ornithopter_of_paradise, palladium_myr, roaming_throne,
+    scrap_trawler, solemn_simulacrum, steel_overseer, syr_ginger_the_meal_ender,
+    three_tree_mascot, ultima_origin_of_oblivion, universal_automaton, virulent_silencer,
+    echoes_of_eternity, eldritch_immunity, kozileks_command, null_elemental_blast, warping_wail,
+    ugin_the_ineffable, all_is_dust, selective_obliteration,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+];
+
+pub const BUSHMASTER_COMMANDERS: &[CardFactory] = &[bushmaster_coiled_henchman];
+
+/// **Bushmaster, Coiled Henchman**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Forests = 99.
+/// Bushmaster, Coiled Henchman (EDHREC, fetched 2026-10-15).
+pub const BUSHMASTER_MAIN: &[CardFactory] = &[
+    arcane_signet, emerald_medallion, ozolith_the_shattered_spire, sol_ring, the_earth_crystal,
+    the_ozolith, boseiju_who_endures, castle_garenbrig, karns_bastion, nykthos_shrine_to_nyx,
+    oran_rief_the_vastwood, rogues_passage, arwen_weaver_of_hope, avenger_of_zendikar,
+    beast_whisperer, birds_of_paradise, champion_of_lambholt, doc_samson_super_psychiatrist,
+    duskshell_crawler, elvish_mystic, emil_vastlands_roamer, evolution_sage, evolution_witness,
+    forgotten_ancient, fyndhorn_elves, fynn_the_fangbearer, goldvein_hydra, ivy_lane_denizen,
+    kami_of_whispered_hopes, kodama_of_the_west_tree, llanowar_elves, michelangelo_mutant_bff,
+    ohran_frostfang, ouroboroid, pridemalkin, rishkar_peema_renegade, taunting_elf,
+    toski_bearer_of_secrets, tuskguard_captain, vigor, branching_evolution, doubling_season,
+    garruks_uprising, hardened_scales, innkeepers_talent, master_chef, terrasymbiosis,
+    tribute_to_the_world_tree, wild_growth, beast_within, gaeas_gift, gift_of_the_viper,
+    heroic_intervention, inspiring_call, ram_through, snakeskin_veil, tamiyos_safekeeping,
+    cultivate, explore, fangs_of_kalonia, germination_practicum, go_nuts, kodamas_reach,
+    natures_lore, rampant_growth, rishkars_expertise, season_of_gathering, skyshroud_claim,
+    smell_fear, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const TIPPY_TOE_COMMANDERS: &[CardFactory] = &[tippy_toe_terrific_partner];
+
+/// **Tippy-Toe, Terrific Partner**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Forests = 99.
+/// Tippy-Toe, Terrific Partner (EDHREC, fetched 2026-10-15).
+pub const TIPPY_TOE_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, bag_end_banquet, bootleggers_stash, chitterspitter, emerald_medallion,
+    idol_of_oblivion, inspiring_statuary, nuka_cola_vending_machine, sol_ring,
+    sword_of_the_squeak, thought_vessel, fountainport, gingerbread_cabin, inventors_fair,
+    reliquary_tower, stardew_valley, swarmyard, the_shire, war_room, yavimaya_cradle_of_growth,
+    academy_manufactor, bilbo_fellow_conspirator, displaced_dinosaurs, elanor_gardner,
+    essence_warden, gilded_goose, honored_dreyleader, jaheira_friend_of_the_forest,
+    llanowar_elves, meatsqueak_hoard_lord, michelangelo_the_heart, mutagen_man_living_ooze,
+    peregrin_took, pest_rescuer, prosperous_innkeeper, scurry_oak, scurry_of_squirrels,
+    scute_swarm, spider_ham_peter_porker, syr_ginger_the_meal_ender, teething_wurmlet,
+    the_cabbage_merchant, the_unbeatable_squirrel_girl, thornvault_forager, tigra_feline_fury,
+    tireless_provisioner, toski_bearer_of_secrets, awakening_zone, campsite_cuisine,
+    doubling_season, gourmands_talent, heroic_feast, kenriths_transformation, killer_service,
+    night_of_the_sweets_revenge, ninja_pizza, parallel_lives, trail_of_crumbs, arachnogenesis,
+    archdruids_charm, beast_within, heroic_intervention, natures_claim, second_harvest,
+    bumis_feast_lecture, cultivate, go_nuts, kodamas_reach, many_partings, natures_lore,
+    pest_infestation, revive_the_shire, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest,
+];
+
+pub const YOMIJI_COMMANDERS: &[CardFactory] = &[yomiji_who_bars_the_way];
+
+/// **Yomiji, Who Bars the Way**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Plains = 99.
+/// Yomiji, Who Bars the Way (EDHREC, fetched 2026-10-15).
+pub const YOMIJI_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, ashnods_altar, heroes_podium, honor_worn_shaku,
+    krark_clan_ironworks, mind_stone, mindslaver, mox_amber, mox_opal, nyx_lotus,
+    oketras_monument, pearl_medallion, phyrexian_altar, relic_of_legends, sol_ring,
+    stone_of_erech, the_irencrag, the_seriema, thran_dynamo, throne_of_eldraine, eiganjo_castle,
+    eiganjo_seat_of_the_empire, emeria_the_sky_ruin, flagstones_of_trokair,
+    gods_eye_gate_to_the_reikai, inventors_fair, mikokoro_center_of_the_sea, minas_tirith,
+    monumental_henge, nykthos_shrine_to_nyx, urzas_saga, war_room, ao_the_dawn_sky,
+    beza_the_bounding_spring, boromir_warden_of_the_tower, daxos_blessed_by_the_sun,
+    eight_and_a_half_tails, esper_sentinel, gandalf_the_white, god_eternal_oketra,
+    hope_of_ghirapur, isamaru_hound_of_konda, jhoiras_familiar, lieutenant_kirtar,
+    loran_of_the_third_path, mangara_the_diplomat, myojin_of_blooming_dawn,
+    omarthis_ghostfire_initiate, oswald_fiddlebender, skrelv_defector_mite,
+    teshar_ancestors_apostle, thalias_lancers, venat_heart_of_hydaelyn, weathered_wayfarer,
+    yosei_the_morning_star, yoshimaru_ever_faithful, day_of_destiny,
+    flowering_of_the_white_tree, land_tax, smothering_tithe, trouble_in_pairs,
+    enlightened_tutor, flare_of_fortitude, generous_gift, path_to_exile, rebuff_the_wicked,
+    stroke_of_midnight, swords_to_plowshares, elspeth_suns_champion, tezzeret_cruel_captain,
+    austere_command, cut_a_deal, search_for_glory, urzas_ruinous_blast,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
