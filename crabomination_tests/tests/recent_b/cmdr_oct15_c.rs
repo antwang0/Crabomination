@@ -86,11 +86,15 @@ fn attack_unblocked(g: &mut GameState, attacks: Vec<(CardId, usize)>) {
 }
 
 fn step_to(g: &mut GameState, seat: usize, step: TurnStep) {
-    while g.active_player_idx != seat || g.step != step {
+    for _ in 0..200 {
+        if g.active_player_idx == seat && g.step == step {
+            return;
+        }
         let evs = g.advance_step(Vec::new()).unwrap();
         g.dispatch_triggers_for_events(&evs);
         drain_stack(g);
     }
+    panic!("never reached seat {seat} {step:?}");
 }
 
 fn named_count(g: &GameState, seat: usize, name: &str) -> usize {
@@ -650,4 +654,335 @@ fn pain_101_returns_the_creature_tapped() {
     cast_with(&mut g, bolt, Some(Target::Permanent(bears)), None);
     let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("returned");
     assert!(back.tapped);
+}
+
+// ── Batch 4 ─────────────────────────────────────────────────────────────────
+
+/// Leonardo, Sewer Samurai: on your turn a 1-toughness creature card casts
+/// from the graveyard and enters with a finality counter; a 2/2 can't.
+#[test]
+fn leonardo_casts_small_creatures_from_the_graveyard() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::leonardo_sewer_samurai());
+    let elves = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    flood(&mut g);
+    let no = g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(no.is_err(), "a 2/2 isn't small enough");
+    cast(&mut g, elves);
+    let c = g.battlefield_find(elves).expect("cast from the graveyard");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+}
+
+/// Hawkeye grows when you cast a spell that targets a creature.
+#[test]
+fn hawkeye_grows_on_creature_targeting_spells() {
+    let mut g = pod(2);
+    let hawk = ready(&mut g, 0, catalog::hawkeye_bowslinger());
+    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Player(1)), None);
+    assert_eq!(plus(&g, hawk), 0, "a player target isn't a creature");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(bears)), None);
+    assert_eq!(plus(&g, hawk), 1);
+}
+
+/// Stunning Shot counters your creature and stuns an opposing one.
+#[test]
+fn stunning_shot_counters_and_stuns() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::stunning_shot());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, mine), 2);
+    let t = g.battlefield_find(theirs).unwrap();
+    assert!(t.tapped);
+    assert_eq!(t.counter_count(CounterType::Stun), 1);
+}
+
+/// Angelic Cub grows only on the first targeting each turn.
+#[test]
+fn angelic_cub_grows_once_a_turn() {
+    let mut g = pod(2);
+    let cub = ready(&mut g, 0, catalog::angelic_cub());
+    for _ in 0..2 {
+        let shot = g.add_card_to_hand(0, catalog::stunning_shot());
+        cast_with(&mut g, shot, Some(Target::Permanent(cub)), None);
+    }
+    assert_eq!(plus(&g, cub), 2 + 2 + 1, "two Shots, one Cub trigger");
+    assert!(g.permanent_has_keyword(cub, &Keyword::Flying), "three or more counters");
+}
+
+/// Oathsworn Knight sheds a counter instead of taking damage.
+#[test]
+fn oathsworn_knight_prevents_with_counters() {
+    let mut g = pod(2);
+    let knight = g.add_card_to_hand(0, catalog::oathsworn_knight());
+    cast(&mut g, knight);
+    assert_eq!(plus(&g, knight), 4);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast_with(&mut g, bolt, Some(Target::Permanent(knight)), None);
+    assert_eq!(plus(&g, knight), 3);
+    assert_eq!(g.battlefield_find(knight).unwrap().damage, 0);
+}
+
+/// Mausoleum Secrets tutors a black card no bigger than your creature-card
+/// count in the graveyard.
+#[test]
+fn mausoleum_secrets_reads_creature_cards_in_graveyard() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    let big = g.add_card_to_library(0, catalog::massacre_wurm());
+    let small = g.add_card_to_library(0, catalog::dark_ritual());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::mausoleum_secrets());
+    cast(&mut g, spell);
+    assert!(g.players[0].hand.iter().any(|c| c.id == small));
+    assert!(!g.players[0].hand.iter().any(|c| c.id == big));
+}
+
+/// Leonardo, Big Brother gets +1/+0 for each other creature you control.
+#[test]
+fn leonardo_big_brother_counts_the_team() {
+    let mut g = pod(2);
+    let leo = ready(&mut g, 0, catalog::leonardo_big_brother());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::llanowar_elves());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    assert_eq!(pt(&g, leo), (3, 3));
+}
+
+// ── Batch 5 ─────────────────────────────────────────────────────────────────
+
+/// Exalted stacks: three exalted creatures pump a lone attacker by three.
+#[test]
+fn exalted_cards_pump_a_lone_attacker() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::court_archers());
+    ready(&mut g, 0, catalog::guardians_of_akrasa());
+    ready(&mut g, 0, catalog::ethercaste_knight());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let life = g.players[1].life;
+    attack_unblocked(&mut g, vec![(bears, 1)]);
+    assert_eq!(g.players[1].life, life - 5);
+}
+
+/// Griffin Rider is a 4/4 flier only while you control a Griffin.
+#[test]
+fn griffin_rider_needs_a_griffin() {
+    let mut g = pod(2);
+    let rider = ready(&mut g, 0, catalog::griffin_rider());
+    assert_eq!(pt(&g, rider), (1, 1));
+    ready(&mut g, 0, catalog::makindi_griffin());
+    assert_eq!(pt(&g, rider), (4, 4));
+    assert!(g.permanent_has_keyword(rider, &Keyword::Flying));
+}
+
+/// Ajani, Inspiring Leader's −3 exiles a creature and its controller gains 2.
+#[test]
+fn ajani_inspiring_leader_exiles_and_heals_its_controller() {
+    let mut g = pod(2);
+    let ajani = ready(&mut g, 0, catalog::ajani_inspiring_leader());
+    g.battlefield_find_mut(ajani).unwrap().add_counters(CounterType::Loyalty, 5);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: ajani, ability_index: 1, target: Some(Target::Permanent(wurm)), x_value: None })
+        .expect("loyalty");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == wurm));
+    assert_eq!(g.players[1].life, life + 2);
+}
+
+/// Dwarven Priest counts your creatures, itself included.
+#[test]
+fn dwarven_priest_gains_per_creature() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let priest = g.add_card_to_hand(0, catalog::dwarven_priest());
+    cast(&mut g, priest);
+    assert_eq!(g.players[0].life, life + 2);
+}
+
+/// Criminal Past gives your commander menace and +X/+0 for creature cards in
+/// your graveyard; a non-commander gets nothing.
+#[test]
+fn criminal_past_grows_your_commander() {
+    let mut g = pod(2);
+    let cmdr = ready(&mut g, 0, catalog::grizzly_bears());
+    g.players[0].commanders.push(cmdr);
+    let other = ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 0, catalog::criminal_past());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.add_card_to_graveyard(0, catalog::craw_wurm());
+    assert_eq!(pt(&g, cmdr), (4, 2));
+    assert!(g.permanent_has_keyword(cmdr, &Keyword::Menace));
+    assert_eq!(pt(&g, other), (2, 2));
+}
+
+/// Kruin Striker pumps when another creature enters; Riot Ringleader pumps
+/// Humans as it attacks.
+#[test]
+fn kruin_striker_and_riot_ringleader() {
+    let mut g = pod(2);
+    let striker = ready(&mut g, 0, catalog::kruin_striker());
+    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast(&mut g, elves);
+    assert_eq!(pt(&g, striker), (3, 1));
+    assert!(g.permanent_has_keyword(striker, &Keyword::Trample));
+}
+
+/// Thatcher Revolt's hasty Humans are sacrificed at the next end step.
+#[test]
+fn thatcher_revolt_tokens_leave_at_end_step() {
+    let mut g = pod(2);
+    let spell = g.add_card_to_hand(0, catalog::thatcher_revolt());
+    cast(&mut g, spell);
+    assert_eq!(named_count(&g, 0, "Human"), 3);
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert_eq!(named_count(&g, 0, "Human"), 0);
+}
+
+/// Gravewaker returns a creature card tapped.
+#[test]
+fn gravewaker_reanimates_tapped() {
+    let mut g = pod(2);
+    let waker = ready(&mut g, 0, catalog::gravewaker());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    activate(&mut g, waker, 0, Some(Target::Permanent(wurm)));
+    assert!(g.battlefield_find(wurm).unwrap().tapped);
+}
+
+// ── Batch 6 ─────────────────────────────────────────────────────────────────
+
+/// CR 702.80a — Puncture Blast's wither puts -1/-1 counters on a creature.
+#[test]
+fn puncture_blast_withers() {
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let blast = g.add_card_to_hand(0, catalog::puncture_blast());
+    cast_with(&mut g, blast, Some(Target::Permanent(wurm)), None);
+    let c = g.battlefield_find(wurm).unwrap();
+    assert_eq!((c.counter_count(CounterType::MinusOneMinusOne), c.damage), (3, 0));
+}
+
+/// Arni's boast makes his base power 1 + your biggest other creature's.
+#[test]
+fn arni_boasts_to_the_biggest() {
+    let mut g = pod(2);
+    let arni = ready(&mut g, 0, catalog::arni_brokenbrow());
+    ready(&mut g, 0, catalog::craw_wurm());
+    g.battlefield_find_mut(arni).unwrap().attacked_this_turn = true;
+    activate(&mut g, arni, 0, None);
+    assert_eq!(pt(&g, arni), (7, 3));
+}
+
+/// Inferno Hellion shuffles itself away at the end step after it attacked.
+#[test]
+fn inferno_hellion_leaves_after_attacking() {
+    let mut g = pod(2);
+    let hellion = ready(&mut g, 0, catalog::inferno_hellion());
+    attack_unblocked(&mut g, vec![(hellion, 1)]);
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert!(g.battlefield_find(hellion).is_none());
+    assert!(g.players[0].library.iter().any(|c| c.id == hellion));
+}
+
+/// Scourge of Geier Reach counts only opponents' creatures.
+#[test]
+fn scourge_of_geier_reach_counts_opponents() {
+    let mut g = pod(3);
+    let scourge = ready(&mut g, 0, catalog::scourge_of_geier_reach());
+    ready(&mut g, 0, catalog::grizzly_bears());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 2, catalog::grizzly_bears());
+    assert_eq!(pt(&g, scourge), (5, 5));
+}
+
+/// Earthshaker Giant pumps your other creatures as it enters.
+#[test]
+fn earthshaker_giant_pumps_the_team() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = g.add_card_to_hand(0, catalog::earthshaker_giant());
+    cast(&mut g, giant);
+    assert_eq!(pt(&g, bears), (5, 5));
+    assert!(g.permanent_has_keyword(bears, &Keyword::Trample));
+    assert_eq!(pt(&g, giant), (6, 6));
+}
+
+/// Saheeli makes one Thopter a turn however often you scry; Master Trinketeer
+/// pumps it.
+#[test]
+fn saheeli_thopter_once_a_turn() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::saheeli_consul_of_oversight());
+    ready(&mut g, 0, catalog::master_trinketeer());
+    for _ in 0..2 {
+        let shot = g.add_card_to_hand(0, catalog::skywhalers_shot());
+        let wurm = ready(&mut g, 1, catalog::craw_wurm());
+        cast_with(&mut g, shot, Some(Target::Permanent(wurm)), None);
+        assert!(g.battlefield_find(wurm).is_none());
+    }
+    assert_eq!(named_count(&g, 0, "Thopter"), 1);
+    let t = g.battlefield.iter().find(|c| c.definition.name == "Thopter").unwrap().id;
+    assert_eq!(pt(&g, t), (2, 2));
+}
+
+/// Enchanted River's Grasp strips abilities and keeps the creature tapped.
+#[test]
+fn enchanted_rivers_grasp_locks_a_creature() {
+    let mut g = pod(2);
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let grasp = g.add_card_to_hand(0, catalog::enchanted_rivers_grasp());
+    cast_with(&mut g, grasp, Some(Target::Permanent(elf)), None);
+    assert!(g.battlefield_find(elf).unwrap().tapped);
+    assert!(g.computed_permanent(elf).unwrap().lost_all_abilities);
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert!(g.battlefield_find(elf).unwrap().tapped, "doesn't untap");
+}
+
+/// Sound the Trumpets recruits only off a cheap spell.
+#[test]
+fn sound_the_trumpets_recruits_on_cheap_spells() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    for c in [Color::Red] {
+        g.players[1].mana_pool.add(c, 1);
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    let trumpets = g.add_card_to_hand(0, catalog::sound_the_trumpets());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: trumpets, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("counter");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "countered");
+    assert_eq!(named_count(&g, 0, "Human Soldier"), 1, "discarded a nonland card");
+}
+
+/// Uninvited Geist transforms into an unblockable 3/3 after connecting.
+#[test]
+fn uninvited_geist_transforms() {
+    let mut g = pod(2);
+    let geist = ready(&mut g, 0, catalog::uninvited_geist());
+    attack_unblocked(&mut g, vec![(geist, 1)]);
+    assert_eq!(g.battlefield_find(geist).unwrap().definition.name, "Unimpeded Trespasser");
+    assert_eq!(pt(&g, geist), (3, 3));
 }
