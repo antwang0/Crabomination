@@ -1088,6 +1088,8 @@ pub enum CounterType {
     Judgment,
     /// Weatherlight Compleated's phyresis counters.
     Phyresis,
+    /// Xathrid Gorgon's marker; it carries no rule of its own.
+    Petrification,
 }
 
 /// Every zone a card can occupy.
