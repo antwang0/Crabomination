@@ -15714,6 +15714,96 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_JAMES_T_KIRK_COMMANDERS,
             main: decks::CAPTAIN_JAMES_T_KIRK_MAIN,
         },
+        // Seat 2544: Raiyuu, Storm's Edge's EDHREC average deck. `--pod-decks 2544`.
+        PodDeck {
+            name: "Raiyuu, Storm's Edge (WR)",
+            commanders: decks::RAIYUU_COMMANDERS,
+            main: decks::RAIYUU_MAIN,
+        },
+        // Seat 2545: The Scarlet Witch's EDHREC average deck. `--pod-decks 2545`.
+        PodDeck {
+            name: "The Scarlet Witch (R)",
+            commanders: decks::THE_SCARLET_WITCH_COMMANDERS,
+            main: decks::THE_SCARLET_WITCH_MAIN,
+        },
+        // Seat 2546: Thor, God of Thunder's EDHREC average deck. `--pod-decks 2546`.
+        PodDeck {
+            name: "Thor, God of Thunder (R)",
+            commanders: decks::THOR_2_COMMANDERS,
+            main: decks::THOR_2_MAIN,
+        },
+        // Seat 2547: Gollum, Scheming Guide's EDHREC average deck. `--pod-decks 2547`.
+        PodDeck {
+            name: "Gollum, Scheming Guide (B)",
+            commanders: decks::GOLLUM_2_COMMANDERS,
+            main: decks::GOLLUM_2_MAIN,
+        },
+        // Seat 2548: Shizuko, Caller of Autumn's EDHREC average deck. `--pod-decks 2548`.
+        PodDeck {
+            name: "Shizuko, Caller of Autumn (G)",
+            commanders: decks::SHIZUKO_COMMANDERS,
+            main: decks::SHIZUKO_MAIN,
+        },
+        // Seat 2549: The Thanos-Copter's EDHREC average deck. `--pod-decks 2549`.
+        PodDeck {
+            name: "The Thanos-Copter (C)",
+            commanders: decks::THE_THANOS_COPTER_COMMANDERS,
+            main: decks::THE_THANOS_COPTER_MAIN,
+        },
+        // Seat 2550: Captain Lannery Storm's EDHREC average deck. `--pod-decks 2550`.
+        PodDeck {
+            name: "Captain Lannery Storm (R)",
+            commanders: decks::CAPTAIN_LANNERY_STORM_COMMANDERS,
+            main: decks::CAPTAIN_LANNERY_STORM_MAIN,
+        },
+        // Seat 2551: Gollum, Patient Plotter's EDHREC average deck. `--pod-decks 2551`.
+        PodDeck {
+            name: "Gollum, Patient Plotter (B)",
+            commanders: decks::GOLLUM_3_COMMANDERS,
+            main: decks::GOLLUM_3_MAIN,
+        },
+        // Seat 2552: Gallowbraid's EDHREC average deck. `--pod-decks 2552`.
+        PodDeck {
+            name: "Gallowbraid (B)",
+            commanders: decks::GALLOWBRAID_COMMANDERS,
+            main: decks::GALLOWBRAID_MAIN,
+        },
+        // Seat 2553: Riven Turnbull's EDHREC average deck. `--pod-decks 2553`.
+        PodDeck {
+            name: "Riven Turnbull (UB)",
+            commanders: decks::RIVEN_TURNBULL_COMMANDERS,
+            main: decks::RIVEN_TURNBULL_MAIN,
+        },
+        // Seat 2554: Myojin of Cleansing Fire's EDHREC average deck. `--pod-decks 2554`.
+        PodDeck {
+            name: "Myojin of Cleansing Fire (W)",
+            commanders: decks::MYOJIN_OF_CLEANSING_FIRE_COMMANDERS,
+            main: decks::MYOJIN_OF_CLEANSING_FIRE_MAIN,
+        },
+        // Seat 2555: Captain Marvel, Earth's Protector's EDHREC average deck. `--pod-decks 2555`.
+        PodDeck {
+            name: "Captain Marvel, Earth's Protector (W)",
+            commanders: decks::CAPTAIN_MARVEL_2_COMMANDERS,
+            main: decks::CAPTAIN_MARVEL_2_MAIN,
+        },
+        // Seat 2556: Rocksteady, Mutant Marauder's EDHREC average deck. `--pod-decks 2556`.
+        PodDeck {
+            name: "Rocksteady, Mutant Marauder (G)",
+            commanders: decks::ROCKSTEADY_COMMANDERS,
+            main: decks::ROCKSTEADY_MAIN,
+        },
+        // Seat 2557: Hulk, Bruce Banner's EDHREC average deck. `--pod-decks 2557`.
+        PodDeck {
+            name: "Hulk, Bruce Banner (R)",
+            commanders: decks::HULK_2_COMMANDERS,
+            main: decks::HULK_2_MAIN,
+        },
+        // Seat 2558: Nighthawk, Dark Defender's EDHREC average deck. `--pod-decks 2558`.
+        PodDeck {
+            name: "Nighthawk, Dark Defender (W)",
+            commanders: decks::NIGHTHAWK_COMMANDERS,
+            main: decks::NIGHTHAWK_MAIN,
+        },
     ]
 }
 
@@ -20090,6 +20180,21 @@ mod tests {
             ("Autumn Willow, Harmony", &[0x1403]),
             ("Greensleeves", &[0x1404]),
             ("Captain James T. Kirk", &[0x1405]),
+            ("Raiyuu, Storm's Edge", &[0x1406]),
+            ("The Scarlet Witch", &[0x1407]),
+            ("Thor, God of Thunder", &[0x1408]),
+            ("Gollum, Scheming Guide", &[0x1409]),
+            ("Shizuko, Caller of Autumn", &[0x140A]),
+            ("The Thanos-Copter", &[0x140B]),
+            ("Captain Lannery Storm", &[0x140C]),
+            ("Gollum, Patient Plotter", &[0x140D]),
+            ("Gallowbraid", &[0x140E]),
+            ("Riven Turnbull", &[0x140F]),
+            ("Myojin of Cleansing Fire", &[0x1410]),
+            ("Captain Marvel, Earth's Protector", &[0x1411]),
+            ("Rocksteady, Mutant Marauder", &[0x1412]),
+            ("Hulk, Bruce Banner", &[0x1413]),
+            ("Nighthawk, Dark Defender", &[0x1414]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
