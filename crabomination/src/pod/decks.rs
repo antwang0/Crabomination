@@ -73147,3 +73147,59 @@ pub const REM_KAROLUS_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const KOH_COMMANDERS: &[CardFactory] = &[koh_the_face_stealer];
+
+/// **Koh, the Face Stealer**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Koh, the Face Stealer (EDHREC, fetched 2026-10-15).
+pub const KOH_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bontus_monument, commanders_plate, jet_medallion,
+    lightning_greaves, mind_stone, sol_ring, swiftfoot_boots, the_soul_stone, thought_vessel,
+    bojuka_bog, cabal_coffers, cabal_stronghold, nykthos_shrine_to_nyx, phyrexian_tower,
+    realm_of_koh, reliquary_tower, urborg_tomb_of_yawgmoth, accursed_marauder,
+    archfiend_of_depravity, archon_of_cruelty, asmodeus_the_archfiend, ayara_first_of_locthwain,
+    blood_artist, bloodthirsty_conqueror, braids_arisen_nightmare, carrion_feeder, crypt_ghast,
+    dread_presence, enduring_tenacity, gray_merchant_of_asphodel, gwenom_remorseless,
+    joo_dee_one_of_many, krrik_son_of_yawgmoth, magus_of_the_coffers, morbid_opportunist,
+    nirkana_revenant, phyrexian_obliterator, pitiless_plunderer, sheoldred_whispering_one,
+    sheoldred_the_apocalypse, tree_of_perdition, twilight_prophet, vilis_broker_of_blood,
+    viscera_seer, witch_king_of_angmar, yahenni_undying_partisan, animate_dead, black_market,
+    font_of_agonies, heartless_summoning, phyrexian_arena, culling_the_weak, dark_ritual,
+    deadly_dispute, defile, fell_the_profane, flare_of_malice, imps_mischief, infernal_grasp,
+    malakir_rebirth, village_rites, withering_torment, bubbling_muck, damnation, exsanguinate,
+    feed_the_swarm, reanimate, sign_in_blood, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const INAME_AS_ONE_COMMANDERS: &[CardFactory] = &[iname_as_one];
+
+/// **Iname as One**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Forests + 9 Swamps = 99.
+/// Iname as One (EDHREC, fetched 2026-10-15).
+pub const INAME_AS_ONE_MAIN: &[CardFactory] = &[
+    arcane_signet, campfire, golgari_signet, long_forgotten_gohei, netherborn_altar, sol_ring,
+    tangleweave_armor, urzas_incubator, bojuka_bog, cabal_coffers, cactus_preserve,
+    command_beacon, command_tower, golgari_rot_farm, llanowar_wastes, overgrown_tomb,
+    path_of_ancestry, reliquary_tower, tainted_wood, temple_of_malady, twilight_mire,
+    undergrowth_stadium, urborg_tomb_of_yawgmoth, woodland_cemetery, yavimaya_cradle_of_growth,
+    bounteous_kirin, crypt_ghast, elder_pine_of_jukai, forked_branch_garami, haru_onna,
+    he_who_hungers, iname_death_aspect, iname_life_aspect, infernal_kirin,
+    junji_the_midnight_sky, kodama_of_the_center_tree, kodama_of_the_east_tree,
+    kodama_of_the_south_tree, koh_the_face_stealer, kokusho_the_evening_star,
+    kura_the_boundless_sky, kyoki_sanitys_eclipse, lifespinner, loam_dweller,
+    myojin_of_grim_betrayal, myojin_of_lifes_web, myojin_of_nights_reach,
+    myojin_of_towering_might, petalmane_baku, primordial_sage, promised_kannushi,
+    sakura_tribe_elder, seizan_perverter_of_truth, sekki_seasons_guide, thief_of_hope,
+    deadbridge_chant, greater_good, heartless_summoning, mortal_combat, phyrexian_arena,
+    assassins_trophy, beast_within, death_denied, deathsprout, rend_flesh, soulless_revival,
+    stinging_study, wear_away, cloudkill, culling_ritual, cultivate, farseek, kodamas_reach,
+    majestic_genesis, natures_lore, patriarchs_bidding, rampant_growth, road_of_return,
+    tempt_with_discovery, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

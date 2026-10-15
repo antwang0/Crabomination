@@ -16080,6 +16080,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::REM_KAROLUS_COMMANDERS,
             main: decks::REM_KAROLUS_MAIN,
         },
+        // Seat 2605: Koh, the Face Stealer's EDHREC average deck. `--pod-decks 2605`.
+        PodDeck {
+            name: "Koh, the Face Stealer (B)",
+            commanders: decks::KOH_COMMANDERS,
+            main: decks::KOH_MAIN,
+        },
+        // Seat 2606: Iname as One's EDHREC average deck. `--pod-decks 2606`.
+        PodDeck {
+            name: "Iname as One (BG)",
+            commanders: decks::INAME_AS_ONE_COMMANDERS,
+            main: decks::INAME_AS_ONE_MAIN,
+        },
     ]
 }
 
@@ -20517,6 +20529,8 @@ mod tests {
             ("Verix Bladewing", &[0x1440]),
             ("Firesong and Sunspeaker", &[0x1441]),
             ("Rem Karolus, Stalwart Slayer", &[0x1442]),
+            ("Koh, the Face Stealer", &[0x1443]),
+            ("Iname as One", &[0x1444]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
