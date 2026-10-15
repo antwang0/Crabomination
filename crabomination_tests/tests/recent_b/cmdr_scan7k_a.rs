@@ -4231,3 +4231,144 @@ fn swans_of_bryn_argoll_turns_damage_into_cards() {
     assert_eq!(g.battlefield_find(swans).unwrap().damage, 0);
     assert_eq!(g.players[1].hand.len(), 3);
 }
+
+/// Dire Fleet Captain grows per other attacking Pirate; Neckbreaker pumps
+/// attacking Pirates.
+#[test]
+fn dire_fleet_pirates_attack_together() {
+    let mut g = pod(2);
+    let cap = ready(&mut g, 0, catalog::dire_fleet_captain());
+    let neck = ready(&mut g, 0, catalog::dire_fleet_neckbreaker());
+    declare(&mut g, vec![(cap, 1), (neck, 1)]);
+    assert_eq!(pt(&g, cap), (5, 3), "+1/+1 for the Neckbreaker, +2/+0 from it");
+    assert_eq!(pt(&g, neck), (5, 2));
+}
+
+/// Admiral's Order's raid cost is {U}; Lookout's Dispersal taxes {4}.
+#[test]
+fn admirals_order_raid_cost() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    declare(&mut g, vec![(bear, 1)]);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    let ao = g.add_card_to_hand(0, catalog::admirals_order());
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative { card_id: ao, pitch_card: None, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("raid {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Bolt countered");
+}
+
+/// Kraul Swarm returns from the graveyard by discarding a creature card.
+#[test]
+fn kraul_swarm_returns_by_discarding_a_creature() {
+    let mut g = pod(2);
+    let ks = g.add_card_to_graveyard(0, catalog::kraul_swarm());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    activate(&mut g, ks, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ks));
+}
+
+/// Orc Sureshot shrinks an opposing creature as another creature enters;
+/// Rathi Trapper taps; Aphotic Wisps gives fear and draws.
+#[test]
+fn horobi_crew() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::orc_sureshot());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let rt = g.add_card_to_hand(0, catalog::rathi_trapper());
+    cast(&mut g, rt);
+    assert!(g.battlefield_find(elf).is_none(), "-1/-1 on the 1/1 Elf");
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    g.clear_sickness(rt);
+    activate(&mut g, rt, 0, Some(Target::Permanent(giant)));
+    assert!(g.battlefield_find(giant).unwrap().tapped);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aw = g.add_card_to_hand(0, catalog::aphotic_wisps());
+    flood(&mut g);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: aw, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("wisps");
+    drain_stack(&mut g);
+    assert!(g.permanent_has_keyword(bear, &Keyword::Fear));
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+}
+
+/// Assembled Alphas mauls its blocker and its controller; Engulfing Slagwurm
+/// eats its blocker and gains its toughness.
+#[test]
+fn assembled_alphas_and_engulfing_slagwurm_punish_blockers() {
+    let mut g = pod(2);
+    let aa = ready(&mut g, 0, catalog::assembled_alphas());
+    let sw = ready(&mut g, 0, catalog::engulfing_slagwurm());
+    let b1 = ready(&mut g, 1, catalog::grizzly_bears());
+    let b2 = ready(&mut g, 1, catalog::hill_giant());
+    declare(&mut g, vec![(aa, 1), (sw, 1)]);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, aa), (b2, sw)])).expect("blocks");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none());
+    assert_eq!(g.players[1].life, 17);
+    assert_eq!(g.players[0].life, 23, "the Giant's toughness 3");
+}
+
+/// Insatiable Appetite: +3/+3, or +5/+5 by sacrificing a Food; Second
+/// Breakfast pumps two and makes a Food; Nimble Hobbit taps with a Food.
+#[test]
+fn butterbur_food_cards() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let sb = g.add_card_to_hand(0, catalog::second_breakfast());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: sb, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("breakfast");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (4, 3));
+    assert_eq!(named_count(&g, 0, "Food"), 1);
+    let ia = g.add_card_to_hand(0, catalog::insatiable_appetite());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: ia, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("appetite");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (9, 8), "+5/+5 with the Food");
+    assert_eq!(named_count(&g, 0, "Food"), 0);
+}
+
+/// Knight of Dusk's Shadow stops opponents gaining life; Call the Cavalry
+/// makes two vigilant Knights; Belle of the Brawl pumps them on attack.
+#[test]
+fn aryel_knights() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::knight_of_dusks_shadow());
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    let _ = g.resolve_effect(&crabomination::effect::Effect::GainLife { who: crabomination::effect::Selector::You, amount: crabomination::effect::Value::Const(3) }, &ctx);
+    assert_eq!(g.players[1].life, 20, "opponents can't gain life");
+    let cc = g.add_card_to_hand(0, catalog::call_the_cavalry());
+    cast(&mut g, cc);
+    assert_eq!(named_count(&g, 0, "Knight"), 2);
+    let belle = ready(&mut g, 0, catalog::belle_of_the_brawl());
+    let knight = g.battlefield.iter().find(|c| c.definition.name == "Knight").unwrap().id;
+    g.clear_sickness(knight);
+    declare(&mut g, vec![(belle, 1)]);
+    assert_eq!(pt(&g, knight), (3, 2));
+}
+
+/// Eland Umbra's +0/+4 and umbra armor; Springjack Shepherd counts white pips.
+#[test]
+fn eland_umbra_and_springjack_shepherd() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let eu = g.add_card_to_hand(0, catalog::eland_umbra());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: eu, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("umbra");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (2, 6));
+    let ss = g.add_card_to_hand(0, catalog::springjack_shepherd());
+    cast(&mut g, ss);
+    assert_eq!(named_count(&g, 0, "Goat"), 2, "Eland Umbra's {{W}} and the Shepherd's {{W}}");
+}

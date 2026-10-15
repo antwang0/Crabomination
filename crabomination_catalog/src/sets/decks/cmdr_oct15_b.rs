@@ -1900,3 +1900,532 @@ pub fn doorman() -> CardDefinition {
         ..creature("Doorman", cost(&[generic(1), g()]), vec![CreatureType::Mutant, CreatureType::Hero], 2, 3)
     }
 }
+
+// ── Beckett Brass, Swarm, Horobi, Marhault, Butterbur, Aryel, Bill the
+// Pony, Baldin, Gimli ───────────────────────────────────────────────────────
+
+fn pirate() -> R {
+    R::HasCreatureType(CreatureType::Pirate)
+}
+
+/// Dire Fleet Captain — {B}{R} 2/2 Orc Pirate. Attacking: +1/+1 until end of
+/// turn for each other attacking Pirate.
+pub fn dire_fleet_captain() -> CardDefinition {
+    let others = || Value::count(Selector::EachPermanent(pirate().and(R::IsAttacking).and(R::OtherThanSource)));
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: others(),
+            toughness: others(),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Dire Fleet Captain", cost(&[b(), r()]), vec![CreatureType::Orc, CreatureType::Pirate], 2, 2)
+    }
+}
+
+/// Dire Fleet Neckbreaker — {2}{B}{R} 3/2 Orc Pirate. Attacking Pirates you
+/// control get +2/+0.
+pub fn dire_fleet_neckbreaker() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Attacking Pirates you control get +2/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(pirate().and(R::IsAttacking).and(R::ControlledByYou)),
+                power: 2,
+                toughness: 0,
+            },
+        }],
+        ..creature("Dire Fleet Neckbreaker", cost(&[generic(2), b(), r()]), vec![CreatureType::Orc, CreatureType::Pirate], 3, 2)
+    }
+}
+
+/// Dire Fleet Poisoner — {1}{B} 2/2 flash deathtouch Human Pirate. Enters:
+/// target attacking Pirate you control gets +1/+1 and deathtouch until end of
+/// turn.
+pub fn dire_fleet_poisoner() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash, Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(pirate().and(R::IsAttacking).and(R::ControlledByYou)),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+        ]))],
+        ..creature("Dire Fleet Poisoner", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Pirate], 2, 2)
+    }
+}
+
+/// Admiral's Order — {1}{U}{U} instant. Raid — {U} instead if you attacked
+/// this turn. Counter target spell.
+pub fn admirals_order() -> CardDefinition {
+    CardDefinition {
+        name: "Admiral's Order",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[u()]),
+            condition: Some(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            ..Default::default()
+        }),
+        effect: Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+        ..Default::default()
+    }
+}
+
+/// Lookout's Dispersal — {2}{U} instant, {1} less with a Pirate. Counter target
+/// spell unless its controller pays {4}.
+pub fn lookouts_dispersal() -> CardDefinition {
+    CardDefinition {
+        name: "Lookout's Dispersal",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast if you control a Pirate.",
+            effect: StaticEffect::SelfCostReducedIfPredicate {
+                amount: 1,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(pirate().and(R::ControlledByYou))),
+            },
+        }],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(R::IsSpellOnStack),
+            mana_cost: cost(&[generic(4)]),
+            exile: false,
+            extra_generic: None,
+            if_paid: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Swarm, Being of Bees — {2}{B} legendary 2/2 flash, flying Insect Villain.
+/// Mayhem {B}.
+pub fn swarm_being_of_bees() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Mayhem(cost(&[b()]))],
+        ..creature("Swarm, Being of Bees", cost(&[generic(2), b()]), vec![CreatureType::Insect, CreatureType::Villain], 2, 2)
+    }
+}
+
+/// Foundry Hornet — {3}{B} 2/3 flying Insect. Enters, if you control a
+/// creature with a +1/+1 counter: creatures your opponents control get -1/-1
+/// until end of turn.
+pub fn foundry_hornet() -> CardDefinition {
+    let countered = Predicate::SelectorExists(Selector::EachPermanent(
+        R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne)),
+    ));
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(countered.clone()),
+            effect: Effect::If {
+                cond: countered,
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..creature("Foundry Hornet", cost(&[generic(3), b()]), vec![CreatureType::Insect], 2, 3)
+    }
+}
+
+/// Great Fierce Bee — {2}{B} 2/2 flying Insect. Whenever one or more other
+/// creatures die, scry 1.
+pub fn great_fierce_bee() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — one scry per batch.
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                .with_filter(trigger_is(R::OtherThanSource))
+                .once_per_batch(),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..creature("Great Fierce Bee", cost(&[generic(2), b()]), vec![CreatureType::Insect], 2, 2)
+    }
+}
+
+/// Kraul Swarm — {4}{B} 4/1 flying Insect Warrior. {2}{B}, discard a creature
+/// card: return it from your graveyard to your hand.
+pub fn kraul_swarm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_graveyard: true,
+            discard_cost: Some((R::Creature, 1)),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..creature("Kraul Swarm", cost(&[generic(4), b()]), vec![CreatureType::Insect, CreatureType::Warrior], 4, 1)
+    }
+}
+
+/// Orc Sureshot — {3}{B} 4/2 Orc Archer. Whenever another creature you
+/// control enters, target creature an opponent controls gets -1/-1 until end
+/// of turn.
+pub fn orc_sureshot() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(trigger_is(R::Creature)),
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Orc Sureshot", cost(&[generic(3), b()]), vec![CreatureType::Orc, CreatureType::Archer], 4, 2)
+    }
+}
+
+/// Rathi Trapper — {1}{B} 1/2 Human Rebel Rogue. {B}, {T}: tap target creature.
+pub fn rathi_trapper() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature("Rathi Trapper", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Rebel, CreatureType::Rogue], 1, 2)
+    }
+}
+
+/// Aphotic Wisps — {B} instant. Target creature becomes black and gains fear
+/// until end of turn. Draw a card.
+pub fn aphotic_wisps() -> CardDefinition {
+    CardDefinition {
+        name: "Aphotic Wisps",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::BecomeColor { what: target_filtered(R::Creature), colors: vec![Color::Black], duration: Duration::EndOfTurn, additive: false },
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Fear, duration: Duration::EndOfTurn },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Nighthaze — {B} sorcery. Target creature gains swampwalk until end of turn.
+/// Draw a card.
+pub fn nighthaze() -> CardDefinition {
+    CardDefinition {
+        name: "Nighthaze",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::Landwalk(LandType::Swamp),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Assembled Alphas — {5}{R} 5/5 Wolf. Whenever it blocks or becomes blocked
+/// by a creature, it deals 3 damage to that creature and 3 to its controller.
+pub fn assembled_alphas() -> CardDefinition {
+    let maul = |each: Selector| Effect::ForEach {
+        selector: each,
+        body: Box::new(Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::Const(3),
+            },
+        ])),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource), effect: maul(Selector::BlockedAttacker) },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: maul(Selector::BlockingCreatures),
+            },
+        ],
+        ..creature("Assembled Alphas", cost(&[generic(5), r()]), vec![CreatureType::Wolf], 5, 5)
+    }
+}
+
+/// Engulfing Slagwurm — {5}{G}{G} 7/7 Wurm. Whenever it blocks or becomes
+/// blocked by a creature, destroy that creature; you gain life equal to its
+/// toughness.
+pub fn engulfing_slagwurm() -> CardDefinition {
+    let engulf = |each: Selector| Effect::ForEach {
+        selector: each,
+        body: Box::new(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::ToughnessOf(Box::new(Selector::TriggerSource)) },
+            Effect::Destroy { what: Selector::TriggerSource },
+        ])),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource), effect: engulf(Selector::BlockedAttacker) },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: engulf(Selector::BlockingCreatures),
+            },
+        ],
+        ..creature("Engulfing Slagwurm", cost(&[generic(5), g(), g()]), vec![CreatureType::Wurm], 7, 7)
+    }
+}
+
+/// Prized Unicorn — {3}{G} 2/2 Unicorn. All creatures able to block it do so.
+pub fn prized_unicorn() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::AllMustBlock],
+        ..creature("Prized Unicorn", cost(&[generic(3), g()]), vec![CreatureType::Unicorn], 2, 2)
+    }
+}
+
+fn food() -> R {
+    R::HasArtifactSubtype(ArtifactSubtype::Food)
+}
+
+fn make_food() -> Effect {
+    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(crabomination_base::tokens::food_token()) }
+}
+
+/// Nimble Hobbit — {1}{W} 1/3 Halfling Peasant. Attacking: you may sacrifice a
+/// Food or pay {2}{W}; when you do, tap target creature an opponent controls.
+pub fn nimble_hobbit() -> CardDefinition {
+    let tap = || Effect::ReflexiveTrigger {
+        body: Box::new(Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) }),
+    };
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+            description: "Sacrifice a Food to tap a creature an opponent controls?".into(),
+            filter: food(),
+            count: Value::ONE,
+            then: Box::new(tap()),
+            else_: Some(Box::new(Effect::MayPay {
+                description: "Pay {2}{W} to tap a creature an opponent controls?".into(),
+                mana_cost: cost(&[generic(2), w()]),
+                body: Box::new(tap()),
+                else_: None,
+            })),
+        })],
+        ..creature("Nimble Hobbit", cost(&[generic(1), w()]), vec![CreatureType::Halfling, CreatureType::Peasant], 1, 3)
+    }
+}
+
+/// Insatiable Appetite — {1}{G} instant. Target creature gets +3/+3 until end
+/// of turn, or +5/+5 if you sacrifice a Food.
+pub fn insatiable_appetite() -> CardDefinition {
+    let pump = |what, n| Effect::PumpPT { what, power: Value::Const(n), toughness: Value::Const(n), duration: Duration::EndOfTurn };
+    CardDefinition {
+        name: "Insatiable Appetite",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            pump(target_filtered(R::Creature), 3),
+            Effect::MaySacrifice {
+                description: "Sacrifice a Food for +5/+5 instead?".into(),
+                filter: food(),
+                count: Value::ONE,
+                then: Box::new(pump(Selector::Target(0), 2)),
+                else_: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Second Breakfast — {2}{W} instant. Up to two target creatures each get
+/// +2/+1 until end of turn. Create a Food.
+pub fn second_breakfast() -> CardDefinition {
+    let pump = |slot| Effect::PumpPT {
+        what: Selector::TargetFiltered { slot, filter: R::Creature },
+        power: Value::Const(2),
+        toughness: Value::ONE,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Second Breakfast",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::OptionalTargets { min: 0, body: Box::new(Effect::Seq(vec![pump(0), pump(1)])) },
+            make_food(),
+        ]),
+        ..Default::default()
+    }
+}
+
+fn knight() -> R {
+    R::HasCreatureType(CreatureType::Knight)
+}
+
+/// Belle of the Brawl — {2}{B} 3/2 menace Human Knight. Attacking: other
+/// Knights you control get +1/+0 until end of turn.
+pub fn belle_of_the_brawl() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::EachPermanent(knight().and(R::ControlledByYou).and(R::OtherThanSource)),
+            power: Value::ONE,
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Belle of the Brawl", cost(&[generic(2), b()]), vec![CreatureType::Human, CreatureType::Knight], 3, 2)
+    }
+}
+
+/// Blacklance Paragon — {1}{B} 3/1 flash Human Knight. Enters: target Knight
+/// gains deathtouch and lifelink until end of turn.
+pub fn blacklance_paragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::GrantKeywords {
+            what: target_filtered(knight()),
+            keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Blacklance Paragon", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Knight], 3, 1)
+    }
+}
+
+/// Knight of Dusk's Shadow — {1}{B} 2/2 menace Human Knight. Your opponents
+/// can't gain life. {1}{B}: +1/+1 until end of turn.
+pub fn knight_of_dusks_shadow() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't gain life.",
+            effect: StaticEffect::PlayerCannotGainLife { target: crate::effect::PlayerStaticTarget::EachOpponent },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::PumpPT { what: Selector::This, power: Value::ONE, toughness: Value::ONE, duration: Duration::EndOfTurn },
+            ..Default::default()
+        }],
+        ..creature("Knight of Dusk's Shadow", cost(&[generic(1), b()]), vec![CreatureType::Human, CreatureType::Knight], 2, 2)
+    }
+}
+
+/// Call the Cavalry — {3}{W} sorcery. Two 2/2 white Knights with vigilance.
+pub fn call_the_cavalry() -> CardDefinition {
+    let knight_token = TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Call the Cavalry",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: Arc::new(knight_token) },
+        ..Default::default()
+    }
+}
+
+/// Eland Umbra — {1}{W} Aura. Enchanted creature gets +0/+4; umbra armor.
+pub fn eland_umbra() -> CardDefinition {
+    CardDefinition {
+        name: "Eland Umbra",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::UmbraArmor],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature gets +0/+4.",
+            effect: StaticEffect::PumpPT { applies_to: enchanted(), power: 0, toughness: 4 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fortifying Provisions — {2}{W} enchantment. Creatures you control get
+/// +0/+1. Enters: create a Food.
+pub fn fortifying_provisions() -> CardDefinition {
+    CardDefinition {
+        name: "Fortifying Provisions",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +0/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: 0,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![etb(make_food())],
+        ..Default::default()
+    }
+}
+
+/// Aegis of the Heavens — {1}{W} instant. Target creature gets +1/+7 until end
+/// of turn.
+pub fn aegis_of_the_heavens() -> CardDefinition {
+    CardDefinition {
+        name: "Aegis of the Heavens",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT { what: target_filtered(R::Creature), power: Value::ONE, toughness: Value::Const(7), duration: Duration::EndOfTurn },
+        ..Default::default()
+    }
+}
+
+/// Springjack Shepherd — {3}{W} 1/2 Kithkin Wizard. Chroma — enters: a 0/1
+/// white Goat for each white mana symbol among your permanents' mana costs.
+pub fn springjack_shepherd() -> CardDefinition {
+    let goat = TokenDefinition {
+        name: "Goat".into(),
+        power: 0,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goat], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::DevotionTo(vec![Color::White]),
+            definition: Arc::new(goat),
+        })],
+        ..creature("Springjack Shepherd", cost(&[generic(3), w()]), vec![CreatureType::Kithkin, CreatureType::Wizard], 1, 2)
+    }
+}
+
+/// Tasseled Dromedary — {W} 0/4 Camel.
+pub fn tasseled_dromedary() -> CardDefinition {
+    creature("Tasseled Dromedary", cost(&[w()]), vec![CreatureType::Camel], 0, 4)
+}
+
+/// Smite the Deathless — {1}{R} instant. 3 damage to target creature; it loses
+/// indestructible until end of turn; if it would die this turn, exile it.
+pub fn smite_the_deathless() -> CardDefinition {
+    CardDefinition {
+        name: "Smite the Deathless",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseKeyword { what: target_filtered(R::Creature), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
