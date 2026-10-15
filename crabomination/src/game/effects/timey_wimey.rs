@@ -307,6 +307,56 @@ impl GameState {
         }
     }
 
+    /// `Effect::BorrowAbilitiesOfChosenExiled` — Koh, the Face Stealer. The
+    /// source's definition goes back to what it was before any baked grant,
+    /// then takes the chosen card's activated and triggered abilities, so
+    /// only the last chosen card lends. (Another baked grant on the source
+    /// is dropped with the old borrow.)
+    pub(super) fn borrow_abilities_of_chosen_exiled(
+        &mut self,
+        filter: &SelectionRequirement,
+        effect: &Effect,
+        ctx: &EffectContext,
+    ) {
+        let Some(src) = ctx.source else { return };
+        let me = ctx.controller;
+        let linked: Vec<(CardId, String, usize)> = self
+            .exile
+            .iter()
+            .filter(|c| c.exiled_with == Some(src) || c.exiled_by.as_ref().is_some_and(|l| l.source == src))
+            .filter(|c| self.evaluate_requirement_on_card(filter, c, me))
+            .map(|c| {
+                let lent = c.definition.activated_abilities.len() + c.definition.triggered_abilities.len();
+                (c.id, c.definition.name.to_string(), lent)
+            })
+            .collect();
+        let Some(best) = linked.iter().max_by_key(|(id, _, lent)| (*lent, std::cmp::Reverse(*id))).map(|t| t.0)
+        else {
+            return;
+        };
+        let candidates = linked.iter().map(|(id, name, _)| (*id, name.clone())).collect();
+        let Some(picked) = self.choose_up_to_cards(
+            me,
+            "Choose a card exiled with this".into(),
+            src,
+            candidates,
+            1,
+            PickValue::Gain,
+            effect,
+            vec![best],
+        ) else {
+            return;
+        };
+        let Some(&pick) = picked.first() else { return };
+        let Some(lender) = self.exile.iter().find(|c| c.id == pick).map(|c| c.definition.arc()) else { return };
+        if let Some(me) = self.battlefield_find_mut(src) {
+            me.revert_baked_grants();
+            let def = me.bake_grant();
+            def.activated_abilities.extend(lender.activated_abilities.iter().cloned());
+            def.triggered_abilities.extend(lender.triggered_abilities.iter().cloned());
+        }
+    }
+
     /// `Effect::ExileOtherCreaturesKeepingUpTo` — the controller keeps up to
     /// `max` creatures matching `keep`, anyone's (headless: its own, greatest
     /// power first), and every other creature is exiled.

@@ -9162,6 +9162,12 @@ pub enum Effect {
     /// (Idris, Soul of the TARDIS): the cards exiled with the source lend
     /// their abilities to it, stamped as they're exiled.
     AcquireAbilitiesOfExiledWithSource,
+    /// "Choose a [filter] card exiled with [this]. [This] has all activated
+    /// and triggered abilities of the last chosen card" (Koh, the Face
+    /// Stealer): the controller picks one card exiled with the source
+    /// (headless: the one lending the most abilities), and the source's
+    /// borrowed abilities are replaced by that card's.
+    BorrowAbilitiesOfChosenExiled { filter: crate::card::SelectionRequirement },
     /// "Choose up to `max` [keep]. Exile all other creatures" (The Day of
     /// the Doctor's IV, inside its "you may"). The controller chooses among
     /// every match, anyone's; headless, its own greatest-power ones.

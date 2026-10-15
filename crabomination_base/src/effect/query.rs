@@ -816,6 +816,7 @@ impl Effect {
             | Effect::RemoveTimeCounterFromSuspendedSource
             | Effect::PhaseInHeldBySource
             | Effect::AcquireAbilitiesOfExiledWithSource
+            | Effect::BorrowAbilitiesOfChosenExiled { .. }
             | Effect::ExileOtherCreaturesKeepingUpTo { .. }
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext

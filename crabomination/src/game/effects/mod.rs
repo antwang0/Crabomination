@@ -7278,6 +7278,10 @@ impl GameState {
                 self.acquire_abilities_of_exiled_with_source(ctx);
                 Ok(())
             }
+            Effect::BorrowAbilitiesOfChosenExiled { filter } => {
+                self.borrow_abilities_of_chosen_exiled(filter, effect, ctx);
+                Ok(())
+            }
             Effect::Voyage { home } => self.voyage(*home, ctx, events),
             Effect::ShuffleIntoTopPile { what, depth } => self.shuffle_into_top_pile(what, depth, ctx, events),
             Effect::ExileOtherCreaturesKeepingUpTo { keep, max } => {
