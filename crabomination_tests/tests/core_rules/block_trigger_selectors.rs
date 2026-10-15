@@ -65,6 +65,16 @@ fn reads_trigger_source(v: &Value) -> bool {
             if is_nested_ability(map) {
                 return false;
             }
+            // `Effect::ForEach` / `ForEachChosen` rebind `TriggerSource` to
+            // the entity of each iteration inside `body` (Assembled Alphas'
+            // per-blocker maul); only the iterated selector reads the
+            // trigger's own binding.
+            if let Some(Value::Object(each)) = map.get("ForEach") {
+                return each.get("selector").is_some_and(reads_trigger_source);
+            }
+            if let Some(Value::Object(each)) = map.get("ForEachChosen") {
+                return each.get("from").is_some_and(reads_trigger_source);
+            }
             map.values().any(reads_trigger_source)
         }
         Value::Array(items) => items.iter().any(reads_trigger_source),
