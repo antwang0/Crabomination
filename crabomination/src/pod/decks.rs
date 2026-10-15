@@ -75975,3 +75975,30 @@ pub const BEBOP_2_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const GOLLUM_4_COMMANDERS: &[CardFactory] = &[gollum_riddle_master];
+
+/// **Gollum, Riddle Master**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Swamps = 99.
+/// Gollum, Riddle Master (EDHREC, fetched 2026-10-15).
+pub const GOLLUM_4_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, bolass_citadel, jet_medallion, mind_stone, my_precious,
+    skullclamp, sol_ring, the_darkness_crystal, the_one_ring, bojuka_bog, cabal_coffers,
+    high_market, myriad_landscape, phyrexian_tower, rogues_passage, witchs_cottage,
+    accursed_marauder, ayara_first_of_locthwain, blood_artist, braids_arisen_nightmare,
+    crypt_ghast, fleshbag_marauder, gollum_the_abandoned, gollum_obsessed_stalker,
+    gollum_patient_plotter, gollum_scheming_guide, gollum_silent_slinker, grave_researcher,
+    gray_merchant_of_asphodel, grim_haruspex, morbid_opportunist, ophiomancer,
+    pitiless_plunderer, plaguecrafter, solemn_simulacrum, syr_konrad_the_grim,
+    the_master_of_lake_town, the_sackville_bagginses, viscera_seer, zulaport_cutthroat,
+    animate_dead, bastion_of_remembrance, black_market_connections, call_of_the_ring,
+    kayas_ghostform, phyrexian_arena, dark_ritual, deadly_dispute, defile, fake_your_own_death,
+    feign_death, go_for_the_throat, malakir_rebirth, nasty_end, not_dead_after_all,
+    supernatural_stamina, undying_malice, village_rites, claim_the_precious, diabolic_intent,
+    dread_return, exsanguinate, feed_the_swarm, nights_whisper, reanimate, sign_in_blood,
+    toxic_deluge, unearth, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];

@@ -16686,6 +16686,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BEBOP_2_COMMANDERS,
             main: decks::BEBOP_2_MAIN,
         },
+        // Seat 2706: Gollum, Riddle Master's EDHREC average deck. `--pod-decks 2706`.
+        PodDeck {
+            name: "Gollum, Riddle Master (B)",
+            commanders: decks::GOLLUM_4_COMMANDERS,
+            main: decks::GOLLUM_4_MAIN,
+        },
     ]
 }
 
@@ -21224,6 +21230,7 @@ mod tests {
             ("Iceman and Firestar", &[0x14A5]),
             ("Chameleon, Master of Disguise", &[0x14A6]),
             ("Bebop, Warthog Warrior", &[0x14A7]),
+            ("Gollum, Riddle Master", &[0x14A8]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
