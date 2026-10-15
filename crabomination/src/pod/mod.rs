@@ -16434,6 +16434,78 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JARVIS_COMMANDERS,
             main: decks::JARVIS_MAIN,
         },
+        // Seat 2664: Agatha of the Vile Cauldron's EDHREC average deck. `--pod-decks 2664`.
+        PodDeck {
+            name: "Agatha of the Vile Cauldron (RG)",
+            commanders: decks::AGATHA_OF_THE_VILE_CAULDRON_COMMANDERS,
+            main: decks::AGATHA_OF_THE_VILE_CAULDRON_MAIN,
+        },
+        // Seat 2665: Raff, Weatherlight Stalwart's EDHREC average deck. `--pod-decks 2665`.
+        PodDeck {
+            name: "Raff, Weatherlight Stalwart (WU)",
+            commanders: decks::RAFF_COMMANDERS,
+            main: decks::RAFF_MAIN,
+        },
+        // Seat 2666: Madame Null, Power Broker's EDHREC average deck. `--pod-decks 2666`.
+        PodDeck {
+            name: "Madame Null, Power Broker (B)",
+            commanders: decks::MADAME_NULL_COMMANDERS,
+            main: decks::MADAME_NULL_MAIN,
+        },
+        // Seat 2667: Loki, God of Lies's EDHREC average deck. `--pod-decks 2667`.
+        PodDeck {
+            name: "Loki, God of Lies (R)",
+            commanders: decks::LOKI_3_COMMANDERS,
+            main: decks::LOKI_3_MAIN,
+        },
+        // Seat 2668: Urza, Powerstone Prodigy's EDHREC average deck. `--pod-decks 2668`.
+        PodDeck {
+            name: "Urza, Powerstone Prodigy (U)",
+            commanders: decks::URZA_4_COMMANDERS,
+            main: decks::URZA_4_MAIN,
+        },
+        // Seat 2669: Astonishing Spider-Man's EDHREC average deck. `--pod-decks 2669`.
+        PodDeck {
+            name: "Astonishing Spider-Man (UR)",
+            commanders: decks::ASTONISHING_SPIDER_MAN_COMMANDERS,
+            main: decks::ASTONISHING_SPIDER_MAN_MAIN,
+        },
+        // Seat 2670: Jolrael, Mwonvuli Recluse's EDHREC average deck. `--pod-decks 2670`.
+        PodDeck {
+            name: "Jolrael, Mwonvuli Recluse (G)",
+            commanders: decks::JOLRAEL_3_COMMANDERS,
+            main: decks::JOLRAEL_3_MAIN,
+        },
+        // Seat 2671: Bebop & Rocksteady's EDHREC average deck. `--pod-decks 2671`.
+        PodDeck {
+            name: "Bebop & Rocksteady (BG)",
+            commanders: decks::BEBOP_ROCKSTEADY_COMMANDERS,
+            main: decks::BEBOP_ROCKSTEADY_MAIN,
+        },
+        // Seat 2672: The Destined Black Mage's EDHREC average deck. `--pod-decks 2672`.
+        PodDeck {
+            name: "The Destined Black Mage (B)",
+            commanders: decks::THE_DESTINED_BLACK_MAGE_COMMANDERS,
+            main: decks::THE_DESTINED_BLACK_MAGE_MAIN,
+        },
+        // Seat 2673: Sachi, Daughter of Seshiro's EDHREC average deck. `--pod-decks 2673`.
+        PodDeck {
+            name: "Sachi, Daughter of Seshiro (G)",
+            commanders: decks::SACHI_COMMANDERS,
+            main: decks::SACHI_MAIN,
+        },
+        // Seat 2674: Tura Kennerüd, Skyknight's EDHREC average deck. `--pod-decks 2674`.
+        PodDeck {
+            name: "Tura Kennerüd, Skyknight (WU)",
+            commanders: decks::TURA_KENNERUD_COMMANDERS,
+            main: decks::TURA_KENNERUD_MAIN,
+        },
+        // Seat 2675: Iron Fist, Living Weapon's EDHREC average deck. `--pod-decks 2675`.
+        PodDeck {
+            name: "Iron Fist, Living Weapon (R)",
+            commanders: decks::IRON_FIST_2_COMMANDERS,
+            main: decks::IRON_FIST_2_MAIN,
+        },
     ]
 }
 
@@ -20930,6 +21002,18 @@ mod tests {
             ("Azula, On the Hunt", &[0x147B]),
             ("Suki, Courageous Rescuer", &[0x147C]),
             ("Jarvis, Earth's Mightiest Butler", &[0x147D]),
+            ("Agatha of the Vile Cauldron", &[0x147E]),
+            ("Raff, Weatherlight Stalwart", &[0x147F]),
+            ("Madame Null, Power Broker", &[0x1480]),
+            ("Loki, God of Lies", &[0x1481]),
+            ("Urza, Powerstone Prodigy", &[0x1482]),
+            ("Astonishing Spider-Man", &[0x1483]),
+            ("Jolrael, Mwonvuli Recluse", &[0x1484]),
+            ("Bebop & Rocksteady", &[0x1485]),
+            ("The Destined Black Mage", &[0x1486]),
+            ("Sachi, Daughter of Seshiro", &[0x1487]),
+            ("Tura Kennerüd, Skyknight", &[0x1488]),
+            ("Iron Fist, Living Weapon", &[0x1489]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
