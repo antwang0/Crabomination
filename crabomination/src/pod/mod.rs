@@ -17394,6 +17394,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::PATRIOT_COMMANDERS,
             main: decks::PATRIOT_MAIN,
         },
+        // Seat 2824: Mary Read and Anne Bonny's EDHREC average deck. `--pod-decks 2824`.
+        PodDeck {
+            name: "Mary Read and Anne Bonny (UR)",
+            commanders: decks::MARY_READ_AND_ANNE_BONNY_COMMANDERS,
+            main: decks::MARY_READ_AND_ANNE_BONNY_MAIN,
+        },
+        // Seat 2825: Krile Baldesion's EDHREC average deck. `--pod-decks 2825`.
+        PodDeck {
+            name: "Krile Baldesion (WU)",
+            commanders: decks::KRILE_BALDESION_COMMANDERS,
+            main: decks::KRILE_BALDESION_MAIN,
+        },
+        // Seat 2826: Ramirez DePietro, Pillager's EDHREC average deck. `--pod-decks 2826`.
+        PodDeck {
+            name: "Ramirez DePietro, Pillager (UB)",
+            commanders: decks::RAMIREZ_DEPIETRO_COMMANDERS,
+            main: decks::RAMIREZ_DEPIETRO_MAIN,
+        },
+        // Seat 2827: Psemilla, Meletian Poet's EDHREC average deck. `--pod-decks 2827`.
+        PodDeck {
+            name: "Psemilla, Meletian Poet (W)",
+            commanders: decks::PSEMILLA_COMMANDERS,
+            main: decks::PSEMILLA_MAIN,
+        },
+        // Seat 2828: Stature, Young Avenger's EDHREC average deck. `--pod-decks 2828`.
+        PodDeck {
+            name: "Stature, Young Avenger (RG)",
+            commanders: decks::STATURE_2_COMMANDERS,
+            main: decks::STATURE_2_MAIN,
+        },
     ]
 }
 
@@ -22053,6 +22083,11 @@ mod tests {
             ("Picard, Steadfast Captain", &[0x151B]),
             ("General Chang, Cold Warrior", &[0x151C]),
             ("Patriot, Young Avenger", &[0x151D]),
+            ("Mary Read and Anne Bonny", &[0x151E]),
+            ("Krile Baldesion", &[0x151F]),
+            ("Ramirez DePietro, Pillager", &[0x1520]),
+            ("Psemilla, Meletian Poet", &[0x1521]),
+            ("Stature, Young Avenger", &[0x1522]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
