@@ -17424,6 +17424,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::STATURE_2_COMMANDERS,
             main: decks::STATURE_2_MAIN,
         },
+        // Seat 2829: Shadowfax, Lord of Horses's EDHREC average deck. `--pod-decks 2829`.
+        PodDeck {
+            name: "Shadowfax, Lord of Horses (WR)",
+            commanders: decks::SHADOWFAX_COMMANDERS,
+            main: decks::SHADOWFAX_MAIN,
+        },
+        // Seat 2830: Eivor, Battle-Ready's EDHREC average deck. `--pod-decks 2830`.
+        PodDeck {
+            name: "Eivor, Battle-Ready (WR)",
+            commanders: decks::EIVOR_2_COMMANDERS,
+            main: decks::EIVOR_2_MAIN,
+        },
+        // Seat 2831: Spider-Punk's EDHREC average deck. `--pod-decks 2831`.
+        PodDeck {
+            name: "Spider-Punk (R)",
+            commanders: decks::SPIDER_PUNK_COMMANDERS,
+            main: decks::SPIDER_PUNK_MAIN,
+        },
+        // Seat 2832: Ferrafor, Young Yew's EDHREC average deck. `--pod-decks 2832`.
+        PodDeck {
+            name: "Ferrafor, Young Yew (G)",
+            commanders: decks::FERRAFOR_COMMANDERS,
+            main: decks::FERRAFOR_MAIN,
+        },
+        // Seat 2833: Jerrard of the Closed Fist's EDHREC average deck. `--pod-decks 2833`.
+        PodDeck {
+            name: "Jerrard of the Closed Fist (RG)",
+            commanders: decks::JERRARD_OF_THE_CLOSED_FIST_COMMANDERS,
+            main: decks::JERRARD_OF_THE_CLOSED_FIST_MAIN,
+        },
+        // Seat 2834: Spinneret and Spiderling's EDHREC average deck. `--pod-decks 2834`.
+        PodDeck {
+            name: "Spinneret and Spiderling (R)",
+            commanders: decks::SPINNERET_AND_SPIDERLING_COMMANDERS,
+            main: decks::SPINNERET_AND_SPIDERLING_MAIN,
+        },
+        // Seat 2835: Spider-Man, Web-Spinner's EDHREC average deck. `--pod-decks 2835`.
+        PodDeck {
+            name: "Spider-Man, Web-Spinner (R)",
+            commanders: decks::SPIDER_MAN_5_COMMANDERS,
+            main: decks::SPIDER_MAN_5_MAIN,
+        },
+        // Seat 2836: Silver Sable, Mercenary Leader's EDHREC average deck. `--pod-decks 2836`.
+        PodDeck {
+            name: "Silver Sable, Mercenary Leader (W)",
+            commanders: decks::SILVER_SABLE_COMMANDERS,
+            main: decks::SILVER_SABLE_MAIN,
+        },
+        // Seat 2837: Titanium Man's EDHREC average deck. `--pod-decks 2837`.
+        PodDeck {
+            name: "Titanium Man (B)",
+            commanders: decks::TITANIUM_MAN_COMMANDERS,
+            main: decks::TITANIUM_MAN_MAIN,
+        },
     ]
 }
 
@@ -22088,6 +22142,15 @@ mod tests {
             ("Ramirez DePietro, Pillager", &[0x1520]),
             ("Psemilla, Meletian Poet", &[0x1521]),
             ("Stature, Young Avenger", &[0x1522]),
+            ("Shadowfax, Lord of Horses", &[0x1523]),
+            ("Eivor, Battle-Ready", &[0x1524]),
+            ("Spider-Punk", &[0x1525]),
+            ("Ferrafor, Young Yew", &[0x1526]),
+            ("Jerrard of the Closed Fist", &[0x1527]),
+            ("Spinneret and Spiderling", &[0x1528]),
+            ("Spider-Man, Web-Spinner", &[0x1529]),
+            ("Silver Sable, Mercenary Leader", &[0x152A]),
+            ("Titanium Man", &[0x152B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
