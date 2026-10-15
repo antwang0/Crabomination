@@ -24209,6 +24209,9 @@ impl GameState {
         // CR 106.6 — per-colour breakdown of what actually funded this
         // activation, threaded to the resolving body (Protective Sphere).
         let mut activation_mana_colors = Vec::new();
+        // Every mana that funded it, colourless included (Dynaheir's "by
+        // spending four or more mana").
+        let mut activation_mana_total = 0u32;
         // Mana from Treasures that funded it (`Value::TreasureManaSpentToActivate`).
         let mut activation_treasure_mana = 0u32;
         // Sunken Palace's rider pips that funded it: one copy each.
@@ -24254,6 +24257,7 @@ impl GameState {
             };
             activation_mana_colors =
                 spent_by_color(&receipt.pool_before, &self.players[p].mana_pool).to_vec();
+            activation_mana_total = receipt.pool_before.total().saturating_sub(self.players[p].mana_pool.total());
             activation_treasure_mana =
                 receipt.pool_before.treasure_amount().saturating_sub(self.players[p].mana_pool.treasure_amount());
             activation_copy_pips =
@@ -25498,6 +25502,9 @@ impl GameState {
             self.randomize_single_target_on_stack();
             if ability.mana_cost.has_x() {
                 self.copy_x_ability_for_grants(p);
+            }
+            if activation_mana_total > 0 {
+                self.copy_costly_ability_for_grants(p, activation_mana_total);
             }
             // CR 707.10 — Sunken Palace: "when you spend this mana to …
             // activate an ability, copy that ability" — above it, so the copy

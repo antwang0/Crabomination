@@ -142,6 +142,10 @@ pub struct LoyaltyCopyGrant {
     /// instead of a loyalty ability (Magus Lucea Kane).
     #[serde(default)]
     pub x_ability: bool,
+    /// Copies the next non-mana activated ability paid with at least this
+    /// much mana instead (Dynaheir, Invoker Adept); 0 = not this kind.
+    #[serde(default)]
+    pub min_mana: u32,
 }
 
 /// The rarely-written, heap-owning tail of a seat: registries only a handful

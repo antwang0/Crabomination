@@ -2515,6 +2515,7 @@ impl Effect {
             | Effect::CopyNextLoyaltyAbility { .. }
             | Effect::DropLinkedLoyaltyCopies
             | Effect::CopyNextXAbilityThisTurn { .. }
+            | Effect::CopyNextCostlyAbilityThisTurn { .. }
             | Effect::CopyLoyaltyAbilitiesOfChosenTypeThisTurn => false,
             Effect::ShuffleInThenCastFromTopFree { what } => sel_has_target(what),
             Effect::GrantFreeCastOnePerCardType { what } => sel_has_target(what),

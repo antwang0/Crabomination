@@ -38924,6 +38924,19 @@ impl GameState {
                     once: true,
                     linked: if *linked { ctx.source } else { None },
                     x_ability: true,
+                    min_mana: 0,
+                };
+                self.players[ctx.controller].loyalty_copy_grants.push(grant);
+                Ok(())
+            }
+            Effect::CopyNextCostlyAbilityThisTurn { min_mana } => {
+                let grant = crate::player::LoyaltyCopyGrant {
+                    copies: 1,
+                    subtype: None,
+                    once: true,
+                    linked: None,
+                    x_ability: false,
+                    min_mana: (*min_mana).max(1),
                 };
                 self.players[ctx.controller].loyalty_copy_grants.push(grant);
                 Ok(())

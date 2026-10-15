@@ -6394,6 +6394,10 @@ pub enum Effect {
     /// this turn, copy that ability" (Magus Lucea Kane): a one-shot grant
     /// beside the spell rider; `linked` ties the two so either spends both.
     CopyNextXAbilityThisTurn { linked: bool },
+    /// "When you next activate an ability that isn't a mana ability this turn
+    /// by spending `min_mana` or more mana to activate it, copy that ability"
+    /// (Dynaheir, Invoker Adept).
+    CopyNextCostlyAbilityThisTurn { min_mana: u32 },
     /// Leori, Sparktouched Hunter — "choose a planeswalker type. Until end of
     /// turn, whenever you activate an ability of a planeswalker of that type,
     /// copy that ability." The type is the one most common among the
