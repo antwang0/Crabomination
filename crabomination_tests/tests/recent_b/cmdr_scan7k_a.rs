@@ -1284,3 +1284,185 @@ fn gideons_avenger_grows_on_opposing_taps() {
     drain_stack(&mut g);
     assert_eq!(plus(&g, avenger), 1);
 }
+
+// ── decks::cmdr_scan7k_g ─────────────────────────────────────────────────────
+
+/// Guan Yu's 1,000-Li March kills only the tapped creatures.
+#[test]
+fn guan_yus_march_destroys_tapped_creatures() {
+    let mut g = pod(2);
+    let tapped = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let untapped = ready(&mut g, 1, catalog::grizzly_bears());
+    let march = g.add_card_to_hand(0, catalog::guan_yus_1_000_li_march());
+    cast(&mut g, march);
+    assert!(g.battlefield_find(tapped).is_none());
+    assert!(g.battlefield_find(untapped).is_some());
+}
+
+/// Quintessential Katana jumps onto an entering Ninja.
+#[test]
+fn quintessential_katana_attaches_to_an_entering_ninja() {
+    let mut g = pod(2);
+    let katana = ready(&mut g, 0, catalog::quintessential_katana());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ninja = g.add_card_to_hand(0, catalog::ninja_of_the_deep_hours());
+    cast(&mut g, ninja);
+    assert_eq!(g.battlefield_find(katana).unwrap().attached_to, Some(ninja));
+    assert_eq!(pt(&g, ninja), (3, 3));
+}
+
+/// Leonardo's Technique returns two cheap creature cards.
+#[test]
+fn leonardos_technique_returns_two() {
+    let mut g = pod(2);
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let spell = g.add_card_to_hand(0, catalog::leonardos_technique());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(a)), additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
+}
+
+/// Stature can't be blocked at 1 power; her power-up grows her past it.
+#[test]
+fn stature_is_unblockable_while_small() {
+    let mut g = pod(2);
+    let stature = ready(&mut g, 0, catalog::stature_size_shifter());
+    assert!(g.permanent_has_keyword(stature, &Keyword::Unblockable));
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stature, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2), mode: None,
+    })
+    .expect("power-up");
+    drain_stack(&mut g);
+    assert_eq!(plus(&g, stature), 2);
+    assert!(!g.permanent_has_keyword(stature, &Keyword::Unblockable));
+}
+
+/// Secret Identity's Reveal: a 3/4 Hero with flying and vigilance.
+#[test]
+fn secret_identity_reveals_a_hero() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::secret_identity());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("reveal");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, bear), (3, 4));
+    assert!(g.permanent_has_keyword(bear, &Keyword::Flying) && g.permanent_has_keyword(bear, &Keyword::Vigilance));
+}
+
+/// Katara grows per Lesson in the graveyard; Scarring Memories makes an
+/// opponent sacrifice, discard and lose 3.
+#[test]
+fn katara_counts_lessons_and_scarring_memories_punishes() {
+    let mut g = pod(2);
+    let katara = ready(&mut g, 0, catalog::katara_seeking_revenge());
+    g.add_card_to_graveyard(0, catalog::scarring_memories());
+    assert_eq!(pt(&g, katara), (4, 4));
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::scarring_memories());
+    let life = g.players[1].life;
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.players[1].hand.is_empty());
+    assert_eq!(g.players[1].life, life - 3);
+    assert_eq!(pt(&g, katara), (5, 5));
+}
+
+/// Minion Missile pays with a discard, destroys, and burns the controller.
+#[test]
+fn minion_missile_destroys_and_burns() {
+    let mut g = pod(2);
+    g.add_card_to_hand(0, catalog::island());
+    let theirs = ready(&mut g, 1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::minion_missile());
+    let life = g.players[1].life;
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+/// Shadow Sliver gives every Sliver shadow.
+#[test]
+fn shadow_sliver_shades_all_slivers() {
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::shadow_sliver());
+    assert!(g.permanent_has_keyword(mine, &Keyword::Shadow));
+}
+
+/// Reality Heist with four artifacts costs {1}{U}{U} and takes two artifacts.
+#[test]
+fn reality_heist_takes_two_artifacts() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        ready(&mut g, 0, catalog::sol_ring());
+    }
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_library(0, catalog::sol_ring());
+    g.add_card_to_library(0, catalog::mind_stone());
+    let heist = g.add_card_to_hand(0, catalog::reality_heist());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: heist, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("affinity");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2);
+}
+
+/// The Blackstaff animates an artifact while it stays tapped.
+#[test]
+fn blackstaff_animates_while_tapped() {
+    let mut g = pod(2);
+    let staff = ready(&mut g, 0, catalog::the_blackstaff_of_waterdeep());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    activate(&mut g, staff, 0, Some(Target::Permanent(ring)));
+    assert_eq!(pt(&g, ring), (4, 4));
+}
+
+/// Massacre Girl, Most Wanted pings an opponent when your creature dies and
+/// grows from it.
+#[test]
+fn massacre_girl_pings_and_grows() {
+    let mut g = pod(2);
+    let mg = ready(&mut g, 0, catalog::massacre_girl_most_wanted());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let life = g.players[1].life;
+    kill(&mut g, bear);
+    assert_eq!(g.players[1].life, life - 1);
+    assert_eq!(plus(&g, mg), 1);
+}
+
+/// Northampton Farm stores a creature and brings it back.
+#[test]
+fn northampton_farm_stores_and_returns_a_creature() {
+    let mut g = pod(2);
+    let farm = ready(&mut g, 0, catalog::northampton_farm());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    activate(&mut g, farm, 1, Some(Target::Permanent(bear)));
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    g.battlefield_find_mut(farm).unwrap().tapped = false;
+    activate(&mut g, farm, 2, None);
+    assert!(g.battlefield_find(bear).is_some());
+}
