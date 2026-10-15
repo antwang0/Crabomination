@@ -16698,6 +16698,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DIAOCHAN_COMMANDERS,
             main: decks::DIAOCHAN_MAIN,
         },
+        // Seat 2708: Reyav, Master Smith's EDHREC average deck. `--pod-decks 2708`.
+        PodDeck {
+            name: "Reyav, Master Smith (WR)",
+            commanders: decks::REYAV_COMMANDERS,
+            main: decks::REYAV_MAIN,
+        },
+        // Seat 2709: Alrund, God of the Cosmos's EDHREC average deck. `--pod-decks 2709`.
+        PodDeck {
+            name: "Alrund, God of the Cosmos (U)",
+            commanders: decks::ALRUND_COMMANDERS,
+            main: decks::ALRUND_MAIN,
+        },
+        // Seat 2710: Rayne, Academy Chancellor's EDHREC average deck. `--pod-decks 2710`.
+        PodDeck {
+            name: "Rayne, Academy Chancellor (U)",
+            commanders: decks::RAYNE_COMMANDERS,
+            main: decks::RAYNE_MAIN,
+        },
+        // Seat 2711: Merry, Esquire of Rohan's EDHREC average deck. `--pod-decks 2711`.
+        PodDeck {
+            name: "Merry, Esquire of Rohan (WR)",
+            commanders: decks::MERRY_2_COMMANDERS,
+            main: decks::MERRY_2_MAIN,
+        },
+        // Seat 2712: Black Bolt, Inhuman King's EDHREC average deck. `--pod-decks 2712`.
+        PodDeck {
+            name: "Black Bolt, Inhuman King (WU)",
+            commanders: decks::BLACK_BOLT_COMMANDERS,
+            main: decks::BLACK_BOLT_MAIN,
+        },
+        // Seat 2713: Ant-Man, Reformed Rogue's EDHREC average deck. `--pod-decks 2713`.
+        PodDeck {
+            name: "Ant-Man, Reformed Rogue (UG)",
+            commanders: decks::ANT_MAN_2_COMMANDERS,
+            main: decks::ANT_MAN_2_MAIN,
+        },
+        // Seat 2714: Katerina of Myra's Marvels's EDHREC average deck. `--pod-decks 2714`.
+        PodDeck {
+            name: "Katerina of Myra's Marvels (W)",
+            commanders: decks::KATERINA_OF_MYRAS_MARVELS_COMMANDERS,
+            main: decks::KATERINA_OF_MYRAS_MARVELS_MAIN,
+        },
+        // Seat 2715: Picard, Leading by Example's EDHREC average deck. `--pod-decks 2715`.
+        PodDeck {
+            name: "Picard, Leading by Example (W)",
+            commanders: decks::PICARD_COMMANDERS,
+            main: decks::PICARD_MAIN,
+        },
     ]
 }
 
@@ -21238,6 +21286,14 @@ mod tests {
             ("Bebop, Warthog Warrior", &[0x14A7]),
             ("Gollum, Riddle Master", &[0x14A8]),
             ("Diaochan, Artful Beauty", &[0x14A9]),
+            ("Reyav, Master Smith", &[0x14AA]),
+            ("Alrund, God of the Cosmos", &[0x14AB]),
+            ("Rayne, Academy Chancellor", &[0x14AC]),
+            ("Merry, Esquire of Rohan", &[0x14AD]),
+            ("Black Bolt, Inhuman King", &[0x14AE]),
+            ("Ant-Man, Reformed Rogue", &[0x14AF]),
+            ("Katerina of Myra's Marvels", &[0x14B0]),
+            ("Picard, Leading by Example", &[0x14B1]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
