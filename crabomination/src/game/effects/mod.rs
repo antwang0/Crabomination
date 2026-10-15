@@ -42562,6 +42562,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::IgnoreOpponentHexproofThisTurn => {
+                let (seat, turn) = (ctx.controller, self.turn_number);
+                if !self.ignore_opponent_hexproof_this_turn.contains(&(seat, turn)) {
+                    self.ignore_opponent_hexproof_this_turn.retain(|&(_, t)| t == turn);
+                    self.ignore_opponent_hexproof_this_turn.push((seat, turn));
+                }
+                Ok(())
+            }
+
             Effect::LegendRuleOffThisTurn { who } => {
                 let turn = self.turn_number;
                 for seat in self.resolve_players(who, ctx) {

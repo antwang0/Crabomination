@@ -75,7 +75,9 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 // client won't grey the player out as a target.
                 let hexproof = state.player_has_static_shroud(i)
                     || (state.player_has_static_hexproof(i)
-                        && !(i != viewer_seat && state.player_ignores_hexproof(viewer_seat)));
+                        && !(i != viewer_seat
+                            && (state.player_ignores_hexproof(viewer_seat)
+                                || state.ignores_opponent_hexproof_this_turn(viewer_seat))));
                 project_player(
                     state,
                     p,

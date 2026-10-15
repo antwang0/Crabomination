@@ -10057,6 +10057,11 @@ pub enum Effect {
     /// CR 704.5j — "the legend rule doesn't apply to permanents [who]
     /// controls this turn" (Hall of Echoes).
     LegendRuleOffThisTurn { who: PlayerRef },
+    /// "Until end of turn, your opponents and creatures your opponents
+    /// control with hexproof can be the targets of spells and abilities you
+    /// control as though they didn't have hexproof" (Detection Tower): the
+    /// turn-scoped `IgnoreOpponentsCreatureHexproof` plus opponent players.
+    IgnoreOpponentHexproofThisTurn,
     BecomeCopyOf {
         what: Selector,
         source: Selector,

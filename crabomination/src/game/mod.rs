@@ -2334,6 +2334,12 @@ pub struct ColdState {
     /// entry is inert; only that effect writes it.
     #[serde(default)]
     pub(crate) legend_rule_off_this_turn: Vec<(usize, u32)>,
+    /// "Until end of turn, your opponents and creatures your opponents
+    /// control with hexproof can be the targets of spells and abilities you
+    /// control as though they didn't have hexproof" (Detection Tower), as
+    /// (seat, turn number). A stale turn's entry is inert.
+    #[serde(default)]
+    pub(crate) ignore_opponent_hexproof_this_turn: Vec<(usize, u32)>,
     /// Stunning Reversal's armed loss replacements, as (seat, turn number):
     /// one entry per resolution, spent by the next loss that turn.
     #[serde(default)]

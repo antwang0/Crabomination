@@ -821,6 +821,7 @@ impl Effect {
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext
             | Effect::LegendRuleOffThisTurn { .. }
+            | Effect::IgnoreOpponentHexproofThisTurn
             | Effect::NextLossThisTurnDrawSevenAtOne
             | Effect::EachCreatureSacrificedUnlessLife { .. }
             | Effect::MayRepeat { .. }

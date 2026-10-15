@@ -16325,7 +16325,8 @@ impl GameState {
                 if self.player_has_static_shroud(*p)
                     || (!self.same_team(*p, caster)
                         && self.player_has_static_hexproof(*p)
-                        && !self.player_ignores_hexproof(caster))
+                        && !self.player_ignores_hexproof(caster)
+                        && !self.ignores_opponent_hexproof_this_turn(caster))
                 {
                     return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
                 }
@@ -17007,6 +17008,7 @@ impl GameState {
     pub(crate) fn player_ignores_creature_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.player_ignores_hexproof(player)
+            || self.ignores_opponent_hexproof_this_turn(player)
             || self.battlefield.iter().any(|c| {
                 c.controller == player
                     && c.definition
@@ -17090,6 +17092,12 @@ impl GameState {
     /// True if `player` controls a permanent granting the broad "ignore
     /// opponents' hexproof" static (Kaya, Bane of the Dead) — plain `Hexproof`
     /// on opponents' permanents *and* opponent players no longer shields them.
+    /// Detection Tower's turn-scoped grant (`ignore_opponent_hexproof_this_turn`).
+    pub(crate) fn ignores_opponent_hexproof_this_turn(&self, player: usize) -> bool {
+        !self.ignore_opponent_hexproof_this_turn.is_empty()
+            && self.ignore_opponent_hexproof_this_turn.contains(&(player, self.turn_number))
+    }
+
     pub(crate) fn player_ignores_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
