@@ -15832,6 +15832,12 @@ static DECKS: &[Factory] = &[
     super::decks::ant_man_reformed_rogue,
     super::decks::cosmos_charger,
     super::decks::alrund_god_of_the_cosmos,
+    super::decks::campus_renovation,
+    super::decks::repair_and_recharge,
+    super::decks::marit_lages_slumber,
+    super::decks::absorb_identity,
+    super::decks::nimbleclaw_adept,
+    super::decks::dynaheir_invoker_adept,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

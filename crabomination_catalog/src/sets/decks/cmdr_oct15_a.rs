@@ -889,3 +889,180 @@ pub fn alrund_god_of_the_cosmos() -> CardDefinition {
         ..legend("Alrund, God of the Cosmos", vec![CreatureType::God], 1, 1)
     }
 }
+
+/// Campus Renovation — {3}{R}{W} sorcery. Return up to one target artifact or
+/// enchantment card from your graveyard to the battlefield. Exile the top two
+/// cards of your library; until the end of your next turn, you may play them.
+pub fn campus_renovation() -> CardDefinition {
+    CardDefinition {
+        name: "Campus Renovation",
+        cost: cost(&[generic(3), r(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Artifact.or(R::HasCardType(CardType::Enchantment)).and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Repair and Recharge — {3}{W}{W} sorcery. Return target artifact,
+/// enchantment, or planeswalker card from your graveyard to the battlefield.
+/// Create a tapped Powerstone token.
+pub fn repair_and_recharge() -> CardDefinition {
+    CardDefinition {
+        name: "Repair and Recharge",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    R::Artifact
+                        .or(R::HasCardType(CardType::Enchantment))
+                        .or(R::HasCardType(CardType::Planeswalker))
+                        .and(R::InYourGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(TokenDefinition { tapped: true, ..crabomination_base::tokens::powerstone_token() }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Marit Lage's Slumber — {1}{U} legendary snow enchantment. Whenever it or
+/// another snow permanent you control enters, scry 1. At your upkeep, with ten
+/// or more snow permanents, sacrifice it; if you do, Marit Lage (a legendary
+/// 20/20 black flying indestructible Avatar).
+pub fn marit_lages_slumber() -> CardDefinition {
+    let marit = TokenDefinition {
+        name: "Marit Lage".into(),
+        power: 20,
+        toughness: 20,
+        keywords: vec![Keyword::Flying, Keyword::Indestructible],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        ..Default::default()
+    };
+    let ten_snow = Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(R::IsSnow.and(R::ControlledByYou)),
+        n: Value::Const(10),
+    };
+    CardDefinition {
+        name: "Marit Lage's Slumber",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary, Supertype::Snow],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::Any(vec![Predicate::TriggerSourceIsSelf, trigger_is(R::IsSnow)])),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl).with_filter(ten_snow.clone()),
+                effect: Effect::If {
+                    cond: ten_snow,
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::SacrificeSource,
+                        Effect::If {
+                            cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                            then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Arc::new(marit) }),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Absorb Identity — {1}{U} instant. Return target creature to its owner's
+/// hand; you may have Shapeshifters you control become copies of it until end
+/// of turn (copied as it is targeted, before it leaves).
+pub fn absorb_identity() -> CardDefinition {
+    CardDefinition {
+        name: "Absorb Identity",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::MayDo {
+                description: "Have your Shapeshifters become copies of it until end of turn?".into(),
+                body: Box::new(Effect::BecomeCopyOfFor {
+                    what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Shapeshifter).and(R::ControlledByYou)),
+                    source: Selector::Target(0),
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                }),
+            },
+            Effect::Move {
+                what: target_filtered(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Nimbleclaw Adept — {3}{U} 2/3 Dragon Wizard. Bigby's Hand — {T}: untap two
+/// other target permanents; sorcery speed, once each turn.
+pub fn nimbleclaw_adept() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            once_per_turn: true,
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 2,
+                filter: R::Permanent.and(R::OtherThanSource),
+                effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Nimbleclaw Adept", cost(&[generic(3), u()]), vec![CreatureType::Dragon, CreatureType::Wizard], 2, 3)
+    }
+}
+
+/// Dynaheir, Invoker Adept — {1}{U}{R}{W} legendary 4/4 haste Human Wizard.
+/// Your other creatures' abilities activate as though they had haste. {T}:
+/// when you next activate a non-mana ability this turn by spending four or
+/// more mana, copy it.
+pub fn dynaheir_invoker_adept() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(1), u(), r(), w()]),
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "You may activate abilities of other creatures you control as though those creatures had haste.",
+            effect: StaticEffect::ControllerCreatureAbilitiesAsThoughHaste,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::CopyNextCostlyAbilityThisTurn { min_mana: 4 },
+            ..Default::default()
+        }],
+        ..legend("Dynaheir, Invoker Adept", vec![CreatureType::Human, CreatureType::Wizard], 4, 4)
+    }
+}

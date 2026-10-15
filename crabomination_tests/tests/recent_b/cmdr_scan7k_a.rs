@@ -2947,3 +2947,60 @@ fn intellect_devourer_gone_before_its_trigger_exiles_nothing() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == card), "nothing exiled");
 }
+
+/// Campus Renovation returns an artifact and impulse-exiles two.
+#[test]
+fn campus_renovation_returns_and_impulses() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    let forge = g.add_card_to_graveyard(0, catalog::futurist_forge());
+    let cr = g.add_card_to_hand(0, catalog::campus_renovation());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: cr, target: Some(Target::Permanent(forge)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forge).is_some());
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0 && c.may_play_until.is_some()).count(), 2);
+}
+
+/// Repair and Recharge reanimates and makes a tapped Powerstone.
+#[test]
+fn repair_and_recharge_reanimates_with_a_powerstone() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    let forge = g.add_card_to_graveyard(0, catalog::futurist_forge());
+    let rr = g.add_card_to_hand(0, catalog::repair_and_recharge());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: rr, target: Some(Target::Permanent(forge)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forge).is_some());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Powerstone" && c.tapped));
+}
+
+/// Marit Lage's Slumber scries on a snow entry and wakes Marit Lage at ten snow.
+#[test]
+fn marit_lages_slumber_wakes_at_ten_snow() {
+    let mut g = pod(2);
+    library(&mut g, 0, 4);
+    library(&mut g, 1, 4);
+    let sl = ready(&mut g, 0, catalog::marit_lages_slumber());
+    for _ in 0..9 {
+        g.add_card_to_battlefield(0, catalog::snow_covered_island());
+    }
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    step_to(&mut g, 0, TurnStep::Draw);
+    assert!(g.battlefield_find(sl).is_none(), "sacrificed");
+    assert_eq!(named_count(&g, 0, "Marit Lage"), 1);
+}
+
+/// Dynaheir copies the next ability paid with four or more mana.
+#[test]
+fn dynaheir_copies_a_four_mana_activation() {
+    let mut g = pod(2);
+    let dyn_id = ready(&mut g, 0, catalog::dynaheir_invoker_adept());
+    library(&mut g, 0, 6);
+    let forge = ready(&mut g, 0, catalog::futurist_forge());
+    activate(&mut g, dyn_id, 0, None);
+    let hand = g.players[0].hand.len();
+    activate(&mut g, forge, 0, None);
+    assert_eq!(g.players[0].hand.len(), hand + 4, "{{3}}{{U}} draw-two, copied");
+}
