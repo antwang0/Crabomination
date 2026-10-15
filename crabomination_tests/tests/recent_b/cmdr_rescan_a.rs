@@ -1577,3 +1577,33 @@ fn raiding_schemes_conspires_noncreature_spells() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 6);
 }
+
+/// CR 101.2 / 500 — Azor's ETB locks each opponent out of instants and
+/// sorceries during that player's next turn, and only that turn.
+#[test]
+fn azor_silences_each_opponents_next_turn() {
+    let mut g = pod(3);
+    for seat in 0..3 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let azor = g.add_card_to_hand(0, catalog::azor_the_lawbringer());
+    cast_with(&mut g, azor, None, vec![], None);
+    let try_bolt = |g: &mut GameState| {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    step_to(&mut g, 1, TurnStep::PreCombatMain);
+    assert!(try_bolt(&mut g).is_err(), "their next turn is locked");
+    step_to(&mut g, 2, TurnStep::PreCombatMain);
+    try_bolt(&mut g).expect("the lock lasted one turn");
+}

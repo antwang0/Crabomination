@@ -1418,3 +1418,35 @@ pub fn knowledge_exploitation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Azor, the Lawbringer — {2}{W}{W}{U}{U} legendary 6/6 flying Sphinx. When
+/// Azor enters, each opponent can't cast instant or sorcery spells during
+/// that player's next turn. Whenever Azor attacks, you may pay {X}{W}{U}{U};
+/// if you do, gain X life and draw X cards. (Approximation: the {X}{W}{U}{U}
+/// is paid from floating mana, like every `MayPayXPlus`.)
+pub fn azor_the_lawbringer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::PlayerCantCastMatchingDuringTheirNextTurn {
+                who: PlayerRef::EachOpponent,
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            }),
+            on_attack(Effect::MayPayXPlus {
+                extra: cost(&[w(), u(), u()]),
+                description: "Pay {X}{W}{U}{U}: gain X life and draw X".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+                    Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+                ])),
+            }),
+        ],
+        ..legend(
+            "Azor, the Lawbringer",
+            cost(&[generic(2), w(), w(), u(), u()]),
+            vec![CreatureType::Sphinx],
+            6,
+            6,
+        )
+    }
+}
