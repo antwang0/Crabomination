@@ -73092,3 +73092,58 @@ pub const VERIX_BLADEWING_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const FIRESONG_AND_SUNSPEAKER_COMMANDERS: &[CardFactory] = &[firesong_and_sunspeaker];
+
+/// **Firesong and Sunspeaker**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 12 Mountains + 9 Plains = 99.
+/// Firesong and Sunspeaker (EDHREC, fetched 2026-10-15).
+pub const FIRESONG_AND_SUNSPEAKER_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, arcane_signet, boros_signet, primal_amulet, pyromancers_goggles,
+    ruby_medallion, sol_ring, sunforger, swiftfoot_boots, talisman_of_conviction,
+    well_of_lost_dreams, arid_mesa, battlefield_forge, boros_garrison, clifftop_retreat,
+    command_tower, furycalm_snarl, myriad_landscape, rugged_prairie, sacred_foundry,
+    spectator_seating, sundown_pass, temple_of_triumph, wind_scarred_crag, balefire_liege,
+    boros_reckoner, brash_taunter, felidar_sovereign, fire_servant, gisela_blade_of_goldnight,
+    guttersnipe, heartflame_duelist, neheb_the_eternal, phyrexian_vindicator,
+    radiant_scrollwielder, rem_karolus_stalwart_slayer, solphim_mayhem_dominus,
+    storm_kiln_artist, stuffy_doll, torbran_thane_of_red_fell, arcane_bombardment,
+    double_vision, fiery_emancipation, land_tax, repercussion, smothering_tithe, abrade,
+    aurelias_fury, boros_charm, deflecting_palm, intimidation_bolt, invoke_the_divine,
+    lightning_bolt, lightning_helix, olorins_searing_light, path_to_exile, price_of_progress,
+    reverberate, revitalize, sacred_fire, starstorm, swords_to_plowshares, warleaders_helix,
+    jaya_ballard, blasphemous_act, boltwave, chain_reaction, deafening_clarion, earthquake,
+    jeskas_will, mana_geyser, mizzium_mortars, pursue_the_past, rip_apart, rolling_earthquake,
+    star_of_extinction, storms_wrath, thrilling_discovery,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains,
+];
+
+pub const REM_KAROLUS_COMMANDERS: &[CardFactory] = &[rem_karolus_stalwart_slayer];
+
+/// **Rem Karolus, Stalwart Slayer**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 14 Mountains + 10 Plains = 99.
+/// Rem Karolus, Stalwart Slayer (EDHREC, fetched 2026-10-15).
+pub const REM_KAROLUS_MAIN: &[CardFactory] = &[
+    arcane_signet, boros_signet, mind_stone, pyromancers_goggles, sol_ring, sunforger,
+    swiftfoot_boots, talisman_of_conviction, arid_mesa, battlefield_forge, boros_garrison,
+    clifftop_retreat, command_tower, furycalm_snarl, needleverge_pathway, rugged_prairie,
+    sacred_foundry, spectator_seating, sundown_pass, temple_of_triumph, balefire_liege,
+    bastion_protector, chandras_incinerator, esper_sentinel, fire_servant,
+    firesong_and_sunspeaker, gisela_blade_of_goldnight, guttersnipe, heartflame_duelist,
+    kessig_flamebreather, neheb_the_eternal, radiant_scrollwielder, satyr_firedancer,
+    solphim_mayhem_dominus, storm_kiln_artist, taii_wakeen_perfect_shot, tajic_legions_edge,
+    toralf_god_of_fury, torbran_thane_of_red_fell, artists_talent, double_vision,
+    fiery_emancipation, land_tax, mark_of_asylum, repercussion, smothering_tithe, abrade,
+    boros_charm, chaos_warp, deflecting_palm, fault_line, generous_gift, lightning_bolt,
+    lightning_helix, magmaquake, path_to_exile, price_of_progress, swords_to_plowshares,
+    volcanic_fallout, wear_tear, the_wanderer, acidic_soil, blasphemous_act, chain_reaction,
+    deafening_clarion, earthquake, faithless_looting, fiery_confluence, flame_rift, jeskas_will,
+    mana_geyser, molten_disaster, rip_apart, rolling_earthquake, star_of_extinction,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains,
+];

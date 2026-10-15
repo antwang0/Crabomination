@@ -16068,6 +16068,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VERIX_BLADEWING_COMMANDERS,
             main: decks::VERIX_BLADEWING_MAIN,
         },
+        // Seat 2603: Firesong and Sunspeaker's EDHREC average deck. `--pod-decks 2603`.
+        PodDeck {
+            name: "Firesong and Sunspeaker (WR)",
+            commanders: decks::FIRESONG_AND_SUNSPEAKER_COMMANDERS,
+            main: decks::FIRESONG_AND_SUNSPEAKER_MAIN,
+        },
+        // Seat 2604: Rem Karolus, Stalwart Slayer's EDHREC average deck. `--pod-decks 2604`.
+        PodDeck {
+            name: "Rem Karolus, Stalwart Slayer (WR)",
+            commanders: decks::REM_KAROLUS_COMMANDERS,
+            main: decks::REM_KAROLUS_MAIN,
+        },
     ]
 }
 
@@ -20503,6 +20515,8 @@ mod tests {
             ("Old Man Willow", &[0x143E]),
             ("Daghatar the Adamant", &[0x143F]),
             ("Verix Bladewing", &[0x1440]),
+            ("Firesong and Sunspeaker", &[0x1441]),
+            ("Rem Karolus, Stalwart Slayer", &[0x1442]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
