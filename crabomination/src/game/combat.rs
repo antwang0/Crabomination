@@ -5691,7 +5691,8 @@ impl GameState {
                         SE::PreventDamageToSelfTradingCounters { .. }
                         | SE::PreventDamageToSelfWhileCountersForRad { .. }
                         | SE::PreventDamageToSelfOpponentGainsControl
-                        | SE::PreventDamageToSelfSourceControllerDraws => sekki = true,
+                        | SE::PreventDamageToSelfSourceControllerDraws
+                        | SE::ReplaceDamageToSelfWithSacrifices => sekki = true,
                         SE::PreventCombatDamageToSelfAndGrow => grows = true,
                         SE::ReplaceDamageToSelfWithCounters { kind: k, how } => {
                             kind.get_or_insert((k, how, c.controller));
@@ -5836,7 +5837,26 @@ impl GameState {
         source: Option<CardId>,
         events: &mut Vec<GameEvent>,
     ) -> bool {
-        if dealt == 0 || self.prevention_off() {
+        if dealt == 0 {
+            return false;
+        }
+        // Dralnu, Lich Lord — a replacement (CR 614), so it bites even when
+        // damage can't be prevented: its controller sacrifices that many
+        // permanents, others first, instead.
+        if let Some(controller) = self.battlefield_find(recipient).and_then(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|s| matches!(s.effect, crate::effect::StaticEffect::ReplaceDamageToSelfWithSacrifices))
+                .then_some(c.controller)
+        }) {
+            let cands = self.sacrifice_candidates(controller, &crate::card::SelectionRequirement::Any, Some(recipient));
+            for id in self.auto_pick_sacrifices(&cands, dealt as usize, Some(recipient), false, false) {
+                self.sacrifice_one(id, controller, events);
+            }
+            return true;
+        }
+        if self.prevention_off() {
             return false;
         }
         // Swans of Bryn Argoll — prevent it; the source's controller draws

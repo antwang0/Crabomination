@@ -1882,3 +1882,25 @@ pub fn the_everforger() -> CardDefinition {
         ..legend("The Everforger", vec![CreatureType::Construct], 4, 5)
     }
 }
+
+/// Dralnu, Lich Lord — {3}{U}{B} legendary 3/3 Zombie Wizard. Damage to him
+/// is replaced by sacrificing that many permanents (CR 614). {T}: target
+/// instant or sorcery card in your graveyard gains flashback until end of
+/// turn, at its mana cost.
+pub fn dralnu_lich_lord() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[generic(3), u(), b()]),
+        static_abilities: vec![StaticAbility {
+            description: "If damage would be dealt to Dralnu, sacrifice that many permanents instead.",
+            effect: StaticEffect::ReplaceDamageToSelfWithSacrifices,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantFlashbackThisTurn {
+                what: target_filtered(R::InYourGraveyard.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))),
+            },
+            ..Default::default()
+        }],
+        ..legend("Dralnu, Lich Lord", vec![CreatureType::Zombie, CreatureType::Wizard], 3, 3)
+    }
+}

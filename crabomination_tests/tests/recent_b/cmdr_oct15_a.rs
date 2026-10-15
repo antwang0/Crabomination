@@ -157,3 +157,58 @@ fn the_everforger_copies_one_artifact_creature_a_turn() {
     }
     assert_eq!(named_count(&g, 0, "Ornithopter"), 3, "two cast, one copy");
 }
+
+/// CR 614 — Dralnu, Lich Lord: a Bolt at him sacrifices three other
+/// permanents instead, and he survives; {T} gives a graveyard Bolt flashback.
+#[test]
+fn dralnu_sacrifices_instead_of_taking_damage() {
+    use crabomination::game::types::Target;
+    let mut g = pod(2);
+    let dralnu = ready(&mut g, 0, catalog::dralnu_lich_lord());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(dralnu)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dralnu).is_some(), "no damage dealt");
+    assert_eq!(named_count(&g, 0, "Swamp"), 1, "three Swamps sacrificed");
+    let mine = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: dralnu, ability_index: 0, target: Some(Target::Permanent(mine)), additional_targets: vec![], x_value: None, mode: None })
+        .expect("grant flashback");
+    drain_stack(&mut g);
+    let card = g.players[0].graveyard.iter().find(|c| c.id == mine).expect("still in the graveyard");
+    assert!(card.granted_flashback_eot.is_some(), "flashback until end of turn");
+}
+
+/// CR 614 — combat damage to a blocking Dralnu is replaced the same way.
+#[test]
+fn dralnu_blocking_sacrifices_for_combat_damage() {
+    let mut g = pod(2);
+    let dralnu = ready(&mut g, 1, catalog::dralnu_lich_lord());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::swamp());
+    }
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(dralnu, bear)])).expect("block");
+    drain_stack(&mut g);
+    while g.step != TurnStep::EndCombat {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(dralnu).is_some_and(|c| c.damage == 0), "no damage marked");
+    assert_eq!(named_count(&g, 1, "Swamp"), 1, "two Swamps for the Bears' two");
+    assert!(g.battlefield_find(bear).is_none(), "Dralnu's 3 kills the Bears");
+}

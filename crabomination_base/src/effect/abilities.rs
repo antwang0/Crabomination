@@ -3449,6 +3449,11 @@ pub enum StaticEffect {
         #[serde(default)]
         how: DamageToCounters,
     },
+    /// CR 614 — "If damage would be dealt to this creature, sacrifice that
+    /// many permanents instead" (Dralnu, Lich Lord). A replacement, not a
+    /// prevention, so it applies even when damage can't be prevented. Read
+    /// by `trade_counters_for_damage`, the combat and noncombat funnel.
+    ReplaceDamageToSelfWithSacrifices,
     /// "If equipped creature would be dealt damage, prevent that damage and put
     /// that many `kind` counters on it" (Panther Habit): the
     /// `ReplaceDamageToSelfWithCounters` of the permanent this is attached to,

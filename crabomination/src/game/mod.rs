@@ -35237,6 +35237,7 @@ fn static_effect_to_effects(
             // ReplaceDamageToSelfWithCounters / CombatDamageToPlayerBecomes… —
             // consulted at the combat + noncombat damage sites, not continuous.
             | StaticEffect::ReplaceDamageToSelfWithCounters { .. }
+            | StaticEffect::ReplaceDamageToSelfWithSacrifices
             | StaticEffect::ReplaceDamageToAttachedWithCounters { .. }
             | StaticEffect::ReplaceDamageToOtherCreaturesYouControlWithCounters { .. }
             | StaticEffect::CombatDamageToPlayerBecomesCountersAndMill
