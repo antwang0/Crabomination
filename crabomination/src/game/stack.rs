@@ -1058,9 +1058,9 @@ impl GameState {
                 self.last_cast_spell_colors.clear();
                 self.noncreature_spells_cast_this_turn = 0;
                 self.opponent_cast_since_your_turn &=
-                    !crate::game::seat_bit(self.active_player_idx);
+                    !(crate::game::seat_bit(self.active_player_idx) as u32);
                 self.combat_damaged_since_your_turn &=
-                    !crate::game::seat_bit(self.active_player_idx);
+                    !(crate::game::seat_bit(self.active_player_idx) as u32);
                 // A funded spell that never entered leaves its grant behind.
                 if !self.pending_etb_keyword_grants.is_empty() {
                     self.pending_etb_keyword_grants.clear();

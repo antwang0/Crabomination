@@ -3355,11 +3355,11 @@ impl GameState {
             Predicate::OpponentCastSpellSinceYourTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()
-                .any(|&p| self.opponent_cast_since_your_turn & crate::game::seat_bit(p) != 0),
+                .any(|&p| u64::from(self.opponent_cast_since_your_turn) & crate::game::seat_bit(p) != 0),
             Predicate::CombatDamagedSinceYourTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()
-                .any(|&p| self.combat_damaged_since_your_turn & crate::game::seat_bit(p) != 0),
+                .any(|&p| u64::from(self.combat_damaged_since_your_turn) & crate::game::seat_bit(p) != 0),
             Predicate::SearchedLibraryThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()

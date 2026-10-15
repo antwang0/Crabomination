@@ -6297,7 +6297,7 @@ impl GameState {
                     // One `Player::deref_mut` for the run: `Player` is a CoW
                     // handle, so each write below was its own `Arc::make_mut`.
                     let atk_id = atk.id;
-                    self.combat_damaged_since_your_turn |= crate::game::seat_bit(p);
+                    self.combat_damaged_since_your_turn |= crate::game::seat_bit(p) as u32;
                     let pl = &mut *self.players[p];
                     pl.was_dealt_damage_this_turn = true;
                     pl.damage_taken_this_turn = pl.damage_taken_this_turn.saturating_add(amount);

@@ -3003,15 +3003,16 @@ pub struct GameState {
     /// by `finalize_cast`, cleared for the active player at cleanup. A mask
     /// on the state rather than a `Player` flag because writing one seat's
     /// flag deep-copies that seat's `PlayerData` through the CoW handle —
-    /// 5,800 unshares per six bench games for one bit. Seats past 63 are not
-    /// tracked; no supported format seats that many.
+    /// 5,800 unshares per six bench games for one bit. Seats past 31 are not
+    /// tracked; no supported format seats that many. `u32`, not `u64`: the two
+    /// masks share one word, which keeps `GameState` under its size cap.
     #[serde(default)]
-    pub(crate) opponent_cast_since_your_turn: u64,
+    pub(crate) opponent_cast_since_your_turn: u32,
     /// Seat mask: bit `s` is set once seat `s` has been dealt combat damage
     /// since its last turn ended (`Predicate::CombatDamagedSinceYourTurn`).
     /// Cleared for the active player at cleanup, as the mask above.
     #[serde(default)]
-    pub(crate) combat_damaged_since_your_turn: u64,
+    pub(crate) combat_damaged_since_your_turn: u32,
     /// Printed colours of the most recently cast spell this turn — Mana
     /// Maze's cast restriction. Cleared at Cleanup.
     ///

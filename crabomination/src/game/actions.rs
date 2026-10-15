@@ -13303,7 +13303,7 @@ impl GameState {
         // write on the state; the per-`Player` flag this replaced unshared a
         // whole `PlayerData` per cast.
         self.opponent_cast_since_your_turn |=
-            crate::game::seat_mask(self.players.len()) & !crate::game::seat_bit(p);
+            (crate::game::seat_mask(self.players.len()) & !crate::game::seat_bit(p)) as u32;
         // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with
         // the same name").
         {
