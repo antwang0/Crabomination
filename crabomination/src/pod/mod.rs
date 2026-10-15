@@ -15858,6 +15858,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LITA_2_COMMANDERS,
             main: decks::LITA_2_MAIN,
         },
+        // Seat 2568: Phage the Untouchable's EDHREC average deck. `--pod-decks 2568`.
+        PodDeck {
+            name: "Phage the Untouchable (B)",
+            commanders: decks::PHAGE_THE_UNTOUCHABLE_COMMANDERS,
+            main: decks::PHAGE_THE_UNTOUCHABLE_MAIN,
+        },
     ]
 }
 
@@ -20258,6 +20264,7 @@ mod tests {
             ("The Prydwen, Steel Flagship", &[0x141B]),
             ("Losheel, Clockwork Scholar", &[0x141C]),
             ("Lita, Mechanical Engineer", &[0x141D]),
+            ("Phage the Untouchable", &[0x141E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

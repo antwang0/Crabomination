@@ -72124,3 +72124,30 @@ pub const LITA_2_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains,
 ];
+
+pub const PHAGE_THE_UNTOUCHABLE_COMMANDERS: &[CardFactory] = &[phage_the_untouchable];
+
+/// **Phage the Untouchable**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Swamps = 99.
+/// Phage the Untouchable (EDHREC, fetched 2026-10-15).
+pub const PHAGE_THE_UNTOUCHABLE_MAIN: &[CardFactory] = &[
+    arcane_signet, bolass_citadel, brotherhood_regalia, caged_sun, campfire, expedition_map,
+    jet_medallion, key_to_the_city, lightning_greaves, netherborn_altar, sol_ring,
+    sundial_of_the_infinite, swiftfoot_boots, the_golden_throne, throne_of_eldraine, torpor_orb,
+    trailblazers_boots, whispersilk_cloak, bojuka_bog, cabal_coffers, cabal_stronghold,
+    command_beacon, myriad_landscape, nykthos_shrine_to_nyx, rogues_passage,
+    shizo_deaths_storehouse, the_black_gate, urborg_tomb_of_yawgmoth, witchs_cottage,
+    avatar_of_woe, burnished_hart, crypt_ghast, dread_presence, filth,
+    gray_merchant_of_asphodel, krrik_son_of_yawgmoth, karn_argent_defender, leaden_myr,
+    magus_of_the_coffers, nirkana_revenant, phyrexian_obliterator, platinum_angel,
+    silent_arbiter, solemn_simulacrum, thrull_wizard, varragoth_bloodsky_sire,
+    black_market_connections, dauthi_embrace, endless_whispers, lichs_mastery, no_mercy,
+    phyrexian_arena, phyrexian_reclamation, dark_ritual, darkness, defile, imps_mischief,
+    stinging_study, stunning_reversal, sudden_spoiling, vampiric_tutor, withering_boon,
+    liliana_of_the_dark_realms, bubbling_muck, damnation, demonic_tutor, diabolic_tutor,
+    exsanguinate, feed_the_swarm, mutilate, nights_whisper, read_the_bones, sign_in_blood,
+    toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
