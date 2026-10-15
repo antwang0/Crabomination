@@ -16344,6 +16344,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ADAMARO_COMMANDERS,
             main: decks::ADAMARO_MAIN,
         },
+        // Seat 2649: Gimli, Mournful Avenger's EDHREC average deck. `--pod-decks 2649`.
+        PodDeck {
+            name: "Gimli, Mournful Avenger (RG)",
+            commanders: decks::GIMLI_COMMANDERS,
+            main: decks::GIMLI_MAIN,
+        },
+        // Seat 2650: Tam, Observant Sequencer's EDHREC average deck. `--pod-decks 2650`.
+        PodDeck {
+            name: "Tam, Observant Sequencer (UG)",
+            commanders: decks::TAM_COMMANDERS,
+            main: decks::TAM_MAIN,
+        },
+        // Seat 2651: Mikey & Leo, Chaos & Order's EDHREC average deck. `--pod-decks 2651`.
+        PodDeck {
+            name: "Mikey & Leo, Chaos & Order (WG)",
+            commanders: decks::MIKEY_LEO_COMMANDERS,
+            main: decks::MIKEY_LEO_MAIN,
+        },
+        // Seat 2652: The Fire Nation Drill's EDHREC average deck. `--pod-decks 2652`.
+        PodDeck {
+            name: "The Fire Nation Drill (B)",
+            commanders: decks::THE_FIRE_NATION_DRILL_COMMANDERS,
+            main: decks::THE_FIRE_NATION_DRILL_MAIN,
+        },
+        // Seat 2653: Yoshimaru, Beloved Companion's EDHREC average deck. `--pod-decks 2653`.
+        PodDeck {
+            name: "Yoshimaru, Beloved Companion (W)",
+            commanders: decks::YOSHIMARU_2_COMMANDERS,
+            main: decks::YOSHIMARU_2_MAIN,
+        },
+        // Seat 2654: Iron Man, Futurist Paragon's EDHREC average deck. `--pod-decks 2654`.
+        PodDeck {
+            name: "Iron Man, Futurist Paragon (U)",
+            commanders: decks::IRON_MAN_5_COMMANDERS,
+            main: decks::IRON_MAN_5_MAIN,
+        },
     ]
 }
 
@@ -20825,6 +20861,12 @@ mod tests {
             ("Spider-Girl, Legacy Hero", &[0x146C]),
             ("Azor, the Lawbringer", &[0x146D]),
             ("Adamaro, First to Desire", &[0x146E]),
+            ("Gimli, Mournful Avenger", &[0x146F]),
+            ("Tam, Observant Sequencer", &[0x1470]),
+            ("Mikey & Leo, Chaos & Order", &[0x1471]),
+            ("The Fire Nation Drill", &[0x1472]),
+            ("Yoshimaru, Beloved Companion", &[0x1473]),
+            ("Iron Man, Futurist Paragon", &[0x1474]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
