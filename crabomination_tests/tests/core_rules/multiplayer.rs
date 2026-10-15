@@ -227,6 +227,21 @@ fn hostile_auto_target_falls_through_to_another_opponent() {
     assert_eq!(t, Some(Target::Permanent(theirs)), "not {mine:?}");
 }
 
+/// CR 115.4 / 702.11 — a hostile "any target" auto-pick skips a hexproof
+/// opponent for another opponent, then an opposing creature, and names its
+/// own controller only last: The Black Arrow's ping hit its caster's face.
+#[test]
+fn hostile_any_target_skips_a_hexproof_opponent_before_its_own_face() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    g.add_card_to_battlefield(1, catalog::leyline_of_sanctity());
+    let ping = catalog::shock().effect.clone();
+    assert_eq!(g.auto_target_for_effect(&ping, 0), Some(Target::Player(2)), "the other opponent");
+    g.add_card_to_battlefield(2, catalog::leyline_of_sanctity());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.auto_target_for_effect(&ping, 0), Some(Target::Permanent(bear)), "not seat 0's face");
+}
+
 /// CR 601.2c — "up to one target": with only its own side's permanents to
 /// name, a removal-shaped optional slot is declined rather than aimed home.
 /// Drach'Nyen's entry exile took its controller's own Bear; a "target

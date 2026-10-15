@@ -283,8 +283,17 @@ impl GameState {
         if accepts_player && !gathers {
             let player_primary = Target::Player(primary_player);
             if is_legal(&player_primary) { return Some(player_primary); }
-            let player_secondary = Target::Player(secondary_player);
-            if is_legal(&player_secondary) { return Some(player_secondary); }
+            if prefer_friendly {
+                let player_secondary = Target::Player(secondary_player);
+                if is_legal(&player_secondary) { return Some(player_secondary); }
+            } else if let Some(t) = self
+                .living_seats()
+                .filter(|&p| p != primary_player && p != controller && !self.same_team(p, controller))
+                .map(Target::Player)
+                .find(|t| is_legal(t))
+            {
+                return Some(t);
+            }
         }
 
         // Stack walk for counter-class effects (Spell Queller, Mystic
@@ -500,6 +509,15 @@ impl GameState {
             others.sort_by_cached_key(|c| (legend_copy(c.0), hostile_ward(c.0), std::cmp::Reverse(c.1)));
             if let Some(&(cid, _)) = others.first() {
                 return Some(Target::Permanent(cid));
+            }
+        }
+        // A hostile "any target" reaches its own controller only once no
+        // opponent and no opposing permanent is legal: The Black Arrow's ping
+        // went to its caster's face past a hexproof player's Dragon.
+        if accepts_player && !gathers && !prefer_friendly {
+            let me = Target::Player(controller);
+            if is_legal(&me) {
+                return Some(me);
             }
         }
         for pass_warded in [false, true] {
