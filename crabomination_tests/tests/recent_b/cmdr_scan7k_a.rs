@@ -3004,3 +3004,19 @@ fn dynaheir_copies_a_four_mana_activation() {
     activate(&mut g, forge, 0, None);
     assert_eq!(g.players[0].hand.len(), hand + 4, "{{3}}{{U}} draw-two, copied");
 }
+
+/// CR 800.4 — Endless Whispers in a pod returns the dead creature under ONE
+/// opponent's control at the next end step. Its destination read
+/// `EachOpponent`, which names two players here and panicked the resolver
+/// (sweep seeds 930608 and 931908).
+#[test]
+fn endless_whispers_returns_under_one_opponent_in_a_pod() {
+    let mut g = pod(3);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::endless_whispers());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    kill(&mut g, bear);
+    step_to(&mut g, 0, TurnStep::End);
+    let back = g.battlefield_find(bear).expect("returned at the end step");
+    assert_ne!(back.controller, 0, "under an opponent's control");
+}

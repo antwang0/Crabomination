@@ -17487,11 +17487,14 @@ fn play_pod_game(
         #[cfg(debug_assertions)]
         if !g.is_game_over() && g.pending_decision.is_none() && g.suspend_signal.is_none() {
             // CR 704.5a — a living player at 0 or less life who can lose has lost.
+            // The waiver is the sweep's own: Phyrexian Unlife *and* a live
+            // `ControllerDoesntLoseForZeroLife` (Pact Weapon while attached —
+            // seed 931068 had Gollum's pilot alive at -13 under one).
             if let Some(i) = (0..g.players.len()).find(|&i| {
                 g.players[i].is_alive()
                     && g.effective_life(i) <= 0
                     && !g.player_cant_lose_game(i)
-                    && !g.player_unlife_active(i)
+                    && !g.player_zero_life_waived(i)
             }) {
                 panic!(
                     "seed {seed}: p{i} is alive at {} life after the sweep (turn {}, {:?}, after {actions} actions)",
