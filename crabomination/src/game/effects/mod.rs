@@ -26526,7 +26526,13 @@ impl GameState {
             Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot } => {
                 // "with mana value less than that creature's" (Arni Metalbrow)
                 // rides an X bound by `WithX`.
-                let filter = &filter.resolve_x(ctx.x_value);
+                let mut filter = filter.resolve_x(ctx.x_value);
+                // A hand card has no source to compare with: concretize
+                // "lesser power" against the attacker (Shadowfax).
+                if let Some(src) = ctx.source.and_then(|s| self.battlefield_find(s)) {
+                    filter = filter.resolve_source_power(self.effective_power(src));
+                }
+                let filter = &filter;
                 use crate::game::types::AttackTarget;
                 // Only meaningful mid-combat (the source is attacking).
                 if self.attacking.is_empty() {

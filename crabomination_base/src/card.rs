@@ -4561,6 +4561,8 @@ impl SelectionRequirement {
             Self::ManaValueAtMostSourcePower => Self::ManaValueAtMost(power.max(0) as u32),
             Self::ManaValueLessThanSourcePower if power >= 1 => Self::ManaValueAtMost((power - 1) as u32),
             Self::ManaValueLessThanSourcePower => Self::Not(Box::new(Self::Any)),
+            // Shadowfax's "creature card with lesser power" from hand.
+            Self::PowerLessThanSource => Self::PowerAtMost(power - 1),
             Self::And(a, b) => Self::And(
                 Box::new(a.resolve_source_power(power)),
                 Box::new(b.resolve_source_power(power)),
