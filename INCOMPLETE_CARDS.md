@@ -2185,3 +2185,4 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Lightmine Field | "each of those creatures" / "the number of attacking creatures" read every attacker as the trigger resolves, not the declaration that triggered it | `YouAttack` + `IsAttacking` |
 | 🟡 Pick Up the Pace | "cards exiled with this enchantment" stay playable after the enchantment leaves (the permission is not tied to it, like Neyali's) | `ExileTopAndGrantMayPlay { TurnsHolderAttacks }` |
 | 🟡 Volcano Hellion | "an amount of damage of your choice" is offered up to the target creature's toughness, not without limit | `PlayerChoosesNumber { max: ToughnessOf(Target(0)) }` |
+| 🟡 The Kingpin of Crime | the attack trigger's "creatures with toughness greater than their power" is the set as it resolves; a creature that qualifies later in the turn doesn't assign by toughness (CR 611.2c) | `GrantKeyword { AssignsCombatDamageByToughness, EndOfTurn }` |

@@ -3136,6 +3136,24 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-15 (Commander run, `01ANcpHx`) — guardrail; 63 seats, 102 cards, four primitives, two bot fixes
+
+Hot-path touches: the hostile auto-target's player block tries other living
+opponents before the controller (and names the controller only after the
+permanent walks); populate's default reads a token's triggered abilities for
+`Populate` when it counts copies. Neither is in the fixed pool. Release
+`bot_ladder` at `93b6da0b6`'s parent, toolchain 1.99, Xeon @ 2.80 GHz, 4 cores.
+
+```text
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical;
+                 determinism ok (all pairs split); thread_determinism ok (3 vs
+                 1); peak_rss 36.1 MiB; games_per_s 249.38 (host_calib_ms 46);
+                 release build 14m53s
+golden traces    unchanged (core_rules golden_trace, pod digests included)
+pod sweeps       audit build: every deck x 4,6,8 seats, 2,774 games, 0 panics,
+                 6 undecided (ENGINE_BACKLOG `01ANcpHx`)
+```
+
 ### 2026-10-14 (Commander run, `01BeJu7Q`) — guardrail; the ranks 1-5500 rescan, 81 seats, eleven primitives
 
 Hot-path touches: `adjust_life` multiplies a loss by `life_loss_multiplier_now`

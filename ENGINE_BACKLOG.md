@@ -124,6 +124,34 @@ the handoff.
 8. **The concurrent eighteenth run (`01Xu59CH`, ENGINE_BACKLOG "eighteenth Commander run"):** CR 601.2c (every required slot at cast; ratchet `spells_requiring_two_targets_print_no_optional_target`), CR 701.21a (only a controller sacrifices), CR 115.3 (an "up to N" instance under an `If`), `LastMoved` never names a commander gone home (Tinybones), Gishath's "any number" pick + the bot declining a loop-starting entry (Polyraptor), loop watch sees face-down faces, Soul Cauldron sink gate, Subtlety, seat 356 Anti-Venom; `audit_cr_citations.py` catches a real-but-wrong keyword number (report 0; absent numbers 61 → 48). **Sweeps: plain 181001/182001/187001, `--a dflt` 183001, fuzzed strict 184001/185001/186001 — ~48,000 pod games, 6 aborts, all fixed.** Fuzz (`CRAB_POD_FUZZ=300 CRAB_ANSWER_LOG=strict`) found 4 of the 6: run it every session. **Gates at `80eea8640`:** strict suite 24,889 / 2 / 5 (both the reveal answer-log leak, fixed concurrently); workspace clippy 0; `--bench` 196,176 / 27.64 / 613.0 byte-identical, both determinism checks ok; paired A/B vs the run's base +3.3 % (PERF). (Both of its open rows are closed: a `TriggerSource` that left its graveyard before resolution is a new object (CR 400.7), and a counter is now growth to the loop watch.)
 9. **The concurrent nineteenth run (`01Vk2K6g`, ENGINE_BACKLOG "nineteenth Commander run"):** seats 357-368, 372-375 and 379 (Avatar Aang: bending events, `KeywordAct::Bent`) (Fire Lord Zuko … Toph, the First Metalbender; ~140 cards in `decks::cmdr_edhrec3`, 20 primitives), each 40 debug pod games decided. ⚠ It built Miirym + Tiamat in parallel with the other session; its copies were dropped at the rebase — fetch before *starting* a deck. Gates at `f2d66e817`: suite 25,282 / 0 / 6 (after registering Avatar Kyoshi) + the long-pole `cr_903_5a_the_official_precon_seats_play_pod_games` (2,011 s), clippy 0, `--bench` byte-identical + both determinism checks, release pod smoke 970 games (4/6/19 seats + the new seats) 0 panics, 1 undecided (a Miirym / Astral Dragon / Ureni token board cap). Final tip `5ccaee51b`: suite 25,316 / 0 / 6, clippy 0, `--bench` byte-identical. Then audit sweeps 197001 + fuzzed 198001 over seats 335-378 only (`pod_sweep.py --decks 335-378`, 2,220 games): 0 aborts; an Anti-Venom / All Will Be One loop fixed (CR 109.5: a damage-to-counters replacement's controller puts the counters). Scan after seat 379: Iroh 4, Lorehold 4, High Perfect Morcant 6, Obeka 7, Galadriel 7 (scry triggers, the Ring).
 
+## FIXED/OPEN 2026-10-15 (Commander run, `01ANcpHx`) — the full-list scan's two-card gaps
+
+- **Scan:** all 6,799 EDHREC commanders (70 pages, average decks fetched 8-wide); 63 seats
+  (2544-2558, 2568, 2572-2580, 2583-2602, 2609-2626), 102 cards in `decks::cmdr_scan7k_a`..`f`,
+  mostly the cards several two-card-gap decks share. A concurrent session worked the one-card gaps
+  (`cmdr_rescan_c`) on the same branch; tests for this run live in `recent_b/cmdr_scan7k_a.rs` and
+  the factory rows at the end of `DECKS`, so the two stop colliding.
+- **Primitives:** `WardCost::ManaOrMana` (Thrull Wizard's "{B} or {3}"),
+  `CumulativeUpkeepCost::OpponentGainsLife` (Wall of Shards), `PlaneswalkerSubtype::Worzel`,
+  `CreatureType::Eternal`.
+- **FIXED (bot):** a hostile "any target" auto-pick fell from the ranked opponent straight to its
+  controller's face — The Black Arrow pinged its caster past a hexproof opponent's Dragon. Other
+  opponents, then opposing permanents, come first now (`targeting.rs`;
+  `multiplayer::hostile_any_target_skips_a_hexproof_opponent_before_its_own_face`).
+- **FIXED (action cap, sweep seed 922560):** Nesting Dovehawk tokens populated more Dovehawk tokens
+  each combat (doubling a turn, every token feeding every Dovehawk's counter trigger); populate's
+  default skips a self-populating token past `TOKEN_DOUBLER_CEILING` copies.
+- **Sweeps (audit build):** seats 2400-2558 × 4,6 seats, 201 games, 0 bad; every deck × 4,6,8 seats
+  (seed 9202), 2,774 games, **0 panics**, 6 undecided: 3 legitimate CR 104.4 draws (simultaneous
+  losses; Ganax's true loop), the Dovehawk cap above, and two **OPEN board caps** — Mazirek + Scurry
+  Oak + Iridescent Hornbeetle (6 seats, seed 920254 game 1) and Roil Elemental + Zagorka + Machine Man
+  (seed 921736 game 1): token explosions the bot opts into, the Preston / Cathars' Crusade lever.
+- **OPEN (bot):** storm-style cast copies keep the original's target by default (Photon Blast
+  Barrage's copies all hit one creature, the rest fizzling once it dies).
+- **Blocked (primitive):** My Precious (an Adventure half with an additional sacrifice cost —
+  `Adventure` has no `additional_cast_cost`, 173 literals), Charging Tuskodon (a per-creature
+  "double combat damage to a player"), Sahir (lose *exactly* 1 life from your own source).
+
 ## FIXED/OPEN 2026-10-14 (Commander run, `01KXJ5zX`) — EDHREC ranks 4501-5500
 
 - **FIXED (`f8c7dc177`) CR 113.10b:** the destroy/sacrifice funnel (`remove_to_graveyard_with_triggers`) and the SBA lethal-damage funnel read the dying creature's *printed* triggers even when a layer-6 strip had removed them — a stripped Hellcat returned on every death. Both now skip them under `GameState::lost_all_abilities`. **FIXED (`adf436766`):** the bounce/exile exit snapshot (`note_left_without_dying`, `lki_clone`) now drops a stripped permanent's printed triggers, read before it leaves.
