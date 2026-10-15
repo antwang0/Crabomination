@@ -12152,6 +12152,31 @@ impl GameState {
     /// the AutoDecider heuristic for a forced "Sacrifice another …" activation
     /// cost, so the activator keeps their higher-power creatures. Ties keep the
     /// candidates' (battlefield) order via a stable sort.
+    /// The cheapest set of at least one of `candidates` (battlefield ids)
+    /// whose mana values sum to `need` or more: a single permanent that covers
+    /// it alone (the lowest such), else the biggest first until covered.
+    /// `None` when the whole set falls short.
+    pub(crate) fn cheapest_mana_value_cover(&self, candidates: &[CardId], need: u32) -> Option<Vec<CardId>> {
+        let mut by_mv: Vec<(u32, CardId)> = candidates
+            .iter()
+            .filter_map(|&id| self.battlefield_find(id).map(|c| (c.definition.cost.cmc(), id)))
+            .collect();
+        by_mv.sort();
+        if let Some(&(_, id)) = by_mv.iter().find(|(mv, _)| *mv >= need) {
+            return Some(vec![id]);
+        }
+        let mut total = 0;
+        let mut picks = Vec::new();
+        for &(mv, id) in by_mv.iter().rev() {
+            total += mv;
+            picks.push(id);
+            if total >= need {
+                return Some(picks);
+            }
+        }
+        None
+    }
+
     pub(crate) fn auto_pick_lowest_power(&self, candidates: &[CardId], count: usize) -> Vec<CardId> {
         // Power first, then — among equals — a token before a card and the
         // cheaper card before the dearer: a 2/2 legend worth five mana went
@@ -22752,39 +22777,56 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, Some(card_id)))
                 .map(|c| c.id)
                 .collect();
-            if candidates.len() < *count as usize {
-                return Err(GameError::SelectionRequirementViolated);
-            }
-            // CR 602.5b — the activator picks a single exile: a UI seat with
-            // a real choice is asked (and the activation replays with the
-            // pick); everyone else gets the lowest-power auto-pick.
-            if let Some(chosen) = chosen_exile_permanent.filter(|c| candidates.contains(c)) {
-                vec![chosen]
-            } else if *count == 1 && candidates.len() > 1 && self.players[p].manual_mana {
-                let source_name =
-                    self.battlefield_find(card_id).map(|c| c.definition.name.to_string()).unwrap_or_default();
-                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
-                    decision: crate::decision::Decision::ChooseTarget {
-                        optional: false,
-                        source: card_id,
-                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
-                        source_name,
-                        description: "choose a permanent to exile (cost)".into(),
-                        extra_cast_slot: false,
-                    },
-                    resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
-                        activator: p,
-                        card_id,
-                        ability_index,
-                        target,
-                        additional_targets: additional_targets.clone(),
-                        x_value,
-                        kind: crate::game::types::AbilityCostChoice::ExilePermanent,
-                    },
-                }));
-                return Ok(());
+            if ability.exile_permanent_cost_covers_target_mv {
+                // Fabrication Foundry — X is the exiled total; the target's
+                // mana value must fit under it.
+                let need = match target {
+                    Some(Target::Permanent(t)) => self
+                        .players
+                        .iter()
+                        .flat_map(|pl| pl.graveyard.iter())
+                        .find(|c| c.id == t)
+                        .map(|c| c.definition.cost.cmc())
+                        .ok_or(GameError::SelectionRequirementViolated)?,
+                    _ => return Err(GameError::SelectionRequirementViolated),
+                };
+                self.cheapest_mana_value_cover(&candidates, need)
+                    .ok_or(GameError::SelectionRequirementViolated)?
             } else {
-                self.auto_pick_lowest_power(&candidates, *count as usize)
+                if candidates.len() < *count as usize {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                // CR 602.5b — the activator picks a single exile: a UI seat with
+                // a real choice is asked (and the activation replays with the
+                // pick); everyone else gets the lowest-power auto-pick.
+                if let Some(chosen) = chosen_exile_permanent.filter(|c| candidates.contains(c)) {
+                    vec![chosen]
+                } else if *count == 1 && candidates.len() > 1 && self.players[p].manual_mana {
+                    let source_name =
+                        self.battlefield_find(card_id).map(|c| c.definition.name.to_string()).unwrap_or_default();
+                    self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                        decision: crate::decision::Decision::ChooseTarget {
+                            optional: false,
+                            source: card_id,
+                            legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                            source_name,
+                            description: "choose a permanent to exile (cost)".into(),
+                            extra_cast_slot: false,
+                        },
+                        resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                            activator: p,
+                            card_id,
+                            ability_index,
+                            target,
+                            additional_targets: additional_targets.clone(),
+                            x_value,
+                            kind: crate::game::types::AbilityCostChoice::ExilePermanent,
+                        },
+                    }));
+                    return Ok(());
+                } else {
+                    self.auto_pick_lowest_power(&candidates, *count as usize)
+                }
             }
         } else {
             Vec::new()

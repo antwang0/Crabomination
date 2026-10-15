@@ -5007,6 +5007,15 @@ pub struct ActivatedAbility {
     /// exiled permanent's mana value is stamped for `Value::ExiledForCostManaValue`.
     #[serde(default)]
     pub exile_permanent_cost: Option<(SelectionRequirement, u32)>,
+    /// "Exile one or more other [filter] you control with total mana value
+    /// X: return target … card with mana value X or less" (Fabrication
+    /// Foundry). With this set, `exile_permanent_cost`'s count is ignored: the
+    /// cost exiles at least one match whose mana values sum to at least the
+    /// slot-0 target card's mana value (the activator names X; the auto-pick
+    /// is the cheapest cover). No target, or not enough mana value on board,
+    /// rejects the activation.
+    #[serde(default)]
+    pub exile_permanent_cost_covers_target_mv: bool,
     /// CR 107.3 — a generic cost whose amount is defined by the game state
     /// rather than chosen ("{X}, {T}: … X is the number of cards in an
     /// opponent's hand" — Bargaining Table). Added to the printed generic at
